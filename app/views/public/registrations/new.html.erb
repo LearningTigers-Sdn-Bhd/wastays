@@ -1,0 +1,80 @@
+<div class="max-w-[32rem] mx-auto py-12 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm">
+    <div class="p-4 sm:p-7">
+      <div class="text-center">
+        <h1 class="block text-2xl font-bold text-gray-800">Register Your Hotel</h1>
+        <p class="mt-2 text-sm text-gray-600">
+          Start your free WAStays account today
+        </p>
+      </div>
+
+      <div class="mt-5">
+        <%= form_with url: register_path, local: true do |f| %>
+          <div class="grid gap-y-6">
+            <!-- Account Section -->
+            <div>
+              <h2 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">Business Details</h2>
+              <div class="space-y-4">
+                <div>
+                  <%= label_tag "account[name]", "Business / Company Name", class: "block text-sm mb-2 font-medium" %>
+                  <%= text_field_tag "account[name]", params.dig(:account, :name), class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "e.g. Green Hotel Group" %>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hotel Section -->
+            <div>
+              <h2 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">Primary Hotel</h2>
+              <div class="space-y-4">
+                <div>
+                  <%= label_tag "hotel[name]", "Hotel Name", class: "block text-sm mb-2 font-medium" %>
+                  <%= text_field_tag "hotel[name]", params.dig(:hotel, :name), class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "e.g. Green Hotel Kuala Lumpur" %>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <%= label_tag "hotel[city]", "City", class: "block text-sm mb-2 font-medium" %>
+                    <%= text_field_tag "hotel[city]", params.dig(:hotel, :city), class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "e.g. Kuala Lumpur" %>
+                  </div>
+                  <div>
+                    <%= label_tag "hotel[country]", "Country", class: "block text-sm mb-2 font-medium" %>
+                    <%= text_field_tag "hotel[country]", params.dig(:hotel, :country) || "Malaysia", class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- User Section -->
+            <div>
+              <h2 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">Your Account</h2>
+              <div class="space-y-4">
+                <div>
+                  <%= label_tag "user[name]", "Full Name", class: "block text-sm mb-2 font-medium" %>
+                  <%= text_field_tag "user[name]", params.dig(:user, :name), class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "e.g. Sarah Lim" %>
+                </div>
+                <div>
+                  <%= label_tag "user[email]", "Email Address", class: "block text-sm mb-2 font-medium" %>
+                  <%= email_field_tag "user[email]", params.dig(:user, :email), class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "sarah@example.com" %>
+                </div>
+                <div>
+                  <%= label_tag "user[password]", "Password", class: "block text-sm mb-2 font-medium" %>
+                  <%= password_field_tag "user[password]", nil, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-500">
+              By registering, you agree to our Terms of Service and Privacy Policy.
+            </p>
+
+            <%= f.submit "Create Account", class: "w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
+            
+            <p class="text-center text-sm text-gray-600">
+              Already have an account?
+              <%= link_to "Login here", login_path, class: "text-blue-600 decoration-2 hover:underline font-medium" %>
+            </p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

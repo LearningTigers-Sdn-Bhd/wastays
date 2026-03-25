@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Wastays" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
+    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body>
+    <header class="flex flex-wrap sm:justify-start sm:flex-nowrap z-50 w-full bg-white border-b border-gray-200 text-sm py-3">
+      <nav class="max-w-[85rem] w-full mx-auto px-4 sm:flex sm:items-center sm:justify-between" aria-label="Global">
+        <div class="flex items-center justify-between">
+          <a class="flex-none text-xl font-semibold focus:outline-none focus:opacity-80" href="<%= root_path %>" aria-label="WAStays">
+            WAStays
+          </a>
+        </div>
+        <div id="navbar-collapse-with-animation" class="hs-collapse hidden overflow-hidden transition-all duration-300 basis-full grow sm:block">
+          <div class="flex flex-col gap-5 mt-5 sm:flex-row sm:items-center sm:justify-end sm:mt-0 sm:ps-5">
+            <% if logged_in? %>
+              <span class="text-gray-600">Logged in as <%= current_user.name %> (<%= current_user.role %>)</span>
+              <% if current_user.superadmin? %>
+                <a class="font-medium text-blue-600 focus:outline-none" href="<%= admin_dashboard_path %>">Admin Panel</a>
+              <% end %>
+              <a class="font-medium text-gray-600 hover:text-gray-400 focus:outline-none" href="<%= hotel_dashboard_path %>">Hotel Dashboard</a>
+              <%= button_to "Logout", logout_path, method: :delete, class: "font-medium text-red-600 focus:outline-none" %>
+            <% else %>
+              <a class="font-medium text-blue-600 focus:outline-none" href="<%= login_path %>">Login</a>
+            <% end %>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <% if flash.any? %>
+      <div class="max-w-[85rem] mx-auto px-4 mt-4">
+        <% flash.each do |key, value| %>
+          <div class="p-4 rounded-lg <%= key == 'alert' ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800' %>" role="alert">
+            <span class="font-bold"><%= key.capitalize %>:</span> <%= value %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <main class="w-full">
+      <%= yield %>
+    </main>
+  </body>
+</html>

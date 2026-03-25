@@ -1,0 +1,42 @@
+<div class="max-w-[26rem] mx-auto py-24 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm">
+    <div class="p-4 sm:p-7">
+      <div class="text-center">
+        <h1 class="block text-2xl font-bold text-gray-800">Login</h1>
+        <p class="mt-2 text-sm text-gray-600">
+          Access your WAStays account
+        </p>
+      </div>
+
+      <div class="mt-5">
+        <%= form_with url: login_path, local: true do |f| %>
+          <div class="grid gap-y-4">
+            <div>
+              <%= f.label :email, class: "block text-sm mb-2" %>
+              <%= f.email_field :email, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center">
+                <%= f.label :password, class: "block text-sm mb-2" %>
+                <a class="text-sm text-blue-600 decoration-2 hover:underline font-medium" href="#">Forgot password?</a>
+              </div>
+              <%= f.password_field :password, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
+            </div>
+
+            <div class="flex items-center">
+              <div class="flex">
+                <%= f.check_box :remember_me, class: "shrink-0 mt-0.5 border-gray-200 rounded text-blue-600 focus:ring-blue-500" %>
+              </div>
+              <div class="ms-3">
+                <%= f.label :remember_me, "Remember me", class: "text-sm text-gray-600" %>
+              </div>
+            </div>
+
+            <%= f.submit "Login", class: "w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

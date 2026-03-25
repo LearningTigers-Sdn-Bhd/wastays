@@ -1,0 +1,78 @@
+<div class="max-w-[85rem] mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="text-center mb-10">
+    <h1 class="text-3xl font-bold text-gray-800">Welcome to WAStays!</h1>
+    <p class="mt-2 text-sm text-gray-600">Complete these steps to get your hotel ready for review.</p>
+  </div>
+
+  <div class="max-w-2xl mx-auto space-y-6">
+    <!-- Step 1: Hotel Profile -->
+    <% profile_completed = !@current_hotel.status.in?(['registered', 'email_verified']) %>
+    <div class="bg-white border <%= profile_completed ? 'border-green-200 bg-green-50' : 'border-gray-200' %> rounded-xl p-6 shadow-sm">
+      <div class="flex items-center gap-x-4">
+        <% if profile_completed %>
+          <div class="flex-shrink-0 size-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">✓</div>
+        <% else %>
+          <div class="flex-shrink-0 size-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">1</div>
+        <% end %>
+        <div class="flex-grow">
+          <h3 class="text-lg font-semibold text-gray-800">Hotel Profile</h3>
+          <p class="text-sm text-gray-600">Complete your hotel's general information and contact details.</p>
+        </div>
+        <div>
+          <%= link_to (profile_completed ? "Edit" : "Update"), edit_hotel_profile_path, class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent #{profile_completed ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-600 text-white hover:bg-blue-700'}" %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Hotel Policies -->
+    <% policies_completed = !@current_hotel.status.in?(['registered', 'email_verified', 'profile_incomplete']) %>
+    <div class="bg-white border <%= policies_completed ? 'border-green-200 bg-green-50' : 'border-gray-200' %> rounded-xl p-6 shadow-sm">
+      <div class="flex items-center gap-x-4 <%= profile_completed ? '' : 'opacity-50' %>">
+        <% if policies_completed %>
+          <div class="flex-shrink-0 size-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">✓</div>
+        <% else %>
+          <div class="flex-shrink-0 size-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold">2</div>
+        <% end %>
+        <div class="flex-grow">
+          <h3 class="text-lg font-semibold text-gray-800">Hotel Policies</h3>
+          <p class="text-sm text-gray-600">Set your check-in, check-out, and cancellation policies.</p>
+        </div>
+        <div>
+          <% if profile_completed %>
+            <%= link_to (policies_completed ? "Edit" : "Update"), edit_hotel_property_policy_path, class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent #{policies_completed ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-600 text-white hover:bg-blue-700'}" %>
+          <% else %>
+            <button disabled class="py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-gray-600 text-white disabled:opacity-50 disabled:pointer-events-none">Pending</button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Room Setup -->
+    <% rooms_completed = !@current_hotel.status.in?(['registered', 'email_verified', 'profile_incomplete', 'rooms_incomplete']) %>
+    <div class="bg-white border <%= rooms_completed ? 'border-green-200 bg-green-50' : 'border-gray-200' %> rounded-xl p-6 shadow-sm">
+      <div class="flex items-center gap-x-4 <%= policies_completed ? '' : 'opacity-50' %>">
+        <div class="flex-shrink-0 size-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold">3</div>
+        <div class="flex-grow">
+          <h3 class="text-lg font-semibold text-gray-800">Room Setup</h3>
+          <p class="text-sm text-gray-600">Define your room types, occupancy, and base rates.</p>
+        </div>
+        <div>
+          <% if policies_completed %>
+            <%= link_to "Update", "#", class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700" %>
+          <% else %>
+            <button disabled class="py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-gray-600 text-white disabled:opacity-50 disabled:pointer-events-none">Pending</button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Ready for Review -->
+    <div class="mt-10 p-6 bg-blue-50 border border-blue-200 rounded-xl text-center">
+      <h3 class="text-lg font-bold text-blue-800">Almost There!</h3>
+      <p class="text-sm text-blue-600 mb-4">Once you've completed the steps above, you can submit your hotel for our team to review and approve.</p>
+      <button disabled class="py-3 px-6 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white disabled:opacity-50 disabled:pointer-events-none">
+        Submit for Review
+      </button>
+    </div>
+  </div>
+</div>
