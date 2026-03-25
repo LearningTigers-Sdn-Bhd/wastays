@@ -8,7 +8,7 @@ RSpec.describe UserHotelAccess, type: :model do
   end
 
   describe 'validations' do
-    subject { build(:user_hotel_access) }
+    subject { create(:user_hotel_access) }
     it { should validate_uniqueness_of(:user_id).scoped_to(:hotel_id) }
   end
 end

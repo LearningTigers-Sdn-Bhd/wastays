@@ -1,0 +1,91 @@
+<div class="max-w-[85rem] mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="mb-5">
+    <%= link_to admin_hotels_path, class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600" do %>
+      <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Back to Hotels
+    <% end %>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Hotel Info -->
+      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-800"><%= @hotel.name %></h2>
+            <p class="text-sm text-gray-600"><%= @hotel.city %>, <%= @hotel.country %></p>
+          </div>
+          <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium 
+            <%= case @hotel.status
+                when 'approved', 'live' then 'bg-green-100 text-green-800'
+                when 'pending_review' then 'bg-yellow-100 text-yellow-800'
+                when 'suspended' then 'bg-red-100 text-red-800'
+                else 'bg-gray-100 text-gray-800'
+                end %>">
+            <%= @hotel.status.titleize %>
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 text-sm mt-6">
+          <div>
+            <p class="text-gray-500 uppercase font-medium text-[10px]">Address</p>
+            <p class="text-gray-800"><%= @hotel.address.presence || 'N/A' %></p>
+          </div>
+          <div>
+            <p class="text-gray-500 uppercase font-medium text-[10px]">Star Rating</p>
+            <p class="text-gray-800"><%= @hotel.star_rating.presence || 'N/A' %> Stars</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Room Types -->
+      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Room Types</h3>
+        <div class="space-y-4">
+          <% if @hotel.room_types.any? %>
+            <% @hotel.room_types.each do |rt| %>
+              <div class="flex justify-between items-center border-b pb-4 last:border-0 last:pb-0">
+                <div>
+                  <p class="font-medium text-gray-800"><%= rt.name %></p>
+                  <p class="text-xs text-gray-500"><%= rt.max_adults %> Adults, <%= rt.max_children %> Children</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-medium text-gray-800"><%= rt.quantity %> Rooms</p>
+                  <p class="text-xs text-blue-600"><%= number_to_currency(rt.base_price, unit: 'MYR ') %></p>
+                </div>
+              </div>
+            <% end %>
+          <% else %>
+            <p class="text-sm text-gray-500 italic">No room types added.</p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="space-y-6">
+      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Admin Actions</h3>
+        <div class="space-y-3">
+          <% if @hotel.status == 'pending_review' %>
+            <%= button_to "Approve Hotel", approve_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700" %>
+          <% end %>
+          
+          <% if @hotel.status != 'suspended' %>
+            <%= button_to "Suspend Hotel", suspend_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700", data: { confirm: "Are you sure?" } %>
+          <% else %>
+            <%= button_to "Reactivate (Approve)", approve_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700" %>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Account Holder</h3>
+        <div class="text-sm">
+          <p class="font-medium text-gray-800"><%= @hotel.account.name %></p>
+          <p class="text-gray-500">Status: <%= @hotel.account.status.titleize %></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

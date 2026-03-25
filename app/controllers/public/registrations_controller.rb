@@ -6,13 +6,11 @@ class Public::RegistrationsController < ApplicationController
   end
 
   def create
-    service = HotelOps::CreateHotel.new(
+    result = HotelOps::CreateHotel.new(
       account_params: account_params,
       user_params: user_params,
       hotel_params: hotel_params
-    )
-
-    result = service.call
+    ).call
 
     if result[:success]
       session[:user_id] = result[:user].id

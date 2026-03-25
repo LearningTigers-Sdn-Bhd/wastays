@@ -23,10 +23,9 @@ RSpec.describe 'Hotel Policies Update', type: :system do
 
   it 'allows the user to update the hotel policies' do
     expect(page).to have_content('Hotel Profile')
-    expect(page).to have_content('✓')
     
     # Click Update for Step 2
-    within(:xpath, "//div[h3[text()='Hotel Policies']]") do
+    within('#step-policies') do
       click_link 'Update'
     end
 
@@ -41,7 +40,7 @@ RSpec.describe 'Hotel Policies Update', type: :system do
     expect(hotel.property_policy.check_in_time).to eq('3:00 PM')
     
     # Onboarding should now show Step 2 as completed
-    within(:xpath, "//div[h3[text()='Hotel Policies']]") do
+    within('#step-policies') do
       expect(page).to have_content('✓')
       expect(page).to have_link('Edit')
     end

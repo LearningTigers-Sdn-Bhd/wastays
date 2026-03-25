@@ -16,7 +16,8 @@
     <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
       <h3 class="text-lg font-semibold text-gray-800 mb-2">Inventory & Rates</h3>
       <p class="text-gray-600 mb-4">Update room quantities and nightly prices.</p>
-      <a class="text-blue-600 font-medium hover:underline" href="#">Calendar editor</a>
+      <%= link_to "Manage Room Types", hotel_room_types_path, class: "text-blue-600 font-medium hover:underline block mb-1" %>
+      <%= link_to "View Audit Logs", hotel_inventory_audit_logs_path, class: "text-blue-600 font-medium hover:underline" %>
     </div>
 
     <!-- Arrival Manifest -->

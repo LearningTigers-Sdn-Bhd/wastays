@@ -14,9 +14,7 @@ class Hotel::PropertyPoliciesController < ApplicationController
     authorize @hotel, policy_class: HotelPolicy
 
     if @property_policy.update(property_policy_params)
-      # Move status to rooms_incomplete if it was profile_incomplete
-      @hotel.update(status: 'rooms_incomplete') if @hotel.status == 'profile_incomplete'
-      
+      @hotel.complete_policies!
       redirect_to hotel_dashboard_path, notice: "Hotel policies updated successfully."
     else
       render :edit, status: :unprocessable_entity

@@ -1,0 +1,79 @@
+<div class="max-w-[85rem] mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="mb-5">
+    <%= link_to hotel_dashboard_path, class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600" do %>
+      <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Back to Dashboard
+    <% end %>
+  </div>
+
+  <div class="flex justify-between items-center mb-5">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-800">Inventory & Rate Audit Logs</h2>
+      <p class="text-sm text-gray-600">Track all operational changes to your room rates and inventory.</p>
+    </div>
+  </div>
+
+  <div class="flex flex-col">
+    <div class="-m-1.5 overflow-x-auto">
+      <div class="p-1.5 min-w-full inline-block align-middle">
+        <div class="border rounded-lg overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">User</th>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Room Type</th>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Action</th>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Changes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <% @audit_logs.each do |log| %>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    <%= log.created_at.strftime("%d %b %Y, %I:%M %p") %>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    <%= log.user.name %>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    <%= log.room_type&.name || 'N/A' %>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    <span class="inline-flex items-center gap-x-1 py-1 px-2 rounded-full text-xs font-medium <%= log.action_type == 'rate_update' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800' %>">
+                      <%= log.action_type.titleize %>
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-800">
+                    <% if log.action_type == 'rate_update' %>
+                      <%= log.old_value['date'] %>: 
+                      <span class="text-gray-500"><%= number_to_currency(log.old_value['price'], unit: 'MYR ') %></span>
+                      <svg class="inline-block size-3 mx-1 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                      <span class="font-semibold text-green-600"><%= number_to_currency(log.new_value['price'], unit: 'MYR ') %></span>
+                    <% elsif log.action_type == 'inventory_update' %>
+                      <%= log.old_value['date'] %>: 
+                      <span class="text-gray-500">Qty: <%= log.old_value['quantity'] %>, <%= log.old_value['status'].upcase %></span>
+                      <svg class="inline-block size-3 mx-1 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                      <span class="font-semibold text-blue-600">Qty: <%= log.new_value['quantity'] %>, <%= log.new_value['status'].upcase %></span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+              <% if @audit_logs.empty? %>
+                <tr>
+                  <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
+                    No audit logs found.
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <%= paginate @audit_logs %>
+  </div>
+</div>

@@ -22,12 +22,24 @@ Rails.application.routes.draw do
   # Superadmin dashboard
   namespace :admin do
     get "dashboard", to: "dashboard#index"
+    resources :hotels, only: [:index, :show] do
+      member do
+        post :approve
+        post :suspend
+      end
+    end
   end
 
   # Hotel admin dashboard
   namespace :hotel do
     get "dashboard", to: "dashboard#index"
+    post "submit_for_review", to: "dashboard#submit_for_review"
     resource :profile, only: [:edit, :update]
     resource :property_policy, only: [:edit, :update]
+    resources :room_types do
+      resources :rates, only: [:index, :create]
+      resources :inventories, only: [:index, :create]
+    end
+    resources :inventory_audit_logs, only: [:index]
   end
 end

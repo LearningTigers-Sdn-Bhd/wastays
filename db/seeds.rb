@@ -30,6 +30,19 @@ ROLE_TEMPLATES = [
   { name: 'Reservation Staff', slug: 'reservation_staff', permissions: %w[view_bookings manage_bookings view_guest_phone] }
 ]
 
+# Cancellation Policy Templates
+templates = [
+  { name: 'Flexible', body: 'Full refund if cancelled at least 24 hours before check-in time. No refund if cancelled within 24 hours.' },
+  { name: 'Moderate', body: 'Full refund if cancelled at least 5 days before check-in time. 50% refund if cancelled between 2 and 5 days. No refund within 48 hours.' },
+  { name: 'Strict', body: 'No refund for cancellations.' }
+]
+
+templates.each do |t|
+  CancellationPolicyTemplate.find_or_create_by!(name: t[:name]) do |template|
+    template.body = t[:body]
+  end
+end
+
 # Create a sample account, hotel and user if none exist (development environment)
 if Rails.env.development?
   account = Account.find_or_create_by!(slug: 'sample-account') do |a|
