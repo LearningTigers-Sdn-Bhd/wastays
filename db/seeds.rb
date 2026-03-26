@@ -86,4 +86,34 @@ if Rails.env.development?
 
   UserRole.find_or_create_by!(user: owner, role: hotel_owner_role)
   UserHotelAccess.find_or_create_by!(user: owner, hotel: hotel, role: hotel_owner_role)
+
+  # Create Room Types, Inventory and Rates for Sample Hotel
+  room_type = RoomType.find_or_create_by!(hotel: hotel, name: 'Deluxe Twin') do |rt|
+    rt.description = 'A comfortable room with two twin beds, perfect for friends or colleagues.'
+    rt.max_adults = 2
+    rt.max_children = 1
+    rt.quantity = 10
+    rt.base_price = 150.00
+  end
+
+  # Create inventory and rates for the next 30 days
+  (Date.today..(Date.today + 30.days)).each do |date|
+    RoomInventory.find_or_create_by!(room_type: room_type, date: date) do |ri|
+      ri.quantity = 10
+      ri.status = 'open'
+    end
+
+    RoomRate.find_or_create_by!(room_type: room_type, date: date) do |rr|
+      ri_price = 150.00
+      ri_price += 50.00 if date.saturday? || date.sunday? # Weekend pricing
+      rr.price = ri_price
+      rr.currency = 'MYR'
+    end
+  end
+
+  # Create default margin rule
+  MarginRule.find_or_create_by!(settable: nil) do |mr|
+    mr.rate = 12.0 # 12% global default
+    mr.status = 'active'
+  end
 end

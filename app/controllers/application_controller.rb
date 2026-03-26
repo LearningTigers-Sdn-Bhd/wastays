@@ -37,7 +37,9 @@ class ApplicationController < ActionController::Base
   end
 
   def current_hotel
-    @current_hotel ||= if params[:hotel_id]
+    @current_hotel ||= if current_user.superadmin? && params[:hotel_id]
+      Hotel.find_by(id: params[:hotel_id])
+    elsif params[:hotel_id]
       current_user.hotels.find_by(id: params[:hotel_id])
     else
       current_user.hotels.first

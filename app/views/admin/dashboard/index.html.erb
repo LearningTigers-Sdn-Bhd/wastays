@@ -9,21 +9,27 @@
     <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
       <h3 class="text-lg font-semibold text-gray-800 mb-2">Accounts</h3>
       <p class="text-gray-600 mb-4">Manage hotel accounts and approvals.</p>
-      <a class="text-blue-600 font-medium hover:underline" href="#">View all accounts</a>
+      <%= link_to "View all accounts", admin_hotels_path, class: "text-blue-600 font-medium hover:underline" %>
     </div>
 
     <!-- Payouts & Margin -->
     <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
       <h3 class="text-lg font-semibold text-gray-800 mb-2">Payouts & Margin</h3>
       <p class="text-gray-600 mb-4">Set margin rules and reconciliation.</p>
-      <a class="text-blue-600 font-medium hover:underline" href="#">Margin settings</a>
+      <%= link_to "Margin settings", admin_margin_rules_path, class: "text-blue-600 font-medium hover:underline" %>
     </div>
 
     <!-- System Logs -->
     <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
       <h3 class="text-lg font-semibold text-gray-800 mb-2">System Audit</h3>
       <p class="text-gray-600 mb-4">Review platform-wide activity logs.</p>
-      <a class="text-blue-600 font-medium hover:underline" href="#">Audit logs</a>
+      <%= link_to "Audit logs", admin_audit_logs_path, class: "text-blue-600 font-medium hover:underline" %>
+    </div>
+    <!-- Reconciliation -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">Reconciliation</h3>
+      <p class="text-gray-600 mb-4">Monitor payment webhooks and retry failures.</p>
+      <%= link_to "View reconciliation", admin_reconciliations_path, class: "text-blue-600 font-medium hover:underline" %>
     </div>
   </div>
 </div>

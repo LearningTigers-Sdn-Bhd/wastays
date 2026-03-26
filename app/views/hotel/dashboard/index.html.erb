@@ -9,7 +9,7 @@
     <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
       <h3 class="text-lg font-semibold text-gray-800 mb-2">Bookings</h3>
       <p class="text-gray-600 mb-4">View and manage guest reservations.</p>
-      <a class="text-blue-600 font-medium hover:underline" href="#">View all bookings</a>
+      <%= link_to "View all bookings", hotel_bookings_path, class: "text-blue-600 font-medium hover:underline" %>
     </div>
 
     <!-- Inventory & Rates -->
@@ -24,7 +24,13 @@
     <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
       <h3 class="text-lg font-semibold text-gray-800 mb-2">Arrival Manifest</h3>
       <p class="text-gray-600 mb-4">Track pre-check-in and guest arrivals.</p>
-      <a class="text-blue-600 font-medium hover:underline" href="#">Arrivals view</a>
+      <%= link_to "Arrivals view", hotel_arrivals_path, class: "text-blue-600 font-medium hover:underline" %>
+    </div>
+    <!-- Financial Reports -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">Financial Reports</h3>
+      <p class="text-gray-600 mb-4">Review your earnings and booking activity.</p>
+      <%= link_to "View financial reports", hotel_reports_path, class: "text-blue-600 font-medium hover:underline" %>
     </div>
   </div>
 </div>

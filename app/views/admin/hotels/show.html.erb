@@ -65,6 +65,21 @@
     <!-- Actions -->
     <div class="space-y-6">
       <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">View Operations</h3>
+        <div class="space-y-2">
+          <%= link_to hotel_arrivals_path(hotel_id: @hotel.id), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" do %>
+            Arrival Manifest
+          <% end %>
+          <%= link_to hotel_bookings_path(hotel_id: @hotel.id), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" do %>
+            Booking List
+          <% end %>
+          <%= link_to hotel_audit_logs_path(hotel_id: @hotel.id), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" do %>
+            Operation Logs
+          <% end %>
+        </div>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
         <h3 class="text-lg font-bold text-gray-800 mb-4">Admin Actions</h3>
         <div class="space-y-3">
           <% if @hotel.status == 'pending_review' %>

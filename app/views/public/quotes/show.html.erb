@@ -1,0 +1,143 @@
+<div class="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <h1 class="text-3xl font-bold text-gray-800">Review Your Booking</h1>
+    <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded-lg text-sm font-medium animate-pulse">
+      Hold expires in: <span id="countdown"><%= ((@quote.expires_at - Time.current) / 60).to_i %> minutes</span>
+    </div>
+  </div>
+
+  <%= form_with url: mock_payment_path, method: :post do |f| %>
+    <%= f.hidden_field :quote_token, value: @quote.token %>
+    
+    <div class="grid lg:grid-cols-3 gap-8">
+      <!-- Left Column: Guest Details Form -->
+      <div class="lg:col-span-2 space-y-6">
+        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-800 mb-6">Guest Information</h2>
+          
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label for="name" class="block text-sm font-medium mb-2 text-gray-700">Full Name</label>
+              <%= f.text_field "guest_details[name]", id: "name", required: true, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 border" %>
+            </div>
+            <div class="sm:col-span-2">
+              <label for="email" class="block text-sm font-medium mb-2 text-gray-700">Email address</label>
+              <%= f.email_field "guest_details[email]", id: "email", required: true, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 border" %>
+            </div>
+            <div class="sm:col-span-2">
+              <label for="phone" class="block text-sm font-medium mb-2 text-gray-700">Phone number (WhatsApp preferred)</label>
+              <%= f.telephone_field "guest_details[phone]", id: "phone", required: true, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 border" %>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-800 mb-6">Payment Method</h2>
+          <div class="space-y-4">
+            <div class="p-4 border border-blue-600 rounded-lg bg-blue-50 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="h-4 w-4 rounded-full border-4 border-blue-600 bg-white"></div>
+                <span class="font-medium text-gray-800">Online Payment / Credit Card</span>
+              </div>
+              <div class="flex gap-2">
+                <span class="text-xs bg-white px-2 py-1 rounded border">Razorpay</span>
+                <span class="text-xs bg-white px-2 py-1 rounded border">Curlec</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <%= f.submit "Proceed to Payment", class: "py-3 px-10 inline-flex justify-center items-center gap-x-2 text-base font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 transition cursor-pointer" %>
+        </div>
+      </div>
+
+      <!-- Right Column: Booking Summary -->
+      <div class="space-y-6">
+        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-800 mb-6 text-center">Summary</h2>
+          
+          <div class="mb-6">
+            <h3 class="font-bold text-gray-800"><%= @hotel.name %></h3>
+            <p class="text-sm text-gray-500"><%= @hotel.city %>, <%= @hotel.country %></p>
+          </div>
+
+          <div class="space-y-4 text-sm border-t border-b border-gray-100 py-4 mb-4">
+            <div class="flex justify-between">
+              <span class="text-gray-500">Check-in</span>
+              <span class="font-medium text-gray-800"><%= @quote.check_in.strftime("%d %b %Y") %></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500">Check-out</span>
+              <span class="font-medium text-gray-800"><%= @quote.check_out.strftime("%d %b %Y") %></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500">Duration</span>
+              <span class="font-medium text-gray-800"><%= pluralize((@quote.check_out - @quote.check_in).to_i, 'night') %></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500">Guests</span>
+              <span class="font-medium text-gray-800"><%= @quote.adults %> Adults, <%= @quote.children %> Children</span>
+            </div>
+          </div>
+
+          <div class="space-y-2 mb-6">
+            <h4 class="text-sm font-bold text-gray-800">Your Selection</h4>
+            <% @quote_items.each do |item| %>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600"><%= item.quantity %>x <%= item.room_type_snapshot['name'] %></span>
+                <span class="text-gray-800 font-medium">MYR <%= item.subtotal %></span>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="space-y-3 pt-4 border-t border-gray-200">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">Subtotal</span>
+              <span class="text-gray-800 font-medium">MYR <%= @quote.total_amount %></span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">Service Charge (10%)</span>
+              <span class="text-gray-800 font-medium">Included</span>
+            </div>
+            <div class="flex justify-between text-lg font-bold">
+              <span class="text-gray-800">Total Price</span>
+              <span class="text-blue-600">MYR <%= @quote.total_amount %></span>
+            </div>
+            <p class="text-[10px] text-gray-400 text-right italic">Calculated price including all taxes</p>
+          </div>
+        </div>
+
+        <div class="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+          <h4 class="text-xs font-bold text-gray-800 mb-2">Cancellation Policy</h4>
+          <p class="text-[10px] text-gray-500 leading-relaxed">
+            <%= @quote.cancellation_policy_snapshot || "No cancellation information available." %>
+          </p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<script>
+  // Simple countdown timer for hold expiration
+  const expiryTime = new Date("<%= @quote.expires_at.iso8601 %>").getTime();
+  const countdownElement = document.getElementById('countdown');
+
+  const timer = setInterval(() => {
+    const now = new Date().getTime();
+    const distance = expiryTime - now;
+
+    if (distance < 0) {
+      clearInterval(timer);
+      countdownElement.innerHTML = "Expired";
+      window.location.reload();
+      return;
+    }
+
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+    countdownElement.innerHTML = minutes + "m " + seconds + "s";
+  }, 1000);
+</script>
