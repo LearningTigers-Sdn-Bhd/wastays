@@ -1,9 +1,15 @@
 Rails.application.routes.draw do
+  get "help_center/index"
+  get "help_center/show"
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check
 
   # Defines the root path route ("/")
   root "static_pages#home"
+
+  # Help Center
+  get "help", to: "help_center#index", as: :help_center
+  get "help/:audience/:id", to: "help_center#show", as: :help_guide
 
   # API Namespace
   namespace :api do

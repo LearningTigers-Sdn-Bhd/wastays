@@ -1,0 +1,63 @@
+<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
+  <div class="grid lg:grid-cols-3 gap-y-8 lg:gap-y-0 lg:gap-x-12">
+    <!-- Content -->
+    <div class="lg:col-span-2">
+      <div class="py-8 lg:pe-8">
+        <div class="space-y-5 lg:space-y-8">
+          <a class="inline-flex items-center gap-x-1.5 text-sm text-gray-600 decoration-2 hover:underline focus:outline-none focus:underline" href="<%= help_center_path %>">
+            <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            Back to Help Center
+          </a>
+
+          <h2 class="text-3xl font-bold lg:text-4xl text-gray-800"><%= @title %></h2>
+
+          <div class="prose prose-blue max-w-none text-gray-800">
+            <%= raw @html_content %>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Content -->
+
+    <!-- Sidebar -->
+    <div class="lg:col-span-1 lg:w-full lg:h-full lg:bg-gradient-to-r lg:from-gray-50 lg:via-transparent lg:to-transparent">
+      <div class="sticky top-0 start-0 py-8 lg:ps-8">
+        <div class="group flex items-center gap-x-3 border-b border-gray-200 pb-8 mb-8">
+          <div class="block flex-shrink-0">
+            <span class="inline-flex items-center justify-center size-10 rounded-full bg-blue-100 text-blue-600 font-bold">
+              ?
+            </span>
+          </div>
+          <div class="block">
+            <h4 class="text-sm font-semibold text-gray-800">Need more help?</h4>
+            <p class="text-sm text-gray-500 italic">Contact support@wastays.com</p>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <h4 class="text-xs font-semibold text-gray-900 uppercase">Related Guides</h4>
+          <ul class="space-y-3">
+            <% list_guides(@audience).each do |guide| %>
+              <% next if guide[:slug] == @slug %>
+              <li>
+                <%= link_to guide[:title], help_guide_path(audience: guide[:audience], id: guide[:slug]), class: "text-sm text-blue-600 decoration-2 hover:underline" %>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <!-- End Sidebar -->
+  </div>
+</div>
+
+<style>
+  /* Basic prose overrides since we might not have @tailwindcss/typography installed */
+  .prose h1 { @apply text-2xl font-bold mt-8 mb-4; }
+  .prose h2 { @apply text-xl font-bold mt-6 mb-3; }
+  .prose h3 { @apply text-lg font-bold mt-4 mb-2; }
+  .prose p { @apply mb-4 leading-relaxed; }
+  .prose ul { @apply list-disc ps-5 mb-4; }
+  .prose li { @apply mb-1; }
+  .prose strong { @apply font-bold; }
+</style>
