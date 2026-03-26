@@ -65,16 +65,35 @@
     <!-- Actions -->
     <div class="space-y-6">
       <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">View Operations</h3>
+        <div class="space-y-2">
+          <%= link_to hotel_arrivals_path(hotel_id: @hotel.id), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" do %>
+            Arrival Manifest
+          <% end %>
+          <%= link_to hotel_bookings_path(hotel_id: @hotel.id), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" do %>
+            Booking List
+          <% end %>
+          <%= link_to hotel_audit_logs_path(hotel_id: @hotel.id), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" do %>
+            Operation Logs
+          <% end %>
+        </div>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
         <h3 class="text-lg font-bold text-gray-800 mb-4">Admin Actions</h3>
         <div class="space-y-3">
+          <%= link_to edit_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700" do %>
+            Edit Details
+          <% end %>
+
           <% if @hotel.status == 'pending_review' %>
             <%= button_to "Approve Hotel", approve_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700" %>
           <% end %>
           
           <% if @hotel.status != 'suspended' %>
-            <%= button_to "Suspend Hotel", suspend_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700", data: { confirm: "Are you sure?" } %>
+            <%= button_to "Suspend Hotel", suspend_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700", data: { turbo_confirm: "Are you sure you want to suspend this hotel? It will no longer be bookable.", turbo_confirm_title: "Suspend Hotel", turbo_confirm_color: "red" } %>
           <% else %>
-            <%= button_to "Reactivate (Approve)", approve_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700" %>
+            <%= button_to "Reactivate (Approve)", approve_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700", data: { turbo_confirm: "Are you sure you want to reactivate this hotel?", turbo_confirm_title: "Reactivate Hotel" } %>
           <% end %>
         </div>
       </div>

@@ -25,19 +25,24 @@ class ApplicationController < ActionController::Base
 
   def authenticate_user!
     unless logged_in?
+      store_forwarding_url
       redirect_to login_path, alert: "You must be logged in to access this page"
+      return false
     end
+    true
   end
 
   def authenticate_superadmin!
-    authenticate_user!
+    return unless authenticate_user!
     unless current_user.superadmin?
       redirect_to root_path, alert: "You are not authorized to access this page"
     end
   end
 
   def current_hotel
-    @current_hotel ||= if params[:hotel_id]
+    @current_hotel ||= if current_user.superadmin? && params[:hotel_id]
+      Hotel.find_by(id: params[:hotel_id])
+    elsif params[:hotel_id]
       current_user.hotels.find_by(id: params[:hotel_id])
     else
       current_user.hotels.first
@@ -56,6 +61,11 @@ class ApplicationController < ActionController::Base
     unless current_hotel || current_user.superadmin?
       redirect_to root_path, alert: "You do not have access to any hotels"
     end
+  end
+
+  def store_forwarding_url
+    return if [login_path, register_path].include?(request.path)
+    session[:forwarding_url] = request.fullpath if request.get? && !request.xhr?
   end
 
   helper_method :current_hotel, :permitted_hotels

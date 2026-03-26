@@ -1,0 +1,70 @@
+<div class="max-w-[85rem] mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="mb-5">
+    <%= link_to admin_dashboard_path, class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600" do %>
+      <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Back to Dashboard
+    <% end %>
+  </div>
+
+  <div class="flex justify-between items-center mb-5">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-800">Platform Bookings</h2>
+      <p class="text-sm text-gray-600">Review all bookings across all hotels on the platform.</p>
+    </div>
+  </div>
+
+  <div class="flex flex-col">
+    <div class="-m-1.5 overflow-x-auto">
+      <div class="p-1.5 min-w-full inline-block align-middle">
+        <div class="border rounded-lg overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Confirmation</th>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Hotel</th>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Guest</th>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Check-in</th>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Amount</th>
+                <th scope="col" class="px-6 py-3 text-end text-xs font-medium text-gray-500 uppercase">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <% @bookings.each do |booking| %>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                    <%= link_to booking.confirmation_token, admin_booking_path(booking) %>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= booking.hotel.name %></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    <%= booking.guest_name %>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    <%= booking.check_in.strftime("%d %b %Y") %>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium 
+                      <%= case booking.status
+                          when 'confirmed' then 'bg-green-100 text-green-800'
+                          when 'pending' then 'bg-yellow-100 text-yellow-800'
+                          when 'cancelled' then 'bg-red-100 text-red-800'
+                          else 'bg-gray-100 text-gray-800'
+                          end %>">
+                      <%= booking.status.titleize %>
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    <%= number_to_currency(booking.total_amount) %>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
+                    <%= link_to "View", admin_booking_path(booking), class: "text-blue-600 hover:text-blue-800" %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

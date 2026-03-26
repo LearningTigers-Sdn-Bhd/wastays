@@ -12,13 +12,13 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
   it 'completes the full onboarding and approval process' do
     # 1. Registration
     visit register_path
-    fill_in 'Business / Company Name', with: 'Green Hotel Group'
+    fill_in 'Company / Group Name', with: 'Green Hotel Group'
     fill_in 'Hotel Name', with: 'Green Hotel KL'
     fill_in 'City', with: 'Kuala Lumpur'
     fill_in 'Full Name', with: 'Sarah Lim'
-    fill_in 'Email Address', with: 'sarah@example.com'
+    fill_in 'Work Email', with: 'sarah@example.com'
     fill_in 'Password', with: 'password123'
-    click_button 'Create Account'
+    click_button 'Register Hotel'
 
     expect(page).to have_content('Welcome to WAStays!')
     hotel = Hotel.find_by(name: 'Green Hotel KL')
@@ -40,7 +40,7 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
 
     # 4. Step 3: Room Setup
     within('#step-rooms') { click_link 'Update' }
-    click_link 'Add Room Type'
+    first(:link, 'Add Room Type').click
     fill_in 'Room Type Name', with: 'Deluxe Room'
     fill_in 'Max Adults', with: 2
     fill_in 'Max Children', with: 1
@@ -59,9 +59,9 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
     # Create superadmin
     superadmin = create(:user, :superadmin, email: 'admin@wastays.com')
     visit login_path
-    fill_in 'Email', with: superadmin.email
+    fill_in 'Email address', with: superadmin.email
     fill_in 'Password', with: 'password123'
-    click_button 'Login'
+    click_button 'Sign In'
 
     expect(page).to have_content('Welcome, Superadmin!')
     visit admin_hotels_path

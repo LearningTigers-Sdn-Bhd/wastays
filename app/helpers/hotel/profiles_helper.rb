@@ -1,2 +1,0 @@
-module Hotel::ProfilesHelper
-end

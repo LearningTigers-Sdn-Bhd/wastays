@@ -1,0 +1,105 @@
+<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800">Operation Audit Logs</h1>
+      <p class="text-sm text-gray-600">Trace every change made to your hotel's rates and inventory.</p>
+    </div>
+
+    <div class="inline-flex gap-x-2">
+      <%= link_to hotel_audit_logs_path(format: :csv, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none" do %>
+        <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        Export CSV
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 md:p-6 mb-6">
+    <%= form_with url: hotel_audit_logs_path, method: :get, class: "grid sm:grid-cols-2 lg:grid-cols-4 gap-4" do |f| %>
+      <div>
+        <label class="block text-sm font-medium mb-2 text-gray-700">Room Type</label>
+        <%= f.select :room_type_id, current_hotel.room_types.map { |rt| [rt.name, rt.id] }, { include_blank: "All Room Types", selected: params[:room_type_id] }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2 text-gray-700">Action Type</label>
+        <%= f.select :action_type, [['Bulk Rate Update', 'bulk_rate_update'], ['Bulk Inventory Update', 'bulk_inventory_update']], { include_blank: "All Actions", selected: params[:action_type] }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2 text-gray-700">Start Date</label>
+        <%= f.date_field :start_date, value: params[:start_date], class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2 text-gray-700">End Date</label>
+        <%= f.date_field :end_date, value: params[:end_date], class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+      </div>
+      <div class="sm:col-span-2 lg:col-span-4 flex justify-end">
+        <%= f.submit "Apply Filters", class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Time</th>
+          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">User</th>
+          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Action</th>
+          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Target</th>
+          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Details</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <% if @logs.any? %>
+          <% @logs.each do |log| %>
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= log.created_at.strftime("%d %b %Y, %H:%M") %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
+                <%= log.user.name %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <% 
+                  action_class = case log.action_type
+                  when 'bulk_rate_update' then 'bg-purple-100 text-purple-800'
+                  when 'bulk_inventory_update' then 'bg-blue-100 text-blue-800'
+                  else 'bg-gray-100 text-gray-800'
+                  end
+                %>
+                <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= action_class %>">
+                  <%= log.action_type.titleize %>
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                <%= log.room_type&.name || 'Property-wide' %>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-600">
+                <% if log.action_type == 'bulk_rate_update' %>
+                  Rate: <%= log.new_value['price'] %> <%= log.new_value['currency'] %>
+                <% elsif log.action_type == 'bulk_inventory_update' %>
+                  Quantity: <%= log.new_value['quantity'] %> (<%= log.new_value['status'] %>)
+                <% end %>
+                <div class="text-[10px] text-gray-400 mt-1">
+                  Dates: <%= log.metadata['start_date'] %> to <%= log.metadata['end_date'] %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500 italic">
+              No audit logs found matching the filters.
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-4">
+    <%= paginate @logs %>
+  </div>
+</div>

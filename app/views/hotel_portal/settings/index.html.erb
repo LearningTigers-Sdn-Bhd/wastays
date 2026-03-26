@@ -1,0 +1,29 @@
+<div class="card">
+  <div class="p-4 border-b border-neutral-border">
+    <h1 class="text-lg font-bold text-neutral-text-primary">Settings</h1>
+  </div>
+  <div class="p-4 space-y-4">
+    <% if @settings.present? %>
+      <dl class="grid grid-cols-1 gap-y-2 text-sm text-neutral-text-secondary">
+        <div>
+          <dt class="font-medium text-neutral-text-primary">Hotel Status</dt>
+          <dd><%= @settings[:hotel_status] %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">Onboarding Stage</dt>
+          <dd><%= @settings[:onboarding_stage] %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">Check-in</dt>
+          <dd><%= @settings[:check_in] || "Not set" %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">Check-out</dt>
+          <dd><%= @settings[:check_out] || "Not set" %></dd>
+        </div>
+      </dl>
+    <% else %>
+      <p class="text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>
+    <% end %>
+  </div>
+</div>

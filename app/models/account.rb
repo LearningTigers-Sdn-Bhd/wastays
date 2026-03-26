@@ -2,6 +2,7 @@ class Account < ApplicationRecord
   has_many :users, dependent: :destroy
   has_many :hotels, dependent: :destroy
   has_many :roles, dependent: :destroy
+  has_many :payment_settings, as: :settable, dependent: :destroy
 
   validates :name, presence: true
   validates :slug, presence: true, uniqueness: true

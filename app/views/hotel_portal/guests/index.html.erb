@@ -1,0 +1,22 @@
+<div class="card">
+  <div class="p-4 border-b border-neutral-border">
+    <h1 class="text-lg font-bold text-neutral-text-primary">Guests</h1>
+  </div>
+  <div class="p-4 space-y-4">
+    <% if @guests.any? %>
+      <ul class="divide-y divide-neutral-border">
+        <% @guests.each do |guest| %>
+          <li class="py-3 flex items-center justify-between">
+                    <div>
+                      <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(guest, :name) %></p>
+                      <p class="text-xs text-neutral-text-secondary"><%= safe_guest_attr(guest, :phone) %></p>
+                    </div>
+                    <span class="text-xs text-neutral-text-secondary"><%= safe_guest_attr(guest, :email) %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-sm text-neutral-text-secondary">No guests to display yet.</p>
+    <% end %>
+  </div>
+</div>

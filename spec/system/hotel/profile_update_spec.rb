@@ -16,9 +16,9 @@ RSpec.describe 'Hotel Profile Update', type: :system do
     
     # Login
     visit login_path
-    fill_in 'Email', with: user.email
+    fill_in 'Email address', with: user.email
     fill_in 'Password', with: 'password123'
-    click_button 'Login'
+    click_button 'Sign In'
   end
 
   it 'allows the user to update the hotel profile' do

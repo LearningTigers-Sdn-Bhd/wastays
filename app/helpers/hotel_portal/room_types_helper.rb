@@ -1,0 +1,2 @@
+module HotelPortal::RoomTypesHelper
+end

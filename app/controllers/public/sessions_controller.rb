@@ -1,5 +1,9 @@
 class Public::SessionsController < ApplicationController
   def new
+    if logged_in?
+      redirect_to_dashboard(current_user)
+      return
+    end
   end
 
   def create
@@ -21,7 +25,11 @@ class Public::SessionsController < ApplicationController
   private
 
   def redirect_to_dashboard(user)
-    if user.superadmin?
+    redirect_path = session.delete(:forwarding_url)
+    
+    if redirect_path.present?
+      redirect_to(redirect_path, notice: "Logged in successfully!")
+    elsif user.superadmin?
       redirect_to admin_dashboard_path, notice: "Welcome, Superadmin!"
     else
       redirect_to hotel_dashboard_path, notice: "Welcome, #{user.name}!"

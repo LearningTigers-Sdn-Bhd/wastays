@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_25_071738) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_26_132227) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -51,9 +51,120 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_25_071738) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "booking_guests", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.bigint "guest_id", null: false
+    t.boolean "is_primary"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_booking_guests_on_booking_id"
+    t.index ["guest_id"], name: "index_booking_guests_on_guest_id"
+  end
+
+  create_table "booking_notes", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.text "body", null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_booking_notes_on_booking_id"
+    t.index ["user_id"], name: "index_booking_notes_on_user_id"
+  end
+
+  create_table "booking_quote_items", force: :cascade do |t|
+    t.bigint "booking_quote_id", null: false
+    t.bigint "room_type_id", null: false
+    t.integer "quantity", default: 1, null: false
+    t.decimal "subtotal", precision: 10, scale: 2, null: false
+    t.jsonb "room_type_snapshot", default: {}, null: false
+    t.jsonb "nightly_rate_snapshot", default: {}, null: false
+    t.jsonb "occupancy_snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_quote_id"], name: "index_booking_quote_items_on_booking_quote_id"
+    t.index ["room_type_id"], name: "index_booking_quote_items_on_room_type_id"
+  end
+
+  create_table "booking_quotes", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.date "check_in", null: false
+    t.date "check_out", null: false
+    t.integer "adults", null: false
+    t.integer "children", default: 0
+    t.decimal "total_amount", precision: 10, scale: 2, null: false
+    t.string "currency", default: "MYR", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "expires_at", null: false
+    t.string "token", null: false
+    t.jsonb "hotel_snapshot", default: {}, null: false
+    t.text "cancellation_policy_snapshot"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_booking_quotes_on_hotel_id"
+    t.index ["token"], name: "index_booking_quotes_on_token", unique: true
+  end
+
+  create_table "booking_rooms", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.bigint "room_type_id", null: false
+    t.integer "quantity", default: 1, null: false
+    t.decimal "subtotal", precision: 10, scale: 2, null: false
+    t.jsonb "room_type_snapshot", default: {}, null: false
+    t.jsonb "nightly_rate_snapshot", default: {}, null: false
+    t.jsonb "occupancy_snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_booking_rooms_on_booking_id"
+    t.index ["room_type_id"], name: "index_booking_rooms_on_room_type_id"
+  end
+
+  create_table "bookings", force: :cascade do |t|
+    t.bigint "booking_quote_id"
+    t.bigint "hotel_id", null: false
+    t.string "guest_name", null: false
+    t.string "guest_email", null: false
+    t.string "guest_phone", null: false
+    t.decimal "total_amount", precision: 10, scale: 2, null: false
+    t.string "currency", default: "MYR", null: false
+    t.string "status", default: "pending", null: false
+    t.string "payment_status", default: "pending", null: false
+    t.string "confirmation_token", null: false
+    t.date "check_in", null: false
+    t.date "check_out", null: false
+    t.integer "adults", null: false
+    t.integer "children", default: 0
+    t.jsonb "hotel_snapshot", default: {}, null: false
+    t.text "cancellation_policy_snapshot"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "pre_checkin_status"
+    t.string "guarantee_method"
+    t.string "deposit_status"
+    t.decimal "margin_amount"
+    t.decimal "net_amount"
+    t.decimal "margin_rate"
+    t.datetime "checked_in_at"
+    t.datetime "checked_out_at"
+    t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
+    t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
+    t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
+    t.index ["payment_status"], name: "index_bookings_on_payment_status"
+    t.index ["status"], name: "index_bookings_on_status"
+  end
+
   create_table "cancellation_policy_templates", force: :cascade do |t|
     t.string "name"
     t.text "body"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "guests", force: :cascade do |t|
+    t.string "name"
+    t.string "email"
+    t.string "phone"
+    t.string "government_id"
+    t.jsonb "metadata"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
@@ -86,12 +197,48 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_25_071738) do
     t.index ["user_id"], name: "index_inventory_audit_logs_on_user_id"
   end
 
+  create_table "margin_rules", force: :cascade do |t|
+    t.string "settable_type"
+    t.bigint "settable_id"
+    t.decimal "rate"
+    t.string "status"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["settable_type", "settable_id"], name: "index_margin_rules_on_settable"
+  end
+
+  create_table "payment_settings", force: :cascade do |t|
+    t.string "settable_type"
+    t.bigint "settable_id"
+    t.string "gateway"
+    t.string "api_key"
+    t.string "secret_key"
+    t.string "webhook_secret"
+    t.string "status"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["settable_type", "settable_id"], name: "index_payment_settings_on_settable"
+  end
+
   create_table "permissions", force: :cascade do |t|
     t.string "name"
     t.string "slug"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["slug"], name: "index_permissions_on_slug", unique: true
+  end
+
+  create_table "pre_checkins", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "status"
+    t.string "token"
+    t.datetime "completed_at"
+    t.string "document_status"
+    t.string "signature_status"
+    t.jsonb "metadata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_pre_checkins_on_booking_id"
   end
 
   create_table "property_policies", force: :cascade do |t|
@@ -191,12 +338,35 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_25_071738) do
     t.index ["email"], name: "index_users_on_email"
   end
 
+  create_table "webhook_events", force: :cascade do |t|
+    t.string "gateway"
+    t.string "external_id"
+    t.jsonb "payload"
+    t.string "status"
+    t.text "error_message"
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "booking_guests", "bookings"
+  add_foreign_key "booking_guests", "guests"
+  add_foreign_key "booking_notes", "bookings"
+  add_foreign_key "booking_notes", "users"
+  add_foreign_key "booking_quote_items", "booking_quotes"
+  add_foreign_key "booking_quote_items", "room_types"
+  add_foreign_key "booking_quotes", "hotels"
+  add_foreign_key "booking_rooms", "bookings"
+  add_foreign_key "booking_rooms", "room_types"
+  add_foreign_key "bookings", "booking_quotes"
+  add_foreign_key "bookings", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
+  add_foreign_key "pre_checkins", "bookings"
   add_foreign_key "property_policies", "hotels"
   add_foreign_key "role_permissions", "permissions"
   add_foreign_key "role_permissions", "roles"

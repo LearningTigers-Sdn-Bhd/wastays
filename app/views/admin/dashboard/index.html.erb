@@ -1,29 +1,224 @@
-<div class="max-w-[85rem] mx-auto py-10 px-4 sm:px-6 lg:px-8">
-  <div class="text-center">
-    <h1 class="text-3xl font-bold text-gray-800">Superadmin Dashboard</h1>
-    <p class="mt-2 text-sm text-gray-600">Platform Control Plane</p>
+<div class="space-y-6 pb-12">
+  <!-- Page Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-y-4">
+    <div>
+      <nav class="flex mb-2" aria-label="Breadcrumb">
+        <ol class="flex items-center whitespace-nowrap min-w-0">
+          <li class="flex items-center text-sm text-neutral-text-secondary">
+            Superadmin
+            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="text-sm font-semibold text-brand-primary truncate" aria-current="page">
+            Dashboard
+          </li>
+        </ol>
+      </nav>
+      <h1 class="text-2xl font-bold text-neutral-text-primary">Operational Control Center</h1>
+    </div>
+
+    <div class="inline-flex gap-x-2">
+      <a class="btn btn-secondary" href="<%= admin_audit_logs_path %>">
+        <svg class="w-4 h-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export Audit
+      </a>
+    </div>
   </div>
 
-  <div class="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <!-- Manage Accounts -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-      <h3 class="text-lg font-semibold text-gray-800 mb-2">Accounts</h3>
-      <p class="text-gray-600 mb-4">Manage hotel accounts and approvals.</p>
-      <a class="text-blue-600 font-medium hover:underline" href="#">View all accounts</a>
+  <!-- Alert Strip (Urgent Items) -->
+  <% if @failed_webhooks_count > 0 || @pending_hotels_count > 0 %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <% if @failed_webhooks_count > 0 %>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
+          <div class="flex items-center gap-x-3">
+            <span class="flex-shrink-0 inline-flex justify-center items-center w-8 h-8 rounded-full bg-red-100 text-status-error">
+              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+            <div>
+              <p class="text-sm font-semibold text-status-error"><%= @failed_webhooks_count %> Webhook Failures</p>
+              <p class="text-xs text-red-700">Payment processing errors detected</p>
+            </div>
+          </div>
+          <a class="text-sm font-medium text-status-error hover:underline" href="<%= admin_reconciliations_path %>">Review now</a>
+        </div>
+      <% end %>
+
+      <% if @pending_hotels_count > 0 %>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
+          <div class="flex items-center gap-x-3">
+            <span class="flex-shrink-0 inline-flex justify-center items-center w-8 h-8 rounded-full bg-amber-100 text-status-warning">
+              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </span>
+            <div>
+              <p class="text-sm font-semibold text-status-warning"><%= @pending_hotels_count %> Hotels Pending Review</p>
+              <p class="text-xs text-amber-700">Waiting for platform approval</p>
+            </div>
+          </div>
+          <a class="text-sm font-medium text-status-warning hover:underline" href="<%= admin_hotels_path %>">Review now</a>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- KPI Row -->
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div class="card p-4 md:p-5">
+      <div class="flex items-center gap-x-2">
+        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Revenue (MTD)</p>
+      </div>
+      <div class="mt-1 flex items-center gap-x-2">
+        <h3 class="text-xl sm:text-2xl font-bold text-neutral-text-primary">RM <%= number_with_precision(@revenue_this_month, precision: 2) %></h3>
+      </div>
     </div>
 
-    <!-- Payouts & Margin -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-      <h3 class="text-lg font-semibold text-gray-800 mb-2">Payouts & Margin</h3>
-      <p class="text-gray-600 mb-4">Set margin rules and reconciliation.</p>
-      <a class="text-blue-600 font-medium hover:underline" href="#">Margin settings</a>
+    <div class="card p-4 md:p-5">
+      <div class="flex items-center gap-x-2">
+        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Margin (MTD)</p>
+        <span class="badge badge-success">RM</span>
+      </div>
+      <div class="mt-1 flex items-center gap-x-2">
+        <h3 class="text-xl sm:text-2xl font-bold text-neutral-text-primary">RM <%= number_with_precision(@margin_this_month, precision: 2) %></h3>
+      </div>
     </div>
 
-    <!-- System Logs -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-      <h3 class="text-lg font-semibold text-gray-800 mb-2">System Audit</h3>
-      <p class="text-gray-600 mb-4">Review platform-wide activity logs.</p>
-      <a class="text-blue-600 font-medium hover:underline" href="#">Audit logs</a>
+    <div class="card p-4 md:p-5">
+      <div class="flex items-center gap-x-2">
+        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Confirmed Bookings</p>
+      </div>
+      <div class="mt-1 flex items-center gap-x-2">
+        <h3 class="text-xl sm:text-2xl font-bold text-neutral-text-primary"><%= @total_bookings_count %></h3>
+      </div>
+    </div>
+
+    <div class="card p-4 md:p-5">
+      <div class="flex items-center gap-x-2">
+        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Active Hotels</p>
+      </div>
+      <div class="mt-1 flex items-center gap-x-2">
+        <h3 class="text-xl sm:text-2xl font-bold text-neutral-text-primary"><%= @hotels_count %></h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational Panels Grid -->
+  <div class="grid lg:grid-cols-2 gap-6">
+    <!-- Hotels Pending Review -->
+    <div class="card flex flex-col h-full">
+      <div class="p-4 md:p-5 border-b border-neutral-border flex justify-between items-center">
+        <h2 class="text-lg font-bold text-neutral-text-primary">Hotels Pending Review</h2>
+        <a class="text-sm font-medium text-brand-primary hover:underline" href="<%= admin_hotels_path %>">View all</a>
+      </div>
+      <div class="p-4 md:p-5 overflow-x-auto">
+        <% if @pending_hotels.any? %>
+          <table class="table-container">
+            <thead class="table-header">
+              <tr>
+                <th class="px-3 py-2">Hotel</th>
+                <th class="px-3 py-2">Account</th>
+                <th class="px-3 py-2">Applied</th>
+                <th class="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-border">
+              <% @pending_hotels.each do |hotel| %>
+                <tr>
+                  <td class="px-3 py-3 text-sm font-medium text-neutral-text-primary"><%= hotel.name %></td>
+                  <td class="px-3 py-3 text-sm text-neutral-text-secondary"><%= hotel.account.name %></td>
+                  <td class="px-3 py-3 text-sm text-neutral-text-secondary"><%= hotel.created_at.strftime("%b %d") %></td>
+                  <td class="px-3 py-3 text-right">
+                    <%= link_to "Review", admin_hotel_path(hotel), class: "text-brand-primary hover:text-red-700 font-medium" %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <div class="text-center py-6">
+            <p class="text-sm text-neutral-text-secondary">No hotels currently pending review.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Recent Webhook Failures -->
+    <div class="card flex flex-col h-full">
+      <div class="p-4 md:p-5 border-b border-neutral-border flex justify-between items-center">
+        <h2 class="text-lg font-bold text-neutral-text-primary">Failed Webhooks</h2>
+        <a class="text-sm font-medium text-brand-primary hover:underline" href="<%= admin_reconciliations_path %>">Reconcile</a>
+      </div>
+      <div class="p-4 md:p-5 overflow-x-auto">
+        <% if @failed_webhooks.any? %>
+          <table class="table-container">
+            <thead class="table-header">
+              <tr>
+                <th class="px-3 py-2">Gateway</th>
+                <th class="px-3 py-2">ID</th>
+                <th class="px-3 py-2">Time</th>
+                <th class="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-border">
+              <% @failed_webhooks.each do |event| %>
+                <tr>
+                  <td class="px-3 py-3 text-sm font-medium text-neutral-text-primary"><%= event.gateway.capitalize %></td>
+                  <td class="px-3 py-3 text-sm text-neutral-text-secondary"><%= event.external_id.to_s.truncate(12) %></td>
+                  <td class="px-3 py-3 text-sm text-neutral-text-secondary"><%= time_ago_in_words(event.created_at) %> ago</td>
+                  <td class="px-3 py-3 text-right">
+                    <%= link_to "Retry", retry_admin_reconciliation_path(event), data: { turbo_method: :post }, class: "text-brand-primary hover:text-red-700 font-medium" %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <div class="text-center py-6">
+            <p class="text-sm text-neutral-text-secondary">System is healthy. No failed webhooks.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Recent Confirmed Bookings -->
+    <div class="card flex flex-col h-full lg:col-span-2">
+      <div class="p-4 md:p-5 border-b border-neutral-border flex justify-between items-center">
+        <h2 class="text-lg font-bold text-neutral-text-primary">Recent Confirmed Bookings</h2>
+        <a class="text-sm font-medium text-brand-primary hover:underline" href="<%= admin_bookings_path %>">View all</a>
+      </div>
+      <div class="p-4 md:p-5 overflow-x-auto">
+        <% if @recent_bookings.any? %>
+          <table class="table-container">
+            <thead class="table-header">
+              <tr>
+                <th class="px-3 py-2">Ref</th>
+                <th class="px-3 py-2">Guest</th>
+                <th class="px-3 py-2">Hotel</th>
+                <th class="px-3 py-2">Stay Dates</th>
+                <th class="px-3 py-2 text-right">Amount</th>
+                <th class="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-border">
+              <% @recent_bookings.each do |booking| %>
+                <tr>
+                  <td class="px-3 py-3 text-sm font-semibold text-neutral-text-primary">#<%= booking.confirmation_token %></td>
+                  <td class="px-3 py-3 text-sm text-neutral-text-primary"><%= booking.guest_name %></td>
+                  <td class="px-3 py-3 text-sm text-neutral-text-secondary"><%= booking.hotel.name %></td>
+                  <td class="px-3 py-3 text-sm text-neutral-text-secondary">
+                    <%= booking.check_in.strftime("%b %d") %> - <%= booking.check_out.strftime("%b %d") %>
+                  </td>
+                  <td class="px-3 py-3 text-sm font-medium text-neutral-text-primary text-right">RM <%= number_with_precision(booking.total_amount, precision: 2) %></td>
+                  <td class="px-3 py-3 text-right">
+                    <%= link_to "View", admin_booking_path(booking), class: "text-brand-primary hover:text-red-700 font-medium" %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <div class="text-center py-10">
+            <p class="text-sm text-neutral-text-secondary">No confirmed bookings yet.</p>
+          </div>
+        <% end %>
+      </div>
     </div>
   </div>
 </div>

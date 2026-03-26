@@ -1,0 +1,128 @@
+<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
+  <!-- Back link -->
+  <div class="mb-5">
+    <%= link_to admin_bookings_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600" do %>
+      <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Back to All Bookings
+    <% end %>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-y-10 lg:gap-x-10">
+    <!-- Main Content -->
+    <div class="lg:col-span-2 space-y-8">
+      <!-- Header -->
+      <div class="flex justify-between items-start">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">Booking <%= @booking.confirmation_token %></h1>
+          <p class="text-sm text-gray-500">Created on <%= @booking.created_at.strftime("%d %b %Y at %H:%M") %></p>
+          <p class="text-sm text-blue-600 font-medium mt-1">Hotel: <%= @booking.hotel.name %></p>
+        </div>
+      </div>
+
+      <!-- Guest Details Card -->
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <h2 class="text-lg font-semibold text-gray-800">Guest Information</h2>
+        </div>
+        <div class="p-6">
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Guest Name</label>
+              <p class="text-gray-800 font-medium"><%= @booking.guest_name %></p>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
+              <p class="text-gray-800 font-medium"><%= @booking.guest_email %></p>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Phone Number</label>
+              <p class="text-gray-800 font-medium"><%= @booking.guest_phone %></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stay & Room Details Card -->
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <h2 class="text-lg font-semibold text-gray-800">Stay & Room Details</h2>
+        </div>
+        <div class="p-6 space-y-6">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Check-in</p>
+              <p class="text-gray-800 font-medium"><%= @booking.check_in.strftime("%d %b %Y") %></p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Check-out</p>
+              <p class="text-gray-800 font-medium"><%= @booking.check_out.strftime("%d %b %Y") %></p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Adults</p>
+              <p class="text-gray-800 font-medium"><%= @booking.adults %></p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Children</p>
+              <p class="text-gray-800 font-medium"><%= @booking.children %></p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider">Rooms</h3>
+            <% @booking.booking_rooms.each do |room| %>
+              <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div>
+                  <p class="font-bold text-gray-800"><%= room.room_type.name %></p>
+                  <p class="text-xs text-gray-500"><%= room.quantity %> room(s)</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-bold text-blue-600">MYR <%= room.subtotal %></p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+      <!-- Status Card -->
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6">
+        <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Status Summary</h3>
+        <div class="space-y-4">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-500">Booking Status</span>
+            <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium 
+              <%= case @booking.status
+                  when 'confirmed' then 'bg-green-100 text-green-800'
+                  when 'pending' then 'bg-yellow-100 text-yellow-800'
+                  when 'cancelled' then 'bg-red-100 text-red-800'
+                  else 'bg-gray-100 text-gray-800'
+                  end %>">
+              <%= @booking.status.titleize %>
+            </span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-500">Payment Status</span>
+            <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium 
+              <%= case @booking.payment_status
+                  when 'captured' then 'bg-green-100 text-green-800'
+                  when 'pending' then 'bg-yellow-100 text-yellow-800'
+                  when 'failed' then 'bg-red-100 text-red-800'
+                  else 'bg-gray-100 text-gray-800'
+                  end %>">
+              <%= @booking.payment_status&.titleize || 'N/A' %>
+            </span>
+          </div>
+          <div class="pt-4 border-t border-gray-100">
+            <div class="flex justify-between items-center">
+              <span class="text-base font-bold text-gray-800">Total Amount</span>
+              <span class="text-xl font-bold text-blue-600">MYR <%= @booking.total_amount %></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

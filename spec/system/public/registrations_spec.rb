@@ -11,16 +11,16 @@ RSpec.describe 'Hotel Registration', type: :system do
   it 'allows a new hotel to register' do
     visit register_path
 
-    fill_in 'Business / Company Name', with: 'Green Hotel Group'
+    fill_in 'Company / Group Name', with: 'Green Hotel Group'
     fill_in 'Hotel Name', with: 'Green Hotel KL'
     fill_in 'City', with: 'Kuala Lumpur'
     fill_in 'Full Name', with: 'Sarah Lim'
-    fill_in 'Email Address', with: 'sarah@example.com'
+    fill_in 'Work Email', with: 'sarah@example.com'
     fill_in 'Password', with: 'password123'
 
-    click_button 'Create Account'
+    click_button 'Register Hotel'
 
-    expect(page).to have_content('Welcome! Your hotel account has been created.')
+    expect(page).to have_content('Welcome to WAStays!')
     expect(page).to have_current_path(hotel_dashboard_path)
     
     user = User.find_by(email: 'sarah@example.com')
@@ -34,7 +34,7 @@ RSpec.describe 'Hotel Registration', type: :system do
     visit register_path
 
     fill_in 'Full Name', with: '' # Invalid
-    click_button 'Create Account'
+    click_button 'Register Hotel'
 
     expect(page).to have_content("Name can't be blank")
   end

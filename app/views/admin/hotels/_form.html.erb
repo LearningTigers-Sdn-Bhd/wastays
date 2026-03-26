@@ -1,0 +1,57 @@
+<%= form_with model: [:admin, hotel], local: true, class: "space-y-6" do |f| %>
+  <% if hotel.errors.any? %>
+    <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+      <h3 class="font-bold mb-1">Could not save hotel:</h3>
+      <ul class="list-disc ps-5 space-y-1">
+        <% hotel.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="grid sm:grid-cols-2 gap-4">
+    <div class="sm:col-span-2">
+      <label for="name" class="block text-sm font-medium mb-2 text-gray-800">Hotel Name</label>
+      <%= f.text_field :name, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+    </div>
+
+    <div class="sm:col-span-2">
+      <label for="address" class="block text-sm font-medium mb-2 text-gray-800">Address</label>
+      <%= f.text_area :address, rows: 2, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+    </div>
+
+    <div>
+      <label for="city" class="block text-sm font-medium mb-2 text-gray-800">City</label>
+      <%= f.text_field :city, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+    </div>
+
+    <div>
+      <label for="country" class="block text-sm font-medium mb-2 text-gray-800">Country</label>
+      <%= f.text_field :country, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+    </div>
+
+    <div>
+      <label for="star_rating" class="block text-sm font-medium mb-2 text-gray-800">Star Rating</label>
+      <%= f.select :star_rating, (1..5).to_a, { include_blank: "Select Rating" }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+    </div>
+
+    <div>
+      <label for="status" class="block text-sm font-medium mb-2 text-gray-800">Status</label>
+      <%= f.select :status, Hotel::STATUSES.map { |s| [s.titleize, s] }, {}, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+    </div>
+
+    <% unless hotel.persisted? %>
+      <div class="sm:col-span-2">
+        <label for="account_id" class="block text-sm font-medium mb-2 text-gray-800">Assign to Account</label>
+        <%= f.collection_select :account_id, Account.all, :id, :name, { include_blank: "Auto-assign or Create New" }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+        <p class="mt-2 text-xs text-gray-500 italic">If left blank, the system will assign to the first available account or create a default one.</p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="pt-6 border-t border-gray-100 flex justify-end gap-x-2">
+    <%= link_to "Cancel", admin_hotels_path, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none" %>
+    <%= f.submit class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
+  </div>
+<% end %>

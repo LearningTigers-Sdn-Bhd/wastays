@@ -1,0 +1,119 @@
+<div class="space-y-6 pb-12">
+  <!-- Page Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-y-4">
+    <div>
+      <nav class="flex mb-2" aria-label="Breadcrumb">
+        <ol class="flex items-center whitespace-nowrap min-w-0">
+          <li class="flex items-center text-sm text-neutral-text-secondary">
+            <%= link_to "Dashboard", hotel_dashboard_path, class: "hover:text-brand-primary" %>
+            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="text-sm font-semibold text-brand-primary truncate" aria-current="page">
+            Rates & Inventory
+          </li>
+        </ol>
+      </nav>
+      <h1 class="text-2xl font-bold text-neutral-text-primary">Rates & Inventory Overview</h1>
+      <p class="text-sm text-neutral-text-secondary">Monitor and manage daily rates and availability across all room types.</p>
+    </div>
+
+    <div class="flex items-center bg-neutral-bg p-1 rounded-lg border border-neutral-border shadow-sm">
+      <%= link_to hotel_inventory_index_path(start_date: @start_date - 14.days), class: "p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      <% end %>
+      <div class="px-4 text-center">
+        <span class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-0.5">Date Range</span>
+        <span class="block text-xs font-black text-neutral-text-primary uppercase tracking-tighter">
+          <%= @start_date.strftime("%b %d") %> - <%= @end_date.strftime("%b %d, %Y") %>
+        </span>
+      </div>
+      <%= link_to hotel_inventory_index_path(start_date: @start_date + 14.days), class: "p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Matrix Table -->
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-neutral-bg/50">
+          <tr>
+            <th class="sticky left-0 z-10 px-6 py-4 bg-white border-b border-r border-neutral-border min-w-[240px]">
+              <span class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest">Room Type / Date</span>
+            </th>
+            <% (@start_date..@end_date).each do |date| %>
+              <th class="px-4 py-3 text-center border-b border-r border-neutral-border last:border-r-0 min-w-[100px]">
+                <span class="block text-[10px] font-black uppercase tracking-widest <%= date == Date.today ? 'text-brand-primary' : 'text-neutral-text-secondary' %>"><%= date.strftime("%a") %></span>
+                <span class="block text-sm font-bold <%= date == Date.today ? 'text-brand-primary' : 'text-neutral-text-primary' %>"><%= date.strftime("%d %b") %></span>
+              </th>
+            <% end %>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-border">
+          <% @room_types.each do |rt| %>
+            <tr>
+              <td class="sticky left-0 z-10 px-6 py-4 bg-white border-r border-neutral-border group">
+                <div class="flex flex-col">
+                  <span class="text-sm font-bold text-neutral-text-primary group-hover:text-brand-primary transition-colors"><%= rt.name %></span>
+                  <div class="flex gap-x-2 mt-1">
+                    <%= link_to "Rates", hotel_room_type_rates_path(rt), class: "text-[9px] font-black uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary" %>
+                    <span class="text-neutral-border text-[9px]">•</span>
+                    <%= link_to "Inventory", hotel_room_type_inventories_path(rt), class: "text-[9px] font-black uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary" %>
+                  </div>
+                </div>
+              </td>
+              
+              <% (@start_date..@end_date).each do |date| %>
+                <td class="px-2 py-4 text-center border-r border-neutral-border last:border-r-0 hover:bg-neutral-bg transition-colors">
+                  <% 
+                    inv = @inventory_matrix[rt.id][date]
+                    rate = @rates_matrix[rt.id][date]
+                    
+                    quantity = inv&.quantity || rt.quantity
+                    status = inv&.status || 'open'
+                    price = rate&.price || rt.base_price
+                    
+                    is_closed = (status == 'closed' || quantity <= 0)
+                  %>
+                  
+                  <div class="flex flex-col items-center">
+                    <span class="text-xs font-black <%= is_closed ? 'text-status-error' : 'text-neutral-text-primary' %>">
+                      <%= quantity %> <span class="text-[8px] font-black uppercase tracking-tight text-neutral-text-secondary ml-0.5">Left</span>
+                    </span>
+                    <span class="mt-1.5 text-[11px] font-bold text-brand-primary">
+                      RM<%= number_with_precision(price, precision: 0) %>
+                    </span>
+                    
+                    <% if is_closed %>
+                      <div class="mt-2 w-1.5 h-1.5 rounded-full bg-status-error"></div>
+                    <% end %>
+                  </div>
+                </td>
+              <% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- Legend -->
+  <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-2">
+    <div class="flex items-center gap-x-1.5">
+      <span class="text-[10px] font-black text-neutral-text-secondary uppercase">Legend:</span>
+    </div>
+    <div class="flex items-center gap-x-1.5">
+      <div class="w-2.5 h-2.5 rounded bg-white border border-neutral-border"></div>
+      <span class="text-[10px] font-bold text-neutral-text-secondary uppercase">Available</span>
+    </div>
+    <div class="flex items-center gap-x-1.5">
+      <div class="w-1.5 h-1.5 rounded-full bg-status-error"></div>
+      <span class="text-[10px] font-bold text-neutral-text-secondary uppercase tracking-tight">Closed / Sold Out</span>
+    </div>
+    <div class="flex items-center gap-x-1.5">
+      <span class="text-[10px] font-black text-brand-primary uppercase">RM</span>
+      <span class="text-[10px] font-bold text-neutral-text-secondary uppercase">Daily Rate</span>
+    </div>
+  </div>
+</div>

@@ -68,6 +68,11 @@ if Rails.env.development?
     h.status = 'approved'
   end
 
+  PropertyPolicy.find_or_create_by!(hotel: hotel) do |policy|
+    policy.check_in_time = '15:00'
+    policy.check_out_time = '12:00'
+  end
+
   superadmin = User.find_or_create_by!(email: 'superadmin@wastays.com') do |u|
     u.name = 'Super Admin'
     u.password = 'password'
@@ -86,4 +91,159 @@ if Rails.env.development?
 
   UserRole.find_or_create_by!(user: owner, role: hotel_owner_role)
   UserHotelAccess.find_or_create_by!(user: owner, hotel: hotel, role: hotel_owner_role)
+
+  # Additional hotels for richer demo data
+  extra_hotels = [
+    {
+      name: 'Aurora Hill Retreat',
+      city: 'Kuala Terengganu',
+      country: 'Malaysia',
+      description: 'Clifftop retreat with panoramic Gulf views.',
+      rooms: [
+        { name: 'Skyline Suite', description: 'Suite with wraparound balcony', adults: 2, children: 1, quantity: 6, base_price: 220.00 },
+        { name: 'Terrace Studio', description: 'Studio with terrace lounge and work desk', adults: 2, children: 0, quantity: 8, base_price: 180.00 }
+      ]
+    },
+    {
+      name: 'Serene Harbor Inn',
+      city: 'George Town',
+      country: 'Malaysia',
+      description: 'Boutique stay beside the Penang waterfront.',
+      rooms: [
+        { name: 'Harbor Deluxe', description: 'Large room with harbor view', adults: 2, children: 1, quantity: 9, base_price: 190.00 },
+        { name: 'Lantern Loft', description: 'Artistically styled loft with twin beds', adults: 2, children: 2, quantity: 5, base_price: 175.00 }
+      ]
+    }
+  ]
+
+  def seed_room_calendar(room_type, start_date:, end_date:)
+    (start_date..end_date).each do |date|
+      RoomInventory.find_or_create_by!(room_type: room_type, date: date) do |ri|
+        ri.quantity = room_type.quantity
+        ri.status = 'open'
+      end
+
+      RoomRate.find_or_create_by!(room_type: room_type, date: date) do |rr|
+        rr.price = room_type.base_price + (date.saturday? || date.sunday? ? 40.00 : 0.00)
+        rr.currency = 'MYR'
+      end
+    end
+  end
+
+  extra_hotels.each do |hotel_attrs|
+    extra = Hotel.find_or_create_by!(account: account, name: hotel_attrs[:name]) do |h|
+      h.city = hotel_attrs[:city]
+      h.country = hotel_attrs[:country]
+      h.status = 'approved'
+    end
+
+    PropertyPolicy.find_or_create_by!(hotel: extra) do |policy|
+      policy.check_in_time = '14:00'
+      policy.check_out_time = '12:00'
+    end
+
+      hotel_attrs[:rooms].each do |rt_attrs|
+        room = RoomType.find_or_create_by!(hotel: extra, name: rt_attrs[:name]) do |rt|
+          rt.description = rt_attrs[:description]
+          rt.max_adults = rt_attrs[:adults]
+          rt.max_children = rt_attrs[:children]
+          rt.quantity = rt_attrs[:quantity]
+          rt.base_price = rt_attrs[:base_price]
+        end
+
+        seed_room_calendar(room, start_date: Date.today - 5.days, end_date: Date.today + 35.days)
+      end
+    end
+
+  # Seed booking history for arrivals/demo guests
+  def create_demo_booking(hotel:, room_type:, guest_attrs:, check_in:, nights:, status:, pre_status:, guarantee:, deposit:)
+    booking = Booking.create!(
+      hotel: hotel,
+      guest_name: guest_attrs[:name],
+      guest_email: guest_attrs[:email],
+      guest_phone: guest_attrs[:phone],
+      check_in: check_in,
+      check_out: check_in + nights.days,
+      adults: guest_attrs[:adults],
+      children: guest_attrs[:children] || 0,
+      currency: 'MYR',
+      total_amount: room_type.base_price * nights,
+      status: status,
+      payment_status: 'captured'
+    )
+
+    BookingRoom.create!(booking: booking, room_type: room_type, quantity: 1, subtotal: room_type.base_price * nights)
+
+    guest = ActiveRecord::Encryption.without_encryption do
+      Guest.find_or_create_by!(email: guest_attrs[:email]) do |g|
+        g.name = guest_attrs[:name]
+        g.phone = guest_attrs[:phone]
+      end
+    end
+
+    BookingGuest.create!(booking: booking, guest: guest, is_primary: true)
+
+    PreCheckin.create!(
+      booking: booking,
+      status: pre_status,
+      document_status: pre_status == 'completed' ? 'verified' : 'pending',
+      signature_status: pre_status == 'completed' ? 'signed' : 'pending'
+    )
+
+    booking.update!(guarantee_method: guarantee, deposit_status: deposit)
+
+    booking
+  end
+
+  base_room = RoomType.find_or_create_by!(hotel: hotel, name: 'Deluxe Twin') do |rt|
+    rt.description ||= 'A comfortable room with two twin beds, perfect for friends or colleagues.'
+    rt.max_adults ||= 2
+    rt.max_children ||= 1
+    rt.quantity ||= 10
+    rt.base_price ||= 150.00
+  end
+
+  seed_room_calendar(base_room, start_date: Date.today - 5.days, end_date: Date.today + 30.days)
+
+  create_demo_booking(
+    hotel: hotel,
+    room_type: base_room,
+    guest_attrs: { name: 'Aisha Tan', email: 'aisha.tan@example.com', phone: '+60123456789', adults: 2 },
+    check_in: Date.today - 7,
+    nights: 2,
+    status: 'completed',
+    pre_status: 'completed',
+    guarantee: 'pre_checkin_completed',
+    deposit: 'collected'
+  )
+
+  create_demo_booking(
+    hotel: hotel,
+    room_type: base_room,
+    guest_attrs: { name: 'Ravi Menon', email: 'ravi.menon@example.com', phone: '+60129876543', adults: 1 },
+    check_in: Date.today,
+    nights: 3,
+    status: 'confirmed',
+    pre_status: 'pending',
+    guarantee: 'manual_at_hotel',
+    deposit: 'pending_at_hotel'
+  )
+
+  create_demo_booking(
+    hotel: hotel,
+    room_type: base_room,
+    guest_attrs: { name: 'Elena Cruz', email: 'elena.cruz@example.com', phone: '+60123333333', adults: 2 },
+    check_in: Date.today + 4,
+    nights: 2,
+    status: 'confirmed',
+    pre_status: 'pending',
+    guarantee: 'manual_at_hotel',
+    deposit: 'pending_at_hotel'
+  )
+
+  # Create margin rules if missing
+  MarginRule.find_or_create_by!(settable: nil) do |mr|
+    mr.rate = 12.0
+    mr.status = 'active'
+  end
 end

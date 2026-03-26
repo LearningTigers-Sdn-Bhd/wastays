@@ -1,0 +1,206 @@
+<div class="bg-neutral-bg min-h-screen pb-12">
+  <!-- Checkout Header -->
+  <div class="bg-white border-b border-neutral-border py-6 shadow-sm">
+    <div class="max-w-[85rem] mx-auto px-4 flex flex-col md:flex-row md:items-center md:justify-between gap-y-4">
+      <div>
+        <h1 class="text-2xl font-black text-neutral-text-primary tracking-tight">Complete Your Booking</h1>
+        <p class="text-sm text-neutral-text-secondary mt-1">Please provide your details to secure your room.</p>
+      </div>
+      
+      <!-- Hold Timer -->
+      <div class="inline-flex items-center gap-x-2 bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-status-error">
+        <svg class="w-4 h-4 animate-pulse" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span class="text-xs font-black uppercase tracking-widest">Hold expires in: <span id="countdown"><%= ((@quote.expires_at - Time.current) / 60).to_i %>m</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Stepper -->
+  <div class="max-w-[85rem] mx-auto px-4 py-8">
+    <div class="flex items-center justify-center max-w-2xl mx-auto mb-12">
+      <div class="flex flex-col items-center relative">
+        <div class="w-8 h-8 rounded-full bg-status-success text-white flex items-center justify-center text-xs font-bold ring-4 ring-green-50 shadow-sm">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <span class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mt-2 absolute -bottom-6 whitespace-nowrap">Room</span>
+      </div>
+      <div class="flex-1 h-0.5 bg-brand-primary mx-4"></div>
+      <div class="flex flex-col items-center relative">
+        <div class="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center text-xs font-black ring-4 ring-red-50 shadow-md">2</div>
+        <span class="text-[10px] font-black text-brand-primary uppercase tracking-widest mt-2 absolute -bottom-6 whitespace-nowrap">Details</span>
+      </div>
+      <div class="flex-1 h-0.5 bg-neutral-border mx-4"></div>
+      <div class="flex flex-col items-center relative opacity-50">
+        <div class="w-8 h-8 rounded-full bg-neutral-surface border-2 border-neutral-border text-neutral-text-secondary flex items-center justify-center text-xs font-bold">3</div>
+        <span class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mt-2 absolute -bottom-6 whitespace-nowrap">Payment</span>
+      </div>
+    </div>
+
+    <%= form_with url: mock_payment_path, method: :post, class: "max-w-[85rem] mx-auto" do |f| %>
+      <%= f.hidden_field :quote_token, value: @quote.token %>
+      
+      <div class="grid lg:grid-cols-12 gap-8">
+        <!-- Forms Area -->
+        <div class="lg:col-span-8 space-y-6">
+          <!-- Guest Information -->
+          <div class="card p-6 md:p-8">
+            <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
+              <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Guest Information
+            </h2>
+            
+            <div class="grid sm:grid-cols-2 gap-6">
+              <div class="sm:col-span-2">
+                <label for="name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Full Name (as per ID/Passport)</label>
+                <%= f.text_field "guest_details[name]", id: "name", required: true, placeholder: "John Doe", class: "form-input py-3" %>
+              </div>
+              <div>
+                <label for="email" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Email Address</label>
+                <%= f.email_field "guest_details[email]", id: "email", required: true, placeholder: "john@example.com", class: "form-input py-3" %>
+              </div>
+              <div>
+                <label for="phone" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">WhatsApp Number</label>
+                <%= f.telephone_field "guest_details[phone]", id: "phone", required: true, placeholder: "+60 12-345 6789", class: "form-input py-3" %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Selection -->
+          <div class="card p-6 md:p-8">
+            <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
+              <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              Secure Payment Method
+            </h2>
+            
+            <div class="space-y-4">
+              <label class="relative block cursor-pointer group">
+                <input type="radio" name="payment_method" value="online" checked class="peer sr-only">
+                <div class="p-4 md:p-5 bg-white border-2 border-neutral-border rounded-xl peer-checked:border-brand-primary peer-checked:bg-red-50/30 transition-all">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-x-4">
+                      <div class="w-10 h-10 rounded-full bg-neutral-bg flex items-center justify-center text-brand-primary peer-checked:bg-brand-primary peer-checked:text-white">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                      </div>
+                      <div>
+                        <p class="font-bold text-neutral-text-primary">Online Payment / Cards</p>
+                        <p class="text-xs text-neutral-text-secondary">FPX, Visa, Mastercard, E-Wallets</p>
+                      </div>
+                    </div>
+                    <div class="h-6 w-6 rounded-full border-2 border-neutral-border flex items-center justify-center peer-checked:border-brand-primary">
+                      <div class="h-3 w-3 rounded-full bg-brand-primary opacity-0 peer-checked:opacity-100"></div>
+                    </div>
+                  </div>
+                </div>
+              </label>
+            </div>
+            
+            <p class="mt-6 text-xs text-neutral-text-secondary text-center">
+              Your connection is encrypted. We do not store your full card details.
+            </p>
+          </div>
+
+          <div class="flex items-center justify-between pt-4">
+            <%= link_to "Back to hotel", hotel_path(@hotel, request.query_parameters), class: "text-sm font-bold text-neutral-text-secondary hover:text-brand-primary" %>
+            <%= f.submit "Confirm & Pay Now", class: "btn btn-gradient px-12 py-4 text-base font-black shadow-xl shadow-brand-primary/20" %>
+          </div>
+        </div>
+
+        <!-- Summary Sidebar -->
+        <aside class="lg:col-span-4">
+          <div class="sticky top-[130px] space-y-6">
+            <div class="card overflow-hidden">
+              <div class="p-5 border-b border-neutral-border bg-neutral-bg/50">
+                <h3 class="text-xs font-black text-neutral-text-secondary uppercase tracking-widest">Booking Summary</h3>
+              </div>
+              <div class="p-6">
+                <div class="flex gap-x-4 mb-6">
+                  <div class="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-neutral-border shadow-sm">
+                    <% if @hotel.room_types.first&.photos&.attached? %>
+                      <%= image_tag @hotel.room_types.first.photos.first, class: "w-full h-full object-cover" %>
+                    <% else %>
+                      <div class="w-full h-full bg-neutral-bg flex items-center justify-center text-neutral-border">
+                        <svg class="w-8 h-8" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9 12 2l9 9"/><path d="M9 22V12h6v10"/><path d="M21 11v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V11"/></svg>
+                      </div>
+                    <% end %>
+                  </div>
+                  <div>
+                    <h4 class="font-extrabold text-neutral-text-primary leading-tight"><%= @hotel.name %></h4>
+                    <p class="text-xs text-neutral-text-secondary mt-1"><%= @hotel.city %></p>
+                    <div class="flex text-amber-400 mt-1">
+                      <% @hotel.star_rating.to_i.times do %>
+                        <svg class="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="space-y-4 text-sm border-t border-b border-neutral-bg py-6 mb-6">
+                  <div class="flex justify-between">
+                    <span class="text-neutral-text-secondary">Check-in</span>
+                    <span class="font-bold text-neutral-text-primary"><%= @quote.check_in.strftime("%a, %b %d") %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-neutral-text-secondary">Check-out</span>
+                    <span class="font-bold text-neutral-text-primary"><%= @quote.check_out.strftime("%a, %b %d") %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-neutral-text-secondary">Stay Length</span>
+                    <span class="font-bold text-neutral-text-primary"><%= pluralize((@quote.check_out - @quote.check_in).to_i, 'night') %></span>
+                  </div>
+                </div>
+
+                <div class="space-y-3 mb-8">
+                  <% @quote_items.each do |item| %>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-neutral-text-secondary font-medium"><%= item.quantity %>x <%= item.room_type_snapshot['name'] %></span>
+                      <span class="text-neutral-text-primary font-bold">RM <%= number_with_precision(item.subtotal, precision: 2) %></span>
+                    </div>
+                  <% end %>
+                </div>
+
+                <div class="space-y-4 pt-6 border-t border-neutral-border">
+                  <div class="flex justify-between items-center text-xl">
+                    <span class="font-black text-neutral-text-primary">Total</span>
+                    <span class="font-black text-brand-primary">RM <%= number_with_precision(@quote.total_amount, precision: 2) %></span>
+                  </div>
+                  <p class="text-[10px] text-neutral-text-secondary italic text-right leading-tight">All-in price including taxes and service charges.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card p-5 bg-neutral-surface border-neutral-border">
+              <h4 class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mb-3">Cancellation Policy</h4>
+              <p class="text-xs text-neutral-text-secondary leading-relaxed">
+                <%= @quote.cancellation_policy_snapshot || "Standard cancellation policy applies. Refund eligibility depends on your check-in date." %>
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const expiryTime = new Date("<%= @quote.expires_at.iso8601 %>").getTime();
+    const countdownElement = document.getElementById('countdown');
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = expiryTime - now;
+
+      if (distance < 0) {
+        clearInterval(timer);
+        countdownElement.innerHTML = "Expired";
+        window.location.reload();
+        return;
+      }
+
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      countdownElement.innerHTML = minutes + "m " + seconds + "s";
+    }, 1000);
+  })();
+</script>

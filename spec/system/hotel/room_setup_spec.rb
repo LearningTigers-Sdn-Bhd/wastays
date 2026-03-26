@@ -16,9 +16,9 @@ RSpec.describe 'Room Setup', type: :system do
     
     # Login
     visit login_path
-    fill_in 'Email', with: user.email
+    fill_in 'Email address', with: user.email
     fill_in 'Password', with: 'password123'
-    click_button 'Login'
+    click_button 'Sign In'
   end
 
   it 'allows the user to add a room type' do
@@ -30,8 +30,8 @@ RSpec.describe 'Room Setup', type: :system do
       click_link 'Update'
     end
 
-    expect(page).to have_content('No room types added yet.')
-    click_link 'Add Room Type'
+    expect(page).to have_content('No room types found')
+    first(:link, 'Add Room Type').click
 
     fill_in 'Room Type Name', with: 'Deluxe Suite'
     fill_in 'Max Adults', with: 2

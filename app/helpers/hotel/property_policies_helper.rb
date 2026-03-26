@@ -1,2 +1,0 @@
-module Hotel::PropertyPoliciesHelper
-end

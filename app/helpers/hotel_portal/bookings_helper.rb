@@ -1,0 +1,2 @@
+module HotelPortal::BookingsHelper
+end

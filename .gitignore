@@ -20,3 +20,4 @@
 /tmp/uploads/*
 !/tmp/uploads/
 !/tmp/uploads/.keep
+/config/credentials/development.key
