@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_26_132227) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_27_103000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -67,6 +67,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_26_132227) do
     t.bigint "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "edit_history", default: [], null: false
     t.index ["booking_id"], name: "index_booking_notes_on_booking_id"
     t.index ["user_id"], name: "index_booking_notes_on_user_id"
   end
@@ -334,6 +335,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_26_132227) do
     t.string "role"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "time_zone", default: "Kuala Lumpur", null: false
     t.index ["account_id"], name: "index_users_on_account_id"
     t.index ["email"], name: "index_users_on_email"
   end

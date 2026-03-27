@@ -16,12 +16,6 @@
       <h1 class="text-2xl font-bold text-neutral-text-primary">Operational Control Center</h1>
     </div>
 
-    <div class="inline-flex gap-x-2">
-      <a class="btn btn-secondary" href="<%= admin_audit_logs_path %>">
-        <svg class="w-4 h-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export Audit
-      </a>
-    </div>
   </div>
 
   <!-- Alert Strip (Urgent Items) -->
@@ -60,41 +54,36 @@
   <% end %>
 
   <!-- KPI Row -->
-  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-    <div class="card p-4 md:p-5">
-      <div class="flex items-center gap-x-2">
-        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Revenue (MTD)</p>
+  <div class="grid sm:grid-cols-2 gap-4 sm:gap-6">
+    <div class="card p-4 md:p-5 space-y-3">
+      <div>
+        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Revenue & Margin (MTD)</p>
       </div>
-      <div class="mt-1 flex items-center gap-x-2">
-        <h3 class="text-xl sm:text-2xl font-bold text-neutral-text-primary">RM <%= number_with_precision(@revenue_this_month, precision: 2) %></h3>
-      </div>
-    </div>
-
-    <div class="card p-4 md:p-5">
-      <div class="flex items-center gap-x-2">
-        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Margin (MTD)</p>
-        <span class="badge badge-success">RM</span>
-      </div>
-      <div class="mt-1 flex items-center gap-x-2">
-        <h3 class="text-xl sm:text-2xl font-bold text-neutral-text-primary">RM <%= number_with_precision(@margin_this_month, precision: 2) %></h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3 bg-neutral-bg rounded-2xl">
+          <p class="text-[10px] uppercase text-neutral-text-secondary tracking-wider">Revenue</p>
+          <p class="text-xl font-bold text-neutral-text-primary mt-1">RM <%= number_with_precision(@revenue_this_month, precision: 2) %></p>
+        </div>
+        <div class="p-3 bg-neutral-bg rounded-2xl">
+          <p class="text-[10px] uppercase text-neutral-text-secondary tracking-wider">Margin</p>
+          <p class="text-xl font-bold text-neutral-text-primary mt-1">RM <%= number_with_precision(@margin_this_month, precision: 2) %></p>
+        </div>
       </div>
     </div>
 
-    <div class="card p-4 md:p-5">
-      <div class="flex items-center gap-x-2">
-        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Confirmed Bookings</p>
+    <div class="card p-4 md:p-5 space-y-3">
+      <div>
+        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Bookings & Hotels</p>
       </div>
-      <div class="mt-1 flex items-center gap-x-2">
-        <h3 class="text-xl sm:text-2xl font-bold text-neutral-text-primary"><%= @total_bookings_count %></h3>
-      </div>
-    </div>
-
-    <div class="card p-4 md:p-5">
-      <div class="flex items-center gap-x-2">
-        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Active Hotels</p>
-      </div>
-      <div class="mt-1 flex items-center gap-x-2">
-        <h3 class="text-xl sm:text-2xl font-bold text-neutral-text-primary"><%= @hotels_count %></h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3 bg-neutral-bg rounded-2xl">
+          <p class="text-[10px] uppercase text-neutral-text-secondary tracking-wider">Confirmed Bookings</p>
+          <p class="text-xl font-bold text-neutral-text-primary mt-1"><%= @total_bookings_count %></p>
+        </div>
+        <div class="p-3 bg-neutral-bg rounded-2xl">
+          <p class="text-[10px] uppercase text-neutral-text-secondary tracking-wider">Active Hotels</p>
+          <p class="text-xl font-bold text-neutral-text-primary mt-1"><%= @hotels_count %></p>
+        </div>
       </div>
     </div>
   </div>

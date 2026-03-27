@@ -74,4 +74,6 @@ Rails.application.configure do
   config.active_record.encryption.primary_key = "H17mvYQYCWx1Np09Q79m9znsb8bNhIlH"
   config.active_record.encryption.deterministic_key = "H17mvYQYCWx1Np09Q79m9znsb8bNhIlH"
   config.active_record.encryption.key_derivation_salt = "H17mvYQYCWx1Np09Q79m9znsb8bNhIlH"
+
+  config.hosts << "wastays.jesseltonpixel.com"
 end

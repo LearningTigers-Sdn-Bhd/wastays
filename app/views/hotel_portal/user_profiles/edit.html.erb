@@ -28,6 +28,12 @@
           <%= f.email_field :email, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
         </div>
 
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">Timezone</label>
+          <%= f.time_zone_select :time_zone, ActiveSupport::TimeZone.all, { default: User::DEFAULT_TIME_ZONE }, { class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" } %>
+          <p class="mt-1 text-xs text-gray-500">Default timezone is UTC+8 (<%= User::DEFAULT_TIME_ZONE %>).</p>
+        </div>
+
         <div class="pt-6 border-t border-gray-100">
           <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Change Password</h3>
           <p class="text-xs text-gray-500 mb-4">Leave blank if you don't want to change your password.</p>

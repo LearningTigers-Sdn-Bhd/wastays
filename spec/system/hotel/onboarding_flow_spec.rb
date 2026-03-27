@@ -57,6 +57,7 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
 
     # 6. Superadmin Approval
     # Create superadmin
+    Capybara.reset_sessions!
     superadmin = create(:user, :superadmin, email: 'admin@wastays.com')
     visit login_path
     fill_in 'Email address', with: superadmin.email

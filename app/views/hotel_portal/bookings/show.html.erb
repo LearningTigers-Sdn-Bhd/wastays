@@ -18,13 +18,48 @@
         </div>
         <div class="flex gap-x-2">
           <% if @booking.status == 'confirmed' %>
-            <%= button_to "Check In Guest", check_in_hotel_booking_path(@booking), method: :post, data: { turbo_confirm: "Are you sure you want to check in this guest?", turbo_confirm_title: "Confirm Check In" }, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
+            <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-bold rounded-lg border border-transparent bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-100 hover:bg-emerald-700" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
+              Check In Guest
+            </button>
             <%= button_to "Cancel Booking", cancel_hotel_booking_path(@booking), method: :post, data: { turbo_confirm: "Are you sure you want to cancel this booking?", turbo_confirm_title: "Cancel Booking", turbo_confirm_color: "red" }, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 bg-white text-red-600 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none" %>
           <% elsif @booking.status == 'checked_in' %>
-            <%= button_to "Check Out Guest", check_out_hotel_booking_path(@booking), method: :post, data: { turbo_confirm: "Are you sure you want to check out this guest?", turbo_confirm_title: "Confirm Check Out" }, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white shadow-sm hover:bg-green-700 disabled:opacity-50 disabled:pointer-events-none" %>
+            <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-bold rounded-lg border border-transparent bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-100 hover:bg-indigo-700" onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').showModal()">
+              Check Out Guest
+            </button>
+            <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
+              Edit Check-In Time
+            </button>
           <% end %>
         </div>
       </div>
+
+      <dialog id="check-in-modal-show-<%= @booking.id %>" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,28rem)] max-w-md backdrop:bg-black/40" onclick="if(event.target===this){this.close()}">
+        <div class="p-5 bg-white rounded-xl">
+          <h3 class="text-base font-bold text-gray-800"><%= @booking.checked_in? ? "Edit Check-In Date & Time" : "Confirm Check-In" %></h3>
+          <p class="text-xs text-gray-500 mt-1">Timezone: <%= current_user.time_zone %></p>
+          <%= form_with url: check_in_hotel_booking_path(@booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
+            <%= f.datetime_local_field :checked_in_at, value: (@booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
+            <div class="flex items-center justify-end gap-x-2">
+              <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').close()">Cancel</button>
+              <%= f.submit (@booking.checked_in? ? "Save Check-In Time" : "Confirm Check-In"), class: "py-2 px-3 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700", data: { turbo_confirm: "Proceed with check-in?", turbo_confirm_title: "Check In Guest" } %>
+            </div>
+          <% end %>
+        </div>
+      </dialog>
+
+      <dialog id="check-out-modal-show-<%= @booking.id %>" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,28rem)] max-w-md backdrop:bg-black/40" onclick="if(event.target===this){this.close()}">
+        <div class="p-5 bg-white rounded-xl">
+          <h3 class="text-base font-bold text-gray-800">Confirm Check-Out</h3>
+          <p class="text-xs text-gray-500 mt-1">Timezone: <%= current_user.time_zone %></p>
+          <%= form_with url: check_out_hotel_booking_path(@booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
+            <%= f.datetime_local_field :checked_out_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
+            <div class="flex items-center justify-end gap-x-2">
+              <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').close()">Cancel</button>
+              <%= f.submit "Confirm Check-Out", class: "py-2 px-3 text-sm font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700", data: { turbo_confirm: "Proceed with check-out?", turbo_confirm_title: "Check Out Guest" } %>
+            </div>
+          <% end %>
+        </div>
+      </dialog>
 
       <!-- Guest Details Card -->
       <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -52,45 +87,51 @@
         </div>
       </div>
 
-      <!-- Stay & Room Details Card -->
-      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h2 class="text-lg font-semibold text-gray-800">Stay & Room Details</h2>
-        </div>
-        <div class="p-6 space-y-6">
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Check-in</p>
-              <p class="text-gray-800 font-medium"><%= @booking.check_in.strftime("%d %b %Y") %></p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Check-out</p>
-              <p class="text-gray-800 font-medium"><%= @booking.check_out.strftime("%d %b %Y") %></p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Adults</p>
-              <p class="text-gray-800 font-medium"><%= @booking.adults %></p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Children</p>
-              <p class="text-gray-800 font-medium"><%= @booking.children %></p>
-            </div>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <!-- Stay & Room Details Card -->
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-800">Stay & Room Details</h2>
           </div>
-
-          <div class="space-y-4">
-            <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider">Rooms</h3>
-            <% @booking_rooms.each do |room| %>
-              <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div>
-                  <p class="font-bold text-gray-800"><%= room.room_type_snapshot['name'] %></p>
-                  <p class="text-xs text-gray-500"><%= room.quantity %> room(s)</p>
-                </div>
-                <div class="text-right">
-                  <p class="font-bold text-blue-600">MYR <%= room.subtotal %></p>
-                </div>
+          <div class="p-6 space-y-6">
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Check-in</p>
+                <p class="text-gray-800 font-medium"><%= @booking.check_in.strftime("%d %b %Y") %></p>
               </div>
-            <% end %>
+              <div>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Check-out</p>
+                <p class="text-gray-800 font-medium"><%= @booking.check_out.strftime("%d %b %Y") %></p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Adults</p>
+                <p class="text-gray-800 font-medium"><%= @booking.adults %></p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Children</p>
+                <p class="text-gray-800 font-medium"><%= @booking.children %></p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider">Rooms</h3>
+              <% @booking_rooms.each do |room| %>
+                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div>
+                    <p class="font-bold text-gray-800"><%= room.room_type_snapshot['name'] %></p>
+                    <p class="text-xs text-gray-500"><%= room.quantity %> room(s)</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-bold text-blue-600">MYR <%= room.subtotal %></p>
+                  </div>
+                </div>
+              <% end %>
+            </div>
           </div>
+        </div>
+
+        <div id="booking_notes_panel">
+          <%= render "hotel_portal/bookings/internal_notes", booking: @booking %>
         </div>
       </div>
     </div>
@@ -117,18 +158,6 @@
               <%= @booking.status.titleize %>
             </span>
           </div>
-          <% if @booking.checked_in? %>
-            <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-500">Checked In At</span>
-              <span class="text-sm font-medium text-gray-800"><%= @booking.checked_in_at.strftime("%d %b %Y %H:%M") %></span>
-            </div>
-          <% end %>
-          <% if @booking.checked_out? && @booking.checked_out_at.present? %>
-            <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-500">Checked Out At</span>
-              <span class="text-sm font-medium text-gray-800"><%= @booking.checked_out_at.strftime("%d %b %Y %H:%M") %></span>
-            </div>
-          <% end %>
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-500">Payment Status</span>
             <% 
@@ -164,44 +193,8 @@
             Add Internal Note
           </button>
         </div>
-        </div>
-        </div>
-        </div>
+      </div>
+    </div>
+  </div>
 
-        <!-- Internal Notes -->
-        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-        <h2 class="text-lg font-semibold text-gray-800">Internal Notes</h2>
-        <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Hotel Staff Only</span>
-        </div>
-        <div class="p-6 space-y-6">
-        <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-        <% if @booking.booking_notes.any? %>
-          <% @booking.booking_notes.order(created_at: :desc).each do |note| %>
-            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-              <div class="flex justify-between items-start mb-2">
-                <span class="text-xs font-bold text-blue-800"><%= note.user.name %></span>
-                <span class="text-[10px] text-blue-600"><%= note.created_at.strftime("%d %b %Y %H:%M") %></span>
-              </div>
-              <p class="text-sm text-gray-800 whitespace-pre-wrap"><%= note.body %></p>
-            </div>
-          <% end %>
-        <% else %>
-          <p class="text-sm text-gray-500 text-center italic py-4">No internal notes for this booking.</p>
-        <% end %>
-        </div>
-
-        <div class="pt-6 border-t border-gray-100">
-        <%= form_with model: [:hotel, @booking, BookingNote.new], url: hotel_booking_booking_notes_path(@booking), local: true do |f| %>
-          <div>
-            <label class="block text-sm font-medium mb-2 text-gray-700">Add Note</label>
-            <%= f.text_area :body, rows: 3, placeholder: "Type internal note here...", class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-          </div>
-          <div class="mt-3 flex justify-end">
-            <%= f.submit "Save Note", class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 transition" %>
-          </div>
-        <% end %>
-        </div>
-        </div>
-        </div>
-        </div>
+</div>

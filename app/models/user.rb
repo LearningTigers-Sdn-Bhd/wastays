@@ -1,6 +1,8 @@
 class User < ApplicationRecord
   include AccountScopable
 
+  DEFAULT_TIME_ZONE = "Kuala Lumpur".freeze
+
   has_secure_password
 
   has_many :user_hotel_accesses, dependent: :destroy
@@ -13,8 +15,11 @@ class User < ApplicationRecord
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :name, presence: true
   validates :role, presence: true
+  validates :time_zone, inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }
 
   ROLES = %w[superadmin admin hotel_staff].freeze
+
+  before_validation :assign_default_time_zone
 
   def superadmin?
     role == "superadmin"
@@ -36,5 +41,11 @@ class User < ApplicationRecord
       # Check account-level permissions
       roles.joins(:permissions).where(permissions: { slug: permission_slug }).exists?
     end
+  end
+
+  private
+
+  def assign_default_time_zone
+    self.time_zone = DEFAULT_TIME_ZONE if time_zone.blank?
   end
 end

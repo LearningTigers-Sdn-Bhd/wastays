@@ -7,6 +7,7 @@ class ApplicationController < ActionController::Base
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
 
   helper_method :current_user, :logged_in?
+  around_action :use_user_time_zone
 
   private
 
@@ -66,6 +67,11 @@ class ApplicationController < ActionController::Base
   def store_forwarding_url
     return if [login_path, register_path].include?(request.path)
     session[:forwarding_url] = request.fullpath if request.get? && !request.xhr?
+  end
+
+  def use_user_time_zone(&block)
+    timezone = current_user&.time_zone.presence || User::DEFAULT_TIME_ZONE
+    Time.use_zone(timezone, &block)
   end
 
   helper_method :current_hotel, :permitted_hotels

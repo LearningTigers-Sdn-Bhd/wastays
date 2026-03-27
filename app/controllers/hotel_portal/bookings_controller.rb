@@ -28,8 +28,8 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def check_in
     @booking = current_hotel.bookings.find(params[:id])
-    
-    if @booking.update(status: 'checked_in', checked_in_at: Time.current)
+
+    if @booking.update(status: 'checked_in', checked_in_at: resolve_event_time(:checked_in_at))
       redirect_to hotel_booking_path(@booking), notice: "Guest has been checked in."
     else
       redirect_to hotel_booking_path(@booking), alert: "Failed to check in guest."
@@ -38,8 +38,8 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def check_out
     @booking = current_hotel.bookings.find(params[:id])
-    
-    if @booking.update(status: 'completed', checked_out_at: Time.current)
+
+    if @booking.update(status: 'completed', checked_out_at: resolve_event_time(:checked_out_at))
       redirect_to hotel_booking_path(@booking), notice: "Guest has been checked out."
     else
       redirect_to hotel_booking_path(@booking), alert: "Failed to check out guest."
@@ -78,5 +78,14 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
         end
       end
     end
+  end
+
+  def resolve_event_time(param_key)
+    raw_value = params[param_key]
+    return Time.current if raw_value.blank?
+
+    Time.zone.parse(raw_value) || Time.current
+  rescue ArgumentError, TypeError
+    Time.current
   end
 end

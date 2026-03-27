@@ -56,8 +56,8 @@
     <!-- Arrivals Snapshot -->
     <div class="card lg:col-span-2 flex flex-col">
       <div class="p-4 md:p-5 border-b border-neutral-border flex justify-between items-center">
-        <h2 class="text-lg font-bold text-neutral-text-primary">Arrivals Snapshot</h2>
-        <a class="text-sm font-medium text-brand-primary hover:underline" href="<%= hotel_arrivals_path %>">View manifest</a>
+        <h2 class="text-lg font-bold text-neutral-text-primary">Arrival Board</h2>
+        <a class="text-sm font-medium text-brand-primary hover:underline" href="<%= hotel_arrivals_path %>">View board</a>
       </div>
       <div class="p-4 md:p-5">
         <div class="border-b border-neutral-border mb-4">
@@ -143,8 +143,8 @@
       </div>
     </div>
 
-    <!-- Right Column: Pending Actions & Occupancy -->
-    <div class="space-y-6">
+  <!-- Right Column: Pending Actions & Occupancy -->
+  <div class="space-y-6">
       <!-- Pending Actions -->
       <div class="card p-4 md:p-5">
         <h3 class="text-sm font-bold text-neutral-text-primary uppercase tracking-wider mb-4">Pending Actions</h3>
@@ -174,16 +174,18 @@
             <div>
               <div class="flex justify-between items-center mb-1">
                 <span class="text-xs font-medium text-neutral-text-secondary"><%= day[:date].strftime("%a, %b %d") %></span>
-                <span class="text-xs font-bold text-neutral-text-primary"><%= day[:percent] %>%</span>
+                <span class="text-xs font-bold text-neutral-text-primary">
+                  <%= day[:percent] %>% (<%= day[:sold] %>/<%= day[:total] || 0 %>)
+                </span>
               </div>
               <div class="flex w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div class="flex flex-col justify-center overflow-hidden bg-brand-primary" role="progressbar" style="width: <%= day[:percent] %>%" aria-valuenow="<%= day[:percent] %>" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
             </div>
           <% end %>
-        </div>
       </div>
     </div>
+  </div>
   </div>
 
   <!-- Recent Bookings Table -->
@@ -192,7 +194,7 @@
       <h2 class="text-lg font-bold text-neutral-text-primary">Recent Bookings</h2>
       <a class="text-sm font-medium text-brand-primary hover:underline" href="<%= hotel_bookings_path %>">View all bookings</a>
     </div>
-    <div class="overflow-x-auto">
+    <div class="hidden sm:block overflow-x-auto">
       <table class="table-container">
         <thead class="table-header">
           <tr>
@@ -242,6 +244,26 @@
           <% end %>
         </tbody>
       </table>
+    </div>
+    <div class="sm:hidden space-y-3 p-4">
+      <% if @recent_bookings.any? %>
+        <% @recent_bookings.each do |booking| %>
+          <div class="border border-neutral-border rounded-2xl p-4 bg-white shadow-sm">
+            <div class="flex justify-between items-center">
+              <p class="text-xs font-semibold text-neutral-text-secondary">#<%= booking.confirmation_token %></p>
+              <span class="text-xs font-semibold text-neutral-text-primary"><%= booking.status.capitalize %></span>
+            </div>
+            <p class="text-base font-bold text-neutral-text-primary mt-2"><%= booking.guest_name %></p>
+            <p class="text-xs text-neutral-text-secondary"><%= booking.guest_phone %></p>
+            <div class="flex items-center justify-between mt-3 text-xs text-neutral-text-secondary">
+              <span><%= booking.check_in.strftime("%b %d") %> → <%= booking.check_out.strftime("%b %d") %></span>
+              <a class="text-brand-primary font-semibold" href="<%= hotel_booking_path(booking) %>">View</a>
+            </div>
+          </div>
+        <% end %>
+      <% else %>
+        <p class="text-center text-sm text-neutral-text-secondary">No bookings found.</p>
+      <% end %>
     </div>
   </div>
 </div>

@@ -1,30 +1,53 @@
 <div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
   <!-- Header -->
-  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
     <div>
-      <h1 class="text-3xl font-bold text-gray-800">Arrival Manifest</h1>
+      <h1 class="text-3xl font-bold text-gray-800">Arrival Board</h1>
       <p class="text-sm text-gray-600">Track and manage guest arrivals for <%= @date.strftime("%d %b %Y") %>.</p>
     </div>
 
-    <div class="inline-flex bg-gray-100 rounded-lg p-1">
-      <%= link_to hotel_arrivals_path(date: Date.today), class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-md transition #{ @date == Date.today ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700' }" do %>
-        Today
-        <span class="inline-flex items-center py-0.5 px-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800"><%= @today_count %></span>
-      <% end %>
-      <%= link_to hotel_arrivals_path(date: Date.tomorrow), class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-md transition #{ @date == Date.tomorrow ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700' }" do %>
-        Tomorrow
-        <span class="inline-flex items-center py-0.5 px-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800"><%= @tomorrow_count %></span>
-      <% end %>
-      <div class="relative ml-2">
-        <%= form_with url: hotel_arrivals_path, method: :get, class: "flex items-center" do |f| %>
-          <%= f.date_field :date, value: @date, onchange: "this.form.submit()", class: "py-2 px-3 block border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+    <div class="w-full md:w-auto">
+      <div class="inline-flex bg-gray-100 rounded-lg p-1 w-full md:w-auto">
+        <%= link_to hotel_arrivals_path(date: Date.today, q: @query.presence), class: "py-2 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-medium rounded-md transition #{ @date == Date.today ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700' }" do %>
+          Today
+          <span class="inline-flex items-center py-0.5 px-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800"><%= @today_count %></span>
         <% end %>
+        <%= link_to hotel_arrivals_path(date: Date.tomorrow, q: @query.presence), class: "py-2 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-medium rounded-md transition #{ @date == Date.tomorrow ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700' }" do %>
+          Tomorrow
+          <span class="inline-flex items-center py-0.5 px-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800"><%= @tomorrow_count %></span>
+        <% end %>
+        <div class="relative ml-2">
+          <%= form_with url: hotel_arrivals_path, method: :get, class: "flex items-center" do |f| %>
+            <%= f.hidden_field :q, value: @query %>
+            <%= f.date_field :date, value: @date, onchange: "this.form.submit()", class: "py-2 px-3 block border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+          <% end %>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Table Card -->
-  <div class="flex flex-col">
+  <div class="mb-6">
+    <%= form_with url: hotel_arrivals_path, method: :get, class: "w-full" do |f| %>
+      <%= f.hidden_field :date, value: @date %>
+      <label for="arrivals-search" class="sr-only">Search arrivals</label>
+      <div class="relative">
+        <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none text-gray-400">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.85-4.65a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+          </svg>
+        </div>
+        <%= f.search_field :q, value: @query, id: "arrivals-search", placeholder: "Search guest, phone, email, or booking reference", class: "w-full py-2.5 ps-10 pe-24 border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", oninput: "clearTimeout(this._arrivalSearchTimer); this._arrivalSearchTimer = setTimeout(() => this.form.requestSubmit(), 250)" %>
+        <div class="absolute inset-y-0 end-0 flex items-center pe-2 gap-x-2">
+          <% if @query.present? %>
+            <%= link_to "Clear", hotel_arrivals_path(date: @date), class: "py-1.5 px-3 text-xs font-semibold rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50" %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Desktop Table -->
+  <div class="hidden sm:flex flex-col">
     <div class="-m-1.5 overflow-x-auto">
       <div class="p-1.5 min-w-full inline-block align-middle">
         <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -53,7 +76,8 @@
             <tbody class="divide-y divide-gray-200">
               <% if @arrivals.any? %>
                 <% @arrivals.each do |booking| %>
-                  <tr>
+                  <% room_number = booking.hotel_snapshot.is_a?(Hash) ? booking.hotel_snapshot['room_number'].presence || booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
+                  <tr class="cursor-pointer hover:bg-blue-50/40 transition" onclick="window.location='<%= hotel_booking_path(booking) %>'">
                     <td class="h-px w-px whitespace-nowrap">
                       <div class="px-6 py-3">
                         <span class="block text-sm font-semibold text-gray-800"><%= booking.guest_name %></span>
@@ -63,14 +87,29 @@
                     <td class="h-px w-px whitespace-nowrap">
                       <div class="px-6 py-3">
                         <% booking.booking_rooms.each do |br| %>
-                          <span class="block text-sm text-gray-800"><%= br.quantity %>x <%= br.room_type_snapshot['name'] %></span>
+                          <span class="block text-sm text-gray-800"><%= br.quantity %>x of <%= br.room_type_snapshot['name'] %></span>
                         <% end %>
-                        <span class="block text-xs text-gray-500"><%= booking.adults %> Ad, <%= booking.children %> Ch</span>
+                        <div class="mt-2 flex items-center gap-x-3">
+                          <span class="inline-flex items-center gap-x-1 text-xs text-gray-600">
+                            <svg class="w-3.5 h-3.5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 1115 0v.75h-15v-.75z" /></svg>
+                            <%= booking.adults %>
+                          </span>
+                          <span class="inline-flex items-center gap-x-1 text-xs text-gray-600">
+                            <svg class="w-3.5 h-3.5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3.75a2.25 2.25 0 012.25 2.25v.75a2.25 2.25 0 01-4.5 0V6A2.25 2.25 0 0112 3.75zM8.25 21v-3.375a3.75 3.75 0 017.5 0V21M6 12.75h12M12 12.75v8.25" /></svg>
+                            <%= booking.children %>
+                          </span>
+                          <% if booking.status == 'checked_in' %>
+                            <span class="inline-flex items-center gap-x-1 text-xs font-medium text-green-700">
+                              <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5M4.5 18.75V9.75a2.25 2.25 0 012.25-2.25h10.5a2.25 2.25 0 012.25 2.25v9M9 12h.008v.008H9V12zm3 0h.008v.008H12V12zm3 0h.008v.008H15V12z" /></svg>
+                              Room <%= room_number || 'TBA' %>
+                            </span>
+                          <% end %>
+                        </div>
                       </div>
                     </td>
                     <td class="h-px w-px whitespace-nowrap">
                       <div class="px-6 py-3">
-                        <% 
+                        <%
                           pc_status = booking.pre_checkin_status || 'not_started'
                           pc_class = case pc_status
                           when 'completed' then 'bg-green-100 text-green-800'
@@ -86,13 +125,13 @@
                     </td>
                     <td class="h-px w-px whitespace-nowrap">
                       <div class="px-6 py-3">
-                        <% 
+                        <%
                           g_method = booking.guarantee_method || 'none'
                           g_class = g_method == 'none' ? 'text-gray-400' : 'text-gray-800'
                         %>
                         <span class="text-xs font-medium <%= g_class %>"><%= g_method.titleize %></span>
                         <div class="mt-1">
-                          <% 
+                          <%
                             d_status = booking.deposit_status || 'not_required'
                             d_class = d_status == 'collected' ? 'text-green-600' : 'text-gray-500'
                           %>
@@ -103,42 +142,72 @@
                     <td class="h-px w-px whitespace-nowrap">
                       <div class="px-6 py-3">
                         <div class="flex items-center gap-x-2">
-                          <!-- Document Status -->
                           <% if booking.pre_checkin&.document_status == 'uploaded' %>
                             <span class="text-green-600" title="Documents Uploaded">
-                              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.744c0 5.052 3.823 9.213 8.722 9.637.85.073 1.711.11 2.578.11 8.598 0 15.598-6.999 15.598-15.598 0-.113-.001-.225-.004-.337A11.996 11.996 0 0112 2.714z" />
-                              </svg>
+                              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.744c0 5.052 3.823 9.213 8.722 9.637.85.073 1.711.11 2.578.11 8.598 0 15.598-6.999 15.598-15.598 0-.113-.001-.225-.004-.337A11.996 11.996 0 0112 2.714z" /></svg>
                             </span>
                           <% else %>
                             <span class="text-gray-300">
-                              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                              </svg>
+                              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
                             </span>
                           <% end %>
 
-                          <!-- Notes Indicator -->
                           <% if booking.booking_notes.any? %>
                             <span class="text-blue-600" title="<%= pluralize(booking.booking_notes.count, 'note') %>">
-                              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-                              </svg>
+                              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>
                             </span>
                           <% end %>
                         </div>
                       </div>
                     </td>
                     <td class="h-px w-px whitespace-nowrap">
-                      <div class="px-6 py-3 text-end flex justify-end gap-x-2">
-                        <%= link_to "View", hotel_booking_path(booking), class: "text-sm font-semibold text-blue-600 hover:text-blue-800" %>
-                        
+                      <div class="px-6 py-3 text-end">
                         <% if booking.status == 'confirmed' %>
-                          <%= button_to "Check In", check_in_hotel_booking_path(booking), method: :post, class: "py-1 px-3 inline-flex items-center gap-x-1 text-xs font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none", data: { turbo_confirm: "Are you sure you want to check in this guest?", turbo_confirm_title: "Confirm Check In" } %>
+                          <button type="button" onclick="event.stopPropagation(); document.getElementById('check-in-modal-desktop-<%= booking.id %>').showModal();" class="py-2 px-3 inline-flex items-center gap-x-1 text-xs font-bold rounded-lg border border-transparent bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-100 hover:bg-emerald-700">
+                            Check In Now
+                          </button>
+                          <dialog id="check-in-modal-desktop-<%= booking.id %>" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,28rem)] max-w-md backdrop:bg-black/40" onclick="event.stopPropagation(); if(event.target===this){this.close()}">
+                            <div class="p-5 bg-white rounded-xl" onclick="event.stopPropagation()">
+                              <h3 class="text-base font-bold text-gray-800">Confirm Check In</h3>
+                              <p class="text-xs text-gray-500 mt-1">Set check-in time (<%= current_user.time_zone %>).</p>
+                              <%= form_with url: check_in_hotel_booking_path(booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
+                                <%= f.datetime_local_field :checked_in_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
+                                <div class="flex items-center justify-end gap-x-2">
+                                  <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="event.stopPropagation(); document.getElementById('check-in-modal-desktop-<%= booking.id %>').close()">Cancel</button>
+                                  <%= f.submit "Confirm Check In", class: "py-2 px-3 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700", data: { turbo_confirm: "Proceed with check-in?", turbo_confirm_title: "Check In Guest" } %>
+                                </div>
+                              <% end %>
+                            </div>
+                          </dialog>
                         <% elsif booking.status == 'checked_in' %>
-                          <span class="py-1 px-3 inline-flex items-center gap-x-1 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-500">
-                            Checked In
-                          </span>
+                          <div class="inline-flex items-center gap-x-2">
+                            <span class="py-1 px-2 inline-flex flex-col items-start gap-y-0.5 text-[11px] font-semibold rounded-lg border border-green-200 bg-green-50 text-green-700">
+                              <span class="inline-flex items-center gap-x-1">
+                                <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                                Checked In
+                              </span>
+                              <span class="inline-flex items-center gap-x-1 text-[10px] font-medium text-green-800/90">
+                                <svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>
+                                <%= booking.checked_in_at&.strftime("%d %b %Y, %I:%M %p") || "—" %>
+                              </span>
+                            </span>
+                            <button type="button" onclick="event.stopPropagation(); document.getElementById('check-in-modal-desktop-<%= booking.id %>').showModal();" class="py-1.5 px-2.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">
+                              Edit Time
+                            </button>
+                          </div>
+                          <dialog id="check-in-modal-desktop-<%= booking.id %>" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,28rem)] max-w-md backdrop:bg-black/40" onclick="event.stopPropagation(); if(event.target===this){this.close()}">
+                            <div class="p-5 bg-white rounded-xl" onclick="event.stopPropagation()">
+                              <h3 class="text-base font-bold text-gray-800">Edit Check-In Time</h3>
+                              <p class="text-xs text-gray-500 mt-1">Update check-in time (<%= current_user.time_zone %>).</p>
+                              <%= form_with url: check_in_hotel_booking_path(booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
+                                <%= f.datetime_local_field :checked_in_at, value: (booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
+                                <div class="flex items-center justify-end gap-x-2">
+                                  <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="event.stopPropagation(); document.getElementById('check-in-modal-desktop-<%= booking.id %>').close()">Cancel</button>
+                                  <%= f.submit "Save Time", class: "py-2 px-3 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700" %>
+                                </div>
+                              <% end %>
+                            </div>
+                          </dialog>
                         <% end %>
                       </div>
                     </td>
@@ -161,5 +230,121 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Mobile Cards -->
+  <div class="sm:hidden space-y-3">
+    <% if @arrivals.any? %>
+      <% @arrivals.each do |booking| %>
+        <% room_number = booking.hotel_snapshot.is_a?(Hash) ? booking.hotel_snapshot['room_number'].presence || booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 cursor-pointer hover:bg-blue-50/40 transition" role="link" tabindex="0" onclick="window.location='<%= hotel_booking_path(booking) %>'" onkeydown="if (event.key === 'Enter') { window.location='<%= hotel_booking_path(booking) %>' }">
+          <div class="flex items-start justify-between gap-x-3">
+            <div>
+              <p class="text-sm font-semibold text-gray-800"><%= booking.guest_name %></p>
+              <p class="text-xs font-mono text-gray-500"><%= booking.confirmation_token %></p>
+            </div>
+            <% if booking.status == 'checked_in' %>
+              <span class="inline-flex items-center gap-x-1 text-[11px] font-semibold rounded-full bg-green-100 text-green-700 px-2 py-1">
+                <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                Checked In
+              </span>
+            <% end %>
+          </div>
+
+          <div class="mt-3 space-y-1.5">
+            <% booking.booking_rooms.each do |br| %>
+              <p class="text-sm text-gray-800"><%= br.quantity %>x of <%= br.room_type_snapshot['name'] %></p>
+            <% end %>
+            <div class="flex items-center gap-x-4 text-xs text-gray-600">
+              <span class="inline-flex items-center gap-x-1">
+                <svg class="w-3.5 h-3.5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 1115 0v.75h-15v-.75z" /></svg>
+                <%= booking.adults %>
+              </span>
+              <span class="inline-flex items-center gap-x-1">
+                <svg class="w-3.5 h-3.5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3.75a2.25 2.25 0 012.25 2.25v.75a2.25 2.25 0 01-4.5 0V6A2.25 2.25 0 0112 3.75zM8.25 21v-3.375a3.75 3.75 0 017.5 0V21M6 12.75h12M12 12.75v8.25" /></svg>
+                <%= booking.children %>
+              </span>
+              <% if booking.status == 'checked_in' %>
+                <span class="inline-flex items-center gap-x-1 font-medium text-green-700">
+                  <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5M4.5 18.75V9.75a2.25 2.25 0 012.25-2.25h10.5a2.25 2.25 0 012.25 2.25v9M9 12h.008v.008H9V12zm3 0h.008v.008H12V12zm3 0h.008v.008H15V12z" /></svg>
+                  Room <%= room_number || 'TBA' %>
+                </span>
+              <% end %>
+            </div>
+          </div>
+
+          <div class="mt-3 flex items-center justify-between">
+            <%
+              pc_status = booking.pre_checkin_status || 'not_started'
+              pc_class = case pc_status
+              when 'completed' then 'bg-green-100 text-green-800'
+              when 'pending' then 'bg-yellow-100 text-yellow-800'
+              when 'failed' then 'bg-red-100 text-red-800'
+              else 'bg-gray-100 text-gray-800'
+              end
+            %>
+            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-[11px] font-medium rounded-full <%= pc_class %>">
+              <%= pc_status.titleize %>
+            </span>
+            <span class="text-[11px] font-medium text-gray-500">
+              <%= (booking.guarantee_method || 'none').titleize %> • <%= (booking.deposit_status || 'not_required').titleize %>
+            </span>
+          </div>
+
+          <div class="mt-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-2 text-xs">
+              <span class="<%= booking.pre_checkin&.document_status == 'uploaded' ? 'text-green-600' : 'text-gray-300' %>">
+                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+              </span>
+              <% if booking.booking_notes.any? %>
+                <span class="text-blue-600"><%= pluralize(booking.booking_notes.count, 'note') %></span>
+              <% end %>
+            </div>
+
+            <div class="flex items-center gap-x-2" onclick="event.stopPropagation()">
+              <% if booking.status == 'confirmed' %>
+                <button type="button" onclick="event.stopPropagation(); document.getElementById('check-in-modal-mobile-<%= booking.id %>').showModal();" class="py-1.5 px-2.5 inline-flex items-center text-xs font-bold rounded-md bg-emerald-600 text-white ring-2 ring-emerald-100 hover:bg-emerald-700">
+                  Check In Now
+                </button>
+                <dialog id="check-in-modal-mobile-<%= booking.id %>" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,28rem)] max-w-md backdrop:bg-black/40" onclick="event.stopPropagation(); if(event.target===this){this.close()}">
+                  <div class="p-5 bg-white rounded-xl" onclick="event.stopPropagation()">
+                    <h3 class="text-base font-bold text-gray-800">Confirm Check In</h3>
+                    <p class="text-xs text-gray-500 mt-1">Set check-in time (<%= current_user.time_zone %>).</p>
+                    <%= form_with url: check_in_hotel_booking_path(booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
+                      <%= f.datetime_local_field :checked_in_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
+                      <div class="flex items-center justify-end gap-x-2">
+                        <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="event.stopPropagation(); document.getElementById('check-in-modal-mobile-<%= booking.id %>').close()">Cancel</button>
+                        <%= f.submit "Confirm Check In", class: "py-2 px-3 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700" %>
+                      </div>
+                    <% end %>
+                  </div>
+                </dialog>
+              <% elsif booking.status == 'checked_in' %>
+                <button type="button" onclick="event.stopPropagation(); document.getElementById('check-in-modal-mobile-<%= booking.id %>').showModal();" class="py-1.5 px-2.5 text-[11px] font-semibold rounded-md border border-green-200 bg-green-50 text-green-700 hover:bg-green-100">
+                  Edit Check-In Time
+                </button>
+                <dialog id="check-in-modal-mobile-<%= booking.id %>" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,28rem)] max-w-md backdrop:bg-black/40" onclick="event.stopPropagation(); if(event.target===this){this.close()}">
+                  <div class="p-5 bg-white rounded-xl" onclick="event.stopPropagation()">
+                    <h3 class="text-base font-bold text-gray-800">Edit Check-In Time</h3>
+                    <p class="text-xs text-gray-500 mt-1">Update check-in time (<%= current_user.time_zone %>).</p>
+                    <%= form_with url: check_in_hotel_booking_path(booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
+                      <%= f.datetime_local_field :checked_in_at, value: (booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
+                      <div class="flex items-center justify-end gap-x-2">
+                        <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="event.stopPropagation(); document.getElementById('check-in-modal-mobile-<%= booking.id %>').close()">Cancel</button>
+                        <%= f.submit "Save Time", class: "py-2 px-3 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700" %>
+                      </div>
+                    <% end %>
+                  </div>
+                </dialog>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm px-4 py-10 text-center">
+        <p class="text-sm text-gray-500 italic">No arrivals scheduled for this date.</p>
+      </div>
+    <% end %>
   </div>
 </div>

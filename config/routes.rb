@@ -85,7 +85,7 @@ Rails.application.routes.draw do
         post :check_out
         post :cancel
       end
-      resources :booking_notes, only: [:create], module: :bookings
+      resources :booking_notes, only: [:create, :update, :destroy], module: :bookings
     end
     
     resources :arrivals, only: [:index]
