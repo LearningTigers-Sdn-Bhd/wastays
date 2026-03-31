@@ -21,4 +21,3 @@
 !/tmp/uploads/
 !/tmp/uploads/.keep
 /config/credentials/development.key
-/config/master.key
