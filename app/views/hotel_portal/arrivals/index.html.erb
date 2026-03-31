@@ -174,7 +174,7 @@
                                 <%= f.datetime_local_field :checked_in_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
                                 <div class="flex items-center justify-end gap-x-2">
                                   <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="event.stopPropagation(); document.getElementById('check-in-modal-desktop-<%= booking.id %>').close()">Cancel</button>
-                                  <%= f.submit "Confirm Check In", class: "py-2 px-3 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700", data: { turbo_confirm: "Proceed with check-in?", turbo_confirm_title: "Check In Guest" }, onclick: "this.closest('dialog').close()" %>
+                                  <%= f.submit "Confirm Check In", class: "py-2 px-3 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700", onclick: "this.closest('dialog').close()" %>
                                 </div>
                               <% end %>
                             </div>
