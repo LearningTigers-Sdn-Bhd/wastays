@@ -20,8 +20,9 @@ WAStays is a modern hotel platform for small and budget hotels across Malaysia a
 2.  **Install dependencies:**
     ```bash
     bundle install
-    npm install
     ```
+    WAStays is a Rails app that uses Import Maps and Tailwind, so there is no `npm install` step in the default setup.
+    Set `RAILS_MASTER_KEY` in your shell or create an untracked `config/master.key` before running Rails commands.
 
 3.  **Setup the database:**
     ```bash
