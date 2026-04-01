@@ -31,7 +31,7 @@
             </div>
             <div>
               <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Tourism Tax</p>
-              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= @settings[:currency] || "MYR" %> <%= number_with_precision(@settings[:tourism_tax], precision: 2) %></p>
+              <p class="mt-1 text-lg font-bold text-neutral-text-primary">RM <%= number_with_precision(@settings[:tourism_tax], precision: 2) %></p>
             </div>
           </div>
 
