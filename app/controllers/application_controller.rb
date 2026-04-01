@@ -81,5 +81,9 @@ class ApplicationController < ActionController::Base
     Time.use_zone(timezone, &block)
   end
 
-  helper_method :current_hotel, :permitted_hotels
+  def hotel_portal_params
+    current_user&.superadmin? && params[:hotel_id].present? ? { hotel_id: params[:hotel_id] } : {}
+  end
+
+  helper_method :current_hotel, :permitted_hotels, :hotel_portal_params
 end
