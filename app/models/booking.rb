@@ -28,18 +28,18 @@ class Booking < ApplicationRecord
   STATUSES = %w[pending confirmed checked_in cancelled completed].freeze
   PAYMENT_STATUSES = %w[pending authorized captured failed refunded].freeze
 
-  scope :confirmed, -> { where(status: 'confirmed') }
-  scope :checked_in, -> { where(status: 'checked_in') }
-  scope :completed, -> { where(status: 'completed') }
-  scope :active, -> { where(status: ['confirmed', 'checked_in']) }
-  scope :revenue_generating, -> { where(status: ['confirmed', 'checked_in', 'completed']) }
+  scope :confirmed, -> { where(status: "confirmed") }
+  scope :checked_in, -> { where(status: "checked_in") }
+  scope :completed, -> { where(status: "completed") }
+  scope :active, -> { where(status: [ "confirmed", "checked_in" ]) }
+  scope :revenue_generating, -> { where(status: [ "confirmed", "checked_in", "completed" ]) }
 
   def checked_in?
-    status == 'checked_in'
+    status == "checked_in"
   end
 
   def checked_out?
-    status == 'completed'
+    status == "completed"
   end
 
   private

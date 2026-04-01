@@ -6,8 +6,8 @@ class Admin::MarginRulesController < Admin::BaseController
 
   def create
     @new_rule = MarginRule.new(margin_rule_params)
-    @new_rule.status = 'active'
-    
+    @new_rule.status = "active"
+
     if @new_rule.save
       redirect_to admin_margin_rules_path, notice: "Margin rule created successfully."
     else

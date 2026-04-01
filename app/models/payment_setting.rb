@@ -7,8 +7,8 @@ class PaymentSetting < ApplicationRecord
 
   validates :gateway, presence: true
   validates :status, presence: true
-  
+
   STATUSES = %w[active inactive testing].freeze
 
-  scope :active, -> { where(status: 'active') }
+  scope :active, -> { where(status: "active") }
 end

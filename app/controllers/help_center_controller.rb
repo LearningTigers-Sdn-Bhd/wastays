@@ -1,5 +1,8 @@
 class HelpCenterController < ApplicationController
-  GUIDE_BASE_DIRECTORY = Rails.root.join("markdowns", "guides")
+  GUIDE_BASE_DIRECTORIES = [
+    Rails.root.join("guides"),
+    Rails.root.join("markdowns", "guides")
+  ].freeze
   AUDIENCE_SECTION_STYLES = {
     "hotel_admin" => {
       accent_bar_class: "bg-brand-secondary",
@@ -88,19 +91,20 @@ class HelpCenterController < ApplicationController
   end
 
   def available_audiences
-    return [] unless Dir.exist?(GUIDE_BASE_DIRECTORY)
+    GUIDE_BASE_DIRECTORIES.filter_map do |base_directory|
+      next unless Dir.exist?(base_directory)
 
-    GUIDE_BASE_DIRECTORY.children.select(&:directory?).filter_map do |path|
-      audience = path.basename.to_s
-      audience if audience.match?(GUIDE_NAME_PATTERN)
-    end.sort
+      base_directory.children.select(&:directory?).filter_map do |path|
+        audience = path.basename.to_s
+        audience if audience.match?(GUIDE_NAME_PATTERN)
+      end
+    end.flatten.uniq.sort
   end
 
   def audience_directory(audience)
     return unless audience.match?(GUIDE_NAME_PATTERN)
 
-    directory = GUIDE_BASE_DIRECTORY.join(audience)
-    directory if directory.directory?
+    GUIDE_BASE_DIRECTORIES.map { |base_directory| base_directory.join(audience) }.find(&:directory?)
   end
 
   def internal_audience?(audience)

@@ -1,4 +1,4 @@
-require 'ostruct'
+require "ostruct"
 
 module GuestArrival
   class StartPreCheckin
@@ -11,13 +11,13 @@ module GuestArrival
 
       ActiveRecord::Base.transaction do
         pre_checkin = @booking.create_pre_checkin!(
-          status: 'pending',
-          document_status: 'pending',
-          signature_status: 'pending'
+          status: "pending",
+          document_status: "pending",
+          signature_status: "pending"
         )
-        
-        @booking.update!(pre_checkin_status: 'pending')
-        
+
+        @booking.update!(pre_checkin_status: "pending")
+
         # TODO: Trigger external WhatsApp workflow
         # GuestArrival::TriggerWorkflowJob.perform_later(@booking.id, 'pre_checkin_start')
 

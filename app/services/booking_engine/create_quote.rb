@@ -1,4 +1,4 @@
-require 'ostruct'
+require "ostruct"
 
 module BookingEngine
   class CreateQuote
@@ -22,7 +22,7 @@ module BookingEngine
           children: @children,
           room_count: @room_count
         )
-        
+
         available_rooms = availability_service.available_rooms_for_hotel(@hotel)
         unless available_rooms.include?(@room_type)
           return OpenStruct.new(success?: false, message: "Room is no longer available for these dates.")

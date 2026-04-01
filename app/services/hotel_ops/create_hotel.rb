@@ -8,22 +8,22 @@ module HotelOps
 
     def call
       ActiveRecord::Base.transaction do
-        account = Account.create!(@account_params.merge(status: 'active'))
-        
+        account = Account.create!(@account_params.merge(status: "active"))
+
         # Seed account roles
         SeedAccountRoles.call(account)
-        
-        user = User.create!(@user_params.merge(account: account, role: 'admin'))
-        
+
+        user = User.create!(@user_params.merge(account: account, role: "admin"))
+
         # Assign hotel owner role to user at account level
-        owner_role = Role.find_by!(account: account, slug: 'hotel_owner')
+        owner_role = Role.find_by!(account: account, slug: "hotel_owner")
         UserRole.create!(user: user, role: owner_role)
-        
-        hotel = Hotel.create!(@hotel_params.merge(account: account, status: 'registered'))
-        
+
+        hotel = Hotel.create!(@hotel_params.merge(account: account, status: "registered"))
+
         # Grant hotel access with the owner role
         UserHotelAccess.create!(user: user, hotel: hotel, role: owner_role)
-        
+
         { success: true, user: user, hotel: hotel, account: account }
       end
     rescue ActiveRecord::RecordInvalid => e

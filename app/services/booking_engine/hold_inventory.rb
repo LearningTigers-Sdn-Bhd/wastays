@@ -14,7 +14,7 @@ module BookingEngine
           # Decrease quantity for each night
           @stay_dates.each do |date|
             inventory = room_type.room_inventories.find_by!(date: date)
-            
+
             # Check again if enough inventory is available
             if inventory.quantity < quantity
               raise ActiveRecord::Rollback, "Not enough inventory for #{room_type.name} on #{date}"

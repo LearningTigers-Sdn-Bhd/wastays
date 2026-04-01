@@ -12,16 +12,16 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
 
     @today_arrivals = @current_hotel.bookings.active.where(check_in: Date.today)
     @tomorrow_arrivals = @current_hotel.bookings.active.where(check_in: Date.tomorrow)
-    
+
     arrival_window = Date.today..(Date.today + 1.day)
     @pending_actions_count = @current_hotel.bookings.active
       .joins(:pre_checkin)
-      .where(pre_checkins: { status: 'pending' })
+      .where(pre_checkins: { status: "pending" })
       .where(check_in: arrival_window)
       .count
-    
+
     @recent_bookings = @current_hotel.bookings.order(created_at: :desc).limit(5)
-    
+
     # 7-day occupancy snapshot (simplified for MVP)
     @occupancy_snapshot = (Date.today..(Date.today + 6.days)).map do |date|
       total_inventory = @current_hotel.room_types.joins(:room_inventories).where(room_inventories: { date: date }).sum(:quantity)

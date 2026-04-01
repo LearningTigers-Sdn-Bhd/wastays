@@ -1,4 +1,4 @@
-require 'csv'
+require "csv"
 
 class HotelPortal::AuditLogsController < HotelPortal::BaseController
   def index
@@ -7,7 +7,7 @@ class HotelPortal::AuditLogsController < HotelPortal::BaseController
     # Filtering
     @logs = @logs.where(room_type_id: params[:room_type_id]) if params[:room_type_id].present?
     @logs = @logs.where(action_type: params[:action_type]) if params[:action_type].present?
-    
+
     if params[:start_date].present? && params[:end_date].present?
       @logs = @logs.where(created_at: params[:start_date].to_date.beginning_of_day..params[:end_date].to_date.end_of_day)
     end
@@ -30,7 +30,7 @@ class HotelPortal::AuditLogsController < HotelPortal::BaseController
         csv << [
           log.id,
           log.action_type.titleize,
-          log.room_type&.name || 'N/A',
+          log.room_type&.name || "N/A",
           log.user.name,
           log.created_at.strftime("%Y-%m-%d %H:%M:%S"),
           log.old_value.to_json,

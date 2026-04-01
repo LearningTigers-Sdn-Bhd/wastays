@@ -5,7 +5,7 @@ module Payments
         # In a real integration:
         # curlec_client = Curlec::Client.new(api_key: @setting.api_key, secret_key: @setting.secret_key)
         # response = curlec_client.create_intent(...)
-        
+
         {
           id: "curlec_intent_#{SecureRandom.hex(8)}",
           amount: amount,
@@ -27,7 +27,7 @@ module Payments
       def handle_webhook(payload:)
         {
           external_reference: payload[:id],
-          status: payload[:status] == 'captured' ? 'captured' : 'failed',
+          status: payload[:status] == "captured" ? "captured" : "failed",
           amount: payload[:amount],
           currency: payload[:currency],
           metadata: payload[:metadata]

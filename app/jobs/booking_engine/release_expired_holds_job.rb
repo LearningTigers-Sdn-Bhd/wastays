@@ -3,8 +3,8 @@ module BookingEngine
     queue_as :default
 
     def perform
-      expired_quotes = BookingQuote.where(status: 'pending').where('expires_at < ?', Time.current)
-      
+      expired_quotes = BookingQuote.where(status: "pending").where("expires_at < ?", Time.current)
+
       expired_quotes.find_each do |quote|
         release_hold(quote)
       end
@@ -26,8 +26,8 @@ module BookingEngine
             end
           end
         end
-        
-        quote.update!(status: 'expired')
+
+        quote.update!(status: "expired")
       end
     rescue => e
       Rails.logger.error "Failed to release hold for Quote #{quote.id}: #{e.message}"

@@ -11,7 +11,7 @@ class Admin::ReconciliationsController < Admin::BaseController
 
   def retry
     @event = WebhookEvent.find(params[:id])
-    
+
     payload = @event.payload.symbolize_keys
     quote_token = payload.dig(:metadata, :quote_token)
 
@@ -26,17 +26,17 @@ class Admin::ReconciliationsController < Admin::BaseController
     ).call
 
     if confirm_result.success?
-      @event.update!(status: 'processed', processed_at: Time.current, error_message: nil)
+      @event.update!(status: "processed", processed_at: Time.current, error_message: nil)
       redirect_to admin_reconciliations_path, notice: "Confirmation retried successfully."
     else
-      @event.update!(status: 'failed', error_message: confirm_result.message)
+      @event.update!(status: "failed", error_message: confirm_result.message)
       redirect_to admin_reconciliation_path(@event), alert: "Retry failed: #{confirm_result.message}"
     end
   end
 
   def resolve
     @event = WebhookEvent.find(params[:id])
-    @event.update!(status: 'processed', error_message: "Manually resolved by #{current_user.name}")
+    @event.update!(status: "processed", error_message: "Manually resolved by #{current_user.name}")
     redirect_to admin_reconciliations_path, notice: "Event marked as resolved."
   end
 end

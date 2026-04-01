@@ -38,12 +38,12 @@ RSpec.describe HotelOps::BulkUpdateRates do
 
     it 'updates existing room rates if they exist' do
       create(:room_rate, room_type: room_type, date: start_date, price: 100.0)
-      
+
       expect {
         result = subject.call
         expect(result[:success]).to be true
       }.to change(RoomRate, :count).by(6) # 7 total, but 1 already exists
-      
+
       expect(room_type.room_rates.find_by(date: start_date).price).to eq(price)
     end
 
@@ -51,7 +51,7 @@ RSpec.describe HotelOps::BulkUpdateRates do
       expect {
         subject.call
       }.to change(InventoryAuditLog, :count).by(7)
-      
+
       audit_log = InventoryAuditLog.last
       expect(audit_log.action_type).to eq('rate_update')
       expect(audit_log.room_type).to eq(room_type)
@@ -60,7 +60,7 @@ RSpec.describe HotelOps::BulkUpdateRates do
 
     it 'does not create audit log if price remains the same' do
       create(:room_rate, room_type: room_type, date: start_date, price: price)
-      
+
       expect {
         subject.call
       }.to change(InventoryAuditLog, :count).by(6) # 7 total, but 1 has same price

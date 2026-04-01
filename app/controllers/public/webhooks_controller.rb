@@ -4,22 +4,22 @@ class Public::WebhooksController < ApplicationController
 
   def create
     gateway = params[:gateway]
-    
+
     # Pre-parse payload to find external ID and quote_token
     request.body.rewind
     raw_payload = request.body.read
     temp_payload = JSON.parse(raw_payload, symbolize_names: true)
-    
+
     external_id = temp_payload[:id]
     quote_token = temp_payload.dig(:metadata, :quote_token)
-    
+
     # 1. Log the incoming event
     event = WebhookEvent.find_or_initialize_by(gateway: gateway, external_id: external_id)
-    event.assign_attributes(payload: temp_payload, status: 'pending')
+    event.assign_attributes(payload: temp_payload, status: "pending")
     event.save!
 
     unless quote_token
-      event.update!(status: 'failed', error_message: "Missing quote_token in metadata")
+      event.update!(status: "failed", error_message: "Missing quote_token in metadata")
       return head :bad_request
     end
 
@@ -28,22 +28,22 @@ class Public::WebhooksController < ApplicationController
     setting = hotel.effective_payment_setting(gateway)
 
     unless setting
-      event.update!(status: 'failed', error_message: "No active payment setting for gateway #{gateway}")
+      event.update!(status: "failed", error_message: "No active payment setting for gateway #{gateway}")
       return head :forbidden
     end
 
     adapter = payment_adapter(gateway, setting)
 
     # 2. Verify signature
-    unless adapter.verify_webhook(payload: raw_payload, signature: request.headers['X-Gateway-Signature'])
-      event.update!(status: 'failed', error_message: "Invalid signature")
+    unless adapter.verify_webhook(payload: raw_payload, signature: request.headers["X-Gateway-Signature"])
+      event.update!(status: "failed", error_message: "Invalid signature")
       return head :unauthorized
     end
 
     # 3. Process payload
     processed_payload = adapter.handle_webhook(payload: temp_payload)
 
-    if processed_payload[:status] == 'captured'
+    if processed_payload[:status] == "captured"
       confirm_result = BookingEngine::ConfirmBooking.new(
         quote_token: quote_token,
         payment_details: {
@@ -55,19 +55,19 @@ class Public::WebhooksController < ApplicationController
       ).call
 
       if confirm_result.success?
-        event.update!(status: 'processed', processed_at: Time.current)
+        event.update!(status: "processed", processed_at: Time.current)
         head :ok
       else
-        event.update!(status: 'failed', error_message: confirm_result.message)
+        event.update!(status: "failed", error_message: confirm_result.message)
         render json: { error: confirm_result.message }, status: :unprocessable_entity
       end
     else
-      event.update!(status: 'processed', processed_at: Time.current)
+      event.update!(status: "processed", processed_at: Time.current)
       head :ok
     end
   rescue => e
     Rails.logger.error "Webhook Error: #{e.message}"
-    event.update!(status: 'failed', error_message: e.message) if defined?(event)
+    event.update!(status: "failed", error_message: e.message) if defined?(event)
     head :internal_server_error
   end
 
@@ -75,7 +75,7 @@ class Public::WebhooksController < ApplicationController
 
   def payment_adapter(gateway, setting)
     case gateway
-    when 'curlec'
+    when "curlec"
       Payments::GatewayAdapters::Curlec.new(setting)
     else
       raise "Unsupported Gateway: #{gateway}"

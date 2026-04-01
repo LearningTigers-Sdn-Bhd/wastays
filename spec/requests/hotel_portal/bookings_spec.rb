@@ -57,5 +57,4 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:found)
     end
   end
-
 end

@@ -5,6 +5,6 @@ class WebhookEvent < ApplicationRecord
 
   STATUSES = %w[pending processed failed].freeze
 
-  scope :failed, -> { where(status: 'failed') }
-  scope :pending, -> { where(status: 'pending') }
+  scope :failed, -> { where(status: "failed") }
+  scope :pending, -> { where(status: "pending") }
 end

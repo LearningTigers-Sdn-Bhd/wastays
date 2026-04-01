@@ -13,7 +13,7 @@ class Public::QuotesController < ApplicationController
 
   def show
     @quote = BookingQuote.find_by!(token: params[:id])
-    
+
     if @quote.expires_at < Time.current
       flash[:alert] = "Your quote has expired. Please search again."
       redirect_to root_path

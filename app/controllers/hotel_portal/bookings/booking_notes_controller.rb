@@ -2,7 +2,7 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
   before_action :authenticate_user!
   before_action :ensure_hotel_access!
   before_action :set_booking
-  before_action :set_note, only: [:update, :destroy]
+  before_action :set_note, only: [ :update, :destroy ]
 
   def create
     @note = @booking.booking_notes.build(note_params)

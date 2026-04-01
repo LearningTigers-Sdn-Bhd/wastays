@@ -8,7 +8,7 @@ class HotelPolicy < ApplicationPolicy
   end
 
   def update?
-    user.superadmin? || user.user_hotel_accesses.find_by(hotel: record)&.role&.permissions&.exists?(slug: 'manage_hotel_profile')
+    user.superadmin? || user.user_hotel_accesses.find_by(hotel: record)&.role&.permissions&.exists?(slug: "manage_hotel_profile")
   end
 
   class Scope < Scope

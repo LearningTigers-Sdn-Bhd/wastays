@@ -17,5 +17,4 @@ RSpec.describe "HotelPortal::Bookings::BookingNotes", type: :request do
       expect(response).to have_http_status(:found) # Redirects after create
     end
   end
-
 end

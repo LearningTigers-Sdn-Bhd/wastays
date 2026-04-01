@@ -38,12 +38,12 @@ RSpec.describe HotelOps::BulkUpdateInventory do
 
     it 'updates existing inventories if they exist' do
       create(:room_inventory, room_type: room_type, date: start_date, quantity: 2, status: 'closed')
-      
+
       expect {
         result = subject.call
         expect(result[:success]).to be true
       }.to change(RoomInventory, :count).by(6) # 7 total, but 1 already exists
-      
+
       inventory = room_type.room_inventories.find_by(date: start_date)
       expect(inventory.quantity).to eq(quantity)
       expect(inventory.status).to eq(status)
@@ -53,7 +53,7 @@ RSpec.describe HotelOps::BulkUpdateInventory do
       expect {
         subject.call
       }.to change(InventoryAuditLog, :count).by(7)
-      
+
       audit_log = InventoryAuditLog.last
       expect(audit_log.action_type).to eq('inventory_update')
       expect(audit_log.room_type).to eq(room_type)
@@ -62,7 +62,7 @@ RSpec.describe HotelOps::BulkUpdateInventory do
 
     it 'does not create audit log if quantity and status remain the same' do
       create(:room_inventory, room_type: room_type, date: start_date, quantity: quantity, status: status)
-      
+
       expect {
         subject.call
       }.to change(InventoryAuditLog, :count).by(6) # 7 total, but 1 has same values

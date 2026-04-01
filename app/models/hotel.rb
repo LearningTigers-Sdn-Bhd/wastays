@@ -61,34 +61,34 @@ class Hotel < ApplicationRecord
   end
 
   def profile_completed?
-    !status.in?(['registered', 'email_verified'])
+    !status.in?([ "registered", "email_verified" ])
   end
 
   def policies_completed?
-    !status.in?(['registered', 'email_verified', 'profile_incomplete'])
+    !status.in?([ "registered", "email_verified", "profile_incomplete" ])
   end
 
   def rooms_completed?
-    !status.in?(['registered', 'email_verified', 'profile_incomplete', 'rooms_incomplete'])
+    !status.in?([ "registered", "email_verified", "profile_incomplete", "rooms_incomplete" ])
   end
 
   def ready_for_review?
-    status == 'inventory_incomplete'
+    status == "inventory_incomplete"
   end
 
   def complete_profile!
-    update(status: 'profile_incomplete') if status == 'registered'
+    update(status: "profile_incomplete") if status == "registered"
   end
 
   def complete_policies!
-    update(status: 'rooms_incomplete') if status == 'profile_incomplete'
+    update(status: "rooms_incomplete") if status == "profile_incomplete"
   end
 
   def complete_rooms!
-    update(status: 'inventory_incomplete') if status == 'rooms_incomplete'
+    update(status: "inventory_incomplete") if status == "rooms_incomplete"
   end
 
   def submit_for_review!
-    update(status: 'pending_review') if ready_for_review?
+    update(status: "pending_review") if ready_for_review?
   end
 end

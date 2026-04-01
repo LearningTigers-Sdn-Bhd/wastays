@@ -1,4 +1,4 @@
-require 'ostruct'
+require "ostruct"
 
 module BookingEngine
   class ConfirmBooking
@@ -12,7 +12,7 @@ module BookingEngine
 
       Booking.transaction do
         # 1. Double check quote haven't expired (though it should have been held)
-        if @quote.status == 'expired'
+        if @quote.status == "expired"
           return OpenStruct.new(success?: false, message: "Quote has expired.")
         end
 
@@ -35,8 +35,8 @@ module BookingEngine
           children: @quote.children,
           hotel_snapshot: @quote.hotel_snapshot,
           cancellation_policy_snapshot: @quote.cancellation_policy_snapshot,
-          status: 'confirmed',
-          payment_status: 'captured',
+          status: "confirmed",
+          payment_status: "captured",
           margin_rate: margin_rate,
           margin_amount: margin_amount,
           net_amount: net_amount
@@ -49,7 +49,7 @@ module BookingEngine
             email: @payment_details[:guest_email],
             phone: @payment_details[:guest_phone]
           ).call
-          
+
           if guest_result.success?
             booking.booking_guests.create!(guest: guest_result.guest, is_primary: true)
           end
@@ -70,7 +70,7 @@ module BookingEngine
           end
 
           # 4. Finalize Quote status
-          @quote.update!(status: 'converted')
+          @quote.update!(status: "converted")
 
           # 5. TODO: Trigger notifications (Phase 5 checklist)
           # Notifications::BookingConfirmedJob.perform_later(booking.id)
