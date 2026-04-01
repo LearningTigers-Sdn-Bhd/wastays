@@ -47,6 +47,7 @@ Rails.application.routes.draw do
     get "margin_rules/create"
     get "margin_rules/destroy"
     get "dashboard", to: "dashboard#index"
+    get "analytics", to: "dashboard#analytics"
     resources :hotels do
       member do
         post :approve
