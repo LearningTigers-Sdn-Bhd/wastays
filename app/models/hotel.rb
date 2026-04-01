@@ -96,7 +96,7 @@ class Hotel < ApplicationRecord
     return false unless tourism_tax_enabled?
     return false if country.blank?
 
-    !country.casecmp('Malaysia').zero?
+    !country.casecmp("Malaysia").zero?
   end
 
   def tourism_tax_amount_for(country)
@@ -107,7 +107,7 @@ class Hotel < ApplicationRecord
     return false unless tourism_tax_enabled?
     return false if country.blank?
 
-    !country.casecmp('Malaysia').zero?
+    !country.casecmp("Malaysia").zero?
   end
 
   def tourism_tax_amount_for(country)

@@ -19,7 +19,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
   def create
     authorize current_hotel, :update?, policy_class: HotelPolicy
-    
+
     result = HotelOps::BulkUpdateRatesAndInventory.new(
       hotel: current_hotel,
       room_type_ids: bulk_update_params[:room_type_ids],

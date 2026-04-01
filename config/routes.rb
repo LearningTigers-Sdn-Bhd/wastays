@@ -93,14 +93,14 @@ Rails.application.routes.draw do
     resources :audit_logs, only: [ :index ]
     resources :reports, only: [ :index ]
     resources :inventorys_dashboards, only: [ :index ], path: "inventory"
-    
-    resources :arrivals, only: [:index]
-    resources :audit_logs, only: [:index]
-    resources :reports, only: [:index]
-    resources :inventory_dashboards, only: [:index, :create], path: 'inventory'
+
+    resources :arrivals, only: [ :index ]
+    resources :audit_logs, only: [ :index ]
+    resources :reports, only: [ :index ]
+    resources :inventory_dashboards, only: [ :index, :create ], path: "inventory"
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
-    resources :guests, only: [:index, :show]
-    resources :settings, only: [:index]
-    resources :inventory_audit_logs, only: [:index]
+    resources :guests, only: [ :index, :show ]
+    resources :settings, only: [ :index ]
+    resources :inventory_audit_logs, only: [ :index ]
   end
 end

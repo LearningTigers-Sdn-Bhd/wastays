@@ -15,14 +15,14 @@ class Guest < ApplicationRecord
   GENDERS = %w[male female other].freeze
   DOCUMENT_TYPES = %w[ic passport].freeze
 
-  # We allow phone/email to be present or missing for soft matches, 
+  # We allow phone/email to be present or missing for soft matches,
   # but they must be unique if present? Actually multiple guests might share email/phone (family).
   # The spec says matching is conservative.
 
   before_validation :normalize_identity_fields
 
   def normalized_country
-    country&.split&.map(&:capitalize)&.join(' ')
+    country&.split&.map(&:capitalize)&.join(" ")
   end
 
   private

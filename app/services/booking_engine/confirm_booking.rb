@@ -108,7 +108,7 @@ module BookingEngine
       return if value.blank?
 
       country = ISO3166::Country.find_country_by_name(value)
-      country&.name || value.split.map(&:capitalize).join(' ')
+      country&.name || value.split.map(&:capitalize).join(" ")
     end
   end
 end

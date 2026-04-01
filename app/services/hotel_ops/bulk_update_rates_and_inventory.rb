@@ -46,7 +46,7 @@ module HotelOps
         start_date: @start_date,
         end_date: @end_date,
         quantity: @quantity || room_type.quantity,
-        status: @status || 'open',
+        status: @status || "open",
         user: @user
       ).call
     end

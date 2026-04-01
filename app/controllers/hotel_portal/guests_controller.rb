@@ -2,18 +2,18 @@ module HotelPortal
   class GuestsController < HotelPortal::BaseController
     helper_method :safe_guest_attr
 
-    before_action :set_guest, only: [:show]
+    before_action :set_guest, only: [ :show ]
 
     def index
       return @guests = [] unless current_hotel
 
       @guests = ActiveRecord::Encryption.without_encryption do
         Guest
-          .select('guests.*, MAX(bookings.check_out) AS last_stay_at')
+          .select("guests.*, MAX(bookings.check_out) AS last_stay_at")
           .joins(:bookings)
           .where(bookings: { hotel_id: current_hotel.id })
-          .group('guests.id')
-          .order(Arel.sql('MAX(bookings.check_out) DESC NULLS LAST'))
+          .group("guests.id")
+          .order(Arel.sql("MAX(bookings.check_out) DESC NULLS LAST"))
       end
     end
 

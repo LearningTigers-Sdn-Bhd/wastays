@@ -5,15 +5,15 @@ module Public::QuotesHelper
   end
 
   def currency_label(currency)
-    currency == 'USD' ? 'USD' : 'RM'
+    currency == "USD" ? "USD" : "RM"
   end
 
   def convert_amount(amount, quote_currency:, display_currency:, hotel:)
     return amount if quote_currency == display_currency
 
     rate = hotel.usd_conversion_rate.to_d
-    return amount / rate if quote_currency == 'MYR' && display_currency == 'USD'
-    return amount * rate if quote_currency == 'USD' && display_currency == 'MYR'
+    return amount / rate if quote_currency == "MYR" && display_currency == "USD"
+    return amount * rate if quote_currency == "USD" && display_currency == "MYR"
 
     amount
   end
