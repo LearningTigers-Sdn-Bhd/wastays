@@ -1,5 +1,7 @@
 module HotelOps
   class CreateHotel
+    DEFAULT_PASSWORD = "12345678".freeze
+
     def initialize(account_params:, user_params:, hotel_params:)
       @account_params = account_params
       @user_params = user_params
@@ -13,13 +15,13 @@ module HotelOps
         # Seed account roles
         SeedAccountRoles.call(account)
 
-        user = User.create!(@user_params.merge(account: account, role: "admin"))
+        user = User.create!(user_attributes(account))
 
         # Assign hotel owner role to user at account level
         owner_role = Role.find_by!(account: account, slug: "hotel_owner")
         UserRole.create!(user: user, role: owner_role)
 
-        hotel = Hotel.create!(@hotel_params.merge(account: account, status: "registered"))
+        hotel = Hotel.create!(@hotel_params.reverse_merge(status: "registered").merge(account: account))
 
         # Grant hotel access with the owner role
         UserHotelAccess.create!(user: user, hotel: hotel, role: owner_role)
@@ -28,6 +30,17 @@ module HotelOps
       end
     rescue ActiveRecord::RecordInvalid => e
       { success: false, error: e.message }
+    end
+
+    private
+
+    def user_attributes(account)
+      password = @user_params[:password].presence || DEFAULT_PASSWORD
+
+      @user_params.reverse_merge(
+        password: password,
+        password_confirmation: @user_params[:password_confirmation].presence || password
+      ).merge(account: account, role: "admin")
     end
   end
 end

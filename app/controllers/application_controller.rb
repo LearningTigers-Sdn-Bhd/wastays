@@ -30,6 +30,13 @@ class ApplicationController < ActionController::Base
       redirect_to login_path, alert: "You must be logged in to access this page"
       return false
     end
+
+    if current_user.account.status == "suspended"
+      session[:user_id] = nil
+      redirect_to login_path, alert: "Your account has been suspended. Please contact support."
+      return false
+    end
+
     true
   end
 

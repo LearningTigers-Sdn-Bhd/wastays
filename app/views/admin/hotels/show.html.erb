@@ -91,18 +91,47 @@
           <% end %>
           
           <% if @hotel.status != 'suspended' %>
-            <%= button_to "Suspend Hotel", suspend_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700", data: { turbo_confirm: "Are you sure you want to suspend this hotel? It will no longer be bookable.", turbo_confirm_title: "Suspend Hotel", turbo_confirm_color: "red" } %>
+            <%= button_to "Suspend", suspend_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700", data: { turbo_confirm: "Are you sure you want to suspend this hotel and its account? It will no longer be bookable.", turbo_confirm_title: "Suspend Account and Hotel", turbo_confirm_color: "red" } %>
           <% else %>
-            <%= button_to "Reactivate (Approve)", approve_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700", data: { turbo_confirm: "Are you sure you want to reactivate this hotel?", turbo_confirm_title: "Reactivate Hotel" } %>
+            <%= button_to "Reactivate", approve_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700", data: { turbo_confirm: "Are you sure you want to reactivate this hotel and its account?", turbo_confirm_title: "Reactivate Account and Hotel" } %>
           <% end %>
         </div>
       </div>
 
       <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Account Holder</h3>
-        <div class="text-sm">
-          <p class="font-medium text-gray-800"><%= @hotel.account.name %></p>
-          <p class="text-gray-500">Status: <%= @hotel.account.status.titleize %></p>
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Account Information</h3>
+
+        <div class="space-y-4 text-sm">
+          <div>
+            <p class="text-gray-500 uppercase font-medium text-[10px]">Account Name</p>
+            <p class="font-medium text-gray-800"><%= @hotel.account.name %></p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4">
+            <div>
+              <p class="text-gray-500 uppercase font-medium text-[10px]">Account Status</p>
+              <p class="text-gray-800"><%= @hotel.account.status.titleize %></p>
+            </div>
+
+            <div>
+              <p class="text-gray-500 uppercase font-medium text-[10px]">Account Slug</p>
+              <p class="text-gray-800 break-all"><%= @hotel.account.slug.presence || 'N/A' %></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Account Users</h3>
+
+        <div class="space-y-4 text-sm">
+          <% @hotel.account.users.order(:created_at).each do |user| %>
+            <div class="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+              <p class="font-medium text-gray-800"><%= user.name %></p>
+              <p class="text-gray-600 break-all"><%= user.email %></p>
+              <p class="text-xs uppercase tracking-wide text-gray-500 mt-1"><%= user.role.titleize %></p>
+            </div>
+          <% end %>
         </div>
       </div>
     </div>

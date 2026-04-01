@@ -8,7 +8,7 @@
 
     <%= yield :head %>
 
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= javascript_importmap_tags %>
   </head>
 

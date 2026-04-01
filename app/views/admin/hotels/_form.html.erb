@@ -12,8 +12,8 @@
 
   <div class="grid sm:grid-cols-2 gap-4">
     <div class="sm:col-span-2">
-      <label for="name" class="block text-sm font-medium mb-2 text-gray-800">Hotel Name</label>
-      <%= f.text_field :name, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+      <label for="hotel_name" class="block text-sm font-medium mb-2 text-gray-800">Hotel Name</label>
+      <%= f.text_field :name, id: "hotel_name", class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
     </div>
 
     <div class="sm:col-span-2">
@@ -36,16 +36,31 @@
       <%= f.select :star_rating, (1..5).to_a, { include_blank: "Select Rating" }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
     </div>
 
-    <div>
-      <label for="status" class="block text-sm font-medium mb-2 text-gray-800">Status</label>
-      <%= f.select :status, Hotel::STATUSES.map { |s| [s.titleize, s] }, {}, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-    </div>
-
     <% unless hotel.persisted? %>
+      <div class="sm:col-span-2 pt-2 border-t border-gray-100">
+        <h3 class="text-sm font-semibold text-gray-800">Account Credentials</h3>
+        <p class="mt-1 text-xs text-gray-500">A dedicated account will be created for this hotel.</p>
+      </div>
+
       <div class="sm:col-span-2">
-        <label for="account_id" class="block text-sm font-medium mb-2 text-gray-800">Assign to Account</label>
-        <%= f.collection_select :account_id, Account.all, :id, :name, { include_blank: "Auto-assign or Create New" }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-        <p class="mt-2 text-xs text-gray-500 italic">If left blank, the system will assign to the first available account or create a default one.</p>
+        <label for="account_name" class="block text-sm font-medium mb-2 text-gray-800">Company / Group Name</label>
+        <%= text_field_tag "account[name]", params.dig(:account, :name), id: "account_name", required: true, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+      </div>
+
+      <div>
+        <label for="user_name" class="block text-sm font-medium mb-2 text-gray-800">Owner Full Name</label>
+        <%= text_field_tag "user[name]", params.dig(:user, :name), id: "user_name", required: true, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+      </div>
+
+      <div>
+        <label for="user_email" class="block text-sm font-medium mb-2 text-gray-800">Account Email</label>
+        <%= email_field_tag "user[email]", params.dig(:user, :email), id: "user_email", required: true, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+      </div>
+
+      <div class="sm:col-span-2">
+        <label for="default_password" class="block text-sm font-medium mb-2 text-gray-800">Default Password</label>
+        <%= password_field_tag :default_password, HotelOps::CreateHotel::DEFAULT_PASSWORD, id: "default_password", readonly: true, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 border" %>
+        <p class="mt-2 text-xs text-gray-500 italic">This password is assigned automatically when the hotel account is created.</p>
       </div>
     <% end %>
   </div>
