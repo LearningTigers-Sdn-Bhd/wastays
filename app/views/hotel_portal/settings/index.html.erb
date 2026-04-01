@@ -1,41 +1,98 @@
-<div class="card">
-  <div class="p-4 border-b border-neutral-border flex items-center justify-between gap-4">
-    <div>
-      <h1 class="text-lg font-bold text-neutral-text-primary">Settings</h1>
-      <p class="text-sm text-neutral-text-secondary">Review your hotel timing, currency, and conversion settings.</p>
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="card overflow-hidden">
+    <div class="p-5 sm:p-6 border-b border-neutral-border flex items-center justify-between gap-4">
+      <div>
+        <h1 class="text-lg sm:text-xl font-bold text-neutral-text-primary md:-ml-6 sm:-ml-2">Settings</h1>
+      </div>
+      <%= link_to "Edit Settings", hotel_edit_settings_path, class: "inline-flex items-center gap-x-2 rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-secondary" %>
     </div>
-    <%= link_to "Edit Settings", hotel_edit_settings_path, class: "inline-flex items-center gap-x-2 rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-secondary" %>
-  </div>
-  <div class="p-4 space-y-4">
-    <% if @settings.present? %>
-      <dl class="grid grid-cols-1 gap-y-2 text-sm text-neutral-text-secondary">
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Hotel Status</dt>
-          <dd><%= @settings[:hotel_status] %></dd>
+
+    <div class="p-5 sm:p-6 border rounded-xl">
+      <% if @settings.present? %>
+        <div class="grid gap-4 md:grid-cols-[1.4fr_0.6fr]">
+          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-6">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7.5A2.5 2.5 0 0 1 7.5 5h9A2.5 2.5 0 0 1 19 7.5V21M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h.01M15 17h.01" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Hotel Status</p>
+              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= @settings[:hotel_status] %></p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <circle cx="12" cy="12" r="9" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v10M9.5 9h5a1.5 1.5 0 0 1 0 3h-5a1.5 1.5 0 0 0 0 3h5" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Tourism Tax</p>
+              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= @settings[:currency] || "MYR" %> <%= number_with_precision(@settings[:tourism_tax], precision: 2) %></p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <circle cx="12" cy="12" r="9" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Check-in</p>
+              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= @settings[:check_in] || "Not set" %></p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <circle cx="12" cy="12" r="9" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 13v4m0-10v2m0 4h.01" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Check-out</p>
+              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= @settings[:check_out] || "Not set" %></p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-2.2 0-4 1.3-4 3s1.8 3 4 3 4 1.3 4 3-1.8 3-4 3m0-12c1.2 0 2.2.5 3 1.2M12 8V6m0 14v-2" />
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Currency</p>
+              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= @settings[:currency] || "MYR" %></p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 19h16M7 15l3-3 4 4 6-6" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">USD Converted Rate</p>
+              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= number_with_precision(@settings[:usd_rate], precision: 2) %></p>
+            </div>
+          </div>
+
         </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Check-in</dt>
-          <dd><%= @settings[:check_in] || "Not set" %></dd>
+      <% else %>
+        <div class="rounded-2xl border border-dashed border-neutral-border bg-neutral-bg p-10 text-center">
+          <h2 class="text-lg font-bold text-neutral-text-primary">No settings yet</h2>
+          <p class="mt-2 text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>
         </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Check-out</dt>
-          <dd><%= @settings[:check_out] || "Not set" %></dd>
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Currency</dt>
-          <dd><%= @settings[:currency] || "Not set" %></dd>
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">USD Converted Rate</dt>
-          <dd><%= number_with_precision(@settings[:usd_rate], precision: 2) %></dd>
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Tourism Tax</dt>
-          <dd><%= @settings[:currency] || "MYR" %> <%= number_with_precision(@settings[:tourism_tax], precision: 2) %> per room per night</dd>
-        </div>
-      </dl>
-    <% else %>
-      <p class="text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>
-    <% end %>
+      <% end %>
+    </div>
   </div>
 </div>
