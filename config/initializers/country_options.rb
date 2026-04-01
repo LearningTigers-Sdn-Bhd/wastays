@@ -9,7 +9,8 @@ module CountryOptions
     private
 
     def compute_list
-      ISO3166::Country.all
+      require 'countries'
+      list = ISO3166::Country.all
         .reject { |country| %w[IL KP].include?(country.alpha2) }
         .map do |country|
           country.common_name || country.official_name || country.translations['en'] || country.alpha2
@@ -17,6 +18,8 @@ module CountryOptions
         .compact
         .uniq
         .sort
+      list |= ['China']
+      list
     end
   end
 end

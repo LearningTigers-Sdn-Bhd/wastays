@@ -36,5 +36,14 @@ module HotelPortal
 
       raise ActiveRecord::RecordNotFound
     end
+
+    private
+
+    def set_guest
+      @guest = ActiveRecord::Encryption.without_encryption { Guest.find(params[:id]) }
+      return if @guest.bookings.where(hotel_id: current_hotel.id).exists?
+
+      raise ActiveRecord::RecordNotFound
+    end
   end
 end

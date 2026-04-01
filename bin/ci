@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# Exit immediately if a command exits with a non-zero status
+set -e
+
+echo "--- 🔍 Running RuboCop (Linting) ---"
+bin/rubocop
+
+echo -e "\n--- 🛡️  Running Brakeman (Security Scan) ---"
+bin/brakeman --no-pager
+
+echo -e "\n--- 📦 Running Importmap Audit (JS Security) ---"
+bin/importmap audit
+
+echo -e "\n--- 🧪 Running RSpec (Tests) ---"
+bundle exec rspec
+
+echo -e "\n✅ All checks passed!"

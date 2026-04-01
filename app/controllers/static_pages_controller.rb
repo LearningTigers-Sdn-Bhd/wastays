@@ -6,4 +6,7 @@ class StaticPagesController < ApplicationController
       [hotel, room_type] if room_type
     end
   end
+
+  def for_hotels
+  end
 end

@@ -33,87 +33,157 @@
     </div>
   </div>
 
-  <!-- Matrix Table -->
-  <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
-        <thead class="bg-neutral-bg/50">
-          <tr>
-            <th class="sticky left-0 z-10 px-6 py-4 bg-white border-b border-r border-neutral-border min-w-[240px]">
-              <span class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest">Room Type / Date</span>
-            </th>
-            <% (@start_date..@end_date).each do |date| %>
-              <th class="px-4 py-3 text-center border-b border-r border-neutral-border last:border-r-0 min-w-[100px]">
-                <span class="block text-[10px] font-black uppercase tracking-widest <%= date == Date.today ? 'text-brand-primary' : 'text-neutral-text-secondary' %>"><%= date.strftime("%a") %></span>
-                <span class="block text-sm font-bold <%= date == Date.today ? 'text-brand-primary' : 'text-neutral-text-primary' %>"><%= date.strftime("%d %b") %></span>
-              </th>
-            <% end %>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-neutral-border">
-          <% @room_types.each do |rt| %>
-            <tr>
-              <td class="sticky left-0 z-10 px-6 py-4 bg-white border-r border-neutral-border group">
-                <div class="flex flex-col">
-                  <span class="text-sm font-bold text-neutral-text-primary group-hover:text-brand-primary transition-colors"><%= rt.name %></span>
-                  <div class="flex gap-x-2 mt-1">
-                    <%= link_to "Rates", hotel_room_type_rates_path(rt), class: "text-[9px] font-black uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary" %>
-                    <span class="text-neutral-border text-[9px]">•</span>
-                    <%= link_to "Inventory", hotel_room_type_inventories_path(rt), class: "text-[9px] font-black uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary" %>
-                  </div>
-                </div>
-              </td>
-              
-              <% (@start_date..@end_date).each do |date| %>
-                <td class="px-2 py-4 text-center border-r border-neutral-border last:border-r-0 hover:bg-neutral-bg transition-colors">
-                  <% 
-                    inv = @inventory_matrix[rt.id][date]
-                    rate = @rates_matrix[rt.id][date]
-                    
-                    quantity = inv&.quantity || rt.quantity
-                    status = inv&.status || 'open'
-                    price = rate&.price || rt.base_price
-                    
-                    is_closed = (status == 'closed' || quantity <= 0)
-                  %>
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- Matrix Table -->
+    <div class="lg:col-span-8">
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-neutral-bg/50">
+              <tr>
+                <th class="sticky left-0 z-10 px-6 py-4 bg-white border-b border-r border-neutral-border min-w-[240px]">
+                  <span class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest">Room Type / Date</span>
+                </th>
+                <% (@start_date..@end_date).each do |date| %>
+                  <th class="px-4 py-3 text-center border-b border-r border-neutral-border last:border-r-0 min-w-[100px]">
+                    <span class="block text-[10px] font-black uppercase tracking-widest <%= date == Date.today ? 'text-brand-primary' : 'text-neutral-text-secondary' %>"><%= date.strftime("%a") %></span>
+                    <span class="block text-sm font-bold <%= date == Date.today ? 'text-brand-primary' : 'text-neutral-text-primary' %>"><%= date.strftime("%d %b") %></span>
+                  </th>
+                <% end %>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-border">
+              <% @room_types.each do |rt| %>
+                <tr>
+                  <td class="sticky left-0 z-10 px-6 py-4 bg-white border-r border-neutral-border group">
+                    <div class="flex flex-col">
+                      <span class="text-sm font-bold text-neutral-text-primary group-hover:text-brand-primary transition-colors"><%= rt.name %></span>
+                      <div class="flex gap-x-2 mt-1">
+                        <%= link_to "Rates", hotel_room_type_rates_path(rt), class: "text-[9px] font-black uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary" %>
+                        <span class="text-neutral-border text-[9px]">•</span>
+                        <%= link_to "Inventory", hotel_room_type_inventories_path(rt), class: "text-[9px] font-black uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary" %>
+                      </div>
+                    </div>
+                  </td>
                   
-                  <div class="flex flex-col items-center">
-                    <span class="text-xs font-black <%= is_closed ? 'text-status-error' : 'text-neutral-text-primary' %>">
-                      <%= quantity %> <span class="text-[8px] font-black uppercase tracking-tight text-neutral-text-secondary ml-0.5">Left</span>
-                    </span>
-                    <span class="mt-1.5 text-[11px] font-bold text-brand-primary">
-                      RM<%= number_with_precision(price, precision: 0) %>
-                    </span>
-                    
-                    <% if is_closed %>
-                      <div class="mt-2 w-1.5 h-1.5 rounded-full bg-status-error"></div>
-                    <% end %>
-                  </div>
-                </td>
+                  <% (@start_date..@end_date).each do |date| %>
+                    <td class="px-2 py-4 text-center border-r border-neutral-border last:border-r-0 hover:bg-neutral-bg transition-colors">
+                      <% 
+                        inv = @inventory_matrix[rt.id][date]
+                        rate = @rates_matrix[rt.id][date]
+                        
+                        quantity = inv&.quantity || rt.quantity
+                        status = inv&.status || 'open'
+                        price = rate&.price || rt.base_price
+                        
+                        is_closed = (status == 'closed' || quantity <= 0)
+                      %>
+                      
+                      <div class="flex flex-col items-center">
+                        <span class="text-xs font-black <%= is_closed ? 'text-status-error' : 'text-neutral-text-primary' %>">
+                          <%= quantity %> <span class="text-[8px] font-black uppercase tracking-tight text-neutral-text-secondary ml-0.5">Left</span>
+                        </span>
+                        <span class="mt-1.5 text-[11px] font-bold text-brand-primary">
+                          RM<%= number_with_precision(price, precision: 0) %>
+                        </span>
+                        
+                        <% if is_closed %>
+                          <div class="mt-2 w-1.5 h-1.5 rounded-full bg-status-error"></div>
+                        <% end %>
+                      </div>
+                    </td>
+                  <% end %>
+                </tr>
               <% end %>
-            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Legend -->
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 px-2">
+        <div class="flex items-center gap-x-1.5">
+          <span class="text-[10px] font-black text-neutral-text-secondary uppercase">Legend:</span>
+        </div>
+        <div class="flex items-center gap-x-1.5">
+          <div class="w-2.5 h-2.5 rounded bg-white border border-neutral-border"></div>
+          <span class="text-[10px] font-bold text-neutral-text-secondary uppercase">Available</span>
+        </div>
+        <div class="flex items-center gap-x-1.5">
+          <div class="w-1.5 h-1.5 rounded-full bg-status-error"></div>
+          <span class="text-[10px] font-bold text-neutral-text-secondary uppercase tracking-tight">Closed / Sold Out</span>
+        </div>
+        <div class="flex items-center gap-x-1.5">
+          <span class="text-[10px] font-black text-brand-primary uppercase">RM</span>
+          <span class="text-[10px] font-bold text-neutral-text-secondary uppercase">Daily Rate</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Update Side Card -->
+    <div class="lg:col-span-4">
+      <div class="card shadow-lg border-brand-primary/10">
+        <div class="p-4 md:p-5 border-b border-neutral-border bg-brand-primary/5">
+          <h3 class="text-sm font-black text-neutral-text-primary uppercase tracking-widest">Global Bulk Update</h3>
+        </div>
+        <div class="p-6">
+          <%= form_with scope: :bulk_update, url: hotel_inventory_dashboards_path, local: true, class: "space-y-5" do |f| %>
+            <div>
+              <label class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">Room Categories</label>
+              <div class="space-y-2 max-h-40 overflow-y-auto p-3 border border-neutral-border rounded-lg bg-neutral-bg/30">
+                <% @room_types.each do |rt| %>
+                  <label class="flex items-center gap-x-3 cursor-pointer">
+                    <%= f.check_box :room_type_ids, { multiple: true, checked: true, class: "form-checkbox rounded text-brand-primary" }, rt.id, nil %>
+                    <span class="text-xs font-semibold text-neutral-text-primary"><%= rt.name %></span>
+                  </label>
+                <% end %>
+              </div>
+              <p class="text-[10px] text-neutral-text-secondary mt-1.5 italic">Select which rooms to apply these changes to.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="start_date" class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">Start Date</label>
+                <%= f.date_field :start_date, value: @start_date, id: "start_date", class: "form-input py-2 text-xs" %>
+              </div>
+              <div>
+                <label for="end_date" class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">End Date</label>
+                <%= f.date_field :end_date, value: @end_date, id: "end_date", class: "form-input py-2 text-xs" %>
+              </div>
+            </div>
+
+            <div class="border-t border-neutral-border pt-4">
+              <label for="price" class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">Daily Rate (Optional)</label>
+              <div class="relative">
+                <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                  <span class="text-xs font-bold text-neutral-text-secondary">RM</span>
+                </div>
+                <%= f.number_field :price, step: 0.01, id: "price", placeholder: "No change", class: "form-input py-2 ps-10 text-sm font-bold" %>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="quantity" class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">Units (Optional)</label>
+                <%= f.number_field :quantity, id: "quantity", min: 0, placeholder: "No change", class: "form-input py-2 text-sm font-bold" %>
+              </div>
+              <div>
+                <label for="status" class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">Status</label>
+                <%= f.select :status, [['No change', ''], ['Open', 'open'], ['Closed', 'closed']], {}, id: "status", class: "form-input py-2 text-xs" %>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <%= f.submit "Apply Global Updates", class: "btn btn-primary w-full py-3 text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-primary/20" %>
+            </div>
           <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  
-  <!-- Legend -->
-  <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-2">
-    <div class="flex items-center gap-x-1.5">
-      <span class="text-[10px] font-black text-neutral-text-secondary uppercase">Legend:</span>
-    </div>
-    <div class="flex items-center gap-x-1.5">
-      <div class="w-2.5 h-2.5 rounded bg-white border border-neutral-border"></div>
-      <span class="text-[10px] font-bold text-neutral-text-secondary uppercase">Available</span>
-    </div>
-    <div class="flex items-center gap-x-1.5">
-      <div class="w-1.5 h-1.5 rounded-full bg-status-error"></div>
-      <span class="text-[10px] font-bold text-neutral-text-secondary uppercase tracking-tight">Closed / Sold Out</span>
-    </div>
-    <div class="flex items-center gap-x-1.5">
-      <span class="text-[10px] font-black text-brand-primary uppercase">RM</span>
-      <span class="text-[10px] font-bold text-neutral-text-secondary uppercase">Daily Rate</span>
+        </div>
+      </div>
+      
+      <div class="mt-6 p-4 rounded-xl bg-neutral-surface border border-neutral-border">
+        <h4 class="text-[10px] font-black text-neutral-text-primary uppercase tracking-widest mb-2">Operational Tip</h4>
+        <p class="text-xs text-neutral-text-secondary leading-relaxed">Global updates are perfect for setting seasonal rates or blocking rooms for large groups across all categories.</p>
+      </div>
     </div>
   </div>
 </div>
