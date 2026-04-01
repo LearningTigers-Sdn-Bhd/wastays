@@ -68,89 +68,60 @@
         <a href="<%= hotels_path %>" class="text-brand-primary font-bold hover:underline hidden sm:block">Explore all hotels →</a>
       </div>
 
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <%# Mocked featured hotels for now %>
-        <div class="card group cursor-pointer hover:shadow-xl transition-all duration-300">
-          <div class="aspect-video bg-gray-200 relative overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800" class="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" alt="Hotel">
-            <div class="absolute top-3 right-3">
-              <span class="badge bg-white/90 text-brand-primary backdrop-blur-sm">Featured</span>
-            </div>
-          </div>
-          <div class="p-5">
-            <div class="flex justify-between items-start mb-2">
-              <h3 class="text-lg font-bold text-neutral-text-primary">Jesselton Cabin</h3>
-              <div class="flex items-center text-amber-500">
-                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                <span class="text-sm font-bold ms-1 text-neutral-text-primary">4.8</span>
+      <% if @featured_stays.any? %>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <% @featured_stays.each do |hotel, room_type| %>
+            <% rating = hotel.star_rating.to_i %>
+            <div class="card group cursor-pointer hover:shadow-xl transition-all duration-300">
+              <div class="aspect-video bg-gray-200 relative overflow-hidden">
+                <% if room_type.photos.attached? %>
+                  <%= image_tag room_type.photos.first, class: "object-cover w-full h-full group-hover:scale-110 transition-transform duration-500", alt: hotel.name %>
+                <% else %>
+                  <div class="w-full h-full bg-neutral-bg flex items-center justify-center">
+                    <svg class="w-12 h-12 text-neutral-border" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
+                  </div>
+                <% end %>
+                <div class="absolute top-3 right-3">
+                  <span class="badge bg-white/90 text-brand-primary backdrop-blur-sm">Featured</span>
+                </div>
+              </div>
+              <div class="p-5">
+                <div class="flex justify-between items-start mb-2">
+                  <h3 class="text-lg font-bold text-neutral-text-primary"><%= hotel.name %></h3>
+                  <% if rating.positive? %>
+                    <div class="flex items-center text-amber-500">
+                      <% rating.times do %>
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+                <p class="text-sm text-neutral-text-secondary mb-4 flex items-center">
+                  <svg class="w-3 h-3 me-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <%= hotel.city %>, <%= hotel.country %>
+                </p>
+                <div class="flex items-center justify-between border-t border-neutral-border pt-4">
+                  <div>
+                    <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">Starts from</p>
+                    <p class="text-xl font-extrabold text-neutral-text-primary">
+                      RM <%= number_with_precision(@availability_service.calculate_total_price(room_type), precision: 2) %><span class="text-xs font-normal text-neutral-text-secondary">/night</span>
+                    </p>
+                  </div>
+                  <%= link_to hotel_path(hotel, request.query_parameters), class: "btn btn-primary py-2 px-4" do %>
+                    Book Now
+                  <% end %>
+                </div>
               </div>
             </div>
-            <p class="text-sm text-neutral-text-secondary mb-4 flex items-center">
-              <svg class="w-3 h-3 me-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              Kota Kinabalu, Sabah
-            </p>
-            <div class="flex items-center justify-between border-t border-neutral-border pt-4">
-              <div>
-                <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">Starts from</p>
-                <p class="text-xl font-extrabold text-neutral-text-primary">RM 120<span class="text-xs font-normal text-neutral-text-secondary">/night</span></p>
-              </div>
-              <a href="#" class="btn btn-primary py-2 px-4">Book Now</a>
-            </div>
-          </div>
+          <% end %>
         </div>
-
-        <div class="card group cursor-pointer hover:shadow-xl transition-all duration-300">
-          <div class="aspect-video bg-gray-200 relative overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&q=80&w=800" class="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" alt="Hotel">
-          </div>
-          <div class="p-5">
-            <div class="flex justify-between items-start mb-2">
-              <h3 class="text-lg font-bold text-neutral-text-primary">Penang Heritage Inn</h3>
-              <div class="flex items-center text-amber-500">
-                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                <span class="text-sm font-bold ms-1 text-neutral-text-primary">4.6</span>
-              </div>
-            </div>
-            <p class="text-sm text-neutral-text-secondary mb-4 flex items-center">
-              <svg class="w-3 h-3 me-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              George Town, Penang
-            </p>
-            <div class="flex items-center justify-between border-t border-neutral-border pt-4">
-              <div>
-                <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">Starts from</p>
-                <p class="text-xl font-extrabold text-neutral-text-primary">RM 145<span class="text-xs font-normal text-neutral-text-secondary">/night</span></p>
-              </div>
-              <a href="#" class="btn btn-primary py-2 px-4">Book Now</a>
-            </div>
-          </div>
+      <% else %>
+        <div class="card p-10 text-center border-2 border-dashed border-neutral-border bg-white">
+          <h3 class="text-xl font-bold text-neutral-text-primary mb-2">No featured stays available right now</h3>
+          <p class="text-neutral-text-secondary mb-6">Try a different destination or use the full hotel search to browse everything that’s available.</p>
+          <a href="<%= hotels_path %>" class="btn btn-primary px-8">Explore all hotels</a>
         </div>
-
-        <div class="card group cursor-pointer hover:shadow-xl transition-all duration-300">
-          <div class="aspect-video bg-gray-200 relative overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=800" class="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" alt="Hotel">
-          </div>
-          <div class="p-5">
-            <div class="flex justify-between items-start mb-2">
-              <h3 class="text-lg font-bold text-neutral-text-primary">KL City Hub</h3>
-              <div class="flex items-center text-amber-500">
-                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                <span class="text-sm font-bold ms-1 text-neutral-text-primary">4.5</span>
-              </div>
-            </div>
-            <p class="text-sm text-neutral-text-secondary mb-4 flex items-center">
-              <svg class="w-3 h-3 me-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              Kuala Lumpur
-            </p>
-            <div class="flex items-center justify-between border-t border-neutral-border pt-4">
-              <div>
-                <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">Starts from</p>
-                <p class="text-xl font-extrabold text-neutral-text-primary">RM 180<span class="text-xs font-normal text-neutral-text-secondary">/night</span></p>
-              </div>
-              <a href="#" class="btn btn-primary py-2 px-4">Book Now</a>
-            </div>
-          </div>
-        </div>
-      </div>
+      <% end %>
       
       <div class="mt-10 text-center sm:hidden">
         <a href="<%= hotels_path %>" class="btn btn-secondary w-full">Explore all hotels</a>
