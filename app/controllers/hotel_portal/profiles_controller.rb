@@ -12,7 +12,7 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
       @hotel.complete_profile!
       redirect_to hotel_dashboard_path, notice: "Hotel profile updated successfully."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

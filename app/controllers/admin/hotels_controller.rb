@@ -31,7 +31,7 @@ class Admin::HotelsController < Admin::BaseController
       redirect_to admin_hotel_path(result[:hotel]), notice: "Hotel created successfully. Default password: #{HotelOps::CreateHotel::DEFAULT_PASSWORD}."
     else
       @hotel.errors.add(:base, result[:error])
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -42,7 +42,7 @@ class Admin::HotelsController < Admin::BaseController
     if @hotel.update(update_hotel_params)
       redirect_to admin_hotel_path(@hotel), notice: "Hotel updated successfully."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

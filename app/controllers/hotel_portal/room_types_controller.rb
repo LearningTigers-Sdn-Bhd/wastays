@@ -23,7 +23,7 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
       current_hotel.complete_rooms!
       redirect_to hotel_room_types_path, notice: "Room type created successfully."
     else
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -37,7 +37,7 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
     if @room_type.update(room_type_params)
       redirect_to hotel_room_types_path, notice: "Room type updated successfully."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

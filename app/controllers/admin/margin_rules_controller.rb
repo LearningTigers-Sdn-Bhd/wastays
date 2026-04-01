@@ -12,7 +12,7 @@ class Admin::MarginRulesController < Admin::BaseController
       redirect_to admin_margin_rules_path, notice: "Margin rule created successfully."
     else
       @margin_rules = MarginRule.all.order(created_at: :desc)
-      render :index, status: :unprocessable_entity
+      render :index, status: :unprocessable_content
     end
   end
 

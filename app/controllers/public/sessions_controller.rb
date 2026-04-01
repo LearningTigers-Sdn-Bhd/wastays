@@ -11,7 +11,7 @@ class Public::SessionsController < ApplicationController
     if user&.authenticate(params[:password])
       if user.account.status == "suspended"
         flash.now[:alert] = "Your account has been suspended. Please contact support."
-        render :new, status: :unprocessable_entity
+        render :new, status: :unprocessable_content
         return
       end
 
@@ -19,7 +19,7 @@ class Public::SessionsController < ApplicationController
       redirect_to_dashboard(user)
     else
       flash.now[:alert] = "Invalid email or password"
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 

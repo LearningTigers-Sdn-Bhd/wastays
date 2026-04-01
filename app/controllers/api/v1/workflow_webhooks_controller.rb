@@ -12,7 +12,7 @@ class Api::V1::WorkflowWebhooksController < ApplicationController
     if result.success?
       head :ok
     else
-      render json: { error: result.message }, status: :unprocessable_entity
+      render json: { error: result.message }, status: :unprocessable_content
     end
   rescue ActiveRecord::RecordNotFound
     head :not_found

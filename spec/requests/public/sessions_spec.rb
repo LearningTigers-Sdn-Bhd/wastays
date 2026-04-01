@@ -8,7 +8,7 @@ RSpec.describe 'Public::Sessions', type: :request do
     it 'rejects login for suspended accounts' do
       post login_path, params: { email: user.email, password: 'password123' }
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include('Your account has been suspended. Please contact support.')
     end
   end

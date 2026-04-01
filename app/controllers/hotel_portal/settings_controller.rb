@@ -16,7 +16,7 @@ module HotelPortal
       if @account.update(account_params)
         redirect_to hotel_settings_path, notice: "Settings updated successfully."
       else
-        render :index, status: :unprocessable_entity
+        render :index, status: :unprocessable_content
       end
     end
 
