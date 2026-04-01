@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
   before do
     driven_by(:rack_test)
-    
+
     # Seed required data
     Permission.find_or_create_by!(slug: 'manage_hotel_profile') { |p| p.name = 'Manage Hotel Profile' }
     CancellationPolicyTemplate.find_or_create_by!(name: 'Flexible', body: 'Full refund if cancelled 24h before.')
@@ -68,7 +68,7 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
     visit admin_hotels_path
     expect(page).to have_content('Green Hotel KL')
     expect(page).to have_content('Pending Review')
-    
+
     click_link 'View'
     expect(page).to have_content('Deluxe Room')
     click_button 'Approve Hotel'

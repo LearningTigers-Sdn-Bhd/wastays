@@ -11,7 +11,7 @@ class PreCheckin < ApplicationRecord
   before_validation :generate_token, on: :create
 
   def completed?
-    status == 'completed'
+    status == "completed"
   end
 
   private

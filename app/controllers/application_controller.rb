@@ -65,7 +65,7 @@ class ApplicationController < ActionController::Base
   end
 
   def store_forwarding_url
-    return if [login_path, register_path].include?(request.path)
+    return if [ login_path, register_path ].include?(request.path)
     session[:forwarding_url] = request.fullpath if request.get? && !request.xhr?
   end
 

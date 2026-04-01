@@ -1,6 +1,6 @@
 module HotelOps
   class BulkUpdateInventory
-    def initialize(hotel:, room_type:, start_date:, end_date:, quantity:, status: 'open', user:)
+    def initialize(hotel:, room_type:, start_date:, end_date:, quantity:, status: "open", user:)
       @hotel = hotel
       @room_type = room_type
       @start_date = start_date.to_date
@@ -16,7 +16,7 @@ module HotelOps
           inventory = @room_type.room_inventories.find_or_initialize_by(date: date)
           old_quantity = inventory.quantity
           old_status = inventory.status
-          
+
           inventory.quantity = @quantity
           inventory.status = @status
           inventory.save!
@@ -25,10 +25,10 @@ module HotelOps
             @hotel.inventory_audit_logs.create!(
               room_type: @room_type,
               user: @user,
-              action_type: 'inventory_update',
+              action_type: "inventory_update",
               old_value: { date: date, quantity: old_quantity, status: old_status },
               new_value: { date: date, quantity: @quantity, status: @status },
-              metadata: { source: 'bulk_editor' }
+              metadata: { source: "bulk_editor" }
             )
           end
         end

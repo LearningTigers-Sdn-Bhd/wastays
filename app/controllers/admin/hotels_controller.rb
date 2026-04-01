@@ -1,5 +1,5 @@
 class Admin::HotelsController < Admin::BaseController
-  before_action :set_hotel, only: [:show, :edit, :update, :approve, :suspend]
+  before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend ]
 
   def index
     @hotels = Hotel.all.order(created_at: :desc)
@@ -13,11 +13,9 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def create
-    @hotel = Hotel.new(hotel_params)
-    @hotel.status ||= 'approved' # Default to approved for admin-created hotels
-    
-    # Simple logic: Assign to first account if not specified
-    @hotel.account ||= Account.first || Account.create!(name: "Default Account", status: "active")
+    @hotel = Hotel.new(create_hotel_params)
+    @hotel.account = selected_account || default_account
+    @hotel.status ||= "approved"
 
     if @hotel.save
       redirect_to admin_hotel_path(@hotel), notice: "Hotel created successfully."
@@ -30,7 +28,7 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def update
-    if @hotel.update(hotel_params)
+    if @hotel.update(update_hotel_params)
       redirect_to admin_hotel_path(@hotel), notice: "Hotel updated successfully."
     else
       render :edit, status: :unprocessable_entity
@@ -38,7 +36,7 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def approve
-    if @hotel.update(status: 'approved')
+    if @hotel.update(status: "approved")
       redirect_to admin_hotel_path(@hotel), notice: "Hotel has been approved."
     else
       redirect_to admin_hotel_path(@hotel), alert: "Failed to approve hotel."
@@ -46,7 +44,7 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def suspend
-    if @hotel.update(status: 'suspended')
+    if @hotel.update(status: "suspended")
       redirect_to admin_hotel_path(@hotel), notice: "Hotel has been suspended."
     else
       redirect_to admin_hotel_path(@hotel), alert: "Failed to suspend hotel."
@@ -59,7 +57,20 @@ class Admin::HotelsController < Admin::BaseController
     @hotel = Hotel.find(params[:id])
   end
 
-  def hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :status, :account_id)
+  def create_hotel_params
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :status)
+  end
+
+  def update_hotel_params
+    create_hotel_params
+  end
+
+  def selected_account
+    account_id = params.dig(:hotel, :account_id).presence
+    Account.find_by(id: account_id) if account_id
+  end
+
+  def default_account
+    Account.first || Account.create!(name: "Default Account", status: "active")
   end
 end

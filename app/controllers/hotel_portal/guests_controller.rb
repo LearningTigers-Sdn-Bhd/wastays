@@ -15,7 +15,7 @@ module HotelPortal
     def safe_guest_attr(guest, attribute)
       guest.public_send(attribute)
     rescue ActiveRecord::Encryption::Errors::Decryption
-      'Encrypted data'
+      "Encrypted data"
     end
   end
 end

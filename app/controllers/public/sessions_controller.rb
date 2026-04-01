@@ -2,7 +2,7 @@ class Public::SessionsController < ApplicationController
   def new
     if logged_in?
       redirect_to_dashboard(current_user)
-      return
+      nil
     end
   end
 
@@ -26,7 +26,7 @@ class Public::SessionsController < ApplicationController
 
   def redirect_to_dashboard(user)
     redirect_path = session.delete(:forwarding_url)
-    
+
     if redirect_path.present?
       redirect_to(redirect_path, notice: "Logged in successfully!")
     elsif user.superadmin?

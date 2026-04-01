@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe 'Hotel Registration', type: :system do
   before do
     driven_by(:rack_test)
-    
+
     # Ensure some permissions exist for seeding
     Permission.find_or_create_by!(slug: 'manage_account') { |p| p.name = 'Manage Account' }
   end
@@ -22,7 +22,7 @@ RSpec.describe 'Hotel Registration', type: :system do
 
     expect(page).to have_content('Welcome to WAStays!')
     expect(page).to have_current_path(hotel_dashboard_path)
-    
+
     user = User.find_by(email: 'sarah@example.com')
     expect(user).to be_present
     expect(user.account.name).to eq('Green Hotel Group')

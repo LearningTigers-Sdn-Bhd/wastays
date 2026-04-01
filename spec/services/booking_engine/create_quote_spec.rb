@@ -4,7 +4,7 @@ RSpec.describe BookingEngine::CreateQuote do
   let!(:account) { Account.create!(name: "Test Account", slug: "test-account", status: "active") }
   let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved") }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100) }
-  
+
   let(:check_in) { Date.today }
   let(:check_out) { Date.today + 2.days }
   let(:stay_dates) { (check_in...check_out).to_a }
@@ -26,7 +26,7 @@ RSpec.describe BookingEngine::CreateQuote do
       expect(result.success?).to be true
       expect(result.quote).to be_persisted
       expect(result.quote.booking_quote_items.count).to eq(1)
-      
+
       # Check inventory held (5 - 1 = 4)
       stay_dates.each do |date|
         expect(room_type.room_inventories.find_by(date: date).quantity).to eq(4)

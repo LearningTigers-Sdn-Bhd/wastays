@@ -17,5 +17,4 @@ RSpec.describe "Public::PaymentMocks", type: :request do
       expect(response).to have_http_status(:found) # Redirects after update
     end
   end
-
 end

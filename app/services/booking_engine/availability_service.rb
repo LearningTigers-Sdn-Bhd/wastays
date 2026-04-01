@@ -12,7 +12,7 @@ module BookingEngine
 
     def find_available_hotels
       # 1. Base query: active hotels
-      hotels = Hotel.where(status: ['approved', 'live'])
+      hotels = Hotel.where(status: [ "approved", "live" ])
       hotels = hotels.where("city ILIKE ?", "%#{@city}%") if @city.present?
 
       # 2. Filter by availability
@@ -36,19 +36,19 @@ module BookingEngine
       available_room_types = potential_room_types.select do |room_type|
         # Check inventory for all stay dates
         inventories = room_type.room_inventories.where(date: stay_dates)
-        
+
         # Must have open inventory with quantity >= required room_count for EVERY stay date
-        inventory_ok = (inventories.count == stay_dates.count) && 
-                       inventories.all? { |inv| inv.status == 'open' && inv.quantity >= @room_count }
+        inventory_ok = (inventories.count == stay_dates.count) &&
+                       inventories.all? { |inv| inv.status == "open" && inv.quantity >= @room_count }
 
         next false unless inventory_ok
 
         # Check rates for all stay dates
         rates = room_type.room_rates.where(date: stay_dates)
-        
+
         # Must have rate record for EVERY stay date
         rates_ok = (rates.count == stay_dates.count)
-        
+
         rates_ok
       end
 

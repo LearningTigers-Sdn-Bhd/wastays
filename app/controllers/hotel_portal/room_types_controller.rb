@@ -1,5 +1,5 @@
 class HotelPortal::RoomTypesController < HotelPortal::BaseController
-  before_action :set_room_type, only: [:show, :edit, :update, :destroy]
+  before_action :set_room_type, only: [ :show, :edit, :update, :destroy ]
 
   def index
     @room_types = current_hotel.room_types

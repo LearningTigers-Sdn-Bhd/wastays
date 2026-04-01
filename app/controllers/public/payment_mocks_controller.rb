@@ -7,7 +7,7 @@ class Public::PaymentMocksController < ApplicationController
 
   def update
     @quote = BookingQuote.find_by!(token: params[:quote_token])
-    
+
     # Simulate Curlec webhook in background
     simulate_webhook(@quote, params[:guest_details])
 
@@ -19,8 +19,8 @@ class Public::PaymentMocksController < ApplicationController
     # For MVP mock, we just predict the token
     confirmation_token = "WS-#{SecureRandom.alphanumeric(8).upcase}"
     # Wait for the webhook job to finish
-    sleep 0.5 
-    
+    sleep 0.5
+
     booking = Booking.find_by(booking_quote_id: @quote.id)
     if booking
       redirect_to booking_path(booking.confirmation_token), notice: "Payment successful!"
@@ -44,7 +44,7 @@ class Public::PaymentMocksController < ApplicationController
     Thread.new do
       payload = {
         id: "curlec_evt_#{SecureRandom.hex(8)}",
-        status: 'captured',
+        status: "captured",
         amount: quote.total_amount,
         currency: quote.currency,
         metadata: {

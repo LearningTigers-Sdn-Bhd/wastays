@@ -8,12 +8,12 @@ RSpec.describe 'Room Setup', type: :system do
 
   before do
     driven_by(:rack_test)
-    
+
     # Setup permissions and role
     Permission.find_or_create_by!(slug: 'manage_hotel_profile') { |p| p.name = 'Manage Hotel Profile' }
     RolePermission.find_or_create_by!(role: role, permission: Permission.find_by(slug: 'manage_hotel_profile'))
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
-    
+
     # Login
     visit login_path
     fill_in 'Email address', with: user.email
@@ -24,7 +24,7 @@ RSpec.describe 'Room Setup', type: :system do
   it 'allows the user to add a room type' do
     expect(page).to have_content('Hotel Policies')
     expect(page).to have_content('✓')
-    
+
     # Click Update for Step 3
     within('#step-rooms') do
       click_link 'Update'
@@ -38,20 +38,20 @@ RSpec.describe 'Room Setup', type: :system do
     fill_in 'Max Children', with: 1
     fill_in 'Total Number of Rooms', with: 5
     fill_in 'Base Nightly Rate (MYR)', with: 250
-    
+
     click_button 'Create Room Type'
 
     expect(page).to have_content('Room type created successfully.')
     expect(page).to have_content('Deluxe Suite')
     expect(hotel.reload.status).to eq('inventory_incomplete')
-    
+
     # Go back to dashboard to check onboarding
     click_link 'Back to Dashboard'
     within('#step-rooms') do
       expect(page).to have_content('✓')
       expect(page).to have_link('Manage')
     end
-    
+
     # Step 4 Submit button should now be enabled
     within('#step-review') do
       expect(page).to have_button('Submit for Review')

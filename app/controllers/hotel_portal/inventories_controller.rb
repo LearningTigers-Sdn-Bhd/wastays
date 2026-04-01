@@ -5,13 +5,13 @@ class HotelPortal::InventoriesController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days
-    
+
     @inventories = @room_type.room_inventories.where(date: @start_date..@end_date).index_by(&:date)
   end
 
   def create
     authorize current_hotel, :update?, policy_class: HotelPolicy
-    
+
     result = HotelOps::BulkUpdateInventory.new(
       hotel: current_hotel,
       room_type: @room_type,

@@ -50,7 +50,7 @@
             prose-p:text-neutral-text-secondary prose-p:leading-relaxed
             prose-li:text-neutral-text-secondary prose-strong:text-neutral-text-primary
             prose-a:text-brand-primary prose-a:no-underline hover:prose-a:underline">
-            <%= raw @html_content %>
+            <%= sanitize @html_content, tags: %w[h1 h2 h3 h4 h5 h6 p br ul ol li strong em a code pre blockquote hr], attributes: %w[href title] %>
           </div>
           
           <div class="mt-12 pt-8 border-t border-neutral-border flex flex-col sm:flex-row items-center justify-between gap-4">

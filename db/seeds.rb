@@ -81,7 +81,7 @@ if Rails.env.development?
   end
 
   hotel_owner_role = Role.find_by(account: account, slug: 'hotel_owner')
-  
+
   owner = User.find_or_create_by!(email: 'owner@sample.com') do |u|
     u.name = 'Hotel Owner'
     u.password = 'password'

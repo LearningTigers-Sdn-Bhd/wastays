@@ -6,5 +6,5 @@ class MarginRule < ApplicationRecord
 
   STATUSES = %w[active inactive].freeze
 
-  scope :active, -> { where(status: 'active') }
+  scope :active, -> { where(status: "active") }
 end

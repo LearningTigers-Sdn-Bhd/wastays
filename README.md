@@ -63,4 +63,4 @@ bundle exec rspec
 
 ## Documentation
 
-Detailed technical specifications and implementation roadmaps are available in the `markdowns/` directory. Operational guides for admins can be found in `markdowns/guides/`.
+Detailed technical specifications and implementation roadmaps are available in the `markdowns/` directory. Operational guides for admins are loaded from `guides/`, with `markdowns/guides/` still supported when present.

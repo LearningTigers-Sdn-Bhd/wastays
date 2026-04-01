@@ -6,6 +6,6 @@ class RoomInventory < ApplicationRecord
   validates :status, presence: true, inclusion: { in: %w[open closed] }
   validates :date, uniqueness: { scope: :room_type_id }
 
-  scope :open, -> { where(status: 'open') }
-  scope :closed, -> { where(status: 'closed') }
+  scope :open, -> { where(status: "open") }
+  scope :closed, -> { where(status: "closed") }
 end

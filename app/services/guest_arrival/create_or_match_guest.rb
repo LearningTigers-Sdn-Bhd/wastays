@@ -1,4 +1,4 @@
-require 'ostruct'
+require "ostruct"
 
 module GuestArrival
   class CreateOrMatchGuest
@@ -11,7 +11,7 @@ module GuestArrival
 
     def call
       guest = find_existing_guest
-      
+
       if guest
         # Update name if it was missing or update metadata
         guest.update(name: @name) if guest.name.blank?
