@@ -15,12 +15,17 @@ class Admin::ReconciliationsController < Admin::BaseController
     payload = @event.payload.symbolize_keys
     quote_token = payload.dig(:metadata, :quote_token)
 
+    metadata = payload[:metadata] || {}
     confirm_result = BookingEngine::ConfirmBooking.new(
       quote_token: quote_token,
       payment_details: {
-        guest_name: payload.dig(:metadata, :guest_name),
-        guest_email: payload.dig(:metadata, :guest_email),
-        guest_phone: payload.dig(:metadata, :guest_phone),
+        guest_name: metadata[:guest_name],
+        guest_email: metadata[:guest_email],
+        guest_phone: metadata[:guest_phone],
+        government_id: metadata[:government_id],
+        gender: metadata[:gender],
+        country: metadata[:country],
+        document_type: metadata[:document_type],
         external_reference: payload[:id]
       }
     ).call

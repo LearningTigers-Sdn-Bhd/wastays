@@ -1,0 +1,124 @@
+<div class="space-y-6">
+  <div class="card">
+    <div class="p-4 border-b border-neutral-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-y-4">
+      <div>
+        <h1 class="text-xl font-bold text-neutral-text-primary"><%= safe_guest_attr(@guest, :name) %></h1>
+        <p class="text-xs uppercase tracking-widest text-neutral-text-secondary">Guest Profile</p>
+      </div>
+      <%= link_to "Back to list", hotel_guests_path, class: "text-sm font-bold text-brand-primary hover:underline" %>
+    </div>
+    <div class="p-4 space-y-3 grid gap-3 md:grid-cols-2">
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Email</p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :email) %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Phone</p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :phone) %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Gender</p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :gender)&.capitalize || "—" %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Passport Country</p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :country) %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Document Type</p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :document_type)&.upcase %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">ID / Passport</p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :government_id) %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Last Stay</p>
+        <p class="text-sm font-semibold text-neutral-text-primary">
+          <%= @bookings.first&.check_out ? @bookings.first.check_out.strftime("%d %b %Y") : "—" %>
+        </p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Total Visits</p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @bookings.count %></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="card">
+      <div class="p-4 border-b border-neutral-border">
+        <p class="text-xs uppercase font-black tracking-widest text-neutral-text-secondary">Currency Totals</p>
+      </div>
+      <div class="p-4 space-y-3">
+        <% if @currency_totals.any? %>
+          <% @currency_totals.each do |currency, amount| %>
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-neutral-text-secondary"><%= currency %></span>
+              <span class="text-sm font-semibold text-neutral-text-primary"><%= number_to_currency(amount, unit: currency == 'USD' ? 'USD ' : 'RM ', delimiter: ',') %></span>
+            </div>
+          <% end %>
+        <% else %>
+          <p class="text-xs text-neutral-text-secondary">No bookings recorded yet.</p>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="p-4 border-b border-neutral-border">
+        <p class="text-xs uppercase font-black tracking-widest text-neutral-text-secondary">Recent Notes</p>
+      </div>
+      <div class="p-4 text-xs text-neutral-text-secondary">
+        Use the booking timeline below to review stay history, documentation status, and payment summaries.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="p-4 border-b border-neutral-border flex items-center justify-between">
+      <h2 class="text-lg font-bold text-neutral-text-primary">Booking History</h2>
+      <span class="text-xs uppercase tracking-widest text-neutral-text-secondary"><%= pluralize(@bookings.count, 'stay') %></span>
+    </div>
+    <div class="p-4 overflow-x-auto">
+      <% if @bookings.any? %>
+        <table class="min-w-full text-left text-sm">
+          <thead>
+            <tr>
+              <th class="pb-2 text-xs uppercase tracking-widest text-neutral-text-secondary">Confirmation</th>
+              <th class="pb-2 text-xs uppercase tracking-widest text-neutral-text-secondary">Stay</th>
+              <th class="pb-2 text-xs uppercase tracking-widest text-neutral-text-secondary">Status</th>
+              <th class="pb-2 text-xs uppercase tracking-widest text-neutral-text-secondary">Amount</th>
+              <th class="pb-2 text-xs uppercase tracking-widest text-neutral-text-secondary">Pre-checkin</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-neutral-border">
+            <% @bookings.each do |booking| %>
+              <tr>
+                <td class="py-2 font-medium text-neutral-text-primary"><%= booking.confirmation_token %></td>
+                <td class="py-2 text-neutral-text-secondary">
+                  <%= booking.check_in.strftime("%d %b") %> – <%= booking.check_out.strftime("%d %b %Y") %>
+                </td>
+                <td class="py-2">
+                  <span class="text-xs font-semibold <%= booking.status == 'completed' ? 'text-green-600' : 'text-neutral-text-secondary' %>">
+                    <%= booking.status.humanize %>
+                  </span>
+                </td>
+                <td class="py-2 font-semibold text-neutral-text-primary">
+                  <%= booking.currency == 'USD' ? "USD #{number_with_precision(booking.total_amount, precision: 2)}" : "RM #{number_with_precision(booking.total_amount, precision: 2)}" %>
+                  <% if booking.tourism_tax? %>
+                    <div class="text-[10px] text-neutral-text-secondary">Tax RM <%= number_with_precision(booking.tourism_tax_amount, precision: 2) %></div>
+                  <% end %>
+                </td>
+                <td class="py-2 text-neutral-text-secondary text-[10px]">
+                  <%= booking.pre_checkin_status&.humanize || 'pending' %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <p class="text-sm text-neutral-text-secondary text-center py-6">No bookings yet.</p>
+      <% end %>
+    </div>
+  </div>
+</div>

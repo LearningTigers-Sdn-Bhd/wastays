@@ -22,6 +22,20 @@
             <dt class="font-medium text-neutral-text-primary">Check-out</dt>
             <dd><%= @settings[:check_out] || "Not set" %></dd>
           </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">Default Currency</dt>
+          <dd><%= @settings[:default_currency] || "MYR" %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">USD Conversion Rate</dt>
+          <dd><%= number_with_precision(@settings[:usd_conversion_rate] || 4.5, precision: 2) %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">Tourism Tax</dt>
+          <dd>
+            <%= @settings[:tourism_tax_enabled] ? "RM #{number_with_precision(@settings[:tourism_tax_amount] || 10.0, precision: 2)} (non-Malaysian passports)" : "Disabled" %>
+          </dd>
+        </div>
         </dl>
       <% else %>
         <p class="text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>

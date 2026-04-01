@@ -33,7 +33,11 @@ module HotelPortal
           hotel_status: current_hotel.status.humanize,
           onboarding_stage: onboarding_stage(current_hotel),
           check_in: policy&.check_in_time,
-          check_out: policy&.check_out_time
+          check_out: policy&.check_out_time,
+          default_currency: current_hotel.default_currency,
+          usd_conversion_rate: current_hotel.usd_conversion_rate,
+          tourism_tax_enabled: current_hotel.tourism_tax_enabled?,
+          tourism_tax_amount: current_hotel.tourism_tax_amount
         }
       else
         @settings = {}

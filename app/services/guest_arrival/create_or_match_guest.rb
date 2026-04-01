@@ -7,20 +7,31 @@ module GuestArrival
       @email = params[:email]&.downcase&.strip
       @phone = params[:phone]&.strip
       @government_id = params[:government_id]&.strip
+      @gender = params[:gender]&.downcase&.strip
+      @country = params[:country]&.strip
+      @document_type = params[:document_type]&.downcase&.strip
     end
 
     def call
       guest = find_existing_guest
 
       if guest
-        # Update name if it was missing or update metadata
-        guest.update(name: @name) if guest.name.blank?
+        updates = {}
+        updates[:name] = @name if @name.present? && guest.name.blank?
+        updates[:country] = @country if @country.present? && guest.country.blank?
+        updates[:gender] = @gender if @gender.present? && guest.gender.blank?
+        updates[:document_type] = @document_type if @document_type.present? && guest.document_type.blank?
+        updates[:government_id] = @government_id if @government_id.present? && guest.government_id.blank?
+        guest.update(updates) if updates.any?
       else
         guest = Guest.create!(
           name: @name,
           email: @email,
           phone: @phone,
-          government_id: @government_id
+          government_id: @government_id,
+          country: @country,
+          gender: @gender,
+          document_type: @document_type
         )
       end
 
