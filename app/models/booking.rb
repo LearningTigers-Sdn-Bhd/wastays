@@ -42,6 +42,10 @@ class Booking < ApplicationRecord
     status == "completed"
   end
 
+  def tourism_tax?
+    tourism_tax_applied && tourism_tax_amount.positive?
+  end
+
   private
 
   def generate_confirmation_token

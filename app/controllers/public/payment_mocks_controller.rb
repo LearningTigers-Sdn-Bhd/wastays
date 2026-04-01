@@ -9,7 +9,7 @@ class Public::PaymentMocksController < ApplicationController
     @quote = BookingQuote.find_by!(token: params[:quote_token])
 
     # Simulate Curlec webhook in background
-    simulate_webhook(@quote, params[:guest_details])
+    simulate_webhook(@quote, guest_details_params)
 
     # Wait for a moment to simulate network delay
     sleep 1
@@ -40,6 +40,8 @@ class Public::PaymentMocksController < ApplicationController
   private
 
   def simulate_webhook(quote, guest_details)
+    guest_details = guest_details.to_h.symbolize_keys
+
     # We'll use a Thread to simulate an asynchronous webhook call from the gateway
     Thread.new do
       payload = {
@@ -51,7 +53,10 @@ class Public::PaymentMocksController < ApplicationController
           quote_token: quote.token,
           guest_name: guest_details[:name],
           guest_email: guest_details[:email],
-          guest_phone: guest_details[:phone]
+          guest_phone: guest_details[:phone],
+          gender: guest_details[:gender],
+          country: guest_details[:country],
+          document_type: guest_details[:document_type]
         }
       }
 
@@ -65,9 +70,17 @@ class Public::PaymentMocksController < ApplicationController
           guest_name: guest_details[:name],
           guest_email: guest_details[:email],
           guest_phone: guest_details[:phone],
+          government_id: guest_details[:government_id],
+          gender: guest_details[:gender],
+          country: guest_details[:country],
+          document_type: guest_details[:document_type],
           external_reference: payload[:id]
         }
       ).call
     end
+  end
+
+  def guest_details_params
+    params.require(:guest_details).permit(:name, :email, :phone, :government_id, :gender, :country, :document_type)
   end
 end

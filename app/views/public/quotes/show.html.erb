@@ -63,6 +63,34 @@
                 <%= f.telephone_field "guest_details[phone]", id: "phone", required: true, placeholder: "+60 12-345 6789", class: "form-input py-3" %>
               </div>
             </div>
+            <div class="grid sm:grid-cols-2 gap-6 mt-6">
+              <div>
+                <label for="document_type" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Document Type</label>
+                <%= f.select "guest_details[document_type]", options_for_select([['MyKad / IC','ic'], ['Passport','passport']]), { required: true }, class: "form-select py-3" %>
+              </div>
+              <div>
+                <label for="government_id" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">IC / Passport Number</label>
+                <%= f.text_field "guest_details[government_id]", id: "government_id", required: true, class: "form-input py-3", placeholder: "A123456789" %>
+              </div>
+              <div>
+                <label for="country" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Country (passport)</label>
+                <%= f.text_field "guest_details[country]", id: "country", required: true, list: "guest-country-options", class: "form-input py-3", placeholder: "Malaysia" %>
+              </div>
+              <div>
+                <label for="gender" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Gender</label>
+                <%= f.select "guest_details[gender]", options_for_select([['Male','male'], ['Female','female'], ['Other','other']]), { required: true }, class: "form-select py-3" %>
+              </div>
+            </div>
+            <datalist id="guest-country-options">
+              <% country_options.each do |country| %>
+                <option value="<%= country %>"></option>
+              <% end %>
+            </datalist>
+            <% if @hotel.tourism_tax_enabled? %>
+              <p class="text-xs text-neutral-text-secondary mt-3">
+                Malaysia tourism tax of RM <%= number_with_precision(@hotel.tourism_tax_amount, precision: 2) %> applies to guests with passports from outside Malaysia. The amount will be included during checkout for clarity.
+              </p>
+            <% end %>
           </div>
 
           <!-- Payment Selection -->

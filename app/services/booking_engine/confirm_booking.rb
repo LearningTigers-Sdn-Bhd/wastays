@@ -21,6 +21,11 @@ module BookingEngine
         margin_amount = (@quote.total_amount * (margin_rate / 100.0)).round(2)
         net_amount = @quote.total_amount - margin_amount
 
+        guest_country = normalize_country(@payment_details[:country])
+        gender = @payment_details[:gender]&.downcase&.strip
+        document_type = @payment_details[:document_type]&.downcase&.strip
+        tourism_tax_amount = @quote.hotel.tourism_tax_amount_for(guest_country)
+
         booking = Booking.new(
           booking_quote: @quote,
           hotel: @quote.hotel,
@@ -39,7 +44,12 @@ module BookingEngine
           payment_status: "captured",
           margin_rate: margin_rate,
           margin_amount: margin_amount,
-          net_amount: net_amount
+          net_amount: net_amount,
+          guest_gender: gender,
+          guest_country: guest_country,
+          guest_document_type: document_type,
+          tourism_tax_amount: tourism_tax_amount,
+          tourism_tax_applied: tourism_tax_amount.positive?
         )
 
         if booking.save
@@ -47,7 +57,11 @@ module BookingEngine
           guest_result = GuestArrival::CreateOrMatchGuest.new(
             name: @payment_details[:guest_name],
             email: @payment_details[:guest_email],
-            phone: @payment_details[:guest_phone]
+            phone: @payment_details[:guest_phone],
+            government_id: @payment_details[:government_id],
+            gender: gender,
+            country: guest_country,
+            document_type: document_type
           ).call
 
           if guest_result.success?
@@ -88,6 +102,13 @@ module BookingEngine
 
     def existing_booking
       @existing_booking ||= Booking.find_by(booking_quote_id: @quote.id)
+    end
+
+    def normalize_country(value)
+      return if value.blank?
+
+      country = ISO3166::Country.find_country_by_name(value)
+      country&.name || value.split.map(&:capitalize).join(' ')
     end
   end
 end

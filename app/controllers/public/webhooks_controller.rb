@@ -43,13 +43,18 @@ class Public::WebhooksController < ApplicationController
     # 3. Process payload
     processed_payload = adapter.handle_webhook(payload: temp_payload)
 
-    if processed_payload[:status] == "captured"
+    if processed_payload[:status] == 'captured'
+      metadata = processed_payload[:metadata] || {}
       confirm_result = BookingEngine::ConfirmBooking.new(
         quote_token: quote_token,
         payment_details: {
-          guest_name: processed_payload[:metadata][:guest_name],
-          guest_email: processed_payload[:metadata][:guest_email],
-          guest_phone: processed_payload[:metadata][:guest_phone],
+          guest_name: metadata[:guest_name],
+          guest_email: metadata[:guest_email],
+          guest_phone: metadata[:guest_phone],
+          government_id: metadata[:government_id],
+          gender: metadata[:gender],
+          country: metadata[:country],
+          document_type: metadata[:document_type],
           external_reference: processed_payload[:external_reference]
         }
       ).call
