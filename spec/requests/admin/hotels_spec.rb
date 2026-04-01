@@ -66,7 +66,54 @@ RSpec.describe 'Admin::Hotels', type: :request do
     let(:account) { create(:account, name: 'Luma Hospitality Group', status: 'active') }
     let(:hotel) { create(:hotel, account: account, name: 'Luma Stay', status: 'approved') }
     let!(:owner) { create(:user, :admin, account: account, name: 'Rose Yeo', email: 'rose@luma.test') }
+    let!(:banking_detail) do
+      create(
+        :banking_detail,
+        account: account,
+        account_holder_name: 'Rose Yeo',
+        bank_name: 'Maybank',
+        account_number: '5142 1234 5678',
+        account_type: 'current'
+      )
+    end
+    let!(:global_margin_rule) { create(:margin_rule, settable: nil, rate: 12.0, status: 'active') }
     let!(:staff) { create(:user, account: account, name: 'Ken Tan', email: 'ken@luma.test') }
+    let!(:current_month_booking) do
+      create(
+        :booking,
+        hotel: hotel,
+        status: 'confirmed',
+        total_amount: 500.0,
+        margin_amount: 50.0,
+        net_amount: 450.0,
+        margin_rate: 10.0,
+        created_at: Time.current.beginning_of_month + 2.days
+      )
+    end
+    let!(:second_current_month_booking) do
+      create(
+        :booking,
+        hotel: hotel,
+        status: 'completed',
+        total_amount: 300.0,
+        margin_amount: 45.0,
+        net_amount: 255.0,
+        margin_rate: 15.0,
+        created_at: Time.current.beginning_of_month + 5.days
+      )
+    end
+    let!(:previous_month_booking) do
+      create(
+        :booking,
+        hotel: hotel,
+        status: 'confirmed',
+        total_amount: 900.0,
+        margin_amount: 90.0,
+        net_amount: 810.0,
+        margin_rate: 10.0,
+        created_at: 1.month.ago.beginning_of_month + 1.day
+      )
+    end
 
     it 'shows account details separately from account users' do
       get admin_hotel_path(hotel)
@@ -84,8 +131,22 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(response.body).to include('Ken Tan')
       expect(response.body).to include('ken@luma.test')
       expect(response.body).to include('Hotel Staff')
-      expect(response.body).not_to include('Account Holder')
-      expect(response.body).not_to include('Account Email')
+      expect(response.body).to include('Banking Details')
+      expect(response.body).to include('Rose Yeo')
+      expect(response.body).to include('Maybank')
+      expect(response.body).to include('5142 1234 5678')
+      expect(response.body).to include('Current')
+      expect(response.body).to include('Gross Revenue (MTD)')
+      expect(response.body).to include('MYR 800.00')
+      expect(response.body).to include('WAStays Earned Margin (MTD)')
+      expect(response.body).to include('MYR 95.00')
+      expect(response.body).to include('Hotel Net Earnings (MTD)')
+      expect(response.body).to include('MYR 705.00')
+      expect(response.body).to include('Bookings (MTD)')
+      expect(response.body).to include('2')
+      expect(response.body).to include('Configured Margin Rate')
+      expect(response.body).to include('12.00%')
+      expect(response.body).not_to include('Realized Margin Rate')
     end
   end
 

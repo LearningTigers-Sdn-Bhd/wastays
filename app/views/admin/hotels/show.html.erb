@@ -8,32 +8,71 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
-      <!-- Hotel Info -->
-      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <div class="flex justify-between items-start mb-4">
-          <div>
-            <h2 class="text-2xl font-bold text-gray-800"><%= @hotel.name %></h2>
-            <p class="text-sm text-gray-600"><%= @hotel.city %>, <%= @hotel.country %></p>
+      <!-- Hotel Overview -->
+      <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="p-6 md:p-7 border-b border-gray-100 bg-gradient-to-br from-white via-white to-gray-50">
+          <div class="space-y-5">
+            <div>
+              <div class="flex items-center gap-3 flex-wrap">
+                <h2 class="text-3xl font-bold tracking-tight text-gray-900"><%= @hotel.name %></h2>
+                <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-semibold
+                  <%= case @hotel.status
+                      when 'approved', 'live' then 'bg-green-100 text-green-800 ring-1 ring-green-200'
+                      when 'pending_review' then 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-200'
+                      when 'suspended' then 'bg-red-100 text-red-800 ring-1 ring-red-200'
+                      else 'bg-gray-100 text-gray-800 ring-1 ring-gray-200'
+                      end %>">
+                  <%= @hotel.status.titleize %>
+                </span>
+              </div>
+              <p class="mt-2 text-base text-gray-600"><%= @hotel.city %>, <%= @hotel.country %></p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+              <div class="rounded-xl border border-gray-200 bg-white/80 px-4 py-3">
+                <p class="text-gray-500 uppercase font-semibold tracking-[0.16em] text-[10px]">Address</p>
+                <p class="mt-1 text-gray-900"><%= @hotel.address.presence || 'N/A' %></p>
+              </div>
+              <div class="rounded-xl border border-gray-200 bg-white/80 px-4 py-3">
+                <p class="text-gray-500 uppercase font-semibold tracking-[0.16em] text-[10px]">Star Rating</p>
+                <p class="mt-1 text-gray-900"><%= @hotel.star_rating.presence || 'N/A' %> Stars</p>
+              </div>
+              <div class="rounded-xl border border-blue-100 bg-gradient-to-br from-white to-blue-50 px-4 py-3">
+                <p class="text-blue-600 uppercase font-semibold tracking-[0.16em] text-[10px]">Configured Margin Rate</p>
+                <p class="mt-1 text-gray-900 text-xl font-bold"><%= number_with_precision(@configured_margin_rate, precision: 2) %>%</p>
+              </div>
+            </div>
           </div>
-          <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium 
-            <%= case @hotel.status
-                when 'approved', 'live' then 'bg-green-100 text-green-800'
-                when 'pending_review' then 'bg-yellow-100 text-yellow-800'
-                when 'suspended' then 'bg-red-100 text-red-800'
-                else 'bg-gray-100 text-gray-800'
-                end %>">
-            <%= @hotel.status.titleize %>
-          </span>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 text-sm mt-6">
-          <div>
-            <p class="text-gray-500 uppercase font-medium text-[10px]">Address</p>
-            <p class="text-gray-800"><%= @hotel.address.presence || 'N/A' %></p>
+        <div class="p-6 md:p-7 bg-gray-50/80">
+          <div class="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <h3 class="text-sm font-bold uppercase tracking-[0.18em] text-gray-700">Performance Snapshot</h3>
+              <p class="text-xs text-gray-500 mt-1">Month-to-date business summary for this hotel.</p>
+            </div>
           </div>
-          <div>
-            <p class="text-gray-500 uppercase font-medium text-[10px]">Star Rating</p>
-            <p class="text-gray-800"><%= @hotel.star_rating.presence || 'N/A' %> Stars</p>
+
+          <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div class="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+              <p class="text-[10px] uppercase tracking-[0.16em] font-semibold text-gray-500">Gross Revenue (MTD)</p>
+              <p class="mt-3 text-2xl font-bold tracking-tight text-gray-900">MYR <%= number_with_precision(@gross_revenue_mtd, precision: 2) %></p>
+            </div>
+
+            <div class="rounded-2xl border border-red-100 bg-gradient-to-br from-white to-red-50 px-5 py-4 shadow-sm">
+              <p class="text-[10px] uppercase tracking-[0.16em] font-semibold text-red-500">WAStays Earned Margin (MTD)</p>
+              <p class="mt-3 text-2xl font-bold tracking-tight text-red-600">MYR <%= number_with_precision(@wastays_margin_mtd, precision: 2) %></p>
+            </div>
+
+            <div class="rounded-2xl border border-blue-100 bg-gradient-to-br from-white to-blue-50 px-5 py-4 shadow-sm">
+              <p class="text-[10px] uppercase tracking-[0.16em] font-semibold text-blue-600">Hotel Net Earnings (MTD)</p>
+              <p class="mt-3 text-2xl font-bold tracking-tight text-blue-700">MYR <%= number_with_precision(@hotel_net_earnings_mtd, precision: 2) %></p>
+            </div>
+
+            <div class="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+              <p class="text-[10px] uppercase tracking-[0.16em] font-semibold text-gray-500">Bookings (MTD)</p>
+              <p class="mt-3 text-2xl font-bold tracking-tight text-gray-900"><%= @booking_count_mtd %></p>
+            </div>
           </div>
         </div>
       </div>
@@ -133,6 +172,37 @@
             </div>
           <% end %>
         </div>
+      </div>
+
+      <% banking_detail = @hotel.account.banking_detail %>
+      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Banking Details</h3>
+
+        <% if banking_detail %>
+          <div class="space-y-4 text-sm">
+            <div>
+              <p class="text-gray-500 uppercase font-medium text-[10px]">Account Holder Name</p>
+              <p class="text-gray-800"><%= banking_detail.account_holder_name %></p>
+            </div>
+
+            <div>
+              <p class="text-gray-500 uppercase font-medium text-[10px]">Bank Name</p>
+              <p class="text-gray-800"><%= banking_detail.bank_name %></p>
+            </div>
+
+            <div>
+              <p class="text-gray-500 uppercase font-medium text-[10px]">Account Number</p>
+              <p class="text-gray-800"><%= banking_detail.account_number %></p>
+            </div>
+
+            <div>
+              <p class="text-gray-500 uppercase font-medium text-[10px]">Account Type</p>
+              <p class="text-gray-800"><%= banking_detail.account_type.titleize %></p>
+            </div>
+          </div>
+        <% else %>
+          <p class="text-sm text-gray-500 italic">No banking details have been submitted yet.</p>
+        <% end %>
       </div>
     </div>
   </div>

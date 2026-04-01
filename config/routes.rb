@@ -94,7 +94,7 @@ Rails.application.routes.draw do
     resources :inventory_dashboards, only: [ :index ], path: "inventory"
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
     resources :guests, only: [ :index ]
-    resources :settings, only: [ :index ]
+    resource :settings, only: [ :show, :update ], controller: "settings"
     resources :inventory_audit_logs, only: [ :index ]
   end
 end

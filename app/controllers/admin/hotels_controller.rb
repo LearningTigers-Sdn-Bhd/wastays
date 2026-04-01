@@ -6,6 +6,13 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def show
+    month_to_date_bookings = @hotel.bookings.revenue_generating.where(created_at: Time.current.all_month)
+
+    @gross_revenue_mtd = month_to_date_bookings.sum(:total_amount)
+    @wastays_margin_mtd = month_to_date_bookings.sum("COALESCE(margin_amount, 0)")
+    @hotel_net_earnings_mtd = month_to_date_bookings.sum("COALESCE(net_amount, 0)")
+    @booking_count_mtd = month_to_date_bookings.count
+    @configured_margin_rate = @hotel.effective_margin_rate
   end
 
   def new

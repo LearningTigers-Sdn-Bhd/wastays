@@ -4,6 +4,7 @@ RSpec.describe Account, type: :model do
   describe 'associations' do
     it { should have_many(:users).dependent(:destroy) }
     it { should have_many(:hotels).dependent(:destroy) }
+    it { should have_one(:banking_detail).dependent(:destroy) }
   end
 
   describe 'validations' do
