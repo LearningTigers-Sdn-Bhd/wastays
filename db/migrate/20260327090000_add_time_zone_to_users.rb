@@ -1,6 +1,6 @@
 class AddTimeZoneToUsers < ActiveRecord::Migration[8.0]
   def up
-    add_column :users, :time_zone, :string, default: "Kuala Lumpur", null: false
+    add_column :users, :time_zone, :string, default: "Asia/Kuching", null: false
   end
 
   def down

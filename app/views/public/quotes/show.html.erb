@@ -52,18 +52,151 @@
             <div class="grid sm:grid-cols-2 gap-6">
               <div class="sm:col-span-2">
                 <label for="name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Full Name (as per ID/Passport)</label>
-                <%= f.text_field "guest_details[name]", id: "name", required: true, placeholder: "John Doe", class: "form-input py-3" %>
+                <%= f.text_field "guest_details[name]", id: "name", required: true, placeholder: "John Doe", class: "form-input py-3 px-4" %>
+              </div>
+              <div>
+                <label for="gender" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Gender</label>
+                <%= f.select "guest_details[gender]", options_for_select([['Male','male'], ['Female','female'], ['Other','other']]), { required: true }, class: "form-select py-3 px-4" %>
               </div>
               <div>
                 <label for="email" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Email Address</label>
-                <%= f.email_field "guest_details[email]", id: "email", required: true, placeholder: "john@example.com", class: "form-input py-3" %>
+                <%= f.email_field "guest_details[email]", id: "email", required: true, placeholder: "john@example.com", class: "form-input py-3 px-4" %>
               </div>
               <div>
                 <label for="phone" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">WhatsApp Number</label>
-                <%= f.telephone_field "guest_details[phone]", id: "phone", required: true, placeholder: "+60 12-345 6789", class: "form-input py-3" %>
+                <%= f.telephone_field "guest_details[phone]", id: "phone", required: true, placeholder: "+60 12-345 6789", class: "form-input py-3 px-4" %>
               </div>
             </div>
+            <div class="grid sm:grid-cols-2 gap-6 mt-6" data-country-flow>
+              <div class="sm:col-span-2 relative" data-country-dropdown data-countries="<%= country_options.to_json %>">
+                <label for="country" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Country (passport)</label>
+                <%= f.text_field "guest_details[country]", id: "country", required: true, class: "form-input py-3 px-4", placeholder: "Start typing to search", autocomplete: "off", inputmode: "search", data: { country_select: true, country_input: true } %>
+                <p class="text-[10px] text-neutral-text-secondary mt-2">Start typing to select a country, then choose the document type.</p>
+                <div class="absolute z-20 mt-2 w-full rounded-xl border border-neutral-200 bg-white shadow-lg max-h-56 overflow-auto hidden" data-country-menu></div>
+              </div>
+              <div>
+                <label for="document_type" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Document Type</label>
+                <%= f.select "guest_details[document_type]", options_for_select([['MyKad / IC','ic'], ['Passport','passport']]), { required: true, prompt: "Select document type" }, class: "form-select py-3 px-4", data: { document_select: true }, disabled: true %>
+              </div>
+              <div data-document-field class="hidden">
+                <label for="government_id" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" data-document-label>IC / Passport Number</label>
+                <%= f.text_field "guest_details[government_id]", id: "government_id", required: true, class: "form-input py-3 px-4", placeholder: "Enter document number", data: { document_input: true }, disabled: true %>
+              </div>
+            </div>
+            <% if @hotel.tourism_tax_enabled? %>
+              <p class="text-xs text-neutral-text-secondary mt-3">
+                Malaysia tourism tax of RM <%= number_with_precision(@hotel.tourism_tax_amount, precision: 2) %> applies to guests with passports from outside Malaysia. The amount will be included during checkout for clarity.
+              </p>
+            <% end %>
           </div>
+          <script>
+            (function() {
+              const container = document.querySelector('[data-country-flow]');
+              if (!container) return;
+
+              const countryInput = container.querySelector('[data-country-select]');
+              const documentSelect = container.querySelector('[data-document-select]');
+              const documentInput = container.querySelector('[data-document-input]');
+              const documentLabel = container.querySelector('[data-document-label]');
+              const documentField = container.querySelector('[data-document-field]');
+              const countryDropdown = container.querySelector('[data-country-dropdown]');
+              const countryMenu = container.querySelector('[data-country-menu]');
+              const countryInputField = container.querySelector('[data-country-input]');
+              const countryList = countryDropdown ? JSON.parse(countryDropdown.dataset.countries || '[]') : [];
+              let documentManuallySet = false;
+
+              const updateEnabled = () => {
+                const hasCountry = countryInput && countryInput.value.trim().length > 0;
+                if (documentSelect) documentSelect.disabled = !hasCountry;
+                if (!hasCountry && documentSelect) {
+                  documentSelect.value = '';
+                  documentManuallySet = false;
+                }
+                const hasDocumentType = hasCountry && documentSelect && documentSelect.value;
+                if (documentInput) documentInput.disabled = !hasDocumentType;
+                if (documentField) {
+                  documentField.classList.toggle('hidden', !hasDocumentType);
+                }
+              };
+
+              const autoSelectDocumentType = () => {
+                if (!countryInput || !documentSelect) return;
+                const country = countryInput.value.trim().toLowerCase();
+                if (!country) return;
+                if (documentManuallySet && documentSelect.value) return;
+                const isMalaysia = ['malaysia', 'my', 'mys'].includes(country);
+                documentSelect.value = isMalaysia ? 'ic' : 'passport';
+                updateLabel();
+                updateEnabled();
+              };
+
+              const updateLabel = () => {
+                if (!documentLabel || !documentSelect) return;
+                if (!documentSelect.value) {
+                  documentLabel.textContent = 'IC / Passport Number';
+                  return;
+                }
+                const label = documentSelect.value === 'ic' ? 'IC Number' : 'Passport Number';
+                documentLabel.textContent = label;
+              };
+
+              const renderCountryOptions = (query) => {
+                if (!countryMenu || !countryInputField) return;
+                const normalized = query.trim().toLowerCase();
+                const matches = normalized
+                  ? countryList.filter((country) => country.toLowerCase().includes(normalized))
+                  : countryList;
+                const limited = matches.slice(0, 12);
+                countryMenu.innerHTML = limited
+                  .map((country) => `<button type="button" class="w-full px-3 py-2 text-left text-sm text-neutral-text-primary hover:bg-neutral-100" data-country-option="${country}">${country}</button>`)
+                  .join('');
+                countryMenu.classList.toggle('hidden', limited.length === 0);
+              };
+
+              const closeCountryMenu = () => {
+                if (countryMenu) countryMenu.classList.add('hidden');
+              };
+
+              if (countryInputField) {
+                countryInputField.addEventListener('input', (event) => {
+                  renderCountryOptions(event.target.value);
+                  updateEnabled();
+                  autoSelectDocumentType();
+                });
+                countryInputField.addEventListener('focus', (event) => {
+                  renderCountryOptions(event.target.value);
+                });
+                countryInputField.addEventListener('blur', () => {
+                  setTimeout(closeCountryMenu, 120);
+                });
+              }
+
+              if (countryMenu) {
+                countryMenu.addEventListener('click', (event) => {
+                  const option = event.target.closest('[data-country-option]');
+                  if (!option || !countryInputField) return;
+                  countryInputField.value = option.dataset.countryOption;
+                  closeCountryMenu();
+                  updateEnabled();
+                  autoSelectDocumentType();
+                });
+              }
+
+              if (countryInput) {
+                countryInput.addEventListener('input', updateEnabled);
+              }
+              if (documentSelect) {
+                documentSelect.addEventListener('change', () => {
+                  documentManuallySet = true;
+                  updateEnabled();
+                  updateLabel();
+                });
+              }
+
+              updateEnabled();
+              updateLabel();
+            })();
+          </script>
 
           <!-- Payment Selection -->
           <div class="card p-6 md:p-8">
@@ -153,7 +286,7 @@
                   <% @quote_items.each do |item| %>
                     <div class="flex justify-between text-sm">
                       <span class="text-neutral-text-secondary font-medium"><%= item.quantity %>x <%= item.room_type_snapshot['name'] %></span>
-                      <span class="text-neutral-text-primary font-bold">RM <%= number_with_precision(item.subtotal, precision: 2) %></span>
+                      <span class="text-neutral-text-primary font-bold"><%= display_amount(item.subtotal, quote_currency: @quote.currency, display_currency: @display_currency, hotel: @hotel) %></span>
                     </div>
                   <% end %>
                 </div>
@@ -161,7 +294,7 @@
                 <div class="space-y-4 pt-6 border-t border-neutral-border">
                   <div class="flex justify-between items-center text-xl">
                     <span class="font-black text-neutral-text-primary">Total</span>
-                    <span class="font-black text-brand-primary">RM <%= number_with_precision(@quote.total_amount, precision: 2) %></span>
+                    <span class="font-black text-brand-primary"><%= display_amount(@quote.total_amount, quote_currency: @quote.currency, display_currency: @display_currency, hotel: @hotel) %></span>
                   </div>
                   <p class="text-[10px] text-neutral-text-secondary italic text-right leading-tight">All-in price including taxes and service charges.</p>
                 </div>
