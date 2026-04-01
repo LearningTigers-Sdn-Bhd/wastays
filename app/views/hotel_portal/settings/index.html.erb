@@ -1,6 +1,10 @@
 <div class="card">
-  <div class="p-4 border-b border-neutral-border">
-    <h1 class="text-lg font-bold text-neutral-text-primary">Settings</h1>
+  <div class="p-4 border-b border-neutral-border flex items-center justify-between gap-4">
+    <div>
+      <h1 class="text-lg font-bold text-neutral-text-primary">Settings</h1>
+      <p class="text-sm text-neutral-text-secondary">Review your hotel timing, currency, and conversion settings.</p>
+    </div>
+    <%= link_to "Edit Settings", hotel_edit_settings_path, class: "inline-flex items-center gap-x-2 rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-secondary" %>
   </div>
   <div class="p-4 space-y-4">
     <% if @settings.present? %>
@@ -10,16 +14,24 @@
           <dd><%= @settings[:hotel_status] %></dd>
         </div>
         <div>
-          <dt class="font-medium text-neutral-text-primary">Onboarding Stage</dt>
-          <dd><%= @settings[:onboarding_stage] %></dd>
-        </div>
-        <div>
           <dt class="font-medium text-neutral-text-primary">Check-in</dt>
           <dd><%= @settings[:check_in] || "Not set" %></dd>
         </div>
         <div>
           <dt class="font-medium text-neutral-text-primary">Check-out</dt>
           <dd><%= @settings[:check_out] || "Not set" %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">Currency</dt>
+          <dd><%= @settings[:currency] || "Not set" %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">USD Converted Rate</dt>
+          <dd><%= number_with_precision(@settings[:usd_rate], precision: 2) %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">Tourism Tax</dt>
+          <dd><%= @settings[:currency] || "MYR" %> <%= number_with_precision(@settings[:tourism_tax], precision: 2) %> per room per night</dd>
         </div>
       </dl>
     <% else %>

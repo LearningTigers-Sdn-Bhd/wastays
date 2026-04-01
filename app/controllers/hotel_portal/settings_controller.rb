@@ -1,20 +1,43 @@
 module HotelPortal
   class SettingsController < HotelPortal::BaseController
     def index
-      if current_hotel
-        policy = current_hotel.property_policy
-        @settings = {
-          hotel_status: current_hotel.status.humanize,
-          onboarding_stage: onboarding_stage(current_hotel),
-          check_in: policy&.check_in_time,
-          check_out: policy&.check_out_time
-        }
+      return @settings = {} unless current_hotel
+
+      policy = settings_policy
+      @settings = {
+        hotel_status: current_hotel.status.humanize,
+        onboarding_stage: onboarding_stage(current_hotel),
+        check_in: policy.check_in_time.presence || "Not set",
+        check_out: policy.check_out_time.presence || "Not set",
+        currency: policy.currency.presence || "MYR",
+        usd_rate: policy.usd_rate.presence || 0.21,
+        tourism_tax: 10.00
+      }
+    end
+
+    def edit
+      @property_policy = settings_policy
+    end
+
+    def update
+      @property_policy = settings_policy
+
+      if @property_policy.update(settings_params)
+        redirect_to hotel_settings_path, notice: "Settings updated successfully."
       else
-        @settings = {}
+        render :edit, status: :unprocessable_entity
       end
     end
 
     private
+
+    def settings_policy
+      current_hotel.property_policy || current_hotel.build_property_policy(currency: "MYR", usd_rate: 0.21)
+    end
+
+    def settings_params
+      params.require(:property_policy).permit(:check_in_time, :check_out_time, :currency, :usd_rate)
+    end
 
     def onboarding_stage(hotel)
       if hotel.status == "live"
