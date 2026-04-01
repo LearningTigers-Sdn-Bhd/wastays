@@ -42,6 +42,7 @@
           <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">User</th>
           <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Action</th>
           <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Details</th>
+          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Value</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-200">
@@ -70,18 +71,16 @@
                 </span>
               </td>
               <td class="px-6 py-4 text-sm text-gray-600">
-                <span class="font-medium"><%= log.room_type&.name || 'Property-wide' %></span>
-                <% if log.action_type == 'bulk_rate_update' %>
-                  - Rate: <%= log.new_value['price'] %> <%= log.new_value['currency'] %>
-                <% elsif log.action_type == 'bulk_inventory_update' %>
-                  - Qty: <%= log.new_value['quantity'] %> (<%= log.new_value['status'] %>)
-                <% end %>
+                <span class="font-medium"><%= log.display_details %></span>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                <%= log.display_value_change %>
               </td>
             </tr>
           <% end %>
         <% else %>
           <tr>
-            <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500 italic">
+            <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500 italic">
               No audit logs found.
             </td>
           </tr>
