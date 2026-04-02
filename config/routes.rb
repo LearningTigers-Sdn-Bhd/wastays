@@ -93,7 +93,6 @@ Rails.application.routes.draw do
     resources :arrivals, only: [ :index ]
     resources :audit_logs, only: [ :index ]
     resources :reports, only: [ :index ]
-    resources :inventorys_dashboards, only: [ :index ], path: "inventory"
 
     resources :arrivals, only: [ :index ]
     resources :audit_logs, only: [ :index ]
