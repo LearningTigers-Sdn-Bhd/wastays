@@ -15,10 +15,10 @@
             </div>
 
             <div>
-              <div class="inline-flex gap-x-2">
-                <%= form_with url: hotel_bookings_path, method: :get, class: "flex gap-x-2", data: { turbo_frame: "bookings_results", controller: "auto-submit" } do |f| %>
-                  <%= f.text_field :query, value: params[:query], placeholder: "Search guest or token", autocomplete: "off", class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border", data: { action: "input->auto-submit#submit" } %>
-                  <%= f.select :status, Booking::STATUSES.map { |s| [s.titleize, s] }, { include_blank: "All Statuses", selected: params[:status] }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+              <div class="inline-flex gap-x-2 w-full md:w-[48rem]">
+                <%= form_with url: hotel_bookings_path, method: :get, class: "flex gap-x-2 w-full", data: { turbo_frame: "bookings_results", controller: "auto-submit" } do |f| %>
+                  <%= f.text_field :query, value: params[:query], placeholder: "Search by guest name, email and phone number...", autocomplete: "off", class: "py-2 px-3 block flex-1 min-w-[18rem] border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border", data: { action: "input->auto-submit#submit" } %>
+                  <%= f.select :status, Booking::STATUSES.map { |s| [s.titleize, s] }, { include_blank: "All Statuses", selected: params[:status] }, class: "py-2 px-3 block w-44 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
                   <%= f.submit "Filter", class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
                 <% end %>
               </div>
@@ -68,6 +68,7 @@
                             <div class="grow">
                               <span class="block text-sm font-semibold text-gray-800"><%= booking.guest_name %></span>
                               <span class="block text-xs text-gray-500"><%= booking.guest_email %></span>
+                              <span class="block text-xs text-gray-500"><%= booking.guest_phone %></span>
                             </div>
                           </div>
                         </div>
