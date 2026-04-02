@@ -146,6 +146,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_01_000000) do
     t.decimal "margin_rate"
     t.datetime "checked_in_at"
     t.datetime "checked_out_at"
+    t.string "guest_gender"
+    t.string "guest_country"
+    t.string "guest_document_type"
+    t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.boolean "tourism_tax_applied", default: false, null: false
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
@@ -168,6 +173,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_01_000000) do
     t.jsonb "metadata"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "gender"
+    t.string "country"
+    t.string "document_type"
   end
 
   create_table "hotels", force: :cascade do |t|
@@ -180,6 +188,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_01_000000) do
     t.string "status"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "default_currency", default: "MYR", null: false
+    t.decimal "usd_conversion_rate", precision: 10, scale: 4, default: "4.5", null: false
+    t.boolean "tourism_tax_enabled", default: false, null: false
+    t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "10.0", null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
   end
 

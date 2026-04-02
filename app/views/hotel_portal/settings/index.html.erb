@@ -87,12 +87,23 @@
           </div>
 
         </div>
-      <% else %>
-        <div class="rounded-2xl border border-dashed border-neutral-border bg-neutral-bg p-10 text-center">
-          <h2 class="text-lg font-bold text-neutral-text-primary">No settings yet</h2>
-          <p class="mt-2 text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">Default Currency</dt>
+          <dd><%= @settings[:default_currency] || "MYR" %></dd>
         </div>
-      <% end %>
-    </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">USD Conversion Rate</dt>
+          <dd><%= number_with_precision(@settings[:usd_conversion_rate] || 4.5, precision: 2) %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-text-primary">Tourism Tax</dt>
+          <dd>
+            <%= @settings[:tourism_tax_enabled] ? "RM #{number_with_precision(@settings[:tourism_tax_amount] || 10.0, precision: 2)} (non-Malaysian passports)" : "Disabled" %>
+          </dd>
+        </div>
+      </dl>
+    <% else %>
+      <p class="text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>
+    <% end %>
   </div>
 </div>
