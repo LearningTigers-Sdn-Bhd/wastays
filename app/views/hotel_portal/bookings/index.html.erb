@@ -16,7 +16,7 @@
 
             <div>
               <div class="inline-flex gap-x-2">
-                <%= form_with url: hotel_bookings_path, method: :get, class: "flex gap-x-2" do |f| %>
+                <%= form_with url: hotel_bookings_path(current_hotel), method: :get, class: "flex gap-x-2" do |f| %>
                   <%= f.text_field :query, value: params[:query], placeholder: "Search guest or token", class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
                   <%= f.select :status, Booking::STATUSES.map { |s| [s.titleize, s] }, { include_blank: "All Statuses", selected: params[:status] }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
                   <%= f.submit "Filter", class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
@@ -95,7 +95,7 @@
                     </td>
                     <td class="h-px w-px whitespace-nowrap">
                       <div class="px-6 py-3 text-end">
-                        <%= link_to "View Details", hotel_booking_path(booking), class: "text-sm font-semibold text-blue-600 hover:text-blue-800" %>
+                        <%= link_to "View Details", hotel_booking_path(current_hotel, booking), class: "text-sm font-semibold text-blue-600 hover:text-blue-800" %>
                       </div>
                     </td>
                   </tr>

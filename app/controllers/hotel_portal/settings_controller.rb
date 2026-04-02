@@ -62,7 +62,7 @@ module HotelPortal
         @property_policy.update!(property_policy_params)
       end
 
-      redirect_to hotel_settings_path, notice: "Settings updated successfully."
+      redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
     rescue ActiveRecord::RecordInvalid
       render :index, status: :unprocessable_content
     end
@@ -71,7 +71,7 @@ module HotelPortal
       authorize_banking_details_update!
 
       if @account.update(account_params)
-        redirect_to hotel_settings_path, notice: "Settings updated successfully."
+        redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
       else
         render :index, status: :unprocessable_content
       end

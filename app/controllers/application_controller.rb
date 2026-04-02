@@ -8,6 +8,7 @@ class ApplicationController < ActionController::Base
 
   helper_method :current_user, :logged_in?
   around_action :use_user_time_zone
+  before_action :redirect_legacy_hotel_portal_path
 
   private
 
@@ -82,7 +83,23 @@ class ApplicationController < ActionController::Base
   end
 
   def hotel_portal_params
-    current_user&.superadmin? && params[:hotel_id].present? ? { hotel_id: params[:hotel_id] } : {}
+    { hotel_id: current_hotel&.id }.compact
+  end
+
+  def redirect_legacy_hotel_portal_path
+    return unless request.get? || request.head?
+    return unless params[:hotel_id].present?
+    return unless request.path.match?(%r{\A/hotel/(dashboard|profile|property_policy|user_profile|bookings|arrivals|audit_logs|reports|inventory|guests|settings)})
+    return if request.path.match?(%r{\A/hotel/\d+/})
+
+    redirect_to canonical_hotel_portal_path(params[:hotel_id], request.path, request.query_parameters.except(:hotel_id))
+  end
+
+  def canonical_hotel_portal_path(hotel_id, legacy_path, query_params)
+    suffix = legacy_path.delete_prefix("/hotel")
+    path = "/hotel/#{hotel_id}#{suffix}"
+    query_string = query_params.to_query
+    query_string.present? ? "#{path}?#{query_string}" : path
   end
 
   helper_method :current_hotel, :permitted_hotels, :hotel_portal_params

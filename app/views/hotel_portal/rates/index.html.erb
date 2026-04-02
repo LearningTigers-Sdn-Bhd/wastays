@@ -9,7 +9,7 @@
             <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </li>
           <li class="flex items-center text-sm text-neutral-text-secondary">
-            <%= link_to "Room Types", hotel_room_types_path, class: "hover:text-brand-primary" %>
+            <%= link_to "Room Types", hotel_room_types_path(current_hotel), class: "hover:text-brand-primary" %>
             <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </li>
           <li class="text-sm font-semibold text-brand-primary truncate" aria-current="page">
@@ -30,13 +30,13 @@
           <h3 class="text-sm font-bold text-neutral-text-primary uppercase tracking-widest">Rate Calendar</h3>
           
           <div class="flex items-center bg-neutral-bg p-1 rounded-lg border border-neutral-border">
-            <%= link_to hotel_room_type_rates_path(@room_type, start_date: @start_date - 14.days), class: "p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
+            <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date - 14.days), class: "p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
               <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
             <% end %>
             <span class="px-4 text-xs font-black text-neutral-text-primary uppercase tracking-tighter">
               <%= @start_date.strftime("%b %d") %> - <%= @end_date.strftime("%b %d") %>
             </span>
-            <%= link_to hotel_room_type_rates_path(@room_type, start_date: @start_date + 14.days), class: "p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
+            <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date + 14.days), class: "p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
               <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             <% end %>
           </div>
@@ -91,7 +91,7 @@
           <h3 class="text-sm font-black text-neutral-text-primary uppercase tracking-widest">Bulk Rate Update</h3>
         </div>
         <div class="p-6">
-          <%= form_with scope: :rate, url: hotel_room_type_rates_path(@room_type), local: true, class: "space-y-5" do |f| %>
+          <%= form_with scope: :rate, url: hotel_room_type_rates_path(current_hotel, @room_type), local: true, class: "space-y-5" do |f| %>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label for="start_date" class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">Start Date</label>

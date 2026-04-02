@@ -20,7 +20,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def update
     @booking = current_hotel.bookings.find(params[:id])
     if @booking.update(booking_params)
-      redirect_to hotel_booking_path(@booking), notice: "Booking updated successfully."
+      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking updated successfully."
     else
       render :show, status: :unprocessable_content
     end
@@ -30,9 +30,9 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @booking = current_hotel.bookings.find(params[:id])
 
     if @booking.update(status: "checked_in", checked_in_at: resolve_event_time(:checked_in_at))
-      redirect_to hotel_booking_path(@booking), notice: "Guest has been checked in."
+      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest has been checked in."
     else
-      redirect_to hotel_booking_path(@booking), alert: "Failed to check in guest."
+      redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to check in guest."
     end
   end
 
@@ -40,9 +40,9 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @booking = current_hotel.bookings.find(params[:id])
 
     if @booking.update(status: "completed", checked_out_at: resolve_event_time(:checked_out_at))
-      redirect_to hotel_booking_path(@booking), notice: "Guest has been checked out."
+      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest has been checked out."
     else
-      redirect_to hotel_booking_path(@booking), alert: "Failed to check out guest."
+      redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to check out guest."
     end
   end
 
@@ -52,9 +52,9 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     if @booking.update(status: "cancelled")
       # Re-release inventory
       release_inventory(@booking)
-      redirect_to hotel_booking_path(@booking), notice: "Booking has been cancelled."
+      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking has been cancelled."
     else
-      redirect_to hotel_booking_path(@booking), alert: "Failed to cancel booking."
+      redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to cancel booking."
     end
   end
 

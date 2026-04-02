@@ -3,6 +3,7 @@ require 'rails_helper'
 RSpec.describe "HotelPortal::Arrivals", type: :request do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user) }
+  let(:booking) { create(:booking, hotel: hotel, check_in: Date.today) }
 
   before do
     role = create(:role, account: hotel.account)
@@ -11,15 +12,21 @@ RSpec.describe "HotelPortal::Arrivals", type: :request do
   end
 
   describe "GET /index" do
+      before do
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
+      BookingRoom.create!(booking: booking, room_type: room_type, room_type_snapshot: { "name" => room_type.name }, quantity: 1, subtotal: booking.total_amount)
+      create(:pre_checkin, booking: booking, status: "completed", document_status: "uploaded")
+    end
+
     it "returns http success" do
-      get "/hotel/arrivals"
+      get "/hotel/#{hotel.id}/arrivals"
       expect(response).to have_http_status(:success)
     end
 
     it 'logs out users whose account has been suspended' do
       user.account.update!(status: 'suspended')
 
-      get "/hotel/arrivals"
+      get "/hotel/#{hotel.id}/arrivals"
 
       expect(response).to redirect_to(login_path)
       follow_redirect!

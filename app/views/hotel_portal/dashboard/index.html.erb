@@ -26,27 +26,27 @@
 
   <!-- Quick Actions -->
   <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-    <a href="<%= hotel_arrivals_path %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
+    <a href="<%= hotel_arrivals_path(current_hotel) %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
       <svg class="w-6 h-6 text-brand-primary mb-2 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <span class="text-xs font-semibold text-neutral-text-primary">Arrivals</span>
     </a>
-    <a href="<%= hotel_bookings_path %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
+    <a href="<%= hotel_bookings_path(current_hotel) %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
       <svg class="w-6 h-6 text-brand-primary mb-2 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <span class="text-xs font-semibold text-neutral-text-primary">Bookings</span>
     </a>
-    <a href="<%= hotel_inventory_index_path %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
+    <a href="<%= hotel_inventory_index_path(current_hotel) %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
       <svg class="w-6 h-6 text-brand-primary mb-2 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M7 14h.01"/><path d="M12 14h.01"/><path d="M17 14h.01"/><path d="M7 18h.01"/><path d="M12 18h.01"/><path d="M17 18h.01"/></svg>
       <span class="text-xs font-semibold text-neutral-text-primary">Rates</span>
     </a>
-    <a href="<%= hotel_room_types_path %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
+    <a href="<%= hotel_room_types_path(current_hotel) %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
       <svg class="w-6 h-6 text-brand-primary mb-2 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M7 20v-5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/><path d="M10 8V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v3"/><path d="M12 17v.01"/><path d="M10 13h4"/></svg>
       <span class="text-xs font-semibold text-neutral-text-primary">Rooms</span>
     </a>
-    <a href="<%= hotel_reports_path %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
+    <a href="<%= hotel_reports_path(current_hotel) %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
       <svg class="w-6 h-6 text-brand-primary mb-2 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
       <span class="text-xs font-semibold text-neutral-text-primary">Reports</span>
     </a>
-    <a href="<%= hotel_settings_path %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
+    <a href="<%= hotel_settings_path(current_hotel) %>" class="card p-3 flex flex-col items-center justify-center text-center hover:bg-neutral-bg transition-colors group">
       <svg class="w-6 h-6 text-brand-primary mb-2 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
       <span class="text-xs font-semibold text-neutral-text-primary">Settings</span>
     </a>
@@ -57,7 +57,7 @@
     <div class="card lg:col-span-2 flex flex-col">
       <div class="p-4 md:p-5 border-b border-neutral-border flex justify-between items-center">
         <h2 class="text-lg font-bold text-neutral-text-primary">Arrival Board</h2>
-        <a class="text-sm font-medium text-brand-primary hover:underline" href="<%= hotel_arrivals_path %>">View board</a>
+        <a class="text-sm font-medium text-brand-primary hover:underline" href="<%= hotel_arrivals_path(current_hotel) %>">View board</a>
       </div>
       <div class="p-4 md:p-5">
         <div class="border-b border-neutral-border mb-4">
@@ -92,7 +92,7 @@
                     <% else %>
                       <span class="badge badge-warning">Pending</span>
                     <% end %>
-                    <a href="<%= hotel_booking_path(booking) %>" class="text-neutral-text-secondary hover:text-brand-primary">
+                    <a href="<%= hotel_booking_path(current_hotel, booking) %>" class="text-neutral-text-secondary hover:text-brand-primary">
                       <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                     </a>
                   </div>
@@ -100,7 +100,7 @@
               <% end %>
               <% if @today_arrivals.count > 5 %>
                 <li class="pt-3 text-center">
-                  <a class="text-xs font-medium text-neutral-text-secondary hover:text-brand-primary" href="<%= hotel_arrivals_path(date: Date.today) %>">
+                  <a class="text-xs font-medium text-neutral-text-secondary hover:text-brand-primary" href="<%= hotel_arrivals_path(current_hotel, date: Date.today) %>">
                     + <%= @today_arrivals.count - 5 %> more arrivals today
                   </a>
                 </li>
@@ -128,7 +128,7 @@
                     </div>
                   </div>
                   <div class="flex items-center gap-x-3">
-                    <a href="<%= hotel_booking_path(booking) %>" class="text-neutral-text-secondary hover:text-brand-primary">
+                    <a href="<%= hotel_booking_path(current_hotel, booking) %>" class="text-neutral-text-secondary hover:text-brand-primary">
                       <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                     </a>
                   </div>
@@ -155,7 +155,7 @@
             </span>
             <div>
               <p class="text-sm font-semibold text-neutral-text-primary"><%= @pending_actions_count %> Pre-check-ins pending</p>
-              <a href="<%= hotel_arrivals_path %>" class="text-xs text-brand-primary font-medium hover:underline">Review arrivals</a>
+              <a href="<%= hotel_arrivals_path(current_hotel) %>" class="text-xs text-brand-primary font-medium hover:underline">Review arrivals</a>
             </div>
           </div>
         <% else %>
@@ -192,7 +192,7 @@
   <div class="card overflow-hidden">
     <div class="p-4 md:p-5 border-b border-neutral-border flex justify-between items-center">
       <h2 class="text-lg font-bold text-neutral-text-primary">Recent Bookings</h2>
-      <a class="text-sm font-medium text-brand-primary hover:underline" href="<%= hotel_bookings_path %>">View all bookings</a>
+      <a class="text-sm font-medium text-brand-primary hover:underline" href="<%= hotel_bookings_path(current_hotel) %>">View all bookings</a>
     </div>
     <div class="hidden sm:block overflow-x-auto">
       <table class="table-container">
@@ -231,7 +231,7 @@
                   <% end %>
                 </td>
                 <td class="px-6 py-4 text-right">
-                  <a href="<%= hotel_booking_path(booking) %>" class="text-brand-primary hover:text-red-700 font-medium text-sm">Details</a>
+                  <a href="<%= hotel_booking_path(current_hotel, booking) %>" class="text-brand-primary hover:text-red-700 font-medium text-sm">Details</a>
                 </td>
               </tr>
             <% end %>
@@ -257,7 +257,7 @@
             <p class="text-xs text-neutral-text-secondary"><%= booking.guest_phone %></p>
             <div class="flex items-center justify-between mt-3 text-xs text-neutral-text-secondary">
               <span><%= booking.check_in.strftime("%b %d") %> → <%= booking.check_out.strftime("%b %d") %></span>
-              <a class="text-brand-primary font-semibold" href="<%= hotel_booking_path(booking) %>">View</a>
+              <a class="text-brand-primary font-semibold" href="<%= hotel_booking_path(current_hotel, booking) %>">View</a>
             </div>
           </div>
         <% end %>

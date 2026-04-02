@@ -7,7 +7,7 @@
     </div>
 
     <div class="inline-flex gap-x-2">
-      <%= link_to hotel_audit_logs_path(format: :csv, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none" do %>
+      <%= link_to hotel_audit_logs_path(current_hotel, format: :csv, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none" do %>
         <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
         Export CSV
       <% end %>
@@ -16,7 +16,7 @@
 
   <!-- Filters -->
   <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 md:p-6 mb-6">
-    <%= form_with url: hotel_audit_logs_path, method: :get, class: "grid sm:grid-cols-2 lg:grid-cols-4 gap-4" do |f| %>
+    <%= form_with url: hotel_audit_logs_path(current_hotel), method: :get, class: "grid sm:grid-cols-2 lg:grid-cols-4 gap-4" do |f| %>
       <div>
         <label class="block text-sm font-medium mb-2 text-gray-700">Room Type</label>
         <%= f.select :room_type_id, current_hotel.room_types.map { |rt| [rt.name, rt.id] }, { include_blank: "All Room Types", selected: params[:room_type_id] }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>

@@ -18,7 +18,7 @@
     </div>
 
     <div class="flex items-center bg-neutral-bg p-1 rounded-lg border border-neutral-border shadow-sm">
-      <%= link_to hotel_inventory_index_path(start_date: @start_date - 14.days), class: "p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
+      <%= link_to hotel_inventory_index_path(current_hotel, start_date: @start_date - 14.days), class: "p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       <% end %>
       <div class="px-4 text-center">
@@ -27,7 +27,7 @@
           <%= @start_date.strftime("%b %d") %> - <%= @end_date.strftime("%b %d, %Y") %>
         </span>
       </div>
-      <%= link_to hotel_inventory_index_path(start_date: @start_date + 14.days), class: "p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
+      <%= link_to hotel_inventory_index_path(current_hotel, start_date: @start_date + 14.days), class: "p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
       <% end %>
     </div>
@@ -59,9 +59,9 @@
                     <div class="flex flex-col">
                       <span class="text-sm font-bold text-neutral-text-primary group-hover:text-brand-primary transition-colors"><%= rt.name %></span>
                       <div class="flex gap-x-2 mt-1">
-                        <%= link_to "Rates", hotel_room_type_rates_path(rt), class: "text-[9px] font-black uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary" %>
+                        <%= link_to "Rates", hotel_room_type_rates_path(current_hotel, rt), class: "text-[9px] font-black uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary" %>
                         <span class="text-neutral-border text-[9px]">•</span>
-                        <%= link_to "Inventory", hotel_room_type_inventories_path(rt), class: "text-[9px] font-black uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary" %>
+                        <%= link_to "Inventory", hotel_room_type_inventories_path(current_hotel, rt), class: "text-[9px] font-black uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary" %>
                       </div>
                     </div>
                   </td>
@@ -127,7 +127,7 @@
           <h3 class="text-sm font-black text-neutral-text-primary uppercase tracking-widest">Global Bulk Update</h3>
         </div>
         <div class="p-6">
-          <%= form_with scope: :bulk_update, url: hotel_inventory_dashboards_path, local: true, class: "space-y-5" do |f| %>
+          <%= form_with scope: :bulk_update, url: hotel_inventory_dashboards_path(current_hotel), local: true, class: "space-y-5" do |f| %>
             <div>
               <label class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">Room Categories</label>
               <div class="space-y-2 max-h-40 overflow-y-auto p-3 border border-neutral-border rounded-lg bg-neutral-bg/30">

@@ -23,9 +23,9 @@ class HotelPortal::RatesController < HotelPortal::BaseController
     ).call
 
     if result[:success]
-      redirect_to hotel_room_type_rates_path(@room_type, start_date: rate_params[:start_date]), notice: "Rates updated successfully."
+      redirect_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: rate_params[:start_date]), notice: "Rates updated successfully."
     else
-      redirect_to hotel_room_type_rates_path(@room_type), alert: "Error updating rates: #{result[:error]}"
+      redirect_to hotel_room_type_rates_path(current_hotel, @room_type), alert: "Error updating rates: #{result[:error]}"
     end
   end
 

@@ -8,16 +8,16 @@
 
     <div class="w-full md:w-auto">
       <div class="inline-flex bg-gray-100 rounded-lg p-1 w-full md:w-auto">
-        <%= link_to hotel_arrivals_path(date: Date.today, q: @query.presence), class: "py-2 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-medium rounded-md transition #{ @date == Date.today ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700' }" do %>
+        <%= link_to hotel_arrivals_path(current_hotel, date: Date.today, q: @query.presence), class: "py-2 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-medium rounded-md transition #{ @date == Date.today ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700' }" do %>
           Today
           <span class="inline-flex items-center py-0.5 px-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800"><%= @today_count %></span>
         <% end %>
-        <%= link_to hotel_arrivals_path(date: Date.tomorrow, q: @query.presence), class: "py-2 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-medium rounded-md transition #{ @date == Date.tomorrow ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700' }" do %>
+        <%= link_to hotel_arrivals_path(current_hotel, date: Date.tomorrow, q: @query.presence), class: "py-2 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-medium rounded-md transition #{ @date == Date.tomorrow ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700' }" do %>
           Tomorrow
           <span class="inline-flex items-center py-0.5 px-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800"><%= @tomorrow_count %></span>
         <% end %>
         <div class="relative ml-2">
-          <%= form_with url: hotel_arrivals_path, method: :get, class: "flex items-center" do |f| %>
+          <%= form_with url: hotel_arrivals_path(current_hotel), method: :get, class:"flex items-center" do |f| %>
             <%= f.hidden_field :q, value: @query %>
             <%= f.date_field :date, value: @date, onchange: "this.form.submit()", class: "py-2 px-3 block border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
           <% end %>
@@ -27,7 +27,7 @@
   </div>
 
   <div class="mb-6">
-    <%= form_with url: hotel_arrivals_path, method: :get, class: "w-full" do |f| %>
+    <%= form_with url: hotel_arrivals_path(current_hotel), method: :get, class:"w-full" do |f| %>
       <%= f.hidden_field :date, value: @date %>
       <label for="arrivals-search" class="sr-only">Search arrivals</label>
       <div class="relative">
@@ -39,7 +39,7 @@
         <%= f.search_field :q, value: @query, id: "arrivals-search", placeholder: "Search guest, phone, email, or booking reference", class: "w-full py-2.5 ps-10 pe-24 border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", oninput: "clearTimeout(this._arrivalSearchTimer); this._arrivalSearchTimer = setTimeout(() => this.form.requestSubmit(), 250)" %>
         <div class="absolute inset-y-0 end-0 flex items-center pe-2 gap-x-2">
           <% if @query.present? %>
-            <%= link_to "Clear", hotel_arrivals_path(date: @date), class: "py-1.5 px-3 text-xs font-semibold rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50" %>
+            <%= link_to "Clear", hotel_arrivals_path(current_hotel, date: @date), class: "py-1.5 px-3 text-xs font-semibold rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50" %>
           <% end %>
         </div>
       </div>
@@ -77,7 +77,7 @@
               <% if @arrivals.any? %>
                 <% @arrivals.each do |booking| %>
                   <% room_number = booking.hotel_snapshot.is_a?(Hash) ? booking.hotel_snapshot['room_number'].presence || booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
-                  <tr class="cursor-pointer hover:bg-blue-50/40 transition" onclick="window.location='<%= hotel_booking_path(booking) %>'">
+                  <tr class="cursor-pointer hover:bg-blue-50/40 transition" onclick="window.location='<%= hotel_booking_path(current_hotel, booking) %>'">
                     <td class="h-px w-px whitespace-nowrap">
                       <div class="px-6 py-3">
                         <span class="block text-sm font-semibold text-gray-800"><%= booking.guest_name %></span>
@@ -170,7 +170,7 @@
                             <div class="p-5 bg-white rounded-xl" onclick="event.stopPropagation()">
                               <h3 class="text-base font-bold text-gray-800">Confirm Check In</h3>
                               <p class="text-xs text-gray-500 mt-1">Set check-in time (<%= current_user.time_zone %>).</p>
-                              <%= form_with url: check_in_hotel_booking_path(booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
+                              <%= form_with url: check_in_hotel_booking_path(current_hotel, booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
                                 <%= f.datetime_local_field :checked_in_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
                                 <div class="flex items-center justify-end gap-x-2">
                                   <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="event.stopPropagation(); document.getElementById('check-in-modal-desktop-<%= booking.id %>').close()">Cancel</button>
@@ -199,7 +199,7 @@
                             <div class="p-5 bg-white rounded-xl" onclick="event.stopPropagation()">
                               <h3 class="text-base font-bold text-gray-800">Edit Check-In Time</h3>
                               <p class="text-xs text-gray-500 mt-1">Update check-in time (<%= current_user.time_zone %>).</p>
-                              <%= form_with url: check_in_hotel_booking_path(booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
+                              <%= form_with url: check_in_hotel_booking_path(current_hotel, booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
                                 <%= f.datetime_local_field :checked_in_at, value: (booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
                                 <div class="flex items-center justify-end gap-x-2">
                                   <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="event.stopPropagation(); document.getElementById('check-in-modal-desktop-<%= booking.id %>').close()">Cancel</button>
@@ -237,7 +237,7 @@
     <% if @arrivals.any? %>
       <% @arrivals.each do |booking| %>
         <% room_number = booking.hotel_snapshot.is_a?(Hash) ? booking.hotel_snapshot['room_number'].presence || booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 cursor-pointer hover:bg-blue-50/40 transition" role="link" tabindex="0" onclick="window.location='<%= hotel_booking_path(booking) %>'" onkeydown="if (event.key === 'Enter') { window.location='<%= hotel_booking_path(booking) %>' }">
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 cursor-pointer hover:bg-blue-50/40 transition" role="link" tabindex="0" onclick="window.location='<%= hotel_booking_path(current_hotel, booking) %>'" onkeydown="if (event.key === 'Enter') { window.location='<%= hotel_booking_path(current_hotel, booking) %>' }">
           <div class="flex items-start justify-between gap-x-3">
             <div>
               <p class="text-sm font-semibold text-gray-800"><%= booking.guest_name %></p>
@@ -310,7 +310,7 @@
                   <div class="p-5 bg-white rounded-xl" onclick="event.stopPropagation()">
                     <h3 class="text-base font-bold text-gray-800">Confirm Check In</h3>
                     <p class="text-xs text-gray-500 mt-1">Set check-in time (<%= current_user.time_zone %>).</p>
-                    <%= form_with url: check_in_hotel_booking_path(booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
+                    <%= form_with url: check_in_hotel_booking_path(current_hotel, booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
                       <%= f.datetime_local_field :checked_in_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
                       <div class="flex items-center justify-end gap-x-2">
                         <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="event.stopPropagation(); document.getElementById('check-in-modal-mobile-<%= booking.id %>').close()">Cancel</button>
@@ -327,7 +327,7 @@
                   <div class="p-5 bg-white rounded-xl" onclick="event.stopPropagation()">
                     <h3 class="text-base font-bold text-gray-800">Edit Check-In Time</h3>
                     <p class="text-xs text-gray-500 mt-1">Update check-in time (<%= current_user.time_zone %>).</p>
-                    <%= form_with url: check_in_hotel_booking_path(booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
+                    <%= form_with url: check_in_hotel_booking_path(current_hotel, booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
                       <%= f.datetime_local_field :checked_in_at, value: (booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
                       <div class="flex items-center justify-end gap-x-2">
                         <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="event.stopPropagation(); document.getElementById('check-in-modal-mobile-<%= booking.id %>').close()">Cancel</button>

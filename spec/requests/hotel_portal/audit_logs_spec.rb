@@ -12,7 +12,7 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request do
 
   describe "GET /index" do
     it "returns http success" do
-      get "/hotel/audit_logs"
+      get "/hotel/#{hotel.id}/audit_logs"
       expect(response).to have_http_status(:success)
     end
 
@@ -30,7 +30,7 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request do
         metadata: { "start_date" => "2026-04-01", "end_date" => "2026-04-03" }
       )
 
-      get "/hotel/audit_logs"
+      get "/hotel/#{hotel.id}/audit_logs"
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Value")

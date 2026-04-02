@@ -6,7 +6,7 @@
 
     <div class="p-4">
       <% if @settings.present? %>
-        <%= form_with model: @hotel, url: hotel_settings_path, method: :patch, local: true, class: "space-y-4" do |f| %>
+        <%= form_with model: @hotel, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-4" do |f| %>
           <% settings_errors = @hotel.errors.full_messages + @property_policy.errors.full_messages %>
           <% if settings_errors.any? %>
             <div class="p-4 rounded-lg bg-red-50 text-red-600 border border-red-200">
@@ -90,7 +90,7 @@
     </div>
 
     <div class="p-4">
-      <%= form_with model: @account, url: hotel_settings_path, method: :patch, local: true, class: "space-y-6" do |f| %>
+      <%= form_with model: @account, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
         <% if @account.errors.any? %>
           <div class="p-4 rounded-lg bg-red-50 text-red-600 border border-red-200">
             <h2 class="text-sm font-bold mb-2"><%= pluralize(@account.errors.count, "error") %> prohibited these settings from being saved:</h2>
@@ -103,7 +103,7 @@
         <% end %>
 
         <%= f.fields_for :banking_detail do |banking_fields| %>
-          <%= banking_fields.hidden_field :id if banking_fields.object.persisted? %>
+          <%= banking_fields.hidden_field :id if banking_fields.object&.persisted? %>
 
           <div class="grid sm:grid-cols-2 gap-4">
             <div>

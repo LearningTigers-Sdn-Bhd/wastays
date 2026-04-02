@@ -16,9 +16,17 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     sign_in_as(user)
   end
 
+  describe 'GET /hotel/settings with legacy hotel_id param' do
+    it 'redirects to the canonical hotel-scoped path' do
+      get legacy_hotel_settings_path, params: { hotel_id: hotel.id }
+
+      expect(response).to redirect_to(hotel_settings_path(hotel))
+    end
+  end
+
   describe 'PATCH /hotel/settings' do
     it 'ignores tampered status params and updates allowed banking details' do
-      patch hotel_settings_path, params: {
+      patch hotel_settings_path(hotel), params: {
         account: {
           status: 'suspended',
           banking_detail_attributes: {
@@ -30,7 +38,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path)
+      expect(response).to redirect_to(hotel_settings_path(hotel))
       follow_redirect!
       expect(response.body).to include('Settings updated successfully.')
       expect(hotel.reload.status).to eq('registered')
@@ -45,7 +53,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       hotel.update!(default_currency: 'MYR', usd_conversion_rate: 4.5, tourism_tax_enabled: false, tourism_tax_amount: 10.0)
       create(:property_policy, hotel: hotel, check_in_time: '2:00 PM', check_out_time: '11:00 AM')
 
-      patch hotel_settings_path, params: {
+      patch hotel_settings_path(hotel), params: {
         hotel: {
           default_currency: 'USD',
           usd_conversion_rate: '4.25',
