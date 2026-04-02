@@ -1,5 +1,7 @@
 module HotelPortal
   class SettingsController < HotelPortal::BaseController
+    before_action :set_account, only: [ :index, :update ]
+
     def index
       return @settings = {} unless current_hotel
 
@@ -13,6 +15,7 @@ module HotelPortal
         usd_rate: policy.usd_rate.presence || 0.21,
         tourism_tax: 10.00
       }
+      @account.build_banking_detail unless @account.banking_detail
     end
 
     def edit
@@ -20,13 +23,39 @@ module HotelPortal
     end
 
     def update
-      @property_policy = settings_policy
-
-      if @property_policy.update(settings_params)
-        redirect_to hotel_settings_path, notice: "Settings updated successfully."
+      if params[:account]
+        authorize_account_management!
+        if @account.update(account_params)
+          redirect_to hotel_settings_path, notice: "Settings updated successfully."
+        else
+          # Re-fetch settings for re-rendering index
+          policy = settings_policy
+          @settings = {
+            hotel_status: current_hotel.status.humanize,
+            onboarding_stage: onboarding_stage(current_hotel),
+            check_in: policy.check_in_time.presence || "Not set",
+            check_out: policy.check_out_time.presence || "Not set",
+            currency: policy.currency.presence || "MYR",
+            usd_rate: policy.usd_rate.presence || 0.21,
+            tourism_tax: 10.00
+          }
+          render :index, status: :unprocessable_entity
+        end
       else
-        render :edit, status: :unprocessable_entity
+        @property_policy = settings_policy
+
+        if @property_policy.update(settings_params)
+          redirect_to hotel_settings_path, notice: "Settings updated successfully."
+        else
+          render :edit, status: :unprocessable_entity
+        end
       end
+    end
+
+    private
+
+    def set_account
+      @account = current_user.account
     end
 
     def authorize_account_management!
