@@ -30,6 +30,13 @@ class ApplicationController < ActionController::Base
       redirect_to login_path, alert: "You must be logged in to access this page"
       return false
     end
+
+    if current_user.account.status == "suspended"
+      session[:user_id] = nil
+      redirect_to login_path, alert: "Your account has been suspended. Please contact support."
+      return false
+    end
+
     true
   end
 
@@ -74,5 +81,9 @@ class ApplicationController < ActionController::Base
     Time.use_zone(timezone, &block)
   end
 
-  helper_method :current_hotel, :permitted_hotels
+  def hotel_portal_params
+    current_user&.superadmin? && params[:hotel_id].present? ? { hotel_id: params[:hotel_id] } : {}
+  end
+
+  helper_method :current_hotel, :permitted_hotels, :hotel_portal_params
 end

@@ -23,7 +23,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     if @booking.update(booking_params)
       redirect_to hotel_booking_path(@booking), notice: "Booking updated successfully."
     else
-      render :show, status: :unprocessable_entity
+      render :show, status: :unprocessable_content
     end
   end
 

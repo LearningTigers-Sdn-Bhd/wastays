@@ -14,7 +14,7 @@ class HotelPortal::PropertyPoliciesController < HotelPortal::BaseController
       @hotel.complete_policies!
       redirect_to hotel_dashboard_path, notice: "Hotel policies updated successfully."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

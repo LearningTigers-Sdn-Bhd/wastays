@@ -56,8 +56,11 @@
   <!-- KPI Row -->
   <div class="grid sm:grid-cols-2 gap-4 sm:gap-6">
     <div class="card p-4 md:p-5 space-y-3">
-      <div>
-        <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Revenue & Margin (MTD)</p>
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs uppercase tracking-wider text-neutral-text-secondary font-semibold">Revenue & Margin (MTD)</p>
+        </div>
+        <%= link_to "View analytics", admin_analytics_path, class: "text-sm font-medium text-brand-primary hover:underline" %>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div class="p-3 bg-neutral-bg rounded-2xl">

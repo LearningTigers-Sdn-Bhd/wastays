@@ -8,7 +8,7 @@
 
     <%= yield :head %>
 
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= javascript_importmap_tags %>
   </head>
 
@@ -17,7 +17,7 @@
     <header class="sticky top-0 inset-x-0 flex flex-wrap sm:justify-start sm:flex-nowrap z-[70] w-full bg-neutral-surface border-b border-neutral-border text-sm py-2.5 sm:py-4 lg:ps-64">
       <nav class="flex basis-full items-center w-full mx-auto px-4 sm:px-6 md:px-8" aria-label="Global">
         <div class="me-5 lg:me-0 lg:hidden">
-          <a class="flex-none text-xl font-semibold text-brand-primary" href="<%= hotel_dashboard_path %>" aria-label="WAStays">WAStays</a>
+          <a class="flex-none text-xl font-semibold text-brand-primary" href="<%= hotel_dashboard_path(hotel_portal_params) %>" aria-label="WAStays">WAStays</a>
         </div>
 
         <div class="w-full flex items-center justify-end ms-auto sm:justify-between sm:gap-x-3">
@@ -54,7 +54,7 @@
                   <p class="text-sm font-medium text-gray-800"><%= current_user.email %></p>
                 </div>
                 <div class="mt-2 py-2 first:pt-0 last:pb-0">
-                  <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500" href="<%= edit_hotel_user_profile_path %>">
+                    <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500" href="<%= edit_hotel_user_profile_path(hotel_portal_params) %>">
                     <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     My Profile
                   </a>
@@ -73,62 +73,69 @@
     <!-- Sidebar -->
     <div id="application-sidebar" class="hs-overlay hs-overlay-open:translate-x-0 -translate-x-full transition-all duration-300 transform hidden fixed top-0 start-0 bottom-0 z-[80] w-64 bg-neutral-surface border-e border-neutral-border pt-7 pb-10 overflow-y-auto lg:block lg:translate-x-0 lg:end-auto lg:bottom-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-border">
       <div class="px-6">
-        <a class="flex-none text-xl font-semibold text-brand-primary" href="<%= hotel_dashboard_path %>" aria-label="WAStays">WAStays</a>
+        <a class="flex-none text-xl font-semibold text-brand-primary" href="<%= hotel_dashboard_path(hotel_portal_params) %>" aria-label="WAStays">WAStays</a>
       </div>
 
       <nav class="hs-accordion-group p-6 w-full flex flex-col flex-wrap" data-hs-accordion-always-open>
         <ul class="space-y-1.5">
           <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'dashboard' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_dashboard_path %>">
+            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'dashboard' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_dashboard_path(hotel_portal_params) %>">
               <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               Dashboard
             </a>
           </li>
 
           <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'arrivals' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_arrivals_path %>">
+            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'arrivals' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_arrivals_path(hotel_portal_params) %>">
               <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Arrivals
             </a>
           </li>
 
           <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'bookings' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_bookings_path %>">
+            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'bookings' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_bookings_path(hotel_portal_params) %>">
               <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               Bookings
             </a>
           </li>
 
           <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'room_types' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_room_types_path %>">
+            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'room_types' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_room_types_path(hotel_portal_params) %>">
               <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M7 20v-5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/><path d="M10 8V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v3"/><path d="M12 17v.01"/><path d="M10 13h4"/></svg>
               Room Categories
             </a>
           </li>
 
           <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'inventory_dashboards' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_inventory_index_path %>">
+            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'inventory_dashboards' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_inventory_index_path(hotel_portal_params) %>">
               <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M7 14h.01"/><path d="M12 14h.01"/><path d="M17 14h.01"/><path d="M7 18h.01"/><path d="M12 18h.01"/><path d="M17 18h.01"/></svg>
               Rates & Inventory
             </a>
           </li>
 
           <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'guests' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_guests_path %>">
+            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'guests' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_guests_path(hotel_portal_params) %>">
               <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               Guests
             </a>
           </li>
 
           <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'reports' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_reports_path %>">
+            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'reports' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_reports_path(hotel_portal_params) %>">
               <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
               Reports
             </a>
           </li>
 
           <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'settings' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_settings_path %>">
+            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'audit_logs' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_audit_logs_path(hotel_portal_params) %>">
+              <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Operation Logs
+            </a>
+          </li>
+
+          <li>
+            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'settings' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= hotel_settings_path(hotel_portal_params) %>">
               <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
               Settings
             </a>
@@ -150,19 +157,19 @@
     </div>
     <div class="sm:hidden fixed inset-x-0 bottom-0 z-40 border-t border-neutral-border bg-white shadow-lg pb-safe">
       <nav class="flex items-center justify-around py-3 text-xs font-semibold text-neutral-text-secondary">
-        <a href="<%= hotel_dashboard_path %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary <%= 'text-brand-primary' if current_page?(hotel_dashboard_path) %>">
+        <a href="<%= hotel_dashboard_path(hotel_portal_params) %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary <%= 'text-brand-primary' if current_page?(hotel_dashboard_path(hotel_portal_params)) %>">
           <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           <span>Dashboard</span>
         </a>
-        <a href="<%= hotel_arrivals_path %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary <%= 'text-brand-primary' if current_page?(hotel_arrivals_path) %>">
+        <a href="<%= hotel_arrivals_path(hotel_portal_params) %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary <%= 'text-brand-primary' if current_page?(hotel_arrivals_path(hotel_portal_params)) %>">
           <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
           <span>Arrivals</span>
         </a>
-        <a href="<%= hotel_bookings_path %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary <%= 'text-brand-primary' if current_page?(hotel_bookings_path) %>">
+        <a href="<%= hotel_bookings_path(hotel_portal_params) %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary <%= 'text-brand-primary' if current_page?(hotel_bookings_path(hotel_portal_params)) %>">
           <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
           <span>Bookings</span>
         </a>
-        <a href="<%= hotel_room_types_path %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary <%= 'text-brand-primary' if current_page?(hotel_room_types_path) %>">
+        <a href="<%= hotel_room_types_path(hotel_portal_params) %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary <%= 'text-brand-primary' if current_page?(hotel_room_types_path(hotel_portal_params)) %>">
           <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 20h20"/><path d="M7 20v-5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/><path d="M10 8V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v3"/></svg>
           <span>Rooms</span>
         </a>

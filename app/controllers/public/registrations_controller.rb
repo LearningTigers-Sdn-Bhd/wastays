@@ -20,7 +20,7 @@ class Public::RegistrationsController < ApplicationController
       @user = User.new(user_params)
       @account = Account.new(account_params)
       @hotel = Hotel.new(hotel_params)
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 

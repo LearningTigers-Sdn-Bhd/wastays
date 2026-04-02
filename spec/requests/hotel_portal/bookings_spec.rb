@@ -16,6 +16,18 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get "/hotel/bookings"
       expect(response).to have_http_status(:success)
     end
+
+    it "preserves hotel context for superadmin hotel portal navigation" do
+      superadmin = create(:user, :superadmin)
+      sign_in_as(superadmin)
+
+      get "/hotel/bookings", params: { hotel_id: hotel.id }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include(%(href="/hotel/arrivals?hotel_id=#{hotel.id}"))
+      expect(response.body).to include(%(href="/hotel/bookings?hotel_id=#{hotel.id}"))
+      expect(response.body).to include(%(href="/hotel/audit_logs?hotel_id=#{hotel.id}"))
+    end
   end
 
   describe "GET /show" do

@@ -6,6 +6,13 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def show
+    month_to_date_bookings = @hotel.bookings.revenue_generating.where(created_at: Time.current.all_month)
+
+    @gross_revenue_mtd = month_to_date_bookings.sum(:total_amount)
+    @wastays_margin_mtd = month_to_date_bookings.sum("COALESCE(margin_amount, 0)")
+    @hotel_net_earnings_mtd = month_to_date_bookings.sum("COALESCE(net_amount, 0)")
+    @booking_count_mtd = month_to_date_bookings.count
+    @configured_margin_rate = @hotel.effective_margin_rate
   end
 
   def new
@@ -14,13 +21,17 @@ class Admin::HotelsController < Admin::BaseController
 
   def create
     @hotel = Hotel.new(create_hotel_params)
-    @hotel.account = selected_account || default_account
-    @hotel.status ||= "approved"
+    result = HotelOps::CreateHotel.new(
+      account_params: account_params,
+      user_params: user_params,
+      hotel_params: create_hotel_params
+    ).call
 
-    if @hotel.save
-      redirect_to admin_hotel_path(@hotel), notice: "Hotel created successfully."
+    if result[:success]
+      redirect_to admin_hotel_path(result[:hotel]), notice: "Hotel created successfully. Default password: #{HotelOps::CreateHotel::DEFAULT_PASSWORD}."
     else
-      render :new, status: :unprocessable_entity
+      @hotel.errors.add(:base, result[:error])
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -31,24 +42,33 @@ class Admin::HotelsController < Admin::BaseController
     if @hotel.update(update_hotel_params)
       redirect_to admin_hotel_path(@hotel), notice: "Hotel updated successfully."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 
   def approve
-    if @hotel.update(status: "approved")
-      redirect_to admin_hotel_path(@hotel), notice: "Hotel has been approved."
-    else
-      redirect_to admin_hotel_path(@hotel), alert: "Failed to approve hotel."
+    reactivating = @hotel.status == "suspended" || @hotel.account.status == "suspended"
+
+    ActiveRecord::Base.transaction do
+      @hotel.account.update!(status: "active")
+      @hotel.update!(status: "approved")
     end
+
+    notice = reactivating ? "Account and hotel have been reactivated." : "Hotel has been approved."
+    redirect_to admin_hotel_path(@hotel), notice: notice
+  rescue ActiveRecord::RecordInvalid
+    redirect_to admin_hotel_path(@hotel), alert: "Failed to approve hotel."
   end
 
   def suspend
-    if @hotel.update(status: "suspended")
-      redirect_to admin_hotel_path(@hotel), notice: "Hotel has been suspended."
-    else
-      redirect_to admin_hotel_path(@hotel), alert: "Failed to suspend hotel."
+    ActiveRecord::Base.transaction do
+      @hotel.account.update!(status: "suspended")
+      @hotel.update!(status: "suspended")
     end
+
+    redirect_to admin_hotel_path(@hotel), notice: "Account and hotel have been suspended."
+  rescue ActiveRecord::RecordInvalid
+    redirect_to admin_hotel_path(@hotel), alert: "Failed to suspend account and hotel."
   end
 
   private
@@ -58,19 +78,18 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def create_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :status)
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating).merge(status: "approved")
   end
 
   def update_hotel_params
-    create_hotel_params
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating)
   end
 
-  def selected_account
-    account_id = params.dig(:hotel, :account_id).presence
-    Account.find_by(id: account_id) if account_id
+  def account_params
+    params.require(:account).permit(:name)
   end
 
-  def default_account
-    Account.first || Account.create!(name: "Default Account", status: "active")
+  def user_params
+    params.require(:user).permit(:name, :email)
   end
 end

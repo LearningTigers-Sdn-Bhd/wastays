@@ -29,7 +29,21 @@ module HotelPortal
       end
     end
 
-    private
+    def authorize_account_management!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_account")
+    end
+
+    def account_params
+      params.require(:account).permit(
+        banking_detail_attributes: [
+          :id,
+          :account_holder_name,
+          :bank_name,
+          :account_number,
+          :account_type
+        ]
+      )
+    end
 
     def settings_policy
       current_hotel.property_policy || current_hotel.build_property_policy(currency: "MYR", usd_rate: 0.21)

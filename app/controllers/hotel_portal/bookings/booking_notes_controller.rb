@@ -15,7 +15,7 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
       end
     else
       respond_to do |format|
-        format.turbo_stream { render_notes_update("Failed to add note.", :alert, status: :unprocessable_entity) }
+        format.turbo_stream { render_notes_update("Failed to add note.", :alert, status: :unprocessable_content) }
         format.html { redirect_to hotel_booking_path(@booking), alert: "Failed to add note." }
       end
     end
@@ -26,7 +26,7 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
 
     if updated_body.blank?
       respond_to do |format|
-        format.turbo_stream { render_notes_update("Note body cannot be blank.", :alert, status: :unprocessable_entity) }
+        format.turbo_stream { render_notes_update("Note body cannot be blank.", :alert, status: :unprocessable_content) }
         format.html { redirect_to hotel_booking_path(@booking), alert: "Note body cannot be blank." }
       end
       return
@@ -49,7 +49,7 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
       end
     else
       respond_to do |format|
-        format.turbo_stream { render_notes_update("Failed to update note.", :alert, status: :unprocessable_entity) }
+        format.turbo_stream { render_notes_update("Failed to update note.", :alert, status: :unprocessable_content) }
         format.html { redirect_to hotel_booking_path(@booking), alert: "Failed to update note." }
       end
     end
@@ -63,7 +63,7 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
       end
     else
       respond_to do |format|
-        format.turbo_stream { render_notes_update("Failed to delete note.", :alert, status: :unprocessable_entity) }
+        format.turbo_stream { render_notes_update("Failed to delete note.", :alert, status: :unprocessable_content) }
         format.html { redirect_to hotel_booking_path(@booking), alert: "Failed to delete note." }
       end
     end
