@@ -1,20 +1,10 @@
 module HotelPortal
   class SettingsController < HotelPortal::BaseController
-    before_action :set_account, only: [ :index, :update ]
+    before_action :set_account
+    before_action :set_hotel
 
     def index
-      return @settings = {} unless current_hotel
-
-      policy = settings_policy
-      @settings = {
-        hotel_status: current_hotel.status.humanize,
-        onboarding_stage: onboarding_stage(current_hotel),
-        check_in: policy.check_in_time.presence || "Not set",
-        check_out: policy.check_out_time.presence || "Not set",
-        currency: policy.currency.presence || "MYR",
-        usd_rate: policy.usd_rate.presence || 0.21,
-        tourism_tax: 10.00
-      }
+      load_settings
       @account.build_banking_detail unless @account.banking_detail
     end
 
@@ -23,32 +13,13 @@ module HotelPortal
     end
 
     def update
-      if params[:account]
-        authorize_account_management!
-        if @account.update(account_params)
-          redirect_to hotel_settings_path, notice: "Settings updated successfully."
-        else
-          # Re-fetch settings for re-rendering index
-          policy = settings_policy
-          @settings = {
-            hotel_status: current_hotel.status.humanize,
-            onboarding_stage: onboarding_stage(current_hotel),
-            check_in: policy.check_in_time.presence || "Not set",
-            check_out: policy.check_out_time.presence || "Not set",
-            currency: policy.currency.presence || "MYR",
-            usd_rate: policy.usd_rate.presence || 0.21,
-            tourism_tax: 10.00
-          }
-          render :index, status: :unprocessable_entity
-        end
-      else
-        @property_policy = settings_policy
+      load_settings
+      @account.build_banking_detail unless @account.banking_detail
 
-        if @property_policy.update(settings_params)
-          redirect_to hotel_settings_path, notice: "Settings updated successfully."
-        else
-          render :edit, status: :unprocessable_entity
-        end
+      if settings_update_request?
+        update_settings
+      else
+        update_banking_details
       end
     end
 
@@ -58,7 +29,64 @@ module HotelPortal
       @account = current_user.account
     end
 
-    def authorize_account_management!
+    def set_hotel
+      @hotel = current_hotel
+      @property_policy = @hotel&.property_policy || @hotel&.build_property_policy
+    end
+
+    def load_settings
+      if @hotel
+        @settings = {
+          hotel_status: @hotel.status.humanize,
+          onboarding_stage: onboarding_stage(@hotel),
+          check_in: @property_policy&.check_in_time,
+          check_out: @property_policy&.check_out_time,
+          default_currency: @hotel.default_currency,
+          usd_conversion_rate: @hotel.usd_conversion_rate,
+          tourism_tax_enabled: @hotel.tourism_tax_enabled?,
+          tourism_tax_amount: @hotel.tourism_tax_amount
+        }
+      else
+        @settings = {}
+      end
+    end
+
+    def settings_update_request?
+      params[:hotel].present?
+    end
+
+    def update_settings
+      authorize_settings_update!
+
+      ActiveRecord::Base.transaction do
+        @hotel.update!(hotel_params)
+        @property_policy ||= @hotel.property_policy || @hotel.build_property_policy
+        @property_policy.update!(property_policy_params)
+      end
+
+      redirect_to hotel_settings_path, notice: "Settings updated successfully."
+    rescue ActiveRecord::RecordInvalid
+      load_settings
+      @account.build_banking_detail unless @account.banking_detail
+      render :index, status: :unprocessable_entity
+    end
+
+    def update_banking_details
+      authorize_banking_details_update!
+
+      if @account.update(account_params)
+        redirect_to hotel_settings_path, notice: "Settings updated successfully."
+      else
+        load_settings
+        render :index, status: :unprocessable_entity
+      end
+    end
+
+    def authorize_settings_update!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
+    end
+
+    def authorize_banking_details_update!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_account")
     end
 
@@ -74,12 +102,25 @@ module HotelPortal
       )
     end
 
-    def settings_policy
-      current_hotel.property_policy || current_hotel.build_property_policy(currency: "MYR", usd_rate: 0.21)
+    def hotel_params
+      params.require(:hotel).permit(
+        :usd_conversion_rate,
+        :tourism_tax_enabled,
+        :tourism_tax_amount
+      )
     end
 
-    def settings_params
-      params.require(:property_policy).permit(:check_in_time, :check_out_time, :currency, :usd_rate)
+    def property_policy_params
+      params.require(:hotel).permit(
+        property_policy_attributes: [
+          :check_in_time,
+          :check_out_time
+        ]
+      ).fetch(:property_policy_attributes)
+    end
+
+    def settings_policy
+      current_hotel.property_policy || current_hotel.build_property_policy
     end
 
     def onboarding_stage(hotel)

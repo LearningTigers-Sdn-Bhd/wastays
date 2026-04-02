@@ -1,152 +1,156 @@
 <div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-  <div class="card overflow-hidden">
-    <div class="p-5 sm:p-6 border-b border-neutral-border flex items-center justify-between gap-4">
-      <div>
-        <h1 class="text-lg sm:text-xl font-bold text-neutral-text-primary">Settings</h1>
-      </div>
-      <%= link_to "Edit Settings", hotel_edit_settings_path, class: "inline-flex items-center gap-x-2 rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-secondary" %>
+  <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-neutral-text-primary">Settings</h1>
+      <p class="mt-1 text-sm text-neutral-text-secondary">Update hotel policy, taxes, conversion rate, and banking details.</p>
     </div>
 
-    <div class="p-5 sm:p-6">
-      <% if @settings.present? %>
-        <div class="grid gap-4 md:grid-cols-[1.0fr_1.0fr]">
-          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-6">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
-              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7.5A2.5 2.5 0 0 1 7.5 5h9A2.5 2.5 0 0 1 19 7.5V21M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h.01M15 17h.01" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Hotel Status</p>
-              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= @settings[:hotel_status] %></p>
-            </div>
-          </div>
-
-          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary ml-50">
-              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <circle cx="12" cy="12" r="9" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v10M9.5 9h5a1.5 1.5 0 0 1 0 3h-5a1.5 1.5 0 0 0 0 3h5" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Tourism Tax</p>
-              <p class="mt-1 text-lg font-bold text-neutral-text-primary">RM <%= number_with_precision(@settings[:tourism_tax], precision: 2) %></p>
-            </div>
-          </div>
-
-          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
-              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <circle cx="12" cy="12" r="9" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Check-in</p>
-              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= @settings[:check_in] || "Not set" %></p>
-            </div>
-          </div>
-
-          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary ml-50">
-              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <circle cx="12" cy="12" r="9" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 13v4m0-10v2m0 4h.01" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Check-out</p>
-              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= @settings[:check_out] || "Not set" %></p>
-            </div>
-          </div>
-
-          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
-              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-2.2 0-4 1.3-4 3s1.8 3 4 3 4 1.3 4 3-1.8 3-4 3m0-12c1.2 0 2.2.5 3 1.2M12 8V6m0 14v-2" />
-                <rect x="3" y="4" width="18" height="16" rx="2" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Currency</p>
-              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= @settings[:currency] || "MYR" %></p>
-            </div>
-          </div>
-
-          <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary ml-50">
-              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 19h16M7 15l3-3 4 4 6-6" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">USD Converted Rate</p>
-              <p class="mt-1 text-lg font-bold text-neutral-text-primary"><%= number_with_precision(@settings[:usd_rate], precision: 2) %></p>
-            </div>
-          </div>
-
-        </div>
-        </dl>
-      <% else %>
-        <p class="text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>
-      <% end %>
-    </div>
+    <%= link_to "Edit Settings", hotel_edit_settings_path, class: "inline-flex items-center gap-x-2 rounded-lg border border-neutral-border bg-white px-4 py-2 text-sm font-semibold text-neutral-text-primary hover:bg-neutral-bg" %>
   </div>
 
-  <% if current_user.has_permission?("manage_account") %>
-    <div class="card">
-      <div class="p-4 border-b border-neutral-border">
-        <h2 class="text-lg font-bold text-neutral-text-primary">Banking Details</h2>
-        <p class="text-sm text-neutral-text-secondary mt-1">Shared account banking details for payout and settlement.</p>
+  <% if @settings.present? %>
+    <div class="space-y-6">
+      <div class="card overflow-hidden">
+        <div class="p-5 sm:p-6 border-b border-neutral-border">
+          <h2 class="text-lg font-semibold text-neutral-text-primary">Hotel Settings</h2>
+          <p class="mt-1 text-sm text-neutral-text-secondary">Control check-in/out timings, currency, and tourism tax.</p>
+        </div>
+
+        <div class="p-5 sm:p-6">
+          <%= form_with model: @hotel, url: hotel_settings_path, method: :patch, local: true, class: "space-y-6" do |f| %>
+            <% settings_errors = @hotel.errors.full_messages + @property_policy.errors.full_messages %>
+            <% if settings_errors.any? %>
+              <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <p class="font-semibold"><%= pluralize(settings_errors.count, "error") %> prohibited these settings from being saved:</p>
+                <ul class="mt-2 list-disc space-y-1 ps-5">
+                  <% settings_errors.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <%= f.label :hotel_status_display, "Hotel Status", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                <%= f.text_field :hotel_status_display, value: @settings[:hotel_status], disabled: true, class: "w-full rounded-lg border border-neutral-border bg-neutral-bg px-4 py-3 text-sm text-neutral-text-secondary" %>
+              </div>
+
+              <div>
+                <%= f.label :onboarding_stage_display, "Onboarding Stage", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                <%= f.text_field :onboarding_stage_display, value: @settings[:onboarding_stage], disabled: true, class: "w-full rounded-lg border border-neutral-border bg-neutral-bg px-4 py-3 text-sm text-neutral-text-secondary" %>
+              </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <%= f.fields_for :property_policy_attributes, @property_policy do |property_policy_fields| %>
+                <div>
+                  <%= property_policy_fields.label :check_in_time, "Standard Check-in Time", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                  <%= property_policy_fields.time_field :check_in_time, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border" %>
+                </div>
+
+                <div>
+                  <%= property_policy_fields.label :check_out_time, "Standard Check-out Time", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                  <%= property_policy_fields.time_field :check_out_time, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border" %>
+                </div>
+              <% end %>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2 items-start" data-controller="tourism-tax">
+              <div>
+                <span class="block text-sm font-medium mb-2 text-neutral-text-primary">Tourism Tax</span>
+                <label class="flex h-[46px] w-full items-center justify-between rounded-lg border border-neutral-border bg-white px-4">
+                  <span class="text-sm text-neutral-text-secondary">Enable tax</span>
+                  <span class="relative inline-flex items-center">
+                    <%= f.check_box :tourism_tax_enabled, class: "sr-only peer", data: { action: "change->tourism-tax#toggle", tourism_tax_target: "enabled" } %>
+                    <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-text-primary peer-checked:after:translate-x-full"></span>
+                  </span>
+                </label>
+              </div>
+
+              <div>
+                <%= f.label :tourism_tax_amount, "Tourism Tax Amount", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                <%= f.number_field :tourism_tax_amount, step: 0.01, disabled: !@hotel.tourism_tax_enabled?, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border disabled:bg-neutral-bg disabled:text-neutral-text-secondary", data: { tourism_tax_target: "amountInput" } %>
+              </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <%= f.label :default_currency, "Default Currency", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                <%= f.text_field :default_currency, value: @settings[:default_currency] || "MYR", disabled: true, class: "w-full rounded-lg border border-neutral-border bg-neutral-bg px-4 py-3 text-sm text-neutral-text-secondary" %>
+              </div>
+
+              <div>
+                <%= f.label :usd_conversion_rate, "USD Conversion Rate", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                <%= f.number_field :usd_conversion_rate, step: 0.0001, value: @settings[:usd_conversion_rate], class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border" %>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-4 border-t border-neutral-border">
+              <%= f.submit "Save Settings", class: "inline-flex items-center gap-x-2 rounded-lg bg-neutral-text-primary px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-text-secondary" %>
+            </div>
+          <% end %>
+        </div>
       </div>
 
-      <div class="p-4">
-        <%= form_with model: @account, url: hotel_settings_path, method: :patch, local: true, class: "space-y-6" do |f| %>
-          <% if @account.errors.any? %>
-            <div class="p-4 rounded-lg bg-red-50 text-red-600 border border-red-200">
-              <h2 class="text-sm font-bold mb-2"><%= pluralize(@account.errors.count, "error") %> prohibited these settings from being saved:</h2>
-              <ul class="list-disc list-inside text-xs">
-                <% @account.errors.full_messages.each do |message| %>
-                  <li><%= message %></li>
-                <% end %>
-              </ul>
-            </div>
-          <% end %>
-
-          <%= f.fields_for :banking_detail do |banking_fields| %>
-            <%= banking_fields.hidden_field :id if banking_fields.object.persisted? %>
-
-            <div class="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium mb-2 text-gray-700">Account Holder Name</label>
-                <%= banking_fields.text_field :account_holder_name, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-                <p class="mt-1 text-xs text-gray-500">Use the exact business or account holder name shown on the bank account.</p>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-2 text-gray-700">Bank Name</label>
-                <%= banking_fields.text_field :bank_name, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-2 text-gray-700">Account Number</label>
-                <%= banking_fields.text_field :account_number, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-                <p class="mt-1 text-xs text-gray-500">Spaces and hyphens are allowed.</p>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-2 text-gray-700">Account Type</label>
-                <%= banking_fields.select :account_type, BankingDetail::ACCOUNT_TYPES.map { |type| [type.titleize, type] }, { include_blank: "Select account type" }, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-              </div>
-            </div>
-          <% end %>
-
-          <div class="flex justify-end pt-4 border-t border-gray-100">
-            <%= f.submit "Save Banking Details", class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 transition" %>
+      <% if current_user.has_permission?("manage_account") %>
+        <div class="card overflow-hidden">
+          <div class="p-5 sm:p-6 border-b border-neutral-border">
+            <h2 class="text-lg font-semibold text-neutral-text-primary">Banking Details</h2>
+            <p class="mt-1 text-sm text-neutral-text-secondary">Shared account banking details for payout and settlement.</p>
           </div>
-        <% end %>
-      </div>
+
+          <div class="p-5 sm:p-6">
+            <%= form_with model: @account, url: hotel_settings_path, method: :patch, local: true, class: "space-y-6" do |f| %>
+              <% if @account.errors.any? %>
+                <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  <p class="font-semibold"><%= pluralize(@account.errors.count, "error") %> prohibited these settings from being saved:</p>
+                  <ul class="mt-2 list-disc space-y-1 ps-5">
+                    <% @account.errors.full_messages.each do |message| %>
+                      <li><%= message %></li>
+                    <% end %>
+                  </ul>
+                </div>
+              <% end %>
+
+              <%= f.fields_for :banking_detail do |banking_fields| %>
+                <%= banking_fields.hidden_field :id if banking_fields.object.persisted? %>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <%= banking_fields.label :account_holder_name, "Account Holder Name", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                    <%= banking_fields.text_field :account_holder_name, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border" %>
+                  </div>
+
+                  <div>
+                    <%= banking_fields.label :bank_name, "Bank Name", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                    <%= banking_fields.text_field :bank_name, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border" %>
+                  </div>
+
+                  <div>
+                    <%= banking_fields.label :account_number, "Account Number", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                    <%= banking_fields.text_field :account_number, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border" %>
+                  </div>
+
+                  <div>
+                    <%= banking_fields.label :account_type, "Account Type", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+                    <%= banking_fields.select :account_type, BankingDetail::ACCOUNT_TYPES.map { |type| [type.titleize, type] }, { include_blank: "Select account type" }, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border" %>
+                  </div>
+                </div>
+              <% end %>
+
+              <div class="flex justify-end pt-4 border-t border-neutral-border">
+                <%= f.submit "Save Banking Details", class: "inline-flex items-center gap-x-2 rounded-lg bg-neutral-text-primary px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-text-secondary" %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="rounded-2xl border border-dashed border-neutral-border bg-neutral-bg p-10 text-center">
+      <h2 class="text-lg font-bold text-neutral-text-primary">No settings yet</h2>
+      <p class="mt-2 text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>
     </div>
   <% end %>
 </div>
