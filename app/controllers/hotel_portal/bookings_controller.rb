@@ -8,7 +8,8 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     end
 
     if params[:query].present?
-      @bookings = @bookings.where("guest_name ILIKE :q OR confirmation_token ILIKE :q", q: "%#{params[:query]}%")
+      query = params[:query].strip
+      @bookings = @bookings.where("guest_name ILIKE :q OR guest_email ILIKE :q OR guest_phone ILIKE :q OR confirmation_token ILIKE :q", q: "#{query}%")
     end
   end
 

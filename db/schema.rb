@@ -272,6 +272,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_01_090000) do
     t.text "cancellation_policy"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "currency", default: "MYR", null: false
+    t.decimal "usd_rate", precision: 10, scale: 4, default: "0.21", null: false
     t.index ["hotel_id"], name: "index_property_policies_on_hotel_id"
   end
 
