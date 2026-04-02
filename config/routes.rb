@@ -68,7 +68,7 @@ Rails.application.routes.draw do
   end
 
   # Hotel admin dashboard
-  get "/hotel/settings", to: "hotel_portal/settings#show", as: :legacy_hotel_settings
+  get "/hotel/settings", to: "hotel_portal/settings#index", as: :legacy_hotel_settings
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
     get "dashboard", to: "dashboard#index", as: :dashboard
