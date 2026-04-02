@@ -41,9 +41,6 @@
                     <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Check-in / Out</span>
                   </th>
                   <th scope="col" class="px-6 py-3 text-start">
-                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Status</span>
-                  </th>
-                  <th scope="col" class="px-6 py-3 text-start">
                     <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Created At</span>
                   </th>
                   <th scope="col" class="px-6 py-3 text-start">
@@ -59,7 +56,20 @@
                     <tr>
                       <td class="h-px w-px whitespace-nowrap">
                         <div class="px-6 py-3">
-                          <span class="text-sm font-mono font-medium text-gray-800"><%= booking.confirmation_token %></span>
+                          <div class="flex flex-col gap-1">
+                            <span class="text-sm font-mono font-medium text-gray-800"><%= booking.confirmation_token %></span>
+                            <%
+                              status_class = case booking.status
+                              when "confirmed" then "bg-green-100 text-green-800"
+                              when "cancelled" then "bg-red-100 text-red-800"
+                              when "pending" then "bg-yellow-100 text-yellow-800"
+                              else "bg-gray-100 text-gray-800"
+                              end
+                            %>
+                            <span class="inline-flex w-fit items-center gap-x-1 rounded-full px-2 py-1 text-xs font-medium <%= status_class %>">
+                              <%= booking.status.titleize %>
+                            </span>
+                          </div>
                         </div>
                       </td>
                       <td class="h-px w-px whitespace-nowrap">
@@ -75,22 +85,7 @@
                       </td>
                       <td class="h-px w-px whitespace-nowrap">
                         <div class="px-6 py-3">
-                          <span class="text-sm text-gray-800"><%= booking.check_in.strftime("%d %b") %> - <%= booking.check_out.strftime("%d %b %Y") %></span>
-                        </div>
-                      </td>
-                      <td class="h-px w-px whitespace-nowrap">
-                        <div class="px-6 py-3">
-                          <%
-                            status_class = case booking.status
-                            when "confirmed" then "bg-green-100 text-green-800"
-                            when "cancelled" then "bg-red-100 text-red-800"
-                            when "pending" then "bg-yellow-100 text-yellow-800"
-                            else "bg-gray-100 text-gray-800"
-                            end
-                          %>
-                          <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= status_class %>">
-                            <%= booking.status.titleize %>
-                          </span>
+                          <span class="text-sm text-gray-800"><%= booking.check_in.strftime("%d %b %Y (%a)") %> - <%= booking.check_out.strftime("%d %b %Y (%a)") %></span>
                         </div>
                       </td>
                       <td class="h-px w-px whitespace-nowrap">
