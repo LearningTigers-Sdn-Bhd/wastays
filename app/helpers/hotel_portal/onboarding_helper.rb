@@ -1,9 +1,9 @@
 module HotelPortal::OnboardingHelper
-  def onboarding_step_status_icon(completed)
+  def onboarding_step_status_icon(completed, &block)
     if completed
       content_tag(:div, "✓", class: "flex-shrink-0 size-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold")
     else
-      yield # This will render the step number
+      capture(&block)
     end
   end
 

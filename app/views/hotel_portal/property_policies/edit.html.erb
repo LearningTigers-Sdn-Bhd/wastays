@@ -17,11 +17,11 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <%= f.label :check_in_time, "Standard Check-in Time", class: "block text-sm mb-2 font-medium" %>
-            <%= f.text_field :check_in_time, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "e.g. 2:00 PM" %>
+            <%= f.time_field :check_in_time, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
           </div>
           <div>
             <%= f.label :check_out_time, "Standard Check-out Time", class: "block text-sm mb-2 font-medium" %>
-            <%= f.text_field :check_out_time, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "e.g. 12:00 PM" %>
+            <%= f.time_field :check_out_time, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
           </div>
         </div>
 

@@ -29,15 +29,18 @@ RSpec.describe 'Hotel Policies Update', type: :system do
       click_link 'Update'
     end
 
-    fill_in 'Standard Check-in Time', with: '3:00 PM'
-    fill_in 'Standard Check-out Time', with: '11:00 AM'
+    expect(page).to have_field('Standard Check-in Time', type: 'time')
+    expect(page).to have_field('Standard Check-out Time', type: 'time')
+
+    fill_in 'Standard Check-in Time', with: '15:00'
+    fill_in 'Standard Check-out Time', with: '11:00'
     fill_in 'Cancellation Policy', with: 'Full refund if cancelled 24h before.'
 
     click_button 'Save Policies'
 
     expect(page).to have_content('Hotel policies updated successfully.')
     expect(hotel.reload.status).to eq('rooms_incomplete')
-    expect(hotel.property_policy.check_in_time).to eq('3:00 PM')
+    expect(hotel.property_policy.check_in_time).to eq('15:00')
 
     # Onboarding should now show Step 2 as completed
     within('#step-policies') do

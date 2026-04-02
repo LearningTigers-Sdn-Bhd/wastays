@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe "HotelPortal::AuditLogs", type: :request do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, status: 'approved') }
   let(:user) { create(:user) }
 
   before do

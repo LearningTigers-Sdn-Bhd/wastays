@@ -1,21 +1,303 @@
 #!/usr/bin/env bash
 
-# Exit immediately if a command exits with a non-zero status
-set -e
+set -euo pipefail
 
-echo "--- 🔍 Running RuboCop (Linting) ---"
-bin/rubocop
+if [[ -t 1 ]]; then
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  RED=$'\033[31m'
+  GREEN=$'\033[32m'
+  YELLOW=$'\033[33m'
+  BLUE=$'\033[34m'
+  MAGENTA=$'\033[35m'
+  CYAN=$'\033[36m'
+  RESET=$'\033[0m'
+else
+  BOLD=''
+  DIM=''
+  RED=''
+  GREEN=''
+  YELLOW=''
+  BLUE=''
+  MAGENTA=''
+  CYAN=''
+  RESET=''
+fi
 
-echo -e "\n--- 🛡️  Running Brakeman (Security Scan) ---"
-bin/brakeman --no-pager
+INTERACTIVE=0
+if [[ -t 1 && -z "${CI:-}" ]]; then
+  INTERACTIVE=1
+fi
 
-echo -e "\n--- 💎 Running Bundle Audit (Gem Security) ---"
-bundle exec bundle-audit update && bundle exec bundle-audit check
+TMP_FILES=()
+STEP_RESULTS=()
+CURRENT_STEP_OUTPUT=''
+CURRENT_STEP_LABEL=''
+CURRENT_STEP_ICON=''
 
-echo -e "\n--- 📦 Running Importmap Audit (JS Security) ---"
-bin/importmap audit || echo "⚠️  Importmap audit failed (skipping due to potential network/SSL issues)"
+cleanup() {
+  for file in "${TMP_FILES[@]:-}"; do
+    [[ -n "$file" && -f "$file" ]] && rm -f "$file"
+  done
+}
+trap cleanup EXIT
 
-echo -e "\n--- 🧪 Running RSpec (Tests) ---"
-bundle exec rspec
+print_banner() {
+  printf "\n${BOLD}${MAGENTA}█╗    ██╗ █████╗ ███████╗████████╗ █████╗ ██╗   ██╗███████╗${RESET}\n"
+  printf "${BOLD}${MAGENTA}██║    ██║██╔══██╗██╔════╝╚══██╔══╝██╔══██╗╚██╗ ██╔╝██╔════╝${RESET}\n"
+  printf "${BOLD}${MAGENTA}██║ █╗ ██║███████║███████╗   ██║   ███████║ ╚████╔╝ ███████╗${RESET}\n"
+  printf "${BOLD}${MAGENTA}██║███╗██║██╔══██║╚════██║   ██║   ██╔══██║  ╚██╔╝  ╚════██║${RESET}\n"
+  printf "${BOLD}${MAGENTA}╚███╔███╔╝██║  ██║███████║   ██║   ██║  ██║   ██║   ███████║${RESET}\n"
+  printf "${BOLD}${MAGENTA} ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚══════╝${RESET}\n"
+  printf "${BOLD}${YELLOW}         ARCADE CI MODE${RESET} ${DIM}Ready to eat bugs...${RESET}\n\n"
+}
 
-echo -e "\n✅ All checks passed!"
+print_section() {
+  local icon="$1"
+  local title="$2"
+  printf "${BOLD}${CYAN}╭─ %s %s${RESET}\n" "$icon" "$title"
+}
+
+show_animation() {
+  local pid="$1"
+  local label="$2"
+  local icon="$3"
+  local pacman='ᗧ'
+  local ghosts=('👾' '👻' '👾' '👻')
+  local control='🕹️'
+  local track_length=9
+  local i=0
+
+  while kill -0 "$pid" 2>/dev/null; do
+    local mouth="$pacman"
+    local ghost="${ghosts[i % ${#ghosts[@]}]}"
+    local position=$(( i % track_length ))
+    local track=''
+    local j
+
+    for ((j = 0; j < track_length; j++)); do
+      if (( j < position )); then
+        track+="  "
+      elif (( j == position )); then
+        track+="${YELLOW}${mouth}${RESET} "
+      else
+        track+="${DIM}•${RESET} "
+      fi
+    done
+
+    printf "\r${BOLD}${BLUE}│${RESET} ${control} ${icon} ${label} ${track}${MAGENTA}${ghost}${RESET}"
+    sleep 0.16
+    ((i += 1))
+  done
+
+  printf "\r\033[K"
+}
+
+play_finish_animation() {
+  local label="$1"
+  local icon="$2"
+  local control='🕹️'
+  local pacman='ᗧ'
+  local ghost='👻'
+  local track_length=9
+  local position
+  local j
+
+  for ((position = track_length; position <= track_length + 1; position++)); do
+    local track=''
+
+    for ((j = 0; j < track_length; j++)); do
+      if (( j < position )); then
+        track+="  "
+      elif (( j == position )); then
+        track+="${YELLOW}${pacman}${RESET} "
+      else
+        track+="${DIM}•${RESET} "
+      fi
+    done
+
+    if (( position == track_length )); then
+      printf "\r${BOLD}${BLUE}│${RESET} ${control} ${icon} ${label} ${track}${MAGENTA}${ghost}${RESET}"
+    else
+      printf "\r${BOLD}${BLUE}│${RESET} ${control} ${icon} ${label} ${track}${GREEN}✦${RESET}"
+    fi
+
+    sleep 0.09
+  done
+
+  printf "\r\033[K"
+}
+
+record_result() {
+  local status="$1"
+  local icon="$2"
+  local label="$3"
+  STEP_RESULTS+=("$status|$icon|$label")
+}
+
+print_step_output() {
+  local output_file="$1"
+  if [[ -s "$output_file" ]]; then
+    sed 's/^/│ /' "$output_file"
+  else
+    printf "│ ${DIM}No output${RESET}\n"
+  fi
+}
+
+run_step() {
+  local icon="$1"
+  local label="$2"
+  local command="$3"
+  local mode="${4:-animated}"
+
+  CURRENT_STEP_LABEL="$label"
+  CURRENT_STEP_ICON="$icon"
+  local output_file
+  output_file=$(mktemp)
+  TMP_FILES+=("$output_file")
+  CURRENT_STEP_OUTPUT="$output_file"
+
+  print_section "$icon" "$label"
+
+  if [[ "$mode" == "stream" ]]; then
+    if bash -lc "$command" 2>&1 | tee "$output_file"; then
+      printf "${BOLD}${GREEN}│ ✓ %s complete${RESET}\n" "$label"
+      record_result "pass" "$icon" "$label"
+    else
+      printf "${BOLD}${RED}│ ✗ %s failed${RESET}\n" "$label"
+      record_result "fail" "$icon" "$label"
+      return 1
+    fi
+  elif (( INTERACTIVE )); then
+    bash -lc "$command" >"$output_file" 2>&1 &
+    local pid=$!
+    show_animation "$pid" "$label" "$icon"
+    if wait "$pid"; then
+      play_finish_animation "$label" "$icon"
+      printf "${BOLD}${GREEN}│ ✓ %s complete${RESET}\n" "$label"
+      print_step_output "$output_file"
+      record_result "pass" "$icon" "$label"
+    else
+      printf "${BOLD}${RED}│ ✗ %s failed${RESET}\n" "$label"
+      print_step_output "$output_file"
+      record_result "fail" "$icon" "$label"
+      return 1
+    fi
+  else
+    if bash -lc "$command" >"$output_file" 2>&1; then
+      printf "${BOLD}${GREEN}│ ✓ %s complete${RESET}\n" "$label"
+      print_step_output "$output_file"
+      record_result "pass" "$icon" "$label"
+    else
+      printf "${BOLD}${RED}│ ✗ %s failed${RESET}\n" "$label"
+      print_step_output "$output_file"
+      record_result "fail" "$icon" "$label"
+      return 1
+    fi
+  fi
+
+  printf "${BOLD}${CYAN}└──────────────────────────────────────────────${RESET}\n\n"
+}
+
+run_optional_step() {
+  local icon="$1"
+  local label="$2"
+  local command="$3"
+  local warning_message="$4"
+
+  CURRENT_STEP_LABEL="$label"
+  CURRENT_STEP_ICON="$icon"
+  local output_file
+  output_file=$(mktemp)
+  TMP_FILES+=("$output_file")
+  CURRENT_STEP_OUTPUT="$output_file"
+
+  print_section "$icon" "$label"
+
+  if (( INTERACTIVE )); then
+    bash -lc "$command" >"$output_file" 2>&1 &
+    local pid=$!
+    show_animation "$pid" "$label" "$icon"
+    if wait "$pid"; then
+      play_finish_animation "$label" "$icon"
+      printf "${BOLD}${GREEN}│ ✓ %s complete${RESET}\n" "$label"
+      print_step_output "$output_file"
+      record_result "pass" "$icon" "$label"
+    else
+      printf "${BOLD}${YELLOW}│ ⚠ %s warning${RESET}\n" "$label"
+      print_step_output "$output_file"
+      printf "│ ${YELLOW}%s${RESET}\n" "$warning_message"
+      record_result "warn" "$icon" "$label"
+    fi
+  else
+    if bash -lc "$command" >"$output_file" 2>&1; then
+      play_finish_animation "$label" "$icon"
+      printf "${BOLD}${GREEN}│ ✓ %s complete${RESET}\n" "$label"
+      print_step_output "$output_file"
+      record_result "pass" "$icon" "$label"
+    else
+      printf "${BOLD}${YELLOW}│ ⚠ %s warning${RESET}\n" "$label"
+      print_step_output "$output_file"
+      printf "│ ${YELLOW}%s${RESET}\n" "$warning_message"
+      record_result "warn" "$icon" "$label"
+    fi
+  fi
+
+  printf "${BOLD}${CYAN}└──────────────────────────────────────────────${RESET}\n\n"
+}
+
+print_summary() {
+  local passes=0
+  local warns=0
+  local fails=0
+
+  printf "${BOLD}${MAGENTA}╔══════════════════════════════════════════════╗${RESET}\n"
+  printf "${BOLD}${MAGENTA}║${RESET} ${BOLD}TEST SCOREBOARD${RESET}                            ${BOLD}${MAGENTA}║${RESET}\n"
+  printf "${BOLD}${MAGENTA}╠══════════════════════════════════════════════╣${RESET}\n"
+
+  for entry in "${STEP_RESULTS[@]}"; do
+    IFS='|' read -r status icon label <<< "$entry"
+    case "$status" in
+      pass)
+        ((passes += 1))
+        printf "${BOLD}${MAGENTA}║${RESET} ${GREEN}●${RESET} %s %-30s ${BOLD}${GREEN}CLEARED${RESET} ${BOLD}${MAGENTA} ║${RESET}\n" "$icon" "$label"
+        ;;
+      warn)
+        ((warns += 1))
+        printf "${BOLD}${MAGENTA}║${RESET} ${YELLOW}●${RESET} %s %-30s ${BOLD}${YELLOW}WARN${RESET}    ${BOLD}${MAGENTA} ║${RESET}\n" "$icon" "$label"
+        ;;
+      fail)
+        ((fails += 1))
+        printf "${BOLD}${MAGENTA}║${RESET} ${RED}●${RESET} %s %-30s ${BOLD}${RED}FAILED${RESET}  ${BOLD}${MAGENTA} ║${RESET}\n" "$icon" "$label"
+        ;;
+    esac
+  done
+
+  printf "${BOLD}${MAGENTA}╠══════════════════════════════════════════════╣${RESET}\n"
+  printf "${BOLD}${MAGENTA}║${RESET} High Score: ${GREEN}%d${RESET}  Caution Flags: ${YELLOW}%d${RESET}  Fails: ${RED}%d${RESET}    ${BOLD}${MAGENTA}║${RESET}\n" "$passes" "$warns" "$fails"
+  printf "${BOLD}${MAGENTA}╚══════════════════════════════════════════════╝${RESET}\n"
+
+  if (( fails > 0 )); then
+    printf "\n${BOLD}${RED}💀 Game over. %d check(s) failed!${RESET}\n" "$fails"
+  elif (( warns > 0 )); then
+    printf "\n${BOLD}${YELLOW}⚠ Stage clear with warnings.${RESET}\n"
+  else
+    printf "\n${BOLD}${GREEN}🏆 Perfect run. All checks passed!${RESET}\n"
+  fi
+}
+
+handle_failure() {
+  local exit_code="$1"
+  printf "${BOLD}${RED}└─ %s failed and stopped the pipeline${RESET}\n\n" "$CURRENT_STEP_LABEL"
+  print_summary
+  exit "$exit_code"
+}
+trap 'handle_failure "$?"' ERR
+
+print_banner
+run_step "🔍" "RuboCop" "bin/rubocop"
+run_step "🔰" "Brakeman" "bin/brakeman --no-pager"
+run_step "💎" "Bundle Audit" "bundle exec bundle-audit update && bundle exec bundle-audit check"
+run_optional_step "📦" "Importmap Audit" "bin/importmap audit" "Importmap audit failed; continuing because this can be caused by network or SSL issues."
+run_step "🧪" "RSpec" "bundle exec rspec" "stream"
+print_summary

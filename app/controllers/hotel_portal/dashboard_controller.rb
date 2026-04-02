@@ -10,6 +10,10 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
       render :onboarding and return
     end
 
+    if @current_hotel.status == "pending_review"
+      render :pending_review and return
+    end
+
     @today_arrivals = @current_hotel.bookings.active.where(check_in: Date.today)
     @tomorrow_arrivals = @current_hotel.bookings.active.where(check_in: Date.tomorrow)
 

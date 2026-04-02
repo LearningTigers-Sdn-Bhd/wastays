@@ -9,6 +9,36 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
     CancellationPolicyTemplate.find_or_create_by!(name: 'Flexible', body: 'Full refund if cancelled 24h before.')
   end
 
+  it 'hides the full hotel navigation during onboarding and pending review' do
+    hotel = create(:hotel, status: 'registered')
+    user = create(:user, email: 'owner@example.com')
+    role = create(:role, account: hotel.account, slug: 'hotel_owner', name: 'Hotel Owner')
+    Permission.find_or_create_by!(slug: 'manage_hotel_profile') { |p| p.name = 'Manage Hotel Profile' }
+    RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: 'manage_hotel_profile'))
+    UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+
+    visit login_path
+    fill_in 'Email address', with: user.email
+    fill_in 'Password', with: 'password123'
+    click_button 'Sign In'
+
+    expect(page).to have_content('Welcome to WAStays!')
+    expect(page).to have_no_content('Rates & Inventory')
+    expect(page).to have_no_content('Guests')
+    expect(page).to have_no_content('Operation Logs')
+    expect(page).to have_no_css("header[class*='lg:ps-64']")
+    expect(page).to have_css('#step-profile .rounded-full', text: '1')
+    expect(page).to have_no_content('<div class="flex-shrink-0 size-10 rounded-full')
+
+    hotel.update!(status: 'pending_review')
+    visit hotel_dashboard_path(hotel)
+
+    expect(page).to have_no_content('Rates & Inventory')
+    expect(page).to have_no_content('Guests')
+    expect(page).to have_no_content('Operation Logs')
+    expect(page).to have_no_css("header[class*='lg:ps-64']")
+  end
+
   it 'completes the full onboarding and approval process' do
     # 1. Registration
     visit register_path
@@ -32,15 +62,18 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
 
     # 3. Step 2: Policies
     within('#step-policies') { click_link 'Update' }
-    fill_in 'Standard Check-in Time', with: '2:00 PM'
-    fill_in 'Standard Check-out Time', with: '12:00 PM'
+    fill_in 'Standard Check-in Time', with: '14:00'
+    fill_in 'Standard Check-out Time', with: '12:00'
     click_button 'Use "Flexible" template'
     click_button 'Save Policies'
     expect(page).to have_content('Hotel policies updated successfully.')
 
     # 4. Step 3: Room Setup
     within('#step-rooms') { click_link 'Update' }
+    expect(page).to have_css("a.btn.btn-secondary", text: 'Back to Onboarding')
+    expect(page).to have_xpath("//a[contains(@class,'btn') and contains(., 'Back to Onboarding')][following::nav[@aria-label='Breadcrumb']]")
     first(:link, 'Add Room Type').click
+    expect(page).to have_css("a.btn.btn-secondary", text: 'Back to Onboarding')
     fill_in 'Room Type Name', with: 'Deluxe Room'
     fill_in 'Max Adults', with: 2
     fill_in 'Max Children', with: 1
@@ -50,9 +83,13 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
     expect(page).to have_content('Room type created successfully.')
 
     # 5. Step 4: Submit for Review
-    click_link 'Back to Dashboard'
+    click_link 'Back to Onboarding'
     within('#step-review') { click_button 'Submit for Review' }
     expect(page).to have_content('Your hotel has been submitted for review.')
+    expect(page).to have_content('Pending Review')
+    expect(page).to have_content('Our team is reviewing your hotel setup.')
+    expect(page).to have_content('You will be able to access the full hotel system once your hotel is approved.')
+    expect(page).to have_no_content('Arrival Board')
     expect(hotel.reload.status).to eq('pending_review')
 
     # 6. Superadmin Approval

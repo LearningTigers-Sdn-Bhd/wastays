@@ -45,8 +45,8 @@ RSpec.describe 'Room Setup', type: :system do
     expect(page).to have_content('Deluxe Suite')
     expect(hotel.reload.status).to eq('inventory_incomplete')
 
-    # Go back to dashboard to check onboarding
-    click_link 'Back to Dashboard'
+    # Go back to onboarding to check step completion
+    click_link 'Back to Onboarding'
     within('#step-rooms') do
       expect(page).to have_content('✓')
       expect(page).to have_link('Manage')
