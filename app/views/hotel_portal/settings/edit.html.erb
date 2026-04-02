@@ -27,7 +27,7 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <%= f.label :currency, "Currency", class: "block text-sm mb-2 font-medium" %>
-            <%= f.select :currency, options_for_select([["MYR", "MYR"], ["USD", "USD"], ["SGD", "SGD"], ["THB", "THB"], ["IDR", "IDR"]], @property_policy.currency.presence || "MYR"), {}, class: "py-3 px-4 block w-full border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" %>
+            <%= f.select :currency, options_for_select([["MYR", "MYR"], ["USD", "USD"]], @property_policy.currency.presence || "MYR"), {}, class: "py-3 px-4 block w-full border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" %>
           </div>
           <div>
             <%= f.label :usd_rate, "USD Rate", class: "block text-sm mb-2 font-medium" %>

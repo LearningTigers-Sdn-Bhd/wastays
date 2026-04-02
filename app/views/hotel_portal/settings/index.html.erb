@@ -2,14 +2,14 @@
   <div class="card overflow-hidden">
     <div class="p-5 sm:p-6 border-b border-neutral-border flex items-center justify-between gap-4">
       <div>
-        <h1 class="text-lg sm:text-xl font-bold text-neutral-text-primary md:-ml-6 sm:-ml-2">Settings</h1>
+        <h1 class="text-lg sm:text-xl font-bold text-neutral-text-primary">Settings</h1>
       </div>
       <%= link_to "Edit Settings", hotel_edit_settings_path, class: "inline-flex items-center gap-x-2 rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-secondary" %>
     </div>
 
-    <div class="p-5 sm:p-6 border rounded-xl">
+    <div class="p-5 sm:p-6">
       <% if @settings.present? %>
-        <div class="grid gap-4 md:grid-cols-[1.4fr_0.6fr]">
+        <div class="grid gap-4 md:grid-cols-[1.0fr_1.0fr]">
           <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-6">
             <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
               <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
@@ -23,7 +23,7 @@
           </div>
 
           <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary ml-50">
               <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <circle cx="12" cy="12" r="9" />
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v10M9.5 9h5a1.5 1.5 0 0 1 0 3h-5a1.5 1.5 0 0 0 0 3h5" />
@@ -49,7 +49,7 @@
           </div>
 
           <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary ml-50">
               <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <circle cx="12" cy="12" r="9" />
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 13v4m0-10v2m0 4h.01" />
@@ -75,7 +75,7 @@
           </div>
 
           <div class="rounded-2xl border border-neutral-border bg-neutral-surface p-5 flex items-start gap-4">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-bg text-neutral-text-secondary ml-50">
               <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 19h16M7 15l3-3 4 4 6-6" />
               </svg>
@@ -86,20 +86,6 @@
             </div>
           </div>
 
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Default Currency</dt>
-          <dd><%= @settings[:default_currency] || "MYR" %></dd>
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">USD Conversion Rate</dt>
-          <dd><%= number_with_precision(@settings[:usd_conversion_rate] || 4.5, precision: 2) %></dd>
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Tourism Tax</dt>
-          <dd>
-            <%= @settings[:tourism_tax_enabled] ? "RM #{number_with_precision(@settings[:tourism_tax_amount] || 10.0, precision: 2)} (non-Malaysian passports)" : "Disabled" %>
-          </dd>
         </div>
       </dl>
     <% else %>
