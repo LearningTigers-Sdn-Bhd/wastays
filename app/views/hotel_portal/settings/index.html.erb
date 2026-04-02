@@ -3,40 +3,80 @@
     <div class="p-4 border-b border-neutral-border">
       <h1 class="text-lg font-bold text-neutral-text-primary">Settings</h1>
     </div>
-    <div class="p-4 space-y-4">
+
+    <div class="p-4">
       <% if @settings.present? %>
-        <dl class="grid grid-cols-1 gap-y-2 text-sm text-neutral-text-secondary">
-          <div>
-            <dt class="font-medium text-neutral-text-primary">Hotel Status</dt>
-            <dd><%= @settings[:hotel_status] %></dd>
+        <%= form_with model: @hotel, url: hotel_settings_path, method: :patch, local: true, class: "space-y-4" do |f| %>
+          <% settings_errors = @hotel.errors.full_messages + @property_policy.errors.full_messages %>
+          <% if settings_errors.any? %>
+            <div class="p-4 rounded-lg bg-red-50 text-red-600 border border-red-200">
+              <h2 class="text-sm font-bold mb-2"><%= pluralize(settings_errors.count, "error") %> prohibited these settings from being saved:</h2>
+              <ul class="list-disc list-inside text-xs">
+                <% settings_errors.each do |message| %>
+                  <li><%= message %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <%= f.label :hotel_status, "Hotel Status", class: "block text-sm font-medium mb-2 text-gray-700" %>
+              <%= f.text_field :hotel_status, value: @settings[:hotel_status], disabled: true, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border bg-gray-50 text-gray-500" %>
+            </div>
+
+            <div>
+              <%= f.label :onboarding_stage, "Onboarding Stage", class: "block text-sm font-medium mb-2 text-gray-700" %>
+              <%= f.text_field :onboarding_stage, value: @settings[:onboarding_stage], disabled: true, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border bg-gray-50 text-gray-500" %>
+            </div>
           </div>
-          <div>
-            <dt class="font-medium text-neutral-text-primary">Onboarding Stage</dt>
-            <dd><%= @settings[:onboarding_stage] %></dd>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-start" data-controller="tourism-tax">
+            <%= f.fields_for :property_policy_attributes, @property_policy do |property_policy_fields| %>
+              <div>
+                <%= property_policy_fields.label :check_in_time, "Standard Check-in Time", class: "block text-sm font-medium mb-2 text-gray-700" %>
+                <%= property_policy_fields.time_field :check_in_time, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+              </div>
+
+              <div>
+                <%= property_policy_fields.label :check_out_time, "Standard Check-out Time", class: "block text-sm font-medium mb-2 text-gray-700" %>
+                <%= property_policy_fields.time_field :check_out_time, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+              </div>
+            <% end %>
+
+            <div>
+              <span class="block text-sm font-medium mb-2 text-gray-700">Tourism Tax</span>
+              <label class="flex h-[46px] w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-4 cursor-pointer">
+                <span class="text-sm text-gray-700">Enable tax</span>
+                <span class="relative inline-flex items-center">
+                  <%= f.check_box :tourism_tax_enabled, class: "sr-only peer", data: { action: "change->tourism-tax#toggle", tourism_tax_target: "enabled" } %>
+                  <span class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-primary/20 rounded-full peer peer-checked:bg-brand-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-gray-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white"></span>
+                </span>
+              </label>
+            </div>
+
+            <div>
+              <%= f.label :tourism_tax_amount, "Tourism Tax Amount", class: "block text-sm font-medium mb-2 text-gray-700" %>
+              <%= f.number_field :tourism_tax_amount, step: 0.01, disabled: !@hotel.tourism_tax_enabled?, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border disabled:bg-gray-50 disabled:text-gray-400", data: { tourism_tax_target: "amountInput" } %>
+            </div>
           </div>
-          <div>
-            <dt class="font-medium text-neutral-text-primary">Check-in</dt>
-            <dd><%= @settings[:check_in] || "Not set" %></dd>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <%= f.label :default_currency, "Default Currency", class: "block text-sm font-medium mb-2 text-gray-700" %>
+              <%= f.text_field :default_currency, value: "MYR", disabled: true, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm border bg-gray-50 text-gray-500" %>
+            </div>
+
+            <div>
+              <%= f.label :usd_conversion_rate, "USD Conversion Rate", class: "block text-sm font-medium mb-2 text-gray-700" %>
+              <%= f.number_field :usd_conversion_rate, step: 0.01, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+            </div>
           </div>
-          <div>
-            <dt class="font-medium text-neutral-text-primary">Check-out</dt>
-            <dd><%= @settings[:check_out] || "Not set" %></dd>
+
+          <div class="flex justify-end pt-4 border-t border-gray-100">
+            <%= f.submit "Save Settings", class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 transition" %>
           </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Default Currency</dt>
-          <dd><%= @settings[:default_currency] || "MYR" %></dd>
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">USD Conversion Rate</dt>
-          <dd><%= number_with_precision(@settings[:usd_conversion_rate] || 4.5, precision: 2) %></dd>
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Tourism Tax</dt>
-          <dd>
-            <%= @settings[:tourism_tax_enabled] ? "RM #{number_with_precision(@settings[:tourism_tax_amount] || 10.0, precision: 2)} (non-Malaysian passports)" : "Disabled" %>
-          </dd>
-        </div>
-        </dl>
+        <% end %>
       <% else %>
         <p class="text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>
       <% end %>

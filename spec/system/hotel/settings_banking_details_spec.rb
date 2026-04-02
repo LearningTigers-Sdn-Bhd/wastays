@@ -10,7 +10,9 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     driven_by(:rack_test)
 
     Permission.find_or_create_by!(slug: 'manage_account') { |permission| permission.name = 'Manage Account' }
+    Permission.find_or_create_by!(slug: 'manage_hotel_profile') { |permission| permission.name = 'Manage Hotel Profile' }
     RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: 'manage_account'))
+    RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: 'manage_hotel_profile'))
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
@@ -37,6 +39,27 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     expect(banking_detail.bank_name).to eq('Maybank')
     expect(banking_detail.account_number).to eq('5142 1234 5678')
     expect(banking_detail.account_type).to eq('current')
+    expect(hotel.reload.status).to eq('approved')
+  end
+
+  it 'saves banking details independently of the display-only settings card' do
+    visit hotel_settings_path
+
+    within all('.card').first do
+      expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Approved')
+      expect(page).to have_field('Onboarding Stage', type: 'text', disabled: true, with: 'Building profile')
+    end
+
+    fill_in 'account_banking_detail_attributes_account_holder_name', with: 'Kejayaan Hotel Sdn Bhd'
+    fill_in 'account_banking_detail_attributes_bank_name', with: 'CIMB'
+    fill_in 'account_banking_detail_attributes_account_number', with: '1234 5678 9012'
+    select 'Savings', from: 'account_banking_detail_attributes_account_type'
+
+    click_button 'Save Banking Details'
+
+    expect(page).to have_content('Settings updated successfully.')
+    expect(account.reload.banking_detail.account_holder_name).to eq('Kejayaan Hotel Sdn Bhd')
+    expect(hotel.reload.status).to eq('approved')
   end
 
   it 'shows validation errors when banking details are invalid' do
