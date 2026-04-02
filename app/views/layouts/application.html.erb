@@ -52,10 +52,12 @@
                       Admin Panel
                     </a>
                   <% end %>
-                  <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-neutral-bg focus:ring-2 focus:ring-brand-primary" href="<%= hotel_dashboard_path %>">
-                    Hotel Dashboard
-                  </a>
-                  <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-neutral-bg focus:ring-2 focus:ring-brand-primary" href="<%= current_user.superadmin? ? edit_admin_profile_path : edit_hotel_user_profile_path %>">
+                  <% if current_hotel.present? %>
+                    <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-neutral-bg focus:ring-2 focus:ring-brand-primary" href="<%= hotel_dashboard_path(current_hotel) %>">
+                      Hotel Dashboard
+                    </a>
+                  <% end %>
+                  <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-neutral-bg focus:ring-2 focus:ring-brand-primary" href="<%= current_user.superadmin? ? edit_admin_profile_path : edit_hotel_user_profile_path(current_hotel) %>">
                     My Profile
                   </a>
                   <div class="my-2 border-t border-neutral-border"></div>

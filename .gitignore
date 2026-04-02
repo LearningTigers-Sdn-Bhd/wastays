@@ -22,3 +22,4 @@
 !/tmp/uploads/.keep
 /config/credentials/development.key
 /coverage/
+/CLAUDE.md

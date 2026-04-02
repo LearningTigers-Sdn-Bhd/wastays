@@ -11,12 +11,12 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
     if @note.save
       respond_to do |format|
         format.turbo_stream { render_notes_update("Note added.", :notice) }
-        format.html { redirect_to hotel_booking_path(@booking), notice: "Note added." }
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Note added." }
       end
     else
       respond_to do |format|
         format.turbo_stream { render_notes_update("Failed to add note.", :alert, status: :unprocessable_content) }
-        format.html { redirect_to hotel_booking_path(@booking), alert: "Failed to add note." }
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to add note." }
       end
     end
   end
@@ -27,7 +27,7 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
     if updated_body.blank?
       respond_to do |format|
         format.turbo_stream { render_notes_update("Note body cannot be blank.", :alert, status: :unprocessable_content) }
-        format.html { redirect_to hotel_booking_path(@booking), alert: "Note body cannot be blank." }
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), alert: "Note body cannot be blank." }
       end
       return
     end
@@ -45,12 +45,12 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
     if @note.update(body: updated_body)
       respond_to do |format|
         format.turbo_stream { render_notes_update("Note updated.", :notice) }
-        format.html { redirect_to hotel_booking_path(@booking), notice: "Note updated." }
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Note updated." }
       end
     else
       respond_to do |format|
         format.turbo_stream { render_notes_update("Failed to update note.", :alert, status: :unprocessable_content) }
-        format.html { redirect_to hotel_booking_path(@booking), alert: "Failed to update note." }
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to update note." }
       end
     end
   end
@@ -59,12 +59,12 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
     if @note.destroy
       respond_to do |format|
         format.turbo_stream { render_notes_update("Note deleted.", :notice) }
-        format.html { redirect_to hotel_booking_path(@booking), notice: "Note deleted." }
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Note deleted." }
       end
     else
       respond_to do |format|
         format.turbo_stream { render_notes_update("Failed to delete note.", :alert, status: :unprocessable_content) }
-        format.html { redirect_to hotel_booking_path(@booking), alert: "Failed to delete note." }
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to delete note." }
       end
     end
   end

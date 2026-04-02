@@ -12,61 +12,73 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
   end
 
   describe "GET /index" do
+      before do
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
+      BookingRoom.create!(booking: booking, room_type: room_type, room_type_snapshot: { "name" => room_type.name }, quantity: 1, subtotal: booking.total_amount)
+      create(:pre_checkin, booking: booking, status: "completed", document_status: "uploaded")
+    end
+
     it "returns http success" do
-      get "/hotel/bookings"
+      get "/hotel/#{hotel.id}/bookings"
       expect(response).to have_http_status(:success)
     end
 
-    it "preserves hotel context for superadmin hotel portal navigation" do
+    it "renders dashboard page without stale hotel booking path helpers" do
+      get "/hotel/#{hotel.id}/dashboard"
+
+      expect(response).to have_http_status(:success)
+    end
+
+    it "renders hotel portal links with hotel id in the path for superadmin" do
       superadmin = create(:user, :superadmin)
       sign_in_as(superadmin)
 
-      get "/hotel/bookings", params: { hotel_id: hotel.id }
+      get "/hotel/#{hotel.id}/bookings"
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include(%(href="/hotel/arrivals?hotel_id=#{hotel.id}"))
-      expect(response.body).to include(%(href="/hotel/bookings?hotel_id=#{hotel.id}"))
-      expect(response.body).to include(%(href="/hotel/audit_logs?hotel_id=#{hotel.id}"))
+      expect(response.body).to include(%(href="/hotel/#{hotel.id}/arrivals"))
+      expect(response.body).to include(%(href="/hotel/#{hotel.id}/bookings"))
+      expect(response.body).to include(%(href="/hotel/#{hotel.id}/audit_logs"))
     end
   end
 
   describe "GET /show" do
     it "returns http success" do
-      get "/hotel/bookings/#{booking.id}"
+      get "/hotel/#{hotel.id}/bookings/#{booking.id}"
       expect(response).to have_http_status(:success)
     end
   end
 
   describe "PATCH /update" do
-    it "returns http success" do
-      patch "/hotel/bookings/#{booking.id}", params: { booking: { status: "confirmed" } }
-      expect(response).to have_http_status(:found)
+    it "redirects within the hotel path" do
+      patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: { booking: { status: "confirmed" } }
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
     end
   end
 
   describe "POST /check_in" do
-    it "updates the booking status to checked_in" do
-      post "/hotel/bookings/#{booking.id}/check_in"
-      expect(response).to have_http_status(:found)
+    it "updates the booking status and redirects within the hotel path" do
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in"
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.checked_in_at).to be_present
     end
   end
 
   describe "POST /check_out" do
-    it "updates the booking status to completed" do
+    it "updates the booking status and redirects within the hotel path" do
       booking.update!(status: 'checked_in')
-      post "/hotel/bookings/#{booking.id}/check_out"
-      expect(response).to have_http_status(:found)
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out"
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
       expect(booking.reload.status).to eq("completed")
       expect(booking.checked_out_at).to be_present
     end
   end
 
   describe "POST /cancel" do
-    it "returns http success" do
-      post "/hotel/bookings/#{booking.id}/cancel"
-      expect(response).to have_http_status(:found)
+    it "redirects within the hotel path" do
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/cancel"
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
     end
   end
 end

@@ -25,9 +25,9 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   end
 
   it 'allows the hotel admin to update the editable settings card fields' do
-    visit hotel_settings_path
+    visit hotel_settings_path(hotel)
 
-    within all('.card').first do
+    within first('.card') do
       expect(page).to have_field('Standard Check-in Time', type: 'time')
       expect(page).to have_field('Standard Check-out Time', type: 'time')
       expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Registered')
@@ -56,9 +56,9 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   end
 
   it 'shows hotel status and onboarding stage as disabled text inputs' do
-    visit hotel_settings_path
+    visit hotel_settings_path(hotel)
 
-    within all('.card').first do
+    within first('.card') do
       expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Registered')
       expect(page).to have_field('Onboarding Stage', type: 'text', disabled: true, with: 'Building profile')
     end
@@ -67,23 +67,23 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   it 'hides tourism tax amount when tourism tax is off' do
     hotel.update!(tourism_tax_enabled: false, tourism_tax_amount: 10.0)
 
-    visit hotel_settings_path
+    visit hotel_settings_path(hotel)
 
-    within all('.card').first do
+    within first('.card') do
       expect(page).to have_unchecked_field('hotel_tourism_tax_enabled')
       expect(page).to have_field('Tourism Tax Amount', disabled: true)
     end
   end
 
   it 'shows validation errors when the settings card submission is invalid' do
-    visit hotel_settings_path
+    visit hotel_settings_path(hotel)
 
     fill_in 'Standard Check-in Time', with: '15:00'
     fill_in 'Standard Check-out Time', with: ''
 
     click_button 'Save Settings'
 
-    within all('.card').first do
+    within first('.card') do
       expect(page).to have_content('prohibited these settings from being saved')
       expect(page).to have_content("Check out time can't be blank")
       expect(find_field('Standard Check-in Time').value).to eq('15:00')
@@ -91,5 +91,25 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     end
 
     expect(page).to have_no_content('Settings updated successfully.')
+  end
+
+  it 'keeps the selected hotel in the path after a superadmin saves settings' do
+    superadmin = create(:user, account: account, role: 'superadmin')
+
+    page.driver.submit :delete, logout_path, {}
+    visit login_path
+    fill_in 'Email address', with: superadmin.email
+    fill_in 'Password', with: 'password123'
+    click_button 'Sign In'
+
+    visit hotel_settings_path(hotel)
+
+    fill_in 'Standard Check-in Time', with: '15:00'
+    fill_in 'Standard Check-out Time', with: '11:00'
+    fill_in 'USD Conversion Rate', with: '4.40'
+    click_button 'Save Settings'
+
+    expect(page).to have_current_path(hotel_settings_path(hotel), ignore_query: true)
+    expect(page).to have_content('Settings updated successfully.')
   end
 end

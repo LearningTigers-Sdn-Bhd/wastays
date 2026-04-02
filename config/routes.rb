@@ -68,10 +68,11 @@ Rails.application.routes.draw do
   end
 
   # Hotel admin dashboard
-  namespace :hotel, module: :hotel_portal do
+  get "/hotel/settings", to: "hotel_portal/settings#index", as: :legacy_hotel_settings
+  scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
-    get "dashboard", to: "dashboard#index"
-    post "submit_for_review", to: "dashboard#submit_for_review"
+    get "dashboard", to: "dashboard#index", as: :dashboard
+    post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
     resource :profile, only: [ :edit, :update ]
     resource :property_policy, only: [ :edit, :update ]
@@ -89,10 +90,6 @@ Rails.application.routes.draw do
       end
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
     end
-
-    resources :arrivals, only: [ :index ]
-    resources :audit_logs, only: [ :index ]
-    resources :reports, only: [ :index ]
 
     resources :arrivals, only: [ :index ]
     resources :audit_logs, only: [ :index ]

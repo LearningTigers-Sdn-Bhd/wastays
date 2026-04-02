@@ -23,9 +23,9 @@ class HotelPortal::InventoriesController < HotelPortal::BaseController
     ).call
 
     if result[:success]
-      redirect_to hotel_room_type_inventories_path(@room_type, start_date: inventory_params[:start_date]), notice: "Inventory updated successfully."
+      redirect_to hotel_room_type_inventories_path(current_hotel, @room_type, start_date: inventory_params[:start_date]), notice: "Inventory updated successfully."
     else
-      redirect_to hotel_room_type_inventories_path(@room_type), alert: "Error updating inventory: #{result[:error]}"
+      redirect_to hotel_room_type_inventories_path(current_hotel, @room_type), alert: "Error updating inventory: #{result[:error]}"
     end
   end
 

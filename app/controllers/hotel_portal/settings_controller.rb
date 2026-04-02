@@ -64,7 +64,7 @@ module HotelPortal
         @property_policy.update!(property_policy_params)
       end
 
-      redirect_to hotel_settings_path, notice: "Settings updated successfully."
+      redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
     rescue ActiveRecord::RecordInvalid
       load_settings
       @account.build_banking_detail unless @account.banking_detail
@@ -75,7 +75,7 @@ module HotelPortal
       authorize_banking_details_update!
 
       if @account.update(account_params)
-        redirect_to hotel_settings_path, notice: "Settings updated successfully."
+        redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
       else
         load_settings
         render :index, status: :unprocessable_entity

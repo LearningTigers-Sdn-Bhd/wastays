@@ -32,9 +32,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     ).call
 
     if result[:success]
-      redirect_to hotel_inventory_index_path(start_date: bulk_update_params[:start_date]), notice: "Bulk update applied successfully."
+      redirect_to hotel_inventory_index_path(current_hotel, start_date: bulk_update_params[:start_date]), notice: "Bulk update applied successfully."
     else
-      redirect_to hotel_inventory_index_path, alert: "Error during bulk update: #{result[:error]}"
+      redirect_to hotel_inventory_index_path(current_hotel), alert: "Error during bulk update: #{result[:error]}"
     end
   end
 
