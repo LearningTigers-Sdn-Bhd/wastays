@@ -9,7 +9,7 @@ module HotelPortal
       if @user.update(user_params)
         redirect_to edit_hotel_user_profile_path, notice: "Profile updated successfully."
       else
-        render :edit, status: :unprocessable_entity
+        render :edit, status: :unprocessable_content
       end
     end
 

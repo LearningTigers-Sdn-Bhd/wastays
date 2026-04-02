@@ -1,0 +1,97 @@
+<div class="space-y-6 pb-12">
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+    <div>
+      <nav class="flex mb-2" aria-label="Breadcrumb">
+        <ol class="flex items-center whitespace-nowrap min-w-0">
+          <li class="flex items-center text-sm text-neutral-text-secondary">
+            Superadmin
+            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="flex items-center text-sm text-neutral-text-secondary">
+            <%= link_to "Dashboard", admin_dashboard_path, class: "hover:text-brand-primary" %>
+            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="text-sm font-semibold text-brand-primary truncate" aria-current="page">
+            Analytics
+          </li>
+        </ol>
+      </nav>
+      <h1 class="text-2xl font-bold text-neutral-text-primary">Revenue & Margin Analytics</h1>
+      <p class="mt-1 text-sm text-neutral-text-secondary">Detailed superadmin analytics across all revenue-generating bookings.</p>
+    </div>
+
+    <div class="card p-4">
+      <%= form_with url: admin_analytics_path, method: :get, class: "flex flex-col sm:flex-row sm:items-end gap-3" do |f| %>
+        <div>
+          <label class="block text-[10px] uppercase tracking-wider text-neutral-text-secondary font-semibold mb-2">Start Date</label>
+          <%= f.date_field :start_date, value: @start_date, class: "py-2.5 px-3 block border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase tracking-wider text-neutral-text-secondary font-semibold mb-2">End Date</label>
+          <%= f.date_field :end_date, value: @end_date, class: "py-2.5 px-3 block border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+        </div>
+        <%= f.submit "Update", class: "py-2.5 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700" %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="grid sm:grid-cols-2 xl:grid-cols-5 gap-4 sm:gap-6">
+    <div class="card p-4 md:p-5">
+      <p class="text-[10px] uppercase tracking-wider text-neutral-text-secondary">Revenue</p>
+      <p class="text-2xl font-bold text-neutral-text-primary mt-2">RM <%= number_with_precision(@total_revenue, precision: 2) %></p>
+    </div>
+    <div class="card p-4 md:p-5">
+      <p class="text-[10px] uppercase tracking-wider text-neutral-text-secondary">Margin</p>
+      <p class="text-2xl font-bold text-neutral-text-primary mt-2">RM <%= number_with_precision(@total_margin, precision: 2) %></p>
+    </div>
+    <div class="card p-4 md:p-5">
+      <p class="text-[10px] uppercase tracking-wider text-neutral-text-secondary">Net</p>
+      <p class="text-2xl font-bold text-neutral-text-primary mt-2">RM <%= number_with_precision(@total_net, precision: 2) %></p>
+    </div>
+    <div class="card p-4 md:p-5">
+      <p class="text-[10px] uppercase tracking-wider text-neutral-text-secondary">Bookings</p>
+      <p class="text-2xl font-bold text-neutral-text-primary mt-2"><%= @booking_count %></p>
+    </div>
+    <div class="card p-4 md:p-5">
+      <p class="text-[10px] uppercase tracking-wider text-neutral-text-secondary">Active Hotels</p>
+      <p class="text-2xl font-bold text-neutral-text-primary mt-2"><%= @active_hotels_count %></p>
+    </div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="p-4 md:p-5 border-b border-neutral-border">
+      <h2 class="text-lg font-bold text-neutral-text-primary">Daily Breakdown</h2>
+      <p class="text-sm text-neutral-text-secondary mt-1">Daily revenue, margin, net earnings, and booking volume.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="table-container">
+        <thead class="table-header">
+          <tr>
+            <th class="px-3 py-2">Date</th>
+            <th class="px-3 py-2">Bookings</th>
+            <th class="px-3 py-2">Revenue</th>
+            <th class="px-3 py-2">Margin</th>
+            <th class="px-3 py-2">Net</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-border">
+          <% if @daily_rows.any? %>
+            <% @daily_rows.each do |row| %>
+              <tr>
+                <td class="px-3 py-3 text-sm text-neutral-text-primary"><%= row[:date].strftime("%d %b %Y") %></td>
+                <td class="px-3 py-3 text-sm text-neutral-text-secondary"><%= row[:booking_count] %></td>
+                <td class="px-3 py-3 text-sm text-neutral-text-primary">RM <%= number_with_precision(row[:revenue], precision: 2) %></td>
+                <td class="px-3 py-3 text-sm text-neutral-text-primary">RM <%= number_with_precision(row[:margin], precision: 2) %></td>
+                <td class="px-3 py-3 text-sm font-medium text-neutral-text-primary">RM <%= number_with_precision(row[:net], precision: 2) %></td>
+              </tr>
+            <% end %>
+          <% else %>
+            <tr>
+              <td colspan="5" class="px-3 py-10 text-center text-sm text-neutral-text-secondary">No analytics data found for this date range.</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

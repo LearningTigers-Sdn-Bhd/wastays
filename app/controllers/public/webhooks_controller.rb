@@ -64,7 +64,7 @@ class Public::WebhooksController < ApplicationController
         head :ok
       else
         event.update!(status: "failed", error_message: confirm_result.message)
-        render json: { error: confirm_result.message }, status: :unprocessable_entity
+        render json: { error: confirm_result.message }, status: :unprocessable_content
       end
     else
       event.update!(status: "processed", processed_at: Time.current)

@@ -15,5 +15,15 @@ RSpec.describe "HotelPortal::Arrivals", type: :request do
       get "/hotel/arrivals"
       expect(response).to have_http_status(:success)
     end
+
+    it 'logs out users whose account has been suspended' do
+      user.account.update!(status: 'suspended')
+
+      get "/hotel/arrivals"
+
+      expect(response).to redirect_to(login_path)
+      follow_redirect!
+      expect(response.body).to include('Your account has been suspended. Please contact support.')
+    end
   end
 end

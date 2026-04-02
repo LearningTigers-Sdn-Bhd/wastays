@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_27_121000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_01_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -49,6 +49,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_27_121000) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "banking_details", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "account_holder_name", null: false
+    t.string "bank_name", null: false
+    t.string "account_number", null: false
+    t.string "account_type", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_banking_details_on_account_id", unique: true
   end
 
   create_table "booking_guests", force: :cascade do |t|
@@ -365,6 +376,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_27_121000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "banking_details", "accounts"
   add_foreign_key "booking_guests", "bookings"
   add_foreign_key "booking_guests", "guests"
   add_foreign_key "booking_notes", "bookings"

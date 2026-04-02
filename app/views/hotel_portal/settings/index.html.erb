@@ -1,26 +1,27 @@
-<div class="card">
-  <div class="p-4 border-b border-neutral-border">
-    <h1 class="text-lg font-bold text-neutral-text-primary">Settings</h1>
-  </div>
-  <div class="p-4 space-y-4">
-    <% if @settings.present? %>
-      <dl class="grid grid-cols-1 gap-y-2 text-sm text-neutral-text-secondary">
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Hotel Status</dt>
-          <dd><%= @settings[:hotel_status] %></dd>
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Onboarding Stage</dt>
-          <dd><%= @settings[:onboarding_stage] %></dd>
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Check-in</dt>
-          <dd><%= @settings[:check_in] || "Not set" %></dd>
-        </div>
-        <div>
-          <dt class="font-medium text-neutral-text-primary">Check-out</dt>
-          <dd><%= @settings[:check_out] || "Not set" %></dd>
-        </div>
+<div class="space-y-6">
+  <div class="card">
+    <div class="p-4 border-b border-neutral-border">
+      <h1 class="text-lg font-bold text-neutral-text-primary">Settings</h1>
+    </div>
+    <div class="p-4 space-y-4">
+      <% if @settings.present? %>
+        <dl class="grid grid-cols-1 gap-y-2 text-sm text-neutral-text-secondary">
+          <div>
+            <dt class="font-medium text-neutral-text-primary">Hotel Status</dt>
+            <dd><%= @settings[:hotel_status] %></dd>
+          </div>
+          <div>
+            <dt class="font-medium text-neutral-text-primary">Onboarding Stage</dt>
+            <dd><%= @settings[:onboarding_stage] %></dd>
+          </div>
+          <div>
+            <dt class="font-medium text-neutral-text-primary">Check-in</dt>
+            <dd><%= @settings[:check_in] || "Not set" %></dd>
+          </div>
+          <div>
+            <dt class="font-medium text-neutral-text-primary">Check-out</dt>
+            <dd><%= @settings[:check_out] || "Not set" %></dd>
+          </div>
         <div>
           <dt class="font-medium text-neutral-text-primary">Default Currency</dt>
           <dd><%= @settings[:default_currency] || "MYR" %></dd>
@@ -35,9 +36,64 @@
             <%= @settings[:tourism_tax_enabled] ? "RM #{number_with_precision(@settings[:tourism_tax_amount] || 10.0, precision: 2)} (non-Malaysian passports)" : "Disabled" %>
           </dd>
         </div>
-      </dl>
-    <% else %>
-      <p class="text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>
-    <% end %>
+        </dl>
+      <% else %>
+        <p class="text-sm text-neutral-text-secondary">Settings will appear once a hotel is selected.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="p-4 border-b border-neutral-border">
+      <h2 class="text-lg font-bold text-neutral-text-primary">Banking Details</h2>
+      <p class="text-sm text-neutral-text-secondary mt-1">Shared account banking details for payout and settlement.</p>
+    </div>
+
+    <div class="p-4">
+      <%= form_with model: @account, url: hotel_settings_path, method: :patch, local: true, class: "space-y-6" do |f| %>
+        <% if @account.errors.any? %>
+          <div class="p-4 rounded-lg bg-red-50 text-red-600 border border-red-200">
+            <h2 class="text-sm font-bold mb-2"><%= pluralize(@account.errors.count, "error") %> prohibited these settings from being saved:</h2>
+            <ul class="list-disc list-inside text-xs">
+              <% @account.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <%= f.fields_for :banking_detail do |banking_fields| %>
+          <%= banking_fields.hidden_field :id if banking_fields.object.persisted? %>
+
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2 text-gray-700">Account Holder Name</label>
+              <%= banking_fields.text_field :account_holder_name, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+              <p class="mt-1 text-xs text-gray-500">Use the exact business or account holder name shown on the bank account.</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2 text-gray-700">Bank Name</label>
+              <%= banking_fields.text_field :bank_name, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2 text-gray-700">Account Number</label>
+              <%= banking_fields.text_field :account_number, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+              <p class="mt-1 text-xs text-gray-500">Spaces and hyphens are allowed.</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2 text-gray-700">Account Type</label>
+              <%= banking_fields.select :account_type, BankingDetail::ACCOUNT_TYPES.map { |type| [type.titleize, type] }, { include_blank: "Select account type" }, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+            </div>
+          </div>
+        <% end %>
+
+        <div class="flex justify-end pt-4 border-t border-gray-100">
+          <%= f.submit "Save Banking Details", class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 transition" %>
+        </div>
+      <% end %>
+    </div>
   </div>
 </div>

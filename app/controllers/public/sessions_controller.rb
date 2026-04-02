@@ -9,11 +9,17 @@ class Public::SessionsController < ApplicationController
   def create
     user = User.find_by(email: params[:email].downcase)
     if user&.authenticate(params[:password])
+      if user.account.status == "suspended"
+        flash.now[:alert] = "Your account has been suspended. Please contact support."
+        render :new, status: :unprocessable_content
+        return
+      end
+
       session[:user_id] = user.id
       redirect_to_dashboard(user)
     else
       flash.now[:alert] = "Invalid email or password"
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 

@@ -47,8 +47,8 @@
           <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Time</th>
           <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">User</th>
           <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Action</th>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Target</th>
           <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Details</th>
+          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Value</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-200">
@@ -73,18 +73,11 @@
                   <%= log.action_type.titleize %>
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                <%= log.room_type&.name || 'Property-wide' %>
-              </td>
               <td class="px-6 py-4 text-sm text-gray-600">
-                <% if log.action_type == 'bulk_rate_update' %>
-                  Rate: <%= log.new_value['price'] %> <%= log.new_value['currency'] %>
-                <% elsif log.action_type == 'bulk_inventory_update' %>
-                  Quantity: <%= log.new_value['quantity'] %> (<%= log.new_value['status'] %>)
-                <% end %>
-                <div class="text-[10px] text-gray-400 mt-1">
-                  Dates: <%= log.metadata['start_date'] %> to <%= log.metadata['end_date'] %>
-                </div>
+                <%= log.display_details %>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                <%= log.display_value_change %>
               </td>
             </tr>
           <% end %>

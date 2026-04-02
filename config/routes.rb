@@ -48,6 +48,7 @@ Rails.application.routes.draw do
     get "margin_rules/create"
     get "margin_rules/destroy"
     get "dashboard", to: "dashboard#index"
+    get "analytics", to: "dashboard#analytics"
     resources :hotels do
       member do
         post :approve
@@ -100,7 +101,7 @@ Rails.application.routes.draw do
     resources :inventory_dashboards, only: [ :index, :create ], path: "inventory"
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
     resources :guests, only: [ :index, :show ]
-    resources :settings, only: [ :index ]
+    resource :settings, only: [ :show, :update ], controller: "settings"
     resources :inventory_audit_logs, only: [ :index ]
   end
 end
