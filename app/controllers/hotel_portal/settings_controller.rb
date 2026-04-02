@@ -3,11 +3,13 @@ module HotelPortal
     before_action :set_account
     before_action :set_hotel
 
-
-    def show
+    def index
       load_settings
       @account.build_banking_detail unless @account.banking_detail
-      render :index
+    end
+
+    def edit
+      @property_policy = settings_policy
     end
 
     def update
@@ -64,7 +66,9 @@ module HotelPortal
 
       redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
     rescue ActiveRecord::RecordInvalid
-      render :index, status: :unprocessable_content
+      load_settings
+      @account.build_banking_detail unless @account.banking_detail
+      render :index, status: :unprocessable_entity
     end
 
     def update_banking_details
@@ -73,7 +77,8 @@ module HotelPortal
       if @account.update(account_params)
         redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
       else
-        render :index, status: :unprocessable_content
+        load_settings
+        render :index, status: :unprocessable_entity
       end
     end
 
@@ -112,6 +117,10 @@ module HotelPortal
           :check_out_time
         ]
       ).fetch(:property_policy_attributes)
+    end
+
+    def settings_policy
+      current_hotel.property_policy || current_hotel.build_property_policy
     end
 
     def onboarding_stage(hotel)

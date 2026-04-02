@@ -15,10 +15,10 @@
             </div>
 
             <div>
-              <div class="inline-flex gap-x-2">
-                <%= form_with url: hotel_bookings_path(current_hotel), method: :get, class: "flex gap-x-2" do |f| %>
-                  <%= f.text_field :query, value: params[:query], placeholder: "Search guest or token", class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-                  <%= f.select :status, Booking::STATUSES.map { |s| [s.titleize, s] }, { include_blank: "All Statuses", selected: params[:status] }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+              <div class="inline-flex gap-x-2 w-full md:w-[48rem]">
+                <%= form_with url: hotel_bookings_path(current_hotel), method: :get, class: "flex gap-x-2 w-full", data: { turbo_frame: "bookings_results", controller: "auto-submit" } do |f| %>
+                  <%= f.text_field :query, value: params[:query], placeholder: "Search by guest name, email and phone number...", autocomplete: "off", class: "py-2 px-3 block flex-1 min-w-[18rem] border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border", data: { action: "input->auto-submit#submit" } %>
+                  <%= f.select :status, Booking::STATUSES.map { |s| [s.titleize, s] }, { include_blank: "All Statuses", selected: params[:status] }, class: "py-2 px-3 block w-44 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
                   <%= f.submit "Filter", class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
                 <% end %>
               </div>
@@ -26,101 +26,107 @@
           </div>
           <!-- End Header -->
 
-          <!-- Table -->
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-start">
-                  <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Booking Ref</span>
-                </th>
-                <th scope="col" class="px-6 py-3 text-start">
-                  <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Guest</span>
-                </th>
-                <th scope="col" class="px-6 py-3 text-start">
-                  <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Check-in / Out</span>
-                </th>
-                <th scope="col" class="px-6 py-3 text-start">
-                  <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Status</span>
-                </th>
-                <th scope="col" class="px-6 py-3 text-start">
-                  <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Amount</span>
-                </th>
-                <th scope="col" class="px-6 py-3 text-end"></th>
-              </tr>
-            </thead>
+          <%= turbo_frame_tag "bookings_results" do %>
+            <!-- Table -->
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-start">
+                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Booking Ref</span>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-start">
+                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Guest</span>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-start">
+                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Check-in / Out</span>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-start">
+                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Created At</span>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-start">
+                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-800">Amount</span>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-end"></th>
+                </tr>
+              </thead>
 
-            <tbody class="divide-y divide-gray-200">
-              <% if @bookings.any? %>
-                <% @bookings.each do |booking| %>
-                  <tr>
-                    <td class="h-px w-px whitespace-nowrap">
-                      <div class="px-6 py-3">
-                        <span class="text-sm font-mono font-medium text-gray-800"><%= booking.confirmation_token %></span>
-                      </div>
-                    </td>
-                    <td class="h-px w-px whitespace-nowrap">
-                      <div class="px-6 py-3">
-                        <div class="flex items-center gap-x-3">
-                          <div class="grow">
-                            <span class="block text-sm font-semibold text-gray-800"><%= booking.guest_name %></span>
-                            <span class="block text-xs text-gray-500"><%= booking.guest_email %></span>
+              <tbody class="divide-y divide-gray-200">
+                <% if @bookings.any? %>
+                  <% @bookings.each do |booking| %>
+                    <tr>
+                      <td class="h-px w-px whitespace-nowrap">
+                        <div class="px-6 py-3">
+                          <div class="flex flex-col gap-1">
+                            <span class="text-sm font-mono font-medium text-gray-800"><%= booking.confirmation_token %></span>
+                            <%
+                              status_class = case booking.status
+                              when "confirmed" then "bg-green-100 text-green-800"
+                              when "cancelled" then "bg-red-100 text-red-800"
+                              when "pending" then "bg-yellow-100 text-yellow-800"
+                              else "bg-gray-100 text-gray-800"
+                              end
+                            %>
+                            <span class="inline-flex w-fit items-center gap-x-1 rounded-full px-2 py-1 text-xs font-medium <%= status_class %>">
+                              <%= booking.status.titleize %>
+                            </span>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td class="h-px w-px whitespace-nowrap">
-                      <div class="px-6 py-3">
-                        <span class="text-sm text-gray-800"><%= booking.check_in.strftime("%d %b") %> - <%= booking.check_out.strftime("%d %b %Y") %></span>
-                      </div>
-                    </td>
-                    <td class="h-px w-px whitespace-nowrap">
-                      <div class="px-6 py-3">
-                        <% 
-                          status_class = case booking.status
-                          when 'confirmed' then 'bg-green-100 text-green-800'
-                          when 'cancelled' then 'bg-red-100 text-red-800'
-                          when 'pending' then 'bg-yellow-100 text-yellow-800'
-                          else 'bg-gray-100 text-gray-800'
-                          end
-                        %>
-                        <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= status_class %>">
-                          <%= booking.status.titleize %>
-                        </span>
-                      </div>
-                    </td>
-                    <td class="h-px w-px whitespace-nowrap">
-                      <div class="px-6 py-3">
-                        <span class="text-sm font-bold text-gray-800">MYR <%= booking.total_amount %></span>
-                      </div>
-                    </td>
-                    <td class="h-px w-px whitespace-nowrap">
-                      <div class="px-6 py-3 text-end">
-                        <%= link_to "View Details", hotel_booking_path(current_hotel, booking), class: "text-sm font-semibold text-blue-600 hover:text-blue-800" %>
+                      </td>
+                      <td class="h-px w-px whitespace-nowrap">
+                        <div class="px-6 py-3">
+                          <div class="flex items-center gap-x-3">
+                            <div class="grow">
+                              <span class="block text-sm font-semibold text-gray-800"><%= booking.guest_name %></span>
+                              <span class="block text-xs text-gray-500"><%= booking.guest_email %></span>
+                              <span class="block text-xs text-gray-500"><%= booking.guest_phone %></span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="h-px w-px whitespace-nowrap">
+                        <div class="px-6 py-3">
+                          <span class="text-sm text-gray-800"><%= booking.check_in.strftime("%d %b %Y (%a)") %> - <%= booking.check_out.strftime("%d %b %Y (%a)") %></span>
+                        </div>
+                      </td>
+                      <td class="h-px w-px whitespace-nowrap">
+                        <div class="px-6 py-3">
+                          <span class="text-sm text-gray-800"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                        </div>
+                      </td>
+                      <td class="h-px w-px whitespace-nowrap">
+                        <div class="px-6 py-3">
+                          <span class="text-sm font-bold text-gray-800">MYR <%= booking.total_amount %></span>
+                        </div>
+                      </td>
+                      <td class="h-px w-px whitespace-nowrap">
+                        <div class="px-6 py-3 text-end">
+                          <%= link_to "View Details", hotel_booking_path(current_hotel, booking), class: "text-sm font-semibold text-blue-600 hover:text-blue-800", data: { turbo_frame: "_top" } %>
+                        </div>
+                      </td>
+                    </tr>
+                  <% end %>
+                <% else %>
+                  <tr>
+                    <td colspan="7" class="px-6 py-10 text-center">
+                      <div class="flex flex-col items-center">
+                        <svg class="size-10 text-gray-400 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                        </svg>
+                        <p class="text-sm text-gray-500 italic">No bookings found matching your criteria.</p>
                       </div>
                     </td>
                   </tr>
                 <% end %>
-              <% else %>
-                <tr>
-                  <td colspan="6" class="px-6 py-10 text-center">
-                    <div class="flex flex-col items-center">
-                      <svg class="size-10 text-gray-400 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-                      </svg>
-                      <p class="text-sm text-gray-500 italic">No bookings found matching your criteria.</p>
-                    </div>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-          <!-- End Table -->
+              </tbody>
+            </table>
+            <!-- End Table -->
 
-          <!-- Footer -->
-          <div class="px-6 py-4 grid gap-3 md:flex md:justify-between md:items-center border-t border-gray-200 text-sm text-gray-500">
-            <p><%= pluralize(@bookings.count, 'booking') %></p>
-          </div>
-          <!-- End Footer -->
+            <!-- Footer -->
+            <div class="px-6 py-4 grid gap-3 md:flex md:justify-between md:items-center border-t border-gray-200 text-sm text-gray-500">
+              <p><%= pluralize(@bookings.count, "booking") %></p>
+            </div>
+            <!-- End Footer -->
+          <% end %>
         </div>
       </div>
     </div>
