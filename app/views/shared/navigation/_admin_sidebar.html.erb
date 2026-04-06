@@ -1,0 +1,166 @@
+<!-- Preline CMS-style Sidebar -->
+<!-- Desktop sidebar -->
+<aside id="admin-sidebar" class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full overflow-y-auto custom-scrollbar">
+
+  <!-- Search Bar (Preline-style) -->
+  <div class="p-4 pb-2">
+    <button type="button" class="w-full inline-flex items-center gap-x-2 py-2 px-3 text-sm rounded-lg bg-layer-alt border border-layer-line text-muted-foreground-2 shadow-xs hover:bg-surface-hover transition-colors">
+      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <span class="flex-1 text-start">Search</span>
+      <kbd class="inline-flex items-center gap-x-0.5 py-0.5 px-1.5 rounded-md border border-layer-line bg-white text-[10px] text-muted-foreground-2 font-medium">
+        <span class="text-xs">⌘</span>K
+      </kbd>
+    </button>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="flex-1 px-4 py-2 space-y-6">
+
+    <!-- HOME -->
+    <div>
+      <span class="sidebar-section-label">Home</span>
+      <div class="space-y-0.5">
+        <a class="sidebar-nav-link <%= controller_name == 'dashboard' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_dashboard_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Dashboard</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- OPERATIONS -->
+    <div>
+      <span class="sidebar-section-label">Operations</span>
+      <div class="space-y-0.5">
+        <a class="sidebar-nav-link <%= controller_name == 'hotels' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_hotels_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+          <span>Hotels</span>
+        </a>
+        <a class="sidebar-nav-link <%= controller_name == 'bookings' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_bookings_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Bookings</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- FINANCE -->
+    <div>
+      <span class="sidebar-section-label">Finance</span>
+      <div class="space-y-0.5">
+        <a class="sidebar-nav-link <%= controller_name == 'margin_rules' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_margin_rules_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+          <span>Margin Settings</span>
+        </a>
+        <a class="sidebar-nav-link <%= controller_name == 'reconciliations' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_reconciliation_dashboard_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Reconciliation</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- SYSTEM -->
+    <div>
+      <span class="sidebar-section-label">System</span>
+      <div class="space-y-0.5">
+        <a class="sidebar-nav-link <%= controller_name == 'audit_logs' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_audit_logs_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Audit Logs</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Footer Links -->
+  <div class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
+    <a class="sidebar-nav-link sidebar-nav-link-default" href="#">
+      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span>What's new?</span>
+    </a>
+    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= help_center_path %>">
+      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>Help & support</span>
+    </a>
+  </div>
+</aside>
+
+<!-- Mobile sidebar overlay -->
+<div id="admin-sidebar-overlay" class="fixed inset-0 z-[79] bg-black/50 hidden lg:hidden" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#close"></div>
+<aside id="admin-sidebar-mobile" class="fixed top-0 start-0 bottom-0 z-[80] w-[260px] bg-sidebar-bg border-e border-layer-line transform -translate-x-full transition-transform duration-300 lg:hidden overflow-y-auto custom-scrollbar">
+
+  <!-- Mobile Close + Logo -->
+  <div class="flex items-center justify-between p-4 border-b border-layer-line">
+    <a href="<%= admin_dashboard_path %>" class="flex items-center gap-x-2.5">
+      <span class="inline-flex justify-center items-center size-8 bg-brand-primary rounded-lg text-white font-bold text-sm shadow-xs">W</span>
+      <span class="text-sm font-semibold text-neutral-text-primary">WAStays</span>
+    </a>
+    <button type="button" class="inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-action="click->sidebar-toggle#close">
+      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- Mobile Search -->
+  <div class="p-4 pb-2">
+    <button type="button" class="w-full inline-flex items-center gap-x-2 py-2 px-3 text-sm rounded-lg bg-layer-alt border border-layer-line text-muted-foreground-2 shadow-xs">
+      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <span class="flex-1 text-start">Search</span>
+    </button>
+  </div>
+
+  <!-- Mobile Nav (same structure) -->
+  <nav class="flex-1 px-4 py-2 space-y-6">
+    <div>
+      <span class="sidebar-section-label">Home</span>
+      <div class="space-y-0.5">
+        <a class="sidebar-nav-link <%= controller_name == 'dashboard' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_dashboard_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Dashboard</span>
+        </a>
+      </div>
+    </div>
+    <div>
+      <span class="sidebar-section-label">Operations</span>
+      <div class="space-y-0.5">
+        <a class="sidebar-nav-link <%= controller_name == 'hotels' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_hotels_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+          <span>Hotels</span>
+        </a>
+        <a class="sidebar-nav-link <%= controller_name == 'bookings' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_bookings_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Bookings</span>
+        </a>
+      </div>
+    </div>
+    <div>
+      <span class="sidebar-section-label">Finance</span>
+      <div class="space-y-0.5">
+        <a class="sidebar-nav-link <%= controller_name == 'margin_rules' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_margin_rules_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+          <span>Margin Settings</span>
+        </a>
+        <a class="sidebar-nav-link <%= controller_name == 'reconciliations' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_reconciliation_dashboard_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Reconciliation</span>
+        </a>
+      </div>
+    </div>
+    <div>
+      <span class="sidebar-section-label">System</span>
+      <div class="space-y-0.5">
+        <a class="sidebar-nav-link <%= controller_name == 'audit_logs' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= admin_audit_logs_path %>">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Audit Logs</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
+    <a class="sidebar-nav-link sidebar-nav-link-default" href="#">
+      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span>What's new?</span>
+    </a>
+    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= help_center_path %>">
+      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>Help & support</span>
+    </a>
+  </div>
+</aside>

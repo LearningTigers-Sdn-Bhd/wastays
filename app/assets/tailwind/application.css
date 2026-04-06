@@ -1,45 +1,72 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand Warm Palette (Inspired by Logo: Red, Orange, Yellow/Gold) */
+  /* ─── Preline-Inspired Design Tokens ─── */
+
+  /* Brand Colors (WAStays warm palette) */
   --color-brand-primary: #DC2626;   /* Red-600 */
+  --color-brand-primary-hover: #B91C1C; /* Red-700 */
   --color-brand-secondary: #EA580C; /* Orange-600 */
   --color-brand-tertiary: #D97706;  /* Amber-600 */
-  
-  /* Selectively use warm gradients for CTAs and Hero sections */
   --background-image-brand-gradient: linear-gradient(135deg, #DC2626 0%, #EA580C 100%);
 
-  /* Neutrals for Admin / Operational views */
-  --color-neutral-bg: #F9FAFB;      /* Gray-50 */
+  /* Layer System (Preline-style) */
+  --color-layer: #FFFFFF;
+  --color-layer-alt: #F8FAFC;
+  --color-layer-line: #E2E8F0;
+
+  /* Surface System */
+  --color-surface: #F8FAFC;
+  --color-surface-hover: #F1F5F9;
+  --color-surface-foreground: #0F172A;
+
+  /* Sidebar Design Tokens */
+  --color-sidebar-bg: #FFFFFF;
+  --color-sidebar-nav-hover: #F1F5F9;
+  --color-sidebar-nav-active: #FEF2F2;
+  --color-sidebar-nav-active-text: #DC2626;
+  --color-sidebar-nav-foreground: #475569;
+  --color-sidebar-section-label: #94A3B8;
+
+  /* Navbar Design Tokens */
+  --color-navbar-bg: #FFFFFF;
+  --color-navbar-nav-hover: #F1F5F9;
+  --color-navbar-nav-foreground: #475569;
+
+  /* Neutrals for Admin/Operational views */
+  --color-neutral-bg: #F8FAFC;
   --color-neutral-surface: #FFFFFF;
-  --color-neutral-border: #E5E7EB;   /* Gray-200 */
-  --color-neutral-text-primary: #111827; /* Gray-900 */
-  --color-neutral-text-secondary: #4B5563; /* Gray-600 */
+  --color-neutral-border: #E2E8F0;
+  --color-neutral-text-primary: #0F172A;
+  --color-neutral-text-secondary: #64748B;
 
-  /* Status Colors (Conventional) */
-  --color-status-success: #16A34A;  /* Green-600 */
-  --color-status-warning: #D97706;  /* Amber-600 */
-  --color-status-error: #DC2626;    /* Red-600 */
-  --color-status-info: #2563EB;     /* Blue-600 */
+  /* Muted Text */
+  --color-muted-foreground: #64748B;
+  --color-muted-foreground-2: #94A3B8;
 
-  /* Typography Scale */
+  /* Status Colors */
+  --color-status-success: #16A34A;
+  --color-status-warning: #D97706;
+  --color-status-error: #DC2626;
+  --color-status-info: #2563EB;
+
+  /* Typography */
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  /* Spacing Scale (Standard Tailwind Defaults are fine, but can override) */
-  
-  /* Border Radius Rules (Medium rounded corners) */
+  /* Border Radius */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  /* Shadow/Elevation Rules (Soft shadows) */
+  /* Shadows (Preline-style subtle) */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-dropdown: 0 10px 40px 10px rgba(0, 0, 0, 0.08);
 }
 
-/* Custom Component Styles using @apply if needed, or keep it to standard utility classes */
 @layer base {
   body {
     @apply bg-neutral-bg text-neutral-text-primary font-sans antialiased;
@@ -53,13 +80,13 @@
 }
 
 @layer components {
-  /* Button Variants */
+  /* ─── Button Variants ─── */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200;
+    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200;
   }
 
   .btn-primary {
-    @apply bg-brand-primary text-white hover:bg-red-700 focus:ring-brand-primary;
+    @apply bg-brand-primary text-white hover:bg-brand-primary-hover focus:ring-brand-primary;
   }
 
   .btn-gradient {
@@ -70,17 +97,39 @@
     @apply bg-white border-neutral-border text-neutral-text-secondary hover:bg-neutral-bg focus:ring-neutral-border;
   }
 
-  /* Input Styles */
+  /* ─── Sidebar Nav Items (Preline CMS Style) ─── */
+  .sidebar-nav-link {
+    @apply w-full flex items-center gap-x-2.5 py-2 px-2.5 text-sm rounded-lg transition-colors duration-150;
+  }
+
+  .sidebar-nav-link-default {
+    @apply text-sidebar-nav-foreground hover:bg-sidebar-nav-hover;
+  }
+
+  .sidebar-nav-link-active {
+    @apply bg-sidebar-nav-active text-sidebar-nav-active-text font-medium;
+  }
+
+  .sidebar-section-label {
+    @apply block text-[11px] font-semibold text-sidebar-section-label uppercase tracking-wide px-2.5 mb-2;
+  }
+
+  /* ─── Navbar Items (Preline CMS Style) ─── */
+  .navbar-link {
+    @apply flex items-center gap-x-1.5 py-1.5 px-2.5 text-sm text-navbar-nav-foreground rounded-lg hover:bg-navbar-nav-hover transition-colors duration-150;
+  }
+
+  /* ─── Input Styles ─── */
   .form-input {
-    @apply block w-full rounded-md border-neutral-border shadow-sm focus:border-brand-primary focus:ring-brand-primary sm:text-sm transition-all duration-200;
+    @apply block w-full rounded-lg border-neutral-border shadow-xs focus:border-brand-primary focus:ring-brand-primary sm:text-sm transition-all duration-200;
   }
 
-  /* Card Styles */
+  /* ─── Card Styles ─── */
   .card {
-    @apply bg-neutral-surface border border-neutral-border rounded-lg shadow-sm;
+    @apply bg-neutral-surface border border-neutral-border rounded-xl shadow-xs;
   }
 
-  /* Badge Styles */
+  /* ─── Badge Styles ─── */
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
@@ -90,31 +139,31 @@
   }
 
   .badge-success {
-    @apply bg-green-100 text-status-success;
+    @apply bg-green-50 text-status-success;
   }
 
   .badge-warning {
-    @apply bg-amber-100 text-status-warning;
+    @apply bg-amber-50 text-status-warning;
   }
 
   .badge-error {
-    @apply bg-red-100 text-status-error;
+    @apply bg-red-50 text-status-error;
   }
 
-  /* Table Style Baseline */
+  /* ─── Table Styles ─── */
   .table-container {
     @apply min-w-full divide-y divide-neutral-border;
   }
-  
+
   .table-header {
-    @apply bg-gray-50 text-left text-xs font-semibold text-neutral-text-secondary uppercase tracking-wider;
+    @apply bg-neutral-bg text-left text-xs font-semibold text-neutral-text-secondary uppercase tracking-wider;
   }
 
   .table-cell {
     @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-text-primary;
   }
 
-  /* Preline Dropdown Toggle Integration */
+  /* Preline Dropdown Integration */
   .hs-dropdown.open > .hs-dropdown-menu {
     @apply absolute block opacity-100;
   }
@@ -124,5 +173,20 @@
   .pb-safe {
     padding-bottom: 0;
     padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+
+  /* Custom Scrollbar (Preline-style) */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #CBD5E1;
+    border-radius: 999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #94A3B8;
   }
 }
