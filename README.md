@@ -64,3 +64,9 @@ bundle exec rspec
 ## Documentation
 
 Detailed technical specifications and implementation roadmaps are available in the `markdowns/` directory. Operational guides for admins are loaded from `guides/`, with `markdowns/guides/` still supported when present.
+
+## Production Deployment
+
+Production runs on Coolify with separate web and worker resources built from the same `Dockerfile`. The web resource uses `CONTAINER_ROLE=web`, the worker uses `CONTAINER_ROLE=worker`, and both mount the same `/rails/storage` path.
+
+See `docs/coolify/separate-resources.md` for the full setup.

@@ -1,14 +1,38 @@
 #!/bin/bash -e
 
+log() {
+  printf '[docker-entrypoint] %s\n' "$1"
+}
+
 # Enable jemalloc for reduced memory usage and latency.
 if [ -z "${LD_PRELOAD+x}" ]; then
     LD_PRELOAD=$(find /usr/lib -name libjemalloc.so.2 -print -quit)
     export LD_PRELOAD
 fi
 
-# If running the rails server then create or migrate existing database
-if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
-  ./bin/rails db:prepare
+# Coolify may not expose a command override for Dockerfile resources.
+# When the default web command is passed, switch behavior by CONTAINER_ROLE.
+if [ "$#" -eq 3 ] && [ "$1" = "./bin/thrust" ] && [ "$2" = "./bin/rails" ] && [ "$3" = "server" ]; then
+  case "${CONTAINER_ROLE:-web}" in
+    web)
+      ;;
+    worker)
+      set -- ./bin/jobs start
+      ;;
+    *)
+      log "Unknown CONTAINER_ROLE='${CONTAINER_ROLE}'. Expected 'web' or 'worker'."
+      exit 1
+      ;;
+  esac
 fi
 
+# If running the rails server or worker then create or migrate existing database.
+if { [ "$#" -eq 3 ] && [ "$1" = "./bin/thrust" ] && [ "$2" = "./bin/rails" ] && [ "$3" = "server" ]; } || \
+   { [ "$#" -eq 2 ] && [ "$1" = "./bin/jobs" ] && [ "$2" = "start" ]; }; then
+  log "Preparing database"
+  ./bin/rails db:prepare
+  log "Database is ready"
+fi
+
+log "Starting: ${*}"
 exec "${@}"
