@@ -3,6 +3,11 @@ class Admin::ApiKeysController < Admin::BaseController
     @api_keys = ApiKey.all.order(created_at: :desc)
   end
 
+  def docs
+    @category = params[:category] || "authentication"
+    # Renders the API documentation page with specific category context
+  end
+
   def new
     @api_key = ApiKey.new
   end

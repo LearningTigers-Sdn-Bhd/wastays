@@ -1,0 +1,242 @@
+<div class="space-y-6 pb-12">
+  <!-- Page Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-y-4">
+    <div>
+      <nav class="flex mb-2" aria-label="Breadcrumb">
+        <ol class="flex items-center whitespace-nowrap min-w-0">
+          <li class="flex items-center text-sm text-neutral-text-secondary">
+            Superadmin
+            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="flex items-center text-sm text-neutral-text-secondary">
+            <%= link_to "API Access", admin_api_keys_path, class: "hover:text-brand-primary" %>
+            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="text-sm font-semibold text-brand-primary truncate" aria-current="page">
+            API Documentation & Quick Start
+          </li>
+        </ol>
+      </nav>
+      <h1 class="text-2xl font-bold text-neutral-text-primary text-brand-primary flex items-center gap-x-2">
+        <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        API Integration Guide
+      </h1>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- Sidebar / Nav -->
+    <div class="lg:col-span-3">
+      <div class="sticky top-[100px] space-y-4">
+        <nav class="flex flex-col space-y-1">
+          <% [
+            { id: "authentication", label: "1. Authentication", icon: "lock" },
+            { id: "discovery", label: "2. Hotel Discovery", icon: "search" },
+            { id: "quotes", label: "3. Booking Links", icon: "link" },
+            { id: "bookings", label: "4. Reservations", icon: "calendar" },
+            { id: "webhooks", label: "5. Webhooks", icon: "zap" }
+          ].each do |nav| %>
+            <%= link_to docs_admin_api_keys_path(category: nav[:id]), 
+                class: "py-2 px-3 text-sm font-semibold rounded-lg transition-colors border-l-2 flex items-center gap-x-2 " + 
+                (@category == nav[:id] ? "bg-brand-primary/10 border-brand-primary text-brand-primary" : "text-neutral-text-primary hover:bg-neutral-bg border-transparent hover:border-brand-primary") do %>
+              <%= nav[:label] %>
+            <% end %>
+          <% end %>
+        </nav>
+        
+        <div class="p-4 bg-brand-primary/5 rounded-xl border border-brand-primary/10">
+          <p class="text-[10px] font-black uppercase text-brand-primary tracking-widest mb-2">Base URL</p>
+          <code class="text-xs font-bold text-neutral-text-primary break-all">https://wastays.com/api/v1</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="lg:col-span-9 space-y-12">
+      
+      <% if @category == "authentication" %>
+        <!-- Section: Authentication -->
+        <section class="card p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div class="flex items-center gap-x-3 mb-6">
+            <span class="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-lg shadow-brand-primary/20">
+              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
+            <h2 class="text-xl font-black text-neutral-text-primary uppercase tracking-tight">How to Authenticate</h2>
+          </div>
+          
+          <p class="text-sm text-neutral-text-secondary leading-relaxed mb-6">
+            To use the API, you must include your <strong>API Key</strong> in the "Header" of every request. This tells the system who is making the call.
+          </p>
+          
+          <div class="bg-neutral-bg p-4 rounded-xl border border-neutral-border mb-8">
+            <p class="text-[10px] font-black uppercase text-neutral-text-secondary mb-2">Copy this Header</p>
+            <pre class="text-xs font-mono text-neutral-text-primary overflow-x-auto bg-white/50 p-3 rounded-lg border border-neutral-border"><code>Authorization: Bearer YOUR_API_KEY_HERE</code></pre>
+            <p class="text-[10px] mt-2 text-neutral-text-secondary italic">* Replace <code>YOUR_API_KEY_HERE</code> with your live key.</p>
+          </div>
+
+          <div class="p-4 bg-amber-50 rounded-xl border border-amber-200">
+            <h4 class="text-xs font-black text-amber-800 uppercase mb-1">Security Warning</h4>
+            <p class="text-[11px] text-amber-700 leading-relaxed">Never share your API key in public places, client-side code, or version control. If a key is leaked, revoke it immediately from the API Access page.</p>
+          </div>
+        </section>
+      <% end %>
+
+      <% if @category == "discovery" %>
+        <!-- Section: Hotel Discovery -->
+        <section class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div class="flex items-center gap-x-3">
+            <span class="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-lg">
+              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <h2 class="text-2xl font-black text-neutral-text-primary uppercase tracking-tight">Hotel Discovery & Inventory</h2>
+          </div>
+
+          <div class="card p-6 md:p-8 space-y-8">
+            <div>
+              <h3 class="text-lg font-bold text-neutral-text-primary mb-2">1. List All Hotels</h3>
+              <p class="text-sm text-neutral-text-secondary mb-4">Use this to get a list of all hotels currently available on the platform.</p>
+              <div class="bg-neutral-text-primary p-4 rounded-xl overflow-x-auto mb-4">
+                <pre class="text-[11px] font-mono text-white"><code>curl -X GET "https://wastays.com/api/v1/hotels" \
+     -H "Authorization: Bearer YOUR_API_KEY_HERE"</code></pre>
+              </div>
+            </div>
+
+            <hr class="border-neutral-border">
+
+            <div>
+              <h3 class="text-lg font-bold text-neutral-text-primary mb-2">2. Check Availability & Price</h3>
+              <p class="text-sm text-neutral-text-secondary mb-4">Find out if a specific hotel has rooms available for your dates and how much they cost.</p>
+              <div class="bg-neutral-text-primary p-4 rounded-xl overflow-x-auto">
+                <pre class="text-[11px] font-mono text-white"><code>curl -X GET "https://wastays.com/api/v1/hotels/:hotel_id/availability?check_in=2026-04-10&check_out=2026-04-12&adults=2" \
+     -H "Authorization: Bearer YOUR_API_KEY_HERE"</code></pre>
+              </div>
+              <p class="text-[10px] mt-2 text-neutral-text-secondary italic">* Replace <code>:hotel_id</code> with the actual ID of the hotel.</p>
+            </div>
+          </div>
+        </section>
+      <% end %>
+
+      <% if @category == "quotes" %>
+        <!-- Section: Booking Links -->
+        <section class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div class="flex items-center gap-x-3">
+            <span class="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-lg shadow-[#25D366]/20">
+              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </span>
+            <h2 class="text-2xl font-black text-neutral-text-primary uppercase tracking-tight">Booking Link Generation</h2>
+          </div>
+
+          <div class="card p-6 md:p-8 space-y-6">
+            <p class="text-sm text-neutral-text-secondary leading-relaxed">
+              When a guest is ready to pay, generate a **Quote**. This freezes the price and gives you a link to send them on WhatsApp.
+            </p>
+
+            <div class="space-y-4">
+              <h3 class="text-lg font-bold text-neutral-text-primary">Create a Payment Link</h3>
+              <div class="bg-neutral-text-primary p-4 rounded-xl overflow-x-auto shadow-inner">
+                <pre class="text-[11px] font-mono text-white leading-relaxed"><code>curl -X POST "https://wastays.com/api/v1/quotes" \
+     -H "Authorization: Bearer YOUR_API_KEY_HERE" \
+     -H "Content-Type: application/json" \
+     -d '{
+          "hotel_id": 1,
+          "room_type_id": 5,
+          "check_in": "2026-04-10",
+          "check_out": "2026-04-12",
+          "guest_name": "John Doe",
+          "guest_phone": "+60123456789",
+          "guest_email": "john@example.com"
+         }'</code></pre>
+              </div>
+              <div class="p-3 bg-neutral-bg rounded-lg border border-neutral-border">
+                <p class="text-[10px] font-black uppercase text-neutral-text-secondary mb-2">Success Response Sample</p>
+                <pre class="text-[10px] font-mono text-brand-primary"><code>{
+  "success": true,
+  "booking_url": "https://wastays.com/quotes/51cf1ae...",
+  "total_amount": "700.0",
+  "currency": "MYR"
+}</code></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      <% end %>
+
+      <% if @category == "bookings" %>
+        <!-- Section: Reservations -->
+        <section class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div class="flex items-center gap-x-3">
+            <span class="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-lg">
+              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            </span>
+            <h2 class="text-2xl font-black text-neutral-text-primary uppercase tracking-tight">Managing Reservations</h2>
+          </div>
+
+          <div class="card p-6 md:p-8 space-y-6">
+            <div>
+              <h3 class="text-lg font-bold text-neutral-text-primary mb-2">Retrieve Booking Status</h3>
+              <p class="text-sm text-neutral-text-secondary mb-4">Check if a booking has been paid for and get the final reservation details.</p>
+              <div class="bg-neutral-text-primary p-4 rounded-xl overflow-x-auto">
+                <pre class="text-[11px] font-mono text-white"><code>curl -X GET "https://wastays.com/api/v1/bookings/:booking_id" \
+     -H "Authorization: Bearer YOUR_API_KEY_HERE"</code></pre>
+              </div>
+            </div>
+
+            <hr class="border-neutral-border">
+
+            <div>
+              <h3 class="text-lg font-bold text-neutral-text-primary mb-2">Check Reminders</h3>
+              <p class="text-sm text-neutral-text-secondary mb-4">Internal endpoint to check if any automated reminders (like pre-checkin) are scheduled for this booking.</p>
+              <div class="bg-neutral-text-primary p-4 rounded-xl overflow-x-auto">
+                <pre class="text-[11px] font-mono text-white"><code>curl -X GET "https://wastays.com/api/v1/bookings/:booking_id/reminders" \
+     -H "Authorization: Bearer YOUR_API_KEY_HERE"</code></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      <% end %>
+
+      <% if @category == "webhooks" %>
+        <!-- Section: Webhooks -->
+        <section class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div class="flex items-center gap-x-3">
+            <span class="w-10 h-10 rounded-full bg-status-warning text-white flex items-center justify-center shadow-lg">
+              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-2 10h3L12 22l2-10h-3l2-10z"/></svg>
+            </span>
+            <h2 class="text-2xl font-black text-neutral-text-primary uppercase tracking-tight">Automation Webhooks</h2>
+          </div>
+
+          <div class="card p-6 md:p-8 space-y-6">
+            <p class="text-sm text-neutral-text-secondary leading-relaxed">
+              Use Webhooks to push information **into** WAStays from external systems like Zapier, Make.com, or your custom CRM.
+            </p>
+
+            <div class="p-4 bg-neutral-bg border border-neutral-border rounded-xl">
+              <h4 class="text-sm font-bold text-neutral-text-primary mb-2">Workflow Webhook</h4>
+              <p class="text-xs text-neutral-text-secondary mb-4 italic">Accepts external triggers to start specific automation workflows.</p>
+              <div class="bg-neutral-text-primary p-4 rounded-xl overflow-x-auto">
+                <pre class="text-[11px] font-mono text-white"><code>curl -X POST "https://wastays.com/api/v1/workflow_webhooks" \
+     -H "Authorization: Bearer YOUR_API_KEY_HERE" \
+     -H "Content-Type: application/json" \
+     -d '{
+          "event_type": "external_notification",
+          "payload": { "key": "value" }
+         }'</code></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      <% end %>
+
+      <!-- Troubleshooting -->
+      <section class="p-6 bg-brand-primary/5 rounded-2xl border border-brand-primary/20">
+        <h4 class="text-sm font-black text-brand-primary uppercase tracking-widest mb-2 flex items-center gap-x-2">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          Need help?
+        </h4>
+        <p class="text-xs text-neutral-text-secondary leading-relaxed">
+          If you are getting an error (like 401 Unauthorized), double-check that your API Key is correctly placed in the header. For technical support, please contact your account manager.
+        </p>
+      </section>
+    </div>
+  </div>
+</div>
