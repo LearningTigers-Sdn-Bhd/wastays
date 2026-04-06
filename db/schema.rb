@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_01_090000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_02_075737) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -49,6 +49,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_01_090000) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "api_keys", force: :cascade do |t|
+    t.string "token", null: false
+    t.string "name"
+    t.string "bearer_type"
+    t.bigint "bearer_id"
+    t.string "status", default: "active"
+    t.datetime "last_used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["bearer_type", "bearer_id"], name: "index_api_keys_on_bearer"
+    t.index ["token"], name: "index_api_keys_on_token", unique: true
   end
 
   create_table "banking_details", force: :cascade do |t|
@@ -112,6 +125,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_01_090000) do
     t.text "cancellation_policy_snapshot"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "guest_name"
+    t.string "guest_email"
+    t.string "guest_phone"
     t.index ["hotel_id"], name: "index_booking_quotes_on_hotel_id"
     t.index ["token"], name: "index_booking_quotes_on_token", unique: true
   end
