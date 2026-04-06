@@ -119,6 +119,31 @@
           </li>
 
           <li>
+            <div class="hs-accordion" id="api-accordion">
+              <button type="button" class="hs-accordion-toggle w-full text-start flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'api_keys' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg focus:outline-none transition-all">
+                <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3L15.5 7.5z"/></svg>
+                API Access
+                <svg class="hs-accordion-active:rotate-180 ms-auto block w-3 h-3 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+
+              <div id="api-accordion-child" class="hs-accordion-content w-full overflow-hidden transition-[height] duration-300 hidden">
+                <ul class="pt-2 ps-2">
+                  <li>
+                    <a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-neutral-text-secondary rounded-lg hover:bg-neutral-bg" href="<%= admin_api_keys_path %>">
+                      Manage Keys
+                    </a>
+                  </li>
+                  <li>
+                    <a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-neutral-text-secondary rounded-lg hover:bg-neutral-bg" href="<%= docs_admin_api_keys_path %>">
+                      Developer Guide
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+
+          <li>
             <a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-neutral-text-secondary rounded-lg hover:bg-neutral-bg" href="<%= help_center_path %>">
               <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
               Help Guides

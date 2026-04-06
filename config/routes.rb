@@ -16,6 +16,13 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       post "workflow_webhooks", to: "workflow_webhooks#create"
+      resources :hotels, only: [ :index, :show ] do
+        get "availability", on: :member
+      end
+      resources :quotes, only: [ :create, :show ]
+      resources :bookings, only: [ :show ] do
+        get "reminders", on: :member
+      end
     end
   end
 
@@ -65,7 +72,10 @@ Rails.application.routes.draw do
     get "reconciliations_dashboard", to: "reconciliations#index", as: :reconciliation_dashboard # Alias for layout
     resources :margin_rules, only: [ :index, :create, :destroy ]
     resources :audit_logs, only: [ :index ]
-  end
+    resources :api_keys, only: [ :index, :new, :create, :destroy ] do
+      get :docs, on: :collection
+    end
+    end
 
   # Hotel admin dashboard
   get "/hotel/settings", to: "hotel_portal/settings#index", as: :legacy_hotel_settings

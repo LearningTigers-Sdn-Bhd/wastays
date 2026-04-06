@@ -10,6 +10,9 @@ module BookingEngine
       @adults = params[:adults].to_i
       @children = params[:children].to_i
       @room_count = (params[:room_count] || 1).to_i
+      @guest_name = params[:guest_name]
+      @guest_email = params[:guest_email]
+      @guest_phone = params[:guest_phone]
     end
 
     def call
@@ -44,7 +47,10 @@ module BookingEngine
           currency: @room_type.room_rates.first&.currency || "MYR",
           expires_at: 15.minutes.from_now,
           hotel_snapshot: @hotel.as_json,
-          cancellation_policy_snapshot: @hotel.property_policy&.cancellation_policy
+          cancellation_policy_snapshot: @hotel.property_policy&.cancellation_policy,
+          guest_name: @guest_name,
+          guest_email: @guest_email,
+          guest_phone: @guest_phone
         )
 
         if quote.save
