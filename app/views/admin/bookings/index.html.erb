@@ -1,70 +1,158 @@
-<div class="max-w-[85rem] mx-auto py-10 px-4 sm:px-6 lg:px-8">
-  <div class="mb-5">
-    <%= link_to admin_dashboard_path, class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600" do %>
-      <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Back to Dashboard
-    <% end %>
-  </div>
+<% content_for :breadcrumbs do %>
+  <%= render "shared/navigation/admin_breadcrumbs", current: "Bookings" %>
+<% end %>
 
-  <div class="flex justify-between items-center mb-5">
-    <div>
-      <h2 class="text-2xl font-bold text-gray-800">Platform Bookings</h2>
-      <p class="text-sm text-gray-600">Review all bookings across all hotels on the platform.</p>
+<% total_bookings = @bookings.size %>
+<% pending_bookings = @bookings.count { |booking| booking.status == 'pending' } %>
+<% confirmed_bookings = @bookings.count { |booking| booking.status == 'confirmed' } %>
+<% checked_in_bookings = @bookings.count { |booking| booking.status == 'checked_in' } %>
+<% completed_bookings = @bookings.count { |booking| booking.status == 'completed' } %>
+<% cancelled_bookings = @bookings.count { |booking| booking.status == 'cancelled' } %>
+
+<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+  <div class="px-4 md:px-0">
+    <div class="mt-5">
+      <h1 class="text-3xl font-bold tracking-tight text-slate-950">Platform Bookings</h1>
+      <p class="mt-1 text-sm font-medium text-slate-600">Review all bookings across all hotels on the platform.</p>
     </div>
   </div>
 
-  <div class="flex flex-col">
-    <div class="-m-1.5 overflow-x-auto">
-      <div class="p-1.5 min-w-full inline-block align-middle">
-        <div class="border rounded-lg overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Confirmation</th>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Hotel</th>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Guest</th>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Check-in</th>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th scope="col" class="px-6 py-3 text-end text-xs font-medium text-gray-500 uppercase">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-              <% @bookings.each do |booking| %>
-                <tr>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                    <%= link_to booking.confirmation_token, admin_booking_path(booking) %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= booking.hotel.name %></td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                    <%= booking.guest_name %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                    <%= booking.check_in.strftime("%d %b %Y") %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                    <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium 
-                      <%= case booking.status
-                          when 'confirmed' then 'bg-green-100 text-green-800'
-                          when 'pending' then 'bg-yellow-100 text-yellow-800'
-                          when 'cancelled' then 'bg-red-100 text-red-800'
-                          else 'bg-gray-100 text-gray-800'
-                          end %>">
-                      <%= booking.status.titleize %>
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                    <%= number_to_currency(booking.total_amount) %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
-                    <%= link_to "View", admin_booking_path(booking), class: "text-blue-600 hover:text-blue-800" %>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
+  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-3 xl:grid-cols-6">
+    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Bookings</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= total_bookings %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">All bookings on platform</p>
+    </div>
+
+    <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Pending</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-600"><%= pending_bookings %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Awaiting confirmation</p>
+    </div>
+
+    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Confirmed</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= confirmed_bookings %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Upcoming confirmed stays</p>
+    </div>
+
+    <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Checked In</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-indigo-600"><%= checked_in_bookings %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Guests currently staying</p>
+    </div>
+
+    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Completed</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-blue-600"><%= completed_bookings %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Checked-out bookings</p>
+    </div>
+
+    <div class="p-6 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Cancelled</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-red-600"><%= cancelled_bookings %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Cancelled reservations</p>
+    </div>
+  </div>
+
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8">
+      <div>
+        <h2 class="text-xl font-bold tracking-tight text-slate-950">Booking Registry</h2>
+        <p class="mt-1 text-sm font-medium text-slate-600">Current booking records across the platform.</p>
       </div>
+      <span class="text-sm font-medium text-slate-500">Total <span class="font-semibold text-slate-900"><%= @bookings.size %></span></span>
+    </div>
+
+    <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50/70 px-6 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+      <label class="relative block w-full max-w-xl">
+        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </span>
+        <input type="text" placeholder="Search bookings..." class="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0">
+      </label>
+
+      <div class="flex items-center gap-3">
+        <label for="booking-status-filter" class="text-sm font-medium text-slate-600">Status</label>
+        <select id="booking-status-filter" class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0">
+          <option>All Status</option>
+          <option>Pending</option>
+          <option>Confirmed</option>
+          <option>Checked In</option>
+          <option>Completed</option>
+          <option>Cancelled</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full">
+        <thead class="bg-slate-100">
+          <tr>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Confirmation</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Hotel</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Guest</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Check-in</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Amount</th>
+            <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 bg-white">
+          <% @bookings.each_with_index do |booking, index| %>
+            <% status_classes = case booking.status
+               when 'confirmed'
+                 'text-emerald-700'
+               when 'pending'
+                 'text-amber-700'
+               when 'checked_in'
+                 'text-indigo-700'
+               when 'completed'
+                 'text-blue-700'
+               when 'cancelled'
+                 'text-red-700'
+               else
+                 'text-slate-600'
+               end %>
+            <% status_dot_classes = case booking.status
+               when 'confirmed'
+                 'bg-emerald-500'
+               when 'pending'
+                 'bg-amber-500'
+               when 'checked_in'
+                 'bg-indigo-500'
+               when 'completed'
+                 'bg-blue-500'
+               when 'cancelled'
+                 'bg-red-500'
+               else
+                 'bg-slate-400'
+               end %>
+
+            <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 sm:px-8">
+                <%= link_to booking.confirmation_token, admin_booking_path(booking), class: 'text-blue-700 hover:text-blue-800' %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700"><%= booking.hotel.name %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700"><%= booking.guest_name %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600"><%= booking.check_in.strftime("%d %b %Y") %></td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_classes %>">
+                  <span class="size-2.5 rounded-sm <%= status_dot_classes %>"></span>
+                  <%= booking.status.titleize %>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900"><%= number_to_currency(booking.total_amount, unit: 'RM ') %></td>
+              <td class="px-6 py-4 text-right sm:px-8">
+                <%= link_to admin_booking_path(booking), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" do %>
+                  <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  View
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
