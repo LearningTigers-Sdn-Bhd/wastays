@@ -106,7 +106,7 @@ Rails.application.routes.draw do
     resources :reports, only: [ :index ]
     resources :inventory_dashboards, only: [ :index, :create ], path: "inventory"
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
-    resources :guests, only: [ :index ]
+    resources :guests, only: [ :index, :show ]
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"
