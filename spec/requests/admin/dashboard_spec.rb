@@ -8,13 +8,14 @@ RSpec.describe 'Admin::Dashboard', type: :request do
   end
 
   describe 'GET /admin/dashboard' do
-    it 'shows the analytics entry point on the revenue and margin card' do
+    it 'renders the current dashboard overview and bookings entry point' do
       get admin_dashboard_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Revenue & Margin (MTD)')
-      expect(response.body).to include('View analytics')
-      expect(response.body).to include(admin_analytics_path)
+      expect(response.body).to include('Platform overview and real-time operational status.')
+      expect(response.body).to include('Recent Successful Bookings')
+      expect(response.body).to include('View All Bookings')
+      expect(response.body).to include(admin_bookings_path)
     end
   end
 

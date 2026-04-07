@@ -12,13 +12,13 @@ RSpec.describe 'Admin dashboard page', type: :system do
     click_button 'Sign In'
   end
 
-  it 'shows the operational control center dashboard content' do
+  it 'shows the current admin dashboard content' do
     visit admin_dashboard_path
 
-    expect(page).to have_content('Operational Control Center')
-    expect(page).to have_content('Hotels Pending Review')
-    expect(page).to have_content('Failed Webhooks')
-    expect(page).to have_content('Recent Confirmed Bookings')
-    expect(page).to have_link('View analytics', href: admin_analytics_path)
+    expect(page).to have_content('Dashboard')
+    expect(page).to have_content('Platform overview and real-time operational status.')
+    expect(page).to have_content('Payment Sync Status')
+    expect(page).to have_content('Recent Successful Bookings')
+    expect(page).to have_link('View All Bookings', href: admin_bookings_path)
   end
 end
