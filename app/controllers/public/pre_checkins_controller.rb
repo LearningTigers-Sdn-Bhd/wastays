@@ -60,6 +60,23 @@ class Public::PreCheckinsController < ApplicationController
     render :show, status: :unprocessable_content
   end
 
+  def cancel
+    if @pre_checkin.completed?
+      redirect_to booking_path(@booking.confirmation_token), alert: "Completed pre-check-in cannot be cancelled."
+      return
+    end
+
+    @pre_checkin.update!(
+      status: "pending",
+      completed_at: nil,
+      document_status: "pending",
+      signature_status: "pending"
+    )
+    @booking.update!(pre_checkin_status: "pending")
+
+    redirect_to booking_path(@booking.confirmation_token), notice: "Pre-check-in cancelled."
+  end
+
   private
 
   def set_pre_checkin

@@ -60,7 +60,7 @@
             </p>
           </div>
         <% else %>
-          <%= form_with model: @booking, url: pre_checkin_path(@pre_checkin.token), method: :patch, local: true, class: "space-y-8" do |f| %>
+          <%= form_with model: @booking, url: pre_checkin_path(@pre_checkin.token), method: :patch, local: true, autocomplete: "off", class: "space-y-8" do |f| %>
             <% if @booking.errors.any? || @pre_checkin.errors.any? %>
               <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                 <p class="font-black uppercase tracking-widest text-xs">Please fix the following</p>
@@ -126,12 +126,13 @@
 
             <div class="rounded-xl border border-neutral-border bg-neutral-bg p-4">
               <label class="flex items-start gap-3 text-sm text-neutral-text-secondary">
-                <input type="checkbox" required class="mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary">
+                <input type="checkbox" required autocomplete="off" class="mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary">
                 <span>I confirm that the details above are accurate and match my identification document.</span>
               </label>
             </div>
 
-            <div class="flex justify-end">
+            <div class="flex items-center justify-end gap-3">
+              <%= button_tag "Cancel", type: "submit", formaction: cancel_pre_checkin_path(@pre_checkin.token), formmethod: :post, formnovalidate: true, class: "rounded-lg border border-neutral-border bg-gray-200 px-6 py-3 text-sm font-black uppercase tracking-widest text-neutral-text-secondary hover:bg-neutral-bg" %>
               <%= f.submit "Complete Pre Check-In", class: "btn btn-primary px-6 py-3 text-sm font-black uppercase tracking-widest" %>
             </div>
           <% end %>

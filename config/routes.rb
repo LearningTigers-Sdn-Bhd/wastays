@@ -31,7 +31,9 @@ Rails.application.routes.draw do
     resources :hotels, only: [ :index, :show ]
     resources :quotes, only: [ :create, :show ]
     resources :bookings, only: [ :show ]
-    resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin"
+    resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
+      post :cancel, on: :member
+    end
     get "mock_payment", to: "payment_mocks#show", as: :mock_payment
     post "mock_payment", to: "payment_mocks#update"
     post "webhooks/:gateway", to: "webhooks#create", as: :payment_webhook
