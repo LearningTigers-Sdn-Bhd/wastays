@@ -40,6 +40,16 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
     end
   end
 
+  it 'renders the developer navigation links in the shared sidebar' do
+    get admin_dashboard_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(%(href="#{admin_api_keys_path}"))
+    expect(response.body).to include(%(href="#{docs_admin_api_keys_path}"))
+    expect(response.body).to include('API Access')
+    expect(response.body).to include('Developer Guide')
+  end
+
   it 'renders the bookings mobile list container' do
     get admin_bookings_path
 

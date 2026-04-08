@@ -160,7 +160,7 @@ run_step() {
   print_section "$icon" "$label"
 
   if [[ "$mode" == "stream" ]]; then
-    if bash -lc "$command" 2>&1 | tee "$output_file"; then
+    if bash -c "$command" 2>&1 | tee "$output_file"; then
       printf "${BOLD}${GREEN}│ ✓ %s complete${RESET}\n" "$label"
       record_result "pass" "$icon" "$label"
     else
@@ -169,7 +169,7 @@ run_step() {
       return 1
     fi
   elif (( INTERACTIVE )); then
-    bash -lc "$command" >"$output_file" 2>&1 &
+    bash -c "$command" >"$output_file" 2>&1 &
     local pid=$!
     show_animation "$pid" "$label" "$icon"
     if wait "$pid"; then
@@ -184,7 +184,7 @@ run_step() {
       return 1
     fi
   else
-    if bash -lc "$command" >"$output_file" 2>&1; then
+    if bash -c "$command" >"$output_file" 2>&1; then
       printf "${BOLD}${GREEN}│ ✓ %s complete${RESET}\n" "$label"
       print_step_output "$output_file"
       record_result "pass" "$icon" "$label"
@@ -215,7 +215,7 @@ run_optional_step() {
   print_section "$icon" "$label"
 
   if (( INTERACTIVE )); then
-    bash -lc "$command" >"$output_file" 2>&1 &
+    bash -c "$command" >"$output_file" 2>&1 &
     local pid=$!
     show_animation "$pid" "$label" "$icon"
     if wait "$pid"; then
@@ -230,7 +230,7 @@ run_optional_step() {
       record_result "warn" "$icon" "$label"
     fi
   else
-    if bash -lc "$command" >"$output_file" 2>&1; then
+    if bash -c "$command" >"$output_file" 2>&1; then
       play_finish_animation "$label" "$icon"
       printf "${BOLD}${GREEN}│ ✓ %s complete${RESET}\n" "$label"
       print_step_output "$output_file"

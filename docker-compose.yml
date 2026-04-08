@@ -1,0 +1,9 @@
+# This file is intentionally not used for Coolify production deployment.
+#
+# Production deployment uses three separate Coolify-managed resources:
+# - wastays-web    (build from Dockerfile, default web startup)
+# - wastays-worker (build from Dockerfile, command: ./bin/jobs start)
+# - wastays-db     (managed PostgreSQL resource)
+#
+# Keep deployment configuration in Coolify resource settings rather than in a
+# hybrid Compose-plus-managed-database setup.

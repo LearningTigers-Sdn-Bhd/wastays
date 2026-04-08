@@ -78,21 +78,40 @@ test:
 # Read https://guides.rubyonrails.org/configuring.html#configuring-a-database
 # for a full overview on how database connection configuration can be specified.
 #
+<%
+  require "uri"
+
+  production_database_url = ENV["DATABASE_URL"]
+
+  if production_database_url.present?
+    primary_uri = URI.parse(production_database_url)
+    primary_database_name = primary_uri.path.delete_prefix("/")
+
+    if primary_database_name.empty?
+      primary_database_name = "wastays_production"
+      primary_uri.path = "/#{primary_database_name}"
+      production_database_url = primary_uri.to_s
+    end
+
+    cache_database_url = primary_uri.dup.tap { |uri| uri.path = "/#{primary_database_name}_cache" }.to_s
+    queue_database_url = primary_uri.dup.tap { |uri| uri.path = "/#{primary_database_name}_queue" }.to_s
+    cable_database_url = primary_uri.dup.tap { |uri| uri.path = "/#{primary_database_name}_cable" }.to_s
+  end
+%>
+
 production:
   primary: &primary_production
     <<: *default
-    database: wastays_production
-    username: wastays
-    password: <%= ENV["WASTAYS_DATABASE_PASSWORD"] %>
+    url: <%= production_database_url %>
   cache:
     <<: *primary_production
-    database: wastays_production_cache
+    url: <%= cache_database_url %>
     migrations_paths: db/cache_migrate
   queue:
     <<: *primary_production
-    database: wastays_production_queue
+    url: <%= queue_database_url %>
     migrations_paths: db/queue_migrate
   cable:
     <<: *primary_production
-    database: wastays_production_cable
+    url: <%= cable_database_url %>
     migrations_paths: db/cable_migrate
