@@ -8,9 +8,18 @@ RSpec.describe "Admin::AuditLogs", type: :request do
   end
 
   describe "GET /index" do
-    it "returns http success" do
+    it "renders the audit log page with inline filter actions" do
       get "/admin/audit_logs"
+
       expect(response).to have_http_status(:success)
+      expect(response.body).to include("Audit Logs")
+      expect(response.body).to include("Review platform activity and operational changes across all hotels.")
+      expect(response.body).to include("Activity Feed")
+      expect(response.body).to include("All Hotels")
+      expect(response.body).to include("All Actions")
+      expect(response.body).to include('class="grid w-full gap-4 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]"')
+      expect(response.body).to include('class="flex items-center gap-3 xl:self-end xl:justify-end"')
+      expect(response.body).to include("Apply Filters")
     end
 
     it "shows old and new values for each audit change" do
