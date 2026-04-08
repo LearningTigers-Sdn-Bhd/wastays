@@ -1,7 +1,10 @@
 require 'rails_helper'
+require 'securerandom'
 
 RSpec.describe 'Admin::Dashboard', type: :request do
-  let(:superadmin) { create(:user, :superadmin) }
+  let(:token) { SecureRandom.hex(6) }
+  let(:admin_account) { create(:account, name: "Admin Dashboard #{token}") }
+  let(:superadmin) { create(:user, :superadmin, account: admin_account, email: "admin-dashboard-#{token}@example.com") }
 
   before do
     sign_in_as(superadmin)
@@ -12,7 +15,9 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       get admin_dashboard_path
 
       expect(response).to have_http_status(:ok)
+      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Dashboard')
       expect(response.body).to include('Platform overview and real-time operational status.')
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Recent Successful Bookings')
       expect(response.body).to include('Recent Successful Bookings')
       expect(response.body).to include('View All Bookings')
       expect(response.body).to include('Payment Issues')
@@ -22,14 +27,16 @@ RSpec.describe 'Admin::Dashboard', type: :request do
   end
 
   describe 'GET /admin/analytics' do
-    let(:account) { create(:account, name: 'Luma Hospitality Group', status: 'active') }
-    let(:hotel) { create(:hotel, account: account, name: 'Luma Stay', status: 'approved') }
-    let(:other_hotel) { create(:hotel, name: 'Ocean Breeze', status: 'approved') }
+    let(:account) { create(:account, name: "Luma Hospitality Group #{token}", status: 'active') }
+    let(:hotel) { create(:hotel, account: account, name: "Luma Stay #{token}", status: 'approved') }
+    let(:other_hotel_account) { create(:account, name: "Ocean Breeze Group #{token}", status: 'active') }
+    let(:other_hotel) { create(:hotel, account: other_hotel_account, name: "Ocean Breeze #{token}", status: 'approved') }
 
     let!(:current_month_booking) do
       create(
         :booking,
         hotel: hotel,
+        booking_quote: create(:booking_quote, hotel: hotel, token: "tok_#{token}_1"),
         status: 'confirmed',
         total_amount: 500.0,
         margin_amount: 50.0,
@@ -43,6 +50,7 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       create(
         :booking,
         hotel: other_hotel,
+        booking_quote: create(:booking_quote, hotel: other_hotel, token: "tok_#{token}_2"),
         status: 'completed',
         total_amount: 300.0,
         margin_amount: 45.0,
@@ -56,6 +64,7 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       create(
         :booking,
         hotel: hotel,
+        booking_quote: create(:booking_quote, hotel: hotel, token: "tok_#{token}_3"),
         status: 'confirmed',
         total_amount: 900.0,
         margin_amount: 90.0,
@@ -69,8 +78,10 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       get admin_analytics_path
 
       expect(response).to have_http_status(:ok)
+      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-neutral-text-primary sm:text-3xl">')
       expect(response.body).to include('Revenue & Margin Analytics')
       expect(response.body).to include('Detailed superadmin analytics across all revenue-generating bookings.')
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-neutral-text-primary sm:text-xl">Daily Breakdown')
       expect(response.body).to include('RM 800.00')
       expect(response.body).to include('RM 95.00')
       expect(response.body).to include('RM 705.00')

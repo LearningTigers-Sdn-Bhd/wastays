@@ -10,7 +10,7 @@
         Back to Payment Issues
       <% end %>
 
-      <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-950">Payment callback <span class="font-mono text-2xl text-slate-700"><%= @event.external_id %></span></h1>
+      <h1 class="mt-4 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Payment callback <span class="font-mono text-xl text-slate-700 sm:text-2xl"><%= @event.external_id %></span></h1>
       <p class="mt-1 text-sm font-medium text-slate-600">Review the callback details, investigate the issue, and decide whether to retry or resolve it manually.</p>
     </div>
 
@@ -25,7 +25,7 @@
       <% if @event.error_message.present? %>
         <section class="overflow-hidden rounded-2xl border border-red-200 bg-red-50 shadow-sm">
           <div class="border-b border-red-200 px-6 py-5 sm:px-8">
-            <h2 class="text-xl font-bold tracking-tight text-red-950">Issue Summary</h2>
+            <h2 class="text-lg font-bold tracking-tight text-red-950 sm:text-xl">Issue Summary</h2>
           </div>
           <div class="px-6 py-5 sm:px-8">
             <p class="text-sm font-medium leading-relaxed text-red-800"><%= @event.error_message %></p>
@@ -36,7 +36,7 @@
       <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8">
           <div>
-            <h2 class="text-xl font-bold tracking-tight text-slate-950">Callback Payload</h2>
+            <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Callback Payload</h2>
             <p class="mt-1 text-sm font-medium text-slate-600">Raw callback data captured from the payment provider.</p>
           </div>
           <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-mono text-slate-500"><%= @event.gateway.titleize %></span>
@@ -49,7 +49,7 @@
 
     <aside class="space-y-6 xl:col-span-4">
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="mb-4 text-xl font-bold tracking-tight text-slate-950">Issue Status</h2>
+        <h2 class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Issue Status</h2>
         <div class="space-y-4">
           <div class="flex items-center justify-between gap-4">
             <span class="text-sm font-medium text-slate-500">Current Status</span>

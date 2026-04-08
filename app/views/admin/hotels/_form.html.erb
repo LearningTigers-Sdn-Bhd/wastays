@@ -1,72 +1,93 @@
-<%= form_with model: [:admin, hotel], local: true, class: "space-y-6" do |f| %>
-  <% if hotel.errors.any? %>
-    <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-      <h3 class="font-bold mb-1">Could not save hotel:</h3>
-      <ul class="list-disc ps-5 space-y-1">
-        <% hotel.errors.full_messages.each do |msg| %>
-          <li><%= msg %></li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
+<%= form_with model: [:admin, hotel], local: true, class: "space-y-0" do |f| %>
+  <% cancel_path = hotel.persisted? ? admin_hotel_path(hotel) : admin_hotels_path %>
+  <% input_classes = "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0" %>
 
-  <div class="grid sm:grid-cols-2 gap-4">
-    <div class="sm:col-span-2">
-      <label for="hotel_name" class="block text-sm font-medium mb-2 text-gray-800">Hotel Name</label>
-      <%= f.text_field :name, id: "hotel_name", class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-    </div>
-
-    <div class="sm:col-span-2">
-      <label for="address" class="block text-sm font-medium mb-2 text-gray-800">Address</label>
-      <%= f.text_area :address, rows: 2, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-    </div>
-
-    <div>
-      <label for="city" class="block text-sm font-medium mb-2 text-gray-800">City</label>
-      <%= f.text_field :city, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-    </div>
-
-    <div>
-      <label for="country" class="block text-sm font-medium mb-2 text-gray-800">Country</label>
-      <%= f.text_field :country, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-    </div>
-
-    <div>
-      <label for="star_rating" class="block text-sm font-medium mb-2 text-gray-800">Star Rating</label>
-      <%= f.select :star_rating, (1..5).to_a, { include_blank: "Select Rating" }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-    </div>
-
-    <% unless hotel.persisted? %>
-      <div class="sm:col-span-2 pt-2 border-t border-gray-100">
-        <h3 class="text-sm font-semibold text-gray-800">Account Credentials</h3>
-        <p class="mt-1 text-xs text-gray-500">A dedicated account will be created for this hotel.</p>
-      </div>
-
-      <div class="sm:col-span-2">
-        <label for="account_name" class="block text-sm font-medium mb-2 text-gray-800">Company / Group Name</label>
-        <%= text_field_tag "account[name]", params.dig(:account, :name), id: "account_name", required: true, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-      </div>
-
-      <div>
-        <label for="user_name" class="block text-sm font-medium mb-2 text-gray-800">Owner Full Name</label>
-        <%= text_field_tag "user[name]", params.dig(:user, :name), id: "user_name", required: true, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-      </div>
-
-      <div>
-        <label for="user_email" class="block text-sm font-medium mb-2 text-gray-800">Account Email</label>
-        <%= email_field_tag "user[email]", params.dig(:user, :email), id: "user_email", required: true, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-      </div>
-
-      <div class="sm:col-span-2">
-        <label for="default_password" class="block text-sm font-medium mb-2 text-gray-800">Default Password</label>
-        <%= password_field_tag :default_password, HotelOps::CreateHotel::DEFAULT_PASSWORD, id: "default_password", readonly: true, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 border" %>
-        <p class="mt-2 text-xs text-gray-500 italic">This password is assigned automatically when the hotel account is created.</p>
+  <div class="px-6 py-6 sm:px-8">
+    <% if hotel.errors.any? %>
+      <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
+        <h3 class="font-semibold text-red-900"><%= pluralize(hotel.errors.count, 'issue') %> blocked this hotel from being saved.</h3>
+        <ul class="mt-3 list-disc space-y-1 pl-5">
+          <% hotel.errors.full_messages.each do |msg| %>
+            <li><%= msg %></li>
+          <% end %>
+        </ul>
       </div>
     <% end %>
+
+    <div class="space-y-8">
+      <section class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Property Profile</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Capture the hotel identity, location, and basic commercial profile.</p>
+        </div>
+
+        <div class="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label for="hotel_name" class="mb-2 block text-sm font-medium text-slate-700">Hotel Name</label>
+            <%= f.text_field :name, id: "hotel_name", class: input_classes %>
+          </div>
+
+          <div>
+            <label for="star_rating" class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+              <svg class="size-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321 1.012l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.386a.562.562 0 0 1-.84.61L12.5 17.77a.563.563 0 0 0-.5 0l-4.517 2.794a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557L3.542 10.41a.562.562 0 0 1 .321-1.012l5.518-.442a.563.563 0 0 0 .475-.345z"/></svg>
+              Star Rating
+            </label>
+            <%= f.select :star_rating, (1..5).map { |rating| ["#{rating} #{'★' * rating}", rating] }, { include_blank: "Select Rating" }, class: input_classes %>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label for="address" class="mb-2 block text-sm font-medium text-slate-700">Address</label>
+            <%= f.text_area :address, rows: 3, class: "#{input_classes} min-h-[112px]" %>
+          </div>
+
+          <div>
+            <label for="city" class="mb-2 block text-sm font-medium text-slate-700">City</label>
+            <%= f.text_field :city, class: input_classes %>
+          </div>
+
+          <div>
+            <label for="country" class="mb-2 block text-sm font-medium text-slate-700">Country</label>
+            <%= f.text_field :country, class: input_classes %>
+          </div>
+        </div>
+      </section>
+
+      <% unless hotel.persisted? %>
+        <section class="space-y-5 border-t border-slate-200 pt-8">
+          <div>
+            <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Account Credentials</h2>
+            <p class="mt-1 text-sm font-medium text-slate-600">A dedicated account will be created for this hotel.</p>
+          </div>
+
+          <div class="grid gap-5 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <label for="account_name" class="mb-2 block text-sm font-medium text-slate-700">Company / Group Name</label>
+              <%= text_field_tag "account[name]", params.dig(:account, :name), id: "account_name", required: true, class: input_classes %>
+            </div>
+
+            <div>
+              <label for="user_name" class="mb-2 block text-sm font-medium text-slate-700">Owner Full Name</label>
+              <%= text_field_tag "user[name]", params.dig(:user, :name), id: "user_name", required: true, class: input_classes %>
+            </div>
+
+            <div>
+              <label for="user_email" class="mb-2 block text-sm font-medium text-slate-700">Account Email</label>
+              <%= email_field_tag "user[email]", params.dig(:user, :email), id: "user_email", required: true, class: input_classes %>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label for="default_password" class="mb-2 block text-sm font-medium text-slate-700">Default Password</label>
+              <%= password_field_tag :default_password, HotelOps::CreateHotel::DEFAULT_PASSWORD, id: "default_password", readonly: true, class: "w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-500" %>
+              <p class="mt-2 text-sm text-slate-500">This password is assigned automatically when the hotel account is created.</p>
+            </div>
+          </div>
+        </section>
+      <% end %>
+    </div>
   </div>
 
-  <div class="pt-6 border-t border-gray-100 flex justify-end gap-x-2">
-    <%= link_to "Cancel", admin_hotels_path, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none" %>
-    <%= f.submit class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
+  <div class="flex flex-col gap-3 border-t border-slate-200 bg-slate-50/70 px-6 py-5 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+    <%= link_to "Cancel", cancel_path, class: "inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100" %>
+    <%= f.submit hotel.persisted? ? "Update Hotel" : "Create Hotel", class: "inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
   </div>
 <% end %>

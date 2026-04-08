@@ -1,7 +1,10 @@
 require 'rails_helper'
+require 'securerandom'
 
 RSpec.describe 'Admin::Hotels', type: :request do
-  let(:superadmin) { create(:user, :superadmin) }
+  let(:token) { SecureRandom.hex(6) }
+  let(:admin_account) { create(:account, name: "Admin Hotels #{token}") }
+  let(:superadmin) { create(:user, :superadmin, account: admin_account, email: "admin-hotels-#{token}@example.com") }
 
   before do
     sign_in_as(superadmin)
@@ -9,11 +12,18 @@ RSpec.describe 'Admin::Hotels', type: :request do
   end
 
   describe 'GET /admin/hotels/new' do
-    it 'shows account credential fields instead of account assignment' do
+    it 'shows the redesigned hotel creation workspace' do
       get new_admin_hotel_path
 
       expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Create Hotel')
+      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Create Hotel')
+      expect(response.body).to include('class="mt-2 text-sm font-medium text-slate-600 sm:text-base">Set up the hotel profile and partner account before the property starts receiving bookings.')
+      expect(response.body).to include('Set up the hotel profile and partner account before the property starts receiving bookings.')
+      expect(response.body).to include('Property Profile')
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Property Profile')
       expect(response.body).to include('Account Credentials')
+      expect(response.body).to include('A dedicated account will be created for this hotel.')
       expect(response.body).to include('Company / Group Name')
       expect(response.body).to include('Owner Full Name')
       expect(response.body).to include('Account Email')
@@ -63,13 +73,13 @@ RSpec.describe 'Admin::Hotels', type: :request do
   end
 
   describe 'GET /admin/hotels/:id' do
-    let(:account) { create(:account, name: 'Luma Hospitality Group', status: 'active') }
-    let(:hotel) { create(:hotel, account: account, name: 'Luma Stay', status: 'approved') }
-    let!(:owner) { create(:user, :admin, account: account, name: 'Rose Yeo', email: 'rose@luma.test') }
+    let(:hotel_account) { create(:account, name: "Luma Hospitality Group #{token}", status: 'active') }
+    let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'approved') }
+    let!(:owner) { create(:user, :admin, account: hotel_account, name: 'Rose Yeo', email: "rose-#{token}@luma.test") }
     let!(:banking_detail) do
       create(
         :banking_detail,
-        account: account,
+        account: hotel_account,
         account_holder_name: 'Rose Yeo',
         bank_name: 'Maybank',
         account_number: '5142 1234 5678',
@@ -77,11 +87,12 @@ RSpec.describe 'Admin::Hotels', type: :request do
       )
     end
     let!(:global_margin_rule) { create(:margin_rule, settable: nil, rate: 12.0, status: 'active') }
-    let!(:staff) { create(:user, account: account, name: 'Ken Tan', email: 'ken@luma.test') }
+    let!(:staff) { create(:user, account: hotel_account, name: 'Ken Tan', email: "ken-#{token}@luma.test") }
     let!(:current_month_booking) do
       create(
         :booking,
         hotel: hotel,
+        booking_quote: create(:booking_quote, hotel: hotel, token: "tok_#{token}_1"),
         status: 'confirmed',
         total_amount: 500.0,
         margin_amount: 50.0,
@@ -94,6 +105,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
       create(
         :booking,
         hotel: hotel,
+        booking_quote: create(:booking_quote, hotel: hotel, token: "tok_#{token}_2"),
         status: 'completed',
         total_amount: 300.0,
         margin_amount: 45.0,
@@ -106,6 +118,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
       create(
         :booking,
         hotel: hotel,
+        booking_quote: create(:booking_quote, hotel: hotel, token: "tok_#{token}_3"),
         status: 'confirmed',
         total_amount: 900.0,
         margin_amount: 90.0,
@@ -120,6 +133,8 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('Back to Hotels')
+      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">')
+      expect(response.body).to include('class="mt-2 text-sm font-medium text-slate-600 sm:text-base">Review hotel details, account ownership, and current operating performance before taking action.')
       expect(response.body).to include('Review hotel details, account ownership, and current operating performance before taking action.')
       expect(response.body).to include('Suspend')
       expect(response.body).not_to include('Suspend Hotel')
@@ -128,10 +143,10 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(response.body).to include('Active')
       expect(response.body).to include('Account Users')
       expect(response.body).to include('Rose Yeo')
-      expect(response.body).to include('rose@luma.test')
+      expect(response.body).to include("rose-#{token}@luma.test")
       expect(response.body).to include('Admin')
       expect(response.body).to include('Ken Tan')
-      expect(response.body).to include('ken@luma.test')
+      expect(response.body).to include("ken-#{token}@luma.test")
       expect(response.body).to include('Hotel Staff')
       expect(response.body).to include('Banking Details')
       expect(response.body).to include('Rose Yeo')
@@ -153,20 +168,30 @@ RSpec.describe 'Admin::Hotels', type: :request do
   end
 
   describe 'GET /admin/hotels/:id/edit' do
-    let(:hotel) { create(:hotel, status: 'approved') }
+    let(:edit_hotel_account) { create(:account, name: "Edit Hotel #{token}") }
+    let(:hotel) { create(:hotel, account: edit_hotel_account, status: 'approved', name: "Urielle Preston #{token}") }
 
-    it 'hides the status field from the hotel edit form' do
+    it 'shows the redesigned hotel edit workspace and keeps cancel on the details page' do
       get edit_admin_hotel_path(hotel)
 
       expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Edit Hotel Details')
+      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Edit Hotel Details')
+      expect(response.body).to include(%(class="mt-2 text-sm font-medium text-slate-600 sm:text-base">Manage profile information for #{hotel.name} and return to the hotel detail workspace when you are done.))
+      expect(response.body).to include("Manage profile information for #{hotel.name} and return to the hotel detail workspace when you are done.")
+      expect(response.body).to include('Property Profile')
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Property Profile')
+      expect(response.body).not_to include('Operational Notes')
+      expect(response.body).to include(%(href="#{admin_hotel_path(hotel)}"))
+      expect(response.body).to include('Cancel')
       expect(response.body).not_to include('Status')
       expect(response.body).not_to include('hotel[status]')
     end
   end
 
   describe 'POST /admin/hotels/:id/suspend' do
-    let(:account) { create(:account, status: 'active') }
-    let(:hotel) { create(:hotel, account: account, status: 'approved') }
+    let(:suspend_account) { create(:account, name: "Suspend Hotel #{token}", status: 'active') }
+    let(:hotel) { create(:hotel, account: suspend_account, status: 'approved') }
 
     it 'suspends both the hotel and its account' do
       post suspend_admin_hotel_path(hotel)
@@ -174,13 +199,13 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(response).to redirect_to(admin_hotel_path(hotel))
       expect(flash[:notice]).to eq('Account and hotel have been suspended.')
       expect(hotel.reload.status).to eq('suspended')
-      expect(account.reload.status).to eq('suspended')
+      expect(suspend_account.reload.status).to eq('suspended')
     end
   end
 
   describe 'POST /admin/hotels/:id/approve' do
-    let(:account) { create(:account, status: 'suspended') }
-    let(:hotel) { create(:hotel, account: account, status: 'suspended') }
+    let(:approve_account) { create(:account, name: "Approve Hotel #{token}", status: 'suspended') }
+    let(:hotel) { create(:hotel, account: approve_account, status: 'suspended') }
 
     it 'reactivates both the hotel and its account' do
       post approve_admin_hotel_path(hotel)
@@ -188,7 +213,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(response).to redirect_to(admin_hotel_path(hotel))
       expect(flash[:notice]).to eq('Account and hotel have been reactivated.')
       expect(hotel.reload.status).to eq('approved')
-      expect(account.reload.status).to eq('active')
+      expect(approve_account.reload.status).to eq('active')
     end
   end
 end

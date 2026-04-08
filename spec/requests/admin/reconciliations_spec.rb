@@ -1,7 +1,10 @@
 require 'rails_helper'
+require 'securerandom'
 
 RSpec.describe "Admin::Reconciliations", type: :request do
-  let(:superadmin) { create(:user, :superadmin) }
+  let(:token) { SecureRandom.hex(6) }
+  let(:admin_account) { create(:account, name: "Admin Reconciliations #{token}") }
+  let(:superadmin) { create(:user, :superadmin, account: admin_account, email: "admin-reconciliations-#{token}@example.com") }
   let(:webhook_event) { create(:webhook_event, gateway: "stripe", external_id: "evt-show", status: "failed", payload: { id: "pay_show", metadata: {} }) }
 
   before do
@@ -25,8 +28,10 @@ RSpec.describe "Admin::Reconciliations", type: :request do
       get admin_reconciliations_path
 
       expect(response).to have_http_status(:ok)
+      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Payment Issues')
       expect(response.body).to include("Payment Issues")
       expect(response.body).to include("Monitor payment callbacks that need a manual review or booking retry.")
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Event Queue')
       expect(response.body).to include("Total Events")
       expect(response.body).to include("Needs Attention")
       expect(response.body).to include("Awaiting Review")
@@ -56,6 +61,8 @@ RSpec.describe "Admin::Reconciliations", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Back to Payment Issues")
+      expect(response.body).to include('class="mt-4 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Payment callback')
+      expect(response.body).to include('class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Issue Status')
       expect(response.body).to include("Issue Status")
     end
   end

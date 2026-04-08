@@ -6,7 +6,7 @@
   <div class="px-4 md:px-0">
     <div class="mt-5 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
       <div>
-        <h1 class="text-3xl font-bold tracking-tight text-slate-950">Payment Issues</h1>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Payment Issues</h1>
         <p class="mt-1 text-sm font-medium text-slate-600">Monitor payment callbacks that need a manual review or booking retry.</p>
       </div>
 
@@ -46,7 +46,7 @@
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
       <div>
-        <h2 class="text-xl font-bold tracking-tight text-slate-950">Event Queue</h2>
+        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Event Queue</h2>
         <p class="mt-1 text-sm font-medium text-slate-600">Showing <%= pluralize(@events.size, "event") %> matching the current filters.</p>
       </div>
 
@@ -72,7 +72,66 @@
       </div>
     <% end %>
 
-    <div class="overflow-x-auto">
+    <div id="admin-payment-issues-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
+      <% if @events.any? %>
+        <% @events.each do |event| %>
+          <% status_text_classes, status_dot_classes = case event.status
+             when "processed"
+               ["text-emerald-700", "bg-emerald-500"]
+             when "failed"
+               ["text-red-700", "bg-red-500"]
+             else
+               ["text-amber-700", "bg-amber-500"]
+             end %>
+          <% issue_summary = event.error_message.presence || (event.status == "processed" ? "Callback handled successfully." : "Waiting for the callback to be reviewed.") %>
+
+          <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-slate-900"><%= event.gateway.titleize %></p>
+                <p class="mt-1 font-mono text-xs text-slate-500"><%= event.external_id %></p>
+              </div>
+              <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_text_classes %>">
+                <span class="size-2.5 rounded-sm <%= status_dot_classes %>"></span>
+                <%= event.status.titleize %>
+              </div>
+            </div>
+
+            <dl class="mt-4 space-y-3 text-sm">
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Received</dt>
+                <dd class="mt-1 text-slate-700"><%= event.created_at.strftime("%d %b %Y, %H:%M") %></dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Issue Summary</dt>
+                <dd class="mt-1 <%= event.status == 'failed' ? 'font-medium text-red-700' : 'text-slate-600' %>"><%= issue_summary %></dd>
+              </div>
+            </dl>
+
+            <div class="mt-4 flex flex-wrap justify-end gap-2">
+              <%= link_to admin_reconciliation_path(event), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" do %>
+                <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                Review
+              <% end %>
+
+              <% if event.status == "failed" %>
+                <%= button_to retry_admin_reconciliation_path(event), method: :post, class: "inline-flex items-center gap-x-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700" do %>
+                  <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 11a9 9 0 0 1 15.55-5.36L21 8"/><path d="M3 22v-6h6"/><path d="M21 13a9 9 0 0 1-15.55 5.36L3 16"/></svg>
+                  Retry Booking
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
+          <p class="text-sm font-semibold text-slate-900">No payment issues match these filters.</p>
+          <p class="mt-2 text-sm text-slate-500">Try clearing the filters to review the full callback queue again.</p>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="hidden lg:block overflow-x-auto">
       <table class="min-w-full">
         <thead class="bg-slate-100">
           <tr>
