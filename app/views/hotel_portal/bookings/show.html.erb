@@ -91,7 +91,7 @@
       <% pre_checkin_arrival_time = pre_checkin_metadata["estimated_arrival_time"].presence || @booking.estimated_arrival_time.presence %>
       <% pre_checkin_government_id = pre_checkin_metadata["guest_government_id"].presence %>
 
-      <% if @pre_checkin.present? && (@booking.pre_checkin_status == "completed" || @pre_checkin.completed?) %>
+      <% if @pre_checkin.present? && @booking.pre_checkin_display_status == "completed" %>
         <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
             <div>
@@ -99,14 +99,8 @@
               <p class="text-xs text-gray-500 mt-1">Guest-submitted arrival information.</p>
             </div>
             <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium 
-              <%= case (@booking.pre_checkin_status.presence || @pre_checkin.status || 'not_started')
-                  when 'completed' then 'bg-green-100 text-green-800'
-                  when 'in_progress' then 'bg-blue-100 text-blue-800'
-                  when 'failed' then 'bg-red-100 text-red-800'
-                  when 'pending' then 'bg-yellow-100 text-yellow-800'
-                  else 'bg-gray-100 text-gray-800'
-                  end %>">
-              <%= (@booking.pre_checkin_status.presence || @pre_checkin.status || 'not_started').titleize %>
+              <%= pre_checkin_status_class(pre_checkin_display_status(@booking)) %>">
+              <%= pre_checkin_display_status(@booking).titleize %>
             </span>
           </div>
           <div class="p-6">
@@ -211,17 +205,8 @@
           </div>
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-500">Pre Check-In Status</span>
-            <%
-              pre_checkin_status = @booking.pre_checkin_status.presence || @pre_checkin&.status || "not_started"
-              pre_checkin_class = case pre_checkin_status
-              when "completed" then "bg-green-100 text-green-800"
-              when "in_progress" then "bg-blue-100 text-blue-800"
-              when "failed" then "bg-red-100 text-red-800"
-              when "pending" then "bg-yellow-100 text-yellow-800"
-              else "bg-gray-100 text-gray-800"
-              end
-            %>
-            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= pre_checkin_class %>">
+            <% pre_checkin_status = pre_checkin_display_status(@booking) %>
+            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= pre_checkin_status_class(pre_checkin_status) %>">
               <%= pre_checkin_status.titleize %>
             </span>
           </div>

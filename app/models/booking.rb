@@ -44,6 +44,24 @@ class Booking < ApplicationRecord
     status == "completed"
   end
 
+  def pre_checkin_display_status
+    metadata = pre_checkin&.metadata || {}
+    has_real_pre_checkin_data = pre_checkin.present? && (
+      pre_checkin.completed_at.present? ||
+      metadata["submitted_at"].present? ||
+      metadata["guest_government_id"].present? ||
+      metadata["estimated_arrival_time"].present?
+    )
+
+    return "not_started" if status == "completed" && !has_real_pre_checkin_data
+    return "completed" if has_real_pre_checkin_data && (pre_checkin_status == "completed" || pre_checkin&.completed?)
+    return "failed" if has_real_pre_checkin_data && (pre_checkin_status == "failed" || pre_checkin&.status == "failed")
+    return "pending" if status == "confirmed"
+    return "not_started" unless has_real_pre_checkin_data
+
+    pre_checkin_status.presence || pre_checkin&.status.presence || "not_started"
+  end
+
   def tourism_tax?
     tourism_tax_applied && tourism_tax_amount.positive?
   end
