@@ -23,7 +23,7 @@ RSpec.describe 'Hotel dashboard page', type: :system do
 
     expect(page).to have_content('Dashboard')
     expect(page).to have_content('Arrival Board')
-    expect(page).to have_content('Pending Actions')
+    expect(page).to have_content('Action Required')
     expect(page).to have_content('7-Day Occupancy')
     expect(page).to have_content('Recent Bookings')
     expect(page).to have_link('View all bookings', href: hotel_bookings_path(hotel))

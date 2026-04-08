@@ -14,7 +14,7 @@ RSpec.describe 'Admin margin settings', type: :system do
   end
 
   before do
-    driven_by(:selenium, using: :headless_chrome, screen_size: [1400, 1400])
+    driven_by(:selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ])
 
     visit login_path
     fill_in 'Email address', with: superadmin.email

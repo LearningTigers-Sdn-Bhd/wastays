@@ -14,13 +14,14 @@ RSpec.describe 'Admin sidebar search', type: :system do
   end
 
   before do
-    driven_by(:selenium, using: :headless_chrome, screen_size: [390, 844])
+    driven_by(:selenium, using: :headless_chrome, screen_size: [ 390, 844 ])
 
     visit login_path
     fill_in 'Email address', with: superadmin.email
     fill_in 'Password', with: 'password123'
     click_button 'Sign In'
     expect(page).to have_current_path(admin_dashboard_path, ignore_query: true)
+    page.current_window.resize_to(390, 844)
   end
 
   it 'filters mobile sidebar links and lets the user open the matching page' do
@@ -28,9 +29,14 @@ RSpec.describe 'Admin sidebar search', type: :system do
 
     within('#admin-sidebar-mobile') do
       fill_in 'Search navigation', with: 'audit'
-      expect(page).to have_link('Audit Logs', href: admin_audit_logs_path)
-      expect(page).to have_no_link('Bookings', href: admin_bookings_path)
-      click_link 'Audit Logs'
+
+      audit_link = find("a[href='#{admin_audit_logs_path}']", text: 'Audit Logs', visible: :all)
+      bookings_link = find("a[href='#{admin_bookings_path}']", text: 'Bookings', visible: :all)
+
+      expect(audit_link[:class]).not_to include('hidden')
+      expect(bookings_link[:class]).to include('hidden')
+
+      audit_link.click
     end
 
     expect(page).to have_current_path(admin_audit_logs_path, ignore_query: true)

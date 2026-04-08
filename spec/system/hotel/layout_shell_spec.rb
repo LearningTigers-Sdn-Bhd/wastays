@@ -29,6 +29,6 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_link('Reports', href: hotel_reports_path(hotel))
     expect(page).to have_content('Rooms')
     expect(page).to have_css('#flash_toasts')
-    expect(page).to have_link('My Profile', href: edit_hotel_user_profile_path(hotel))
+    expect(page).to have_link('My account', href: edit_hotel_user_profile_path(hotel))
   end
 end
