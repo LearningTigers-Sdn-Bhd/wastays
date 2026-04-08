@@ -15,7 +15,9 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       expect(response.body).to include('Platform overview and real-time operational status.')
       expect(response.body).to include('Recent Successful Bookings')
       expect(response.body).to include('View All Bookings')
+      expect(response.body).to include('Payment Issues')
       expect(response.body).to include(admin_bookings_path)
+      expect(response.body).to include(admin_reconciliation_dashboard_path)
     end
   end
 

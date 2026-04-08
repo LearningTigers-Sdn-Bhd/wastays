@@ -1,87 +1,146 @@
-<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
-  <!-- Header -->
-  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-    <div>
-      <h1 class="text-3xl font-bold text-gray-800">Reconciliation Dashboard</h1>
-      <p class="text-sm text-gray-600">Monitor and resolve payment webhook failures.</p>
+<% content_for :breadcrumbs do %>
+  <%= render "shared/navigation/admin_breadcrumbs", current: "Payment Issues" %>
+<% end %>
+
+<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+  <div class="px-4 md:px-0">
+    <div class="mt-5 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight text-slate-950">Payment Issues</h1>
+        <p class="mt-1 text-sm font-medium text-slate-600">Monitor payment callbacks that need a manual review or booking retry.</p>
+      </div>
+
+      <div class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700">
+        <span class="size-2.5 rounded-full bg-red-500"></span>
+        <%= pluralize(@summary_failed_events, "issue") %> currently need attention
+      </div>
     </div>
   </div>
 
-  <!-- Filters -->
-  <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 md:p-6 mb-6">
-    <%= form_with url: admin_reconciliations_path, method: :get, class: "flex gap-x-4 items-end" do |f| %>
-      <div class="grow">
-        <label class="block text-sm font-medium mb-2 text-gray-700">Status</label>
-        <%= f.select :status, WebhookEvent::STATUSES.map { |s| [s.titleize, s] }, { include_blank: "All Statuses", selected: params[:status] }, class: "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-      </div>
-      <div>
-        <%= f.submit "Filter", class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700" %>
-      </div>
-    <% end %>
+  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4">
+    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Events</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @summary_total_events %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">All payment callbacks received</p>
+    </div>
+
+    <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Needs Attention</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-red-600"><%= @summary_failed_events %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Failed events blocking follow-up</p>
+    </div>
+
+    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Awaiting Review</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-600"><%= @summary_pending_events %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Pending callbacks still under review</p>
+    </div>
+
+    <div class="p-6 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Recovered</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= @summary_processed_events %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Callbacks already processed successfully</p>
+    </div>
   </div>
 
-  <!-- Table -->
-  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
-        <tr>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Time</th>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Gateway</th>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">External ID</th>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Status</th>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Error</th>
-          <th scope="col" class="px-6 py-3 text-end"></th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-200">
-        <% if @events.any? %>
-          <% @events.each do |event| %>
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h2 class="text-xl font-bold tracking-tight text-slate-950">Event Queue</h2>
+        <p class="mt-1 text-sm font-medium text-slate-600">Showing <%= pluralize(@events.size, "event") %> matching the current filters.</p>
+      </div>
+
+      <span class="text-sm font-medium text-slate-500">Last updated from live callback records</span>
+    </div>
+
+    <%= form_with url: admin_reconciliations_path, method: :get, class: "flex flex-col gap-4 border-b border-slate-200 bg-slate-50/70 px-6 py-4 sm:px-8 xl:flex-row xl:items-end" do |f| %>
+      <div class="w-full xl:max-w-xs">
+        <label class="mb-2 block text-sm font-medium text-slate-600">Status</label>
+        <%= f.select :status, WebhookEvent::STATUSES.map { |status| [status.titleize, status] }, { include_blank: "All Statuses", selected: params[:status] }, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+      </div>
+
+      <div class="w-full xl:max-w-xs">
+        <label class="mb-2 block text-sm font-medium text-slate-600">Gateway</label>
+        <%= f.select :gateway, @gateway_options.map { |gateway| [gateway.titleize, gateway] }, { include_blank: "All Gateways", selected: params[:gateway] }, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+      </div>
+
+      <div class="flex items-center gap-3 xl:ml-auto">
+        <%= f.submit "Apply Filters", class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" %>
+        <% if params[:status].present? || params[:gateway].present? %>
+          <%= link_to "Clear", admin_reconciliations_path, class: "text-sm font-semibold text-slate-600 hover:text-slate-900" %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full">
+        <thead class="bg-slate-100">
+          <tr>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Received</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Gateway</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Reference</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Issue Status</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Issue Summary</th>
+            <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 bg-white">
+          <% if @events.any? %>
+            <% @events.each_with_index do |event, index| %>
+              <% status_text_classes, status_dot_classes = case event.status
+                 when "processed"
+                   ["text-emerald-700", "bg-emerald-500"]
+                 when "failed"
+                   ["text-red-700", "bg-red-500"]
+                 else
+                   ["text-amber-700", "bg-amber-500"]
+                 end %>
+              <% issue_summary = event.error_message.presence || (event.status == "processed" ? "Callback handled successfully." : "Waiting for the callback to be reviewed.") %>
+
+              <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600 sm:px-8"><%= event.created_at.strftime("%d %b %Y, %H:%M") %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900"><%= event.gateway.titleize %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600"><%= event.external_id %></td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_text_classes %>">
+                    <span class="size-2.5 rounded-sm <%= status_dot_classes %>"></span>
+                    <%= event.status.titleize %>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-slate-600">
+                  <div class="max-w-md">
+                    <p class="font-medium <%= event.status == 'failed' ? 'text-red-700' : 'text-slate-600' %>"><%= issue_summary %></p>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-right sm:px-8">
+                  <div class="inline-flex items-center gap-2">
+                    <%= link_to admin_reconciliation_path(event), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" do %>
+                      <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                      Review
+                    <% end %>
+
+                    <% if event.status == "failed" %>
+                      <%= button_to retry_admin_reconciliation_path(event), method: :post, class: "inline-flex items-center gap-x-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700" do %>
+                        <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 11a9 9 0 0 1 15.55-5.36L21 8"/><path d="M3 22v-6h6"/><path d="M21 13a9 9 0 0 1-15.55 5.36L3 16"/></svg>
+                        Retry Booking
+                      <% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          <% else %>
             <tr>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <%= event.created_at.strftime("%d %b, %H:%M:%S") %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
-                <%= event.gateway.titleize %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                <%= event.external_id %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <% 
-                  status_class = case event.status
-                  when 'processed' then 'bg-green-100 text-green-800'
-                  when 'failed' then 'bg-red-100 text-red-800'
-                  else 'bg-yellow-100 text-yellow-800'
-                  end
-                %>
-                <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= status_class %>">
-                  <%= event.status.titleize %>
-                </span>
-              </td>
-              <td class="px-6 py-4 text-sm text-red-600 truncate max-w-xs">
-                <%= event.error_message %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
-                <%= link_to "View", admin_reconciliation_path(event), class: "text-blue-600 hover:text-blue-800 mr-3" %>
-                <% if event.status == 'failed' %>
-                  <%= button_to "Retry", retry_admin_reconciliation_path(event), method: :post, class: "inline text-purple-600 hover:text-purple-800 font-semibold" %>
-                <% end %>
+              <td colspan="6" class="px-6 py-12 text-center sm:px-8">
+                <div class="mx-auto max-w-sm space-y-2">
+                  <p class="text-sm font-semibold text-slate-900">No payment issues match these filters.</p>
+                  <p class="text-sm text-slate-500">Try clearing the filters to review the full callback queue again.</p>
+                </div>
               </td>
             </tr>
           <% end %>
-              <% else %>
-                <tr>
-                  <td colspan="6" class="px-6 py-10 text-center">
-                    <div class="flex flex-col items-center">
-                      <svg class="size-10 text-gray-400 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
-                      <p class="text-sm text-gray-500 italic">No webhook events found matching your criteria.</p>
-                    </div>
-                  </td>
-                </tr>
-              <% end %>
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
