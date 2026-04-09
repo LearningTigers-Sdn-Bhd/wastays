@@ -16,6 +16,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def show
     @booking = current_hotel.bookings.find(params[:id])
     @booking_rooms = @booking.booking_rooms
+    @pre_checkin = @booking.pre_checkin
   end
 
   def update
