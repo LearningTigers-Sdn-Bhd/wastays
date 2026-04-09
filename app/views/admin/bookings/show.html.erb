@@ -113,6 +113,19 @@
               <%= @booking.payment_status&.titleize || 'N/A' %>
             </span>
           </div>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-sm font-medium text-slate-500">Pre Check-In Status</span>
+            <% admin_pre_checkin_status = pre_checkin_display_status(@booking) %>
+            <span class="inline-flex items-center gap-x-1.5 rounded-full px-3 py-1.5 text-xs font-semibold <%= case admin_pre_checkin_status
+                when 'completed' then 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'
+                when 'in_progress' then 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200'
+                when 'pending' then 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200'
+                when 'failed' then 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200'
+                else 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200'
+                end %>">
+              <%= admin_pre_checkin_status.titleize %>
+            </span>
+          </div>
           <div class="border-t border-slate-200 pt-4">
             <div class="flex items-center justify-between gap-4">
               <span class="text-base font-semibold text-slate-900">Total Amount</span>

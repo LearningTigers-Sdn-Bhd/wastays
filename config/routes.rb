@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       post "workflow_webhooks", to: "workflow_webhooks#create"
+      post "pre_checkin_links", to: "pre_checkin_links#create"
       resources :hotels, only: [ :index, :show ] do
         get "availability", on: :member
       end
@@ -31,6 +32,9 @@ Rails.application.routes.draw do
     resources :hotels, only: [ :index, :show ]
     resources :quotes, only: [ :create, :show ]
     resources :bookings, only: [ :show ]
+    resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
+      post :cancel, on: :member
+    end
     get "mock_payment", to: "payment_mocks#show", as: :mock_payment
     post "mock_payment", to: "payment_mocks#update"
     post "webhooks/:gateway", to: "webhooks#create", as: :payment_webhook
@@ -106,7 +110,7 @@ Rails.application.routes.draw do
     resources :reports, only: [ :index ]
     resources :inventory_dashboards, only: [ :index, :create ], path: "inventory"
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
-    resources :guests, only: [ :index ]
+    resources :guests, only: [ :index, :show ]
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"

@@ -41,5 +41,15 @@ RSpec.describe 'Admin::Bookings', type: :request do
       expect(response.body).to include('Booking WS-FBBPGNAT')
       expect(response.body).to include("Hotel: #{hotel.name}")
     end
+
+    it 'renders the pre check-in status in the summary' do
+      create(:pre_checkin, booking: booking, status: 'completed', completed_at: Time.current)
+
+      get admin_booking_path(booking)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Pre Check-In Status')
+      expect(response.body).to include('Completed')
+    end
   end
 end
