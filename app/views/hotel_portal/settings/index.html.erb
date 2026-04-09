@@ -4,8 +4,6 @@
       <h1 class="text-2xl font-bold text-neutral-text-primary">Settings</h1>
       <p class="mt-1 text-sm text-neutral-text-secondary">Update hotel policy, taxes, conversion rate, and banking details.</p>
     </div>
-
-    <%= link_to "Edit Settings", hotel_edit_settings_path(@hotel), class: "inline-flex items-center gap-x-2 rounded-lg border border-neutral-border bg-white px-4 py-2 text-sm font-semibold text-neutral-text-primary hover:bg-neutral-bg" %>
   </div>
 
   <% if @settings.present? %>
@@ -130,11 +128,6 @@
                   <div>
                     <%= banking_fields.label :account_number, "Account Number", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
                     <%= banking_fields.text_field :account_number, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border" %>
-                  </div>
-
-                  <div>
-                    <%= banking_fields.label :account_type, "Account Type", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
-                    <%= banking_fields.select :account_type, BankingDetail::ACCOUNT_TYPES.map { |type| [type.titleize, type] }, { include_blank: "Select account type" }, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border" %>
                   </div>
                 </div>
               <% end %>
