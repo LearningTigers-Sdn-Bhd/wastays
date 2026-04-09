@@ -87,6 +87,37 @@
         </div>
       </div>
 
+      <% pre_checkin_metadata = @pre_checkin&.metadata || {} %>
+      <% pre_checkin_arrival_time = pre_checkin_metadata["estimated_arrival_time"].presence || @booking.estimated_arrival_time.presence %>
+      <% pre_checkin_government_id = pre_checkin_metadata["guest_government_id"].presence %>
+
+      <% if @pre_checkin.present? && @booking.pre_checkin_display_status == "completed" %>
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold text-gray-800">Pre Check-In Details</h2>
+              <p class="text-xs text-gray-500 mt-1">Guest-submitted arrival information.</p>
+            </div>
+            <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium 
+              <%= pre_checkin_status_class(pre_checkin_display_status(@booking)) %>">
+              <%= pre_checkin_display_status(@booking).titleize %>
+            </span>
+          </div>
+          <div class="p-6">
+            <div class="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Estimated Arrival</label>
+                <p class="text-gray-800 font-medium"><%= pre_checkin_arrival_time.present? ? pre_checkin_arrival_time : "Not provided" %></p>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">ID / Passport Number</label>
+                <p class="text-gray-800 font-medium"><%= pre_checkin_government_id.present? ? pre_checkin_government_id : "Not provided" %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
       <div class="grid lg:grid-cols-2 gap-6">
         <!-- Stay & Room Details Card -->
         <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -144,32 +175,21 @@
         <div class="space-y-4">
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-500">Booking Status</span>
-            <% 
-              status_class = case @booking.status
-              when 'confirmed' then 'bg-green-100 text-green-800'
-              when 'checked_in' then 'bg-blue-100 text-blue-800'
-              when 'completed' then 'bg-gray-100 text-gray-800'
-              when 'cancelled' then 'bg-red-100 text-red-800'
-              when 'pending' then 'bg-yellow-100 text-yellow-800'
-              else 'bg-gray-100 text-gray-800'
-              end
-            %>
-            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= status_class %>">
+            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= booking_status_class(@booking.status) %>">
               <%= @booking.status.titleize %>
             </span>
           </div>
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-500">Payment Status</span>
-            <% 
-              p_status_class = case @booking.payment_status
-              when 'captured' then 'bg-green-100 text-green-800'
-              when 'pending' then 'bg-yellow-100 text-yellow-800'
-              when 'failed' then 'bg-red-100 text-red-800'
-              else 'bg-gray-100 text-gray-800'
-              end
-            %>
-            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= p_status_class %>">
+            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= payment_status_class(@booking.payment_status) %>">
               <%= @booking.payment_status.titleize %>
+            </span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-500">Pre Check-In Status</span>
+            <% pre_checkin_status = pre_checkin_display_status(@booking) %>
+            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= pre_checkin_status_class(pre_checkin_status) %>">
+              <%= pre_checkin_status.titleize %>
             </span>
           </div>
           <div class="flex justify-between items-center pt-4 border-t border-gray-100">

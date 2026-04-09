@@ -35,7 +35,11 @@
           <div class="w-10 h-10 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center font-black">2</div>
           <h3 class="font-bold text-sm text-neutral-text-primary uppercase tracking-wider">Pre-check-in</h3>
           <p class="text-xs text-neutral-text-secondary leading-relaxed">Save time at the desk. Complete your guest details online before you arrive.</p>
-          <a href="#" class="btn btn-primary py-1.5 px-4 text-[10px] font-black uppercase tracking-widest">Start Now</a>
+          <% if @booking.pre_checkin.present? %>
+            <%= link_to "Start Now", pre_checkin_path(@booking.pre_checkin.token), class: "btn btn-primary py-1.5 px-4 text-[10px] font-black uppercase tracking-widest" %>
+          <% else %>
+            <span class="text-[10px] font-black text-neutral-text-secondary uppercase">Not Available</span>
+          <% end %>
         </div>
         <div class="space-y-3">
           <div class="w-10 h-10 rounded-full bg-green-100 text-status-success flex items-center justify-center font-black">
