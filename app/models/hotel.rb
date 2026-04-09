@@ -1,6 +1,7 @@
 class Hotel < ApplicationRecord
   include AccountScopable
 
+  has_many_attached :photos
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :users, through: :user_hotel_accesses
   has_one :property_policy, dependent: :destroy
@@ -14,6 +15,7 @@ class Hotel < ApplicationRecord
   validates :status, presence: true
   validates :city, presence: true
   validates :country, presence: true
+  validate :photos_limit_not_exceeded
 
   STATUSES = %w[
     registered
@@ -101,6 +103,14 @@ class Hotel < ApplicationRecord
 
   def tourism_tax_amount_for(country)
     tourism_tax_applicable_for?(country) ? tourism_tax_amount : 0
+  end
+
+  private
+
+  def photos_limit_not_exceeded
+    return unless photos.attached?
+
+    errors.add(:photos, "cannot exceed 20 photos") if photos.count > 20
   end
 
   def tourism_tax_applicable_for?(country)

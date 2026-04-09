@@ -89,6 +89,7 @@ Rails.application.routes.draw do
     post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
     resource :profile, only: [ :edit, :update ]
+    delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
     resource :property_policy, only: [ :edit, :update ]
 
     resources :room_types do
