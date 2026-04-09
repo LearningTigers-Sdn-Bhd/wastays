@@ -21,7 +21,7 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
     if @hotel.update(hotel_attributes)
       @hotel.photos.attach(photo_files) if photo_files.any?
       @hotel.complete_profile!
-      redirect_to edit_hotel_profile_path, notice: "Hotel profile updated successfully."
+      redirect_to hotel_dashboard_path, notice: "Hotel profile updated successfully."
     else
       render :edit, status: :unprocessable_content
     end

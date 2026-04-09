@@ -27,7 +27,6 @@ RSpec.describe 'Hotel Profile Update', type: :system do
 
     fill_in 'Hotel Name', with: 'Updated Hotel Name'
     fill_in 'Address', with: '123 New Street'
-    select '5 Star', from: 'Star Rating'
 
     click_button 'Save Profile'
 
