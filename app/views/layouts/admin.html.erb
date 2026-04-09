@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="h-full bg-neutral-bg">
+<html class="h-full">
   <head>
     <title><%= content_for(:title) || "Superadmin | WAStays" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -8,185 +8,101 @@
 
     <%= yield :head %>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/preline@2.4.1/dist/preline.min.css">
     <%= javascript_importmap_tags %>
   </head>
 
   <body class="h-full">
-    <!-- Navigation -->
-    <header class="sticky top-0 inset-x-0 flex flex-wrap sm:justify-start sm:flex-nowrap z-[70] w-full bg-neutral-surface border-b border-neutral-border text-sm py-2.5 sm:py-4 lg:ps-64">
-      <nav class="flex basis-full items-center w-full mx-auto px-4 sm:px-6 md:px-8" aria-label="Global">
-        <div class="me-5 lg:me-0 lg:hidden">
-          <a class="flex-none text-xl font-semibold text-brand-primary" href="<%= admin_dashboard_path %>" aria-label="WAStays">WAStays</a>
-        </div>
+    <!-- Preline CMS-style layout: flex column (header + body row) -->
+    <div class="flex flex-col h-screen bg-layer-alt">
 
-        <div class="w-full flex items-center justify-between">
-          <div class="hidden sm:block">
-            <h2 class="text-sm font-semibold text-neutral-text-primary">Superadmin Control Panel</h2>
+      <!-- ═══ Top Navbar ═══ -->
+      <header class="sticky top-0 z-[60] w-full bg-layer border-b border-layer-line">
+        <div class="flex items-center h-14 px-4 gap-x-3">
+
+          <!-- Mobile hamburger -->
+          <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggle" aria-label="Toggle navigation">
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+
+          <!-- Logo Icon (Preline-style round icon) -->
+          <a href="<%= admin_dashboard_path %>" class="shrink-0 flex items-center gap-x-2.5" aria-label="WAStays">
+            <span class="inline-flex justify-center items-center size-8 bg-brand-primary rounded-lg text-white font-bold text-sm shadow-xs">W</span>
+            <span class="hidden lg:block text-sm font-semibold text-neutral-text-primary">WAStays</span>
+          </a>
+
+          <!-- Separator -->
+          <div class="hidden sm:block w-px h-5 bg-layer-line"></div>
+
+          <!-- Breadcrumbs slot -->
+          <div class="hidden sm:flex items-center">
+            <% if content_for?(:breadcrumbs) %>
+              <%= yield :breadcrumbs %>
+            <% end %>
           </div>
 
-          <div class="flex flex-row items-center justify-end gap-2">
-            <a class="py-2 px-3 inline-flex items-center gap-x-2 text-xs font-medium rounded-lg border border-neutral-border bg-white text-neutral-text-secondary shadow-sm hover:bg-neutral-bg focus:outline-none focus:bg-neutral-bg disabled:opacity-50 disabled:pointer-events-none" href="<%= root_path %>">
-              <svg class="flex-shrink-0 w-3 h-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              View Website
+          <!-- Spacer -->
+          <div class="flex-1"></div>
+
+          <!-- Right Actions -->
+          <div class="flex items-center gap-x-1">
+            <% if content_for?(:header_actions) %>
+              <%= yield :header_actions %>
+            <% end %>
+
+            <!-- Help Link -->
+            <a class="navbar-link hidden sm:flex" href="<%= help_center_path %>">
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Help
             </a>
 
-            <a class="w-10 h-10 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-full border border-transparent text-neutral-text-secondary hover:bg-neutral-bg focus:outline-none focus:bg-neutral-bg disabled:opacity-50 disabled:pointer-events-none" href="<%= help_center_path %>">
-              <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <!-- View Website -->
+            <a class="hidden sm:flex items-center gap-x-1.5 py-1.5 px-2.5 text-sm text-navbar-nav-foreground rounded-lg hover:bg-navbar-nav-hover transition-colors duration-150" href="<%= root_path %>" target="_blank">
+              <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Website
             </a>
 
-            <div class="relative inline-flex" data-controller="dropdown">
-              <button id="admin-profile-toggle" type="button" class="w-10 h-10 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-full border border-transparent text-neutral-text-secondary hover:bg-neutral-bg focus:outline-none focus:bg-neutral-bg disabled:opacity-50 disabled:pointer-events-none" data-action="click->dropdown#toggle">
-                <span class="inline-block h-10 w-10 rounded-full ring-2 ring-white bg-gray-100 overflow-hidden">
-                  <svg class="h-full w-full text-gray-300" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                </span>
-              </button>
+            <!-- Divider -->
+            <div class="w-px h-5 bg-layer-line mx-1 hidden sm:block"></div>
 
-              <div class="absolute right-0 top-full mt-2 w-60 bg-white shadow-xl rounded-xl p-2 hidden z-[100] border border-neutral-border animate-in fade-in zoom-in duration-200" data-dropdown-target="menu">
-                <div class="py-3 px-4 -m-2 bg-neutral-bg rounded-t-xl mb-2 border-b border-neutral-border">
-                  <p class="text-xs text-neutral-text-secondary">Signed in as</p>
-                  <p class="text-sm font-semibold text-neutral-text-primary truncate"><%= current_user.email %></p>
-                </div>
-                <div class="space-y-1">
-                  <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-neutral-bg focus:ring-2 focus:ring-brand-primary" href="<%= edit_admin_profile_path %>">
-                    <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                    My Profile
-                  </a>
-                  <div class="border-t border-neutral-border my-1"></div>
-                  <%= button_to logout_path, method: :delete, class: "flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-status-error hover:bg-red-50 focus:ring-2 focus:ring-status-error w-full text-left" do %>
-                    <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    Logout
-                  <% end %>
-                </div>
+            <!-- Profile Dropdown -->
+            <%= render "shared/navigation/admin_profile_dropdown" %>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══ Body: Sidebar + Content ═══ -->
+      <div class="flex flex-1 overflow-hidden">
+
+        <!-- Sidebar -->
+        <%= render 'shared/navigation/admin_sidebar' %>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col overflow-hidden overflow-y-auto custom-scrollbar">
+          <div class="p-5 sm:p-6 space-y-5">
+            <%= render "shared/feedback/flash_toasts", flash: flash %>
+
+            <div class="grid grid-cols-1 <%= content_for?(:right_sidebar) ? 'xl:grid-cols-4 gap-6' : '' %>">
+              <div class="<%= content_for?(:right_sidebar) ? 'xl:col-span-3' : '' %>">
+                <%= yield %>
               </div>
+
+              <% if content_for?(:right_sidebar) %>
+                <div class="xl:col-span-1 space-y-6">
+                  <%= yield :right_sidebar %>
+                </div>
+              <% end %>
             </div>
           </div>
-        </div>
-      </nav>
-    </header>
-
-    <!-- Sidebar -->
-    <div id="application-sidebar" class="hs-overlay hs-overlay-open:translate-x-0 -translate-x-full transition-all duration-300 transform hidden fixed top-0 start-0 bottom-0 z-[80] w-64 bg-neutral-surface border-e border-neutral-border pt-7 pb-10 overflow-y-auto lg:block lg:translate-x-0 lg:end-auto lg:bottom-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-border">
-      <div class="px-6">
-        <a class="flex-none text-xl font-semibold text-brand-primary" href="<%= admin_dashboard_path %>" aria-label="WAStays">WAStays</a>
+        </main>
       </div>
-
-      <nav class="hs-accordion-group p-6 w-full flex flex-col flex-wrap" data-hs-accordion-always-open>
-        <ul class="space-y-1.5">
-          <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'dashboard' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= admin_dashboard_path %>">
-              <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              Dashboard
-            </a>
-          </li>
-
-          <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'hotels' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= admin_hotels_path %>">
-              <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
-              Hotels
-            </a>
-          </li>
-
-          <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'bookings' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= admin_bookings_path %>">
-              <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              Bookings
-            </a>
-          </li>
-
-          <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'margin_rules' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= admin_margin_rules_path %>">
-              <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-              Margin Settings
-            </a>
-          </li>
-
-          <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'reconciliations' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= admin_reconciliation_dashboard_path %>">
-              <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              Reconciliation
-            </a>
-          </li>
-
-          <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'audit_logs' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg" href="<%= admin_audit_logs_path %>">
-              <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              Audit Logs
-            </a>
-          </li>
-
-          <li>
-            <div class="hs-accordion" id="api-accordion">
-              <button type="button" class="hs-accordion-toggle w-full text-start flex items-center gap-x-3.5 py-2 px-2.5 <%= controller_name == 'api_keys' ? 'bg-neutral-bg text-neutral-text-primary' : 'text-neutral-text-secondary' %> text-sm rounded-lg hover:bg-neutral-bg focus:outline-none transition-all">
-                <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3L15.5 7.5z"/></svg>
-                API Access
-                <svg class="hs-accordion-active:rotate-180 ms-auto block w-3 h-3 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-              </button>
-
-              <div id="api-accordion-child" class="hs-accordion-content w-full overflow-hidden transition-[height] duration-300 hidden">
-                <ul class="pt-2 ps-2">
-                  <li>
-                    <a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-neutral-text-secondary rounded-lg hover:bg-neutral-bg" href="<%= admin_api_keys_path %>">
-                      Manage Keys
-                    </a>
-                  </li>
-                  <li>
-                    <a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-neutral-text-secondary rounded-lg hover:bg-neutral-bg" href="<%= docs_admin_api_keys_path %>">
-                      Developer Guide
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </li>
-
-          <li>
-            <a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-neutral-text-secondary rounded-lg hover:bg-neutral-bg" href="<%= help_center_path %>">
-              <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-              Help Guides
-            </a>
-          </li>
-        </ul>
-      </nav>
     </div>
 
-    <!-- Content -->
-    <div class="w-full pt-10 px-4 sm:px-6 md:px-8 lg:ps-72 pb-24">
-      <% if flash.any? %>
-        <div class="mb-4">
-          <% flash.each do |key, value| %>
-            <div class="p-4 rounded-lg <%= key == 'alert' ? 'bg-red-50 text-status-error border border-red-200' : 'bg-green-50 text-status-success border border-green-200' %>" role="alert">
-              <span class="font-bold"><%= key.capitalize %>:</span> <%= value %>
-            </div>
-          <% end %>
-        </div>
-      <% end %>
-
-      <%= yield %>
-    </div>
-    <div class="sm:hidden fixed inset-x-0 bottom-0 z-40 border-t border-neutral-border bg-white shadow-lg pb-safe">
-      <nav class="flex items-center justify-around py-3 text-xs font-semibold text-neutral-text-secondary">
-        <a href="<%= admin_dashboard_path %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary">
-          <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          <span>Dashboard</span>
-        </a>
-        <a href="<%= admin_hotels_path %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary">
-          <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
-          <span>Hotels</span>
-        </a>
-        <a href="<%= admin_bookings_path %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary">
-          <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
-          <span>Bookings</span>
-        </a>
-        <a href="<%= admin_reconciliation_dashboard_path %>" class="flex flex-col items-center gap-y-1 hover:text-brand-primary">
-          <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          <span>Reconcile</span>
-        </a>
-      </nav>
-    </div>
+    <%= render 'shared/navigation/admin_mobile_nav' %>
     <%= render 'shared/turbo_confirm' %>
   </body>
 </html>

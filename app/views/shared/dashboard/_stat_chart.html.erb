@@ -1,0 +1,35 @@
+<%# locals: (title:, value:, trend: nil, options: {}, chart_id: "chart-#{SecureRandom.hex(4)}") %>
+
+<div class="flex flex-col bg-white border border-neutral-border rounded-xl shadow-sm overflow-hidden">
+  <div class="p-4 md:p-5">
+    <div class="flex items-center gap-x-2">
+      <p class="text-xs font-semibold uppercase tracking-wider text-neutral-text-secondary">
+        <%= title %>
+      </p>
+    </div>
+
+    <div class="mt-1 flex items-center gap-x-2">
+      <h3 class="text-xl sm:text-2xl font-bold text-neutral-text-primary">
+        <%= value %>
+      </h3>
+      <% if trend %>
+        <span class="inline-flex items-center gap-x-1 py-0.5 px-2 rounded-full text-xs font-medium <%= trend[:positive] ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
+          <svg class="size-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <% if trend[:positive] %>
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+            <% else %>
+              <polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>
+            <% end %>
+          </svg>
+          <%= trend[:value] %>
+        </span>
+      <% end %>
+    </div>
+  </div>
+
+  <div id="<%= chart_id %>"
+       class="h-24 w-full"
+       data-controller="chart"
+       data-chart-options-value="<%= options.to_json %>">
+  </div>
+</div>

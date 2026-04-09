@@ -1,6 +1,14 @@
 class Admin::ReconciliationsController < Admin::BaseController
   def index
-    @events = WebhookEvent.order(created_at: :desc)
+    base_scope = WebhookEvent.order(created_at: :desc)
+
+    @summary_total_events = base_scope.count
+    @summary_failed_events = base_scope.failed.count
+    @summary_pending_events = base_scope.pending.count
+    @summary_processed_events = base_scope.where(status: "processed").count
+    @gateway_options = base_scope.reorder(nil).distinct.pluck(:gateway).compact.sort
+
+    @events = base_scope
     @events = @events.where(status: params[:status]) if params[:status].present?
     @events = @events.where(gateway: params[:gateway]) if params[:gateway].present?
   end
