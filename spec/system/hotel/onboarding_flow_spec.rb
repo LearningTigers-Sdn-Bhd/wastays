@@ -106,7 +106,9 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
     expect(page).to have_content('Green Hotel KL')
     expect(page).to have_content('Pending Review')
 
-    click_link 'View'
+    within('table') do
+      click_link 'View'
+    end
     expect(page).to have_content('Deluxe Room')
     click_button 'Approve Hotel'
 

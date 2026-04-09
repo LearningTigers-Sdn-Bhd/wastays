@@ -1,64 +1,183 @@
-<div class="max-w-[85rem] mx-auto py-10 px-4 sm:px-6 lg:px-8">
-  <div class="mb-5">
-    <%= link_to admin_dashboard_path, class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600" do %>
-      <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Back to Dashboard
-    <% end %>
-  </div>
+<% content_for :breadcrumbs do %>
+  <%= render "shared/navigation/admin_breadcrumbs", current: "Hotels" %>
+<% end %>
 
-  <div class="flex justify-between items-center mb-5">
-    <div>
-      <h2 class="text-2xl font-bold text-gray-800">Manage Hotels</h2>
-      <p class="text-sm text-gray-600">Review and manage hotel accounts across the platform.</p>
-    </div>
-    <div class="inline-flex gap-x-2">
-      <%= link_to new_admin_hotel_path, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" do %>
-        <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+<% total_hotels = @hotels.size %>
+<% pending_hotels = @hotels.count { |hotel| hotel.status == "pending_review" } %>
+<% active_hotels = @hotels.count { |hotel| ["approved", "live"].include?(hotel.status) } %>
+<% suspended_hotels = @hotels.count { |hotel| hotel.status == "suspended" } %>
+
+<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+  <div class="px-4 md:px-0">
+    <div class="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Manage Hotels</h1>
+        <p class="mt-1 text-sm font-medium text-slate-600">Review hotel registrations, approvals, and account status across the platform.</p>
+      </div>
+
+      <%= link_to new_admin_hotel_path, class: "inline-flex items-center justify-center gap-x-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700" do %>
+        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         Add New Hotel
       <% end %>
     </div>
   </div>
 
-  <div class="flex flex-col">
-    <div class="-m-1.5 overflow-x-auto">
-      <div class="p-1.5 min-w-full inline-block align-middle">
-        <div class="border rounded-lg overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Hotel Name</th>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">City</th>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Registered</th>
-                <th scope="col" class="px-6 py-3 text-end text-xs font-medium text-gray-500 uppercase">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-              <% @hotels.each do |hotel| %>
-                <tr>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800"><%= hotel.name %></td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= hotel.city %></td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                    <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium 
-                      <%= case hotel.status
-                          when 'approved', 'live' then 'bg-green-100 text-green-800'
-                          when 'pending_review' then 'bg-yellow-100 text-yellow-800'
-                          when 'suspended' then 'bg-red-100 text-red-800'
-                          else 'bg-gray-100 text-gray-800'
-                          end %>">
-                      <%= hotel.status.titleize %>
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= hotel.created_at.strftime("%d %b %Y") %></td>
-                  <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
-                    <%= link_to "View", admin_hotel_path(hotel), class: "text-blue-600 hover:text-blue-800" %>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
+  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4">
+    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Hotels</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= total_hotels %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">All registered hotel accounts</p>
+    </div>
+
+    <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Pending Review</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-600"><%= pending_hotels %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Waiting for admin action</p>
+    </div>
+
+    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Approved / Live</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= active_hotels %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Operational hotel accounts</p>
+    </div>
+
+    <div class="p-6 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Suspended</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-rose-600"><%= suspended_hotels %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Accounts needing follow-up</p>
+    </div>
+  </div>
+
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8">
+      <div>
+        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Hotel Registry</h2>
+        <p class="mt-1 text-sm font-medium text-slate-600">Current hotel records with registration and status visibility.</p>
       </div>
+
+      <span class="text-sm font-medium text-slate-500">Total <span class="font-semibold text-slate-900"><%= total_hotels %></span></span>
+    </div>
+
+    <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50/70 px-6 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+      <label class="relative block w-full max-w-xl">
+        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </span>
+        <input type="text" placeholder="Search hotels..." class="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0">
+      </label>
+
+      <div class="flex items-center gap-3">
+        <label for="hotel-status-filter" class="text-sm font-medium text-slate-600">Status</label>
+        <select id="hotel-status-filter" class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0">
+          <option>All Status</option>
+          <option>Pending Review</option>
+          <option>Approved</option>
+          <option>Live</option>
+          <option>Suspended</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="admin-hotels-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
+      <% @hotels.each do |hotel| %>
+        <% status_dot_classes = case hotel.status
+           when "approved", "live"
+             "bg-emerald-500"
+           when "pending_review"
+             "bg-amber-500"
+           when "suspended"
+             "bg-rose-500"
+           else
+             "bg-slate-400"
+           end %>
+        <% status_text_classes = case hotel.status
+           when "approved", "live"
+             "text-emerald-700"
+           when "pending_review"
+             "text-amber-700"
+           when "suspended"
+             "text-rose-700"
+           else
+             "text-slate-600"
+           end %>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-base font-semibold text-slate-950"><%= hotel.name %></p>
+              <p class="mt-1 text-sm text-slate-600"><%= hotel.city.presence || "City not set" %></p>
+            </div>
+            <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_text_classes %>">
+              <span class="size-2.5 rounded-sm <%= status_dot_classes %>"></span>
+              <%= hotel.status.titleize %>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center justify-between text-sm text-slate-600">
+            <span>Registered <%= hotel.created_at.strftime("%d %b %Y") %></span>
+            <%= link_to admin_hotel_path(hotel), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" do %>
+              <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              View
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="hidden lg:block overflow-x-auto">
+      <table class="min-w-full">
+        <thead class="bg-slate-100">
+          <tr>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Hotel Name</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">City</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Registered</th>
+            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 bg-white">
+          <% @hotels.each_with_index do |hotel, index| %>
+            <% status_dot_classes = case hotel.status
+               when "approved", "live"
+                 "bg-emerald-500"
+               when "pending_review"
+                 "bg-amber-500"
+               when "suspended"
+                 "bg-rose-500"
+               else
+                 "bg-slate-400"
+               end %>
+            <% status_text_classes = case hotel.status
+               when "approved", "live"
+                 "text-emerald-700"
+               when "pending_review"
+                 "text-amber-700"
+               when "suspended"
+                 "text-rose-700"
+               else
+                 "text-slate-600"
+               end %>
+
+            <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 sm:px-8"><%= hotel.name %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600"><%= hotel.city %></td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_text_classes %>">
+                  <span class="size-2.5 rounded-sm <%= status_dot_classes %>"></span>
+                  <%= hotel.status.titleize %>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600"><%= hotel.created_at.strftime("%d %b %Y") %></td>
+              <td class="px-6 py-4 text-right sm:px-8">
+                <%= link_to admin_hotel_path(hotel), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" do %>
+                  <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  View
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>

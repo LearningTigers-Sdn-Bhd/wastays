@@ -16,6 +16,11 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
 
     @today_arrivals = @current_hotel.bookings.active.where(check_in: Date.today)
     @tomorrow_arrivals = @current_hotel.bookings.active.where(check_in: Date.tomorrow)
+    @today_checkouts = @current_hotel.bookings.active.where(check_out: Date.today)
+
+    this_month = Time.current.beginning_of_month..Time.current.end_of_month
+    @bookings_this_month_count = @current_hotel.bookings.active.where(created_at: this_month).count
+    @revenue_this_month = @current_hotel.bookings.active.where(created_at: this_month).sum(:total_amount)
 
     arrival_window = Date.today..(Date.today + 1.day)
     @pending_actions_count = @current_hotel.bookings.active

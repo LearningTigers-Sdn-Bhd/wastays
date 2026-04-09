@@ -299,5 +299,6 @@ run_step "🔍" "RuboCop" "bin/rubocop"
 run_step "🔰" "Brakeman" "bin/brakeman --no-pager"
 run_step "💎" "Bundle Audit" "bundle exec bundle-audit update && bundle exec bundle-audit check"
 run_optional_step "📦" "Importmap Audit" "bin/importmap audit" "Importmap audit failed; continuing because this can be caused by network or SSL issues."
+run_step "🎨" "Tailwind Build" "bin/rails tailwindcss:build"
 run_step "🧪" "RSpec" "bundle exec rspec" "stream"
 print_summary

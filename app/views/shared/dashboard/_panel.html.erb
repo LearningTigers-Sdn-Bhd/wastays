@@ -1,0 +1,25 @@
+<div class="flex flex-col rounded-xl border border-neutral-border bg-white shadow-sm ring-1 ring-black/5 <%= local_assigns[:panel_classes] %>">
+  <% if local_assigns[:title].present? || local_assigns[:action].present? || local_assigns[:eyebrow].present? %>
+    <div class="flex items-start justify-between gap-4 border-b border-neutral-border px-5 py-4 sm:px-6">
+      <div class="space-y-1">
+        <% if local_assigns[:eyebrow].present? %>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-text-secondary"><%= eyebrow %></p>
+        <% end %>
+
+        <% if local_assigns[:title].present? %>
+          <h2 class="text-base font-semibold text-neutral-text-primary sm:text-lg"><%= title %></h2>
+        <% end %>
+      </div>
+
+      <% if local_assigns[:action].present? %>
+        <div class="shrink-0">
+          <%= action %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="px-5 py-5 sm:px-6 <%= local_assigns[:body_classes] %>">
+    <%= body %>
+  </div>
+</div>

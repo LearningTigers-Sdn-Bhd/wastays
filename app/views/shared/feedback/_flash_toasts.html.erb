@@ -1,0 +1,7 @@
+<div id="flash_toasts" class="fixed top-4 right-4 z-[120] flex flex-col gap-2 pointer-events-none">
+  <% if flash.any? %>
+    <% flash.each do |key, value| %>
+      <%= render "shared/toast", key: key, value: value %>
+    <% end %>
+  <% end %>
+</div>
