@@ -35,6 +35,7 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
     authorize @hotel, :update?
 
     photo = @hotel.photos.attachments.find(params[:photo_id])
+    clear_featured_photo_if_needed(photo.id)
     photo.purge
 
     redirect_to edit_hotel_profile_path, notice: "Hotel photo removed successfully."
@@ -60,14 +61,37 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
       return
     end
 
+    clear_featured_photo_if_needed(photos.pluck(:id))
     photos.each(&:purge)
 
     redirect_to edit_hotel_profile_path, notice: "Selected hotel photos removed successfully."
   end
 
+  def set_featured_photo
+    @hotel = current_hotel
+    authorize @hotel, :update?
+
+    photo = @hotel.photos.attachments.find(params[:photo_id])
+
+    if @hotel.update(featured_photo_attachment_id: photo.id)
+      redirect_to edit_hotel_profile_path, notice: "Featured photo updated successfully."
+    else
+      redirect_to edit_hotel_profile_path, alert: @hotel.errors.full_messages.to_sentence
+    end
+  rescue ActiveRecord::RecordNotFound
+    redirect_to edit_hotel_profile_path, alert: "Hotel photo could not be found."
+  end
+
   private
 
   def hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, photos: [])
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :featured_photo_attachment_id, photos: [])
+  end
+
+  def clear_featured_photo_if_needed(photo_ids)
+    return unless @hotel.featured_photo_attachment_id.present?
+    return unless Array(photo_ids).map(&:to_i).include?(@hotel.featured_photo_attachment_id.to_i)
+
+    @hotel.update_column(:featured_photo_attachment_id, nil)
   end
 end

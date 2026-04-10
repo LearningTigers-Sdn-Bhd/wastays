@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_09_073452) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_10_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -218,7 +218,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_09_073452) do
     t.decimal "usd_conversion_rate", precision: 10, scale: 4, default: "4.5", null: false
     t.boolean "tourism_tax_enabled", default: false, null: false
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "10.0", null: false
+    t.bigint "featured_photo_attachment_id"
     t.index ["account_id"], name: "index_hotels_on_account_id"
+    t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
   end
 
   create_table "inventory_audit_logs", force: :cascade do |t|

@@ -16,6 +16,7 @@ class Hotel < ApplicationRecord
   validates :city, presence: true
   validates :country, presence: true
   validate :photos_limit_not_exceeded
+  validate :featured_photo_attachment_belongs_to_hotel
 
   STATUSES = %w[
     registered
@@ -105,12 +106,33 @@ class Hotel < ApplicationRecord
     tourism_tax_applicable_for?(country) ? tourism_tax_amount : 0
   end
 
+  def featured_photo_attachment
+    return nil if featured_photo_attachment_id.blank?
+
+    photos.attachments.find_by(id: featured_photo_attachment_id)
+  end
+
+  def ordered_photo_attachments
+    attachments = photos.attachments.to_a
+    featured = featured_photo_attachment
+    return attachments if featured.blank?
+
+    [ featured ] + attachments.reject { |attachment| attachment.id == featured.id }
+  end
+
   private
 
   def photos_limit_not_exceeded
     return unless photos.attached?
 
     errors.add(:photos, "cannot exceed 20 photos") if photos.count > 20
+  end
+
+  def featured_photo_attachment_belongs_to_hotel
+    return if featured_photo_attachment_id.blank?
+    return if photos.attachments.exists?(id: featured_photo_attachment_id)
+
+    errors.add(:featured_photo_attachment_id, "must belong to this hotel")
   end
 
   def tourism_tax_applicable_for?(country)

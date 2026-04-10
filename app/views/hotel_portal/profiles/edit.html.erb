@@ -64,19 +64,29 @@
             <%= submit_tag "Remove Selected Photos", class: "inline-flex items-center gap-x-2 rounded-lg border border-neutral-border bg-white px-4 py-2 text-sm font-semibold text-neutral-text-primary hover:bg-neutral-bg", data: { turbo_confirm: "Remove the selected photos?" } %>
           </div>
 
-          <div class="p-5 sm:p-6">
-            <div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-              <% @hotel.photos.attachments.each do |photo| %>
-                <label class="group relative overflow-hidden rounded-lg border border-neutral-border bg-neutral-bg cursor-pointer">
-                  <%= image_tag photo, class: "h-28 w-full object-cover" %>
-                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
-                  <div class="absolute left-2 top-2">
-                    <%= check_box_tag "photo_ids[]", photo.id, false, class: "h-4 w-4 rounded border-neutral-border text-neutral-text-primary focus:ring-neutral-text-secondary" %>
-                  </div>
-                </label>
-              <% end %>
-            </div>
-          </div>
+              <div class="p-5 sm:p-6">
+                <div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                  <% @hotel.photos.attachments.each do |photo| %>
+                    <% featured_photo = @hotel.featured_photo_attachment %>
+                    <label class="group relative overflow-hidden rounded-lg border border-neutral-border bg-neutral-bg cursor-pointer">
+                      <%= image_tag photo, class: "h-28 w-full object-cover" %>
+                      <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
+                      <div class="absolute left-2 top-2">
+                        <%= check_box_tag "photo_ids[]", photo.id, false, class: "h-4 w-4 rounded border-neutral-border text-neutral-text-primary focus:ring-neutral-text-secondary" %>
+                      </div>
+                      <div class="absolute inset-x-0 bottom-0 flex justify-between items-end px-2 pb-2">
+                        <% if featured_photo&.id == photo.id %>
+                          <span class="inline-flex items-center rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-neutral-text-primary shadow-sm">Featured</span>
+                        <% else %>
+                          <%= link_to hotel_profile_photo_feature_path(@hotel, photo.id), data: { turbo_method: :patch }, class: "inline-flex items-center rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-neutral-text-secondary shadow-sm hover:text-neutral-text-primary opacity-0 group-hover:opacity-100 transition-opacity" do %>
+                            Set Featured
+                          <% end %>
+                        <% end %>
+                      </div>
+                    </label>
+                  <% end %>
+                </div>
+              </div>
         <% end %>
       </div>
     <% end %>

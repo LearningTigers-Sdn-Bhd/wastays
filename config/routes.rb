@@ -91,6 +91,7 @@ Rails.application.routes.draw do
     resource :profile, only: [ :edit, :update ]
     delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
     delete "profile/photos", to: "profiles#destroy_photos", as: :profile_photos
+    patch "profile/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature
     resource :property_policy, only: [ :edit, :update ]
 
     resources :room_types do
