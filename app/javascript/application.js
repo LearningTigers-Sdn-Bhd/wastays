@@ -3,13 +3,16 @@ import "@hotwired/turbo-rails"
 import "controllers"
 import "turbo_confirm"
 
-document.addEventListener("turbo:load", () => {
-  // Keep Stimulus interactions working even if CDN preline fails to load.
-  import("preline")
-    .then(() => {
-      if (typeof HSStaticMethods !== "undefined") {
-        HSStaticMethods.autoInit()
-      }
-    })
-    .catch(() => {})
-})
+async function initializePreline() {
+  try {
+    await import("preline")
+
+    if (window.HSStaticMethods?.autoInit) {
+      window.HSStaticMethods.autoInit()
+    }
+  } catch (error) {
+    console.warn("Preline initialization failed", error)
+  }
+}
+
+document.addEventListener("turbo:load", initializePreline)

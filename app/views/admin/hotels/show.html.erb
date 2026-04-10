@@ -1,204 +1,202 @@
-<div class="max-w-[85rem] mx-auto py-10 px-4 sm:px-6 lg:px-8">
-  <div class="mb-5">
-    <%= link_to admin_hotels_path, class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600" do %>
-      <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+<% content_for :breadcrumbs do %>
+  <%= render "shared/navigation/admin_breadcrumbs", current: "Hotel Details" %>
+<% end %>
+
+<div class="max-w-[1600px] mx-auto pb-20 space-y-6">
+  <div>
+    <%= link_to admin_hotels_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-900" do %>
+      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       Back to Hotels
     <% end %>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 space-y-6">
-      <!-- Hotel Overview -->
-      <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div class="p-6 md:p-7 border-b border-gray-100 bg-gradient-to-br from-white via-white to-gray-50">
-          <div class="space-y-5">
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+    <div class="space-y-6 xl:col-span-8">
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 px-6 py-6 sm:px-8">
+          <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div class="flex items-center gap-3 flex-wrap">
-                <h2 class="text-3xl font-bold tracking-tight text-gray-900"><%= @hotel.name %></h2>
-                <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-semibold
-                  <%= case @hotel.status
-                      when 'approved', 'live' then 'bg-green-100 text-green-800 ring-1 ring-green-200'
-                      when 'pending_review' then 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-200'
-                      when 'suspended' then 'bg-red-100 text-red-800 ring-1 ring-red-200'
-                      else 'bg-gray-100 text-gray-800 ring-1 ring-gray-200'
-                      end %>">
+                <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl"><%= @hotel.name %></h1>
+                <span class="inline-flex items-center gap-x-1.5 rounded-full px-3 py-1.5 text-xs font-semibold <%= case @hotel.status
+                    when 'approved', 'live' then 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'
+                    when 'pending_review' then 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200'
+                    when 'suspended' then 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200'
+                    else 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200'
+                    end %>">
                   <%= @hotel.status.titleize %>
                 </span>
               </div>
-              <p class="mt-2 text-base text-gray-600"><%= @hotel.city %>, <%= @hotel.country %></p>
-            </div>
-
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-              <div class="rounded-xl border border-gray-200 bg-white/80 px-4 py-3">
-                <p class="text-gray-500 uppercase font-semibold tracking-[0.16em] text-[10px]">Address</p>
-                <p class="mt-1 text-gray-900"><%= @hotel.address.presence || 'N/A' %></p>
-              </div>
-              <div class="rounded-xl border border-gray-200 bg-white/80 px-4 py-3">
-                <p class="text-gray-500 uppercase font-semibold tracking-[0.16em] text-[10px]">Star Rating</p>
-                <p class="mt-1 text-gray-900"><%= @hotel.star_rating.presence || 'N/A' %> Stars</p>
-              </div>
-              <div class="rounded-xl border border-blue-100 bg-gradient-to-br from-white to-blue-50 px-4 py-3">
-                <p class="text-blue-600 uppercase font-semibold tracking-[0.16em] text-[10px]">Configured Margin Rate</p>
-                <p class="mt-1 text-gray-900 text-xl font-bold"><%= number_with_precision(@configured_margin_rate, precision: 2) %>%</p>
-              </div>
+              <p class="mt-2 text-sm font-medium text-slate-600 sm:text-base">Review hotel details, account ownership, and current operating performance before taking action.</p>
+              <p class="mt-1 text-sm font-medium text-slate-500"><%= @hotel.city %>, <%= @hotel.country %></p>
             </div>
           </div>
         </div>
 
-        <div class="p-6 md:p-7 bg-gray-50/80">
-          <div class="flex items-center justify-between gap-4 mb-4">
-            <div>
-              <h3 class="text-sm font-bold uppercase tracking-[0.18em] text-gray-700">Performance Snapshot</h3>
-              <p class="text-xs text-gray-500 mt-1">Month-to-date business summary for this hotel.</p>
+        <div class="px-6 py-6 sm:px-8">
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-4">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Address</p>
+              <p class="mt-2 text-sm font-medium text-slate-900"><%= @hotel.address.presence || 'N/A' %></p>
             </div>
-          </div>
-
-          <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div class="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
-              <p class="text-[10px] uppercase tracking-[0.16em] font-semibold text-gray-500">Gross Revenue (MTD)</p>
-              <p class="mt-3 text-2xl font-bold tracking-tight text-gray-900">MYR <%= number_with_precision(@gross_revenue_mtd, precision: 2) %></p>
+            <div class="rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-4">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Star Rating</p>
+              <p class="mt-2 text-sm font-medium text-slate-900"><%= @hotel.star_rating.present? ? "#{@hotel.star_rating} Stars (#{'★' * @hotel.star_rating})" : 'N/A' %></p>
             </div>
-
-            <div class="rounded-2xl border border-red-100 bg-gradient-to-br from-white to-red-50 px-5 py-4 shadow-sm">
-              <p class="text-[10px] uppercase tracking-[0.16em] font-semibold text-red-500">WAStays Earned Margin (MTD)</p>
-              <p class="mt-3 text-2xl font-bold tracking-tight text-red-600">MYR <%= number_with_precision(@wastays_margin_mtd, precision: 2) %></p>
-            </div>
-
-            <div class="rounded-2xl border border-blue-100 bg-gradient-to-br from-white to-blue-50 px-5 py-4 shadow-sm">
-              <p class="text-[10px] uppercase tracking-[0.16em] font-semibold text-blue-600">Hotel Net Earnings (MTD)</p>
-              <p class="mt-3 text-2xl font-bold tracking-tight text-blue-700">MYR <%= number_with_precision(@hotel_net_earnings_mtd, precision: 2) %></p>
-            </div>
-
-            <div class="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
-              <p class="text-[10px] uppercase tracking-[0.16em] font-semibold text-gray-500">Bookings (MTD)</p>
-              <p class="mt-3 text-2xl font-bold tracking-tight text-gray-900"><%= @booking_count_mtd %></p>
+            <div class="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-4">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-blue-700">Configured Margin Rate</p>
+              <p class="mt-2 text-2xl font-bold tracking-tight text-slate-950"><%= number_with_precision(@configured_margin_rate, precision: 2) %>%</p>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Room Types -->
-      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Room Types</h3>
-        <div class="space-y-4">
+        <div class="border-t border-slate-200 bg-slate-50/70 px-6 py-6 sm:px-8">
+          <div class="mb-4">
+            <h2 class="text-sm font-bold uppercase tracking-[0.18em] text-slate-700">Performance Snapshot</h2>
+            <p class="mt-1 text-xs font-medium text-slate-500">Month-to-date business summary for this hotel.</p>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+              <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Gross Revenue This Month</p>
+              <p class="mt-3 text-2xl font-bold tracking-tight text-slate-950">RM <%= number_with_precision(@gross_revenue_mtd, precision: 2) %></p>
+            </div>
+            <div class="rounded-2xl border border-red-100 bg-red-50/60 px-5 py-4 shadow-sm">
+              <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-red-600">WAStays Earned Margin This Month</p>
+              <p class="mt-3 text-2xl font-bold tracking-tight text-red-600">RM <%= number_with_precision(@wastays_margin_mtd, precision: 2) %></p>
+            </div>
+            <div class="rounded-2xl border border-blue-100 bg-blue-50/60 px-5 py-4 shadow-sm">
+              <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700">Hotel Net Earnings This Month</p>
+              <p class="mt-3 text-2xl font-bold tracking-tight text-blue-700">RM <%= number_with_precision(@hotel_net_earnings_mtd, precision: 2) %></p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+              <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Bookings This Month</p>
+              <p class="mt-3 text-2xl font-bold tracking-tight text-slate-950"><%= @booking_count_mtd %></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Room Types</h2>
+        </div>
+
+        <div class="px-6 py-2 sm:px-8">
           <% if @hotel.room_types.any? %>
             <% @hotel.room_types.each do |rt| %>
-              <div class="flex justify-between items-center border-b pb-4 last:border-0 last:pb-0">
+              <div class="flex items-center justify-between gap-4 border-b border-slate-200 py-5 last:border-0">
                 <div>
-                  <p class="font-medium text-gray-800"><%= rt.name %></p>
-                  <p class="text-xs text-gray-500"><%= rt.max_adults %> Adults, <%= rt.max_children %> Children</p>
+                  <p class="text-lg font-semibold text-slate-900"><%= rt.name %></p>
+                  <p class="mt-1 text-sm text-slate-500"><%= rt.max_adults %> Adults, <%= rt.max_children %> Children</p>
                 </div>
                 <div class="text-right">
-                  <p class="font-medium text-gray-800"><%= rt.quantity %> Rooms</p>
-                  <p class="text-xs text-blue-600"><%= number_to_currency(rt.base_price, unit: 'MYR ') %></p>
+                  <p class="text-lg font-semibold text-slate-900"><%= rt.quantity %> Rooms</p>
+                  <p class="mt-1 text-sm font-medium text-blue-700"><%= number_to_currency(rt.base_price, unit: 'RM ') %></p>
                 </div>
               </div>
             <% end %>
           <% else %>
-            <p class="text-sm text-gray-500 italic">No room types added.</p>
+            <div class="py-6">
+              <p class="text-sm italic text-slate-500">No room types added.</p>
+            </div>
           <% end %>
         </div>
-      </div>
+      </section>
     </div>
 
-    <!-- Actions -->
-    <div class="space-y-6">
-      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">View Operations</h3>
-        <div class="space-y-2">
-          <%= link_to hotel_arrivals_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" do %>
+    <aside class="space-y-6 xl:col-span-4">
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">View Operations</h2>
+        <div class="space-y-3">
+          <%= link_to hotel_arrivals_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50" do %>
             Arrival Board
           <% end %>
-          <%= link_to hotel_bookings_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" do %>
+          <%= link_to hotel_bookings_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50" do %>
             Booking List
           <% end %>
-          <%= link_to hotel_audit_logs_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" do %>
+          <%= link_to hotel_audit_logs_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50" do %>
             Operation Logs
           <% end %>
         </div>
-      </div>
+      </section>
 
-      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Admin Actions</h3>
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Admin Actions</h2>
         <div class="space-y-3">
-          <%= link_to edit_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700" do %>
+          <%= link_to edit_admin_hotel_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700" do %>
             Edit Details
           <% end %>
 
           <% if @hotel.status == 'pending_review' %>
-            <%= button_to "Approve Hotel", approve_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700" %>
+            <%= button_to "Approve Hotel", approve_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700" %>
           <% end %>
-          
+
           <% if @hotel.status != 'suspended' %>
-            <%= button_to "Suspend", suspend_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700", data: { turbo_confirm: "Are you sure you want to suspend this hotel and its account? It will no longer be bookable.", turbo_confirm_title: "Suspend Account and Hotel", turbo_confirm_color: "red" } %>
+            <%= button_to "Suspend", suspend_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700", data: { turbo_confirm: "Are you sure you want to suspend this hotel and its account? It will no longer be bookable.", turbo_confirm_title: "Suspend Account and Hotel", turbo_confirm_color: "red" } %>
           <% else %>
-            <%= button_to "Reactivate", approve_admin_hotel_path(@hotel), class: "w-full py-2 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700", data: { turbo_confirm: "Are you sure you want to reactivate this hotel and its account?", turbo_confirm_title: "Reactivate Account and Hotel" } %>
+            <%= button_to "Reactivate", approve_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700", data: { turbo_confirm: "Are you sure you want to reactivate this hotel and its account?", turbo_confirm_title: "Reactivate Account and Hotel" } %>
           <% end %>
         </div>
-      </div>
+      </section>
 
-      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Account Information</h3>
-
-        <div class="space-y-4 text-sm">
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-5 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Account Information</h2>
+        <div class="space-y-5 text-sm">
           <div>
-            <p class="text-gray-500 uppercase font-medium text-[10px]">Account Name</p>
-            <p class="font-medium text-gray-800"><%= @hotel.account.name %></p>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Account Name</p>
+            <p class="mt-1 font-medium text-slate-900"><%= @hotel.account.name %></p>
           </div>
-
-          <div class="grid grid-cols-1 gap-4">
-            <div>
-              <p class="text-gray-500 uppercase font-medium text-[10px]">Account Status</p>
-              <p class="text-gray-800"><%= @hotel.account.status.titleize %></p>
-            </div>
-
-            <div>
-              <p class="text-gray-500 uppercase font-medium text-[10px]">Account Slug</p>
-              <p class="text-gray-800 break-all"><%= @hotel.account.slug.presence || 'N/A' %></p>
-            </div>
+          <div>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Account Status</p>
+            <p class="mt-1 text-slate-700"><%= @hotel.account.status.titleize %></p>
+          </div>
+          <div>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Account Slug</p>
+            <p class="mt-1 break-all text-slate-700"><%= @hotel.account.slug.presence || 'N/A' %></p>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Account Users</h3>
-
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-5 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Account Users</h2>
         <div class="space-y-4 text-sm">
           <% @hotel.account.users.order(:created_at).each do |user| %>
-            <div class="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
-              <p class="font-medium text-gray-800"><%= user.name %></p>
-              <p class="text-gray-600 break-all"><%= user.email %></p>
-              <p class="text-xs uppercase tracking-wide text-gray-500 mt-1"><%= user.role.titleize %></p>
+            <div class="border-b border-slate-200 pb-4 last:border-0 last:pb-0">
+              <p class="font-medium text-slate-900"><%= user.name %></p>
+              <p class="mt-1 break-all text-slate-600"><%= user.email %></p>
+              <p class="mt-1 text-xs uppercase tracking-[0.08em] text-slate-500"><%= user.role.titleize %></p>
             </div>
           <% end %>
         </div>
-      </div>
+      </section>
 
       <% banking_detail = @hotel.account.banking_detail %>
-      <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Banking Details</h3>
-
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-5 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Banking Details</h2>
         <% if banking_detail %>
-          <div class="space-y-4 text-sm">
+          <div class="space-y-5 text-sm">
             <div>
-              <p class="text-gray-500 uppercase font-medium text-[10px]">Account Holder Name</p>
-              <p class="text-gray-800"><%= banking_detail.account_holder_name %></p>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Account Holder Name</p>
+              <p class="mt-1 text-slate-700"><%= banking_detail.account_holder_name %></p>
             </div>
-
             <div>
-              <p class="text-gray-500 uppercase font-medium text-[10px]">Bank Name</p>
-              <p class="text-gray-800"><%= banking_detail.bank_name %></p>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Bank Name</p>
+              <p class="mt-1 text-slate-700"><%= banking_detail.bank_name %></p>
             </div>
-
             <div>
-              <p class="text-gray-500 uppercase font-medium text-[10px]">Account Number</p>
-              <p class="text-gray-800"><%= banking_detail.account_number %></p>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Account Number</p>
+              <p class="mt-1 text-slate-700"><%= banking_detail.account_number %></p>
+            </div>
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Account Type</p>
+              <p class="mt-1 text-slate-700"><%= banking_detail.account_type.titleize %></p>
             </div>
           </div>
         <% else %>
-          <p class="text-sm text-gray-500 italic">No banking details have been submitted yet.</p>
+          <p class="text-sm italic text-slate-500">No banking details have been submitted yet.</p>
         <% end %>
-      </div>
-    </div>
+      </section>
+    </aside>
   </div>
 </div>

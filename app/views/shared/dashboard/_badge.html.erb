@@ -1,0 +1,15 @@
+<%
+  tone_classes = case local_assigns[:tone]
+                 when 'success'
+                   'badge badge-success'
+                 when 'warning'
+                   'badge badge-warning'
+                 when 'error'
+                   'badge badge-error'
+                 else
+                   'badge badge-neutral'
+                 end
+  classes = [tone_classes, local_assigns[:class]].compact.join(' ')
+%>
+
+<span class="<%= classes %>"><%= label %></span>
