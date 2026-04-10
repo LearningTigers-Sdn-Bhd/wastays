@@ -10,17 +10,20 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
 
     photo_files = Array(params.dig(:hotel, :photos)).reject(&:blank?)
     hotel_attributes = hotel_params.except(:photos)
-
-    if photo_upload_limit_exceeded?(photo_files)
-      @hotel.assign_attributes(hotel_attributes)
-      @hotel.errors.add(:photos, "cannot exceed 20 photos")
-      render :edit, status: :unprocessable_content
-      return
-    end
+    remaining_slots = [20 - @hotel.photos.count, 0].max
+    photos_to_attach = photo_files.first(remaining_slots)
+    trimmed_count = photo_files.size - photos_to_attach.size
 
     if @hotel.update(hotel_attributes)
-      @hotel.photos.attach(photo_files) if photo_files.any?
+      @hotel.photos.attach(photos_to_attach) if photos_to_attach.any?
       @hotel.complete_profile!
+      if trimmed_count.positive?
+        flash[:alert] = if photos_to_attach.any?
+          "Only the first #{photos_to_attach.size} photo#{photos_to_attach.size == 1 ? '' : 's'} were uploaded. Extra files were ignored."
+        else
+          "This hotel already has 20 photos. Remove some before uploading more."
+        end
+      end
       redirect_to edit_hotel_profile_path, notice: "Hotel profile updated successfully."
     else
       render :edit, status: :unprocessable_content
@@ -66,9 +69,5 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
 
   def hotel_params
     params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, photos: [])
-  end
-
-  def photo_upload_limit_exceeded?(photo_files)
-    photo_files.size + @hotel.photos.count > 20
   end
 end
