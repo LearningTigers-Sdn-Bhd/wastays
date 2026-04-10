@@ -78,10 +78,10 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       get admin_analytics_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-neutral-text-primary sm:text-3xl">')
-      expect(response.body).to include('Revenue & Margin Analytics')
+      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Revenue &amp; Margin Analytics')
+      expect(response.body).to include('Revenue &amp; Margin Analytics')
       expect(response.body).to include('Detailed superadmin analytics across all revenue-generating bookings.')
-      expect(response.body).to include('class="text-lg font-bold tracking-tight text-neutral-text-primary sm:text-xl">Daily Breakdown')
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Daily Breakdown')
       expect(response.body).to include('RM 800.00')
       expect(response.body).to include('RM 95.00')
       expect(response.body).to include('RM 705.00')
@@ -111,7 +111,8 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       get admin_analytics_path, params: { start_date: future_start, end_date: future_end }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('No analytics data found for this date range.')
+      expect(response.body).to include('No analytics data found.')
+      expect(response.body).to include('Try adjusting the selected date range.')
     end
   end
 end

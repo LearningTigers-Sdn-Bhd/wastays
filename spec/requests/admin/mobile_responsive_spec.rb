@@ -40,6 +40,35 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
     end
   end
 
+  it 'renders the api access page with the shared admin index shell' do
+    get admin_api_keys_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('max-w-[1600px] mx-auto pb-20 space-y-8')
+    expect(response.body).to include('text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">API Access Management')
+    expect(response.body).to include('Manage programmatic access for chatbots and external integrations.')
+  end
+
+  it 'renders the new api access key page with the shared admin form shell' do
+    get new_admin_api_key_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('max-w-[1600px] mx-auto pb-20 space-y-6')
+    expect(response.body).to include('Create API Access Key')
+    expect(response.body).to include('Generate a credential for platform-wide or restricted integration access.')
+    expect(response.body).to include('mt-auto flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end')
+  end
+
+  it 'renders the developer guide with the shared admin documentation shell' do
+    get docs_admin_api_keys_path(category: 'authentication')
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('max-w-[1600px] mx-auto pb-20 space-y-8')
+    expect(response.body).to include('API Integration Guide')
+    expect(response.body).to include('Build against WAStays endpoints with authentication, discovery, booking, and webhook references.')
+    expect(response.body).to include('Copy Base URL')
+  end
+
   it 'renders the developer navigation links in the shared sidebar' do
     get admin_dashboard_path
 
@@ -83,5 +112,21 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('id="admin-analytics-mobile-list"')
+  end
+
+  it 'renders the analytics page with the shared admin index shell' do
+    get admin_analytics_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('max-w-[1600px] mx-auto pb-20 space-y-8')
+    expect(response.body).to include('text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Revenue &amp; Margin Analytics')
+  end
+
+  it 'renders analytics filters inside the daily breakdown section' do
+    get admin_analytics_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('id="admin-analytics-filters"')
+    expect(response.body).to include('id="admin-analytics-filters-toolbar"')
   end
 end
