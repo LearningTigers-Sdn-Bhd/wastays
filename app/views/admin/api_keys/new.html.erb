@@ -1,72 +1,100 @@
-<div class="max-w-2xl mx-auto space-y-6 pb-12">
-  <!-- Page Header -->
-  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-y-4">
-    <div>
-      <nav class="flex mb-2" aria-label="Breadcrumb">
-        <ol class="flex items-center whitespace-nowrap min-w-0">
-          <li class="flex items-center text-sm text-neutral-text-secondary">
-            Superadmin
-            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </li>
-          <li class="flex items-center text-sm text-neutral-text-secondary">
-            <%= link_to "API Keys", admin_api_keys_path, class: "hover:text-brand-primary" %>
-            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </li>
-          <li class="text-sm font-semibold text-brand-primary truncate" aria-current="page">
-            Generate New Key
-          </li>
-        </ol>
-      </nav>
-      <h1 class="text-2xl font-bold text-neutral-text-primary">New API Access Key</h1>
-    </div>
-  </div>
+<% content_for :breadcrumbs do %>
+  <%= render "shared/navigation/admin_breadcrumbs", current: "Generate New Key" %>
+<% end %>
 
-  <div class="card p-6 md:p-8">
-    <%= form_with model: [:admin, @api_key], local: true, class: "space-y-6" do |f| %>
-      <% if @api_key.errors.any? %>
-        <div class="p-4 rounded-lg bg-red-50 text-status-error text-sm border border-red-200">
-          <ul class="list-disc list-inside">
-            <% @api_key.errors.full_messages.each do |msg| %>
-              <li><%= msg %></li>
-            <% end %>
-          </ul>
-        </div>
-      <% end %>
-
-      <div class="space-y-2">
-        <%= f.label :name, "Key Identifier", class: "block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary" %>
-        <%= f.text_field :name, placeholder: "e.g. WhatsApp Chatbot - Main", class: "form-input", required: true %>
-        <p class="text-[10px] text-neutral-text-secondary">A friendly name to help you remember what this key is used for.</p>
-      </div>
-
-      <div class="space-y-2 border-t border-neutral-border pt-6">
-        <label class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary">Scope & Restriction</label>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-2">
-            <%= f.label :bearer_type, "Restriction Level", class: "text-xs font-bold text-neutral-text-primary" %>
-            <%= f.select :bearer_type, [["Global (Superadmin)", ""], ["Hotel Specific", "Hotel"], ["Account Specific", "Account"]], {}, class: "form-input", id: "bearer_type_select" %>
-          </div>
-
-          <div class="space-y-2" id="bearer_id_container" style="display: none;">
-            <%= f.label :bearer_id, "Target Entity ID", class: "text-xs font-bold text-neutral-text-primary" %>
-            <%= f.number_field :bearer_id, class: "form-input", placeholder: "Enter ID" %>
-          </div>
-        </div>
-        
-        <div class="p-4 rounded-lg bg-neutral-bg border border-neutral-border mt-4">
-          <p class="text-xs text-neutral-text-secondary leading-relaxed" id="scope_explanation">
-            <strong>Global Key:</strong> Can access all hotels and bookings in the entire system.
-          </p>
-        </div>
-      </div>
-
-      <div class="pt-6 border-t border-neutral-border flex gap-x-3">
-        <%= f.submit "Generate API Key", class: "btn btn-primary" %>
-        <%= link_to "Cancel", admin_api_keys_path, class: "btn btn-secondary" %>
-      </div>
+<div class="max-w-[1600px] mx-auto pb-20 space-y-6">
+  <div>
+    <%= link_to admin_api_keys_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-900" do %>
+      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Back to API Access
     <% end %>
   </div>
+
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-6 py-6 sm:px-8">
+      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Create API Access Key</h1>
+      <p class="mt-2 text-sm font-medium text-slate-600 sm:text-base">Generate a credential for platform-wide or restricted integration access.</p>
+    </div>
+
+    <div class="grid gap-6 px-6 py-6 sm:px-8 sm:py-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div>
+        <%= form_with model: [:admin, @api_key], local: true, class: "flex h-full flex-col space-y-8" do |f| %>
+          <% if @api_key.errors.any? %>
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
+              <p class="font-semibold">Unable to create API key.</p>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <% @api_key.errors.full_messages.each do |msg| %>
+                  <li><%= msg %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <div class="space-y-5">
+            <div>
+              <%= f.label :name, "Key Identifier", class: "mb-2 block text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500" %>
+              <%= f.text_field :name, placeholder: "e.g. WhatsApp Chatbot - Main", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0", required: true %>
+              <p class="mt-2 text-sm text-slate-500">Use a specific name so the key owner and purpose are obvious later.</p>
+            </div>
+          </div>
+
+          <div class="space-y-5 border-t border-slate-200 pt-8">
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Scope & Restriction</p>
+              <p class="mt-1 text-sm text-slate-500">Global keys have broad access. Restricted keys reduce blast radius for external integrations.</p>
+            </div>
+
+            <div class="grid gap-5 md:grid-cols-2">
+              <div>
+                <%= f.label :bearer_type, "Restriction Level", class: "mb-2 block text-sm font-semibold text-slate-900" %>
+                <%= f.select :bearer_type, [["Global (Superadmin)", ""], ["Hotel Specific", "Hotel"], ["Account Specific", "Account"]], {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0", id: "bearer_type_select" %>
+              </div>
+
+              <div id="bearer_id_container" class="hidden">
+                <%= f.label :bearer_id, "Target Entity ID", class: "mb-2 block text-sm font-semibold text-slate-900" %>
+                <%= f.number_field :bearer_id, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0", placeholder: "Enter target ID" %>
+                <p class="mt-2 text-sm text-slate-500">Provide the exact record ID that this key should be allowed to access.</p>
+              </div>
+            </div>
+
+            <div id="scope_explanation" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-relaxed text-slate-600">
+              <strong class="text-slate-900">Global Key:</strong> Can access all hotels and bookings in the entire system.
+            </div>
+          </div>
+
+          <div class="mt-auto flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end">
+            <%= f.submit "Generate API Key", class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" %>
+            <%= link_to "Cancel", admin_api_keys_path, class: "inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50" %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="space-y-6">
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="text-base font-bold text-slate-950">Restriction Guide</h3>
+        <div class="mt-4 space-y-4 text-sm text-slate-600">
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p class="font-semibold text-slate-900">Global</p>
+            <p class="mt-1">Use for internal trusted services that need access across hotels and bookings.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p class="font-semibold text-slate-900">Hotel Specific</p>
+            <p class="mt-1">Limits requests to one hotel record. Best for hotel-managed automations.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p class="font-semibold text-slate-900">Account Specific</p>
+            <p class="mt-1">Allows access across hotels under one account without exposing the full platform.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+        <h3 class="text-base font-bold text-amber-950">Security Note</h3>
+        <p class="mt-2 text-sm leading-relaxed text-amber-900">The full token is shown only once after creation. Store it securely and prefer the most restrictive scope that still works for the integration.</p>
+      </div>
+      </div>
+    </div>
+  </section>
 </div>
 
 <script>
@@ -75,23 +103,24 @@
     const idContainer = document.getElementById('bearer_id_container');
     const explanation = document.getElementById('scope_explanation');
 
+    if (!typeSelect || !idContainer || !explanation) return;
+
     const updateUI = () => {
       const type = typeSelect.value;
-      if (type === "") {
-        idContainer.style.display = 'none';
-        explanation.innerHTML = '<strong>Global Key:</strong> Can access all hotels and bookings in the entire system.';
-      } else if (type === "Hotel") {
-        idContainer.style.display = 'block';
-        explanation.innerHTML = '<strong>Hotel Restriction:</strong> This key will <u>only</u> be able to fetch data for the specific Hotel ID provided.';
-      } else if (type === "Account") {
-        idContainer.style.display = 'block';
-        explanation.innerHTML = '<strong>Account Restriction:</strong> This key can access all hotels belonging to the specified Account ID.';
+
+      if (type === '') {
+        idContainer.classList.add('hidden');
+        explanation.innerHTML = '<strong class="text-slate-900">Global Key:</strong> Can access all hotels and bookings in the entire system.';
+      } else if (type === 'Hotel') {
+        idContainer.classList.remove('hidden');
+        explanation.innerHTML = '<strong class="text-slate-900">Hotel Restriction:</strong> This key will only be able to access data for the specific hotel ID you provide.';
+      } else if (type === 'Account') {
+        idContainer.classList.remove('hidden');
+        explanation.innerHTML = '<strong class="text-slate-900">Account Restriction:</strong> This key can access hotels belonging to the specified account ID without exposing the rest of the platform.';
       }
     };
 
-    if (typeSelect) {
-      typeSelect.addEventListener('change', updateUI);
-      updateUI();
-    }
+    typeSelect.addEventListener('change', updateUI);
+    updateUI();
   });
 </script>
