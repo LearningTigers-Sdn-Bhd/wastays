@@ -10,7 +10,7 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
 
     photo_files = Array(params.dig(:hotel, :photos)).reject(&:blank?)
     hotel_attributes = hotel_params.except(:photos)
-    remaining_slots = [20 - @hotel.photos.count, 0].max
+    remaining_slots = [ 20 - @hotel.photos.count, 0 ].max
     photos_to_attach = photo_files.first(remaining_slots)
     trimmed_count = photo_files.size - photos_to_attach.size
 
@@ -24,7 +24,7 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
           "This hotel already has 20 photos. Remove some before uploading more."
         end
       end
-      redirect_to edit_hotel_profile_path, notice: "Hotel profile updated successfully."
+      redirect_to hotel_dashboard_path(@hotel), notice: "Hotel profile updated successfully."
     else
       render :edit, status: :unprocessable_content
     end
@@ -38,9 +38,9 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
     clear_featured_photo_if_needed(photo.id)
     photo.purge
 
-    redirect_to edit_hotel_profile_path, notice: "Hotel photo removed successfully."
+    redirect_to edit_hotel_profile_path(@hotel), notice: "Hotel photo removed successfully."
   rescue ActiveRecord::RecordNotFound
-    redirect_to edit_hotel_profile_path, alert: "Hotel photo could not be found."
+    redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found."
   end
 
   def destroy_photos
@@ -50,21 +50,21 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
     photo_ids = Array(params[:photo_ids]).reject(&:blank?)
 
     if photo_ids.empty?
-      redirect_to edit_hotel_profile_path, alert: "Please select at least one photo to remove."
+      redirect_to edit_hotel_profile_path(@hotel), alert: "Please select at least one photo to remove."
       return
     end
 
     photos = @hotel.photos.attachments.where(id: photo_ids)
 
     if photos.empty?
-      redirect_to edit_hotel_profile_path, alert: "Hotel photo could not be found."
+      redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found."
       return
     end
 
     clear_featured_photo_if_needed(photos.pluck(:id))
     photos.each(&:purge)
 
-    redirect_to edit_hotel_profile_path, notice: "Selected hotel photos removed successfully."
+    redirect_to edit_hotel_profile_path(@hotel), notice: "Selected hotel photos removed successfully."
   end
 
   def set_featured_photo
@@ -74,12 +74,12 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
     photo = @hotel.photos.attachments.find(params[:photo_id])
 
     if @hotel.update(featured_photo_attachment_id: photo.id)
-      redirect_to edit_hotel_profile_path, notice: "Featured photo updated successfully."
+      redirect_to edit_hotel_profile_path(@hotel), notice: "Featured photo updated successfully."
     else
-      redirect_to edit_hotel_profile_path, alert: @hotel.errors.full_messages.to_sentence
+      redirect_to edit_hotel_profile_path(@hotel), alert: @hotel.errors.full_messages.to_sentence
     end
   rescue ActiveRecord::RecordNotFound
-    redirect_to edit_hotel_profile_path, alert: "Hotel photo could not be found."
+    redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found."
   end
 
   private

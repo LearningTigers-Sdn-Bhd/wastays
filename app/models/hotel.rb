@@ -130,7 +130,7 @@ class Hotel < ApplicationRecord
 
   def featured_photo_attachment_belongs_to_hotel
     return if featured_photo_attachment_id.blank?
-    return if photos.attachments.exists?(id: featured_photo_attachment_id)
+    return if photos.attachments.any? { |a| a.id == featured_photo_attachment_id }
 
     errors.add(:featured_photo_attachment_id, "must belong to this hotel")
   end
