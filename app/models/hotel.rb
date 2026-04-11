@@ -29,6 +29,21 @@ class Hotel < ApplicationRecord
     live
     suspended
   ].freeze
+  MAX_PHOTOS = 20
+
+  PhotoUploadResult = Struct.new(:attached_count, :trimmed_count, keyword_init: true) do
+    def trimmed?
+      trimmed_count.positive?
+    end
+
+    def alert_message
+      if attached_count.positive?
+        "Only the first #{attached_count} photo#{attached_count == 1 ? '' : 's'} were uploaded. Extra files were ignored."
+      else
+        "This hotel already has #{Hotel::MAX_PHOTOS} photos. Remove some before uploading more."
+      end
+    end
+  end
 
   def active?
     %w[approved live].include?(status)
@@ -120,12 +135,25 @@ class Hotel < ApplicationRecord
     [ featured ] + attachments.reject { |attachment| attachment.id == featured.id }
   end
 
+  def attach_photos_with_limit(photo_files)
+    photo_files = Array(photo_files).reject(&:blank?)
+    remaining_slots = [ MAX_PHOTOS - photos.count, 0 ].max
+    photos_to_attach = photo_files.first(remaining_slots)
+
+    photos.attach(photos_to_attach) if photos_to_attach.any?
+
+    PhotoUploadResult.new(
+      attached_count: photos_to_attach.size,
+      trimmed_count: photo_files.size - photos_to_attach.size
+    )
+  end
+
   private
 
   def photos_limit_not_exceeded
     return unless photos.attached?
 
-    errors.add(:photos, "cannot exceed 20 photos") if photos.count > 20
+    errors.add(:photos, "cannot exceed #{MAX_PHOTOS} photos") if photos.count > MAX_PHOTOS
   end
 
   def featured_photo_attachment_belongs_to_hotel

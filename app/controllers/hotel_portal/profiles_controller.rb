@@ -8,22 +8,12 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
     @hotel = current_hotel
     authorize @hotel
 
-    photo_files = Array(params.dig(:hotel, :photos)).reject(&:blank?)
-    hotel_attributes = hotel_params.except(:photos)
-    remaining_slots = [ 20 - @hotel.photos.count, 0 ].max
-    photos_to_attach = photo_files.first(remaining_slots)
-    trimmed_count = photo_files.size - photos_to_attach.size
+    profile_params = hotel_params
 
-    if @hotel.update(hotel_attributes)
-      @hotel.photos.attach(photos_to_attach) if photos_to_attach.any?
+    if @hotel.update(profile_params.except(:photos))
+      photo_upload_result = @hotel.attach_photos_with_limit(profile_params[:photos])
       @hotel.complete_profile!
-      if trimmed_count.positive?
-        flash[:alert] = if photos_to_attach.any?
-          "Only the first #{photos_to_attach.size} photo#{photos_to_attach.size == 1 ? '' : 's'} were uploaded. Extra files were ignored."
-        else
-          "This hotel already has 20 photos. Remove some before uploading more."
-        end
-      end
+      flash[:alert] = photo_upload_result.alert_message if photo_upload_result.trimmed?
       redirect_to hotel_dashboard_path(@hotel), notice: "Hotel profile updated successfully."
     else
       render :edit, status: :unprocessable_content
