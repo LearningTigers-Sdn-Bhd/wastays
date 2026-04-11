@@ -1,13 +1,11 @@
 class BankingDetail < ApplicationRecord
   belongs_to :account
 
-  ACCOUNT_TYPES = %w[savings current].freeze
   ACCOUNT_NUMBER_FORMAT = /\A[\p{Alnum}\s-]+\z/
 
   validates :account_holder_name, presence: true, length: { maximum: 255 }
   validates :bank_name, presence: true, length: { maximum: 255 }
   validates :account_number, presence: true, length: { maximum: 34 }, format: { with: ACCOUNT_NUMBER_FORMAT }
-  validates :account_type, presence: true, inclusion: { in: ACCOUNT_TYPES }
 
   before_validation :strip_fields
 

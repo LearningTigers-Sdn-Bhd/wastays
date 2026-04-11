@@ -82,8 +82,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
         account: hotel_account,
         account_holder_name: 'Rose Yeo',
         bank_name: 'Maybank',
-        account_number: '5142 1234 5678',
-        account_type: 'current'
+        account_number: '5142 1234 5678'
       )
     end
     let!(:global_margin_rule) { create(:margin_rule, settable: nil, rate: 12.0, status: 'active') }
@@ -152,7 +151,6 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(response.body).to include('Rose Yeo')
       expect(response.body).to include('Maybank')
       expect(response.body).to include('5142 1234 5678')
-      expect(response.body).to include('Current')
       expect(response.body).to include('Gross Revenue This Month')
       expect(response.body).to include('RM 800.00')
       expect(response.body).to include('WAStays Earned Margin This Month')

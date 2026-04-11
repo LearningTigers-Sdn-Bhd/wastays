@@ -1,48 +1,93 @@
-<div class="max-w-2xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-  <div class="mb-5">
-    <%= link_to hotel_dashboard_path, class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600" do %>
-      <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Back to Onboarding
-    <% end %>
-  </div>
-
-  <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-7">
-    <div class="mb-8">
-      <h2 class="text-2xl font-bold text-gray-800">Hotel Profile</h2>
-      <p class="text-sm text-gray-600">Update your hotel's general information.</p>
+<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
+  <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-neutral-text-primary">Hotel Details</h1>
+      <p class="mt-1 text-sm text-neutral-text-secondary">View and update your hotel information.</p>
     </div>
 
-    <%= form_with model: @hotel, url: hotel_profile_path, method: :patch, local: true do |f| %>
-      <div class="grid gap-y-4">
-        <div>
-          <%= f.label :name, "Hotel Name", class: "block text-sm mb-2 font-medium" %>
-          <%= f.text_field :name, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
-        </div>
+    <button type="button" class="inline-flex h-10 items-center justify-center rounded-xl border border-neutral-border bg-white px-5 text-sm font-semibold text-neutral-text-secondary shadow-sm hover:bg-neutral-bg focus:outline-none focus:bg-neutral-bg">
+      See Hotel
+    </button>
+  </div>
 
-        <div>
-          <%= f.label :address, class: "block text-sm mb-2 font-medium" %>
-          <%= f.text_area :address, rows: 3, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" %>
-        </div>
+  <div class="space-y-6">
+    <div class="card overflow-hidden">
 
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <%= f.label :city, class: "block text-sm mb-2 font-medium" %>
-            <%= f.text_field :city, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
+      <div class="p-5 sm:p-6">
+        <%= form_with model: @hotel, url: hotel_profile_path, method: :patch, local: true, html: { multipart: true }, class: "space-y-6" do |f| %>
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="md:col-span-2">
+              <%= f.label :name, "Hotel Name", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+              <%= f.text_field :name, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border", required: true %>
+            </div>
+
+            <div class="md:col-span-2">
+              <%= f.label :address, class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+              <%= f.text_area :address, rows: 3, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border" %>
+            </div>
+
+            <div>
+              <%= f.label :city, class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+              <%= f.text_field :city, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border", required: true %>
+            </div>
+
+            <div>
+              <%= f.label :country, class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+              <%= f.text_field :country, class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border", required: true %>
+            </div>
+
+            <div class="md:col-span-2" data-controller="photo-limit" data-photo-limit-existing-count-value="<%= @hotel.photos.count %>" data-photo-limit-max-count-value="20">
+              <%= f.label :photos, "Hotel Photos", class: "block text-sm font-medium mb-2 text-neutral-text-primary" %>
+              <%= f.file_field :photos, multiple: true, accept: "image/*", class: "w-full rounded-lg border border-neutral-border px-4 py-3 text-sm focus:border-neutral-text-secondary focus:ring-neutral-border bg-white", data: { photo_limit_target: "input", action: "change->photo-limit#update" } %>
+              <div class="mt-2 flex items-center gap-3">
+                <p class="ml-auto text-right text-xs font-semibold text-neutral-text-secondary" data-photo-limit-target="counter"><%= "#{@hotel.photos.count}/20 photos" %></p>
+              </div>
+              <p class="mt-2 hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700" data-photo-limit-target="warning"></p>
+            </div>
           </div>
-          <div>
-            <%= f.label :country, class: "block text-sm mb-2 font-medium" %>
-            <%= f.text_field :country, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
+
+          <div class="flex justify-end pt-4 border-t border-neutral-border">
+            <%= f.submit "Save Profile", class: "inline-flex items-center gap-x-2 rounded-lg bg-neutral-text-primary px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-text-secondary" %>
           </div>
-        </div>
+        <% end %>
+      </div>
+    </div>
 
-        <div>
-          <%= f.label :star_rating, "Star Rating", class: "block text-sm mb-2 font-medium" %>
-          <%= f.select :star_rating, (1..5).map { |n| ["#{n} Star", n] }, { include_blank: "Select Rating" }, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" %>
-        </div>
+    <% if @hotel.photos.attached? %>
+      <div class="card overflow-hidden">
+        <%= form_with url: hotel_profile_photos_path(@hotel), method: :delete, local: true do %>
+          <div class="p-5 sm:p-6 border-b border-neutral-border flex items-center justify-between gap-4">
+            <div>
+              <h2 class="text-lg font-semibold text-neutral-text-primary">Current Photos</h2>
+              <p class="mt-1 text-sm text-neutral-text-secondary">Select one or more photos to remove them in one go.</p>
+            </div>
+            <%= submit_tag "Remove Selected Photos", class: "inline-flex items-center gap-x-2 rounded-lg border border-neutral-border bg-white px-4 py-2 text-sm font-semibold text-neutral-text-primary hover:bg-neutral-bg", data: { turbo_confirm: "Remove the selected photos?" } %>
+          </div>
 
-        <div class="mt-5">
-          <%= f.submit "Save Profile", class: "w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
-        </div>
+              <div class="p-5 sm:p-6">
+                <div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                  <% @hotel.photos.attachments.each do |photo| %>
+                    <% featured_photo = @hotel.featured_photo_attachment %>
+                    <label class="group relative overflow-hidden rounded-lg border border-neutral-border bg-neutral-bg cursor-pointer">
+                      <%= image_tag photo, class: "h-28 w-full object-cover" %>
+                      <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
+                      <div class="absolute left-2 top-2">
+                        <%= check_box_tag "photo_ids[]", photo.id, false, class: "h-4 w-4 rounded border-neutral-border text-neutral-text-primary focus:ring-neutral-text-secondary" %>
+                      </div>
+                      <div class="absolute inset-x-0 bottom-0 flex justify-between items-end px-2 pb-2">
+                        <% if featured_photo&.id == photo.id %>
+                          <span class="inline-flex items-center rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-neutral-text-primary shadow-sm">Featured</span>
+                        <% else %>
+                          <%= link_to hotel_profile_photo_feature_path(@hotel, photo.id), data: { turbo_method: :patch }, class: "inline-flex items-center rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-neutral-text-secondary shadow-sm hover:text-neutral-text-primary opacity-0 group-hover:opacity-100 transition-opacity" do %>
+                            Set Featured
+                          <% end %>
+                        <% end %>
+                      </div>
+                    </label>
+                  <% end %>
+                </div>
+              </div>
+        <% end %>
       </div>
     <% end %>
   </div>

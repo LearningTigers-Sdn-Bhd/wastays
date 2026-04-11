@@ -78,4 +78,5 @@ Rails.application.configure do
   config.hotwire_livereload.debounce_delay_ms = 300
 
   config.hosts << "wastays.jesseltonpixel.com"
+  config.hosts << /.*\.wastays\.com/
 end

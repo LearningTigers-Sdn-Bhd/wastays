@@ -11,12 +11,10 @@ RSpec.describe BankingDetail, type: :model do
     it { should validate_presence_of(:account_holder_name) }
     it { should validate_presence_of(:bank_name) }
     it { should validate_presence_of(:account_number) }
-    it { should validate_presence_of(:account_type) }
 
     it { should allow_value('5142 1234 5678').for(:account_number) }
     it { should allow_value('A-12345-678').for(:account_number) }
     it { should_not allow_value('1234/5678').for(:account_number) }
-    it { should validate_inclusion_of(:account_type).in_array(BankingDetail::ACCOUNT_TYPES) }
   end
 
   describe 'before_validation' do

@@ -96,8 +96,7 @@ module HotelPortal
           :id,
           :account_holder_name,
           :bank_name,
-          :account_number,
-          :account_type
+          :account_number
         ]
       )
     end

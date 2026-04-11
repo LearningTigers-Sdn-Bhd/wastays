@@ -72,9 +72,12 @@
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <% @featured_stays.each do |hotel, room_type| %>
             <% rating = hotel.star_rating.to_i %>
+            <% featured_photo = hotel.ordered_photo_attachments.first %>
             <div class="card group cursor-pointer hover:shadow-xl transition-all duration-300">
               <div class="aspect-video bg-gray-200 relative overflow-hidden">
-                <% if room_type.photos.attached? %>
+                <% if featured_photo.present? %>
+                  <%= image_tag featured_photo, class: "object-cover w-full h-full group-hover:scale-110 transition-transform duration-500", alt: hotel.name %>
+                <% elsif room_type.photos.attached? %>
                   <%= image_tag room_type.photos.first, class: "object-cover w-full h-full group-hover:scale-110 transition-transform duration-500", alt: hotel.name %>
                 <% else %>
                   <div class="w-full h-full bg-neutral-bg flex items-center justify-center">

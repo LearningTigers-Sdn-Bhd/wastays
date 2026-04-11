@@ -56,7 +56,6 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
     # 2. Step 1: Profile
     within('#step-profile') { click_link 'Update' }
     fill_in 'Address', with: '123 Jalan Ampang'
-    select '4 Star', from: 'Star Rating'
     click_button 'Save Profile'
     expect(page).to have_content('Hotel profile updated successfully.')
 

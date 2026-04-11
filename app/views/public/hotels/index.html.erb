@@ -127,7 +127,11 @@
                 <div class="flex flex-col md:flex-row h-full">
                   <!-- Photo Carousel (Mocked functionality for now) -->
                   <div class="relative w-full md:w-72 lg:w-80 h-56 md:h-auto overflow-hidden">
-                    <% if hotel.room_types.first&.photos&.attached? %>
+                    <% if hotel.featured_photo_attachment.present? %>
+                      <%= image_tag hotel.featured_photo_attachment, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
+                    <% elsif hotel.photos.attached? %>
+                      <%= image_tag hotel.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
+                    <% elsif hotel.room_types.first&.photos&.attached? %>
                       <%= image_tag hotel.room_types.first.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
                     <% else %>
                       <div class="absolute inset-0 bg-neutral-bg flex items-center justify-center">
