@@ -1,200 +1,1318 @@
-<div class="relative overflow-hidden">
-  <!-- Hero Section -->
-  <div class="relative bg-brand-gradient py-24 sm:py-32">
-    <div class="absolute inset-0 bg-black/10"></div>
-    <div class="relative max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <h1 class="text-4xl sm:text-6xl font-extrabold text-white tracking-tight mb-4">
-        Discover Better Deals <br>at Local Budget Hotels
-      </h1>
-      <p class="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto mb-10">
-        Direct bookings, transparent pricing, and WhatsApp support for a seamless stay across Malaysia and beyond.
-      </p>
+<div class="relative overflow-hidden bg-landing-bg">
+  <!-- New Hero Section -->
+  <div class="relative h-screen lg:h-[calc(100vh-64px)] flex items-center">
+    <!-- Background Image with Mask -->
+    <div class="absolute inset-y-0 right-0 w-full lg:w-2/3">
+      <!-- Horizontal Fade -->
+      <div class="absolute inset-0 z-10 bg-gradient-to-r from-landing-bg via-landing-bg/20 to-transparent"></div>
+      <!-- Vertical Fade at Bottom -->
+      <div class="absolute inset-x-0 bottom-0 z-10 h-32 bg-gradient-to-t from-landing-bg to-transparent"></div>
 
-      <!-- Search Form -->
-      <div class="max-w-5xl mx-auto">
-        <div class="p-2 bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl">
-          <div class="p-4 sm:p-6 bg-white rounded-xl shadow-sm">
-            <%= form_with url: hotels_path, method: :get, local: true, class: "grid grid-cols-1 md:grid-cols-12 gap-4" do |f| %>
-              <!-- Destination -->
-              <div class="md:col-span-4 text-left">
-                <label for="city" class="block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-1 ms-1">Destination</label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                    <svg class="w-4 h-4 text-neutral-text-secondary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                  </div>
-                  <%= f.text_field :city, id: "city", placeholder: "Where are you going?", class: "form-input py-3 ps-10" %>
-                </div>
-              </div>
-
-              <!-- Dates -->
-              <div class="md:col-span-4 text-left">
-                <label class="block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-1 ms-1">Check-in / Check-out</label>
-                <div class="grid grid-cols-2 gap-x-px bg-neutral-border rounded-md overflow-hidden border border-neutral-border">
-                  <%= f.date_field :check_in, id: "check_in", value: Date.today, class: "py-3 px-3 block w-full border-0 text-sm focus:ring-2 focus:ring-brand-primary" %>
-                  <%= f.date_field :check_out, id: "check_out", value: Date.tomorrow, class: "py-3 px-3 block w-full border-0 text-sm focus:ring-2 focus:ring-brand-primary border-s border-neutral-border" %>
-                </div>
-              </div>
-
-              <!-- Guests/Rooms -->
-              <div class="md:col-span-2 text-left">
-                <label for="rooms" class="block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-1 ms-1">Rooms</label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                    <svg class="w-4 h-4 text-neutral-text-secondary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="7" height="5" x="7" y="7" rx="1"/><rect width="7" height="5" x="10" y="12" rx="1"/></svg>
-                  </div>
-                  <%= f.number_field :rooms, id: "rooms", value: 1, min: 1, class: "form-input py-3 ps-10" %>
-                </div>
-              </div>
-
-              <!-- Submit -->
-              <div class="md:col-span-2 flex items-end">
-                <%= f.submit "Find Stays", class: "btn btn-gradient w-full py-3 shadow-lg shadow-brand-primary/30" %>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      </div>
+      <img class="h-full w-full object-cover" src="https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=2000" alt="Tropical Resort">
     </div>
-  </div>
 
-  <!-- Featured Hotels -->
-  <div class="bg-neutral-bg py-16 sm:py-24">
-    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto">
-      <div class="flex justify-between items-end mb-10">
-        <div>
-          <h2 class="text-3xl font-bold text-neutral-text-primary">Featured Stays</h2>
-          <p class="text-neutral-text-secondary mt-1">Hand-picked local gems for your next trip.</p>
+    <div class="relative max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 z-20">
+      <div class="max-w-2xl">
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-x-2 bg-brand-accent px-4 py-1.5 rounded-md mb-8">
+          <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent-text">Direct Hotel Booking Platform</span>
         </div>
-        <a href="<%= hotels_path %>" class="text-brand-primary font-bold hover:underline hidden sm:block">Explore all hotels →</a>
-      </div>
 
-      <% if @featured_stays.any? %>
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <% @featured_stays.each do |hotel, room_type| %>
-            <% rating = hotel.star_rating.to_i %>
-            <% featured_photo = hotel.ordered_photo_attachments.first %>
-            <div class="card group cursor-pointer hover:shadow-xl transition-all duration-300">
-              <div class="aspect-video bg-gray-200 relative overflow-hidden">
-                <% if featured_photo.present? %>
-                  <%= image_tag featured_photo, class: "object-cover w-full h-full group-hover:scale-110 transition-transform duration-500", alt: hotel.name %>
-                <% elsif room_type.photos.attached? %>
-                  <%= image_tag room_type.photos.first, class: "object-cover w-full h-full group-hover:scale-110 transition-transform duration-500", alt: hotel.name %>
-                <% else %>
-                  <div class="w-full h-full bg-neutral-bg flex items-center justify-center">
-                    <svg class="w-12 h-12 text-neutral-border" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
-                  </div>
-                <% end %>
-                <div class="absolute top-3 right-3">
-                  <span class="badge bg-white/90 text-brand-primary backdrop-blur-sm">Featured</span>
-                </div>
-              </div>
-              <div class="p-5">
-                <div class="flex justify-between items-start mb-2">
-                  <h3 class="text-lg font-bold text-neutral-text-primary"><%= hotel.name %></h3>
-                  <% if rating.positive? %>
-                    <div class="flex items-center text-amber-500">
-                      <% rating.times do %>
-                        <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                      <% end %>
-                    </div>
-                  <% end %>
-                </div>
-                <p class="text-sm text-neutral-text-secondary mb-4 flex items-center">
-                  <svg class="w-3 h-3 me-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                  <%= hotel.city %>, <%= hotel.country %>
-                </p>
-                <div class="flex items-center justify-between border-t border-neutral-border pt-4">
-                  <div>
-                    <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">Starts from</p>
-                    <p class="text-xl font-extrabold text-neutral-text-primary">
-                      RM <%= number_with_precision(@availability_service.calculate_total_price(room_type), precision: 2) %><span class="text-xs font-normal text-neutral-text-secondary">/night</span>
-                    </p>
-                  </div>
-                  <%= link_to hotel_path(hotel, request.query_parameters), class: "btn btn-primary py-2 px-4" do %>
-                    Book Now
-                  <% end %>
-                </div>
-              </div>
-            </div>
-          <% end %>
-        </div>
-      <% else %>
-        <div class="card p-10 text-center border-2 border-dashed border-neutral-border bg-white">
-          <h3 class="text-xl font-bold text-neutral-text-primary mb-2">No featured stays available right now</h3>
-          <p class="text-neutral-text-secondary mb-6">Try a different destination or use the full hotel search to browse everything that’s available.</p>
-          <a href="<%= hotels_path %>" class="btn btn-primary px-8">Explore all hotels</a>
-        </div>
-      <% end %>
-      
-      <div class="mt-10 text-center sm:hidden">
-        <a href="<%= hotels_path %>" class="btn btn-secondary w-full">Explore all hotels</a>
-      </div>
-    </div>
-  </div>
+        <h1 class="text-5xl lg:text-6xl xl:text-7xl font-serif text-brand-primary leading-[1.1] mb-8">
+          Turn Every Stay Into a <br>
+          <span class="italic">5-Star Experience</span> <br>
+          — Automatically
+        </h1>
 
-  <!-- Hotel Owner Promo -->
-  <div class="max-w-[85rem] px-4 py-16 sm:px-6 lg:px-8 mx-auto">
-    <div class="bg-neutral-text-primary rounded-3xl overflow-hidden shadow-2xl relative">
-      <div class="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-brand-secondary via-brand-primary to-transparent"></div>
-      <div class="relative px-6 py-12 text-center sm:px-12 sm:py-20 max-w-3xl mx-auto">
-        <h2 class="text-3xl font-extrabold text-white sm:text-4xl mb-6">
-          Own an independent or local hotel?
-        </h2>
-        <p class="text-lg text-white/80 mb-10">
-          Join WAStays for free. No monthly subscription, no hidden fees. Only pay a small margin when you get confirmed bookings.
+        <p class="text-lg text-neutral-text-secondary max-w-lg mb-10 leading-relaxed">
+          WAStays helps hotels automate guest communication, increase revenue, and deliver exceptional hospitality — all through WhatsApp.
         </p>
-        <div class="flex flex-col sm:flex-row justify-center gap-4">
-          <%= link_to "Learn More & Register", for_hotels_path, class: "btn btn-gradient py-3 px-8 text-base shadow-xl font-bold" %>
-          <%= link_to "Login to Dashboard", login_path, class: "btn btn-secondary py-3 px-8 text-base border-white/20 bg-white/10 text-white hover:bg-white/20" %>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Booking Help / Trust -->
-  <div class="max-w-[85rem] px-4 pb-24 sm:px-6 lg:px-8 mx-auto">
-    <div class="grid md:grid-cols-2 gap-12 items-center">
-      <div>
-        <h2 class="text-3xl font-bold text-neutral-text-primary mb-6">Need help with your booking?</h2>
-        <p class="text-neutral-text-secondary mb-8 leading-relaxed">
-          Our friendly travel assistants are available via WhatsApp to help you find the perfect stay, handle group bookings, or assist with any changes to your reservation.
-        </p>
-        <div class="space-y-4">
-          <div class="flex items-start gap-x-4">
-            <div class="bg-green-100 text-green-600 p-2 rounded-lg">
-              <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-            </div>
-            <div>
-              <h4 class="font-bold text-neutral-text-primary">Instant Assistance</h4>
-              <p class="text-sm text-neutral-text-secondary">Get answers to your questions in minutes.</p>
-            </div>
-          </div>
-          <div class="flex items-start gap-x-4">
-            <div class="bg-blue-100 text-blue-600 p-2 rounded-lg">
-              <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            </div>
-            <div>
-              <h4 class="font-bold text-neutral-text-primary">Easy Pre-check-in</h4>
-              <p class="text-sm text-neutral-text-secondary">Send documents and complete arrival forms via chat.</p>
-            </div>
-          </div>
-        </div>
-        <div class="mt-10">
-          <a href="#" class="btn btn-secondary border-green-200 text-green-700 hover:bg-green-50 px-8">
-            <svg class="w-5 h-5 me-2" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-            Chat with us
+        <div class="flex flex-wrap items-center gap-4 mb-10">
+          <a href="#" class="btn btn-primary px-10 py-4 rounded-lg text-base font-bold shadow-lg shadow-brand-primary/20">
+            Book a Demo
+          </a>
+          <a href="<%= hotels_path %>" class="btn bg-white border-brand-primary text-brand-primary hover:bg-neutral-bg px-10 py-4 rounded-lg text-base font-bold">
+            Get Started
           </a>
         </div>
+
+        <p class="text-sm font-medium text-neutral-text-secondary italic">
+          Trusted by modern hotels to simplify operations and delight guests at scale.
+        </p>
       </div>
-      <div class="relative">
-        <div class="aspect-square bg-neutral-bg rounded-full p-8 md:p-12 border-8 border-white shadow-2xl overflow-hidden">
-          <img src="https://images.unsplash.com/photo-1549443105-2070367f4077?auto=format&fit=crop&q=80&w=800" class="object-cover w-full h-full rounded-full" alt="WhatsApp Support">
+    </div>
+  </div>
+
+  <!-- Problem → Solution Section -->
+  <div class="bg-landing-bg py-24 lg:py-32">
+    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto">
+      <div class="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+
+        <!-- Left Side: Problem -->
+        <div class="max-w-md">
+          <div class="mb-12">
+            <h2 class="text-4xl lg:text-5xl font-serif text-neutral-text-primary mb-6 leading-tight">Hospitality is <span class="text-red-600 italic">Broken</span></h2>
+            <p class="text-lg text-neutral-text-secondary leading-relaxed">
+              Traditional tools are rigid, fragmented, and alienate your most valuable asset: the guest relationship.
+            </p>
+          </div>
+
+          <ul class="space-y-10">
+            <li class="flex items-start gap-x-6">
+              <div class="flex-none mt-1 w-6 h-6 text-red-500/80">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              </div>
+              <div>
+                <h4 class="text-base font-bold text-neutral-text-primary mb-1">Guests wait for replies</h4>
+                <p class="text-sm text-neutral-text-secondary leading-normal">Frustrating delays lead to abandoned bookings and poor reviews.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-x-6">
+              <div class="flex-none mt-1 w-6 h-6 text-red-500/80">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+              </div>
+              <div>
+                <h4 class="text-base font-bold text-neutral-text-primary mb-1">Front desk is overloaded</h4>
+                <p class="text-sm text-neutral-text-secondary leading-normal">Staff are buried in repetitive FAQs and manual arrival forms.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-x-6">
+              <div class="flex-none mt-1 w-6 h-6 text-red-500/80">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>
+              </div>
+              <div>
+                <h4 class="text-base font-bold text-neutral-text-primary mb-1">Upsell opportunities are missed</h4>
+                <p class="text-sm text-neutral-text-secondary leading-normal">Upgrades and services are never offered at the right moment.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-x-6">
+              <div class="flex-none mt-1 w-6 h-6 text-red-500/80">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+              </div>
+              <div>
+                <h4 class="text-base font-bold text-neutral-text-primary mb-1">Guest data is lost to OTAs</h4>
+                <p class="text-sm text-neutral-text-secondary leading-normal">Platforms own your relationship, leaving you with zero insights.</p>
+              </div>
+            </li>
+          </ul>
         </div>
-        <div class="absolute -bottom-6 -left-6 card p-4 shadow-xl max-w-[200px] animate-bounce">
-          <p class="text-xs font-bold text-neutral-text-primary italic">"Found a great room in 5 mins via WhatsApp!"</p>
-          <p class="text-[10px] text-neutral-text-secondary mt-1">- Ahmad, KL</p>
+
+        <!-- Right Side: Solution -->
+        <div class="bg-[#1e2e2a] rounded-[2rem] p-8 lg:p-16 border border-white/5 shadow-xl shadow-brand-primary/5">
+          <div class="mb-12">
+            <h2 class="text-3xl lg:text-4xl font-serif text-white mb-6 leading-tight">WAStays <span class="italic text-[#d9c5a0]">Fixes This</span></h2>
+            <p class="text-gray-400 leading-relaxed">
+              We bring soul back to hospitality by automating the noise and highlighting the human.
+            </p>
+          </div>
+
+          <ul class="space-y-10">
+            <li class="flex items-start gap-x-6">
+              <div class="flex-none mt-1 w-6 h-6 text-[#d9c5a0]">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+              </div>
+              <div>
+                <h4 class="text-base font-bold text-white mb-1">Automate guest communication 24/7</h4>
+                <p class="text-sm text-gray-400 leading-normal">Instant AI-powered replies on WhatsApp for every inquiry.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-x-6">
+              <div class="flex-none mt-1 w-6 h-6 text-[#d9c5a0]">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+              </div>
+              <div>
+                <h4 class="text-base font-bold text-white mb-1">Engage guests before, during, and after stay</h4>
+                <p class="text-sm text-gray-400 leading-normal">Personalized touchpoints that make guests feel valued.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-x-6">
+              <div class="flex-none mt-1 w-6 h-6 text-[#d9c5a0]">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+              </div>
+              <div>
+                <h4 class="text-base font-bold text-white mb-1">Increase revenue through smart upsells</h4>
+                <p class="text-sm text-gray-400 leading-normal">Auto-offer upgrades and services at the perfect moment.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-x-6">
+              <div class="flex-none mt-1 w-6 h-6 text-[#d9c5a0]">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+              </div>
+              <div>
+                <h4 class="text-base font-bold text-white mb-1">Own your guest relationships</h4>
+                <p class="text-sm text-gray-400 leading-normal">Build a direct database for loyalty and repeat bookings.</p>
+              </div>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Rolling Benefits Marquee (Full Width Section) -->
+  <div class="bg-[#f4f2ed] py-12 lg:py-16 overflow-hidden border-y border-neutral-border/30">
+    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-text-secondary text-center mb-8">Built for hotels that want</p>
+
+    <div class="relative">
+      <div class="flex whitespace-nowrap animate-marquee">
+        <!-- Set 1 -->
+        <span class="text-6xl lg:text-8xl font-serif italic text-brand-primary opacity-20 px-12 leading-none">Control.</span>
+        <span class="text-6xl lg:text-8xl font-serif italic text-brand-primary opacity-20 px-12 leading-none">Automation.</span>
+        <span class="text-6xl lg:text-8xl font-serif italic text-brand-primary opacity-20 px-12 leading-none">Growth.</span>
+        <span class="text-6xl lg:text-8xl font-serif italic text-brand-primary opacity-20 px-12 leading-none">Directly.</span>
+        <span class="text-6xl lg:text-8xl font-serif italic text-brand-primary opacity-20 px-12 leading-none">Automatically.</span>
+        <!-- Set 2 (for seamless loop) -->
+        <span class="text-6xl lg:text-8xl font-serif italic text-brand-primary opacity-20 px-12 leading-none">Control.</span>
+        <span class="text-6xl lg:text-8xl font-serif italic text-brand-primary opacity-20 px-12 leading-none">Automation.</span>
+        <span class="text-6xl lg:text-8xl font-serif italic text-brand-primary opacity-20 px-12 leading-none">Growth.</span>
+        <span class="text-6xl lg:text-8xl font-serif italic text-brand-primary opacity-20 px-12 leading-none">Directly.</span>
+        <span class="text-6xl lg:text-8xl font-serif italic text-brand-primary opacity-20 px-12 leading-none">Automatically.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Our Products (Product Modules) -->
+  <div id="products" class="bg-white py-24 lg:py-32">
+    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto">
+
+      <!-- Editorial Header -->
+      <div class="text-center mb-20 max-w-2xl mx-auto">
+        <div class="inline-flex items-center gap-x-3 mb-6">
+          <span class="w-8 h-px bg-brand-primary/30"></span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">What we offer</span>
+          <span class="w-8 h-px bg-brand-primary/30"></span>
+        </div>
+        <h2 class="text-5xl lg:text-6xl font-serif text-neutral-text-primary mb-8 leading-tight">
+          Our <span class="italic text-brand-primary">Products</span>
+        </h2>
+        <p class="text-lg text-neutral-text-secondary leading-relaxed">
+          Simple, powerful tools designed to help you look after your guests and grow your business without the extra stress.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8">
+
+        <!-- 1. Guest Engagement (Wide Hero Card) -->
+        <div class="md:col-span-8 bg-[#fdfbf7] rounded-[2.5rem] overflow-hidden border border-neutral-border/50 group hover:border-brand-primary/20 transition-all duration-500 shadow-sm flex flex-col">
+          <div class="p-8 lg:p-12 flex-1">
+            <h3 class="text-3xl font-serif text-neutral-text-primary mb-6">Guest Engagement</h3>
+            <p class="text-neutral-text-secondary mb-8 leading-relaxed max-w-lg">
+              Personal touch, without the manual work. We handle the timing so you can focus on being a great host.
+            </p>
+            <ul class="grid sm:grid-cols-2 gap-4">
+              <% ["Welcome message before arrival", "Mid-stay 'How is it?' check-ins", "Helpful checkout reminders", "Post-stay review requests", "Loyalty & return offers"].each do |point| %>
+                <li class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
+                  <span class="w-1.5 h-1.5 rounded-full bg-[#8b6d2e]"></span>
+                  <%= point %>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+          <div class="h-64 lg:h-80 relative overflow-hidden">
+            <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1200&auto=format&fit=crop" alt="Engagement">
+            <div class="absolute inset-0 bg-gradient-to-t from-[#fdfbf7] via-transparent to-transparent"></div>
+          </div>
+        </div>
+
+        <!-- 2. AI Concierge (Slim Vertical) -->
+        <div class="md:col-span-4 bg-[#1e2e2a] rounded-[2.5rem] overflow-hidden shadow-xl border border-white/5 flex flex-col group transition-all duration-500 text-white">
+          <div class="h-48 relative">
+            <img class="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700" src="https://images.unsplash.com/photo-1512428559087-560fa5ceab42?q=80&w=800&auto=format&fit=crop" alt="Concierge">
+            <div class="absolute inset-0 bg-gradient-to-b from-[#1e2e2a]/50 to-[#1e2e2a]"></div>
+          </div>
+          <div class="p-8 lg:p-10 flex-1 flex flex-col justify-between">
+            <div>
+              <h3 class="text-2xl font-serif mb-4">AI Concierge</h3>
+              <ul class="space-y-3 mb-8">
+                <% ["Facilities & house rules", "Easy check-in/out info", "Local recommendations", "FAQs & instant support"].each do |point| %>
+                  <li class="text-xs text-gray-400 flex items-start gap-x-3">
+                    <span class="text-[#d9c5a0]">•</span>
+                    <%= point %>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-[#d9c5a0] opacity-80 border-t border-white/10 pt-6">No more repetitive questions</p>
+          </div>
+        </div>
+
+        <!-- 3. Revenue Engine (Slim Vertical) -->
+        <div class="md:col-span-4 bg-[#8b6d2e] rounded-[2.5rem] overflow-hidden shadow-xl border border-white/5 flex flex-col group transition-all duration-500 text-white">
+          <div class="h-48 relative">
+            <img class="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700" src="https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=800&auto=format&fit=crop" alt="Revenue">
+            <div class="absolute inset-0 bg-gradient-to-b from-[#8b6d2e]/50 to-[#8b6d2e]"></div>
+          </div>
+          <div class="p-8 lg:p-10 flex-1 flex flex-col justify-between">
+            <div>
+              <h3 class="text-2xl font-serif mb-4 leading-tight">Revenue Engine</h3>
+              <div class="grid grid-cols-2 gap-2 mb-8">
+                <% ["Room service", "Spa bookings", "Dining", "Tours"].each do |item| %>
+                  <div class="text-[10px] bg-black/10 px-3 py-2 rounded-lg border border-white/5 font-medium"><%= item %></div>
+                <% end %>
+              </div>
+            </div>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-white/60 border-t border-white/10 pt-6">Sell more without extra staff</p>
+          </div>
+        </div>
+
+        <!-- 4. Guest Experience (Wide Horizontal) -->
+        <div class="md:col-span-8 bg-[#fdfbf7] rounded-[2.5rem] overflow-hidden border border-neutral-border/50 group hover:border-brand-primary/20 transition-all duration-500 shadow-sm flex flex-col lg:flex-row">
+          <div class="p-8 lg:p-12 flex-1 flex flex-col justify-between">
+            <div>
+              <h3 class="text-3xl font-serif text-neutral-text-primary mb-6">Experience Management</h3>
+              <ul class="space-y-3 mb-8">
+                <% ["Housekeeping requests tracking", "Complaint & issue resolution", "Service delivery monitoring"].each do |point| %>
+                  <li class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-primary/40"></span>
+                    <%= point %>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-brand-primary">Improve satisfaction. Reduce friction.</p>
+          </div>
+          <div class="w-full lg:w-1/2 h-64 lg:h-auto relative overflow-hidden">
+            <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=800&auto=format&fit=crop" alt="Experience">
+            <div class="absolute inset-0 bg-gradient-to-l from-[#fdfbf7] via-transparent to-transparent hidden lg:block"></div>
+          </div>
+        </div>
+
+        <!-- 5. Guest Data & Marketing (Full Width Highlight) -->
+        <div class="md:col-span-12 bg-white rounded-[2.5rem] overflow-hidden border border-neutral-border/50 group hover:border-brand-primary/20 transition-all duration-500 shadow-sm flex flex-col lg:flex-row-reverse">
+          <div class="p-8 lg:p-16 flex-1 flex flex-col justify-center">
+            <h3 class="text-3xl lg:text-4xl font-serif text-neutral-text-primary mb-6">Guest Data & Marketing</h3>
+            <p class="text-lg text-neutral-text-secondary mb-10 max-w-xl leading-relaxed">
+              Build your own database. Reach out to guests directly on WhatsApp with promotions and re-engagement campaigns.
+            </p>
+            <div class="grid sm:grid-cols-2 gap-6 mb-10">
+              <% ["Own your guest database", "Send WhatsApp promotions", "Re-engage past guests", "Cross-sell partner hotels"].each do |point| %>
+                <div class="flex items-center gap-x-4">
+                  <div class="flex-none w-8 h-8 rounded-full bg-brand-primary/5 flex items-center justify-center text-brand-primary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                  </div>
+                  <span class="text-sm font-medium text-neutral-text-secondary"><%= point %></span>
+                </div>
+              <% end %>
+            </div>
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-text-secondary italic">💡 No dependency on OTAs anymore</p>
+          </div>
+          <div class="w-full lg:w-2/5 h-80 lg:h-auto relative overflow-hidden">
+            <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop" alt="Data">
+            <div class="absolute inset-0 bg-gradient-to-r from-white via-transparent to-transparent hidden lg:block"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Section -->
+  <div class="bg-[#1e2e2a] py-24 lg:py-32 overflow-hidden">
+    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto">
+      <div class="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+
+        <!-- Left: Text Content -->
+        <div>
+          <!-- Eyebrow -->
+          <div class="inline-flex items-center gap-x-3 mb-8">
+            <span class="w-2 h-2 rounded-full bg-[#d9c5a0] animate-pulse"></span>
+            <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-[#d9c5a0]">Dashboard</span>
+          </div>
+
+          <h2 class="text-4xl lg:text-5xl xl:text-6xl font-serif text-white mb-6 leading-[1.1]">
+            One Dashboard.<br>
+            <span class="italic text-[#d9c5a0]">Total Control.</span>
+          </h2>
+
+          <p class="text-gray-400 text-lg leading-relaxed mb-12 max-w-md">
+            Everything your team needs — conversations, bookings, operations, and campaigns — all in one clean, powerful view.
+          </p>
+
+          <!-- Feature list -->
+          <ul class="space-y-7">
+            <li class="flex items-center gap-x-5">
+              <div class="flex-none w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#d9c5a0]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+              </div>
+              <div>
+                <p class="text-base font-semibold text-white">View all guest conversations</p>
+                <p class="text-sm text-gray-500 mt-0.5">Every WhatsApp thread, in one unified inbox.</p>
+              </div>
+            </li>
+            <li class="flex items-center gap-x-5">
+              <div class="flex-none w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#d9c5a0]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+              </div>
+              <div>
+                <p class="text-base font-semibold text-white">Track bookings & requests</p>
+                <p class="text-sm text-gray-500 mt-0.5">Live booking status and guest request queue.</p>
+              </div>
+            </li>
+            <li class="flex items-center gap-x-5">
+              <div class="flex-none w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#d9c5a0]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+              </div>
+              <div>
+                <p class="text-base font-semibold text-white">Monitor operations in real-time</p>
+                <p class="text-sm text-gray-500 mt-0.5">Housekeeping, check-ins, and service — at a glance.</p>
+              </div>
+            </li>
+            <li class="flex items-center gap-x-5">
+              <div class="flex-none w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#d9c5a0]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+              </div>
+              <div>
+                <p class="text-base font-semibold text-white">Manage offers & campaigns</p>
+                <p class="text-sm text-gray-500 mt-0.5">Launch WhatsApp promos and upsells in one click.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Right: Dashboard Mockup -->
+        <div class="relative">
+          <!-- Glow effect -->
+          <div class="absolute -inset-6 bg-[#d9c5a0]/5 rounded-3xl blur-3xl -z-10"></div>
+
+          <!-- Browser chrome -->
+          <div class="bg-[#0d1a17] rounded-2xl border border-white/10 shadow-2xl shadow-black/40 overflow-hidden">
+
+            <!-- Browser top bar -->
+            <div class="flex items-center gap-x-2 px-4 py-3 bg-[#111f1c] border-b border-white/5">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500/60"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-green-500/60"></span>
+              <div class="flex-1 mx-4 bg-white/5 rounded-md px-3 py-1 text-[10px] text-gray-600 tracking-wide">app.wastays.com/dashboard</div>
+              <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+            </div>
+
+            <!-- Dashboard layout -->
+            <div class="flex h-[420px]">
+
+              <!-- Sidebar -->
+              <div class="w-14 bg-[#0a1512] border-r border-white/5 flex flex-col items-center py-4 gap-y-5 flex-none">
+                <div class="w-7 h-7 rounded-lg bg-[#d9c5a0] flex items-center justify-center mb-2">
+                  <span class="text-[8px] font-black text-[#0a1512]">W</span>
+                </div>
+                <div class="w-7 h-7 rounded-lg bg-[#d9c5a0]/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-[#d9c5a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                </div>
+                <div class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                </div>
+                <div class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <div class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                </div>
+                <div class="mt-auto w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+                  <span class="text-[8px] font-bold text-gray-400">HM</span>
+                </div>
+              </div>
+
+              <!-- Main content -->
+              <div class="flex-1 p-4 overflow-hidden flex flex-col gap-y-3">
+
+                <!-- Page title + date -->
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-[11px] font-bold text-white">Good morning, Hotel Manager</div>
+                    <div class="text-[9px] text-gray-600 mt-0.5">Monday, 14 July 2025</div>
+                  </div>
+                  <div class="text-[9px] bg-[#d9c5a0]/10 text-[#d9c5a0] border border-[#d9c5a0]/20 px-2 py-1 rounded-md font-medium">Today</div>
+                </div>
+
+                <!-- Stat cards row -->
+                <div class="grid grid-cols-4 gap-2">
+                  <div class="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <div class="text-[9px] text-gray-500 mb-1">Conversations</div>
+                    <div class="text-base font-bold text-white leading-none">24</div>
+                    <div class="text-[8px] text-green-400 mt-1.5 flex items-center gap-x-0.5">
+                      <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                      +3 new
+                    </div>
+                  </div>
+                  <div class="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <div class="text-[9px] text-gray-500 mb-1">Bookings</div>
+                    <div class="text-base font-bold text-white leading-none">12</div>
+                    <div class="text-[8px] text-[#d9c5a0] mt-1.5">2 pending</div>
+                  </div>
+                  <div class="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <div class="text-[9px] text-gray-500 mb-1">Operations</div>
+                    <div class="text-base font-bold text-white leading-none">7</div>
+                    <div class="text-[8px] text-blue-400 mt-1.5 flex items-center gap-x-0.5">
+                      <span class="w-1 h-1 rounded-full bg-blue-400 inline-block animate-pulse"></span>
+                      Live now
+                    </div>
+                  </div>
+                  <div class="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <div class="text-[9px] text-gray-500 mb-1">Campaigns</div>
+                    <div class="text-base font-bold text-white leading-none">3</div>
+                    <div class="text-[8px] text-purple-400 mt-1.5">Active</div>
+                  </div>
+                </div>
+
+                <!-- Conversations list + chart -->
+                <div class="grid grid-cols-5 gap-2 flex-1 min-h-0">
+
+                  <!-- Conversations -->
+                  <div class="col-span-3 bg-white/5 rounded-xl border border-white/5 overflow-hidden flex flex-col">
+                    <div class="px-3 py-2 border-b border-white/5 flex items-center justify-between">
+                      <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Recent Conversations</span>
+                      <span class="text-[8px] text-[#d9c5a0]">View all →</span>
+                    </div>
+                    <div class="flex flex-col divide-y divide-white/5">
+                      <div class="flex items-center gap-x-2 px-3 py-2">
+                        <div class="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-[7px] font-bold text-green-400 flex-none">A</div>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-[9px] text-white font-medium">Ahmad R.</div>
+                          <div class="text-[8px] text-gray-600 truncate">When is check-in time?</div>
+                        </div>
+                        <div class="text-[8px] text-gray-600 flex-none">2m</div>
+                        <div class="w-1.5 h-1.5 rounded-full bg-green-400 flex-none"></div>
+                      </div>
+                      <div class="flex items-center gap-x-2 px-3 py-2">
+                        <div class="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-[7px] font-bold text-blue-400 flex-none">S</div>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-[9px] text-white font-medium">Sarah L.</div>
+                          <div class="text-[8px] text-gray-600 truncate">Can I get airport pickup?</div>
+                        </div>
+                        <div class="text-[8px] text-gray-600 flex-none">15m</div>
+                        <div class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-none"></div>
+                      </div>
+                      <div class="flex items-center gap-x-2 px-3 py-2">
+                        <div class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[7px] font-bold text-purple-400 flex-none">R</div>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-[9px] text-white font-medium">Raj P.</div>
+                          <div class="text-[8px] text-gray-600 truncate">Late checkout possible?</div>
+                        </div>
+                        <div class="text-[8px] text-gray-600 flex-none">1h</div>
+                        <div class="w-1.5 h-1.5 rounded-full bg-gray-600 flex-none"></div>
+                      </div>
+                      <div class="flex items-center gap-x-2 px-3 py-2">
+                        <div class="w-5 h-5 rounded-full bg-[#d9c5a0]/20 flex items-center justify-center text-[7px] font-bold text-[#d9c5a0] flex-none">L</div>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-[9px] text-white font-medium">Li W.</div>
+                          <div class="text-[8px] text-gray-600 truncate">Interested in spa package</div>
+                        </div>
+                        <div class="text-[8px] text-gray-600 flex-none">2h</div>
+                        <div class="w-1.5 h-1.5 rounded-full bg-gray-600 flex-none"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Right mini panels -->
+                  <div class="col-span-2 flex flex-col gap-y-2">
+
+                    <!-- Bar chart -->
+                    <div class="bg-white/5 rounded-xl border border-white/5 p-3 flex-1">
+                      <div class="text-[9px] text-gray-500 mb-2">Bookings this week</div>
+                      <div class="flex items-end gap-x-1 h-12">
+                        <div class="flex-1 bg-[#d9c5a0]/20 rounded-sm" style="height:45%"></div>
+                        <div class="flex-1 bg-[#d9c5a0]/30 rounded-sm" style="height:65%"></div>
+                        <div class="flex-1 bg-[#d9c5a0]/20 rounded-sm" style="height:50%"></div>
+                        <div class="flex-1 bg-[#d9c5a0]/40 rounded-sm" style="height:80%"></div>
+                        <div class="flex-1 bg-[#d9c5a0]/30 rounded-sm" style="height:70%"></div>
+                        <div class="flex-1 bg-[#d9c5a0] rounded-sm" style="height:100%"></div>
+                        <div class="flex-1 bg-[#d9c5a0]/25 rounded-sm" style="height:60%"></div>
+                      </div>
+                      <div class="flex justify-between mt-1">
+                        <span class="text-[7px] text-gray-700">Mon</span>
+                        <span class="text-[7px] text-gray-700">Sun</span>
+                      </div>
+                    </div>
+
+                    <!-- Campaign stat -->
+                    <div class="bg-white/5 rounded-xl border border-white/5 p-3">
+                      <div class="text-[9px] text-gray-500 mb-1">Offers sent</div>
+                      <div class="text-xl font-bold text-[#d9c5a0] leading-none">128</div>
+                      <div class="text-[8px] text-green-400 mt-1.5 flex items-center gap-x-0.5">
+                        <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                        18% vs last week
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- WhatsApp Differentiation Section -->
+  <div id="whatsapp" class="bg-[#f4f2ed] py-24 lg:py-32 overflow-hidden relative">
+
+    <!-- Large decorative background letterform -->
+    <div class="absolute inset-0 flex items-center justify-end pr-8 pointer-events-none select-none overflow-hidden">
+      <span class="text-[20rem] font-serif font-bold text-[#25D366]/5 leading-none translate-x-1/4">W</span>
+    </div>
+
+    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto relative z-10">
+      <div class="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+
+        <!-- Left: Text Content -->
+        <div>
+          <!-- Eyebrow -->
+          <div class="inline-flex items-center gap-x-3 mb-8">
+            <span class="w-2 h-2 rounded-full bg-[#25D366]"></span>
+            <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-text-secondary">Why WhatsApp?</span>
+          </div>
+
+          <h2 class="text-4xl lg:text-5xl xl:text-6xl font-serif text-neutral-text-primary mb-6 leading-[1.1]">
+            Because that's where<br>
+            <span class="italic text-brand-primary">your guests already are.</span>
+          </h2>
+
+          <p class="text-lg text-neutral-text-secondary leading-relaxed mb-14 max-w-md">
+            Forget portals, login screens, and app downloads. WAStays works through the one app your guests open dozens of times every day.
+          </p>
+
+          <!-- Benefits -->
+          <ul class="space-y-7 mb-14">
+            <li class="flex items-start gap-x-5">
+              <div class="flex-none w-11 h-11 rounded-xl bg-white border border-neutral-border/50 shadow-sm flex items-center justify-center">
+                <svg class="w-5 h-5 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.322 17.378A8 8 0 1 0 6.622 6.622M12 12v4m0 4h.01"></path><circle cx="12" cy="20" r=".5" fill="currentColor"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 16v-4"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 12H2m4.343-5.657L4.93 4.929M12 4V2m5.657 4.343 1.414-1.414"></path></svg>
+              </div>
+              <div>
+                <p class="text-base font-semibold text-neutral-text-primary">No app downloads</p>
+                <p class="text-sm text-neutral-text-secondary mt-0.5 leading-relaxed">Guests connect instantly — nothing to install, nothing to sign up for.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-x-5">
+              <div class="flex-none w-11 h-11 rounded-xl bg-white border border-neutral-border/50 shadow-sm flex items-center justify-center">
+                <svg class="w-5 h-5 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+              </div>
+              <div>
+                <p class="text-base font-semibold text-neutral-text-primary">No login friction</p>
+                <p class="text-sm text-neutral-text-secondary mt-0.5 leading-relaxed">No passwords, no accounts. Guests just tap and message — it's that simple.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-x-5">
+              <div class="flex-none w-11 h-11 rounded-xl bg-white border border-neutral-border/50 shadow-sm flex items-center justify-center">
+                <svg class="w-5 h-5 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+              </div>
+              <div>
+                <p class="text-base font-semibold text-neutral-text-primary">Instant communication</p>
+                <p class="text-sm text-neutral-text-secondary mt-0.5 leading-relaxed">Real-time replies, automated or live — guests never wait in silence.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-x-5">
+              <div class="flex-none w-11 h-11 rounded-xl bg-white border border-neutral-border/50 shadow-sm flex items-center justify-center">
+                <svg class="w-5 h-5 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+              </div>
+              <div>
+                <p class="text-base font-semibold text-neutral-text-primary">Higher response rates</p>
+                <p class="text-sm text-neutral-text-secondary mt-0.5 leading-relaxed">WhatsApp messages are read within minutes — emails sit unread for days.</p>
+              </div>
+            </li>
+          </ul>
+
+          <!-- Closing tagline -->
+          <div class="flex items-center gap-x-4 border-l-[3px] border-[#25D366] pl-5">
+            <p class="text-lg font-serif italic text-neutral-text-primary leading-snug">
+              WAStays meets guests<br>where they are.
+            </p>
+          </div>
+        </div>
+
+        <!-- Right: WhatsApp Phone Mockup -->
+        <div class="flex justify-center lg:justify-end">
+          <div class="relative">
+
+            <!-- Outer glow -->
+            <div class="absolute -inset-8 bg-[#25D366]/8 rounded-[4rem] blur-3xl -z-10"></div>
+
+            <!-- Phone shell -->
+            <div class="w-72 bg-[#111b21] rounded-[2.8rem] shadow-2xl shadow-black/30 overflow-hidden ring-1 ring-white/10" style="border: 8px solid #1a2530;">
+
+              <!-- Notch -->
+              <div class="bg-[#111b21] flex justify-center pt-3 pb-1">
+                <div class="w-20 h-1.5 rounded-full bg-white/10"></div>
+              </div>
+
+              <!-- WhatsApp header -->
+              <div class="bg-[#1f2c34] px-3 py-2.5 flex items-center gap-x-3 border-b border-white/5">
+                <svg class="w-4 h-4 text-gray-400 flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                <div class="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center flex-none shadow-md">
+                  <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-white text-xs font-semibold">WAStays</p>
+                  <p class="text-[#25D366] text-[10px]">online</p>
+                </div>
+                <div class="flex items-center gap-x-3 text-gray-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+                </div>
+              </div>
+
+              <!-- Chat wallpaper + messages -->
+              <div class="bg-[#0b141a] px-3 py-4 space-y-3" style="background-image: url('data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.015\'%3E%3Cpath d=\'M20 20c0-5.5-4.5-10-10-10s-10 4.5-10 10 4.5 10 10 10 10-4.5 10-10zm10 0c0-5.5-4.5-10-10-10s-10 4.5-10 10 4.5 10 10 10 10-4.5 10-10z\'/%3E%3C/g%3E%3C/svg%3E');">
+
+                <!-- Date chip -->
+                <div class="flex justify-center">
+                  <span class="text-[9px] text-gray-400 bg-[#182229] px-3 py-1 rounded-full">Today</span>
+                </div>
+
+                <!-- Guest message (right) -->
+                <div class="flex justify-end">
+                  <div class="bg-[#005c4b] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[80%] shadow-sm">
+                    <p class="text-[11px] text-white leading-relaxed">Hi! What time is check-in? 😊</p>
+                    <p class="text-[8px] text-green-300/70 text-right mt-1">10:42 AM ✓✓</p>
+                  </div>
+                </div>
+
+                <!-- Bot reply (left) -->
+                <div class="flex justify-start">
+                  <div class="bg-[#202c33] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[86%] shadow-sm">
+                    <p class="text-[11px] text-white leading-relaxed">👋 Hi Sarah! Check-in is from <span class="font-semibold">3:00 PM</span>. Early check-in available from 12 PM for just <span class="text-[#25D366] font-semibold">RM30</span>. Want to add it?</p>
+                    <p class="text-[8px] text-gray-500 mt-1">10:42 AM</p>
+                  </div>
+                </div>
+
+                <!-- Guest reply -->
+                <div class="flex justify-end">
+                  <div class="bg-[#005c4b] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[80%] shadow-sm">
+                    <p class="text-[11px] text-white leading-relaxed">Yes! And a sea view room?</p>
+                    <p class="text-[8px] text-green-300/70 text-right mt-1">10:43 AM ✓✓</p>
+                  </div>
+                </div>
+
+                <!-- Bot upsell -->
+                <div class="flex justify-start">
+                  <div class="bg-[#202c33] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[86%] shadow-sm">
+                    <p class="text-[11px] text-white leading-relaxed">🌊 We have 2 sea view rooms — <span class="font-semibold">Deluxe (RM240)</span> or <span class="font-semibold">Suite (RM380)</span>. Which do you prefer?</p>
+                    <p class="text-[8px] text-gray-500 mt-1">10:43 AM</p>
+                  </div>
+                </div>
+
+                <!-- Guest pick -->
+                <div class="flex justify-end">
+                  <div class="bg-[#005c4b] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[75%] shadow-sm">
+                    <p class="text-[11px] text-white leading-relaxed">Deluxe please! 🙌</p>
+                    <p class="text-[8px] text-green-300/70 text-right mt-1">10:44 AM ✓✓</p>
+                  </div>
+                </div>
+
+                <!-- Bot confirmation -->
+                <div class="flex justify-start">
+                  <div class="bg-[#202c33] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[86%] shadow-sm">
+                    <p class="text-[11px] text-white leading-relaxed">✅ <span class="font-semibold">Booked!</span> Deluxe sea view + early check-in confirmed. See you soon, Sarah! 🏨</p>
+                    <p class="text-[8px] text-gray-500 mt-1">10:44 AM</p>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Input bar -->
+              <div class="bg-[#1f2c34] px-3 py-2.5 flex items-center gap-x-2 border-t border-white/5">
+                <div class="flex-1 bg-[#2a3942] rounded-full px-4 py-2">
+                  <p class="text-[10px] text-gray-600">Type a message</p>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center flex-none shadow-md">
+                  <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                </div>
+              </div>
+
+              <!-- Home indicator -->
+              <div class="bg-[#111b21] flex justify-center py-2">
+                <div class="w-24 h-1 rounded-full bg-white/20"></div>
+              </div>
+
+            </div>
+
+            <!-- Floating stat badge -->
+            <div class="absolute -left-10 top-1/3 bg-white rounded-2xl shadow-xl px-4 py-3 border border-neutral-border/30 max-w-[140px]">
+              <div class="flex items-center gap-x-2 mb-1">
+                <span class="w-2 h-2 rounded-full bg-[#25D366] animate-pulse"></span>
+                <span class="text-[9px] font-bold uppercase tracking-wider text-neutral-text-secondary">Open rate</span>
+              </div>
+              <p class="text-2xl font-bold text-neutral-text-primary leading-none">98%</p>
+              <p class="text-[9px] text-neutral-text-secondary mt-0.5">vs 22% for email</p>
+            </div>
+
+            <!-- Floating response badge -->
+            <div class="absolute -right-8 bottom-1/4 bg-white rounded-2xl shadow-xl px-4 py-3 border border-neutral-border/30">
+              <div class="text-[9px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Avg. reply time</div>
+              <p class="text-2xl font-bold text-[#25D366] leading-none">&lt; 1 min</p>
+              <p class="text-[9px] text-neutral-text-secondary mt-0.5">automated responses</p>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Built-In Booking Experience Section -->
+  <div class="bg-white py-24 lg:py-28 overflow-hidden">
+    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto">
+
+      <!-- Header -->
+      <div class="text-center mb-16 max-w-2xl mx-auto">
+        <div class="inline-flex items-center gap-x-3 mb-6">
+          <span class="w-8 h-px bg-brand-primary/30"></span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">Booking Experience</span>
+          <span class="w-8 h-px bg-brand-primary/30"></span>
+        </div>
+        <h2 class="text-4xl lg:text-5xl font-serif text-neutral-text-primary mb-5 leading-tight">
+          Built-In <span class="italic text-brand-primary">Booking Experience</span>
+        </h2>
+        <p class="text-lg text-neutral-text-secondary leading-relaxed">
+          While WAStays focuses on hospitality, it also enables the full booking journey — all inside WhatsApp, seamlessly.
+        </p>
+      </div>
+
+      <!-- Pipeline flow -->
+      <div class="relative">
+
+        <!-- Connecting line (desktop) -->
+        <div class="hidden lg:block absolute top-10 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-border/60 to-transparent z-0"></div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 lg:gap-4 relative z-10">
+
+          <!-- Step 1: Instant room booking -->
+          <div class="group flex flex-col items-center text-center">
+            <div class="relative mb-6">
+              <div class="w-20 h-20 rounded-2xl bg-[#fdfbf7] border border-neutral-border/50 group-hover:border-brand-primary/30 group-hover:bg-brand-primary/5 transition-all duration-300 flex items-center justify-center shadow-sm">
+                <svg class="w-8 h-8 text-brand-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+              </div>
+              <div class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-brand-primary text-white text-[10px] font-bold flex items-center justify-center shadow">1</div>
+            </div>
+            <h4 class="text-sm font-bold text-neutral-text-primary mb-2">Instant room booking</h4>
+            <p class="text-xs text-neutral-text-secondary leading-relaxed max-w-[140px]">Guest selects room and confirms directly in chat.</p>
+          </div>
+
+          <!-- Arrow (desktop only) -->
+          <div class="hidden lg:flex absolute items-center" style="left: calc(20% - 8px); top: 32px;">
+            <svg class="w-4 h-4 text-neutral-border/80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+          </div>
+
+          <!-- Step 2: Automated pre-check-in -->
+          <div class="group flex flex-col items-center text-center">
+            <div class="relative mb-6">
+              <div class="w-20 h-20 rounded-2xl bg-[#fdfbf7] border border-neutral-border/50 group-hover:border-brand-primary/30 group-hover:bg-brand-primary/5 transition-all duration-300 flex items-center justify-center shadow-sm">
+                <svg class="w-8 h-8 text-brand-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              </div>
+              <div class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-brand-primary text-white text-[10px] font-bold flex items-center justify-center shadow">2</div>
+            </div>
+            <h4 class="text-sm font-bold text-neutral-text-primary mb-2">Automated pre-check-in</h4>
+            <p class="text-xs text-neutral-text-secondary leading-relaxed max-w-[140px]">Guest details collected via WhatsApp before arrival.</p>
+          </div>
+
+          <!-- Step 3: Payment & confirmation -->
+          <div class="group flex flex-col items-center text-center">
+            <div class="relative mb-6">
+              <div class="w-20 h-20 rounded-2xl bg-[#fdfbf7] border border-[#25D366]/30 bg-[#25D366]/5 transition-all duration-300 flex items-center justify-center shadow-sm ring-1 ring-[#25D366]/10">
+                <svg class="w-8 h-8 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+              </div>
+              <div class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#25D366] text-white text-[10px] font-bold flex items-center justify-center shadow">3</div>
+            </div>
+            <h4 class="text-sm font-bold text-neutral-text-primary mb-2">Payment & confirmation</h4>
+            <p class="text-xs text-neutral-text-secondary leading-relaxed max-w-[140px]">Secure payment link sent and confirmed in chat.</p>
+          </div>
+
+          <!-- Step 4: Reminder notifications -->
+          <div class="group flex flex-col items-center text-center">
+            <div class="relative mb-6">
+              <div class="w-20 h-20 rounded-2xl bg-[#fdfbf7] border border-neutral-border/50 group-hover:border-brand-primary/30 group-hover:bg-brand-primary/5 transition-all duration-300 flex items-center justify-center shadow-sm">
+                <svg class="w-8 h-8 text-brand-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+              </div>
+              <div class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-brand-primary text-white text-[10px] font-bold flex items-center justify-center shadow">4</div>
+            </div>
+            <h4 class="text-sm font-bold text-neutral-text-primary mb-2">Reminder notifications</h4>
+            <p class="text-xs text-neutral-text-secondary leading-relaxed max-w-[140px]">Timely nudges sent before arrival and at checkout.</p>
+          </div>
+
+          <!-- Step 5: All inside WhatsApp -->
+          <div class="group flex flex-col items-center text-center">
+            <div class="relative mb-6">
+              <div class="w-20 h-20 rounded-2xl bg-[#1e2e2a] border border-white/5 transition-all duration-300 flex items-center justify-center shadow-lg">
+                <svg class="w-8 h-8 text-[#d9c5a0]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+              </div>
+              <div class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#d9c5a0] text-[#1e2e2a] text-[10px] font-bold flex items-center justify-center shadow">5</div>
+            </div>
+            <h4 class="text-sm font-bold text-neutral-text-primary mb-2">All inside WhatsApp</h4>
+            <p class="text-xs text-neutral-text-secondary leading-relaxed max-w-[140px]">Zero redirects. The entire journey in one thread.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Closing strip -->
+      <div class="mt-16 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 py-6 px-8 bg-[#fdfbf7] rounded-2xl border border-neutral-border/40">
+        <div class="flex items-center gap-x-3">
+          <svg class="w-5 h-5 text-[#25D366] flex-none" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+          <p class="text-sm font-semibold text-neutral-text-primary italic font-serif">All inside WhatsApp — seamlessly.</p>
+        </div>
+        <span class="hidden sm:block w-px h-5 bg-neutral-border/50"></span>
+        <p class="text-xs text-neutral-text-secondary">No extra apps. No redirects. No friction.</p>
+        <span class="hidden sm:block w-px h-5 bg-neutral-border/50"></span>
+        <p class="text-xs text-neutral-text-secondary">From inquiry to confirmed stay in minutes.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Comparison Section -->
+  <div class="bg-[#1e2e2a] py-24 lg:py-32 overflow-hidden relative">
+
+    <!-- Subtle grid pattern -->
+    <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(#d9c5a0 1px, transparent 1px), linear-gradient(to right, #d9c5a0 1px, transparent 1px); background-size: 40px 40px;"></div>
+
+    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto relative z-10">
+
+      <!-- Header -->
+      <div class="text-center mb-16 max-w-2xl mx-auto">
+        <div class="inline-flex items-center gap-x-3 mb-6">
+          <span class="w-8 h-px bg-[#d9c5a0]/30"></span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-[#d9c5a0]">The Difference</span>
+          <span class="w-8 h-px bg-[#d9c5a0]/30"></span>
+        </div>
+        <h2 class="text-4xl lg:text-5xl font-serif text-white mb-5 leading-tight">
+          WAStays vs <span class="italic text-[#d9c5a0]">Traditional Setup</span>
+        </h2>
+        <p class="text-gray-400 leading-relaxed">
+          See exactly what changes when you switch to a smarter way of running your hotel.
+        </p>
+      </div>
+
+      <!-- Comparison table -->
+      <div class="max-w-4xl mx-auto">
+
+        <!-- Table header -->
+        <div class="grid grid-cols-3 mb-3 px-4">
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Feature</div>
+          <div class="text-center">
+            <div class="inline-flex items-center gap-x-2 bg-[#d9c5a0]/10 border border-[#d9c5a0]/20 rounded-full px-4 py-1.5">
+              <div class="w-2 h-2 rounded-full bg-[#d9c5a0]"></div>
+              <span class="text-[11px] font-bold text-[#d9c5a0] uppercase tracking-wider">WAStays</span>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="inline-flex items-center gap-x-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5">
+              <div class="w-2 h-2 rounded-full bg-gray-600"></div>
+              <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Traditional</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rows -->
+        <div class="rounded-[1.5rem] overflow-hidden border border-white/5 divide-y divide-white/5">
+
+          <div class="grid grid-cols-3 items-center px-6 py-5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors group">
+            <div class="flex items-center gap-x-3">
+              <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-none">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+              </div>
+              <span class="text-sm font-medium text-gray-300">Guest Communication</span>
+            </div>
+            <div class="flex justify-center">
+              <span class="inline-flex items-center gap-x-1.5 text-sm font-semibold text-[#d9c5a0]">
+                <svg class="w-4 h-4 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                Automated
+              </span>
+            </div>
+            <div class="flex justify-center">
+              <span class="inline-flex items-center gap-x-1.5 text-sm text-gray-500">
+                <svg class="w-4 h-4 text-red-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Manual
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 items-center px-6 py-5 bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
+            <div class="flex items-center gap-x-3">
+              <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-none">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.098-1.031 1.994l-1.382-.138m-10.34-1.12L4.598 17.9c-1.06.104-2.03-.994-1.03-1.994L5 14.5"></path></svg>
+              </div>
+              <span class="text-sm font-medium text-gray-300">Concierge</span>
+            </div>
+            <div class="flex justify-center">
+              <span class="inline-flex items-center gap-x-1.5 text-sm font-semibold text-[#d9c5a0]">
+                <svg class="w-4 h-4 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                AI-powered
+              </span>
+            </div>
+            <div class="flex justify-center">
+              <span class="inline-flex items-center gap-x-1.5 text-sm text-gray-500">
+                <svg class="w-4 h-4 text-red-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Staff-dependent
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 items-center px-6 py-5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+            <div class="flex items-center gap-x-3">
+              <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-none">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+              </div>
+              <span class="text-sm font-medium text-gray-300">Upsells</span>
+            </div>
+            <div class="flex justify-center">
+              <span class="inline-flex items-center gap-x-1.5 text-sm font-semibold text-[#d9c5a0]">
+                <svg class="w-4 h-4 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                Automated
+              </span>
+            </div>
+            <div class="flex justify-center">
+              <span class="inline-flex items-center gap-x-1.5 text-sm text-gray-500">
+                <svg class="w-4 h-4 text-red-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                Missed
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 items-center px-6 py-5 bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
+            <div class="flex items-center gap-x-3">
+              <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-none">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path></svg>
+              </div>
+              <span class="text-sm font-medium text-gray-300">Guest Data</span>
+            </div>
+            <div class="flex justify-center">
+              <span class="inline-flex items-center gap-x-1.5 text-sm font-semibold text-[#d9c5a0]">
+                <svg class="w-4 h-4 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                You own it
+              </span>
+            </div>
+            <div class="flex justify-center">
+              <span class="inline-flex items-center gap-x-1.5 text-sm text-gray-500">
+                <svg class="w-4 h-4 text-red-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                Lost to OTAs
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 items-center px-6 py-5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+            <div class="flex items-center gap-x-3">
+              <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-none">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              </div>
+              <span class="text-sm font-medium text-gray-300">Availability</span>
+            </div>
+            <div class="flex justify-center">
+              <span class="inline-flex items-center gap-x-1.5 text-sm font-semibold text-[#d9c5a0]">
+                <svg class="w-4 h-4 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                24 / 7
+              </span>
+            </div>
+            <div class="flex justify-center">
+              <span class="inline-flex items-center gap-x-1.5 text-sm text-gray-500">
+                <svg class="w-4 h-4 text-red-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Limited hours
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom nudge -->
+        <div class="mt-10 text-center">
+          <p class="text-sm text-gray-500 italic">The gap is clear. The switch is easy.</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Social Proof Section -->
+  <div id="testimonials" class="bg-[#fdfbf7] py-24 lg:py-32 overflow-hidden relative">
+
+    <!-- Large decorative quote mark -->
+    <div class="absolute top-12 left-1/2 -translate-x-1/2 text-[14rem] font-serif leading-none text-brand-primary/5 select-none pointer-events-none">"</div>
+
+    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto relative z-10">
+
+      <!-- Header -->
+      <div class="text-center mb-16">
+        <div class="inline-flex items-center gap-x-3 mb-6">
+          <span class="w-8 h-px bg-brand-primary/30"></span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">Social Proof</span>
+          <span class="w-8 h-px bg-brand-primary/30"></span>
+        </div>
+        <h2 class="text-4xl lg:text-5xl font-serif text-neutral-text-primary leading-tight">
+          What Hotel Partners <span class="italic text-brand-primary">Are Saying</span>
+        </h2>
+      </div>
+
+      <!-- Testimonials -->
+      <div class="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
+
+        <!-- Testimonial 1 -->
+        <div class="relative bg-white rounded-[2rem] p-8 lg:p-10 border border-neutral-border/50 shadow-sm hover:shadow-md hover:border-brand-primary/20 transition-all duration-300 flex flex-col">
+          <!-- Quote mark -->
+          <div class="text-5xl font-serif leading-none text-brand-primary/20 mb-4 select-none">"</div>
+          <blockquote class="flex-1">
+            <p class="text-lg lg:text-xl font-serif text-neutral-text-primary leading-relaxed italic mb-8">
+              We increased direct bookings and upsell revenue within weeks. It genuinely changed how we operate.
+            </p>
+          </blockquote>
+          <div class="flex items-center gap-x-4 pt-6 border-t border-neutral-border/40">
+            <div class="w-11 h-11 rounded-full bg-brand-primary/10 flex items-center justify-center flex-none">
+              <span class="text-sm font-bold text-brand-primary">HP</span>
+            </div>
+            <div>
+              <p class="text-sm font-bold text-neutral-text-primary">Hotel Partner</p>
+              <p class="text-xs text-neutral-text-secondary">Independent Hotel, Malaysia</p>
+            </div>
+            <!-- Stars -->
+            <div class="ml-auto flex items-center gap-x-0.5">
+              <% 5.times do %>
+                <svg class="w-4 h-4 text-[#d9c5a0]" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Testimonial 2 -->
+        <div class="relative bg-[#1e2e2a] rounded-[2rem] p-8 lg:p-10 border border-white/5 shadow-xl flex flex-col">
+          <!-- Quote mark -->
+          <div class="text-5xl font-serif leading-none text-[#d9c5a0]/30 mb-4 select-none">"</div>
+          <blockquote class="flex-1">
+            <p class="text-lg lg:text-xl font-serif text-white leading-relaxed italic mb-8">
+              Guests love the WhatsApp experience — it's fast, it's simple, and it feels personal. We get compliments about it now.
+            </p>
+          </blockquote>
+          <div class="flex items-center gap-x-4 pt-6 border-t border-white/10">
+            <div class="w-11 h-11 rounded-full bg-[#d9c5a0]/10 flex items-center justify-center flex-none">
+              <span class="text-sm font-bold text-[#d9c5a0]">HP</span>
+            </div>
+            <div>
+              <p class="text-sm font-bold text-white">Hotel Partner</p>
+              <p class="text-xs text-gray-500">Boutique Resort, Malaysia</p>
+            </div>
+            <!-- Stars -->
+            <div class="ml-auto flex items-center gap-x-0.5">
+              <% 5.times do %>
+                <svg class="w-4 h-4 text-[#d9c5a0]" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Placeholder notice -->
+      <div class="mt-10 text-center">
+        <div class="inline-flex items-center gap-x-2 bg-white border border-neutral-border/50 rounded-full px-5 py-2.5 shadow-sm">
+          <svg class="w-3.5 h-3.5 text-brand-primary/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span class="text-xs text-neutral-text-secondary">More stories coming soon — we're just getting started.</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FAQ Section -->
+  <div id="faq" class="bg-white py-24 lg:py-32 overflow-hidden">
+    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto">
+      <div class="grid lg:grid-cols-5 gap-16 lg:gap-24">
+
+        <!-- Left: Sticky heading -->
+        <div class="lg:col-span-2">
+          <div class="lg:sticky lg:top-28">
+            <div class="inline-flex items-center gap-x-3 mb-6">
+              <span class="w-8 h-px bg-brand-primary/30"></span>
+              <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">FAQ</span>
+              <span class="w-8 h-px bg-brand-primary/30"></span>
+            </div>
+            <h2 class="text-4xl lg:text-5xl font-serif text-neutral-text-primary mb-6 leading-tight">
+              Questions?<br>
+              <span class="italic text-brand-primary">We've got answers.</span>
+            </h2>
+            <p class="text-neutral-text-secondary leading-relaxed mb-10">
+              Everything you need to know about WAStays. Can't find what you're looking for? Reach out directly.
+            </p>
+            <a href="#" class="inline-flex items-center gap-x-2.5 text-sm font-medium text-[#25D366] hover:text-[#25D366]/70 transition-colors group">
+              <svg class="w-4 h-4 flex-none" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+              Ask us on WhatsApp
+              <svg class="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Right: Accordion -->
+        <div class="lg:col-span-3 space-y-3">
+
+          <details class="group bg-[#fdfbf7] border border-neutral-border/50 rounded-2xl overflow-hidden hover:border-brand-primary/20 transition-colors duration-200" open>
+            <summary class="flex items-center justify-between gap-x-4 px-6 py-5 cursor-pointer list-none">
+              <span class="text-sm font-semibold text-neutral-text-primary">How does WAStays actually work?</span>
+              <span class="flex-none w-6 h-6 rounded-full bg-brand-primary/8 flex items-center justify-center text-brand-primary transition-transform duration-300 group-open:rotate-45">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+              </span>
+            </summary>
+            <div class="px-6 pb-5">
+              <p class="text-sm text-neutral-text-secondary leading-relaxed">WAStays connects to your hotel's WhatsApp number and handles guest communication automatically — from booking inquiries and pre-check-in forms to upsell offers and post-stay reviews. You manage everything from a single dashboard.</p>
+            </div>
+          </details>
+
+          <details class="group bg-[#fdfbf7] border border-neutral-border/50 rounded-2xl overflow-hidden hover:border-brand-primary/20 transition-colors duration-200">
+            <summary class="flex items-center justify-between gap-x-4 px-6 py-5 cursor-pointer list-none">
+              <span class="text-sm font-semibold text-neutral-text-primary">Do my guests need to download anything?</span>
+              <span class="flex-none w-6 h-6 rounded-full bg-brand-primary/8 flex items-center justify-center text-brand-primary transition-transform duration-300 group-open:rotate-45">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+              </span>
+            </summary>
+            <div class="px-6 pb-5">
+              <p class="text-sm text-neutral-text-secondary leading-relaxed">No. Guests interact entirely through WhatsApp, which they already have on their phone. No app downloads, no account creation, no login screens — just a simple tap-and-message experience they already know.</p>
+            </div>
+          </details>
+
+          <details class="group bg-[#fdfbf7] border border-neutral-border/50 rounded-2xl overflow-hidden hover:border-brand-primary/20 transition-colors duration-200">
+            <summary class="flex items-center justify-between gap-x-4 px-6 py-5 cursor-pointer list-none">
+              <span class="text-sm font-semibold text-neutral-text-primary">Is there a monthly subscription fee?</span>
+              <span class="flex-none w-6 h-6 rounded-full bg-brand-primary/8 flex items-center justify-center text-brand-primary transition-transform duration-300 group-open:rotate-45">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+              </span>
+            </summary>
+            <div class="px-6 pb-5">
+              <p class="text-sm text-neutral-text-secondary leading-relaxed">No monthly fees. WAStays works on a small commission model — you only pay when you receive a confirmed booking. There are no upfront costs, no hidden charges, and no lock-in contracts.</p>
+            </div>
+          </details>
+
+          <details class="group bg-[#fdfbf7] border border-neutral-border/50 rounded-2xl overflow-hidden hover:border-brand-primary/20 transition-colors duration-200">
+            <summary class="flex items-center justify-between gap-x-4 px-6 py-5 cursor-pointer list-none">
+              <span class="text-sm font-semibold text-neutral-text-primary">How long does it take to get set up?</span>
+              <span class="flex-none w-6 h-6 rounded-full bg-brand-primary/8 flex items-center justify-center text-brand-primary transition-transform duration-300 group-open:rotate-45">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+              </span>
+            </summary>
+            <div class="px-6 pb-5">
+              <p class="text-sm text-neutral-text-secondary leading-relaxed">Most hotels are live within a day. You register your property, connect your WhatsApp number, and configure your basic hotel info. Our team helps onboard you and the AI concierge is ready to answer guest questions almost immediately.</p>
+            </div>
+          </details>
+
+          <details class="group bg-[#fdfbf7] border border-neutral-border/50 rounded-2xl overflow-hidden hover:border-brand-primary/20 transition-colors duration-200">
+            <summary class="flex items-center justify-between gap-x-4 px-6 py-5 cursor-pointer list-none">
+              <span class="text-sm font-semibold text-neutral-text-primary">Do I need to be tech-savvy to use WAStays?</span>
+              <span class="flex-none w-6 h-6 rounded-full bg-brand-primary/8 flex items-center justify-center text-brand-primary transition-transform duration-300 group-open:rotate-45">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+              </span>
+            </summary>
+            <div class="px-6 pb-5">
+              <p class="text-sm text-neutral-text-secondary leading-relaxed">Not at all. The dashboard is designed for hotel owners and front desk staff — not developers. If you can manage a WhatsApp group, you can run WAStays. And our support team is always one message away.</p>
+            </div>
+          </details>
+
+          <details class="group bg-[#fdfbf7] border border-neutral-border/50 rounded-2xl overflow-hidden hover:border-brand-primary/20 transition-colors duration-200">
+            <summary class="flex items-center justify-between gap-x-4 px-6 py-5 cursor-pointer list-none">
+              <span class="text-sm font-semibold text-neutral-text-primary">Can WAStays handle multiple properties?</span>
+              <span class="flex-none w-6 h-6 rounded-full bg-brand-primary/8 flex items-center justify-center text-brand-primary transition-transform duration-300 group-open:rotate-45">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+              </span>
+            </summary>
+            <div class="px-6 pb-5">
+              <p class="text-sm text-neutral-text-secondary leading-relaxed">Yes. If you manage more than one property, each hotel gets its own profile, WhatsApp number, and dashboard. You can switch between properties easily from a single account.</p>
+            </div>
+          </details>
+
+          <details class="group bg-[#fdfbf7] border border-neutral-border/50 rounded-2xl overflow-hidden hover:border-brand-primary/20 transition-colors duration-200">
+            <summary class="flex items-center justify-between gap-x-4 px-6 py-5 cursor-pointer list-none">
+              <span class="text-sm font-semibold text-neutral-text-primary">How does the AI concierge know about my hotel?</span>
+              <span class="flex-none w-6 h-6 rounded-full bg-brand-primary/8 flex items-center justify-center text-brand-primary transition-transform duration-300 group-open:rotate-45">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+              </span>
+            </summary>
+            <div class="px-6 pb-5">
+              <p class="text-sm text-neutral-text-secondary leading-relaxed">During setup you fill in your hotel profile — room types, house rules, facilities, check-in times, local tips, and more. The AI learns from this information and uses it to answer guest questions accurately and in your hotel's tone.</p>
+            </div>
+          </details>
+
+          <details class="group bg-[#fdfbf7] border border-neutral-border/50 rounded-2xl overflow-hidden hover:border-brand-primary/20 transition-colors duration-200">
+            <summary class="flex items-center justify-between gap-x-4 px-6 py-5 cursor-pointer list-none">
+              <span class="text-sm font-semibold text-neutral-text-primary">Is my guest data safe and secure?</span>
+              <span class="flex-none w-6 h-6 rounded-full bg-brand-primary/8 flex items-center justify-center text-brand-primary transition-transform duration-300 group-open:rotate-45">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+              </span>
+            </summary>
+            <div class="px-6 pb-5">
+              <p class="text-sm text-neutral-text-secondary leading-relaxed">Absolutely. Guest data is encrypted and stored securely. Unlike OTAs, your guest database belongs entirely to you — WAStays never sells or shares your data with third parties. You own every contact and every conversation.</p>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA Section -->
+  <div class="bg-[#1e2e2a] py-32 lg:py-40 overflow-hidden relative">
+
+    <!-- Deep radial glow -->
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div class="w-[800px] h-[500px] bg-brand-primary/20 rounded-full blur-[140px]"></div>
+    </div>
+
+    <!-- Decorative large serif watermark -->
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
+      <span class="text-[28rem] font-serif italic text-white/[0.025] leading-none">W</span>
+    </div>
+
+    <!-- Floating star decorations -->
+    <div class="absolute top-16 left-[12%] w-1.5 h-1.5 rounded-full bg-[#d9c5a0]/30"></div>
+    <div class="absolute top-32 left-[18%] w-1 h-1 rounded-full bg-[#d9c5a0]/20"></div>
+    <div class="absolute bottom-24 right-[14%] w-2 h-2 rounded-full bg-[#25D366]/20"></div>
+    <div class="absolute top-20 right-[20%] w-1 h-1 rounded-full bg-white/20"></div>
+    <div class="absolute bottom-32 left-[10%] w-1.5 h-1.5 rounded-full bg-white/10"></div>
+
+    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto relative z-10 text-center">
+
+      <!-- Eyebrow -->
+      <div class="inline-flex items-center gap-x-3 mb-10">
+        <span class="w-8 h-px bg-[#d9c5a0]/30"></span>
+        <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-[#d9c5a0]">Get Started</span>
+        <span class="w-8 h-px bg-[#d9c5a0]/30"></span>
+      </div>
+
+      <h2 class="text-5xl lg:text-6xl xl:text-7xl font-serif text-white mb-8 leading-[1.05] max-w-4xl mx-auto">
+        Ready to Upgrade Your<br>
+        <span class="italic text-[#d9c5a0]">Guest Experience?</span>
+      </h2>
+
+      <p class="text-xl text-gray-400 mb-14 max-w-xl mx-auto leading-relaxed">
+        Turn your hotel into a smart, automated hospitality engine — powered by WhatsApp.
+      </p>
+
+      <!-- CTA Buttons -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+        <a href="#" class="group inline-flex items-center justify-center gap-x-2 btn btn-primary px-10 py-4 rounded-xl text-base font-bold shadow-lg shadow-brand-primary/30 w-full sm:w-auto">
+          Book a Demo
+          <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+        </a>
+        <%= link_to for_hotels_path, class: "group inline-flex items-center justify-center gap-x-2 border border-white/20 text-white hover:bg-white/10 px-10 py-4 rounded-xl text-base font-bold transition-all duration-200 w-full sm:w-auto" do %>
+          Start with WAStays
+          <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+        <% end %>
+      </div>
+
+      <!-- Trust micro-row -->
+      <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+        <div class="flex items-center gap-x-2 text-sm text-gray-500">
+          <svg class="w-4 h-4 text-[#25D366] flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+          No subscription fees
+        </div>
+        <span class="hidden sm:block w-px h-4 bg-white/10"></span>
+        <div class="flex items-center gap-x-2 text-sm text-gray-500">
+          <svg class="w-4 h-4 text-[#25D366] flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+          Set up in minutes
+        </div>
+        <span class="hidden sm:block w-px h-4 bg-white/10"></span>
+        <div class="flex items-center gap-x-2 text-sm text-gray-500">
+          <svg class="w-4 h-4 text-[#25D366] flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+          Pay only when you earn
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>
