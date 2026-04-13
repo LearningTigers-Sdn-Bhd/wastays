@@ -1,0 +1,44 @@
+<!-- New Hero Section -->
+<div class="relative h-screen lg:h-[calc(100vh-64px)] flex items-center">
+  <!-- Background Image with Mask -->
+  <div class="absolute inset-y-0 right-0 w-full lg:w-2/3">
+    <!-- Horizontal Fade -->
+    <div class="absolute inset-0 z-10 bg-gradient-to-r from-landing-bg via-landing-bg/20 to-transparent"></div>
+    <!-- Vertical Fade at Bottom -->
+    <div class="absolute inset-x-0 bottom-0 z-10 h-32 bg-gradient-to-t from-landing-bg to-transparent"></div>
+
+    <img class="h-full w-full object-cover" src="https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=2000" alt="Tropical Resort">
+  </div>
+
+  <div class="relative max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 z-20">
+    <div class="max-w-2xl">
+      <!-- Badge -->
+      <div class="inline-flex items-center gap-x-2 bg-brand-accent px-4 py-1.5 rounded-md mb-8">
+        <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent-text">Direct Hotel Booking Platform</span>
+      </div>
+
+      <h1 class="text-5xl lg:text-6xl xl:text-7xl font-serif text-brand-primary leading-[1.1] mb-8">
+        Turn Every Stay Into a <br>
+        <span class="italic">5-Star Experience</span> <br>
+        — Automatically
+      </h1>
+
+      <p class="text-lg text-neutral-text-secondary max-w-lg mb-10 leading-relaxed">
+        WAStays helps hotels automate guest communication, increase revenue, and deliver exceptional hospitality — all through WhatsApp.
+      </p>
+
+      <div class="flex flex-wrap items-center gap-4 mb-10">
+        <a href="#" class="btn btn-primary px-10 py-4 rounded-lg text-base font-bold shadow-lg shadow-brand-primary/20">
+          Book a Demo
+        </a>
+        <a href="<%= hotels_path %>" class="btn bg-white border-brand-primary text-brand-primary hover:bg-neutral-bg px-10 py-4 rounded-lg text-base font-bold">
+          Get Started
+        </a>
+      </div>
+
+      <p class="text-sm font-medium text-neutral-text-secondary italic">
+        Trusted by modern hotels to simplify operations and delight guests at scale.
+      </p>
+    </div>
+  </div>
+</div>

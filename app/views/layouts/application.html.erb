@@ -13,9 +13,8 @@
     <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
     <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
 
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
+    <link rel="icon" href="<%= asset_path('logo/icon-logo.png') %>" type="image/png">
+    <link rel="apple-touch-icon" href="<%= asset_path('logo/icon-logo.png') %>">
 
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
@@ -31,11 +30,8 @@
       <nav class="max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16" aria-label="Global">
 
         <!-- Logo -->
-        <a class="flex items-center gap-x-2.5 flex-none focus:outline-none group" href="<%= root_path %>" aria-label="WAStays">
-          <div class="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow duration-200">
-            <span class="text-sm font-black text-white tracking-tight">W</span>
-          </div>
-          <span class="text-lg font-bold text-neutral-text-primary tracking-tight">WAStays</span>
+        <a class="flex items-center flex-none focus:outline-none group" href="<%= root_path %>" aria-label="WAStays">
+          <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "block h-11 w-auto" %>
         </a>
 
         <!-- Nav links (desktop) -->
@@ -183,8 +179,10 @@
 
           <!-- Brand column -->
           <div class="lg:col-span-2">
-            <a class="inline-block text-2xl font-bold text-white tracking-tight mb-4" href="<%= root_path %>" aria-label="WAStays">WAStays</a>
-            <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-8">
+            <a class="inline-block mb-4" href="<%= root_path %>" aria-label="WAStays">
+              <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "block h-12 w-auto -ml-2" %>
+            </a>
+            <p class="text-sm text-gray-400 leading-relaxed max-w-xs mb-8">
               Helping independent hotels automate guest communication, grow direct revenue, and deliver exceptional hospitality — through WhatsApp.
             </p>
             <a href="#" class="inline-flex items-center gap-x-2.5 text-sm font-medium text-[#25D366] hover:text-[#25D366]/70 transition-colors group">
@@ -198,9 +196,9 @@
           <div>
             <h4 class="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d9c5a0] mb-6">Support</h4>
             <ul class="space-y-4">
-              <li><a class="text-sm text-gray-500 hover:text-white transition-colors duration-200" href="mailto:support@wastays.com">Email Support</a></li>
-              <li><a class="text-sm text-gray-500 hover:text-white transition-colors duration-200" href="<%= help_center_path %>">Help Center</a></li>
-              <li><a class="text-sm text-gray-500 hover:text-white transition-colors duration-200" href="#">FAQs</a></li>
+              <li><a class="text-sm text-gray-300 hover:text-white transition-colors duration-200" href="mailto:support@wastays.com">Email Support</a></li>
+              <li><a class="text-sm text-gray-300 hover:text-white transition-colors duration-200" href="<%= help_center_path %>">Help Center</a></li>
+              <li><a class="text-sm text-gray-300 hover:text-white transition-colors duration-200" href="#">FAQs</a></li>
             </ul>
           </div>
 
@@ -208,9 +206,7 @@
           <div>
             <h4 class="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d9c5a0] mb-6">Company</h4>
             <ul class="space-y-4">
-              <li><a class="text-sm text-gray-500 hover:text-white transition-colors duration-200" href="#">About Us</a></li>
-              <li><a class="text-sm text-gray-500 hover:text-white transition-colors duration-200" href="#">Privacy Policy</a></li>
-              <li><a class="text-sm text-gray-500 hover:text-white transition-colors duration-200" href="#">Terms of Service</a></li>
+              <li><a class="text-sm text-gray-300 hover:text-white transition-colors duration-200" href="#">About Us</a></li>
             </ul>
           </div>
 
@@ -218,9 +214,9 @@
           <div>
             <h4 class="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d9c5a0] mb-6">For Hotels</h4>
             <ul class="space-y-4">
-              <li><%= link_to "Hotel Partnerships", for_hotels_path, class: "text-sm text-gray-500 hover:text-white transition-colors duration-200" %></li>
-              <li><%= link_to "Register Your Hotel", register_path, class: "text-sm text-gray-500 hover:text-white transition-colors duration-200" %></li>
-              <li><%= link_to "Hotel Login", login_path, class: "text-sm text-gray-500 hover:text-white transition-colors duration-200" %></li>
+              <li><%= link_to "Hotel Partnerships", for_hotels_path, class: "text-sm text-gray-300 hover:text-white transition-colors duration-200" %></li>
+              <li><%= link_to "Register Your Hotel", register_path, class: "text-sm text-gray-300 hover:text-white transition-colors duration-200" %></li>
+              <li><%= link_to "Hotel Login", login_path, class: "text-sm text-gray-300 hover:text-white transition-colors duration-200" %></li>
             </ul>
           </div>
 
@@ -229,14 +225,14 @@
         <!-- Bottom bar -->
         <div class="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div class="flex items-center gap-x-3">
-            <span class="text-sm font-bold text-white/30 tracking-tight">WAStays</span>
+            <span class="text-sm font-semibold text-white/60 tracking-tight">WAStays</span>
             <span class="w-px h-3.5 bg-white/10"></span>
-            <p class="text-sm text-gray-600">&copy; <%= Date.today.year %> WAStays. All rights reserved.</p>
+            <p class="text-sm text-gray-400">&copy; <%= Date.today.year %> WAStays. All rights reserved.</p>
           </div>
-          <div class="flex items-center gap-x-1.5">
-            <span class="text-xs text-gray-700">Made with</span>
-            <svg class="w-3.5 h-3.5 text-red-500/50" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
-            <span class="text-xs text-gray-700">for hospitality</span>
+          <div class="flex items-center gap-x-4 text-xs text-gray-400">
+            <a class="hover:text-white transition-colors duration-200" href="#">Privacy Policy</a>
+            <span class="w-px h-3 bg-white/10"></span>
+            <a class="hover:text-white transition-colors duration-200" href="#">Terms &amp; Conditions</a>
           </div>
         </div>
 
