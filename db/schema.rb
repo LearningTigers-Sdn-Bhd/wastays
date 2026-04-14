@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_14_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_14_093000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -189,6 +189,35 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_14_000000) do
     t.text "body"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "complaint_requests", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "external_id"
+    t.datetime "requested_at", null: false
+    t.text "complaint_details", null: false
+    t.string "source", default: "whatsapp", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
+    t.index ["booking_id"], name: "index_complaint_requests_on_booking_id"
+    t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
+  end
+
+  create_table "complaints", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "external_id"
+    t.datetime "reported_at"
+    t.text "issue_details"
+    t.string "source"
+    t.datetime "resolved_at"
+    t.jsonb "metadata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_complaints_on_booking_id"
+    t.index ["external_id"], name: "index_complaints_on_external_id"
+    t.index ["reported_at"], name: "index_complaints_on_reported_at"
   end
 
   create_table "guests", force: :cascade do |t|
@@ -424,6 +453,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_14_000000) do
   add_foreign_key "booking_rooms", "room_types"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
+  add_foreign_key "complaint_requests", "bookings"
+  add_foreign_key "complaints", "bookings"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "housekeeping_requests", "bookings"
   add_foreign_key "inventory_audit_logs", "hotels"
