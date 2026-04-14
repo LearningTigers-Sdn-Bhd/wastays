@@ -32,8 +32,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
           banking_detail_attributes: {
             account_holder_name: 'Syarikat Maju Jaya Sdn Bhd',
             bank_name: 'Maybank',
-            account_number: '5142 1234 5678',
-            account_type: 'current'
+            account_number: '5142 1234 5678'
           }
         }
       }
@@ -46,7 +45,6 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(banking_detail.account_holder_name).to eq('Syarikat Maju Jaya Sdn Bhd')
       expect(banking_detail.bank_name).to eq('Maybank')
       expect(banking_detail.account_number).to eq('5142 1234 5678')
-      expect(banking_detail.account_type).to eq('current')
     end
 
     it 'rolls back hotel settings when property policy validation fails' do

@@ -1,0 +1,54 @@
+<!-- New Hero Section -->
+<div class="relative h-screen lg:h-[calc(100vh-64px)] flex items-center">
+  <!-- Background Image with Mask -->
+  <div class="absolute inset-y-0 right-0 w-full lg:w-2/3">
+    <!-- Horizontal Fade (desktop only — on mobile image is full-width so fade looks out of place) -->
+    <div class="hidden lg:block absolute inset-0 z-10 bg-gradient-to-r from-landing-bg via-landing-bg/20 to-transparent"></div>
+    <!-- Vertical Fade at Bottom -->
+    <div class="absolute inset-x-0 bottom-0 z-10 h-32 bg-gradient-to-t from-landing-bg to-transparent"></div>
+    <!-- Mobile dark overlay for text contrast -->
+    <div class="lg:hidden absolute inset-0 z-[5] bg-black/40"></div>
+
+    <img class="h-full w-full object-cover" src="https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=2000" alt="Tropical Resort">
+  </div>
+
+  <div class="relative max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 z-20">
+    <div class="max-w-2xl">
+      <!-- Badge -->
+      <div class="inline-flex items-center gap-x-2 bg-brand-accent px-4 py-1.5 rounded-md mb-5 sm:mb-8">
+        <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent-text">Direct Hotel Booking Platform</span>
+      </div>
+
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif text-brand-primary leading-[1.1] mb-8">
+        Turn Every Stay Into a <br class="hidden sm:inline">
+        <span class="italic">5-Star Experience</span> <br class="hidden sm:inline">
+        — Automatically
+      </h1>
+
+      <p class="text-lg text-white max-w-lg mb-10 leading-relaxed lg:hidden">
+        WAStays helps hotels automate guest communication, increase revenue, and deliver exceptional hospitality — all through WhatsApp.
+      </p>
+
+      <p class="hidden lg:block text-lg text-[#315f59] max-w-lg mb-10 leading-relaxed">
+        WAStays helps hotels automate guest communication, increase revenue, and deliver exceptional hospitality — all through WhatsApp.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-10">
+        <a href="#" class="btn btn-primary px-8 py-3.5 sm:py-4 rounded-lg text-base font-bold shadow-lg shadow-brand-primary/20 text-center">
+          Book a Demo
+        </a>
+        <a href="<%= register_path %>" class="btn bg-white border-brand-primary text-brand-primary hover:bg-neutral-bg px-8 py-3.5 sm:py-4 rounded-lg text-base font-bold text-center">
+          Get Started
+        </a>
+      </div>
+
+      <p class="text-sm font-medium text-white/80 italic text-center lg:hidden">
+        Trusted by modern hotels to simplify operations and delight guests at scale.
+      </p>
+
+      <p class="hidden lg:block text-sm font-medium text-[#456863] italic">
+        Trusted by modern hotels to simplify operations and delight guests at scale.
+      </p>
+    </div>
+  </div>
+</div>

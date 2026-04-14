@@ -17,9 +17,9 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
     visit login_path
-    fill_in 'Email address', with: user.email
+    fill_in 'Email Address', with: user.email
     fill_in 'Password', with: 'password123'
-    click_button 'Sign In'
+    click_button 'Sign In to Portal'
   end
 
   it 'allows the user to add banking details from the settings page' do
@@ -28,7 +28,6 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     fill_in 'account_banking_detail_attributes_account_holder_name', with: 'Syarikat Maju Jaya Sdn Bhd'
     fill_in 'account_banking_detail_attributes_bank_name', with: 'Maybank'
     fill_in 'account_banking_detail_attributes_account_number', with: '5142 1234 5678'
-    select 'Current', from: 'account_banking_detail_attributes_account_type'
 
     click_button 'Save Banking Details'
 
@@ -38,7 +37,6 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     expect(banking_detail.account_holder_name).to eq('Syarikat Maju Jaya Sdn Bhd')
     expect(banking_detail.bank_name).to eq('Maybank')
     expect(banking_detail.account_number).to eq('5142 1234 5678')
-    expect(banking_detail.account_type).to eq('current')
     expect(hotel.reload.status).to eq('approved')
   end
 
@@ -53,7 +51,6 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     fill_in 'account_banking_detail_attributes_account_holder_name', with: 'Kejayaan Hotel Sdn Bhd'
     fill_in 'account_banking_detail_attributes_bank_name', with: 'CIMB'
     fill_in 'account_banking_detail_attributes_account_number', with: '1234 5678 9012'
-    select 'Savings', from: 'account_banking_detail_attributes_account_type'
 
     click_button 'Save Banking Details'
 
@@ -68,7 +65,6 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     fill_in 'account_banking_detail_attributes_account_holder_name', with: ''
     fill_in 'account_banking_detail_attributes_bank_name', with: ''
     fill_in 'account_banking_detail_attributes_account_number', with: '1234/5678'
-    select 'Current', from: 'account_banking_detail_attributes_account_type'
 
     click_button 'Save Banking Details'
 

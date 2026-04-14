@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_02_075737) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_10_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -69,7 +69,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_02_075737) do
     t.string "account_holder_name", null: false
     t.string "bank_name", null: false
     t.string "account_number", null: false
-    t.string "account_type", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_banking_details_on_account_id", unique: true
@@ -219,7 +218,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_02_075737) do
     t.decimal "usd_conversion_rate", precision: 10, scale: 4, default: "4.5", null: false
     t.boolean "tourism_tax_enabled", default: false, null: false
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "10.0", null: false
+    t.bigint "featured_photo_attachment_id"
     t.index ["account_id"], name: "index_hotels_on_account_id"
+    t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
   end
 
   create_table "inventory_audit_logs", force: :cascade do |t|
@@ -273,11 +274,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_02_075737) do
     t.string "status"
     t.string "token"
     t.datetime "completed_at"
-    t.string "document_status"
-    t.string "signature_status"
     t.jsonb "metadata"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "signature_status"
+    t.string "document_status"
     t.index ["booking_id"], name: "index_pre_checkins_on_booking_id"
   end
 

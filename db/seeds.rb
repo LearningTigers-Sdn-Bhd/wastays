@@ -162,7 +162,7 @@ if Rails.env.development?
   account_blueprints = [
     {
       account: { slug: 'sample-account', name: 'Sample Account', status: 'active' },
-      banking: { account_holder_name: 'Sample Hospitality Sdn Bhd', bank_name: 'Maybank', account_number: '5142 1234 5678', account_type: 'current' },
+      banking: { account_holder_name: 'Sample Hospitality Sdn Bhd', bank_name: 'Maybank', account_number: '5142 1234 5678' },
       users: [
         { email: 'owner@sample.com', name: 'Hotel Owner', role: 'admin', role_slug: 'hotel_owner' },
         { email: 'owner@example.com', name: 'Nadia Rahman', role: 'admin', role_slug: 'hotel_owner' }
@@ -198,7 +198,7 @@ if Rails.env.development?
     },
     {
       account: { slug: 'borneo-boutique-group', name: 'Borneo Boutique Group', status: 'active' },
-      banking: { account_holder_name: 'Borneo Boutique Group Sdn Bhd', bank_name: 'CIMB', account_number: '8000 2233 4455', account_type: 'current' },
+      banking: { account_holder_name: 'Borneo Boutique Group Sdn Bhd', bank_name: 'CIMB', account_number: '8000 2233 4455' },
       users: [
         { email: 'manager@borneo.test', name: 'Farid Iskandar', role: 'admin', role_slug: 'hotel_owner' }
       ],
@@ -246,7 +246,6 @@ if Rails.env.development?
       banking_detail.account_holder_name = blueprint[:banking][:account_holder_name]
       banking_detail.bank_name = blueprint[:banking][:bank_name]
       banking_detail.account_number = blueprint[:banking][:account_number]
-      banking_detail.account_type = blueprint[:banking][:account_type]
     end.tap do |banking_detail|
       banking_detail.update!(blueprint[:banking])
     end

@@ -3,7 +3,7 @@
   <div class="sticky top-[61px] z-40 w-full bg-white border-b border-neutral-border py-3 shadow-sm">
     <div class="max-w-[85rem] mx-auto px-4 flex items-center justify-between">
       <div class="flex items-center gap-x-4 overflow-hidden">
-        <div class="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-red-50 text-brand-primary">
+        <div class="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-brand-primary/10 text-brand-primary">
           <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </div>
         <div class="truncate">
@@ -127,7 +127,11 @@
                 <div class="flex flex-col md:flex-row h-full">
                   <!-- Photo Carousel (Mocked functionality for now) -->
                   <div class="relative w-full md:w-72 lg:w-80 h-56 md:h-auto overflow-hidden">
-                    <% if hotel.room_types.first&.photos&.attached? %>
+                    <% if hotel.featured_photo_attachment.present? %>
+                      <%= image_tag hotel.featured_photo_attachment, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
+                    <% elsif hotel.photos.attached? %>
+                      <%= image_tag hotel.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
+                    <% elsif hotel.room_types.first&.photos&.attached? %>
                       <%= image_tag hotel.room_types.first.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
                     <% else %>
                       <div class="absolute inset-0 bg-neutral-bg flex items-center justify-center">
@@ -152,22 +156,13 @@
                           <% end %>
                         </div>
                       </div>
-                      <p class="text-sm text-neutral-text-secondary flex items-center mb-4">
+                      <p class="text-sm text-neutral-text-secondary flex items-center mb-6">
                         <svg class="w-3.5 h-3.5 me-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                         <%= hotel.city %>, <%= hotel.country %>
                       </p>
-
-                      <div class="flex flex-wrap gap-2 mb-4">
-                        <span class="inline-flex items-center gap-x-1 py-1 px-2 rounded-md text-[10px] font-bold uppercase tracking-wider bg-green-50 text-status-success border border-green-100">
-                          Free Cancellation
-                        </span>
-                        <span class="inline-flex items-center gap-x-1 py-1 px-2 rounded-md text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-status-info border border-blue-100">
-                          WhatsApp Support
-                        </span>
-                      </div>
                     </div>
 
-                    <div class="flex justify-between items-end border-t border-neutral-border pt-4">
+                    <div class="flex justify-between items-end border-t border-neutral-border pt-6">
                       <div>
                         <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">Starts from</p>
                         <% lowest_room = hotel.room_types.first %>

@@ -18,7 +18,7 @@ RSpec.describe 'Hotel Registration', type: :system do
     fill_in 'Work Email', with: 'sarah@example.com'
     fill_in 'Password', with: 'password123'
 
-    click_button 'Register Hotel'
+    click_button 'Register Your Hotel'
 
     expect(page).to have_content('Welcome to WAStays!')
 
@@ -34,7 +34,7 @@ RSpec.describe 'Hotel Registration', type: :system do
     visit register_path
 
     fill_in 'Full Name', with: '' # Invalid
-    click_button 'Register Hotel'
+    click_button 'Register Your Hotel'
 
     expect(page).to have_content("Name can't be blank")
   end

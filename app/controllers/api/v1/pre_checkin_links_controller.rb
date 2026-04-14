@@ -18,7 +18,7 @@ class Api::V1::PreCheckinLinksController < Api::V1::BaseController
       render json: {
         booking_token: booking.confirmation_token,
         guest_name: booking.guest_name,
-        hotel_name: booking.hotel.name,
+        hotel_id: booking.hotel_id,
         check_in_date: booking.check_in,
         check_out_date: booking.check_out,
         pre_checkin_url: public_pre_checkin_url(pre_checkin.token)
@@ -36,8 +36,8 @@ class Api::V1::PreCheckinLinksController < Api::V1::BaseController
       return true
     end
 
-    if params[:hotel_name].present? && params[:hotel_name] != booking.hotel.name
-      render json: { error: "Hotel name does not match the booking" }, status: :unprocessable_content
+    if params[:hotel_id].present? && params[:hotel_id].to_s != booking.hotel_id.to_s
+      render json: { error: "Hotel id does not match the booking" }, status: :unprocessable_content
       return true
     end
 

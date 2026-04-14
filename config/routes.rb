@@ -7,6 +7,7 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   root "static_pages#home"
   get "for-hotels", to: "static_pages#for_hotels", as: :for_hotels
+  get "explore", to: "static_pages#explore", as: :explore
 
   # Help Center
   get "help", to: "help_center#index", as: :help_center
@@ -89,6 +90,9 @@ Rails.application.routes.draw do
     post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
     resource :profile, only: [ :edit, :update ]
+    delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
+    delete "profile/photos", to: "profiles#destroy_photos", as: :profile_photos
+    patch "profile/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature
     resource :property_policy, only: [ :edit, :update ]
 
     resources :room_types do

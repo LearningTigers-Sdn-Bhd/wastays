@@ -1,136 +1,260 @@
-<div class="bg-neutral-bg min-h-screen flex flex-col md:flex-row">
-  <!-- Left Side: Branding & Value Prop -->
-  <div class="hidden md:flex md:w-1/2 bg-brand-gradient p-12 lg:p-20 flex-col justify-between text-white relative overflow-hidden">
-    <div class="absolute inset-0 opacity-10">
-      <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 100 C 20 0 50 0 100 100 Z" fill="white"></path></svg>
+
+<div class="bg-[#fdfbf7] min-h-screen flex flex-col md:flex-row">
+
+  <!-- Left Panel: Dark Forest Branding -->
+  <div class="hidden md:flex md:w-[45%] lg:w-2/5 bg-[#1e2e2a] flex-col justify-between relative overflow-hidden p-12 lg:p-16">
+
+    <!-- Deep radial glow -->
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div class="w-[600px] h-[600px] bg-brand-primary/15 rounded-full blur-[120px]"></div>
     </div>
+
+    <!-- Top: Logo -->
     <div class="relative z-10">
-      <a class="text-3xl font-black tracking-tighter" href="<%= root_path %>">WAStays</a>
-      <div class="mt-20 max-w-md">
-        <h1 class="text-4xl lg:text-5xl font-black leading-tight mb-6">Grow your hotel business with WAStays</h1>
-        <p class="text-lg text-white/80 mb-10 leading-relaxed">Join the fastest growing network of budget and boutique hotels across Southeast Asia.</p>
-        
-        <ul class="space-y-6">
-          <li class="flex items-start gap-x-4">
-            <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <div>
-              <h3 class="font-bold text-white">Free to Join</h3>
-              <p class="text-sm text-white/70">No subscription fees. No setup costs. Pay only for performance.</p>
-            </div>
-          </li>
-          <li class="flex items-start gap-x-4">
-            <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </div>
-            <div>
-              <h3 class="font-bold text-white">WhatsApp Driven</h3>
-              <p class="text-sm text-white/70">Communicate directly with guests. Lower barriers to booking.</p>
-            </div>
-          </li>
-          <li class="flex items-start gap-x-4">
-            <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-            <div>
-              <h3 class="font-bold text-white">Operational Ease</h3>
-              <p class="text-sm text-white/70">Powerful dashboard to manage inventory, rates, and guest arrivals.</p>
-            </div>
-          </li>
-        </ul>
-      </div>
+      <a href="<%= root_path %>" class="inline-block">
+        <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-14 w-auto brightness-0 invert" %>
+      </a>
     </div>
-    
-    <div class="relative z-10 text-sm text-white/60">
-      © 2026 WAStays Platform. All rights reserved.
+
+    <!-- Middle: Headline + Features -->
+    <div class="relative z-10 flex-1 flex flex-col justify-center py-16">
+
+      <!-- Eyebrow -->
+      <div class="inline-flex items-center gap-x-3 mb-8">
+        <span class="w-8 h-px bg-[#d9c5a0]/30"></span>
+        <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-[#d9c5a0]">Hotel Partner Programme</span>
+        <span class="w-8 h-px bg-[#d9c5a0]/30"></span>
+      </div>
+
+      <h1 class="text-4xl lg:text-5xl font-serif text-white leading-[1.1] mb-6">
+        Grow Your Hotel<br>
+        <span class="italic text-[#d9c5a0]">The Smart Way</span>
+      </h1>
+
+      <p class="text-gray-400 text-base leading-relaxed mb-12 max-w-xs">
+        Join Southeast Asia's fastest-growing network of budget and boutique hotels powered by WhatsApp.
+      </p>
+
+      <ul class="space-y-8">
+        <li class="flex items-start gap-x-5">
+          <div class="flex-none w-9 h-9 rounded-xl bg-[#d9c5a0]/10 border border-[#d9c5a0]/20 flex items-center justify-center">
+            <svg class="w-4 h-4 text-[#d9c5a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white mb-0.5">Free to Join</h3>
+            <p class="text-xs text-gray-500 leading-relaxed">No setup fees. No subscriptions. Pay only when you earn.</p>
+          </div>
+        </li>
+        <li class="flex items-start gap-x-5">
+          <div class="flex-none w-9 h-9 rounded-xl bg-[#d9c5a0]/10 border border-[#d9c5a0]/20 flex items-center justify-center">
+            <svg class="w-4 h-4 text-[#d9c5a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white mb-0.5">WhatsApp-Driven</h3>
+            <p class="text-xs text-gray-500 leading-relaxed">Communicate directly with guests, right where they already are.</p>
+          </div>
+        </li>
+        <li class="flex items-start gap-x-5">
+          <div class="flex-none w-9 h-9 rounded-xl bg-[#d9c5a0]/10 border border-[#d9c5a0]/20 flex items-center justify-center">
+            <svg class="w-4 h-4 text-[#d9c5a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white mb-0.5">Revenue Growth</h3>
+            <p class="text-xs text-gray-500 leading-relaxed">Smart upsells and automated flows that increase your bottom line.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Bottom: Trust line -->
+    <div class="relative z-10 flex items-center gap-x-3">
+      <span class="w-6 h-px bg-[#d9c5a0]/20"></span>
+      <p class="text-xs text-gray-600">Trusted by 200+ hotels across Southeast Asia</p>
     </div>
   </div>
 
-  <!-- Right Side: Form -->
-  <div class="flex-1 p-6 sm:p-12 lg:p-20 overflow-y-auto">
-    <div class="max-w-md mx-auto">
-      <div class="mb-10 text-center md:text-left">
-        <h2 class="text-3xl font-black text-neutral-text-primary tracking-tight">Create your account</h2>
-        <p class="text-neutral-text-secondary mt-2">Already have an account? <%= link_to "Sign in here", login_path, class: "text-brand-primary font-bold hover:underline" %></p>
+  <!-- Right Panel: Registration Form -->
+  <div class="flex-1 bg-[#fdfbf7] overflow-y-auto flex items-start justify-center px-6 pt-16 pb-16 sm:px-10 lg:px-8">
+    <div class="w-full max-w-2xl">
+
+      <!-- Header -->
+      <div class="mb-12 mt-20 text-center">
+        <!-- Mobile logo: centered above eyebrow -->
+        <div class="md:hidden mb-8">
+          <a href="<%= root_path %>" class="inline-block">
+            <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-10 w-auto mx-auto" %>
+          </a>
+        </div>
+
+        <div class="flex items-center justify-center gap-x-3 mb-6">
+          <span class="w-6 h-px bg-brand-primary/30"></span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">Create Account</span>
+          <span class="w-6 h-px bg-brand-primary/30"></span>
+        </div>
+        <h2 class="text-4xl font-serif text-neutral-text-primary leading-tight mb-3">
+          Start Your <span class="italic text-brand-primary">Free Account</span>
+        </h2>
+        <p class="text-neutral-text-secondary text-sm leading-relaxed">
+          Already have an account?
+          <%= link_to "Sign in here", login_path, class: "text-brand-primary font-semibold hover:underline underline-offset-2" %>
+        </p>
       </div>
 
-      <%= form_with url: register_path, local: true, class: "space-y-8" do |f| %>
-        <!-- Business Section -->
-        <section class="space-y-4">
-          <div class="flex items-center gap-x-2 mb-4">
-            <span class="w-6 h-6 rounded-full bg-neutral-bg text-neutral-text-secondary flex items-center justify-center text-[10px] font-black border border-neutral-border">1</span>
-            <h3 class="text-sm font-black text-neutral-text-primary uppercase tracking-widest">Business Details</h3>
+      <%= form_with url: register_path, local: true, class: "space-y-10" do |f| %>
+
+        <!-- 1. Business Details -->
+        <div>
+          <div class="flex items-center gap-x-3 mb-6">
+            <div class="flex-none w-6 h-6 rounded-full bg-[#1e2e2a] flex items-center justify-center">
+              <span class="text-[9px] font-black text-[#d9c5a0]">1</span>
+            </div>
+            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-neutral-text-secondary">Business Details</h3>
+            <span class="flex-1 h-px bg-neutral-border"></span>
           </div>
-          
+
           <div>
             <label for="business_name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Company / Group Name</label>
-            <%= text_field_tag "account[name]", params.dig(:account, :name), id: "business_name", class: "form-input py-3", required: true, placeholder: "e.g. Nusantara Hospitality Group" %>
+            <%= text_field_tag "account[name]", params.dig(:account, :name),
+                id: "business_name",
+                class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                required: true,
+                placeholder: "e.g. Nusantara Hospitality Group" %>
           </div>
-        </section>
-
-        <!-- Primary Hotel Section -->
-        <section class="space-y-4">
-          <div class="flex items-center gap-x-2 mb-4">
-            <span class="w-6 h-6 rounded-full bg-neutral-bg text-neutral-text-secondary flex items-center justify-center text-[10px] font-black border border-neutral-border">2</span>
-            <h3 class="text-sm font-black text-neutral-text-primary uppercase tracking-widest">Your First Hotel</h3>
-          </div>
-          
-          <div>
-            <label for="hotel_name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Hotel Name</label>
-            <%= text_field_tag "hotel[name]", params.dig(:hotel, :name), id: "hotel_name", class: "form-input py-3", required: true, placeholder: "e.g. Budget Stay Kuala Lumpur" %>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="city" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">City</label>
-              <%= text_field_tag "hotel[city]", params.dig(:hotel, :city), id: "city", class: "form-input py-3", required: true, placeholder: "Kuala Lumpur" %>
-            </div>
-            <div>
-              <label for="country" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Country</label>
-              <%= text_field_tag "hotel[country]", params.dig(:hotel, :country) || "Malaysia", id: "country", class: "form-input py-3", required: true %>
-            </div>
-          </div>
-        </section>
-
-        <!-- Admin User Section -->
-        <section class="space-y-4">
-          <div class="flex items-center gap-x-2 mb-4">
-            <span class="w-6 h-6 rounded-full bg-neutral-bg text-neutral-text-secondary flex items-center justify-center text-[10px] font-black border border-neutral-border">3</span>
-            <h3 class="text-sm font-black text-neutral-text-primary uppercase tracking-widest">Admin Account</h3>
-          </div>
-          
-          <div>
-            <label for="user_name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Full Name</label>
-            <%= text_field_tag "user[name]", params.dig(:user, :name), id: "user_name", class: "form-input py-3", required: true, placeholder: "Sarah Lim" %>
-          </div>
-
-          <div>
-            <label for="user_email" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Work Email</label>
-            <%= email_field_tag "user[email]", params.dig(:user, :email), id: "user_email", class: "form-input py-3", required: true, placeholder: "sarah@nusantara.com" %>
-          </div>
-
-          <div>
-            <label for="user_password" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Password</label>
-            <%= password_field_tag "user[password]", nil, id: "user_password", class: "form-input py-3", required: true %>
-          </div>
-        </section>
-
-        <div class="pt-4">
-          <p class="text-[10px] text-neutral-text-secondary leading-relaxed mb-6">
-            By clicking "Register Hotel", you agree to our <a href="#" class="text-brand-primary underline">Terms of Service</a> and <a href="#" class="text-brand-primary underline">Privacy Policy</a>. We will never share your personal data without consent.
-          </p>
-          
-          <%= f.submit "Register Hotel", class: "btn btn-gradient w-full py-4 text-base font-black shadow-xl shadow-brand-primary/30" %>
         </div>
+
+        <!-- 2. Your First Hotel -->
+        <div>
+          <div class="flex items-center gap-x-3 mb-6">
+            <div class="flex-none w-6 h-6 rounded-full bg-[#1e2e2a] flex items-center justify-center">
+              <span class="text-[9px] font-black text-[#d9c5a0]">2</span>
+            </div>
+            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-neutral-text-secondary">Your First Hotel</h3>
+            <span class="flex-1 h-px bg-neutral-border"></span>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label for="hotel_name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Hotel Name</label>
+              <%= text_field_tag "hotel[name]", params.dig(:hotel, :name),
+                  id: "hotel_name",
+                  class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                  required: true,
+                  placeholder: "e.g. Budget Stay Kuala Lumpur" %>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="city" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">City</label>
+                <%= text_field_tag "hotel[city]", params.dig(:hotel, :city),
+                    id: "city",
+                    class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                    required: true,
+                    placeholder: "Kuala Lumpur" %>
+              </div>
+              <div>
+                <label for="country" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Country</label>
+                <%= text_field_tag "hotel[country]", params.dig(:hotel, :country) || "Malaysia",
+                    id: "country",
+                    class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                    required: true %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Admin Account -->
+        <div>
+          <div class="flex items-center gap-x-3 mb-6">
+            <div class="flex-none w-6 h-6 rounded-full bg-[#1e2e2a] flex items-center justify-center">
+              <span class="text-[9px] font-black text-[#d9c5a0]">3</span>
+            </div>
+            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-neutral-text-secondary">Admin Account</h3>
+            <span class="flex-1 h-px bg-neutral-border"></span>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label for="user_name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Full Name</label>
+              <%= text_field_tag "user[name]", params.dig(:user, :name),
+                  id: "user_name",
+                  class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                  required: true,
+                  placeholder: "Sarah Lim" %>
+            </div>
+
+            <div>
+              <label for="user_email" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Work Email</label>
+              <%= email_field_tag "user[email]", params.dig(:user, :email),
+                  id: "user_email",
+                  class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                  required: true,
+                  placeholder: "sarah@nusantara.com" %>
+            </div>
+
+            <div>
+              <label for="user_password" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Password</label>
+              <div class="relative" data-controller="password-toggle">
+                <%= password_field_tag "user[password]", nil,
+                    id: "user_password",
+                    class: "w-full bg-white border border-neutral-border rounded-xl px-4 pe-12 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                    required: true,
+                    placeholder: "Create a password",
+                    data: { password_toggle_target: "input" } %>
+                <button
+                  type="button"
+                  class="absolute inset-y-0 end-0 flex items-center pe-4 text-neutral-text-secondary/50 hover:text-brand-primary transition-colors"
+                  data-password-toggle-target="button"
+                  data-action="click->password-toggle#toggle"
+                  aria-label="Show password"
+                  aria-pressed="false"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                    <path data-password-toggle-target="slash" class="hidden" d="M4 4l16 16"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="pt-2">
+          <p class="text-[11px] text-neutral-text-secondary leading-relaxed mb-6">
+            By registering, you agree to our
+            <a href="#" class="text-brand-primary hover:underline underline-offset-2">Terms of Service</a>
+            and
+            <a href="#" class="text-brand-primary hover:underline underline-offset-2">Privacy Policy</a>.
+            We never share your data without consent.
+          </p>
+
+          <%= f.submit "Register Your Hotel",
+              class: "group w-full inline-flex items-center justify-center gap-x-2 btn btn-primary py-4 rounded-xl text-base font-bold shadow-lg shadow-brand-primary/20 cursor-pointer hover:shadow-xl hover:shadow-brand-primary/30 transition-all duration-200" %>
+        </div>
+
       <% end %>
 
-      <div class="mt-12 pt-8 border-t border-neutral-border">
-        <div class="flex items-center justify-center gap-x-8 grayscale opacity-50">
-          <%# Trust Badges / Partners Placeholders %>
-          <span class="text-xs font-black uppercase tracking-widest">Trusted by 200+ Hotels</span>
+      <!-- Trust micro-row -->
+      <div class="mt-12 pt-8 border-t border-neutral-border/60">
+        <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+          <div class="flex items-center gap-x-2 text-xs text-neutral-text-secondary">
+            <svg class="w-3.5 h-3.5 text-brand-primary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            No subscription fees
+          </div>
+          <span class="w-px h-3 bg-neutral-border hidden sm:block"></span>
+          <div class="flex items-center gap-x-2 text-xs text-neutral-text-secondary">
+            <svg class="w-3.5 h-3.5 text-brand-primary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            Set up in minutes
+          </div>
+          <span class="w-px h-3 bg-neutral-border hidden sm:block"></span>
+          <div class="flex items-center gap-x-2 text-xs text-neutral-text-secondary">
+            <svg class="w-3.5 h-3.5 text-brand-primary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            Pay only when you earn
+          </div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
