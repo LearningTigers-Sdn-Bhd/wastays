@@ -18,9 +18,9 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
     visit login_path
-    fill_in 'Email address', with: user.email
+    fill_in 'Email Address', with: user.email
     fill_in 'Password', with: 'password123'
-    click_button 'Sign In'
+    click_button 'Sign In to Portal'
 
     expect(page).to have_content('Welcome to WAStays!')
     expect(page).to have_no_content('Rates & Inventory')
@@ -48,7 +48,7 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
     fill_in 'Full Name', with: 'Sarah Lim'
     fill_in 'Work Email', with: 'sarah@example.com'
     fill_in 'Password', with: 'password123'
-    click_button 'Register Hotel'
+    click_button 'Register Your Hotel'
 
     expect(page).to have_content('Welcome to WAStays!')
     hotel = Hotel.find_by(name: 'Green Hotel KL')
@@ -96,9 +96,9 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
     Capybara.reset_sessions!
     superadmin = create(:user, :superadmin, email: 'admin@wastays.com')
     visit login_path
-    fill_in 'Email address', with: superadmin.email
+    fill_in 'Email Address', with: superadmin.email
     fill_in 'Password', with: 'password123'
-    click_button 'Sign In'
+    click_button 'Sign In to Portal'
 
     expect(page).to have_content('Welcome, Superadmin!')
     visit admin_hotels_path

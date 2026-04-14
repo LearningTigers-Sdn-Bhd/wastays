@@ -1,4 +1,5 @@
 class Public::RegistrationsController < ApplicationController
+  layout "auth"
   def new
     @user = User.new
     @account = Account.new

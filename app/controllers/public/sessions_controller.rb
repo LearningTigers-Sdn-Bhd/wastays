@@ -1,4 +1,5 @@
 class Public::SessionsController < ApplicationController
+  layout "auth"
   def new
     if logged_in?
       redirect_to_dashboard(current_user)
