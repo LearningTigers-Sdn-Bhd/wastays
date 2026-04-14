@@ -201,4 +201,52 @@
   .animate-marquee {
     animation: marquee 12s linear infinite;
   }
+
+  /* ─── Landing Page Animations ─── */
+  @keyframes wa-fade-up {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes wa-fade-left {
+    from { opacity: 0; transform: translateX(-36px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes wa-fade-right {
+    from { opacity: 0; transform: translateX(36px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes wa-scale-in {
+    from { opacity: 0; transform: scale(0.94); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* Hero: always-visible above-fold animations */
+  .animate-hero-badge   { animation: wa-fade-up 0.55s ease both; animation-delay: 0.05s; }
+  .animate-hero-title   { animation: wa-fade-up 0.65s ease both; animation-delay: 0.2s;  }
+  .animate-hero-text    { animation: wa-fade-up 0.65s ease both; animation-delay: 0.35s; }
+  .animate-hero-buttons { animation: wa-fade-up 0.65s ease both; animation-delay: 0.5s;  }
+  .animate-hero-trust   { animation: wa-fade-up 0.65s ease both; animation-delay: 0.65s; }
+
+  /* Scroll-reveal: only active when JS class is present (graceful degradation) */
+  .js-animate-ready [data-animate] {
+    opacity: 0;
+    transition: opacity 0.65s ease, transform 0.65s ease;
+  }
+
+  .js-animate-ready [data-animate]:not([data-animate="from-left"]):not([data-animate="from-right"]):not([data-animate="scale-in"]) {
+    transform: translateY(28px);
+  }
+
+  .js-animate-ready [data-animate="from-left"]  { transform: translateX(-36px); }
+  .js-animate-ready [data-animate="from-right"] { transform: translateX(36px);  }
+  .js-animate-ready [data-animate="scale-in"]   { transform: scale(0.94);       }
+
+  .js-animate-ready [data-animate].is-visible {
+    opacity: 1;
+    transform: none;
+  }
 }
+

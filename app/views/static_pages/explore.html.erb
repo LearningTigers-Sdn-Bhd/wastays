@@ -1,4 +1,4 @@
-<div id="top" class="relative overflow-hidden bg-landing-bg">
+<div id="top" class="relative overflow-hidden bg-landing-bg" data-controller="scroll-reveal">
 
   <!-- ─── HERO ─── -->
   <div class="relative h-[100dvh] flex flex-col overflow-hidden">
@@ -21,23 +21,23 @@
     <div class="relative z-20 flex-1 flex flex-col items-center justify-center max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
 
       <!-- Eyebrow -->
-      <div class="inline-flex items-center gap-x-4 mb-6 sm:mb-8">
+      <div class="inline-flex items-center gap-x-4 mb-6 sm:mb-8 animate-hero-badge">
         <span class="w-8 sm:w-12 h-px bg-[#d9c5a0]/40"></span>
         <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.4em] sm:tracking-[0.5em] text-[#d9c5a0]">Explore Hotel</span>
         <span class="w-8 sm:w-12 h-px bg-[#d9c5a0]/40"></span>
       </div>
 
-      <h1 class="text-4xl sm:text-7xl lg:text-8xl font-serif text-white leading-[1.1] sm:leading-[1.05] mb-6 sm:mb-8 max-w-5xl mx-auto drop-shadow-2xl">
+      <h1 class="text-4xl sm:text-7xl lg:text-8xl font-serif text-white leading-[1.1] sm:leading-[1.05] mb-6 sm:mb-8 max-w-5xl mx-auto drop-shadow-2xl animate-hero-title">
         Discover Better Deals<br>
         at <span class="italic text-[#d9c5a0] font-medium">Local Budget Hotels</span>
       </h1>
 
-      <p class="text-base sm:text-xl text-white/80 max-w-2xl mx-auto mb-10 sm:mb-16 leading-relaxed font-medium px-4">
+      <p class="text-base sm:text-xl text-white/80 max-w-2xl mx-auto mb-10 sm:mb-16 leading-relaxed font-medium px-4 animate-hero-text">
         Direct bookings, transparent pricing, and WhatsApp support for a seamless stay across Malaysia and beyond.
       </p>
 
       <!-- Search form -->
-      <div id="search-hotels" class="max-w-6xl w-full mx-auto scroll-mt-24">
+      <div id="search-hotels" class="max-w-6xl w-full mx-auto scroll-mt-24 animate-hero-buttons">
         <%= form_with url: hotels_path, method: :get, class: "bg-white/95 backdrop-blur-2xl rounded-[2rem] sm:rounded-full shadow-2xl shadow-black/60 p-2 sm:p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-1" do |f| %>
 
           <!-- Destination -->
@@ -112,7 +112,7 @@
   <div class="bg-landing-bg py-10 lg:py-20">
     <div class="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8">
 
-      <div class="flex items-end justify-between mb-12">
+      <div class="flex items-end justify-between mb-12" data-animate>
         <div>
           <div class="inline-flex items-center gap-x-3 mb-4">
             <span class="w-8 h-px bg-brand-primary/30"></span>
@@ -132,8 +132,8 @@
 
       <% if @featured_stays.any? %>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          <% @featured_stays.each do |hotel, room_type| %>
-            <%= link_to hotel_path(hotel), class: "group bg-white rounded-3xl border border-neutral-border/60 hover:border-brand-primary/20 hover:shadow-2xl hover:shadow-brand-primary/10 transition-all duration-500 overflow-hidden flex flex-col" do %>
+          <% @featured_stays.each_with_index do |(hotel, room_type), i| %>
+            <%= link_to hotel_path(hotel), class: "group bg-white rounded-3xl border border-neutral-border/60 hover:border-brand-primary/20 hover:shadow-2xl hover:shadow-brand-primary/10 transition-all duration-500 overflow-hidden flex flex-col", data: { animate: "" }, style: "transition-delay: #{i * 0.1}s" do %>
               <div class="relative h-64 overflow-hidden bg-neutral-bg">
                 <% if hotel.featured_photo_attachment.present? %>
                   <%= image_tag hotel.featured_photo_attachment, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" %>
@@ -183,7 +183,7 @@
                 </div>
               </div>
             <% end %>
-          <% end %>
+          <% end %> <%# each_with_index %>
         </div>
       <% else %>
         <div class="card p-16 text-center border-2 border-dashed border-neutral-border">
@@ -220,7 +220,7 @@
     <div class="absolute top-20 right-[20%] w-1 h-1 rounded-full bg-white/20"></div>
     <div class="absolute bottom-32 left-[10%] w-1.5 h-1.5 rounded-full bg-white/10"></div>
 
-    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto relative z-10 text-center">
+    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto relative z-10 text-center" data-animate="scale-in">
 
       <!-- Eyebrow -->
       <div class="inline-flex items-center gap-x-3 mb-10">
