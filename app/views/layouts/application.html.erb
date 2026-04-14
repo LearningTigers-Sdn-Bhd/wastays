@@ -25,6 +25,7 @@
   <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased">
 
 
+    <% unless content_for?(:hide_chrome) %>
     <!-- Desktop/Mobile Top Nav -->
     <header class="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-lg border-b border-neutral-border/60 shadow-sm shadow-black/[0.04]">
       <nav class="max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16" aria-label="Global">
@@ -113,6 +114,7 @@
 
       </nav>
     </header>
+    <% end %>
 
     <% if flash.any? %>
       <div class="fixed bottom-6 right-6 z-[200] flex flex-col gap-y-3 pointer-events-none">
@@ -167,6 +169,7 @@
       </nav>
     </div>
 
+    <% unless content_for?(:hide_chrome) %>
     <footer class="bg-[#0d1a17]">
 
       <!-- Top gradient rule -->
@@ -238,5 +241,6 @@
 
       </div>
     </footer>
+    <% end %>
   </body>
 </html>
