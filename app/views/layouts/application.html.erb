@@ -147,27 +147,29 @@
       <%= yield %>
     </main>
 
-    <!-- Mobile Bottom Nav (Phase 4 requirement) -->
-    <div class="sm:hidden sticky bottom-0 z-50 w-full bg-white/95 backdrop-blur-md border-t border-neutral-border pb-safe">
-      <nav class="flex items-center justify-around py-3 px-4">
-        <a href="<%= root_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          <span class="text-[10px] font-medium">Home</span>
-        </a>
-        <a href="<%= hotels_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <span class="text-[10px] font-medium">Search</span>
-        </a>
-        <a href="<%= help_center_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <span class="text-[10px] font-medium">Help</span>
-        </a>
-        <a href="<%= login_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span class="text-[10px] font-medium">Account</span>
-        </a>
-      </nav>
-    </div>
+    <% unless controller_name == "static_pages" && action_name == "home" %>
+      <!-- Mobile Bottom Nav (Phase 4 requirement) -->
+      <div class="sm:hidden sticky bottom-0 z-50 w-full bg-white/95 backdrop-blur-md border-t border-neutral-border pb-safe">
+        <nav class="flex items-center justify-around py-3 px-4">
+          <a href="<%= root_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="text-[10px] font-medium">Home</span>
+          </a>
+          <a href="<%= hotels_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="text-[10px] font-medium">Search</span>
+          </a>
+          <a href="<%= help_center_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="text-[10px] font-medium">Help</span>
+          </a>
+          <a href="<%= login_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="text-[10px] font-medium">Account</span>
+          </a>
+        </nav>
+      </div>
+    <% end %>
 
     <% unless content_for?(:hide_chrome) %>
     <footer class="bg-[#0d1a17]">
