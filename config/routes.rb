@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       post "workflow_webhooks", to: "workflow_webhooks#create"
+      post "housekeeping_webhooks", to: "housekeeping_webhooks#create"
       post "pre_checkin_links", to: "pre_checkin_links#create"
       resources :hotels, only: [ :index, :show ] do
         get "availability", on: :member

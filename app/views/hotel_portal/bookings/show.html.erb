@@ -90,6 +90,7 @@
       <% pre_checkin_metadata = @pre_checkin&.metadata || {} %>
       <% pre_checkin_arrival_time = pre_checkin_metadata["estimated_arrival_time"].presence || @booking.estimated_arrival_time.presence %>
       <% pre_checkin_government_id = pre_checkin_metadata["guest_government_id"].presence %>
+      <% housekeeping_requests = @housekeeping_requests || [] %>
 
       <% if @pre_checkin.present? && @booking.pre_checkin_display_status == "completed" %>
         <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -117,6 +118,49 @@
           </div>
         </div>
       <% end %>
+
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Housekeeping Requests</h2>
+            <p class="text-xs text-gray-500 mt-1">Guest housekeeping requests.</p>
+          </div>
+          <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <%= pluralize(housekeeping_requests.count, "request") %>
+          </span>
+        </div>
+        <div class="p-6">
+          <% if housekeeping_requests.any? %>
+            <div class="space-y-4">
+              <% housekeeping_requests.each do |request| %>
+                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="space-y-2">
+                      <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Date</label>
+                        <p class="text-gray-800 font-medium"><%= display_housekeeping_date(request.display_requested_at) %></p>
+                      </div>
+                      <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Requests</label>
+                        <p class="text-gray-800 font-medium leading-relaxed"><%= request.request_details %></p>
+                      </div>
+                    </div>
+                    <div class="shrink-0">
+                      <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium <%= housekeeping_status_class(request.status) %>">
+                        <%= request.status.titleize %>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <div class="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
+              No housekeeping requests yet.
+            </div>
+          <% end %>
+        </div>
+      </div>
 
       <div class="grid lg:grid-cols-2 gap-6">
         <!-- Stay & Room Details Card -->

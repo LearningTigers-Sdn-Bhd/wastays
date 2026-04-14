@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_10_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_14_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -223,6 +223,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_10_000000) do
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
   end
 
+  create_table "housekeeping_requests", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "external_id"
+    t.datetime "requested_at", null: false
+    t.text "request_details", null: false
+    t.string "status", default: "pending", null: false
+    t.string "source", default: "whatsapp", null: false
+    t.datetime "completed_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id", "requested_at"], name: "index_housekeeping_requests_on_booking_id_and_requested_at"
+    t.index ["booking_id", "status"], name: "index_housekeeping_requests_on_booking_id_and_status"
+    t.index ["booking_id"], name: "index_housekeeping_requests_on_booking_id"
+    t.index ["external_id"], name: "index_housekeeping_requests_on_external_id", unique: true
+  end
+
   create_table "inventory_audit_logs", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.bigint "room_type_id"
@@ -408,6 +425,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_10_000000) do
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
   add_foreign_key "hotels", "accounts"
+  add_foreign_key "housekeeping_requests", "bookings"
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
