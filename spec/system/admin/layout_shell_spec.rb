@@ -7,9 +7,9 @@ RSpec.describe 'Admin layout shell', type: :system do
     driven_by(:rack_test)
 
     visit login_path
-    fill_in 'Email address', with: superadmin.email
+    fill_in 'Email Address', with: superadmin.email
     fill_in 'Password', with: 'password123'
-    click_button 'Sign In'
+    click_button 'Sign In to Portal'
   end
 
   it 'renders the admin navigation shell for superadmins' do
