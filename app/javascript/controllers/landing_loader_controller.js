@@ -8,7 +8,9 @@ export default class extends Controller {
 
   connect() {
     this.handleBeforeCache = this.reset.bind(this)
+    this.handleBeforeRender = this.releaseScrollLock.bind(this)
     document.addEventListener("turbo:before-cache", this.handleBeforeCache)
+    document.addEventListener("turbo:before-render", this.handleBeforeRender)
 
     this.reset()
     this.dismissWhenReady()
@@ -16,7 +18,9 @@ export default class extends Controller {
 
   disconnect() {
     document.removeEventListener("turbo:before-cache", this.handleBeforeCache)
+    document.removeEventListener("turbo:before-render", this.handleBeforeRender)
     this.clearTimers()
+    this.releaseScrollLock()
   }
 
   dismissWhenReady() {
@@ -46,7 +50,7 @@ export default class extends Controller {
     if (!this.hasOverlayTarget) return
 
     this.overlayTarget.classList.add("is-hidden")
-    document.documentElement.classList.remove("landing-loader-active")
+    this.releaseScrollLock()
   }
 
   reset() {
@@ -55,6 +59,10 @@ export default class extends Controller {
     this.clearTimers()
     this.overlayTarget.classList.remove("is-hidden")
     document.documentElement.classList.add("landing-loader-active")
+  }
+
+  releaseScrollLock() {
+    document.documentElement.classList.remove("landing-loader-active")
   }
 
   clearTimers() {
