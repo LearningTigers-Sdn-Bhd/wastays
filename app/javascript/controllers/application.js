@@ -6,4 +6,8 @@ const application = Application.start()
 application.debug = false
 window.Stimulus   = application
 
+document.addEventListener("turbo:load", () => {
+  document.documentElement.classList.remove("landing-loader-active")
+})
+
 export { application }

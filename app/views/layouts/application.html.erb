@@ -23,6 +23,9 @@
   </head>
 
   <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased">
+    <script>
+      document.documentElement.classList.remove("landing-loader-active")
+    </script>
 
 
     <% unless content_for?(:hide_chrome) %>
@@ -235,9 +238,9 @@
             <p class="text-sm text-gray-400">&copy; <%= Date.today.year %> WAStays. All rights reserved.</p>
           </div>
           <div class="flex items-center gap-x-4 text-xs text-gray-400">
-            <a class="hover:text-white transition-colors duration-200" href="#">Privacy Policy</a>
+            <%= link_to "Privacy Policy", privacy_policy_path, class: "hover:text-white transition-colors duration-200" %>
             <span class="w-px h-3 bg-white/10"></span>
-            <a class="hover:text-white transition-colors duration-200" href="#">Terms &amp; Conditions</a>
+            <%= link_to "Terms & Conditions", terms_and_conditions_path, class: "hover:text-white transition-colors duration-200" %>
           </div>
         </div>
 

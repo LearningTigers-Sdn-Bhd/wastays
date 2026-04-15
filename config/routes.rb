@@ -8,6 +8,8 @@ Rails.application.routes.draw do
   root "static_pages#home"
   get "for-hotels", to: "static_pages#for_hotels", as: :for_hotels
   get "explore", to: "static_pages#explore", as: :explore
+  get "privacy-policy", to: "legal_pages#privacy_policy", as: :privacy_policy
+  get "terms-and-conditions", to: "legal_pages#terms_and_conditions", as: :terms_and_conditions
 
   # Help Center
   get "help", to: "help_center#index", as: :help_center
