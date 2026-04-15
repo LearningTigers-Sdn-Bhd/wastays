@@ -150,7 +150,9 @@
       <%= yield %>
     </main>
 
-    <% unless controller_name == "static_pages" && (action_name == "home" || action_name == "explore") %>
+    <% hide_mobile_bottom_nav = (controller_name == "static_pages" && (action_name == "home" || action_name == "explore")) ||
+                                (controller_name == "legal_pages" && %w[privacy_policy terms_and_conditions].include?(action_name)) %>
+    <% unless hide_mobile_bottom_nav %>
       <!-- Mobile Bottom Nav (Phase 4 requirement) -->
       <div class="sm:hidden sticky bottom-0 z-50 w-full bg-white/95 backdrop-blur-md border-t border-neutral-border pb-safe">
         <nav class="flex items-center justify-around py-3 px-4">
