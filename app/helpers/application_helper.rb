@@ -52,4 +52,15 @@ module ApplicationHelper
   rescue ArgumentError, TypeError
     value.to_s
   end
+
+  def display_housekeeping_datetime(value)
+    return "Not provided" if value.blank?
+
+    return value.strftime("%d %b %Y, %I:%M %p") if value.respond_to?(:strftime)
+
+    parsed_value = Time.zone.parse(value.to_s)
+    parsed_value ? parsed_value.strftime("%d %b %Y, %I:%M %p") : value.to_s
+  rescue ArgumentError, TypeError
+    value.to_s
+  end
 end

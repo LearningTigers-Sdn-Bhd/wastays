@@ -66,10 +66,28 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @booking = current_hotel.bookings.find(params[:id])
     request = @booking.housekeeping_requests.find(params[:housekeeping_request_id])
 
-    if request.update(status: "completed", completed_at: request.completed_at || Time.current)
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Housekeeping request marked as completed."
+    request.add_internal_note(params[:internal_note], user_name: current_user.name)
+
+    request.status = "completed"
+    request.completed_at ||= Time.current
+
+    if request.save
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Housekeeping request marked as completed."
     else
-      redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to update housekeeping request."
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to update housekeeping request."
+    end
+  end
+
+  def update_complaint_request
+    @booking = current_hotel.bookings.find(params[:id])
+    complaint_request = @booking.complaint_requests.find(params[:complaint_request_id])
+
+    complaint_request.add_internal_note(params[:internal_note], user_name: current_user.name)
+
+    if complaint_request.save
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Complaint note saved."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to save complaint note."
     end
   end
 
