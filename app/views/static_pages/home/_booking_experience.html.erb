@@ -19,14 +19,11 @@
 
     <!-- Pipeline flow -->
     <div class="relative">
-
-      <!-- Connecting line (desktop) -->
-      <div class="hidden lg:block absolute top-10 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-border/60 to-transparent z-0"></div>
-
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 lg:gap-4 relative z-10">
 
         <!-- Step 1: Instant room booking -->
-        <div class="group flex flex-col items-center text-center" data-animate style="transition-delay: 0.05s">
+        <div class="group relative flex flex-col items-center text-center" data-animate style="transition-delay: 0.05s">
+          <div class="booking-step-connector hidden lg:block absolute top-10 left-[calc(50%+2.5rem)] w-[calc(100%+1rem-5rem)] h-px bg-neutral-border/50"></div>
           <div class="relative mb-6">
             <div class="w-20 h-20 rounded-2xl bg-[#fdfbf7] border border-neutral-border/50 group-hover:border-brand-primary/30 group-hover:bg-brand-primary/5 transition-all duration-300 flex items-center justify-center shadow-sm">
               <svg class="w-8 h-8 text-brand-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012 2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
@@ -37,13 +34,9 @@
           <p class="text-xs text-neutral-text-secondary leading-relaxed max-w-[140px]">Guest selects room and confirms directly in chat.</p>
         </div>
 
-        <!-- Arrow (desktop only) -->
-        <div class="hidden lg:flex absolute items-center" style="left: calc(20% - 8px); top: 32px;">
-          <svg class="w-4 h-4 text-neutral-border/80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-        </div>
-
         <!-- Step 2: Automated pre-check-in -->
-        <div class="group flex flex-col items-center text-center" data-animate style="transition-delay: 0.15s">
+        <div class="group relative flex flex-col items-center text-center" data-animate style="transition-delay: 0.15s">
+          <div class="booking-step-connector hidden lg:block absolute top-10 left-[calc(50%+2.5rem)] w-[calc(100%+1rem-5rem)] h-px bg-neutral-border/50"></div>
           <div class="relative mb-6">
             <div class="w-20 h-20 rounded-2xl bg-[#fdfbf7] border border-neutral-border/50 group-hover:border-brand-primary/30 group-hover:bg-brand-primary/5 transition-all duration-300 flex items-center justify-center shadow-sm">
               <svg class="w-8 h-8 text-brand-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -55,7 +48,8 @@
         </div>
 
         <!-- Step 3: Payment & confirmation -->
-        <div class="group flex flex-col items-center text-center" data-animate style="transition-delay: 0.25s">
+        <div class="group relative flex flex-col items-center text-center" data-animate style="transition-delay: 0.25s">
+          <div class="booking-step-connector hidden lg:block absolute top-10 left-[calc(50%+2.5rem)] w-[calc(100%+1rem-5rem)] h-px bg-neutral-border/50"></div>
           <div class="relative mb-6">
             <div class="w-20 h-20 rounded-2xl bg-[#fdfbf7] border border-[#25D366]/30 bg-[#25D366]/5 transition-all duration-300 flex items-center justify-center shadow-sm ring-1 ring-[#25D366]/10">
               <svg class="w-8 h-8 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
@@ -67,7 +61,8 @@
         </div>
 
         <!-- Step 4: Reminder notifications -->
-        <div class="group flex flex-col items-center text-center" data-animate style="transition-delay: 0.35s">
+        <div class="group relative flex flex-col items-center text-center" data-animate style="transition-delay: 0.35s">
+          <div class="booking-step-connector hidden lg:block absolute top-10 left-[calc(50%+2.5rem)] w-[calc(100%+1rem-5rem)] h-px bg-neutral-border/50"></div>
           <div class="relative mb-6">
             <div class="w-20 h-20 rounded-2xl bg-[#fdfbf7] border border-neutral-border/50 group-hover:border-brand-primary/30 group-hover:bg-brand-primary/5 transition-all duration-300 flex items-center justify-center shadow-sm">
               <svg class="w-8 h-8 text-brand-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
