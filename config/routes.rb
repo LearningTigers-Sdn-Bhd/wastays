@@ -106,6 +106,7 @@ Rails.application.routes.draw do
         post :check_in
         post :check_out
         post :cancel
+        post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings#complete_housekeeping_request", as: :complete_housekeeping_request
       end
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
     end

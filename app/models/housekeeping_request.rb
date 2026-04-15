@@ -11,4 +11,20 @@ class HousekeepingRequest < ApplicationRecord
   def display_requested_at
     requested_at || created_at
   end
+
+  def completed?
+    status == "completed"
+  end
+
+  def pending?
+    status == "pending"
+  end
+
+  def in_progress?
+    status == "in_progress"
+  end
+
+  def failed?
+    status == "failed"
+  end
 end

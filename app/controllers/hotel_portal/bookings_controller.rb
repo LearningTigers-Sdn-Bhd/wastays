@@ -62,6 +62,17 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     end
   end
 
+  def complete_housekeeping_request
+    @booking = current_hotel.bookings.find(params[:id])
+    request = @booking.housekeeping_requests.find(params[:housekeeping_request_id])
+
+    if request.update(status: "completed", completed_at: request.completed_at || Time.current)
+      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Housekeeping request marked as completed."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to update housekeeping request."
+    end
+  end
+
   private
 
   def booking_params
