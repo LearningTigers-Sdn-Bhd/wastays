@@ -6,13 +6,13 @@
     <div class="text-center mb-12 lg:mb-20 max-w-2xl mx-auto" data-animate>
       <div class="inline-flex items-center gap-x-3 mb-6">
         <span class="w-8 h-px bg-brand-primary/30"></span>
-        <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">What we offer</span>
+        <span class="text-xs sm:text-sm font-bold uppercase tracking-[0.3em] text-brand-primary">What we offer</span>
         <span class="w-8 h-px bg-brand-primary/30"></span>
       </div>
       <h2 class="text-4xl sm:text-5xl lg:text-6xl font-serif text-neutral-text-primary mb-8 leading-tight">
         Our <span class="italic text-brand-primary">Products</span>
       </h2>
-      <p class="text-lg text-neutral-text-secondary leading-relaxed">
+      <p class="text-xl lg:text-2xl text-neutral-text-secondary leading-relaxed">
         Simple, powerful tools designed to help you look after your guests and grow your business without the extra stress.
       </p>
     </div>
@@ -22,14 +22,14 @@
       <!-- 1. Guest Engagement (Wide Hero Card) -->
       <div class="md:col-span-8 bg-[#fdfbf7] rounded-[2.5rem] overflow-hidden border border-neutral-border/50 group hover:border-brand-primary/20 transition-all duration-500 shadow-sm flex flex-col" data-animate style="transition-delay: 0.05s">
         <div class="p-8 lg:p-12 flex-1">
-          <h3 class="text-3xl font-serif text-neutral-text-primary mb-6">Guest Engagement</h3>
-          <p class="text-neutral-text-secondary mb-8 leading-relaxed max-w-lg">
+          <h3 class="text-4xl lg:text-5xl font-serif text-neutral-text-primary mb-6">Guest Engagement</h3>
+          <p class="text-lg lg:text-xl text-neutral-text-secondary mb-8 leading-relaxed max-w-lg">
             Personal touch, without the manual work. We handle the timing so you can focus on being a great host.
           </p>
           <ul class="grid sm:grid-cols-2 gap-4">
             <% ["Welcome message before arrival", "Mid-stay 'How is it?' check-ins", "Helpful checkout reminders", "Post-stay review requests", "Loyalty & return offers"].each do |point| %>
-              <li class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#8b6d2e]"></span>
+              <li class="flex items-center gap-x-3 text-base lg:text-lg text-neutral-text-secondary leading-relaxed">
+                <span class="w-2 h-2 rounded-full bg-[#8b6d2e]"></span>
                 <%= point %>
               </li>
             <% end %>
@@ -48,17 +48,17 @@
         </div>
         <div class="p-8 lg:p-10 flex-1 flex flex-col justify-between">
           <div>
-            <h3 class="text-2xl font-serif mb-4">AI Concierge</h3>
+            <h3 class="text-3xl lg:text-4xl font-serif mb-5">AI Concierge</h3>
             <ul class="space-y-3 mb-8">
               <% ["Facilities & house rules", "Easy check-in/out info", "Local recommendations", "FAQs & instant support"].each do |point| %>
-                <li class="text-xs text-gray-400 flex items-start gap-x-3">
-                  <span class="text-[#d9c5a0]">•</span>
+                <li class="text-base lg:text-lg text-gray-300 leading-relaxed flex items-start gap-x-3">
+                  <span class="text-[#d9c5a0] text-lg leading-none">•</span>
                   <%= point %>
                 </li>
               <% end %>
             </ul>
           </div>
-          <p class="text-[10px] font-bold uppercase tracking-widest text-[#d9c5a0] opacity-80 border-t border-white/10 pt-6">No more repetitive questions</p>
+          <p class="text-xs sm:text-sm font-bold uppercase tracking-[0.2em] text-[#d9c5a0] opacity-80 border-t border-white/10 pt-6">No more repetitive questions</p>
         </div>
       </div>
 
@@ -69,14 +69,14 @@
         </div>
         <div class="p-8 lg:p-10 flex-1 flex flex-col justify-between">
           <div>
-            <h3 class="text-2xl font-serif mb-4 leading-tight">Revenue Engine</h3>
+            <h3 class="text-3xl lg:text-4xl font-serif mb-5 leading-tight">Revenue Engine</h3>
             <div class="grid grid-cols-2 gap-2 mb-8">
               <% ["Room service", "Spa bookings", "Dining", "Tours"].each do |item| %>
-                <div class="text-[10px] bg-black/10 px-3 py-2 rounded-lg border border-white/5 font-medium"><%= item %></div>
+                <div class="text-sm lg:text-base bg-black/10 px-3 py-2.5 rounded-lg border border-white/5 font-medium"><%= item %></div>
               <% end %>
             </div>
           </div>
-          <p class="text-[10px] font-bold uppercase tracking-widest text-white/60 border-t border-white/10 pt-6">Sell more without extra staff</p>
+          <p class="text-xs sm:text-sm font-bold uppercase tracking-[0.2em] text-white/70 border-t border-white/10 pt-6">Sell more without extra staff</p>
         </div>
       </div>
 
@@ -84,17 +84,17 @@
       <div class="md:col-span-8 bg-[#fdfbf7] rounded-[2.5rem] overflow-hidden border border-neutral-border/50 group hover:border-brand-primary/20 transition-all duration-500 shadow-sm flex flex-col lg:flex-row" data-animate style="transition-delay: 0.1s">
         <div class="p-8 lg:p-12 flex-1 flex flex-col justify-between">
           <div>
-            <h3 class="text-3xl font-serif text-neutral-text-primary mb-6">Experience Management</h3>
+            <h3 class="text-4xl lg:text-5xl font-serif text-neutral-text-primary mb-6">Experience Management</h3>
             <ul class="space-y-3 mb-8">
               <% ["Housekeeping requests tracking", "Complaint & issue resolution", "Service delivery monitoring"].each do |point| %>
-                <li class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
-                  <span class="w-1.5 h-1.5 rounded-full bg-brand-primary/40"></span>
+                <li class="flex items-center gap-x-3 text-base lg:text-lg text-neutral-text-secondary leading-relaxed">
+                  <span class="w-2 h-2 rounded-full bg-brand-primary/40"></span>
                   <%= point %>
                 </li>
               <% end %>
             </ul>
           </div>
-          <p class="text-[10px] font-bold uppercase tracking-widest text-brand-primary">Improve satisfaction. Reduce friction.</p>
+          <p class="text-xs sm:text-sm font-bold uppercase tracking-[0.2em] text-brand-primary">Improve satisfaction. Reduce friction.</p>
         </div>
         <div class="w-full lg:w-1/2 h-64 lg:h-auto relative overflow-hidden">
           <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=800&auto=format&fit=crop" alt="Experience">
@@ -105,8 +105,8 @@
       <!-- 5. Guest Data & Marketing (Full Width Highlight) -->
       <div class="md:col-span-12 bg-white rounded-[2.5rem] overflow-hidden border border-neutral-border/50 group hover:border-brand-primary/20 transition-all duration-500 shadow-sm flex flex-col lg:flex-row-reverse" data-animate style="transition-delay: 0.2s">
         <div class="p-8 lg:p-16 flex-1 flex flex-col justify-center">
-          <h3 class="text-3xl lg:text-4xl font-serif text-neutral-text-primary mb-6">Guest Data & Marketing</h3>
-          <p class="text-lg text-neutral-text-secondary mb-10 max-w-xl leading-relaxed">
+          <h3 class="text-4xl lg:text-5xl font-serif text-neutral-text-primary mb-6">Guest Data & Marketing</h3>
+          <p class="text-xl lg:text-2xl text-neutral-text-secondary mb-10 max-w-xl leading-relaxed">
             Build your own database. Reach out to guests directly on WhatsApp with promotions and re-engagement campaigns.
           </p>
           <div class="grid sm:grid-cols-2 gap-6 mb-10">
@@ -115,11 +115,11 @@
                 <div class="flex-none w-8 h-8 rounded-full bg-brand-primary/5 flex items-center justify-center text-brand-primary">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                 </div>
-                <span class="text-sm font-medium text-neutral-text-secondary"><%= point %></span>
+                <span class="text-base lg:text-lg font-medium text-neutral-text-secondary leading-relaxed"><%= point %></span>
               </div>
             <% end %>
           </div>
-          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-text-secondary italic">💡 No dependency on OTAs anymore</p>
+          <p class="text-xs sm:text-sm font-bold uppercase tracking-[0.2em] text-neutral-text-secondary italic">💡 No dependency on OTAs anymore</p>
         </div>
         <div class="w-full lg:w-2/5 h-80 lg:h-auto relative overflow-hidden">
           <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop" alt="Data">
