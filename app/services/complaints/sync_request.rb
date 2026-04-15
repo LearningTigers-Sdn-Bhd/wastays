@@ -10,6 +10,7 @@ module Complaints
       )
       @requested_at = parse_requested_at(event_payload[:date].presence || @data[:date].presence)
       @external_id = event_payload[:external_id].presence || @data[:external_id].presence
+      @status = event_payload[:status].presence || @data[:status].presence
     end
 
     def call
@@ -24,6 +25,7 @@ module Complaints
       complaint.assign_attributes(
         requested_at: @requested_at || complaint.requested_at || Time.current,
         complaint_details: @complaint_details,
+        status: @status || complaint.status || "pending",
         metadata: complaint.metadata.to_h.merge(data: @data, external_id: @external_id).compact
       )
       complaint.save!

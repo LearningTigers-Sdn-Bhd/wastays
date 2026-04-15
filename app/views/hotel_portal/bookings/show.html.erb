@@ -79,6 +79,11 @@
                 <%= @pending_housekeeping_requests_count %>
               </span>
             <% end %>
+            <% if @pending_complaint_requests_count.to_i > 0 %>
+              <span class="inline-flex items-center justify-center min-w-5 h-5 rounded-full bg-rose-100 px-1.5 text-[10px] font-bold text-rose-800">
+                <%= @pending_complaint_requests_count %>
+              </span>
+            <% end %>
           </button>
         </div>
 
@@ -269,8 +274,8 @@
             <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
                 <div>
-                  <h2 class="text-lg font-semibold text-gray-800">Complaint</h2>
-                  <p class="text-xs text-gray-500 mt-1">Guest complaint.</p>
+                  <h2 class="text-lg font-semibold text-gray-800">Complaint Requests</h2>
+                  <p class="text-xs text-gray-500 mt-1">Guest complaint requests.</p>
                 </div>
                 <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                   <%= pluralize(complaint_requests.count, "complaint") %>
@@ -280,26 +285,37 @@
                 <% if complaint_requests.any? %>
                   <div class="space-y-4">
                     <% complaint_requests.each do |request| %>
+                      <% complaint_notes_id = "complaint-notes-#{request.id}" %>
                       <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                        <div class="space-y-3">
+                        <div class="flex items-start justify-between gap-4">
+                          <div class="flex-1 min-w-0 space-y-3">
                           <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Date</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Requested At</label>
                             <p class="text-gray-800 font-medium"><%= display_housekeeping_date(request.display_requested_at) %></p>
                           </div>
                           <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Complaint</label>
                             <p class="text-gray-800 font-medium leading-relaxed"><%= request.complaint_details %></p>
                           </div>
-                          <div>
+                          </div>
+                          <div class="shrink-0 flex flex-col items-end gap-2">
+                            <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium <%= complaint_status_class(request.status) %>">
+                              <%= request.status.titleize %>
+                            </span>
+                            <% unless request.resolved? %>
+                              <%= button_to "Resolved", resolve_complaint_request_hotel_booking_path(current_hotel, @booking, complaint_request_id: request.id), method: :post, class: "inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
+                            <% end %>
+                          </div>
+                        </div>
+                        <div id="<%= complaint_notes_id %>" class="<%= request.resolved? ? "" : "hidden" %> mt-4 w-full">
+                          <div class="w-full">
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Internal Notes</label>
                             <% if request.internal_notes_list.any? %>
                               <div class="space-y-2 mb-3">
                                 <% request.internal_notes_list.each do |note| %>
                                   <% note_time = Time.zone.parse(note["created_at"].to_s) rescue nil %>
                                   <div class="rounded-lg border border-gray-200 bg-white p-3">
-                                    <div class="flex items-center justify-between gap-2">
-                                      <p class="text-[10px] text-gray-500"><%= note_time ? display_housekeeping_datetime(note_time) : "Not provided" %></p>
-                                    </div>
+                                    <p class="text-[10px] text-gray-500"><%= note_time ? display_housekeeping_datetime(note_time) : "Not provided" %></p>
                                     <p class="mt-1 text-sm text-gray-800 whitespace-pre-wrap"><%= note["body"] %></p>
                                   </div>
                                 <% end %>
@@ -309,6 +325,7 @@
                             <% end %>
 
                             <%= form_with url: update_complaint_request_hotel_booking_path(current_hotel, @booking, complaint_request_id: request.id), method: :patch, local: true, class: "space-y-3" do |f| %>
+                              <%= hidden_field_tag :status, request.resolved? ? "resolved" : (request.status.presence || "in_progress") %>
                               <%= text_area_tag :internal_note, nil, rows: 3, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border", placeholder: "Add internal note..." %>
                               <div class="flex justify-end">
                                 <%= f.submit "Add Note", class: "inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>

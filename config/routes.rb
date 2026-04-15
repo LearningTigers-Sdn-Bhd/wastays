@@ -108,6 +108,7 @@ Rails.application.routes.draw do
         post :cancel
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings#complete_housekeeping_request", as: :complete_housekeeping_request
         patch "complaint_requests/:complaint_request_id", to: "bookings#update_complaint_request", as: :update_complaint_request
+        post "complaint_requests/:complaint_request_id/resolve", to: "bookings#resolve_complaint_request", as: :resolve_complaint_request
       end
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
     end

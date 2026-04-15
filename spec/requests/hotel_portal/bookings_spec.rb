@@ -47,6 +47,14 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get "/hotel/#{hotel.id}/bookings/#{booking.id}"
       expect(response).to have_http_status(:success)
     end
+
+    it "renders successfully when booking has complaint requests" do
+      create(:complaint_request, booking: booking, status: "pending", complaint_details: "Broken AC")
+      get "/hotel/#{hotel.id}/bookings/#{booking.id}"
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Broken AC")
+      expect(response.body).to include("Pending")
+    end
   end
 
   describe "PATCH /update" do

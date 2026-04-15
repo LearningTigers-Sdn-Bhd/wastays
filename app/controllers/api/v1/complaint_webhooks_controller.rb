@@ -25,6 +25,7 @@ class Api::V1::ComplaintWebhooksController < ApplicationController
       :date,
       :external_id,
       :complaint,
+      :status,
       data: {}
     ).to_h.deep_symbolize_keys
   end
