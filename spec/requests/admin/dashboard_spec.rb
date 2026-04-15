@@ -24,6 +24,29 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       expect(response.body).to include(admin_bookings_path)
       expect(response.body).to include(admin_reconciliation_dashboard_path)
     end
+
+    it 'shows the created date for recent bookings' do
+      hotel_account = create(:account, name: "Recent Booking Account #{token}", status: 'active')
+      hotel = create(:hotel, account: hotel_account, name: "Recent Booking Hotel #{token}", status: 'approved')
+      created_at = Time.zone.local(2021, 1, 7, 14, 30)
+
+      create(
+        :booking,
+        hotel: hotel,
+        booking_quote: create(:booking_quote, hotel: hotel, token: "recent_#{token}"),
+        status: 'confirmed',
+        total_amount: 300.0,
+        check_in: Date.new(2026, 4, 15),
+        check_out: Date.new(2026, 4, 17),
+        created_at: created_at
+      )
+
+      get admin_dashboard_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Created Date')
+      expect(response.body).to include(created_at.strftime('%d %b %Y'))
+    end
   end
 
   describe 'GET /admin/analytics' do

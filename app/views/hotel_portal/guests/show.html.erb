@@ -1,11 +1,27 @@
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <%= link_to "Guest Records", hotel_guests_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900"><%= safe_guest_attr(@guest, :name) %></span>
+  </div>
+<% end %>
+
 <div class="space-y-6">
+  <div>
+    <%= link_to hotel_guests_path(current_hotel), class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600" do %>
+      <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Back to Guest Records
+    <% end %>
+  </div>
+
   <div class="card">
-    <div class="p-4 border-b border-neutral-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-y-4">
+    <div class="p-4 border-b border-neutral-border">
       <div>
         <h1 class="text-xl font-bold text-neutral-text-primary"><%= safe_guest_attr(@guest, :name) %></h1>
         <p class="text-xs uppercase tracking-widest text-neutral-text-secondary">Guest Profile</p>
       </div>
-      <%= link_to "Back to list", hotel_guests_path, class: "text-sm font-bold text-brand-primary hover:underline" %>
     </div>
     <div class="p-4 space-y-3 grid gap-3 md:grid-cols-2">
       <div>
@@ -74,51 +90,117 @@
     </div>
   </div>
 
-  <div class="card">
-    <div class="p-4 border-b border-neutral-border flex items-center justify-between">
-      <h2 class="text-lg font-bold text-neutral-text-primary">Booking History</h2>
-      <span class="text-xs uppercase tracking-widest text-neutral-text-secondary"><%= pluralize(@bookings.count, 'stay') %></span>
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+      <div>
+        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Booking History</h2>
+        <p class="mt-1 text-sm font-medium text-slate-600">Timeline of this guest's stays at the property.</p>
+      </div>
+      <span class="text-sm font-medium text-slate-500">Stays <span class="font-semibold text-slate-900"><%= @bookings.count %></span></span>
     </div>
-    <div class="p-4 overflow-x-auto">
-      <% if @bookings.any? %>
-        <table class="min-w-full text-left text-sm">
-          <thead>
+
+    <% if @bookings.any? %>
+      <div class="hidden md:block overflow-x-auto">
+        <table class="min-w-full">
+          <thead class="bg-slate-100">
             <tr>
-              <th class="pb-2 text-xs uppercase tracking-widest text-neutral-text-secondary">Confirmation</th>
-              <th class="pb-2 text-xs uppercase tracking-widest text-neutral-text-secondary">Stay</th>
-              <th class="pb-2 text-xs uppercase tracking-widest text-neutral-text-secondary">Status</th>
-              <th class="pb-2 text-xs uppercase tracking-widest text-neutral-text-secondary">Amount</th>
-              <th class="pb-2 text-xs uppercase tracking-widest text-neutral-text-secondary">Pre-checkin</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Confirmation</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Stay</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Amount</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Created At</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Pre-Check-In</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-neutral-border">
-            <% @bookings.each do |booking| %>
-              <tr>
-                <td class="py-2 font-medium text-neutral-text-primary"><%= booking.confirmation_token %></td>
-                <td class="py-2 text-neutral-text-secondary">
-                  <%= booking.check_in.strftime("%d %b") %> – <%= booking.check_out.strftime("%d %b %Y") %>
+          <tbody class="divide-y divide-slate-200 bg-white">
+            <% @bookings.each_with_index do |booking, index| %>
+              <% status_class = booking.status == "completed" ? "text-emerald-700" : "text-slate-600" %>
+              <% status_dot_class = booking.status == "completed" ? "bg-emerald-500" : "bg-slate-400" %>
+              <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900"><%= booking.confirmation_token %></td>
+                <td class="px-6 py-4 text-sm text-slate-700">
+                  <div class="flex flex-col gap-0.5">
+                    <span><%= booking.check_in.strftime("%d %b %Y") %> - <%= booking.check_out.strftime("%d %b %Y") %></span>
+                    <span class="text-xs text-slate-500">
+                      <%= pluralize((booking.check_out - booking.check_in).to_i, "night") %>
+                    </span>
+                  </div>
                 </td>
-                <td class="py-2">
-                  <span class="text-xs font-semibold <%= booking.status == 'completed' ? 'text-green-600' : 'text-neutral-text-secondary' %>">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_class %>">
+                    <span class="size-2.5 rounded-sm <%= status_dot_class %>"></span>
                     <%= booking.status.humanize %>
-                  </span>
+                  </div>
                 </td>
-                <td class="py-2 font-semibold text-neutral-text-primary">
-                  <%= booking.currency == 'USD' ? "USD #{number_with_precision(booking.total_amount, precision: 2)}" : "RM #{number_with_precision(booking.total_amount, precision: 2)}" %>
-                  <% if booking.tourism_tax? %>
-                    <div class="text-[10px] text-neutral-text-secondary">Tax RM <%= number_with_precision(booking.tourism_tax_amount, precision: 2) %></div>
-                  <% end %>
+                <td class="px-6 py-4 text-sm font-medium text-slate-900">
+                  <div class="flex flex-col gap-0.5">
+                    <span><%= booking.currency == "USD" ? "USD #{number_with_precision(booking.total_amount, precision: 2)}" : "RM #{number_with_precision(booking.total_amount, precision: 2)}" %></span>
+                    <% if booking.tourism_tax? %>
+                      <span class="text-xs text-slate-500">Tax RM <%= number_with_precision(booking.tourism_tax_amount, precision: 2) %></span>
+                    <% end %>
+                  </div>
                 </td>
-                <td class="py-2 text-neutral-text-secondary text-[10px]">
-                  <%= booking.pre_checkin_status&.humanize || 'pending' %>
+                <td class="px-6 py-4 text-sm text-slate-700">
+                  <div class="flex flex-col gap-0.5">
+                    <span><%= booking.created_at.strftime("%I:%M %p") %></span>
+                    <span class="text-xs text-slate-500"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-slate-600">
+                  <%= booking.pre_checkin_status&.humanize || "Pending" %>
                 </td>
               </tr>
             <% end %>
           </tbody>
         </table>
-      <% else %>
-        <p class="text-sm text-neutral-text-secondary text-center py-6">No bookings yet.</p>
-      <% end %>
-    </div>
+      </div>
+
+      <div class="space-y-4 p-4 md:hidden">
+        <% @bookings.each do |booking| %>
+          <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Confirmation</p>
+                <p class="mt-1 text-sm font-semibold text-slate-900"><%= booking.confirmation_token %></p>
+              </div>
+              <div class="text-right">
+                <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Status</p>
+                <p class="mt-1 text-sm font-medium <%= booking.status == 'completed' ? 'text-emerald-700' : 'text-slate-600' %>"><%= booking.status.humanize %></p>
+              </div>
+            </div>
+
+            <dl class="mt-4 space-y-3 text-sm">
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Stay</dt>
+                <dd class="mt-1 text-slate-700"><%= booking.check_in.strftime("%d %b %Y") %> - <%= booking.check_out.strftime("%d %b %Y") %></dd>
+              </div>
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Amount</dt>
+                  <dd class="mt-1 text-slate-700"><%= booking.currency == "USD" ? "USD #{number_with_precision(booking.total_amount, precision: 2)}" : "RM #{number_with_precision(booking.total_amount, precision: 2)}" %></dd>
+                </div>
+                <div class="text-right">
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Pre-Check-In</dt>
+                  <dd class="mt-1 text-slate-700"><%= booking.pre_checkin_status&.humanize || "Pending" %></dd>
+                </div>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Created At</dt>
+                <dd class="mt-1 text-slate-700">
+                  <div class="flex flex-col gap-0.5">
+                    <span><%= booking.created_at.strftime("%I:%M %p") %></span>
+                    <span class="text-xs text-slate-500"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                  </div>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="px-6 py-12 text-center">
+        <p class="text-sm font-medium text-slate-500">No bookings yet.</p>
+      </div>
+    <% end %>
   </div>
 </div>
