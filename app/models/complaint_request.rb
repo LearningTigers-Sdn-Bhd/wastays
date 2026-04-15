@@ -1,9 +1,6 @@
 class ComplaintRequest < ApplicationRecord
   belongs_to :booking
 
-  STATUSES = %w[pending resolved failed].freeze
-
-  validates :status, presence: true, inclusion: { in: STATUSES }
   validates :complaint_details, presence: true
   validates :requested_at, presence: true
 
@@ -28,17 +25,5 @@ class ComplaintRequest < ApplicationRecord
       "created_by_name" => user_name
     }.compact
     self.internal_notes = notes
-  end
-
-  def resolved?
-    status == "resolved"
-  end
-
-  def pending?
-    status == "pending"
-  end
-
-  def failed?
-    status == "failed"
   end
 end

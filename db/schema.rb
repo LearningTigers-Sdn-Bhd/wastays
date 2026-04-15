@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_14_093000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_15_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -196,10 +196,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_14_093000) do
     t.string "external_id"
     t.datetime "requested_at", null: false
     t.text "complaint_details", null: false
-    t.string "source", default: "whatsapp", null: false
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "internal_notes", default: []
+    t.string "status", default: "pending", null: false
     t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
     t.index ["booking_id"], name: "index_complaint_requests_on_booking_id"
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
@@ -210,7 +211,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_14_093000) do
     t.string "external_id"
     t.datetime "reported_at"
     t.text "issue_details"
-    t.string "source"
     t.datetime "resolved_at"
     t.jsonb "metadata"
     t.datetime "created_at", null: false
@@ -258,11 +258,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_14_093000) do
     t.datetime "requested_at", null: false
     t.text "request_details", null: false
     t.string "status", default: "pending", null: false
-    t.string "source", default: "whatsapp", null: false
     t.datetime "completed_at"
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "internal_notes", default: []
     t.index ["booking_id", "requested_at"], name: "index_housekeeping_requests_on_booking_id_and_requested_at"
     t.index ["booking_id", "status"], name: "index_housekeeping_requests_on_booking_id_and_status"
     t.index ["booking_id"], name: "index_housekeeping_requests_on_booking_id"
@@ -338,6 +338,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_14_093000) do
     t.string "currency", default: "MYR", null: false
     t.decimal "usd_rate", precision: 10, scale: 4, default: "0.21", null: false
     t.index ["hotel_id"], name: "index_property_policies_on_hotel_id"
+  end
+
+  create_table "request_notes", force: :cascade do |t|
+    t.string "noteable_type", null: false
+    t.bigint "noteable_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["noteable_type", "noteable_id", "created_at"], name: "index_request_notes_on_noteable_and_created_at"
+    t.index ["noteable_type", "noteable_id"], name: "index_request_notes_on_noteable"
   end
 
   create_table "role_permissions", force: :cascade do |t|

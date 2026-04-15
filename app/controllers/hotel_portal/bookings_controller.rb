@@ -18,6 +18,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @booking_rooms = @booking.booking_rooms
     @pre_checkin = @booking.pre_checkin
     @housekeeping_requests = @booking.housekeeping_requests.recent_first
+    @pending_housekeeping_requests_count = @booking.housekeeping_requests.where(status: "pending").count
     @complaint_requests = @booking.complaint_requests.recent_first
   end
 
