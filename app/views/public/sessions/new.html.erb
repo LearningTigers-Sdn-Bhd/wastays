@@ -13,7 +13,7 @@
     <!-- Top: Logo -->
     <div class="relative z-10">
       <a href="<%= root_path %>" class="inline-block">
-        <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-14 w-auto brightness-0 invert" %>
+        <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-14 w-auto" %>
       </a>
     </div>
 
@@ -117,7 +117,6 @@
         <div>
           <div class="flex items-center justify-between mb-2">
             <label for="password" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Password</label>
-            <a href="mailto:support@wastays.com?subject=Password Reset Request" class="text-[11px] text-brand-primary font-semibold hover:underline underline-offset-2">Forgot password?</a>
           </div>
           <div class="relative" data-controller="password-toggle">
             <%= f.password_field :password,
@@ -145,12 +144,15 @@
         </div>
 
         <!-- Remember me -->
-        <div class="flex items-center gap-x-2.5 pt-1">
-          <%= f.check_box :remember_me,
-              class: "h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary/30 focus:ring-2 cursor-pointer" %>
-          <label for="sessions_remember_me" class="text-xs font-medium text-neutral-text-secondary cursor-pointer select-none">
-            Keep me signed in for 30 days
-          </label>
+        <div class="flex items-center justify-between gap-4 pt-1">
+          <div class="flex items-center gap-x-2.5 min-w-0">
+            <%= f.check_box :remember_me,
+                class: "h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary/30 focus:ring-2 cursor-pointer" %>
+            <label for="sessions_remember_me" class="text-xs font-medium text-neutral-text-secondary cursor-pointer select-none">
+              Keep me signed in for 30 days
+            </label>
+          </div>
+          <a href="mailto:support@wastays.com?subject=Password Reset Request" class="shrink-0 text-[11px] text-brand-primary font-semibold hover:underline underline-offset-2">Forgot password?</a>
         </div>
 
         <!-- Submit -->
