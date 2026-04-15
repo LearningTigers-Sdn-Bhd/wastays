@@ -1,7 +1,11 @@
 <!-- New Hero Section -->
 <div class="relative h-screen lg:h-[calc(100vh-64px)] flex items-center">
   <!-- Background Image with Mask -->
-  <div class="absolute inset-y-0 right-0 w-full lg:w-2/3">
+  <div
+    class="absolute inset-y-0 right-0 w-full lg:w-2/3"
+    data-controller="hero-background"
+    data-hero-background-interval-value="4500"
+  >
     <!-- Horizontal Fade (desktop only — on mobile image is full-width so fade looks out of place) -->
     <div class="hidden lg:block absolute inset-0 z-10 bg-gradient-to-r from-landing-bg via-landing-bg/20 to-transparent"></div>
     <!-- Vertical Fade at Bottom -->
@@ -9,7 +13,16 @@
     <!-- Mobile dark overlay for text contrast -->
     <div class="lg:hidden absolute inset-0 z-[5] bg-black/40"></div>
 
-    <img class="h-full w-full object-cover" src="https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=2000" alt="Tropical Resort">
+    <% hero_backgrounds = ["landing/bg-1.jpg", "landing/bg-2.jpg", "landing/bg-3.jpg"] %>
+    <% hero_backgrounds.each_with_index do |path, index| %>
+      <% asset = Rails.application.assets.load_path.find(path) %>
+      <img
+        src="/assets/<%= asset.digested_path %>"
+        alt="Sabah hospitality scene"
+        class="absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 <%= index.zero? ? "opacity-100" : "opacity-0" %>"
+        data-hero-background-target="slide"
+      >
+    <% end %>
   </div>
 
   <div class="relative max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 z-20">
@@ -19,9 +32,9 @@
         <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent-text">Guest Engagement Platform</span>
       </div>
 
-      <h1 class="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif text-[#d8f3dc] lg:text-brand-primary leading-[1.1] mb-8 animate-hero-title [text-shadow:0_8px_28px_rgba(4,18,16,0.34)] lg:[text-shadow:none]">
-        Turn Every Stay Into a <br class="hidden sm:inline">
-        <span class="italic">5-Star Experience</span> <br class="hidden sm:inline">
+      <h1 class="text-4xl sm:text-[3.2rem] lg:text-6xl xl:text-7xl font-serif text-[#d8f3dc] lg:text-brand-primary leading-[1.1] mb-8 animate-hero-title [text-shadow:0_8px_28px_rgba(4,18,16,0.34)] lg:[text-shadow:none]">
+        <span class="whitespace-nowrap">Turn Every Stay Into a</span> <br class="hidden sm:inline">
+        <span class="italic"><span class="whitespace-nowrap">5-Star</span> Experience</span> <br class="hidden sm:inline">
         — Automatically
       </h1>
 
