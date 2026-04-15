@@ -24,7 +24,6 @@ module Housekeeping
           requested_at: @requested_at || request.requested_at || Time.current,
           request_details: request_details,
           status: resolved_status(request),
-          source: "whatsapp",
           metadata: merged_metadata(request),
           external_id: @external_id.presence || request.external_id
         )

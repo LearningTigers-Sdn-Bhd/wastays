@@ -24,7 +24,6 @@ module Complaints
       complaint.assign_attributes(
         requested_at: @requested_at || complaint.requested_at || Time.current,
         complaint_details: @complaint_details,
-        source: "whatsapp",
         metadata: complaint.metadata.to_h.merge(data: @data, external_id: @external_id).compact
       )
       complaint.save!

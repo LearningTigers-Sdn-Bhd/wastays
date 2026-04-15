@@ -5,7 +5,6 @@ class CreateComplaintRequests < ActiveRecord::Migration[8.0]
       t.string :external_id
       t.datetime :requested_at, null: false
       t.text :complaint_details, null: false
-      t.string :source, null: false, default: "whatsapp"
       t.jsonb :metadata, null: false, default: {}
 
       t.timestamps

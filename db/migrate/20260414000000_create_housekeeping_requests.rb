@@ -6,7 +6,6 @@ class CreateHousekeepingRequests < ActiveRecord::Migration[8.0]
       t.datetime :requested_at, null: false
       t.text :request_details, null: false
       t.string :status, null: false, default: "pending"
-      t.string :source, null: false, default: "whatsapp"
       t.datetime :completed_at
       t.jsonb :metadata, null: false, default: {}
 
