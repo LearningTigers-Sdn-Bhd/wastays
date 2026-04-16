@@ -35,20 +35,20 @@ module ApplicationHelper
 
   def housekeeping_status_class(status)
     case status
-    when "completed", "resolved" then "bg-green-100 text-green-800"
-    when "cancel", "rejected" then "bg-red-100 text-red-800"
-    when "pending", "requested" then "bg-yellow-100 text-yellow-800"
-    else "bg-gray-100 text-gray-800"
+    when "completed", "resolved" then "bg-green-50 text-green-700 border border-green-100"
+    when "cancel", "rejected" then "bg-red-50 text-red-700 border border-red-100"
+    when "pending", "requested" then "bg-yellow-50 text-yellow-700 border border-yellow-100"
+    else "bg-gray-50 text-gray-700 border border-gray-100"
     end
   end
 
   def complaint_status_class(status)
     case status
-    when "resolved", "completed" then "bg-green-100 text-green-800"
-    when "in_progress" then "bg-blue-100 text-blue-800"
-    when "failed" then "bg-red-100 text-red-800"
-    when "pending" then "bg-yellow-100 text-yellow-800"
-    else "bg-gray-100 text-gray-800"
+    when "resolved", "completed" then "bg-green-50 text-green-700 border border-green-100"
+    when "in_progress" then "bg-blue-50 text-blue-700 border border-blue-100"
+    when "failed" then "bg-red-50 text-red-700 border border-red-100"
+    when "pending" then "bg-yellow-50 text-yellow-700 border border-yellow-100"
+    else "bg-gray-50 text-gray-700 border border-gray-100"
     end
   end
 

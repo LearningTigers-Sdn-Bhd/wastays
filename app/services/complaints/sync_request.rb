@@ -28,6 +28,8 @@ module Complaints
         status: @status || complaint.status || "pending",
         metadata: complaint.metadata.to_h.merge(data: @data, external_id: @external_id).compact
       )
+      complaint.completed_at = Time.current if complaint.status == "resolved"
+      complaint.completed_at = nil unless complaint.status == "resolved"
       complaint.save!
 
       OpenStruct.new(success?: true, complaint_request: complaint)

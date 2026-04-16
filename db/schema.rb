@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_15_100001) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_16_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -201,6 +201,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_15_100001) do
     t.datetime "updated_at", null: false
     t.jsonb "internal_notes", default: []
     t.string "status", default: "pending", null: false
+    t.datetime "completed_at"
+    t.index ["booking_id", "completed_at"], name: "index_complaint_requests_on_booking_id_and_completed_at"
     t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
     t.index ["booking_id"], name: "index_complaint_requests_on_booking_id"
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true

@@ -21,6 +21,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @pending_housekeeping_requests_count = @booking.housekeeping_requests.where(status: "pending").count
     @complaint_requests = @booking.complaint_requests.recent_first
     @pending_complaint_requests_count = @booking.complaint_requests.where(status: "pending").count
+    @pending_requests_count = @pending_housekeeping_requests_count + @pending_complaint_requests_count
   end
 
   def update
@@ -86,7 +87,9 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
     complaint_request.add_internal_note(params[:internal_note], user_name: current_user.name)
 
-    complaint_request.status = params[:status].presence || complaint_request.status || "in_progress"
+    requested_status = params[:status].presence || complaint_request.status || "in_progress"
+    complaint_request.status = requested_status
+    complaint_request.completed_at = nil unless complaint_request.resolved?
 
     if complaint_request.save
       redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Complaint note saved."
@@ -99,7 +102,9 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @booking = current_hotel.bookings.find(params[:id])
     complaint_request = @booking.complaint_requests.find(params[:complaint_request_id])
 
-    if complaint_request.update(status: "resolved")
+    complaint_request.resolved!
+
+    if complaint_request.save
       redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Complaint request marked as resolved."
     else
       redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to resolve complaint request."

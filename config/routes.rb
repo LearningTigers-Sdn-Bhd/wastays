@@ -113,6 +113,9 @@ Rails.application.routes.draw do
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
     end
 
+    get "requests", to: "requests#index", as: :requests
+    patch "requests/:kind/:request_id", to: "requests#update_status", as: :request_status
+
     resources :arrivals, only: [ :index ]
     resources :audit_logs, only: [ :index ]
     resources :reports, only: [ :index ]

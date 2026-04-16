@@ -1,0 +1,100 @@
+<% content_for :title, "Requests | WAStays" %>
+
+<div class="space-y-6" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800">Requests</h1>
+      <p class="mt-1 text-sm text-gray-500">Track housekeeping requests, complaint requests, and completed items in one board.</p>
+    </div>
+
+    <div class="flex flex-wrap gap-2 text-xs font-semibold">
+      <span class="inline-flex items-center gap-x-2 rounded-full bg-blue-50 px-3 py-1.5 text-blue-700 border border-blue-100">
+        Housekeeping <%= @board_counts[:housekeeping] %>
+      </span>
+      <span class="inline-flex items-center gap-x-2 rounded-full bg-rose-50 px-3 py-1.5 text-rose-700 border border-rose-100">
+        Complaint <%= @board_counts[:complaint] %>
+      </span>
+      <span class="inline-flex items-center gap-x-2 rounded-full bg-green-50 px-3 py-1.5 text-green-700 border border-green-100">
+        Completed <%= @board_counts[:completed] %>
+      </span>
+    </div>
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-3" data-requests-board-target="board">
+    <% [
+      [:housekeeping, "Housekeeping Requests", "border-t-blue-500"],
+      [:complaint, "Complaint Requests", "border-t-rose-500"],
+      [:completed, "Completed", "border-t-green-500"],
+    ].each do |bucket_key, label, accent_class| %>
+      <section
+        data-requests-board-target="column"
+        data-board-column="<%= bucket_key %>"
+        data-action="dragover->requests-board#dragOver dragleave->requests-board#dragLeave drop->requests-board#drop"
+        class="rounded-2xl border border-gray-200 bg-gray-50/50 shadow-sm overflow-hidden border-t-4 <%= accent_class %>"
+      >
+        <div class="flex items-center justify-between gap-3 border-b border-gray-200/70 px-4 py-3 bg-white">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-gray-700"><%= label %></h2>
+            <p class="text-[11px] text-gray-500"><%= pluralize(@board_columns[bucket_key].size, "request") %></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex min-w-7 items-center justify-center rounded-full bg-gray-100 px-2 py-1 text-xs font-bold text-gray-700 shadow-sm">
+              <%= @board_columns[bucket_key].size %>
+            </span>
+            <button
+              type="button"
+              draggable="true"
+              aria-label="Drag column"
+              data-action="dragstart->requests-board#columnDragStart dragend->requests-board#columnDragEnd"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 shadow-sm transition hover:text-gray-700 hover:shadow-md active:cursor-grabbing cursor-grab"
+            >
+              <span class="text-lg leading-none">⋮⋮</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-3 p-4 min-h-[18rem]">
+          <% if @board_columns[bucket_key].any? %>
+            <% @board_columns[bucket_key].each do |card| %>
+              <% status_class = card[:kind] == "housekeeping" ? housekeeping_status_class(card[:status]) : complaint_status_class(card[:status]) %>
+              <% kind_badge_class = card[:kind] == "housekeeping" ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-rose-50 text-rose-600 border-rose-100" %>
+              <article
+                draggable="true"
+                data-requests-board-target="card"
+                data-request-kind="<%= card[:kind] %>"
+                data-request-id="<%= card[:request_id] %>"
+                data-update-url="<%= card[:update_url] %>"
+                data-current-status="<%= card[:status] %>"
+                data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd"
+                class="cursor-grab rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= kind_badge_class %>">
+                    <%= card[:kind].titleize %>
+                  </span>
+                  <span class="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= status_class %>">
+                    <%= card[:status].titleize %>
+                  </span>
+                </div>
+
+                <%= link_to card[:booking_url], class: "mt-3 block" do %>
+                  <p class="text-sm font-semibold text-gray-800 leading-snug"><%= card[:title].to_s.truncate(80) %></p>
+                  <p class="mt-2 text-xs text-gray-500">Guest: <%= card[:guest_name] %></p>
+                  <p class="text-xs text-gray-500">Booking: <%= card[:booking_token] %></p>
+                  <p class="mt-2 text-xs font-medium text-gray-600"><%= display_housekeeping_datetime(card[:requested_at]) %></p>
+                  <% if card[:completed_at].present? %>
+                    <p class="text-xs font-medium text-gray-600"><%= display_housekeeping_datetime(card[:completed_at]) %></p>
+                  <% end %>
+                <% end %>
+              </article>
+            <% end %>
+          <% else %>
+            <div class="rounded-xl border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-500">
+              No requests in this column.
+            </div>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+  </div>
+</div>

@@ -45,4 +45,14 @@ class ComplaintRequest < ApplicationRecord
   def failed?
     status == "failed"
   end
+
+  def resolved!
+    self.status = "resolved"
+    self.completed_at ||= Time.current
+  end
+
+  def reopen!
+    self.status = "in_progress"
+    self.completed_at = nil
+  end
 end
