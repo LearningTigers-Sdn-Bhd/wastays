@@ -16,6 +16,53 @@
     </div>
   </div>
 
+  <% if @show_stay_modal %>
+    <div class="fixed inset-0 z-[200] bg-black/55 backdrop-blur-sm px-4 sm:px-6 flex items-center justify-center overflow-y-auto" role="dialog" aria-modal="true">
+      <div class="w-full max-w-xl my-6 rounded-2xl bg-white shadow-2xl border border-neutral-border p-6 sm:p-8">
+        <h2 class="text-2xl font-extrabold text-neutral-text-primary mb-2">Select Your Stay Dates</h2>
+        <p class="text-sm text-neutral-text-secondary mb-6">Choose your check-in and check-out dates to see accurate room availability and price.</p>
+
+        <%= form_with url: hotel_path(@hotel),
+                      method: :get,
+                      local: true,
+                      class: "space-y-4",
+                      html: {
+                        onsubmit: "var params=new URLSearchParams(new FormData(this));window.location.replace(this.action+'?'+params.toString());return false;"
+                      } do |f| %>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <%= f.label :check_in, "Check-in", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+              <%= f.date_field :check_in, value: (@check_in || Date.current).to_s, required: true, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            </div>
+            <div>
+              <%= f.label :check_out, "Check-out", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+              <%= f.date_field :check_out, value: (@check_out || Date.tomorrow).to_s, required: true, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <%= f.label :adults, "Adults", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+              <%= f.select :adults, options_for_select((1..8).map { |n| [n, n] }, @adults), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            </div>
+            <div>
+              <%= f.label :children, "Children", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+              <%= f.select :children, options_for_select((0..6).map { |n| [n, n] }, @children), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            </div>
+            <div>
+              <%= f.label :room_count, "Rooms", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+              <%= f.select :room_count, options_for_select((1..5).map { |n| [n, n] }, @room_count), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <%= f.submit "Check Availability", class: "btn btn-primary w-full py-3 text-sm font-bold uppercase tracking-widest" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <!-- Gallery Section -->
   <div id="hotel-gallery-top" class="max-w-[85rem] mx-auto px-4 py-6 sm:px-6 lg:px-8">
     <% hotel_gallery_photos = @hotel.ordered_photo_attachments.first(5) %>
@@ -258,10 +305,18 @@
         <div class="space-y-6 pt-4" id="rooms-section">
           <div class="flex justify-between items-end">
             <h2 class="text-2xl font-extrabold text-neutral-text-primary">Select your room</h2>
-            <p class="text-sm text-brand-secondary font-bold">Recommended for <%= params[:adults] || 2 %> guests</p>
+            <p class="text-sm text-brand-secondary font-bold">Recommended for <%= @adults %> guests</p>
           </div>
 
           <div class="space-y-6">
+            <% if @search_ready && @room_types.empty? %>
+              <div class="card p-8 text-center">
+                <h3 class="text-lg font-bold text-neutral-text-primary mb-2">No rooms available for selected dates</h3>
+                <p class="text-sm text-neutral-text-secondary mb-6">Try changing your check-in/check-out dates to see available options.</p>
+                <%= link_to "Edit Search", hotel_path(@hotel), class: "btn btn-secondary px-8" %>
+              </div>
+            <% end %>
+
             <% @room_types.each do |room_type| %>
               <div class="card overflow-hidden group hover:shadow-xl transition-all duration-300">
                 <div class="flex flex-col md:flex-row">
@@ -304,22 +359,28 @@
                     <div class="flex justify-between items-end border-t border-neutral-border pt-4">
                       <div>
                         <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest">Total for Stay</p>
-                        <p class="text-2xl font-black text-neutral-text-primary">
-                          RM <%= number_with_precision(@availability_service.calculate_total_price(room_type), precision: 2) %>
-                        </p>
-                        <p class="text-[10px] text-neutral-text-secondary italic">Inclusive of all taxes</p>
+                        <% if @search_ready %>
+                          <p class="text-2xl font-black text-neutral-text-primary">
+                            RM <%= number_with_precision(@availability_service.calculate_total_price(room_type), precision: 2) %>
+                          </p>
+                          <p class="text-[10px] text-neutral-text-secondary italic">Inclusive of all taxes</p>
+                        <% else %>
+                          <p class="text-sm font-bold text-neutral-text-secondary">Select dates to see price</p>
+                        <% end %>
                       </div>
                       
                       <%= form_with url: quotes_path, method: :post do |f| %>
                         <%= f.hidden_field :hotel_id, value: @hotel.id %>
                         <%= f.hidden_field :room_type_id, value: room_type.id %>
-                        <%= f.hidden_field :check_in, value: params[:check_in] %>
-                        <%= f.hidden_field :check_out, value: params[:check_out] %>
-                        <%= f.hidden_field :adults, value: params[:adults] %>
-                        <%= f.hidden_field :children, value: params[:children] %>
-                        <%= f.hidden_field :room_count, value: params[:room_count] || 1 %>
+                        <%= f.hidden_field :check_in, value: @check_in&.to_s %>
+                        <%= f.hidden_field :check_out, value: @check_out&.to_s %>
+                        <%= f.hidden_field :adults, value: @adults %>
+                        <%= f.hidden_field :children, value: @children %>
+                        <%= f.hidden_field :room_count, value: @room_count %>
                         
-                        <%= f.submit "Reserve Now", class: "btn btn-primary py-3 px-8 shadow-lg shadow-brand-primary/20" %>
+                        <%= f.submit "Reserve Now",
+                                     disabled: !@search_ready,
+                                     class: "btn btn-primary py-3 px-8 shadow-lg shadow-brand-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" %>
                       <% end %>
                     </div>
                   </div>
@@ -376,7 +437,11 @@
                 <div>
                   <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">Stay Dates</p>
                   <p class="text-sm font-bold text-neutral-text-primary">
-                    <%= Date.parse(params[:check_in] || Date.today.to_s).strftime("%b %d") %> - <%= Date.parse(params[:check_out] || Date.tomorrow.to_s).strftime("%b %d") %>
+                    <% if @search_ready %>
+                      <%= @check_in.strftime("%b %d") %> - <%= @check_out.strftime("%b %d") %>
+                    <% else %>
+                      Select your dates
+                    <% end %>
                   </p>
                 </div>
               </div>
@@ -385,15 +450,15 @@
                 <div>
                   <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">Guests</p>
                   <p class="text-sm font-bold text-neutral-text-primary">
-                    <%= params[:adults] || 2 %> Adults, <%= params[:children] || 0 %> Children
+                    <%= @adults %> Adults, <%= @children %> Children
                   </p>
                 </div>
               </div>
             </div>
             <div class="mt-8">
-              <a href="<%= root_path %>" class="btn btn-secondary w-full py-2.5 text-xs font-bold uppercase tracking-widest">
-                Edit Search
-              </a>
+              <%= link_to "Edit Search",
+                          hotels_path(request.query_parameters),
+                          class: "btn btn-secondary w-full py-2.5 text-xs font-bold uppercase tracking-widest" %>
             </div>
           </div>
 
@@ -424,7 +489,13 @@
     <div class="flex items-center justify-between gap-x-4 max-w-[85rem] mx-auto">
       <div>
         <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-tighter">Starting from</p>
-        <p class="text-xl font-black text-neutral-text-primary">RM <%= number_with_precision(@availability_service.calculate_total_price(@room_types.first), precision: 2) if @room_types.any? %></p>
+        <p class="text-xl font-black text-neutral-text-primary">
+          <% if @search_ready && @room_types.any? %>
+            RM <%= number_with_precision(@availability_service.calculate_total_price(@room_types.first), precision: 2) %>
+          <% else %>
+            Select dates
+          <% end %>
+        </p>
       </div>
       <a href="#rooms-section" class="btn btn-primary px-8 py-3 shadow-lg shadow-brand-primary/20">
         Choose Room

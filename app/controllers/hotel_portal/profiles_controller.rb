@@ -2,6 +2,7 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
   def edit
     @hotel = current_hotel
     authorize @hotel
+    load_setup_fee_context
   end
 
   def update
@@ -16,6 +17,7 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
       flash[:alert] = photo_upload_result.alert_message if photo_upload_result.trimmed?
       redirect_to hotel_dashboard_path(@hotel), notice: "Hotel profile updated successfully."
     else
+      load_setup_fee_context
       render :edit, status: :unprocessable_content
     end
   end
@@ -83,5 +85,22 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
     return unless Array(photo_ids).map(&:to_i).include?(@hotel.featured_photo_attachment_id.to_i)
 
     @hotel.update_column(:featured_photo_attachment_id, nil)
+  end
+
+  def load_setup_fee_context
+    setup_fee_override = SetupFeeRule.active.find_by(settable: @hotel)
+    setup_fee_default = SetupFeeRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ])
+    active_setup_fee = setup_fee_override || setup_fee_default
+
+    @setup_fee_amount = active_setup_fee&.amount&.to_f || 0.0
+    @setup_fee_currency = active_setup_fee&.currency || SetupFeeRule::CURRENCY
+    @setup_fee_source =
+      if setup_fee_override
+        "Hotel Override"
+      elsif setup_fee_default
+        "Global Default"
+      else
+        "Not Configured"
+      end
   end
 end

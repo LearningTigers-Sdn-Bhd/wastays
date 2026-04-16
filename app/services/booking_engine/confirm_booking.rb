@@ -107,8 +107,10 @@ module BookingEngine
     def normalize_country(value)
       return if value.blank?
 
-      country = ISO3166::Country.find_country_by_name(value)
-      country&.name || value.split.map(&:capitalize).join(" ")
+      country = ISO3166::Country.find_country_by_any_name(value.to_s.strip)
+      country&.iso_short_name || value.to_s.split.map(&:capitalize).join(" ")
+    rescue StandardError
+      value.to_s.split.map(&:capitalize).join(" ")
     end
   end
 end
