@@ -70,8 +70,16 @@ class Hotel < ApplicationRecord
     return rule.rate if rule
 
     # 3. Check global default (where settable is nil)
-    rule = MarginRule.active.find_by(settable: nil)
+    rule = MarginRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ])
     rule&.rate || 10.0 # Default to 10% if nothing set
+  end
+
+  def effective_setup_fee
+    override = SetupFeeRule.active.find_by(settable: self)
+    return override.amount.to_f if override
+
+    default_rule = SetupFeeRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ])
+    default_rule&.amount&.to_f || 0.0
   end
 
   def onboarding?

@@ -1,19 +1,20 @@
 <% content_for :breadcrumbs do %>
-  <%= render "shared/navigation/admin_breadcrumbs", current: "Margin Settings" %>
+  <%= render "shared/navigation/admin_breadcrumbs", current: "Setup Fee Settings" %>
 <% end %>
 
-<% rules = @margin_rules.to_a %>
+<% rules = @setup_fee_rules.to_a %>
+<% hotels = Array(@hotels) %>
 <% total_rules = rules.size %>
 <% active_rules = rules.count { |rule| rule.status == "active" } %>
 <% global_defaults = rules.count { |rule| rule.settable_type.blank? } %>
-<% override_rules = total_rules - global_defaults %>
+<% hotel_overrides = total_rules - global_defaults %>
 
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
   <div class="px-4 md:px-0">
     <div class="mt-5 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Margin Settings</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Set the commission rules WAStays applies across the platform, hotels, and room types.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Setup Fee Settings</h1>
+        <p class="mt-1 text-sm font-medium text-slate-600">Set the one-time hotel onboarding fees WAStays applies across global defaults and hotel overrides.</p>
       </div>
 
       <div class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm">
@@ -27,25 +28,25 @@
     <div class="p-6 md:border-r md:border-slate-200 md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Rules</p>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= total_rules %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">All commission rules in the admin registry</p>
+      <p class="mt-2 text-sm font-medium text-slate-600">All setup fee rules in the admin registry</p>
     </div>
 
     <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Active Rules</p>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= active_rules %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Rules currently used for pricing margins</p>
+      <p class="mt-2 text-sm font-medium text-slate-600">Rules currently used for hotel setup pricing</p>
     </div>
 
     <div class="p-6 md:border-r md:border-slate-200 md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Global Defaults</p>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-blue-600"><%= global_defaults %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Base rules used when no override exists</p>
+      <p class="mt-2 text-sm font-medium text-slate-600">Fallback fee when no hotel override exists</p>
     </div>
 
     <div class="p-6 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Overrides</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-violet-600"><%= override_rules %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Hotel or room-level exceptions to the default</p>
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Hotel Overrides</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-violet-600"><%= hotel_overrides %></h2>
+      <p class="mt-2 text-sm font-medium text-slate-600">Hotel-level exceptions to the global default</p>
     </div>
   </div>
 
@@ -53,7 +54,7 @@
     <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm xl:sticky xl:top-6">
       <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
         <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Add New Rule</h2>
-        <p class="mt-1 text-sm font-medium text-slate-600">Create a default rule or a targeted override for a hotel or room type.</p>
+        <p class="mt-1 text-sm font-medium text-slate-600">Create a global setup fee or a targeted override for a specific hotel.</p>
       </div>
 
       <div class="p-6 sm:p-8">
@@ -70,19 +71,24 @@
 
         <%= form_with model: [:admin, @new_rule], local: true, class: "space-y-5", data: { controller: "margin-rule-form" } do |f| %>
           <div>
-            <label class="mb-2 block text-sm font-medium text-slate-600">Commission Rate (%)</label>
-            <%= f.number_field :rate, step: 0.1, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            <label class="mb-2 block text-sm font-medium text-slate-600">Setup Fee Amount (MYR)</label>
+            <%= f.number_field :amount, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
           </div>
 
           <div>
             <label class="mb-2 block text-sm font-medium text-slate-600">Applies To</label>
-            <%= f.select :settable_type, [["Global Default", nil], ["Specific Hotel", "Hotel"], ["Specific Room Type", "RoomType"]], {}, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { margin_rule_form_target: "appliesTo", action: "change->margin-rule-form#toggle" } %>
+            <%= f.select :settable_type, [["Global Default", nil], ["Specific Hotel", "Hotel"]], {}, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { margin_rule_form_target: "appliesTo", action: "change->margin-rule-form#toggle" } %>
           </div>
 
           <div data-margin-rule-form-target="targetField" class="<%= @new_rule.settable_type.blank? ? 'hidden' : '' %>">
-            <label class="mb-2 block text-sm font-medium text-slate-600">Target ID</label>
-            <%= f.number_field :settable_id, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { margin_rule_form_target: "targetInput" }, disabled: @new_rule.settable_type.blank? %>
-            <p class="mt-2 text-xs font-medium text-slate-500">Required when the rule applies only to one hotel or room type.</p>
+            <label class="mb-2 block text-sm font-medium text-slate-600">Hotel</label>
+            <%= f.select :settable_id,
+                         options_from_collection_for_select(hotels, :id, :name, @new_rule.settable_id),
+                         { include_blank: "Select a hotel" },
+                         class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0",
+                         data: { margin_rule_form_target: "targetInput" },
+                         disabled: @new_rule.settable_type.blank? %>
+            <p class="mt-2 text-xs font-medium text-slate-500">Choose the hotel that should use a custom one-time setup fee.</p>
           </div>
 
           <div class="pt-2">
@@ -96,22 +102,21 @@
       <div class="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Rule Registry</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Create and manage commission rules for default coverage or targeted overrides.</p>
+          <p class="mt-1 text-sm font-medium text-slate-600">Create and manage fixed setup fee rules for default coverage or hotel overrides.</p>
         </div>
 
         <span class="text-sm font-medium text-slate-500">Total <span class="font-semibold text-slate-900"><%= total_rules %></span></span>
       </div>
 
-      <div id="admin-margin-rules-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
+      <div id="admin-setup-fee-rules-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
         <% if rules.any? %>
           <% rules.each do |rule| %>
             <% status_classes = rule.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200" %>
             <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
-                 ["Global Default", "Applied when no hotel or room override exists", "text-blue-700"]
-               elsif rule.settable_type == "Hotel"
-                 ["Hotel Override", rule.settable_id.present? ? "Applies to hotel ##{rule.settable_id}" : "Applies to one hotel", "text-slate-900"]
+                 ["Global Default", "Applied when no hotel override exists", "text-blue-700"]
                else
-                 ["Room Type Override", rule.settable_id.present? ? "Applies to room type ##{rule.settable_id}" : "Applies to one room type", "text-slate-900"]
+                 hotel_name = hotels.find { |hotel| hotel.id == rule.settable_id }&.name
+                 ["Hotel Override", hotel_name.present? ? hotel_name : "Applies to hotel ##{rule.settable_id}", "text-slate-900"]
                end %>
 
             <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
@@ -125,10 +130,10 @@
 
               <div class="mt-4 flex items-center justify-between gap-3">
                 <div>
-                  <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Rate</p>
-                  <p class="mt-1 text-lg font-semibold text-slate-900"><%= rule.rate %>%</p>
+                  <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Fee Amount</p>
+                  <p class="mt-1 text-lg font-semibold text-slate-900"><%= number_to_currency(rule.amount, unit: "#{rule.currency} ", precision: 2) %></p>
                 </div>
-                <%= button_to admin_margin_rule_path(rule), method: :delete, data: { turbo_confirm: "Are you sure you want to delete this margin rule?", turbo_confirm_title: "Delete Margin Rule", turbo_confirm_color: "red" }, class: "inline-flex items-center gap-x-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100" do %>
+                <%= button_to admin_setup_fee_rule_path(rule), method: :delete, data: { turbo_confirm: "Are you sure you want to delete this setup fee rule?", turbo_confirm_title: "Delete Setup Fee Rule", turbo_confirm_color: "red" }, class: "inline-flex items-center gap-x-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100" do %>
                   <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                   Delete
                 <% end %>
@@ -137,18 +142,18 @@
           <% end %>
         <% else %>
           <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
-            <p class="text-sm font-semibold text-slate-900">No margin rules yet.</p>
-            <p class="mt-2 text-sm text-slate-500">Create the first default or override rule to start controlling platform commission settings.</p>
+            <p class="text-sm font-semibold text-slate-900">No setup fee rules yet.</p>
+            <p class="mt-2 text-sm text-slate-500">Create the first global default or hotel override to start controlling onboarding fees.</p>
           </div>
         <% end %>
       </div>
 
-      <div class="hidden lg:block overflow-x-auto">
+      <div class="hidden overflow-x-auto lg:block">
         <table class="min-w-full">
           <thead class="bg-slate-100">
             <tr>
               <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Target</th>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Rate</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Fee Amount</th>
               <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
               <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Action</th>
             </tr>
@@ -158,11 +163,10 @@
               <% rules.each_with_index do |rule, index| %>
                 <% status_classes = rule.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200" %>
                 <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
-                     ["Global Default", "Applied when no hotel or room override exists", "text-blue-700"]
-                   elsif rule.settable_type == "Hotel"
-                     ["Hotel Override", rule.settable_id.present? ? "Applies to hotel ##{rule.settable_id}" : "Applies to one hotel", "text-slate-900"]
+                     ["Global Default", "Applied when no hotel override exists", "text-blue-700"]
                    else
-                     ["Room Type Override", rule.settable_id.present? ? "Applies to room type ##{rule.settable_id}" : "Applies to one room type", "text-slate-900"]
+                     hotel_name = hotels.find { |hotel| hotel.id == rule.settable_id }&.name
+                     ["Hotel Override", hotel_name.present? ? hotel_name : "Applies to hotel ##{rule.settable_id}", "text-slate-900"]
                    end %>
 
                 <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
@@ -172,12 +176,12 @@
                       <p class="mt-1 text-sm text-slate-600"><%= target_caption %></p>
                     </div>
                   </td>
-                  <td class="whitespace-nowrap px-6 py-4 text-sm font-semibold text-slate-900"><%= rule.rate %>%</td>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm font-semibold text-slate-900"><%= number_to_currency(rule.amount, unit: "#{rule.currency} ", precision: 2) %></td>
                   <td class="whitespace-nowrap px-6 py-4">
                     <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold <%= status_classes %>"><%= rule.status.titleize %></span>
                   </td>
                   <td class="px-6 py-4 text-right sm:px-8">
-                    <%= button_to admin_margin_rule_path(rule), method: :delete, data: { turbo_confirm: "Are you sure you want to delete this margin rule?", turbo_confirm_title: "Delete Margin Rule", turbo_confirm_color: "red" }, class: "inline-flex items-center gap-x-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100" do %>
+                    <%= button_to admin_setup_fee_rule_path(rule), method: :delete, data: { turbo_confirm: "Are you sure you want to delete this setup fee rule?", turbo_confirm_title: "Delete Setup Fee Rule", turbo_confirm_color: "red" }, class: "inline-flex items-center gap-x-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100" do %>
                       <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                       Delete
                     <% end %>
@@ -188,8 +192,8 @@
               <tr>
                 <td colspan="4" class="px-6 py-12 text-center sm:px-8">
                   <div class="mx-auto max-w-sm space-y-2">
-                    <p class="text-sm font-semibold text-slate-900">No margin rules yet.</p>
-                    <p class="text-sm text-slate-500">Create the first default or override rule to start controlling platform commission settings.</p>
+                    <p class="text-sm font-semibold text-slate-900">No setup fee rules yet.</p>
+                    <p class="text-sm text-slate-500">Create the first global default or hotel override to start controlling onboarding fees.</p>
                   </div>
                 </td>
               </tr>

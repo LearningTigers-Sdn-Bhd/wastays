@@ -19,13 +19,18 @@ RSpec.describe 'Hotel dashboard page', type: :system do
   end
 
   it 'shows the hotel dashboard content' do
+    create(:setup_fee_rule, :global_default, amount: 500.0)
+
     visit hotel_dashboard_path(hotel)
 
     expect(page).to have_content('Dashboard')
     expect(page).to have_content('Arrival Board')
+    expect(page).to have_content('Setup Fee')
+    expect(page).to have_content('MYR 500.00')
     expect(page).to have_content('Action Required')
     expect(page).to have_content('7-Day Occupancy')
     expect(page).to have_content('Recent Bookings')
     expect(page).to have_link('View all bookings', href: hotel_bookings_path(hotel))
+    expect(page.body.index('Setup Fee')).to be < page.body.index('Action Required')
   end
 end

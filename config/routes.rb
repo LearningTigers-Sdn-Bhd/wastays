@@ -78,6 +78,7 @@ Rails.application.routes.draw do
     end
     get "reconciliations_dashboard", to: "reconciliations#index", as: :reconciliation_dashboard # Alias for layout
     resources :margin_rules, only: [ :index, :create, :destroy ]
+    resources :setup_fee_rules, only: [ :index, :create, :destroy ]
     resources :audit_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
