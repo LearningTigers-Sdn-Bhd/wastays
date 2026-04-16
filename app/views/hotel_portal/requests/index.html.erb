@@ -1,6 +1,6 @@
 <% content_for :title, "Requests | WAStays" %>
 
-<div class="space-y-6" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>">
+<div class="space-y-8" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>">
   <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
     <div>
       <h1 class="text-3xl font-bold text-gray-800">Requests</h1>
@@ -27,10 +27,10 @@
   </div>
 
   <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-    <%= form_with url: hotel_requests_path(current_hotel), method: :get, local: true, class: "grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px_auto]" do |f| %>
+    <%= form_with url: hotel_requests_path(current_hotel), method: :get, local: true, data: { controller: "auto-submit", turbo_frame: "requests_board_results" }, class: "grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px_auto]" do |f| %>
       <div>
         <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Search</label>
-        <%= text_field_tag :q, params[:q], class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500", placeholder: "Guest, booking, request..." %>
+        <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500", placeholder: "Guest, booking, request...", data: { action: "input->auto-submit#submit" } %>
       </div>
       <div>
         <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Date</label>
@@ -38,11 +38,12 @@
       </div>
       <div class="flex items-end gap-2">
         <%= f.submit "Apply Filters", class: "inline-flex items-center gap-x-2 rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700" %>
-        <%= link_to "Clear", hotel_requests_path(current_hotel), class: "inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
+        <%= link_to "Clear", hotel_requests_path(current_hotel), class: "inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50", data: { turbo_frame: "_top" } %>
       </div>
     <% end %>
   </div>
 
+  <%= turbo_frame_tag "requests_board_results" do %>
   <div class="grid gap-4 xl:grid-cols-3 xl:h-[calc(100vh-10rem)] xl:items-stretch" data-requests-board-target="board">
     <% [
       [:housekeeping, "Housekeeping Requests", "border-t-blue-500"],
@@ -209,4 +210,5 @@
       </section>
     <% end %>
   </div>
+  <% end %>
 </div>

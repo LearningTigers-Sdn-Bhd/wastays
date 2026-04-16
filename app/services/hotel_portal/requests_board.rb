@@ -36,6 +36,7 @@ module HotelPortal
     def filtered_request_cards
       cards = request_cards
       cards = cards.select { |card| search_match?(card) }
+      cards = cards.select { |card| status_match?(card) }
       cards = cards.select { |card| date_range_match?(card) }
       cards
     end
@@ -87,18 +88,50 @@ module HotelPortal
         booking_url: hotel_booking_path(hotel, booking, tab: "requests")
       }
     end
+def search_match?(card)
+  query = params[:q].to_s.strip.downcase
+  return true if query.blank?
 
-    def search_match?(card)
-      query = params[:q].to_s.strip.downcase
-      return true if query.blank?
+  # Map query to potential statuses if it matches a group name
+  status_aliases = []
+  if "pending".include?(query)
+    status_aliases += %w[pending in_progress failed]
+  end
+  if "completed".include?(query) || "resolved".include?(query)
+    status_aliases += %w[completed resolved]
+  end
+  if "cancelled".include?(query)
+    status_aliases << "cancelled"
+  end
 
-      [
-        card[:guest_name],
-        card[:booking_token],
-        card[:title],
-        card[:status],
-        card[:kind]
-      ].compact.any? { |value| value.to_s.downcase.include?(query) }
+  searchable_values = [
+    card[:guest_name],
+    card[:booking_token],
+    card[:title],
+    card[:status],
+    card[:kind]
+  ]
+
+  # Check if query matches any searchable value OR if the card status matches a status alias
+  searchable_values.compact.any? { |value| value.to_s.downcase.include?(query) } ||
+    status_aliases.include?(card[:status].to_s)
+end
+
+
+    def status_match?(card)
+      status = params[:status].to_s
+      return true if status.blank? || status == "all"
+
+      case status
+      when "pending"
+        card[:status].in?(%w[pending in_progress failed])
+      when "completed"
+        card[:status].in?(%w[completed resolved])
+      when "cancelled"
+        card[:status] == "cancelled"
+      else
+        true
+      end
     end
 
     def date_range_match?(card)

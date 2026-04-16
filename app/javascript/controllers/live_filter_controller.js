@@ -5,19 +5,17 @@ export default class extends Controller {
     this.timeout = null
   }
 
-  disconnect() {
-    if (this.timeout) {
-      clearTimeout(this.timeout)
-    }
-  }
-
-  submit(event) {
+  submit() {
     if (this.timeout) {
       clearTimeout(this.timeout)
     }
 
     this.timeout = window.setTimeout(() => {
-      this.submitNow()
+      if (typeof this.element.requestSubmit === "function") {
+        this.element.requestSubmit()
+      } else {
+        this.element.submit()
+      }
     }, 300)
   }
 

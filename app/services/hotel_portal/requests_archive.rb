@@ -81,13 +81,30 @@ module HotelPortal
       query = params[:q].to_s.strip.downcase
       return true if query.blank?
 
-      [
+      # Map query to potential statuses if it matches a group name
+      status_aliases = []
+      if "pending".include?(query)
+        status_aliases += %w[pending in_progress failed]
+      end
+      if "completed".include?(query) || "resolved".include?(query)
+        status_aliases += %w[completed resolved]
+      end
+      if "cancelled".include?(query)
+        status_aliases << "cancelled"
+      end
+
+      searchable_values = [
         row[:guest_name],
         row[:booking_token],
         row[:title],
         row[:status],
-        row[:internal_notes].map { |n| n["body"] }.join(" ")
-      ].compact.any? { |value| value.to_s.downcase.include?(query) }
+        row[:kind]
+      ]
+
+      # Check if query matches any searchable value OR if the row status matches a status alias
+      searchable_values.compact.any? { |value| value.to_s.downcase.include?(query) } ||
+        status_aliases.include?(row[:status].to_s) ||
+        row[:internal_notes].any? { |n| n["body"].to_s.downcase.include?(query) }
     end
 
     def kind_match?(row)

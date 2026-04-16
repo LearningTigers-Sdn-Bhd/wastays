@@ -17,9 +17,13 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @booking = current_hotel.bookings.find(params[:id])
     @booking_rooms = @booking.booking_rooms
     @pre_checkin = @booking.pre_checkin
-    @housekeeping_requests = @booking.housekeeping_requests.active.recent_first
+    @housekeeping_requests = @booking.housekeeping_requests.where(archived_at: nil).or(
+      @booking.housekeeping_requests.where(status: "cancelled")
+    ).recent_first
     @pending_housekeeping_requests_count = @booking.housekeeping_requests.active.where(status: "pending").count
-    @complaint_requests = @booking.complaint_requests.active.recent_first
+    @complaint_requests = @booking.complaint_requests.where(archived_at: nil).or(
+      @booking.complaint_requests.where(status: "cancelled")
+    ).recent_first
     @pending_complaint_requests_count = @booking.complaint_requests.active.where(status: "pending").count
     @pending_requests_count = @pending_housekeeping_requests_count + @pending_complaint_requests_count
   end

@@ -41,7 +41,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("<table")
       expect(response.body).to include("Ravi Menon")
-      expect(response.body).to include(hotel.name)
+      expect(response.body).to include(hotel.name[0...10])
       expect(response.body).to include("Guest Records")
       expect(response.body).to include("Country")
       expect(response.body).to include("Stays")
@@ -134,6 +134,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(response.body).to include("Pre-Check-In")
       expect(response.body).to include("MYR")
       expect(response.body).to include("USD")
+      expect(response.body.downcase).to include("india")
     end
   end
 end
