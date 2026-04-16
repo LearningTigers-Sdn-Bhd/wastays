@@ -1,112 +1,93 @@
+<% hotel_sidebar_sections = [
+  {
+    label: "Home",
+    items: [
+      { label: "Dashboard", path: hotel_dashboard_path(current_hotel), search_text: "Dashboard Home", active: controller_name == "dashboard", icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' }
+    ]
+  },
+  {
+    label: "Operations",
+    items: [
+      { label: "Arrivals", path: hotel_arrivals_path(current_hotel), search_text: "Arrivals Check-in Operations", active: controller_name == "arrivals", icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' },
+      { label: "In-House Guest", path: hotel_in_house_guests_path(current_hotel), search_text: "In-House Guests Operations", active: controller_name == "in_house_guests", icon: '<path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M12 4v6"/><path d="M2 18h20"/>' },
+      { label: "Bookings", path: hotel_bookings_path(current_hotel), search_text: "Bookings Reservations Operations", active: controller_name == "bookings", icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
+      { label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Operations", active: controller_name == "requests", icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M3 10h18"/><path d="M8 14h8"/><path d="M8 18h5"/>' },
+      { label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory", active: controller_name == "guests", icon: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' }
+    ]
+  },
+  {
+    label: "Property",
+    items: [
+      { label: "Room Categories", path: hotel_room_types_path(current_hotel), search_text: "Room Categories Rooms Property", active: controller_name == "room_types", icon: '<path d="M2 20h20"/><path d="M7 20v-5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/><path d="M10 8V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v3"/><path d="M12 17v.01"/><path d="M10 13h4"/>' },
+      { label: "Rates & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Rates Inventory Calendar Property", active: controller_name == "inventory_dashboards", icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M7 14h.01"/><path d="M12 14h.01"/><path d="M17 14h.01"/><path d="M7 18h.01"/><path d="M12 18h.01"/><path d="M17 18h.01"/>' },
+      { label: "Hotel Details", path: edit_hotel_profile_path(current_hotel), search_text: "Hotel Details Profile Property", active: controller_name == "profiles", icon: '<path d="M3 21h18"/><path d="M5 21V7l8-4 6 3v15"/><path d="M9 21v-8h6v8"/>' }
+    ]
+  },
+  {
+    label: "System",
+    items: [
+      { label: "Reports", path: hotel_reports_path(current_hotel), search_text: "Reports Analytics System", active: controller_name == "reports", icon: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>' },
+      { label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Activity System", active: controller_name == "audit_logs", icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>' },
+      { label: "Settings", path: hotel_settings_path(current_hotel), search_text: "Settings Preferences System", active: controller_name == "settings", icon: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>' }
+    ]
+  }
+] %>
+<% hotel_sidebar_footer_items = [
+  { label: "Homepage", path: root_path, search_text: "Homepage Website", icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+  { label: "Help & support", path: help_center_path, search_text: "Help Support", icon: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' }
+] %>
+<% render_hotel_sidebar_nav = lambda do %>
+  <nav class="flex-1 px-4 py-2 space-y-6">
+    <% hotel_sidebar_sections.each do |section| %>
+      <div data-admin-sidebar-search-target="section">
+        <span class="sidebar-section-label"><%= section[:label] %></span>
+        <div class="space-y-0.5">
+          <% section[:items].each do |item| %>
+            <a data-admin-sidebar-search-target="item" data-search-text="<%= item[:search_text] %>" class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= item[:path] %>">
+              <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
+              <span><%= item[:label] %></span>
+            </a>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </nav>
+<% end %>
+
 <!-- Preline CMS-style Hotel Sidebar -->
 <!-- Desktop sidebar -->
-<aside id="hotel-sidebar" class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full overflow-y-auto custom-scrollbar">
-
-  <!-- Search Bar -->
+<aside id="hotel-sidebar" data-controller="admin-sidebar-search" class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full overflow-y-auto custom-scrollbar">
   <div class="p-4 pb-2">
-    <button type="button" class="w-full inline-flex items-center gap-x-2 py-2 px-3 text-sm rounded-lg bg-layer-alt border border-layer-line text-muted-foreground-2 shadow-xs hover:bg-surface-hover transition-colors">
-      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      <span class="flex-1 text-start">Search</span>
-      <kbd class="inline-flex items-center gap-x-0.5 py-0.5 px-1.5 rounded-md border border-layer-line bg-white text-[10px] text-muted-foreground-2 font-medium">
-        <span class="text-xs">⌘</span>K
-      </kbd>
-    </button>
+    <label class="block" for="hotel-sidebar-search-desktop">
+      <span class="sr-only">Search navigation</span>
+      <span class="relative block">
+        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground-2">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </span>
+        <input id="hotel-sidebar-search-desktop" type="search" placeholder="Search navigation" autocomplete="off" data-admin-sidebar-search-target="input" data-action="input->admin-sidebar-search#filter" class="w-full rounded-lg border border-layer-line bg-layer-alt py-2 pl-10 pr-3 text-sm text-neutral-text-primary placeholder:text-muted-foreground-2 shadow-xs focus:border-slate-300 focus:outline-none focus:ring-0">
+      </span>
+    </label>
   </div>
 
-  <!-- Navigation -->
-  <nav class="flex-1 px-4 py-2 space-y-6">
+  <%= capture(&render_hotel_sidebar_nav) %>
 
-    <!-- HOME -->
-    <div>
-      <span class="sidebar-section-label">Home</span>
-      <div class="space-y-0.5">
-        <a class="sidebar-nav-link <%= controller_name == 'dashboard' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_dashboard_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          <span>Dashboard</span>
-        </a>
-      </div>
-    </div>
+  <div data-admin-sidebar-search-target="section" class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
+    <% hotel_sidebar_footer_items.each do |item| %>
+      <a data-admin-sidebar-search-target="item" data-search-text="<%= item[:search_text] %>" class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
+        <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
+        <span><%= item[:label] %></span>
+      </a>
+    <% end %>
+  </div>
 
-    <!-- OPERATIONS -->
-    <div>
-      <span class="sidebar-section-label">Operations</span>
-      <div class="space-y-0.5">
-        <a class="sidebar-nav-link <%= controller_name == 'arrivals' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_arrivals_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span>Arrivals</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'bookings' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_bookings_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <span>Bookings</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'requests' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_requests_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M3 10h18"/><path d="M8 14h8"/><path d="M8 18h5"/></svg>
-          <span>Requests</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'guests' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_guests_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span>Guests</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- PROPERTY -->
-    <div>
-      <span class="sidebar-section-label">Property</span>
-      <div class="space-y-0.5">
-        <a class="sidebar-nav-link <%= controller_name == 'room_types' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_room_types_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M7 20v-5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/><path d="M10 8V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v3"/><path d="M12 17v.01"/><path d="M10 13h4"/></svg>
-          <span>Room Categories</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'inventory_dashboards' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_inventory_index_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M7 14h.01"/><path d="M12 14h.01"/><path d="M17 14h.01"/><path d="M7 18h.01"/><path d="M12 18h.01"/><path d="M17 18h.01"/></svg>
-          <span>Rates & Inventory</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'profiles' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= edit_hotel_profile_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4 6 3v15"/><path d="M9 21v-8h6v8"/></svg>
-          <span>Hotel Details</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- SYSTEM -->
-    <div>
-      <span class="sidebar-section-label">System</span>
-      <div class="space-y-0.5">
-        <a class="sidebar-nav-link <%= controller_name == 'reports' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_reports_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-          <span>Reports</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'audit_logs' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_audit_logs_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          <span>Operation Logs</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'settings' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_settings_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-          <span>Settings</span>
-        </a>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Footer Links -->
-  <div class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
-    <a class="sidebar-nav-link sidebar-nav-link-default" href="#">
-      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-      <span>What's new?</span>
-    </a>
-    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= help_center_path %>">
-      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span>Help & support</span>
-    </a>
+  <div data-admin-sidebar-search-target="empty" class="hidden mx-4 mb-4 rounded-xl border border-dashed border-layer-line bg-layer-alt px-4 py-5 text-center text-sm text-muted-foreground-2">
+    No navigation matches that search.
   </div>
 </aside>
 
 <!-- Mobile sidebar overlay -->
 <div id="hotel-sidebar-overlay" class="fixed inset-0 z-[79] bg-black/50 hidden lg:hidden" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#close"></div>
-<aside id="hotel-sidebar-mobile" class="fixed top-0 start-0 bottom-0 z-[80] w-[260px] bg-sidebar-bg border-e border-layer-line transform -translate-x-full transition-transform duration-300 lg:hidden overflow-y-auto custom-scrollbar">
-
-  <!-- Mobile Close + Logo -->
+<aside id="hotel-sidebar-mobile" data-controller="admin-sidebar-search sidebar-toggle" class="fixed top-0 start-0 bottom-0 z-[80] w-[260px] bg-sidebar-bg border-e border-layer-line transform -translate-x-full transition-transform duration-300 lg:hidden overflow-y-auto custom-scrollbar">
   <div class="flex items-center justify-between p-4 border-b border-layer-line">
     <a href="<%= hotel_dashboard_path(current_hotel) %>" class="flex items-center gap-x-2.5">
       <span class="inline-flex justify-center items-center size-8 bg-brand-primary rounded-lg text-white font-bold text-sm shadow-xs">W</span>
@@ -117,90 +98,30 @@
     </button>
   </div>
 
-  <!-- Mobile Search -->
   <div class="p-4 pb-2">
-    <button type="button" class="w-full inline-flex items-center gap-x-2 py-2 px-3 text-sm rounded-lg bg-layer-alt border border-layer-line text-muted-foreground-2 shadow-xs">
-      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      <span class="flex-1 text-start">Search</span>
-    </button>
+    <label class="block" for="hotel-sidebar-search-mobile">
+      <span class="sr-only">Search navigation</span>
+      <span class="relative block">
+        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground-2">
+          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </span>
+        <input id="hotel-sidebar-search-mobile" type="search" placeholder="Search navigation" autocomplete="off" data-admin-sidebar-search-target="input" data-action="input->admin-sidebar-search#filter" class="w-full rounded-lg border border-layer-line bg-layer-alt py-2 pl-10 pr-3 text-sm text-neutral-text-primary placeholder:text-muted-foreground-2 shadow-xs focus:border-slate-300 focus:outline-none focus:ring-0">
+      </span>
+    </label>
   </div>
 
-  <!-- Mobile Nav -->
-  <nav class="flex-1 px-4 py-2 space-y-6">
-    <div>
-      <span class="sidebar-section-label">Home</span>
-      <div class="space-y-0.5">
-        <a class="sidebar-nav-link <%= controller_name == 'dashboard' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_dashboard_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          <span>Dashboard</span>
-        </a>
-      </div>
-    </div>
-    <div>
-      <span class="sidebar-section-label">Operations</span>
-      <div class="space-y-0.5">
-        <a class="sidebar-nav-link <%= controller_name == 'arrivals' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_arrivals_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span>Arrivals</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'bookings' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_bookings_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <span>Bookings</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'requests' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_requests_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M3 10h18"/><path d="M8 14h8"/><path d="M8 18h5"/></svg>
-          <span>Requests</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'guests' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_guests_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span>Guests</span>
-        </a>
-      </div>
-    </div>
-    <div>
-      <span class="sidebar-section-label">Property</span>
-      <div class="space-y-0.5">
-        <a class="sidebar-nav-link <%= controller_name == 'room_types' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_room_types_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M7 20v-5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/><path d="M10 8V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v3"/><path d="M12 17v.01"/><path d="M10 13h4"/></svg>
-          <span>Room Categories</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'inventory_dashboards' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_inventory_index_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M7 14h.01"/><path d="M12 14h.01"/><path d="M17 14h.01"/><path d="M7 18h.01"/><path d="M12 18h.01"/><path d="M17 18h.01"/></svg>
-          <span>Rates & Inventory</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'profiles' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= edit_hotel_profile_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4 6 3v15"/><path d="M9 21v-8h6v8"/></svg>
-          <span>Hotel Details</span>
-        </a>
-      </div>
-    </div>
-    <div>
-      <span class="sidebar-section-label">System</span>
-      <div class="space-y-0.5">
-        <a class="sidebar-nav-link <%= controller_name == 'reports' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_reports_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-          <span>Reports</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'audit_logs' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_audit_logs_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          <span>Operation Logs</span>
-        </a>
-        <a class="sidebar-nav-link <%= controller_name == 'settings' ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= hotel_settings_path(current_hotel) %>">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-          <span>Settings</span>
-        </a>
-      </div>
-    </div>
-  </nav>
+  <%= capture(&render_hotel_sidebar_nav) %>
 
-  <div class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
-    <a class="sidebar-nav-link sidebar-nav-link-default" href="#">
-      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-      <span>What's new?</span>
-    </a>
-    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= help_center_path %>">
-      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span>Help & support</span>
-    </a>
+  <div data-admin-sidebar-search-target="section" class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
+    <% hotel_sidebar_footer_items.each do |item| %>
+      <a data-admin-sidebar-search-target="item" data-search-text="<%= item[:search_text] %>" class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
+        <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
+        <span><%= item[:label] %></span>
+      </a>
+    <% end %>
+  </div>
+
+  <div data-admin-sidebar-search-target="empty" class="hidden mx-4 mb-4 rounded-xl border border-dashed border-layer-line bg-layer-alt px-4 py-5 text-center text-sm text-muted-foreground-2">
+    No navigation matches that search.
   </div>
 </aside>

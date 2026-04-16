@@ -31,6 +31,7 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
       admin_bookings_path => 'Platform Bookings',
       admin_reconciliations_path => 'Payment Issues',
       admin_margin_rules_path => 'Margin Settings',
+      admin_setup_fee_rules_path => 'Setup Fee Settings',
       admin_audit_logs_path => 'Audit Logs'
     }.each do |path, heading|
       get path
@@ -75,8 +76,10 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include(%(href="#{admin_api_keys_path}"))
     expect(response.body).to include(%(href="#{docs_admin_api_keys_path}"))
+    expect(response.body).to include(%(href="#{admin_setup_fee_rules_path}"))
     expect(response.body).to include('API Access')
     expect(response.body).to include('Developer Guide')
+    expect(response.body).to include('Setup Fee Settings')
   end
 
   it 'renders the bookings mobile list container' do
@@ -105,6 +108,15 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('id="admin-margin-rules-mobile-list"')
+  end
+
+  it 'renders the setup fee rules mobile list container' do
+    get admin_setup_fee_rules_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('id="admin-setup-fee-rules-mobile-list"')
+    expect(response.body).to include('Setup Fee Settings')
+    expect(response.body).to include('Add New Rule')
   end
 
   it 'renders the analytics mobile list container' do

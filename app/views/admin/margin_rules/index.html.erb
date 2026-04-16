@@ -5,7 +5,7 @@
 <% rules = @margin_rules.to_a %>
 <% total_rules = rules.size %>
 <% active_rules = rules.count { |rule| rule.status == "active" } %>
-<% global_defaults = rules.count { |rule| rule.settable_type.nil? } %>
+<% global_defaults = rules.count { |rule| rule.settable_type.blank? } %>
 <% override_rules = total_rules - global_defaults %>
 
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
@@ -106,7 +106,7 @@
         <% if rules.any? %>
           <% rules.each do |rule| %>
             <% status_classes = rule.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200" %>
-            <% target_title, target_caption, target_title_classes = if rule.settable_type.nil?
+            <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
                  ["Global Default", "Applied when no hotel or room override exists", "text-blue-700"]
                elsif rule.settable_type == "Hotel"
                  ["Hotel Override", rule.settable_id.present? ? "Applies to hotel ##{rule.settable_id}" : "Applies to one hotel", "text-slate-900"]
@@ -157,7 +157,7 @@
             <% if rules.any? %>
               <% rules.each_with_index do |rule, index| %>
                 <% status_classes = rule.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200" %>
-                <% target_title, target_caption, target_title_classes = if rule.settable_type.nil?
+                <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
                      ["Global Default", "Applied when no hotel or room override exists", "text-blue-700"]
                    elsif rule.settable_type == "Hotel"
                      ["Hotel Override", rule.settable_id.present? ? "Applies to hotel ##{rule.settable_id}" : "Applies to one hotel", "text-slate-900"]

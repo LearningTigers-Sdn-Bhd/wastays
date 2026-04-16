@@ -16,9 +16,9 @@ RSpec.describe 'Hotel Policies Update', type: :system do
 
     # Login
     visit login_path
-    fill_in 'Email address', with: user.email
+    fill_in 'Email Address', with: user.email
     fill_in 'Password', with: 'password123'
-    click_button 'Sign In'
+    click_button 'Sign In to Portal'
   end
 
   it 'allows the user to update the hotel policies' do

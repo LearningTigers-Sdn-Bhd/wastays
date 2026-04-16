@@ -29,6 +29,21 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
       .where(check_in: arrival_window)
       .count
 
+    setup_fee_override = SetupFeeRule.active.find_by(settable: @current_hotel)
+    setup_fee_default = SetupFeeRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ])
+    active_setup_fee = setup_fee_override || setup_fee_default
+
+    @setup_fee_amount = active_setup_fee&.amount&.to_f || 0.0
+    @setup_fee_currency = active_setup_fee&.currency || SetupFeeRule::CURRENCY
+    @setup_fee_source =
+      if setup_fee_override
+        "Hotel Override"
+      elsif setup_fee_default
+        "Global Default"
+      else
+        "Not Configured"
+      end
+
     @recent_bookings = @current_hotel.bookings.order(created_at: :desc).limit(5)
 
     # 7-day occupancy snapshot (simplified for MVP)

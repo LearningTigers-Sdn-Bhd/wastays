@@ -7,6 +7,9 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   root "static_pages#home"
   get "for-hotels", to: "static_pages#for_hotels", as: :for_hotels
+  get "explore", to: "static_pages#explore", as: :explore
+  get "privacy-policy", to: "legal_pages#privacy_policy", as: :privacy_policy
+  get "terms-and-conditions", to: "legal_pages#terms_and_conditions", as: :terms_and_conditions
 
   # Help Center
   get "help", to: "help_center#index", as: :help_center
@@ -77,6 +80,7 @@ Rails.application.routes.draw do
     end
     get "reconciliations_dashboard", to: "reconciliations#index", as: :reconciliation_dashboard # Alias for layout
     resources :margin_rules, only: [ :index, :create, :destroy ]
+    resources :setup_fee_rules, only: [ :index, :create, :destroy ]
     resources :audit_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
@@ -126,6 +130,7 @@ Rails.application.routes.draw do
     resources :inventory_dashboards, only: [ :index, :create ], path: "inventory"
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
     resources :guests, only: [ :index, :show ]
+    resources :in_house_guests, only: [ :index ]
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"

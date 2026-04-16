@@ -1,0 +1,23 @@
+<div
+  class="landing-loader"
+  data-landing-loader-target="overlay"
+  aria-hidden="true"
+>
+  <div class="landing-loader__backdrop"></div>
+  <div class="landing-loader__grain"></div>
+  <div class="landing-loader__glow"></div>
+  <div class="landing-loader__shutter landing-loader__shutter--top"></div>
+  <div class="landing-loader__shutter landing-loader__shutter--bottom"></div>
+
+  <div class="landing-loader__content">
+    <div class="landing-loader__mark">
+      <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "landing-loader__logo" %>
+    </div>
+
+    <div class="landing-loader__meter" role="presentation">
+      <span class="landing-loader__meter-bar"></span>
+    </div>
+
+    <p class="landing-loader__caption">Every great stay begins with a warm welcome.</p>
+  </div>
+</div>

@@ -26,3 +26,4 @@
 
 /config/credentials/production.key
 /app/assets/builds/tailwind.css
+/public/assets

@@ -326,11 +326,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_010000) do
     t.string "status"
     t.string "token"
     t.datetime "completed_at"
+    t.string "document_status"
+    t.string "signature_status"
     t.jsonb "metadata"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "signature_status"
-    t.string "document_status"
     t.index ["booking_id"], name: "index_pre_checkins_on_booking_id"
   end
 
@@ -409,6 +409,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_010000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
+  end
+
+  create_table "setup_fee_rules", force: :cascade do |t|
+    t.string "settable_type"
+    t.bigint "settable_id"
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.string "currency", default: "MYR", null: false
+    t.string "status", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["settable_type", "settable_id"], name: "index_setup_fee_rules_on_active_hotel_overrides", unique: true, where: "(((status)::text = 'active'::text) AND ((settable_type)::text = 'Hotel'::text))"
+    t.index ["settable_type", "settable_id"], name: "index_setup_fee_rules_on_settable"
+    t.index ["status"], name: "index_setup_fee_rules_on_active_global_default", unique: true, where: "(((status)::text = 'active'::text) AND (settable_type IS NULL) AND (settable_id IS NULL))"
   end
 
   create_table "user_hotel_accesses", force: :cascade do |t|

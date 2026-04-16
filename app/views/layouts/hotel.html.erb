@@ -31,10 +31,9 @@
             </button>
           <% end %>
 
-          <!-- Logo Icon -->
-          <a href="<%= current_hotel ? hotel_dashboard_path(current_hotel) : '#' %>" class="shrink-0 flex items-center gap-x-2.5" aria-label="WAStays">
-            <span class="inline-flex justify-center items-center size-8 bg-brand-primary rounded-lg text-white font-bold text-sm shadow-xs">W</span>
-            <span class="hidden lg:block text-sm font-semibold text-neutral-text-primary">WAStays</span>
+          <!-- Brand -->
+          <a href="<%= current_hotel ? hotel_dashboard_path(current_hotel) : '#' %>" class="shrink-0 flex items-center" aria-label="WAStays">
+            <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-9 w-auto" %>
           </a>
 
           <!-- Divider -->

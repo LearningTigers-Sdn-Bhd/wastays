@@ -17,9 +17,9 @@ RSpec.describe 'Admin margin settings', type: :system do
     driven_by(:rack_test)
 
     visit login_path
-    fill_in 'Email address', with: superadmin.email
+    fill_in 'Email Address', with: superadmin.email
     fill_in 'Password', with: 'password123'
-    click_button 'Sign In'
+    click_button 'Sign In to Portal'
     expect(page).to have_current_path(admin_dashboard_path, ignore_query: true)
   end
 

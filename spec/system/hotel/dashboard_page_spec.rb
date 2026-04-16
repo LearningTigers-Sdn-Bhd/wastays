@@ -13,9 +13,9 @@ RSpec.describe 'Hotel dashboard page', type: :system do
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
     visit login_path
-    fill_in 'Email address', with: user.email
+    fill_in 'Email Address', with: user.email
     fill_in 'Password', with: 'password123'
-    click_button 'Sign In'
+    click_button 'Sign In to Portal'
   end
 
   it 'shows the hotel dashboard content' do
@@ -27,5 +27,6 @@ RSpec.describe 'Hotel dashboard page', type: :system do
     expect(page).to have_content('7-Day Occupancy')
     expect(page).to have_content('Recent Bookings')
     expect(page).to have_link('View all bookings', href: hotel_bookings_path(hotel))
+    expect(page.body.index('7-Day Occupancy')).to be < page.body.index('Action Required')
   end
 end

@@ -158,6 +158,15 @@
                   <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Stay Dates</dt>
                   <dd class="mt-1 text-slate-700"><%= booking.check_in.strftime("%d %b %Y") %> → <%= booking.check_out.strftime("%d %b %Y") %></dd>
                 </div>
+                <div>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Created Date</dt>
+                  <dd class="mt-1 text-slate-700">
+                    <div class="flex flex-col gap-0.5">
+                      <span><%= booking.created_at.strftime("%I:%M %p") %></span>
+                      <span class="text-xs text-slate-500"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                    </div>
+                  </dd>
+                </div>
               </dl>
 
               <div class="mt-4 flex justify-end">
@@ -183,6 +192,7 @@
               <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Guest</th>
               <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Hotel</th>
               <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Stay Dates</th>
+              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Created Date</th>
               <th class="px-8 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Amount</th>
               <th class="px-8 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Action</th>
             </tr>
@@ -204,6 +214,12 @@
                     <span><%= booking.check_in.strftime("%b %d") %></span>
                     <svg class="size-3 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
                     <span><%= booking.check_out.strftime("%b %d") %></span>
+                  </div>
+                </td>
+                <td class="whitespace-nowrap px-8 py-4">
+                  <div class="flex flex-col gap-0.5 text-sm font-medium text-slate-700">
+                    <span><%= booking.created_at.strftime("%I:%M %p") %></span>
+                    <span class="text-xs text-slate-500"><%= booking.created_at.strftime("%d %b %Y") %></span>
                   </div>
                 </td>
                 <td class="whitespace-nowrap px-8 py-4 text-right">
