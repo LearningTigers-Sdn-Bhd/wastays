@@ -28,7 +28,7 @@
       </div>
       <div>
         <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Date</label>
-        <%= select_tag :date_range, options_for_select([["All", "all"], ["Today", "today"], ["Last 3 Days", "3_days"], ["Last 7 Days", "7_days"]], params[:date_range].presence || "all"), class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
+        <%= date_field_tag :date, params[:date], class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
       </div>
       <div class="md:col-span-4 flex justify-end">
         <div class="flex items-center gap-2">

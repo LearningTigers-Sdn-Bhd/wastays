@@ -18,6 +18,11 @@ module HotelPortal
       def unarchive
         request = find_request
         request.unarchive!
+        if request.respond_to?(:status=) && request.status.to_s == "cancelled"
+          request.status = "pending"
+          request.completed_at = nil if request.respond_to?(:completed_at=)
+          request.internal_notes = [] if request.respond_to?(:internal_notes=)
+        end
         request.save ? request : false
       end
 

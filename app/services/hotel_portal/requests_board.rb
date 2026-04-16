@@ -81,6 +81,7 @@ module HotelPortal
         requested_at_raw: request.display_requested_at,
         status: request.status,
         completed_at: request.completed_at,
+        internal_notes: request.respond_to?(:internal_notes_list) ? request.internal_notes_list : [],
         archive_url: hotel_archive_request_path(hotel, kind: kind, request_id: request.id),
         update_url: hotel_request_status_path(hotel, kind: kind, request_id: request.id),
         booking_url: hotel_booking_path(hotel, booking, tab: "requests")
@@ -101,25 +102,20 @@ module HotelPortal
     end
 
     def date_range_match?(card)
-      date_range = params[:date_range].to_s
-      return true if date_range.blank? || date_range == "all"
+      date = params[:date].presence || params[:requested_on].presence
+      return true if date.blank?
 
       requested_at = card[:requested_at_raw]
       return false if requested_at.blank?
 
-      start_time =
-        case date_range
-        when "today"
-          Time.zone.now.beginning_of_day
-        when "3_days"
-          3.days.ago.beginning_of_day
-        when "7_days"
-          7.days.ago.beginning_of_day
-        else
-          nil
-        end
+      selected_date = begin
+        Date.parse(date.to_s)
+      rescue ArgumentError, TypeError
+        nil
+      end
+      return true if selected_date.blank?
 
-      start_time ? requested_at >= start_time : true
+      requested_at.to_date == selected_date
     end
 
     def request_bucket(kind, request)
