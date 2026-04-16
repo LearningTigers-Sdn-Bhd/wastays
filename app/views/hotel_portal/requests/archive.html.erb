@@ -1,0 +1,107 @@
+<% content_for :title, "Request Archive | WAStays" %>
+
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800">Request Archive</h1>
+      <p class="mt-1 text-sm text-gray-500">Search and filter archived housekeeping and complaint requests.</p>
+    </div>
+
+    <div class="flex gap-2">
+      <%= link_to hotel_requests_path(current_hotel), class: "inline-flex items-center gap-x-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50" do %>
+        Board
+      <% end %>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <%= form_with url: hotel_request_archive_path(current_hotel), method: :get, local: true, class: "grid gap-4 md:grid-cols-3" do |f| %>
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Search</label>
+        <%= text_field_tag :q, params[:q], class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500", placeholder: "Guest, booking, request..." %>
+      </div>
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Type</label>
+        <%= select_tag :kind, options_for_select([["All", "all"], ["Housekeeping", "housekeeping"], ["Complaint", "complaint"]], params[:kind].presence || "all"), class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
+      </div>
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Status</label>
+        <%= select_tag :status, options_for_select([["All", "all"], ["Pending", "pending"], ["In Progress", "in_progress"], ["Completed", "completed"], ["Resolved", "resolved"], ["Failed", "failed"]], params[:status].presence || "all"), class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
+      </div>
+      <div class="md:col-span-3 flex justify-end">
+        <%= f.submit "Apply Filters", class: "inline-flex items-center gap-x-2 rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="flex flex-wrap gap-2 text-xs font-semibold">
+    <span class="inline-flex items-center gap-x-2 rounded-full bg-gray-50 px-3 py-1.5 text-gray-700 border border-gray-200">
+      Archived <%= @archive_counts[:archived] %>
+    </span>
+  </div>
+
+  <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div class="border-b border-gray-200 bg-gray-50 px-6 py-4">
+      <h2 class="text-lg font-semibold text-gray-800">Every Request</h2>
+    </div>
+
+    <% if @archive_rows.any? %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-white">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Type</th>
+              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Request</th>
+              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Guest</th>
+              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Dates</th>
+              <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white">
+            <% @archive_rows.each do |row| %>
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:kind_class] %>">
+                    <%= row[:kind].titleize %>
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="space-y-1">
+                    <p class="text-sm font-semibold text-gray-800"><%= row[:title] %></p>
+                    <p class="text-xs text-gray-500">Booking: <%= row[:booking_token] %></p>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><%= row[:guest_name] %></td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:status_class] %>">
+                    <%= row[:status].titleize %>
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">
+                  <div class="space-y-1">
+                    <p>Requested: <%= display_housekeeping_datetime(row[:requested_at]) %></p>
+                    <% if row[:completed_at].present? %>
+                      <p>Completed: <%= display_housekeeping_datetime(row[:completed_at]) %></p>
+                    <% end %>
+                    <% if row[:archived_at].present? %>
+                      <p>Archived: <%= display_housekeeping_datetime(row[:archived_at]) %></p>
+                    <% end %>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <%= link_to "Open", row[:booking_url], class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
+                    <%= button_to row[:archive_action], row[:archive_url], method: :patch, class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="p-8 text-sm text-gray-500">No requests match your filters.</div>
+    <% end %>
+  </div>
+</div>

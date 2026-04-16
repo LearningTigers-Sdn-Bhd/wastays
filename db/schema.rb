@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_16_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_16_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -202,6 +202,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_000000) do
     t.jsonb "internal_notes", default: []
     t.string "status", default: "pending", null: false
     t.datetime "completed_at"
+    t.datetime "archived_at"
+    t.index ["booking_id", "archived_at"], name: "index_complaint_requests_on_booking_id_and_archived_at"
     t.index ["booking_id", "completed_at"], name: "index_complaint_requests_on_booking_id_and_completed_at"
     t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
     t.index ["booking_id"], name: "index_complaint_requests_on_booking_id"
@@ -265,6 +267,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "internal_notes", default: []
+    t.datetime "archived_at"
+    t.index ["booking_id", "archived_at"], name: "index_housekeeping_requests_on_booking_id_and_archived_at"
     t.index ["booking_id", "requested_at"], name: "index_housekeeping_requests_on_booking_id_and_requested_at"
     t.index ["booking_id", "status"], name: "index_housekeeping_requests_on_booking_id_and_status"
     t.index ["booking_id"], name: "index_housekeeping_requests_on_booking_id"

@@ -7,6 +7,8 @@ class HousekeepingRequest < ApplicationRecord
   validates :request_details, presence: true
 
   scope :recent_first, -> { order(created_at: :desc) }
+  scope :active, -> { where(archived_at: nil) }
+  scope :archived, -> { where.not(archived_at: nil) }
 
   def display_requested_at
     requested_at || created_at
@@ -43,5 +45,17 @@ class HousekeepingRequest < ApplicationRecord
 
   def failed?
     status == "failed"
+  end
+
+  def archived?
+    archived_at.present?
+  end
+
+  def archive!
+    self.archived_at = Time.current
+  end
+
+  def unarchive!
+    self.archived_at = nil
   end
 end

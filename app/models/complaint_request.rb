@@ -8,6 +8,8 @@ class ComplaintRequest < ApplicationRecord
   validates :requested_at, presence: true
 
   scope :recent_first, -> { order(created_at: :desc) }
+  scope :active, -> { where(archived_at: nil) }
+  scope :archived, -> { where.not(archived_at: nil) }
 
   def display_requested_at
     requested_at || created_at
@@ -54,5 +56,17 @@ class ComplaintRequest < ApplicationRecord
   def reopen!
     self.status = "in_progress"
     self.completed_at = nil
+  end
+
+  def archived?
+    archived_at.present?
+  end
+
+  def archive!
+    self.archived_at = Time.current
+  end
+
+  def unarchive!
+    self.archived_at = nil
   end
 end

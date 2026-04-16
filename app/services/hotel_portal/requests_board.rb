@@ -30,22 +30,24 @@ module HotelPortal
       cards = []
 
       hotel.bookings.includes(:housekeeping_requests, :complaint_requests).each do |booking|
-        booking.housekeeping_requests.each do |request|
-          cards << build_card(
+        booking.housekeeping_requests.active.each do |request|
+          card = build_card(
             kind: "housekeeping",
             request: request,
             booking: booking,
             title: request.request_details
           )
+          cards << card if card[:bucket].present?
         end
 
-        booking.complaint_requests.each do |request|
-          cards << build_card(
+        booking.complaint_requests.active.each do |request|
+          card = build_card(
             kind: "complaint",
             request: request,
             booking: booking,
             title: request.complaint_details
           )
+          cards << card if card[:bucket].present?
         end
       end
 
@@ -55,7 +57,7 @@ module HotelPortal
     def build_card(kind:, request:, booking:, title:)
       {
         kind: kind,
-        bucket: request_bucket(kind, request.status),
+        bucket: request_bucket(kind, request),
         request_id: request.id,
         booking_id: booking.id,
         booking_token: booking.confirmation_token,
@@ -64,20 +66,34 @@ module HotelPortal
         requested_at: request.display_requested_at,
         status: request.status,
         completed_at: request.completed_at,
+        archive_url: hotel_archive_request_path(hotel, kind: kind, request_id: request.id),
         update_url: hotel_request_status_path(hotel, kind: kind, request_id: request.id),
         booking_url: hotel_booking_path(hotel, booking, tab: "requests")
       }
     end
 
-    def request_bucket(kind, status)
+    def request_bucket(kind, request)
       case kind.to_s
       when "housekeeping"
-        status.to_s == "completed" ? :completed : :housekeeping
+        return :completed if completed_recently?(request.completed_at, request.status)
+        return :housekeeping unless request.completed?
+
+        nil
       when "complaint"
-        status.to_s == "resolved" ? :completed : :complaint
+        return :completed if completed_recently?(request.completed_at, request.status)
+        return :complaint unless request.resolved?
+
+        nil
       else
         :housekeeping
       end
+    end
+
+    def completed_recently?(completed_at, status)
+      return false unless status.to_s.in?(%w[completed resolved])
+      return false if completed_at.blank?
+
+      completed_at >= 7.days.ago
     end
   end
 end
