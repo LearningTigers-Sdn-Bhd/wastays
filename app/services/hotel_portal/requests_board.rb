@@ -2,18 +2,25 @@ module HotelPortal
   class RequestsBoard
     include Rails.application.routes.url_helpers
 
-    attr_reader :hotel
+    attr_reader :hotel, :params
 
-    def initialize(hotel)
+    def initialize(hotel, params = {})
       @hotel = hotel
+      @params = params || {}
     end
 
     def board_columns
-      @board_columns ||= {
-        housekeeping: request_cards.select { |card| card[:bucket] == :housekeeping },
-        complaint: request_cards.select { |card| card[:bucket] == :complaint },
-        completed: request_cards.select { |card| card[:bucket] == :completed }
-      }
+      @board_columns ||= begin
+        cards = filtered_request_cards
+
+        {
+          housekeeping: cards.select { |card| card[:bucket] == :housekeeping },
+          complaint: cards.select { |card| card[:bucket] == :complaint },
+          completed: cards.select { |card| card[:bucket] == :completed }
+                          .sort_by { |card| card[:completed_at] || Time.zone.at(0) }
+                          .reverse
+        }
+      end
     end
 
     def board_counts
@@ -24,6 +31,13 @@ module HotelPortal
 
     def request_cards
       @request_cards ||= build_request_cards
+    end
+
+    def filtered_request_cards
+      cards = request_cards
+      cards = cards.select { |card| search_match?(card) }
+      cards = cards.select { |card| date_range_match?(card) }
+      cards
     end
 
     def build_request_cards
@@ -64,6 +78,7 @@ module HotelPortal
         guest_name: booking.guest_name,
         title: title,
         requested_at: request.display_requested_at,
+        requested_at_raw: request.display_requested_at,
         status: request.status,
         completed_at: request.completed_at,
         archive_url: hotel_archive_request_path(hotel, kind: kind, request_id: request.id),
@@ -72,7 +87,44 @@ module HotelPortal
       }
     end
 
+    def search_match?(card)
+      query = params[:q].to_s.strip.downcase
+      return true if query.blank?
+
+      [
+        card[:guest_name],
+        card[:booking_token],
+        card[:title],
+        card[:status],
+        card[:kind]
+      ].compact.any? { |value| value.to_s.downcase.include?(query) }
+    end
+
+    def date_range_match?(card)
+      date_range = params[:date_range].to_s
+      return true if date_range.blank? || date_range == "all"
+
+      requested_at = card[:requested_at_raw]
+      return false if requested_at.blank?
+
+      start_time =
+        case date_range
+        when "today"
+          Time.zone.now.beginning_of_day
+        when "3_days"
+          3.days.ago.beginning_of_day
+        when "7_days"
+          7.days.ago.beginning_of_day
+        else
+          nil
+        end
+
+      start_time ? requested_at >= start_time : true
+    end
+
     def request_bucket(kind, request)
+      return nil if request.status.to_s == "cancelled"
+
       case kind.to_s
       when "housekeeping"
         return :completed if completed_recently?(request.completed_at, request.status)

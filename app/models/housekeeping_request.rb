@@ -1,7 +1,7 @@
 class HousekeepingRequest < ApplicationRecord
   belongs_to :booking
 
-  STATUSES = %w[pending in_progress completed failed].freeze
+  STATUSES = %w[pending in_progress completed failed cancelled].freeze
 
   validates :status, presence: true, inclusion: { in: STATUSES }
   validates :request_details, presence: true
@@ -45,6 +45,10 @@ class HousekeepingRequest < ApplicationRecord
 
   def failed?
     status == "failed"
+  end
+
+  def cancelled?
+    status == "cancelled"
   end
 
   def archived?

@@ -1,7 +1,7 @@
 class ComplaintRequest < ApplicationRecord
   belongs_to :booking
 
-  STATUSES = %w[pending in_progress resolved failed].freeze
+  STATUSES = %w[pending in_progress resolved failed cancelled].freeze
 
   validates :status, presence: true, inclusion: { in: STATUSES }
   validates :complaint_details, presence: true
@@ -46,6 +46,10 @@ class ComplaintRequest < ApplicationRecord
 
   def failed?
     status == "failed"
+  end
+
+  def cancelled?
+    status == "cancelled"
   end
 
   def resolved!

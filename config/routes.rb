@@ -116,6 +116,7 @@ Rails.application.routes.draw do
     get "requests", to: "requests#index", as: :requests
     get "requests/archive", to: "requests#archive", as: :request_archive
     patch "requests/:kind/:request_id", to: "requests#update_status", as: :request_status
+    post "requests/:kind/:request_id/cancel", to: "requests#cancel_request", as: :cancel_request
     patch "requests/:kind/:request_id/archive", to: "requests#archive_request", as: :archive_request
     patch "requests/:kind/:request_id/unarchive", to: "requests#unarchive_request", as: :unarchive_request
 

@@ -15,8 +15,6 @@ module HotelPortal
 
     def summary_counts
       {
-        housekeeping: rows.count { |row| row[:kind] == "housekeeping" },
-        complaint: rows.count { |row| row[:kind] == "complaint" },
         archived: rows.count { |row| row[:archived_at].present? }
       }
     end
@@ -24,11 +22,11 @@ module HotelPortal
     private
 
     def filtered_rows
-      rows = build_rows
+      rows = build_rows.select { |row| row[:archived_at].present? }
       rows = rows.select { |row| search_match?(row) }
       rows = rows.select { |row| kind_match?(row) }
       rows = rows.select { |row| status_match?(row) }
-      rows = rows.select { |row| archived_match?(row) }
+      rows = rows.select { |row| date_range_match?(row) }
       rows.sort_by { |row| row[:requested_at] || Time.zone.at(0) }.reverse
     end
 
@@ -69,6 +67,7 @@ module HotelPortal
         requested_at: request.display_requested_at,
         completed_at: request.completed_at,
         status: request.status,
+        internal_notes: request.internal_notes_list,
         archived_at: request.archived_at,
         status_class: status_class_for(kind, request.status),
         kind_class: kind_class_for(kind),
@@ -82,7 +81,13 @@ module HotelPortal
       query = params[:q].to_s.strip.downcase
       return true if query.blank?
 
-      [ row[:guest_name], row[:booking_token], row[:title], row[:status] ].compact.any? { |value| value.to_s.downcase.include?(query) }
+      [ 
+        row[:guest_name], 
+        row[:booking_token], 
+        row[:title], 
+        row[:status],
+        row[:internal_notes].map { |n| n["body"] }.join(" ")
+      ].compact.any? { |value| value.to_s.downcase.include?(query) }
     end
 
     def kind_match?(row)
@@ -97,18 +102,37 @@ module HotelPortal
       return true if status.blank? || status == "all"
 
       case status
-      when "completed", "resolved"
+      when "pending"
+        row[:status].in?(%w[pending in_progress failed])
+      when "completed"
         row[:status].in?(%w[completed resolved])
+      when "cancelled"
+        row[:status] == "cancelled"
       else
-        row[:status] == status
+        true
       end
     end
 
-    def archived_match?(row)
-      archived = params[:archived].to_s
-      return true if archived.blank? || archived == "all"
+    def date_range_match?(row)
+      date_range = params[:date_range].to_s
+      return true if date_range.blank? || date_range == "all"
 
-      archived == "archived" ? row[:archived_at].present? : row[:archived_at].blank?
+      requested_at = row[:requested_at]
+      return false if requested_at.blank?
+
+      start_time =
+        case date_range
+        when "today"
+          Time.zone.now.beginning_of_day
+        when "3_days"
+          3.days.ago.beginning_of_day
+        when "7_days"
+          7.days.ago.beginning_of_day
+        else
+          nil
+        end
+
+      start_time ? requested_at >= start_time : true
     end
 
     def status_class_for(kind, status)
@@ -124,7 +148,7 @@ module HotelPortal
         case status.to_s
         when "resolved", "completed" then "bg-green-50 text-green-700 border border-green-100"
         when "in_progress" then "bg-blue-50 text-blue-700 border border-blue-100"
-        when "failed" then "bg-red-50 text-red-700 border border-red-100"
+        when "failed", "cancelled" then "bg-red-50 text-red-700 border border-red-100"
         when "pending" then "bg-yellow-50 text-yellow-700 border border-yellow-100"
         else "bg-gray-50 text-gray-700 border border-gray-100"
         end

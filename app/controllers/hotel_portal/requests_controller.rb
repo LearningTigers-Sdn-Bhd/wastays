@@ -1,15 +1,43 @@
 class HotelPortal::RequestsController < HotelPortal::BaseController
   def index
-    @board = ::HotelPortal::RequestsBoard.new(current_hotel)
+    @board = ::HotelPortal::RequestsBoard.new(current_hotel, params)
     @board_columns = @board.board_columns
     @board_counts = @board.board_counts
   end
 
   def archive
-    archive_params = params.to_unsafe_h.merge("archived" => "archived")
-    @archive = ::HotelPortal::RequestsArchive.new(current_hotel, archive_params)
+    @archive = ::HotelPortal::RequestsArchive.new(current_hotel, params)
     @archive_rows = @archive.rows
     @archive_counts = @archive.summary_counts
+  end
+
+  def cancel_request
+    updater = ::HotelPortal::Requests::CancelUpdater.new(
+      hotel: current_hotel,
+      kind: params[:kind],
+      request_id: params[:request_id],
+      note: params[:internal_note]
+    )
+
+    if (request = updater.call)
+      redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+      respond_to do |format|
+        format.html { redirect_to redirect_target, notice: "Request cancelled successfully." }
+        format.json { render json: { ok: true, status: request.status, archived_at: request.archived_at } }
+      end
+    else
+      redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+      respond_to do |format|
+        format.html { redirect_to redirect_target, alert: "Cancellation note is required." }
+        format.json { render json: { ok: false }, status: :unprocessable_entity }
+      end
+    end
+  rescue ActiveRecord::RecordNotFound
+    redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+    respond_to do |format|
+      format.html { redirect_to redirect_target, alert: "Request not found." }
+      format.json { render json: { ok: false }, status: :not_found }
+    end
   end
 
   def update_status
