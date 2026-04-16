@@ -62,8 +62,18 @@ module HotelPortal
     end
 
     def show
-      @bookings = @guest.bookings.where(hotel_id: current_hotel.id).order(check_out: :desc)
-      @currency_totals = @bookings.except(:order).group(:currency).sum(:total_amount)
+      guest_booking_scope = Booking
+        .joins(:booking_guests)
+        .where(hotel_id: current_hotel.id, booking_guests: { guest_id: @guest.id })
+
+      @bookings = guest_booking_scope
+        .includes(:pre_checkin)
+        .order(check_out: :desc, id: :desc)
+
+      @currency_totals = guest_booking_scope
+        .reorder(nil)
+        .group(:currency)
+        .sum(:total_amount)
     end
 
     def safe_guest_attr(guest, attribute)

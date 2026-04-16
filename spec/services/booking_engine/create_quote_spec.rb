@@ -41,5 +41,21 @@ RSpec.describe BookingEngine::CreateQuote do
       expect(result.success?).to be false
       expect(result.message).to eq("Room is no longer available for these dates.")
     end
+
+    it "fails with clear error when dates are missing" do
+      service = described_class.new(
+        hotel_id: hotel.id,
+        room_type_id: room_type.id,
+        check_in: "",
+        check_out: "",
+        adults: "",
+        children: "",
+        room_count: "1"
+      )
+      result = service.call
+
+      expect(result.success?).to be false
+      expect(result.message).to eq("Please select check-in and check-out dates.")
+    end
   end
 end

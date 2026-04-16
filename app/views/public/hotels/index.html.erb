@@ -11,8 +11,8 @@
             <%= params[:city].present? ? params[:city] : "All Destinations" %>
           </h2>
           <p class="text-xs text-neutral-text-secondary truncate">
-            <%= Date.parse(params[:check_in] || Date.today.to_s).strftime("%b %d") %> - 
-            <%= Date.parse(params[:check_out] || Date.tomorrow.to_s).strftime("%b %d") %> • 
+            <%= Date.parse(params[:check_in].presence || Date.current.to_s).strftime("%b %d") %> - 
+            <%= Date.parse(params[:check_out].presence || Date.tomorrow.to_s).strftime("%b %d") %> • 
             <%= params[:rooms] || 1 %> Room, <%= params[:adults] || 2 %> Adults
           </p>
         </div>

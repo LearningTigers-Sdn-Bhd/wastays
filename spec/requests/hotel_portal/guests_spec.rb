@@ -1,4 +1,5 @@
 require "rails_helper"
+require "cgi"
 
 RSpec.describe "HotelPortal::Guests", type: :request do
   let(:hotel) { create(:hotel, status: "approved") }
@@ -122,18 +123,19 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       create(:booking_guest, booking: usd_booking, guest: guest)
 
       get hotel_guest_path(hotel, guest)
+      body_text = CGI.unescapeHTML(response.body)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include(hotel.name)
-      expect(response.body).to include("Guest Records")
-      expect(response.body).to include("Ravi Menon")
-      expect(response.body).to include("Guest Profile")
-      expect(response.body).to include("Currency Totals")
-      expect(response.body).to include("Booking History")
-      expect(response.body).to include("Confirmation")
-      expect(response.body).to include("Pre-Check-In")
-      expect(response.body).to include("MYR")
-      expect(response.body).to include("USD")
+      expect(body_text).to include(hotel.name)
+      expect(body_text).to include("Guest Records")
+      expect(body_text).to include("Ravi Menon")
+      expect(body_text).to include("Guest Profile")
+      expect(body_text).to include("Currency Totals")
+      expect(body_text).to include("Booking History")
+      expect(body_text).to include("Confirmation")
+      expect(body_text).to include("Pre-Check-In")
+      expect(body_text).to include("MYR")
+      expect(body_text).to include("USD")
     end
   end
 end
