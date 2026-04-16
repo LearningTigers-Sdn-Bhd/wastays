@@ -5,17 +5,20 @@ module BookingEngine
     def initialize(params)
       @hotel = Hotel.find(params[:hotel_id])
       @room_type = @hotel.room_types.find(params[:room_type_id])
-      @check_in = params[:check_in].is_a?(String) ? Date.parse(params[:check_in]) : params[:check_in]
-      @check_out = params[:check_out].is_a?(String) ? Date.parse(params[:check_out]) : params[:check_out]
-      @adults = params[:adults].to_i
-      @children = params[:children].to_i
-      @room_count = (params[:room_count] || 1).to_i
+      @check_in = parse_date(params[:check_in])
+      @check_out = parse_date(params[:check_out])
+      @adults = (params[:adults].presence || 2).to_i
+      @children = (params[:children].presence || 0).to_i
+      @room_count = (params[:room_count].presence || 1).to_i
       @guest_name = params[:guest_name]
       @guest_email = params[:guest_email]
       @guest_phone = params[:guest_phone]
     end
 
     def call
+      validation_error = validate_dates
+      return OpenStruct.new(success?: false, message: validation_error) if validation_error.present?
+
       BookingQuote.transaction do
         # 1. Revalidate availability one last time
         availability_service = BookingEngine::AvailabilityService.new(
@@ -77,6 +80,24 @@ module BookingEngine
       end
     rescue => e
       OpenStruct.new(success?: false, message: "An error occurred: #{e.message}")
+    end
+
+    private
+
+    def parse_date(date_param)
+      return date_param if date_param.is_a?(Date)
+      return nil if date_param.blank?
+
+      Date.parse(date_param)
+    rescue ArgumentError
+      nil
+    end
+
+    def validate_dates
+      return "Please select check-in and check-out dates." if @check_in.blank? || @check_out.blank?
+      return "Check-out date must be after check-in date." if @check_out <= @check_in
+
+      nil
     end
   end
 end
