@@ -43,7 +43,7 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
   it 'saves banking details independently of the display-only settings card' do
     visit hotel_settings_path(hotel)
 
-    within all('.card').first do
+    within('section', text: 'Hotel Settings') do
       expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Approved')
       expect(page).to have_field('Onboarding Stage', type: 'text', disabled: true, with: 'Building profile')
     end

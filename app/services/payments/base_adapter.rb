@@ -4,7 +4,11 @@ module Payments
       @setting = setting
     end
 
-    def create_intent(amount:, currency:, description:, metadata:)
+    def create_checkout_session(amount:, currency:, description:, metadata:, callback_url:)
+      raise NotImplementedError, "#{self.class} has not implemented method '#{__method__}'"
+    end
+
+    def verify_client_callback(payment_response:)
       raise NotImplementedError, "#{self.class} has not implemented method '#{__method__}'"
     end
 

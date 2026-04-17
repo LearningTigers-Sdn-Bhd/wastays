@@ -55,7 +55,21 @@ class Hotel < ApplicationRecord
     return setting if setting
 
     # 2. Check account-level setting
-    account.payment_settings.active.find_by(gateway: gateway)
+    setting = account.payment_settings.active.find_by(gateway: gateway)
+    return setting if setting
+
+    # 3. Check credential-level default for this gateway
+    Payments::CredentialSetting.for_gateway(gateway)
+  end
+
+  def checkout_payment_setting
+    payment_settings.active.order(updated_at: :desc).first ||
+      account.payment_settings.active.order(updated_at: :desc).first ||
+      Payments::CredentialSetting.default
+  end
+
+  def checkout_payment_gateway
+    checkout_payment_setting&.gateway&.downcase
   end
 
   def effective_margin_rate(room_type = nil)

@@ -40,6 +40,9 @@ Rails.application.routes.draw do
     resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
       post :cancel, on: :member
     end
+    post "payments/checkout_session", to: "payments#checkout_session", as: :checkout_payment_session
+    get "payments/verify", to: "payments#verify"
+    post "payments/verify", to: "payments#verify", as: :verify_payment
     get "mock_payment", to: "payment_mocks#show", as: :mock_payment
     post "mock_payment", to: "payment_mocks#update"
     post "webhooks/:gateway", to: "webhooks#create", as: :payment_webhook
