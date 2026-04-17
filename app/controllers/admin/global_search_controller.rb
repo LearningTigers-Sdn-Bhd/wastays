@@ -1,6 +1,6 @@
 module Admin
   class GlobalSearchController < BaseController
-    GROUP_PRIORITY = { "Pages" => 0, "Hotels" => 1, "Bookings" => 2 }.freeze
+    GROUP_PRIORITY = { "Bookings" => 0, "Pages" => 1, "Hotels" => 2 }.freeze
     PAGE_RESULTS = [
       { title: "Dashboard", subtitle: "Admin dashboard overview", url: :admin_dashboard_path, keywords: "dashboard overview" },
       { title: "Recent Successful Bookings", subtitle: "Dashboard section", url: :admin_dashboard_path, anchor: "recent-successful-bookings", keywords: "recent bookings successful bookings" },
@@ -19,12 +19,13 @@ module Admin
       query = params[:q].to_s.strip.downcase
       results = Rails.cache.fetch(cache_key_for(query), expires_in: 2.minutes) do
         rows = page_results(query) + hotel_results(query) + booking_results(query)
-        rows = rows.uniq { |entry| [entry[:title], entry[:url]] }
-        rows.sort_by { |entry| [GROUP_PRIORITY.fetch(entry[:group], 99), -entry[:score].to_i] }
+        rows = rows.uniq { |entry| [ entry[:title], entry[:url] ] }
+        rows.sort_by { |entry| [ GROUP_PRIORITY.fetch(entry[:group], 99), -entry[:score].to_i ] }
       end
 
       render json: {
-        results: results.first(20).map { |entry| entry.except(:score) }
+        results: results.first(20).map { |entry| entry.except(:score) },
+        quick_actions: quick_actions
       }
     end
 
@@ -32,7 +33,7 @@ module Admin
 
     def page_results(query)
       PAGE_RESULTS.filter_map do |entry|
-        text = [entry[:title], entry[:subtitle], entry[:keywords]].join(" ").downcase
+        text = [ entry[:title], entry[:subtitle], entry[:keywords] ].join(" ").downcase
         score = search_score(text, query)
         next if query.present? && score.zero?
 
@@ -63,13 +64,13 @@ module Admin
 
       list_result_score = search_score("manage hotels hotels list".downcase, query)
       list_result = if list_result_score.positive?
-        [{
+        [ {
           title: "Manage Hotels",
           subtitle: "Open hotels list",
           group: "Hotels",
           url: admin_hotels_path,
           score: list_result_score + 4
-        }]
+        } ]
       else
         []
       end
@@ -182,7 +183,15 @@ module Admin
     end
 
     def cache_key_for(query)
-      "admin:global_search:v3:user:#{current_user.id}:q:#{Digest::SHA256.hexdigest(query)}"
+      "admin:global_search:v5:user:#{current_user.id}:q:#{Digest::SHA256.hexdigest(query)}"
+    end
+
+    def quick_actions
+      [
+        { group: "Bookings", label: "Go to bookings", url: admin_bookings_path },
+        { group: "Hotels", label: "Go to hotels", url: admin_hotels_path },
+        { group: "Pages", label: "Go to dashboard", url: admin_dashboard_path }
+      ]
     end
   end
 end

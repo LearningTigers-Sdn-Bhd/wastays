@@ -8,27 +8,19 @@
   </div>
 
   <%= turbo_frame_tag "payouts_content" do %>
-    <!-- Search & Filter -->
-    <div class="bg-white border border-gray-200 rounded-xl p-4 mb-8 shadow-sm" data-controller="tab-field">
-      <%= form_with url: payouts_hotel_reports_path(current_hotel), method: :get, id: "hotel-payout-filter-form", class: "space-y-4", data: { controller: "auto-submit", turbo_frame: "payouts_content" } do |f| %>
+    <div data-controller="tab-field">
+      <%= form_with url: payouts_hotel_reports_path(current_hotel), method: :get, id: "hotel-payout-filter-form", data: { turbo_frame: "payouts_content" } do %>
         <%= hidden_field_tag :tab, @active_tab, id: "hotel-payout-active-tab-input", data: { "tab-field-target": "input" } %>
-        
-        <div class="flex flex-col md:flex-row gap-4">
-          <div class="flex-1 relative">
-            <%= f.text_field :q, value: params[:q], placeholder: "Search reference, status...", class: "form-input py-2 pl-9 pr-3 text-sm", data: { action: "input->auto-submit#submit" } %>
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg class="size-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            </div>
-          </div>
-        </div>
       <% end %>
     </div>
 
     <!-- Tabs Navigation -->
     <div class="border-b border-gray-200 mb-6">
       <nav class="flex space-x-6" aria-label="Tabs" role="tablist">
+        <% upcoming_active = @active_tab == "upcoming" %>
+        <% paid_active = @active_tab == "paid" %>
         <button type="button" 
-                class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'active' if @active_tab == 'upcoming' %>" 
+                class="py-4 px-1 inline-flex items-center gap-x-2 border-b-2 text-sm whitespace-nowrap transition-colors focus:outline-none <%= upcoming_active ? 'font-bold border-brand-primary text-brand-primary' : 'border-transparent text-gray-500 hover:text-brand-primary' %>" 
                 id="tabs-hotel-payout-item-1" 
                 data-hs-tab="#tabs-hotel-payout-1" 
                 aria-controls="tabs-hotel-payout-1" 
@@ -38,7 +30,7 @@
           Upcoming & Processing
         </button>
         <button type="button" 
-                class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'active' if @active_tab == 'paid' %>" 
+                class="py-4 px-1 inline-flex items-center gap-x-2 border-b-2 text-sm whitespace-nowrap transition-colors focus:outline-none <%= paid_active ? 'font-bold border-brand-primary text-brand-primary' : 'border-transparent text-gray-500 hover:text-brand-primary' %>" 
                 id="tabs-hotel-payout-item-2" 
                 data-hs-tab="#tabs-hotel-payout-2" 
                 aria-controls="tabs-hotel-payout-2" 
@@ -110,6 +102,27 @@
       </div>
 
       <div id="tabs-hotel-payout-2" class="<%= 'hidden' unless @active_tab == 'paid' %>" role="tabpanel" aria-labelledby="tabs-hotel-payout-item-2">
+        <div class="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <%= form_with url: payouts_hotel_reports_path(current_hotel), method: :get, class: "flex flex-col gap-3 md:flex-row md:items-end md:gap-4", data: { turbo_frame: "payouts_content" } do |f| %>
+            <%= hidden_field_tag :tab, "paid" %>
+
+            <div class="w-full md:w-48">
+              <%= f.label :paid_start_date, "From", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500" %>
+              <%= f.date_field :paid_start_date, value: @paid_start_date, class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-0" %>
+            </div>
+
+            <div class="w-full md:w-48">
+              <%= f.label :paid_end_date, "To", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500" %>
+              <%= f.date_field :paid_end_date, value: @paid_end_date, class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-0" %>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <%= f.submit "Apply", class: "inline-flex items-center rounded-lg bg-brand-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors" %>
+              <%= link_to "Reset", payouts_hotel_reports_path(current_hotel, tab: "paid"), class: "inline-flex items-center rounded-lg border border-gray-200 px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors", data: { turbo_frame: "payouts_content" } %>
+            </div>
+          <% end %>
+        </div>
+
         <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
@@ -157,7 +170,7 @@
           </table>
           <% if @payout_history.total_pages > 1 %>
             <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <%= paginate @payout_history, params: { tab: 'paid' } %>
+              <%= paginate @payout_history, params: { tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date } %>
             </div>
           <% end %>
         </div>
@@ -169,7 +182,7 @@
   <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-xl flex gap-x-3 items-center">
     <svg class="size-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
     <p class="text-sm text-blue-800 font-medium">
-      Payout Schedule: All bookings from **Saturday to Friday** are processed on the following **Monday**.
+      Payout Schedule: All bookings from <b>Saturday to Friday</b> are processed on the following <b>Monday</b>.
     </p>
   </div>
 </div>

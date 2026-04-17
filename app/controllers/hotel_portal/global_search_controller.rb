@@ -1,6 +1,6 @@
 module HotelPortal
   class GlobalSearchController < BaseController
-    GROUP_PRIORITY = { "Pages" => 0, "Bookings" => 1, "Requests" => 2 }.freeze
+    GROUP_PRIORITY = { "Bookings" => 0, "Pages" => 1, "Requests" => 2 }.freeze
     PAGE_RESULTS = [
       { title: "Hotel Dashboard", subtitle: "Overview and recent activity", route: :hotel_dashboard_path, keywords: "dashboard overview recent bookings" },
       { title: "Arrival Board", subtitle: "Check-ins and arrivals", route: :hotel_arrivals_path, keywords: "arrival board arrivals check in" },
@@ -20,12 +20,13 @@ module HotelPortal
       query = params[:q].to_s.strip.downcase
       results = Rails.cache.fetch(cache_key_for(query), expires_in: 2.minutes) do
         rows = page_results(query) + booking_results(query) + request_results(query)
-        rows = rows.uniq { |entry| [entry[:title], entry[:url]] }
-        rows.sort_by { |entry| [GROUP_PRIORITY.fetch(entry[:group], 99), -entry[:score].to_i] }
+        rows = rows.uniq { |entry| [ entry[:title], entry[:url] ] }
+        rows.sort_by { |entry| [ GROUP_PRIORITY.fetch(entry[:group], 99), -entry[:score].to_i ] }
       end
 
       render json: {
-        results: results.first(20).map { |entry| entry.except(:score) }
+        results: results.first(20).map { |entry| entry.except(:score) },
+        quick_actions: quick_actions
       }
     end
 
@@ -33,7 +34,7 @@ module HotelPortal
 
     def page_results(query)
       PAGE_RESULTS.filter_map do |entry|
-        text = [entry[:title], entry[:subtitle], entry[:keywords]].join(" ").downcase
+        text = [ entry[:title], entry[:subtitle], entry[:keywords] ].join(" ").downcase
         score = search_score(text, query)
         next if query.present? && score.zero?
 
@@ -190,7 +191,15 @@ module HotelPortal
     end
 
     def cache_key_for(query)
-      "hotel:global_search:v3:hotel:#{current_hotel.id}:user:#{current_user.id}:q:#{Digest::SHA256.hexdigest(query)}"
+      "hotel:global_search:v5:hotel:#{current_hotel.id}:user:#{current_user.id}:q:#{Digest::SHA256.hexdigest(query)}"
+    end
+
+    def quick_actions
+      [
+        { group: "Bookings", label: "Go to bookings", url: hotel_bookings_path(current_hotel) },
+        { group: "Requests", label: "Go to requests", url: hotel_requests_path(current_hotel) },
+        { group: "Pages", label: "Go to arrival board", url: hotel_arrivals_path(current_hotel) }
+      ]
     end
   end
 end

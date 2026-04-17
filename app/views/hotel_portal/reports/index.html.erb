@@ -93,14 +93,77 @@
                 daily_bookings = @base_bookings.select { |b| b.created_at.to_date == date }
                 daily_margin = daily_bookings.sum { |b| b.margin_amount || 0 }
                 daily_net = daily_bookings.sum { |b| b.net_amount || 0 }
+                date_key = date.strftime("%Y%m%d")
               %>
-              <tr>
+              <tr class="cursor-pointer transition-colors hover:bg-slate-50" onclick="document.getElementById('daily-performance-modal-<%= date_key %>').showModal()">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium"><%= date.strftime("%d %b %Y") %></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= daily_bookings.count %></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= number_to_currency(gross, unit: "MYR ", precision: 2) %></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">- <%= number_with_delimiter(number_with_precision(daily_margin, precision: 2)) %></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800"><%= number_to_currency(daily_net, unit: "MYR ", precision: 2) %></td>
               </tr>
+              <dialog id="daily-performance-modal-<%= date_key %>" class="fixed inset-0 m-auto w-[min(94vw,64rem)] rounded-2xl p-0 backdrop:bg-black/40" onclick="if(event.target===this){this.close()}">
+                <div class="max-h-[85vh] overflow-y-auto bg-white">
+                  <div class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
+                    <div>
+                      <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Daily Performance Snapshot</p>
+                      <h3 class="text-lg font-bold text-gray-900"><%= date.strftime("%A, %d %b %Y") %></h3>
+                    </div>
+                    <button type="button" class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50" onclick="this.closest('dialog').close()">Close</button>
+                  </div>
+
+                  <div class="grid grid-cols-1 gap-3 border-b border-gray-100 bg-slate-50 px-5 py-4 md:grid-cols-4">
+                    <div>
+                      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Bookings</p>
+                      <p class="mt-1 text-sm font-bold text-gray-900"><%= daily_bookings.count %></p>
+                    </div>
+                    <div>
+                      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Gross</p>
+                      <p class="mt-1 text-sm font-bold text-gray-900"><%= number_to_currency(gross, unit: "MYR ", precision: 2) %></p>
+                    </div>
+                    <div>
+                      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Margin</p>
+                      <p class="mt-1 text-sm font-bold text-red-600">- <%= number_with_delimiter(number_with_precision(daily_margin, precision: 2)) %></p>
+                    </div>
+                    <div>
+                      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Net</p>
+                      <p class="mt-1 text-sm font-bold text-emerald-700"><%= number_to_currency(daily_net, unit: "MYR ", precision: 2) %></p>
+                    </div>
+                  </div>
+
+                  <div class="space-y-3 px-5 py-4">
+                    <% daily_bookings.each do |booking| %>
+                      <div class="rounded-xl border border-gray-200 bg-white p-4">
+                        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div>
+                            <p class="text-sm font-bold text-gray-900"><%= booking.confirmation_token %> · <%= booking.guest_name %></p>
+                            <p class="mt-1 text-xs text-gray-500"><%= booking.guest_email %> · <%= booking.guest_phone %></p>
+                            <p class="mt-1 text-xs text-gray-500">Stay: <%= booking.check_in&.strftime("%d %b %Y") %> → <%= booking.check_out&.strftime("%d %b %Y") %></p>
+                          </div>
+                          <div class="text-left md:text-right">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Net Payout</p>
+                            <p class="mt-1 text-sm font-bold text-gray-900">MYR <%= number_with_precision(booking.net_amount, precision: 2) %></p>
+                            <%= link_to "Open booking", hotel_booking_path(current_hotel, booking), class: "mt-2 inline-flex items-center text-xs font-semibold text-brand-primary hover:text-red-700" %>
+                          </div>
+                        </div>
+
+                        <% if booking.booking_rooms.any? %>
+                          <div class="mt-3 border-t border-gray-100 pt-3">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Room Details</p>
+                            <div class="mt-2 space-y-1.5">
+                              <% booking.booking_rooms.each do |room| %>
+                                <% room_name = room.room_type_snapshot.is_a?(Hash) ? room.room_type_snapshot["name"].presence : nil %>
+                                <% room_name = room_name.presence || room.room_type&.name || "Room" %>
+                                <p class="text-sm text-gray-700"><span class="font-semibold text-gray-900"><%= room.quantity %>x</span> <%= room_name %></p>
+                              <% end %>
+                            </div>
+                          </div>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                </div>
+              </dialog>
             <% end %>
           <% else %>
             <tr>

@@ -8,6 +8,7 @@ export default class extends Controller {
 
   connect() {
     this.resultsData = []
+    this.quickActionsData = []
     this.activeIndex = -1
     this.currentQuery = ""
     this.searchTimer = null
@@ -48,6 +49,7 @@ export default class extends Controller {
     this.overlayTarget.classList.add("hidden")
     this.inputTarget.value = ""
     this.resultsData = []
+    this.quickActionsData = []
     this.activeIndex = -1
     this.currentQuery = ""
     this.renderResults()
@@ -74,11 +76,13 @@ export default class extends Controller {
       .then((response) => response.ok ? response.json() : { results: [] })
       .then((payload) => {
         this.resultsData = payload.results || []
+        this.quickActionsData = payload.quick_actions || []
         this.activeIndex = this.resultsData.length > 0 ? 0 : -1
         this.renderResults()
       })
       .catch(() => {
         this.resultsData = []
+        this.quickActionsData = []
         this.activeIndex = -1
         this.renderResults()
       })
@@ -129,13 +133,34 @@ export default class extends Controller {
 
     this.emptyTarget.classList.add("hidden")
     let currentGroup = null
+    const actionByGroup = new Map(
+      this.quickActionsData
+        .filter((action) => action.group && action.url)
+        .map((action) => [action.group, action])
+    )
+
     this.resultsData.forEach((item, index) => {
       if (item.group && item.group !== currentGroup) {
         currentGroup = item.group
+        const groupHeader = document.createElement("div")
+        groupHeader.className = "flex items-center justify-between gap-3 px-3 pt-2 pb-1"
+
         const groupLabel = document.createElement("p")
-        groupLabel.className = "px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground-2"
+        groupLabel.className = "text-[11px] font-semibold uppercase tracking-wide text-muted-foreground-2"
         groupLabel.textContent = currentGroup
-        this.resultsTarget.appendChild(groupLabel)
+
+        groupHeader.appendChild(groupLabel)
+
+        const groupAction = actionByGroup.get(currentGroup)
+        if (groupAction) {
+          const groupLink = document.createElement("a")
+          groupLink.href = groupAction.url
+          groupLink.className = "inline-flex items-center gap-1 text-[11px] font-medium text-brand-primary hover:text-red-700"
+          groupLink.innerHTML = `${this.escapeHtml(groupAction.label || "Go to")}<span aria-hidden="true">→</span>`
+          groupHeader.appendChild(groupLink)
+        }
+
+        this.resultsTarget.appendChild(groupHeader)
       }
 
       const button = document.createElement("button")
