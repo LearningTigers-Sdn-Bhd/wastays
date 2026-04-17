@@ -10,6 +10,7 @@ class Hotel < ApplicationRecord
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
   has_many :booking_quotes, dependent: :destroy
+  has_many :payout_batches, dependent: :destroy
 
   validates :name, presence: true
   validates :status, presence: true

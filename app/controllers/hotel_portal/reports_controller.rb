@@ -6,7 +6,7 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
   def index
     # Note: FinancialFiltering sets @start_date and @end_date
     hotel_bookings = current_hotel.bookings.revenue_generating
-
+    
     summary = Booking.analytics_summary(@start_date, @end_date, query: params[:q], base_scope: hotel_bookings)
     @total_gross = summary[:total_revenue]
     @total_margin = summary[:total_margin]
@@ -15,18 +15,19 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
 
     # Daily data for chart (simplified)
     @bookings = hotel_bookings.created_between(@start_date, @end_date).search(params[:q])
+    @base_bookings = @bookings # Used in the view for daily calculations
     @daily_data = Booking.daily_revenue_data(@bookings)
   end
 
   def payouts
     cutoff_date = Booking.last_friday.end_of_day
     @active_tab = params[:tab] || "upcoming"
-
+    
     @upcoming_bookings = current_hotel.bookings.unbatched_upcoming(cutoff_date)
     @upcoming_payout_amount = @upcoming_bookings.sum("COALESCE(net_amount, 0)")
 
     @processing_batches = current_hotel.payout_batches.where(status: "processing")
-
+    
     # Apply pagination to history
     @payout_history = current_hotel.payout_batches.order(period_end: :desc).page(params[:page]).per(25)
   end

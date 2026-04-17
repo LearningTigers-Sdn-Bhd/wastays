@@ -55,7 +55,7 @@
         <div class="p-4 md:p-5">
           <p class="text-xs uppercase tracking-wide text-gray-500">Gross Bookings</p>
           <div class="mt-1 flex items-center gap-x-2">
-            <h3 class="text-xl sm:text-2xl font-medium text-gray-800">MYR <%= number_with_precision(@total_gross, precision: 2) %></h3>
+            <h3 class="text-xl sm:text-2xl font-medium text-gray-800"><%= number_to_currency(@total_gross, unit: "MYR ", precision: 2) %></h3>
           </div>
         </div>
       </div>
@@ -65,7 +65,7 @@
         <div class="p-4 md:p-5">
           <p class="text-xs uppercase tracking-wide text-blue-600 font-bold">Net Earnings</p>
           <div class="mt-1 flex items-center gap-x-2">
-            <h3 class="text-xl sm:text-2xl font-bold text-blue-800">MYR <%= number_with_precision(@total_net, precision: 2) %></h3>
+            <h3 class="text-xl sm:text-2xl font-bold text-blue-800"><%= number_to_currency(@total_net, unit: "MYR ", precision: 2) %></h3>
           </div>
         </div>
       </div>
@@ -107,9 +107,9 @@
               <tr>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium"><%= date.strftime("%d %b %Y") %></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= daily_bookings.count %></td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">MYR <%= number_with_precision(gross, precision: 2) %></td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">- <%= number_with_precision(daily_margin, precision: 2) %></td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">MYR <%= number_with_precision(daily_net, precision: 2) %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= number_to_currency(gross, unit: "MYR ", precision: 2) %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">- <%= number_with_delimiter(number_with_precision(daily_margin, precision: 2)) %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800"><%= number_to_currency(daily_net, unit: "MYR ", precision: 2) %></td>
               </tr>
             <% end %>
           <% else %>
