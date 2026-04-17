@@ -43,9 +43,10 @@ class Booking < ApplicationRecord
 
   scope :search, ->(query) {
     return all if query.blank?
+    q = "%#{ActiveRecord::Base.sanitize_sql_like(query.to_s.downcase)}%"
     joins(:hotel).where(
-      "hotels.name ILIKE :q OR guest_name ILIKE :q OR confirmation_token ILIKE :q OR guest_email ILIKE :q",
-      q: "%#{query}%"
+      "hotels.name ILIKE :q OR guest_name ILIKE :q OR confirmation_token ILIKE :q OR guest_email ILIKE :q OR guest_phone ILIKE :q",
+      q: q
     )
   }
 
@@ -107,6 +108,13 @@ class Booking < ApplicationRecord
         total_net: bs.sum { |b| b.net_amount || 0 }
       }
     end
+  end
+
+  def self.for_financial_breakdown(hotel, start_date, end_date, query)
+    hotel.bookings.revenue_generating
+         .created_between(start_date, end_date)
+         .search(query)
+         .order(created_at: :desc)
   end
 
   def checked_in?

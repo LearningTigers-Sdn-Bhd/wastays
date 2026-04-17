@@ -16,9 +16,9 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="h-full">
+  <body class="h-full overflow-hidden">
     <!-- Preline CMS-style layout: flex column (header + body row) -->
-    <div class="flex flex-col h-screen bg-layer-alt">
+    <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-layer-alt">
 
       <!-- ═══ Top Navbar ═══ -->
       <header class="sticky top-0 z-[60] w-full bg-layer border-b border-layer-line">
@@ -28,6 +28,9 @@
           <% unless locked_hotel_portal_shell? %>
             <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggle" aria-label="Toggle navigation">
               <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/></svg>
             </button>
           <% end %>
 
@@ -71,6 +74,10 @@
               </a>
             <% end %>
 
+            <% unless locked_hotel_portal_shell? %>
+              <%= render "shared/navigation/command_palette", endpoint: hotel_global_search_index_path(current_hotel), placeholder: "Search dashboard pages..." %>
+            <% end %>
+
             <!-- Help Link -->
             <a class="navbar-link hidden sm:flex" href="<%= help_center_path %>">
               <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -97,7 +104,7 @@
         <% end %>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col overflow-hidden overflow-y-auto custom-scrollbar">
+        <main class="flex-1 flex flex-col overflow-hidden overflow-y-auto overscroll-contain custom-scrollbar">
           <div class="p-5 sm:p-6 space-y-5">
             <%= render "shared/feedback/flash_toasts", flash: flash %>
 

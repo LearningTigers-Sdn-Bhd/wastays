@@ -9,6 +9,7 @@ class Guest < ApplicationRecord
   OTP_EXPIRY = 10.minutes
   MAGIC_LINK_EXPIRY = 24.hours
   OTP_LENGTH = 6
+  RESEND_COOLDOWN = 2.minutes
 
   validates :name, presence: true
   validates :country, presence: true
@@ -20,6 +21,14 @@ class Guest < ApplicationRecord
   DOCUMENT_TYPES = %w[ic passport].freeze
 
   before_validation :normalize_identity_fields
+
+  def otp_on_cooldown?
+    otp_sent_at.present? && otp_sent_at > RESEND_COOLDOWN.ago
+  end
+
+  def magic_link_on_cooldown?
+    magic_token_expires_at.present? && magic_token_expires_at > (MAGIC_LINK_EXPIRY - RESEND_COOLDOWN).from_now
+  end
 
   def generate_otp!
     code = SecureRandom.random_number(10**OTP_LENGTH).to_s.rjust(OTP_LENGTH, "0")

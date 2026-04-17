@@ -1,4 +1,8 @@
 Rails.application.routes.draw do
+  if Rails.env.development?
+    require "letter_opener_web"
+    mount LetterOpenerWeb::Engine, at: "/letter_opener"
+  end
   get "help_center/index"
   get "help_center/show"
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
@@ -17,11 +21,12 @@ Rails.application.routes.draw do
 
   # Guest Portal
   scope "/guest", module: :guest, as: :guest do
-    get  "login",      to: "sessions#new",     as: :login
-    post "login",      to: "sessions#create"
-    get  "verify",     to: "sessions#verify",  as: :verify
-    delete "logout",   to: "sessions#destroy", as: :logout
-    get "dashboard",  to: "dashboard#index",  as: :dashboard
+    get    "login",               to: "sessions#new",              as: :login
+    post   "login",               to: "sessions#create"
+    get    "verify",              to: "sessions#verify",           as: :verify
+    post   "request_magic_link",  to: "sessions#request_magic_link", as: :request_magic_link
+    delete "logout",              to: "sessions#destroy",          as: :logout
+    get    "dashboard",           to: "dashboard#index",           as: :dashboard
     resources :bookings, only: [ :index, :show ]
   end
 
@@ -107,6 +112,7 @@ Rails.application.routes.draw do
         post :mark_as_paid
       end
     end
+    resources :global_search, only: [ :index ]
     resources :margin_rules, only: [ :index, :create, :destroy ]
     resources :setup_fee_rules, only: [ :index, :create, :destroy ]
     resources :audit_logs, only: [ :index ]
@@ -168,5 +174,6 @@ Rails.application.routes.draw do
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"
     resources :inventory_audit_logs, only: [ :index ]
+    resources :global_search, only: [ :index ]
   end
 end

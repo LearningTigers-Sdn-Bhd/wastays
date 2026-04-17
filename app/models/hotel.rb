@@ -10,6 +10,7 @@ class Hotel < ApplicationRecord
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
   has_many :booking_quotes, dependent: :destroy
+  has_many :payout_batches, dependent: :destroy
 
   validates :name, presence: true
   validates :status, presence: true
@@ -168,6 +169,14 @@ class Hotel < ApplicationRecord
       attached_count: photos_to_attach.size,
       trimmed_count: photo_files.size - photos_to_attach.size
     )
+  end
+
+  def payout_batches_for_reports(start_date: nil, end_date: nil)
+    payout_batches.order(period_end: :desc).period_between(start_date, end_date)
+  end
+
+  def upcoming_payout_amount(cutoff_date)
+    bookings.unbatched_upcoming(cutoff_date).sum("COALESCE(net_amount, 0)")
   end
 
   private
