@@ -34,11 +34,11 @@ class Api::V1::GuestSessionsController < Api::V1::BaseController
     variants = []
     if digits.start_with?("60")
       local = digits.sub(/\A60/, "0")
-      variants = ["+#{digits}", digits, local]
+      variants = [ "+#{digits}", digits, local ]
     elsif digits.start_with?("0")
-      variants = [digits, "60#{digits[1..]}", "+60#{digits[1..]}"]
+      variants = [ digits, "60#{digits[1..]}", "+60#{digits[1..]}" ]
     else
-      variants = [digits, "0#{digits}", "+60#{digits}", "60#{digits}"]
+      variants = [ digits, "0#{digits}", "+60#{digits}", "60#{digits}" ]
     end
 
     variants.each do |v|
