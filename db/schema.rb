@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_16_075913) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_17_085557) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -225,6 +225,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_075913) do
     t.string "gender"
     t.string "country"
     t.string "document_type"
+    t.string "otp_code_digest"
+    t.datetime "otp_sent_at"
+    t.string "magic_token_digest"
+    t.datetime "magic_token_expires_at"
+    t.datetime "last_signed_in_at"
+    t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
   end
 
   create_table "hotels", force: :cascade do |t|
