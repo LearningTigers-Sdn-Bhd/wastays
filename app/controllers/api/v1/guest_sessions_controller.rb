@@ -27,6 +27,27 @@ class Api::V1::GuestSessionsController < Api::V1::BaseController
 
   private
 
+  def find_guest_by_phone(raw)
+    digits = raw.to_s.gsub(/\D/, "")
+    return nil if digits.blank?
+
+    variants = []
+    if digits.start_with?("60")
+      local = digits.sub(/\A60/, "0")
+      variants = [ "+#{digits}", digits, local ]
+    elsif digits.start_with?("0")
+      variants = [ digits, "60#{digits[1..]}", "+60#{digits[1..]}" ]
+    else
+      variants = [ digits, "0#{digits}", "+60#{digits}", "60#{digits}" ]
+    end
+
+    variants.each do |v|
+      guest = ::Guest.find_by(phone: v)
+      return guest if guest
+    end
+    nil
+  end
+
   def normalize_phone(raw)
     return "" if raw.blank?
     digits = raw.to_s.gsub(/\D/, "")
