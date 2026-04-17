@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html class="h-full">
+  <head>
+    <title><%= content_for(:title) || "My Bookings | WAStays" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full">
+    <div class="flex flex-col h-screen bg-layer-alt">
+
+      <!-- Top Navbar -->
+      <header class="sticky top-0 z-[60] w-full bg-layer border-b border-layer-line">
+        <div class="flex items-center h-14 px-4 gap-x-3">
+
+          <!-- Mobile hamburger -->
+          <% if guest_logged_in? %>
+            <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggle" aria-label="Toggle navigation">
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+          <% end %>
+
+          <!-- Brand -->
+          <a href="<%= guest_logged_in? ? guest_dashboard_path : root_path %>" class="shrink-0 flex items-center" aria-label="WAStays">
+            <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-9 w-auto" %>
+          </a>
+
+          <% if guest_logged_in? %>
+            <div class="hidden sm:block w-px h-5 bg-layer-line mx-2"></div>
+            <div class="hidden sm:flex items-center gap-x-2 text-sm">
+              <span class="font-medium text-slate-600">Guest</span>
+              <span class="text-slate-400">/</span>
+              <span class="font-semibold text-slate-900"><%= content_for?(:breadcrumb_current) ? yield(:breadcrumb_current) : "Dashboard" %></span>
+            </div>
+          <% end %>
+
+          <div class="flex-1"></div>
+
+          <div class="flex items-center gap-x-1">
+            <% if guest_logged_in? %>
+              <div class="w-px h-5 bg-layer-line mx-1 hidden sm:block"></div>
+              <%= render "shared/navigation/guest_profile_dropdown" %>
+            <% end %>
+          </div>
+        </div>
+      </header>
+
+      <!-- Body: Sidebar + Content -->
+      <div class="flex flex-1 overflow-hidden">
+
+        <% if guest_logged_in? %>
+          <%= render 'shared/navigation/guest_sidebar' %>
+        <% end %>
+
+        <main class="flex-1 flex flex-col overflow-hidden overflow-y-auto custom-scrollbar">
+          <div class="p-5 sm:p-6 space-y-5">
+            <%= render "shared/feedback/flash_toasts", flash: flash %>
+            <%= yield %>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
