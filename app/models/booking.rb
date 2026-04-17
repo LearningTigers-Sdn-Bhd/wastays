@@ -1,6 +1,7 @@
 class Booking < ApplicationRecord
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
+  belongs_to :payout_batch, optional: true
   has_many :booking_rooms, dependent: :destroy
   has_many :booking_notes, dependent: :destroy
   has_many :booking_guests, dependent: :destroy
@@ -31,12 +32,14 @@ class Booking < ApplicationRecord
 
   STATUSES = %w[pending confirmed checked_in cancelled completed].freeze
   PAYMENT_STATUSES = %w[pending authorized captured failed refunded].freeze
+  PAYOUT_STATUSES = %w[pending processing paid].freeze
 
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
   scope :active, -> { where(status: [ "confirmed", "checked_in" ]) }
   scope :revenue_generating, -> { where(status: [ "confirmed", "checked_in", "completed" ]) }
+  scope :payout_eligible, -> { completed.where(payout_status: "pending") }
 
   def checked_in?
     status == "checked_in"
@@ -45,6 +48,12 @@ class Booking < ApplicationRecord
   def checked_out?
     status == "completed"
   end
+
+  def payout_eligible?
+    status == "completed" && payout_status == "pending"
+  end
+
+  before_save :set_payout_status, if: :status_changed?
 
   def pre_checkin_display_status
     metadata = pre_checkin&.metadata || {}
@@ -73,6 +82,10 @@ class Booking < ApplicationRecord
   end
 
   private
+
+  def set_payout_status
+    self.payout_status = "pending" if status == "completed" && payout_status.blank?
+  end
 
   def generate_confirmation_token
     self.confirmation_token ||= "WS-#{SecureRandom.alphanumeric(8).upcase}"

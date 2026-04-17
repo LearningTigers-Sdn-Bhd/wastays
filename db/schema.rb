@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_16_075913) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -177,6 +177,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
     t.string "guest_document_type"
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "0.0", null: false
     t.boolean "tourism_tax_applied", default: false, null: false
+    t.string "payout_status"
+    t.datetime "payout_at"
+    t.string "payout_reference"
+    t.string "payout_batch_id"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
@@ -339,6 +343,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
     t.index ["status"], name: "index_payment_transactions_on_status"
   end
 
+  create_table "payout_batches", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.decimal "amount"
+    t.string "status"
+    t.date "period_start"
+    t.date "period_end"
+    t.datetime "payout_at"
+    t.string "payout_reference"
+    t.jsonb "metadata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_payout_batches_on_hotel_id"
+  end
+
   create_table "permissions", force: :cascade do |t|
     t.string "name"
     t.string "slug"
@@ -352,11 +370,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
     t.string "status"
     t.string "token"
     t.datetime "completed_at"
+    t.string "document_status"
+    t.string "signature_status"
     t.jsonb "metadata"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "signature_status"
-    t.string "document_status"
     t.index ["booking_id"], name: "index_pre_checkins_on_booking_id"
   end
 
@@ -517,6 +535,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
   add_foreign_key "inventory_audit_logs", "users"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
+  add_foreign_key "payout_batches", "hotels"
   add_foreign_key "pre_checkins", "bookings"
   add_foreign_key "property_policies", "hotels"
   add_foreign_key "role_permissions", "permissions"

@@ -1,0 +1,173 @@
+<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800">Weekly Settlements</h1>
+      <p class="text-sm text-gray-600">Track your weekly payouts and payment history.</p>
+    </div>
+  </div>
+
+  <%= turbo_frame_tag "payouts_content" do %>
+    <!-- Search & Filter -->
+    <div class="bg-white border border-gray-200 rounded-xl p-4 mb-8 shadow-sm">
+      <%= form_with url: payouts_hotel_reports_path(current_hotel), method: :get, id: "hotel-payout-filter-form", class: "space-y-4", data: { controller: "auto-submit", turbo_frame: "payouts_content" } do |f| %>
+        <%= hidden_field_tag :tab, @active_tab, id: "hotel-payout-active-tab-input" %>
+        
+        <div class="flex flex-col md:flex-row gap-4">
+          <div class="flex-1 relative">
+            <%= f.text_field :q, value: params[:q], placeholder: "Search reference, status...", class: "form-input py-2 pl-9 pr-3 text-sm", data: { action: "input->auto-submit#submit" } %>
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="size-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="border-b border-gray-200 mb-6">
+      <nav class="flex space-x-6" aria-label="Tabs" role="tablist">
+        <button type="button" 
+                class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'active' if @active_tab == 'upcoming' %>" 
+                id="tabs-hotel-payout-item-1" 
+                data-hs-tab="#tabs-hotel-payout-1" 
+                aria-controls="tabs-hotel-payout-1" 
+                role="tab"
+                onclick="document.getElementById('hotel-payout-active-tab-input').value = 'upcoming';">
+          Upcoming & Processing
+        </button>
+        <button type="button" 
+                class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'active' if @active_tab == 'paid' %>" 
+                id="tabs-hotel-payout-item-2" 
+                data-hs-tab="#tabs-hotel-payout-2" 
+                aria-controls="tabs-hotel-payout-2" 
+                role="tab"
+                onclick="document.getElementById('hotel-payout-active-tab-input').value = 'paid';">
+          Paid History
+          <span class="ms-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
+            <%= @payout_history.total_count %>
+          </span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Tabs Content -->
+    <div class="mt-3">
+      <div id="tabs-hotel-payout-1" class="<%= 'hidden' unless @active_tab == 'upcoming' %>" role="tabpanel" aria-labelledby="tabs-hotel-payout-item-1">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+          <div class="flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm">
+            <div class="p-4 md:p-5">
+              <p class="text-xs uppercase tracking-wide text-gray-500">Accumulating (Current Cycle)</p>
+              <div class="mt-1 flex items-center gap-x-2">
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-800">MYR <%= number_with_precision(@upcoming_payout_amount, precision: 2) %></h3>
+              </div>
+              <p class="mt-1 text-xs text-gray-500"><%= @upcoming_bookings.count %> completed stays</p>
+            </div>
+          </div>
+
+          <% if @processing_batches.any? %>
+            <div class="flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm border-l-4 border-l-amber-400">
+              <div class="p-4 md:p-5">
+                <p class="text-xs uppercase tracking-wide text-amber-600 font-bold">Processing Batch</p>
+                <div class="mt-1 flex items-center gap-x-2">
+                  <h3 class="text-xl sm:text-2xl font-bold text-amber-800">MYR <%= number_with_precision(@processing_batches.sum(&:amount), precision: 2) %></h3>
+                </div>
+                <p class="mt-1 text-xs text-amber-600">Settlement in progress by platform</p>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Current Cycle Breakdown</h3>
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-3 py-2 text-start text-[10px] font-bold uppercase text-gray-500">Ref</th>
+                <th class="px-3 py-2 text-start text-[10px] font-bold uppercase text-gray-500">Checkout</th>
+                <th class="px-3 py-2 text-end text-[10px] font-bold uppercase text-gray-500">Net Payout</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <% if @upcoming_bookings.any? %>
+                <% @upcoming_bookings.each do |booking| %>
+                  <tr>
+                    <td class="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-800">#<%= booking.confirmation_token %></td>
+                    <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600"><%= booking.checked_out_at&.strftime("%d %b %H:%M") %></td>
+                    <td class="px-3 py-2 whitespace-nowrap text-xs text-end font-bold text-gray-900">RM <%= number_with_precision(booking.net_amount, precision: 2) %></td>
+                  </tr>
+                <% end %>
+              <% else %>
+                <tr>
+                  <td colspan="3" class="px-3 py-10 text-center text-xs text-gray-400 italic">No bookings in the current cycle yet.</td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tabs-hotel-payout-2" class="<%= 'hidden' unless @active_tab == 'paid' %>" role="tabpanel" aria-labelledby="tabs-hotel-payout-item-2">
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Period</th>
+                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Paid Date</th>
+                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Reference</th>
+                <th class="px-6 py-3 text-end text-xs font-semibold uppercase text-gray-800">Net Amount</th>
+                <th class="px-6 py-3 text-center text-xs font-semibold uppercase text-gray-800">Receipt</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <% if @payout_history.any? %>
+                <% @payout_history.each do |batch| %>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                      <%= batch.period_start.strftime("%d %b") %> - <%= batch.period_end.strftime("%d %b %Y") %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                      <%= batch.payout_at&.strftime("%d %b %Y") || "-" %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">
+                      <%= batch.payout_reference || "-" %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-end font-bold text-gray-900">
+                      MYR <%= number_with_precision(batch.amount, precision: 2) %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                      <% if batch.receipt.attached? %>
+                        <%= link_to url_for(batch.receipt), target: "_blank", class: "text-blue-600 hover:underline", data: { turbo: false } do %>
+                          View
+                        <% end %>
+                      <% else %>
+                        <span class="text-gray-400">-</span>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              <% else %>
+                <tr>
+                  <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500 italic">No settlement history found.</td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+          <% if @payout_history.total_pages > 1 %>
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <%= paginate @payout_history, params: { tab: 'paid' } %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Payout Schedule Info -->
+  <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-xl flex gap-x-3 items-center">
+    <svg class="size-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    <p class="text-sm text-blue-800 font-medium">
+      Payout Schedule: All bookings from **Saturday to Friday** are processed on the following **Monday**.
+    </p>
+  </div>
+</div>

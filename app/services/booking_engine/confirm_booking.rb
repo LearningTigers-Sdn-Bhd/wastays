@@ -51,6 +51,7 @@ module BookingEngine
           tourism_tax_amount: tourism_tax_amount,
           tourism_tax_applied: tourism_tax_amount.positive?
         )
+        
 
         if booking.save
           # 3. Link Guest Profile

@@ -16,3 +16,4 @@ async function initializePreline() {
 }
 
 document.addEventListener("turbo:load", initializePreline)
+document.addEventListener("turbo:frame-render", initializePreline)
