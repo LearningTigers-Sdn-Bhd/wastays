@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_16_075913) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -177,6 +177,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
     t.string "guest_document_type"
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "0.0", null: false
     t.boolean "tourism_tax_applied", default: false, null: false
+    t.string "payout_status"
+    t.datetime "payout_at"
+    t.string "payout_reference"
+    t.string "payout_batch_id"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
@@ -201,27 +205,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
     t.datetime "updated_at", null: false
     t.jsonb "internal_notes", default: []
     t.string "status", default: "pending", null: false
-    t.datetime "completed_at"
     t.datetime "archived_at"
+    t.datetime "completed_at"
     t.index ["booking_id", "archived_at"], name: "index_complaint_requests_on_booking_id_and_archived_at"
     t.index ["booking_id", "completed_at"], name: "index_complaint_requests_on_booking_id_and_completed_at"
     t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
     t.index ["booking_id"], name: "index_complaint_requests_on_booking_id"
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
-  end
-
-  create_table "complaints", force: :cascade do |t|
-    t.bigint "booking_id", null: false
-    t.string "external_id"
-    t.datetime "reported_at"
-    t.text "issue_details"
-    t.datetime "resolved_at"
-    t.jsonb "metadata"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["booking_id"], name: "index_complaints_on_booking_id"
-    t.index ["external_id"], name: "index_complaints_on_external_id"
-    t.index ["reported_at"], name: "index_complaints_on_reported_at"
   end
 
   create_table "guests", force: :cascade do |t|
@@ -339,6 +329,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
     t.index ["status"], name: "index_payment_transactions_on_status"
   end
 
+  create_table "payout_batches", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.decimal "amount"
+    t.string "status"
+    t.date "period_start"
+    t.date "period_end"
+    t.datetime "payout_at"
+    t.string "payout_reference"
+    t.jsonb "metadata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_payout_batches_on_hotel_id"
+  end
+
   create_table "permissions", force: :cascade do |t|
     t.string "name"
     t.string "slug"
@@ -352,11 +356,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
     t.string "status"
     t.string "token"
     t.datetime "completed_at"
+    t.string "document_status"
+    t.string "signature_status"
     t.jsonb "metadata"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "signature_status"
-    t.string "document_status"
     t.index ["booking_id"], name: "index_pre_checkins_on_booking_id"
   end
 
@@ -370,16 +374,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
     t.string "currency", default: "MYR", null: false
     t.decimal "usd_rate", precision: 10, scale: 4, default: "0.21", null: false
     t.index ["hotel_id"], name: "index_property_policies_on_hotel_id"
-  end
-
-  create_table "request_notes", force: :cascade do |t|
-    t.string "noteable_type", null: false
-    t.bigint "noteable_id", null: false
-    t.text "body", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["noteable_type", "noteable_id", "created_at"], name: "index_request_notes_on_noteable_and_created_at"
-    t.index ["noteable_type", "noteable_id"], name: "index_request_notes_on_noteable"
   end
 
   create_table "role_permissions", force: :cascade do |t|
@@ -509,7 +503,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
   add_foreign_key "complaint_requests", "bookings"
-  add_foreign_key "complaints", "bookings"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "housekeeping_requests", "bookings"
   add_foreign_key "inventory_audit_logs", "hotels"
@@ -517,6 +510,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_020000) do
   add_foreign_key "inventory_audit_logs", "users"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
+  add_foreign_key "payout_batches", "hotels"
   add_foreign_key "pre_checkins", "bookings"
   add_foreign_key "property_policies", "hotels"
   add_foreign_key "role_permissions", "permissions"

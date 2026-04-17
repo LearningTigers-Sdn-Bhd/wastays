@@ -3,112 +3,138 @@
   <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
     <div>
       <h1 class="text-3xl font-bold text-gray-800">Financial Performance</h1>
-      <p class="text-sm text-gray-600">Review your earnings and booking activity for the selected period.</p>
+      <p class="text-sm text-gray-600">Review your earnings and booking activity.</p>
     </div>
 
     <div class="inline-flex gap-x-2">
-      <%= form_with url: hotel_reports_path, method: :get, class: "flex gap-x-2" do |f| %>
-        <%= f.date_field :start_date, value: @start_date, class: "py-2 px-3 block border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-        <%= f.date_field :end_date, value: @end_date, class: "py-2 px-3 block border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-        <%= f.submit "Update", class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700" %>
+      <%= link_to breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset), class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:bg-gray-50", data: { turbo: false } do %>
+        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        View Breakdown
       <% end %>
     </div>
   </div>
 
-  <!-- Quick Stats -->
-  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-    <!-- Card -->
-    <div class="flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm">
-      <div class="p-4 md:p-5">
-        <div class="flex items-center gap-x-2">
+  <%= turbo_frame_tag "reports_content" do %>
+    <!-- Filters & Search -->
+    <div class="bg-white border border-gray-200 rounded-xl p-4 md:p-6 mb-8 shadow-sm">
+      <%= form_with url: hotel_reports_path, method: :get, class: "space-y-4", data: { controller: "auto-submit", turbo_frame: "reports_content" } do |f| %>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+          <div class="md:col-span-3">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Time Period</label>
+            <%= f.select :date_preset, options_for_select(date_preset_options, @date_preset), {}, class: "form-select py-2 px-3 text-sm", data: { action: "change->auto-submit#submitNow" } %>
+          </div>
+
+          <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'grid' : 'hidden' %> md:col-span-4 grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">From</label>
+              <%= f.date_field :start_date, value: @start_date, class: "form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">To</label>
+              <%= f.date_field :end_date, value: @end_date, class: "form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
+            </div>
+          </div>
+
+          <div class="md:col-span-5">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Search Anything</label>
+            <div class="relative">
+              <%= f.text_field :q, value: params[:q], placeholder: "Guest name, email, ref...", class: "form-input py-2 pl-9 pr-3 text-sm", data: { action: "input->auto-submit#submit" } %>
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="size-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+      <!-- Card -->
+      <div class="flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div class="p-4 md:p-5">
           <p class="text-xs uppercase tracking-wide text-gray-500">Gross Bookings</p>
-        </div>
-        <div class="mt-1 flex items-center gap-x-2">
-          <h3 class="text-xl sm:text-2xl font-medium text-gray-800">MYR <%= number_with_precision(@total_gross, precision: 2) %></h3>
-        </div>
-      </div>
-    </div>
-    <!-- End Card -->
-
-    <!-- Card -->
-    <div class="flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm">
-      <div class="p-4 md:p-5">
-        <div class="flex items-center gap-x-2">
-          <p class="text-xs uppercase tracking-wide text-gray-500">WAStays Margin</p>
-        </div>
-        <div class="mt-1 flex items-center gap-x-2">
-          <h3 class="text-xl sm:text-2xl font-medium text-red-600">- MYR <%= number_with_precision(@total_margin, precision: 2) %></h3>
+          <div class="mt-1 flex items-center gap-x-2">
+            <h3 class="text-xl sm:text-2xl font-medium text-gray-800">MYR <%= number_with_precision(@total_gross, precision: 2) %></h3>
+          </div>
         </div>
       </div>
-    </div>
-    <!-- End Card -->
 
-    <!-- Card -->
-    <div class="flex flex-col bg-blue-50 border border-blue-200 rounded-xl shadow-sm">
-      <div class="p-4 md:p-5">
-        <div class="flex items-center gap-x-2">
+      <!-- Card -->
+      <div class="flex flex-col bg-blue-50 border border-blue-200 rounded-xl shadow-sm">
+        <div class="p-4 md:p-5">
           <p class="text-xs uppercase tracking-wide text-blue-600 font-bold">Net Earnings</p>
-        </div>
-        <div class="mt-1 flex items-center gap-x-2">
-          <h3 class="text-xl sm:text-2xl font-bold text-blue-800">MYR <%= number_with_precision(@total_net, precision: 2) %></h3>
+          <div class="mt-1 flex items-center gap-x-2">
+            <h3 class="text-xl sm:text-2xl font-bold text-blue-800">MYR <%= number_with_precision(@total_net, precision: 2) %></h3>
+          </div>
         </div>
       </div>
-    </div>
-    <!-- End Card -->
 
-    <!-- Card -->
-    <div class="flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm">
-      <div class="p-4 md:p-5">
-        <div class="flex items-center gap-x-2">
+      <!-- Card -->
+      <div class="flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div class="p-4 md:p-5">
           <p class="text-xs uppercase tracking-wide text-gray-500">Booking Count</p>
-        </div>
-        <div class="mt-1 flex items-center gap-x-2">
-          <h3 class="text-xl sm:text-2xl font-medium text-gray-800"><%= @booking_count %></h3>
+          <div class="mt-1 flex items-center gap-x-2">
+            <h3 class="text-xl sm:text-2xl font-medium text-gray-800"><%= @booking_count %></h3>
+          </div>
         </div>
       </div>
     </div>
-    <!-- End Card -->
-  </div>
 
-  <!-- Details Table -->
-  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-800">Daily Performance</h2>
-    </div>
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
-        <tr>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Date</th>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Bookings</th>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Gross</th>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Margin</th>
-          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-800">Net</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-200">
-        <% if @daily_data.any? %>
-          <% @daily_data.each do |date, gross| %>
-            <% 
-              daily_bookings = @bookings.select { |b| b.created_at.to_date == date }
-              daily_margin = daily_bookings.sum { |b| b.margin_amount || 0 }
-              daily_net = daily_bookings.sum { |b| b.net_amount || 0 }
-            %>
+    <!-- Details Table -->
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-lg font-semibold text-gray-800">Daily Performance Snapshot</h2>
+      </div>
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Date</th>
+            <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Bookings</th>
+            <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Gross</th>
+            <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Margin</th>
+            <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Net</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <% if @daily_data.any? %>
+            <% @daily_data.each do |date, gross| %>
+              <% 
+                daily_bookings = @base_bookings.select { |b| b.created_at.to_date == date }
+                daily_margin = daily_bookings.sum { |b| b.margin_amount || 0 }
+                daily_net = daily_bookings.sum { |b| b.net_amount || 0 }
+              %>
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium"><%= date.strftime("%d %b %Y") %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= daily_bookings.count %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">MYR <%= number_with_precision(gross, precision: 2) %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">- <%= number_with_precision(daily_margin, precision: 2) %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">MYR <%= number_with_precision(daily_net, precision: 2) %></td>
+              </tr>
+            <% end %>
+          <% else %>
             <tr>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= date.strftime("%d %b %Y") %></td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= daily_bookings.count %></td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">MYR <%= number_with_precision(gross, precision: 2) %></td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">- <%= number_with_precision(daily_margin, precision: 2) %></td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">MYR <%= number_with_precision(daily_net, precision: 2) %></td>
+              <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500 italic">
+                No financial data for this period.
+              </td>
             </tr>
           <% end %>
-        <% else %>
-          <tr>
-            <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500 italic">
-              No financial data for this period.
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
 </div>
+
+<script>
+  document.querySelector('select[name="date_preset"]')?.addEventListener('change', function(e) {
+    const customRange = document.getElementById('custom-date-range');
+    if (!customRange) return;
+    if (e.target.value === 'custom') {
+      customRange.classList.remove('hidden');
+      customRange.classList.add('grid');
+    } else {
+      customRange.classList.add('hidden');
+      customRange.classList.remove('grid');
+    }
+  });
+</script>

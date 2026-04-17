@@ -1,6 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
+  static values = {
+    delay: { type: Number, default: 400 }
+  }
+
   connect() {
     this.timeout = null
   }
@@ -18,7 +22,7 @@ export default class extends Controller {
 
     this.timeout = window.setTimeout(() => {
       this.submitNow()
-    }, 300)
+    }, this.delayValue)
   }
 
   submitNow() {
