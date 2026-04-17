@@ -1,6 +1,6 @@
 class Api::V1::GuestSessionsController < Api::V1::BaseController
   def create
-    phone = params[:phone]&.strip
+    phone = normalize_phone(params[:phone])
 
     if phone.blank?
       render json: { error: "phone is required" }, status: :bad_request
@@ -23,5 +23,20 @@ class Api::V1::GuestSessionsController < Api::V1::BaseController
       magic_link: guest_verify_url(token: token),
       expires_in_seconds: ::Guest::OTP_EXPIRY.to_i
     }
+  end
+
+  private
+
+  def normalize_phone(raw)
+    return "" if raw.blank?
+    digits = raw.to_s.gsub(/\D/, "")
+    # 60xxxxxxxx → +60xxxxxxxx, 0xxxxxxxx → +60xxxxxxxx
+    if digits.start_with?("60")
+      "+#{digits}"
+    elsif digits.start_with?("0")
+      "+6#{digits}"
+    else
+      "+#{digits}"
+    end
   end
 end
