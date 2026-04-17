@@ -19,6 +19,8 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       post "workflow_webhooks", to: "workflow_webhooks#create"
+      post "housekeeping_webhooks", to: "housekeeping_webhooks#create"
+      post "complaint_webhooks", to: "complaint_webhooks#create"
       post "pre_checkin_links", to: "pre_checkin_links#create"
       resources :hotels, only: [ :index, :show ] do
         get "availability", on: :member
@@ -111,9 +113,19 @@ Rails.application.routes.draw do
         post :check_in
         post :check_out
         post :cancel
+        post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings#complete_housekeeping_request", as: :complete_housekeeping_request
+        patch "complaint_requests/:complaint_request_id", to: "bookings#update_complaint_request", as: :update_complaint_request
+        post "complaint_requests/:complaint_request_id/resolve", to: "bookings#resolve_complaint_request", as: :resolve_complaint_request
       end
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
     end
+
+    get "requests", to: "requests#index", as: :requests
+    get "requests/archive", to: "requests#archive", as: :request_archive
+    patch "requests/:kind/:request_id", to: "requests#update_status", as: :request_status
+    post "requests/:kind/:request_id/cancel", to: "requests#cancel_request", as: :cancel_request
+    patch "requests/:kind/:request_id/archive", to: "requests#archive_request", as: :archive_request
+    patch "requests/:kind/:request_id/unarchive", to: "requests#unarchive_request", as: :unarchive_request
 
     resources :arrivals, only: [ :index ]
     resources :audit_logs, only: [ :index ]

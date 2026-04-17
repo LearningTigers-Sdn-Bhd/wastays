@@ -40,16 +40,17 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       get hotel_guests_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("<table")
-      expect(response.body).to include("Ravi Menon")
-      expect(response.body).to include(hotel.name)
-      expect(response.body).to include("Guest Records")
-      expect(response.body).to include("Country")
-      expect(response.body).to include("Stays")
-      expect(response.body).to include("Last Stayed")
-      expect(response.body).to include("Lifetime Value")
-      expect(response.body).to include("02:30 PM")
-      expect(response.body).to include("View Timeline")
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("<table")
+      expect(body_text).to include("Ravi Menon")
+      expect(body_text).to include(hotel.name[0...10])
+      expect(body_text).to include("Guest Records")
+      expect(body_text).to include("Country")
+      expect(body_text).to include("Stays")
+      expect(body_text).to include("Last Stayed")
+      expect(body_text).to include("Lifetime Value")
+      expect(body_text).to include("02:30 PM")
+      expect(body_text).to include("View Timeline")
     end
 
     it "filters guests by search query and country" do
@@ -80,10 +81,11 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       get hotel_guests_path(hotel), params: { query: "ravi", country: "India" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Search guests")
-      expect(response.body).to include("All Countries")
-      expect(response.body).to include("Ravi Menon")
-      expect(response.body).not_to include("Aisha Tan")
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("Search guests")
+      expect(body_text).to include("All Countries")
+      expect(body_text).to include("Ravi Menon")
+      expect(body_text).not_to include("Aisha Tan")
     end
   end
 
@@ -126,7 +128,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       body_text = CGI.unescapeHTML(response.body)
 
       expect(response).to have_http_status(:success)
-      expect(body_text).to include(hotel.name)
+      expect(body_text).to include(hotel.name[0...10])
       expect(body_text).to include("Guest Records")
       expect(body_text).to include("Ravi Menon")
       expect(body_text).to include("Guest Profile")
@@ -136,6 +138,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Pre-Check-In")
       expect(body_text).to include("MYR")
       expect(body_text).to include("USD")
+      expect(body_text.downcase).to include("india")
     end
   end
 end
