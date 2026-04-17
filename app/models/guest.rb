@@ -2,9 +2,13 @@ class Guest < ApplicationRecord
   has_many :booking_guests, dependent: :destroy
   has_many :bookings, through: :booking_guests
 
-  encrypts :email
-  encrypts :phone
+  encrypts :email, deterministic: true
+  encrypts :phone, deterministic: true
   encrypts :government_id
+
+  OTP_EXPIRY = 10.minutes
+  MAGIC_LINK_EXPIRY = 24.hours
+  OTP_LENGTH = 6
 
   validates :name, presence: true
   validates :country, presence: true
@@ -15,11 +19,45 @@ class Guest < ApplicationRecord
   GENDERS = %w[male female other].freeze
   DOCUMENT_TYPES = %w[ic passport].freeze
 
-  # We allow phone/email to be present or missing for soft matches,
-  # but they must be unique if present? Actually multiple guests might share email/phone (family).
-  # The spec says matching is conservative.
-
   before_validation :normalize_identity_fields
+
+  def generate_otp!
+    code = SecureRandom.random_number(10**OTP_LENGTH).to_s.rjust(OTP_LENGTH, "0")
+    update!(
+      otp_code_digest: BCrypt::Password.create(code),
+      otp_sent_at: Time.current
+    )
+    code
+  end
+
+  def verify_otp(code)
+    return false if otp_code_digest.blank? || otp_sent_at.blank?
+    return false if otp_sent_at < OTP_EXPIRY.ago
+    BCrypt::Password.new(otp_code_digest) == code
+  end
+
+  def generate_magic_token!
+    token = SecureRandom.urlsafe_base64(32)
+    update!(
+      magic_token_digest: Digest::SHA256.hexdigest(token),
+      magic_token_expires_at: MAGIC_LINK_EXPIRY.from_now
+    )
+    token
+  end
+
+  def verify_magic_token(token)
+    return false if magic_token_digest.blank? || magic_token_expires_at.blank?
+    return false if magic_token_expires_at < Time.current
+    Digest::SHA256.hexdigest(token) == magic_token_digest
+  end
+
+  def consume_otp!
+    update!(otp_code_digest: nil, otp_sent_at: nil, last_signed_in_at: Time.current)
+  end
+
+  def consume_magic_token!
+    update!(magic_token_digest: nil, magic_token_expires_at: nil, last_signed_in_at: Time.current)
+  end
 
   def normalized_country
     country&.split&.map(&:capitalize)&.join(" ")

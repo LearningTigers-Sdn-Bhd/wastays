@@ -1,0 +1,14 @@
+<%= link_to guest_booking_path(booking), class: "block bg-layer rounded-2xl border border-layer-line p-4 hover:border-brand-primary/40 transition-colors" do %>
+  <div class="flex items-start justify-between gap-x-3">
+    <div class="min-w-0">
+      <p class="font-medium text-neutral-text-primary truncate"><%= booking.hotel.name %></p>
+      <p class="text-sm text-neutral-text-secondary mt-0.5">
+        <%= booking.check_in.strftime("%d %b") %> – <%= booking.check_out.strftime("%d %b %Y") %>
+      </p>
+    </div>
+    <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+      <%= booking.status == 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-600' %>">
+      <%= booking.status.humanize %>
+    </span>
+  </div>
+<% end %>
