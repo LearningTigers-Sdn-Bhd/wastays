@@ -7,7 +7,7 @@ class Api::V1::GuestSessionsController < Api::V1::BaseController
       return
     end
 
-    guest = ::Guest.find_by(phone: phone)
+    guest = find_guest_by_phone(phone)
 
     unless guest
       render json: { error: "No guest found with that phone number" }, status: :not_found
@@ -51,7 +51,6 @@ class Api::V1::GuestSessionsController < Api::V1::BaseController
   def normalize_phone(raw)
     return "" if raw.blank?
     digits = raw.to_s.gsub(/\D/, "")
-    # 60xxxxxxxx → +60xxxxxxxx, 0xxxxxxxx → +60xxxxxxxx
     if digits.start_with?("60")
       "+#{digits}"
     elsif digits.start_with?("0")
