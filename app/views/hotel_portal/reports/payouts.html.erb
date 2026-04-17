@@ -12,7 +12,6 @@
       <%= form_with url: payouts_hotel_reports_path(current_hotel), method: :get, id: "hotel-payout-filter-form", data: { turbo_frame: "payouts_content" } do %>
         <%= hidden_field_tag :tab, @active_tab, id: "hotel-payout-active-tab-input", data: { "tab-field-target": "input" } %>
       <% end %>
-    </div>
 
     <!-- Tabs Navigation -->
     <div class="border-b border-gray-200 mb-6">
@@ -175,6 +174,7 @@
           <% end %>
         </div>
       </div>
+    </div>
     </div>
   <% end %>
 
