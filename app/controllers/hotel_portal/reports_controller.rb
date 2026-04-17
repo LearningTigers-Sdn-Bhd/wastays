@@ -47,31 +47,9 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
         @paginated_bookings = @bookings.page(params[:page]).per(25)
         @grouped_bookings = @paginated_bookings.group_by { |b| b.created_at.to_date }
       end
-      format.csv { send_data generate_breakdown_csv(@bookings), filename: "financial-breakdown-#{@start_date}-#{@end_date}.csv" }
-    end
-  end
-
-  private
-
-  def generate_breakdown_csv(bookings)
-    attributes = %w[confirmation_token guest_name status check_in check_out total_amount margin_rate margin_amount net_amount currency]
-
-    CSV.generate(headers: true) do |csv|
-      csv << attributes.map(&:titleize)
-
-      bookings.each do |booking|
-        csv << [
-          booking.confirmation_token,
-          booking.guest_name,
-          booking.status,
-          booking.check_in,
-          booking.check_out,
-          booking.total_amount,
-          booking.margin_rate,
-          booking.margin_amount,
-          booking.net_amount,
-          booking.currency
-        ]
+      format.csv do
+        service = BookingExportService.new(@bookings)
+        send_data service.generate_breakdown_csv, filename: "financial-breakdown-#{@start_date}-#{@end_date}.csv"
       end
     end
   end
