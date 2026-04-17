@@ -1,4 +1,8 @@
 Rails.application.routes.draw do
+  if Rails.env.development?
+    require "letter_opener_web"
+    mount LetterOpenerWeb::Engine, at: "/letter_opener"
+  end
   get "help_center/index"
   get "help_center/show"
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
@@ -17,11 +21,12 @@ Rails.application.routes.draw do
 
   # Guest Portal
   scope "/guest", module: :guest, as: :guest do
-    get  "login",      to: "sessions#new",     as: :login
-    post "login",      to: "sessions#create"
-    get  "verify",     to: "sessions#verify",  as: :verify
-    delete "logout",   to: "sessions#destroy", as: :logout
-    get "dashboard",  to: "dashboard#index",  as: :dashboard
+    get    "login",               to: "sessions#new",              as: :login
+    post   "login",               to: "sessions#create"
+    get    "verify",              to: "sessions#verify",           as: :verify
+    post   "request_magic_link",  to: "sessions#request_magic_link", as: :request_magic_link
+    delete "logout",              to: "sessions#destroy",          as: :logout
+    get    "dashboard",           to: "dashboard#index",           as: :dashboard
     resources :bookings, only: [ :index, :show ]
   end
 

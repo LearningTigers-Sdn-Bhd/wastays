@@ -1,16 +1,15 @@
 class Guest::SessionsController < Guest::BaseController
   layout "application"
   skip_before_action :authenticate_guest!, raise: false
+  before_action :redirect_if_guest_logged_in!, only: %i[new request_magic_link]
 
-  def new
-    redirect_to guest_dashboard_path if guest_logged_in?
-  end
+  def new; end
 
   def create
     phone = params[:phone]&.strip
     otp   = params[:otp]&.strip
 
-    guest = ::Guest.find_by(phone: phone)
+    guest = find_guest_by_phone(phone)
 
     if guest.nil?
       flash.now[:alert] = "No account found for that phone number."
@@ -29,6 +28,34 @@ class Guest::SessionsController < Guest::BaseController
     redirect_to guest_dashboard_path, notice: "Welcome back, #{guest.name}!"
   end
 
+  def request_magic_link
+    email = params[:email]&.strip&.downcase
+
+    if email.blank?
+      flash.now[:alert] = "Please enter your email address."
+      render :new, status: :unprocessable_entity
+      return
+    end
+
+    guest = ::Guest.find_by(email: email)
+
+    unless guest
+      redirect_to guest_login_path(email_sent: true)
+      return
+    end
+
+    if guest.magic_link_on_cooldown?
+      flash[:alert] = "A link was already sent. Please wait 2 minutes before requesting again."
+      redirect_to guest_login_path
+      return
+    end
+
+    token = guest.generate_magic_token!
+    GuestMailer.magic_link(guest, token).deliver_later
+
+    redirect_to guest_login_path(email_sent: true)
+  end
+
   def verify
     token = params[:token]
     guest = ::Guest.find_by(magic_token_digest: Digest::SHA256.hexdigest(token.to_s))
@@ -38,12 +65,38 @@ class Guest::SessionsController < Guest::BaseController
       session[:guest_id] = guest.id
       redirect_to guest_dashboard_path, notice: "Welcome back, #{guest.name}!"
     else
-      redirect_to guest_login_path, alert: "This link has expired or is invalid. Request a new one via WhatsApp."
+      redirect_to guest_login_path, alert: "This link has expired or is invalid. Request a new one."
     end
   end
 
   def destroy
     session[:guest_id] = nil
     redirect_to guest_login_path, notice: "You have been logged out."
+  end
+
+  private
+
+  def redirect_if_guest_logged_in!
+    redirect_to guest_dashboard_path if guest_logged_in?
+  end
+
+  def find_guest_by_phone(raw)
+    digits = raw.to_s.gsub(/\D/, "")
+    return nil if digits.blank?
+
+    variants = if digits.start_with?("60")
+      local = digits.sub(/\A60/, "0")
+      [ "+#{digits}", digits, local ]
+    elsif digits.start_with?("0")
+      [ digits, "60#{digits[1..]}", "+60#{digits[1..]}" ]
+    else
+      [ digits, "0#{digits}", "+60#{digits}", "60#{digits}" ]
+    end
+
+    variants.each do |v|
+      guest = ::Guest.find_by(phone: v)
+      return guest if guest
+    end
+    nil
   end
 end

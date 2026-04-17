@@ -24,6 +24,7 @@ gem "csv"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"
+gem "resend", "~> 0.8"
 
 # Authorization policy layer
 gem "pundit"
@@ -71,6 +72,7 @@ group :development do
   gem "hotwire-livereload"
   gem "web-console"
   gem "rails-mcp-server"
+  gem "letter_opener_web"
 end
 
 group :test do
