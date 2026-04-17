@@ -53,11 +53,16 @@ class Booking < ApplicationRecord
     where(created_at: start_date.beginning_of_day..end_date.end_of_day)
   }
 
-  def self.analytics_summary(start_date, end_date, query: nil)
-    base = revenue_generating.created_between(start_date, end_date).search(query)
+  scope :unbatched_upcoming, ->(cutoff_date) {
+    completed.where(payout_batch_id: nil).where("checked_out_at > ?", cutoff_date)
+  }
+
+  def self.analytics_summary(start_date, end_date, query: nil, base_scope: nil)
+    base = base_scope || revenue_generating
+    base = base.created_between(start_date, end_date).search(query)
 
     {
-      total_revenue: base.sum(:total_amount),
+      total_revenue: base.sum(:total_amount) || 0,
       total_margin: base.sum("COALESCE(margin_amount, 0)"),
       total_net: base.sum("COALESCE(net_amount, 0)"),
       booking_count: base.count,
@@ -65,9 +70,9 @@ class Booking < ApplicationRecord
     }
   end
 
-  def self.daily_analytics(start_date, end_date, query: nil)
-    revenue_generating
-      .created_between(start_date, end_date)
+  def self.daily_analytics(start_date, end_date, query: nil, base_scope: nil)
+    base = base_scope || revenue_generating
+    base.created_between(start_date, end_date)
       .search(query)
       .group_by { |booking| booking.created_at.to_date }
       .sort
@@ -82,6 +87,11 @@ class Booking < ApplicationRecord
       end
   end
 
+  def self.daily_revenue_data(bookings)
+    bookings.group_by { |b| b.created_at.to_date }
+            .transform_values { |bs| bs.sum(&:total_amount) }
+            .sort.to_h
+  end
   def self.last_friday
     date = Date.current
     date -= 1 while !date.friday?
