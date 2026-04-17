@@ -57,7 +57,7 @@
 
 <!-- Preline CMS-style Hotel Sidebar -->
 <!-- Desktop sidebar -->
-<aside id="hotel-sidebar" class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full overflow-y-auto custom-scrollbar">
+<aside id="hotel-sidebar" class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full overflow-y-auto overscroll-contain custom-scrollbar">
   <%= capture(&render_hotel_sidebar_nav) %>
 
   <div class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
@@ -72,7 +72,7 @@
 
 <!-- Mobile sidebar overlay -->
 <div id="hotel-sidebar-overlay" class="fixed inset-0 z-[79] bg-black/50 hidden lg:hidden" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#close"></div>
-<aside id="hotel-sidebar-mobile" data-controller="sidebar-toggle" class="fixed top-0 start-0 bottom-0 z-[80] w-[260px] bg-sidebar-bg border-e border-layer-line transform -translate-x-full transition-transform duration-300 lg:hidden overflow-y-auto custom-scrollbar">
+<aside id="hotel-sidebar-mobile" data-controller="sidebar-toggle" class="fixed top-0 start-0 bottom-0 z-[80] w-[260px] bg-sidebar-bg border-e border-layer-line transform -translate-x-full transition-transform duration-300 lg:hidden overflow-y-auto overscroll-contain custom-scrollbar">
   <div class="flex items-center justify-between p-4 border-b border-layer-line">
     <a href="<%= hotel_dashboard_path(current_hotel) %>" class="flex items-center gap-x-2.5">
       <span class="inline-flex justify-center items-center size-8 bg-brand-primary rounded-lg text-white font-bold text-sm shadow-xs">W</span>
