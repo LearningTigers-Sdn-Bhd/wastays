@@ -17,6 +17,15 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @booking = current_hotel.bookings.find(params[:id])
     @booking_rooms = @booking.booking_rooms
     @pre_checkin = @booking.pre_checkin
+    @housekeeping_requests = @booking.housekeeping_requests.where(archived_at: nil).or(
+      @booking.housekeeping_requests.where(status: "cancelled")
+    ).recent_first
+    @pending_housekeeping_requests_count = @booking.housekeeping_requests.active.where(status: "pending").count
+    @complaint_requests = @booking.complaint_requests.where(archived_at: nil).or(
+      @booking.complaint_requests.where(status: "cancelled")
+    ).recent_first
+    @pending_complaint_requests_count = @booking.complaint_requests.active.where(status: "pending").count
+    @pending_requests_count = @pending_housekeeping_requests_count + @pending_complaint_requests_count
   end
 
   def update
@@ -57,6 +66,52 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking has been cancelled."
     else
       redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to cancel booking."
+    end
+  end
+
+  def complete_housekeeping_request
+    @booking = current_hotel.bookings.find(params[:id])
+    request = @booking.housekeeping_requests.find(params[:housekeeping_request_id])
+
+    request.add_internal_note(params[:internal_note], user_name: current_user.name)
+
+    request.status = "completed"
+    request.completed_at ||= Time.current
+
+    if request.save
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Housekeeping request marked as completed."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to update housekeeping request."
+    end
+  end
+
+  def update_complaint_request
+    @booking = current_hotel.bookings.find(params[:id])
+    complaint_request = @booking.complaint_requests.find(params[:complaint_request_id])
+
+    complaint_request.add_internal_note(params[:internal_note], user_name: current_user.name)
+
+    requested_status = params[:status].presence || complaint_request.status || "in_progress"
+    complaint_request.status = requested_status
+    complaint_request.completed_at = nil unless complaint_request.resolved?
+
+    if complaint_request.save
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Complaint note saved."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to save complaint note."
+    end
+  end
+
+  def resolve_complaint_request
+    @booking = current_hotel.bookings.find(params[:id])
+    complaint_request = @booking.complaint_requests.find(params[:complaint_request_id])
+
+    complaint_request.resolved!
+
+    if complaint_request.save
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Complaint request marked as resolved."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to resolve complaint request."
     end
   end
 

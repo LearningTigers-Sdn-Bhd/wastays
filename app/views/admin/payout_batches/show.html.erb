@@ -1,0 +1,123 @@
+<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
+  <div class="mb-8 flex items-center justify-between">
+    <div>
+      <%= link_to admin_payout_batches_path, class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600 mb-2" do %>
+        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        Back to Batches
+      <% end %>
+      <h1 class="text-3xl font-bold text-gray-800">Batch #<%= @batch.id %></h1>
+      <p class="text-sm text-gray-600">Settlement for <%= @batch.hotel.name %> (<%= @batch.period_start.strftime("%d %b") %> - <%= @batch.period_end.strftime("%d %b %Y") %>)</p>
+    </div>
+
+    <div class="inline-flex items-center">
+      <span class="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider <%= @batch.paid? ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' %>">
+        <%= @batch.status.titleize %>
+      </span>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-8">
+    <!-- Left: Batch Details -->
+    <div class="lg:col-span-2 space-y-6">
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <h2 class="text-lg font-semibold text-gray-800">Linked Bookings</h2>
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-500">Ref</th>
+              <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-500">Checkout</th>
+              <th class="px-6 py-3 text-end text-xs font-semibold uppercase text-gray-500">Gross</th>
+              <th class="px-6 py-3 text-end text-xs font-semibold uppercase text-gray-500">Net Payout</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <% @bookings.each do |booking| %>
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">#<%= booking.confirmation_token %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"><%= booking.checked_out_at&.strftime("%d %b %Y") %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-end text-gray-600">RM <%= number_with_precision(booking.total_amount, precision: 2) %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-end font-bold text-gray-900">RM <%= number_with_precision(booking.net_amount, precision: 2) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+          <tfoot class="bg-gray-50/80">
+            <tr>
+              <td colspan="3" class="px-6 py-4 text-sm font-bold text-gray-800">Total Settlement</td>
+              <td class="px-6 py-4 text-sm text-end font-black text-brand-primary">MYR <%= number_with_precision(@batch.amount, precision: 2) %></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right: Payment Processing -->
+    <div class="space-y-6">
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Banking Details</h3>
+        <% banking = @batch.hotel.account.banking_detail %>
+        <% if banking %>
+          <div class="space-y-3">
+            <div>
+              <p class="text-[10px] font-black text-gray-400 uppercase">Account Holder</p>
+              <p class="text-sm font-bold text-gray-900"><%= banking.account_holder_name %></p>
+            </div>
+            <div>
+              <p class="text-[10px] font-black text-gray-400 uppercase">Bank</p>
+              <p class="text-sm font-bold text-gray-900"><%= banking.bank_name %></p>
+            </div>
+            <div>
+              <p class="text-[10px] font-black text-gray-400 uppercase">Account Number</p>
+              <p class="text-sm font-bold text-gray-900 font-mono"><%= banking.account_number %></p>
+            </div>
+          </div>
+        <% else %>
+          <p class="text-sm text-red-500 italic">No banking details provided by hotel.</p>
+        <% end %>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Payout Processing</h3>
+        
+        <% if @batch.paid? %>
+          <div class="space-y-4">
+            <div class="p-3 bg-green-50 rounded-lg border border-green-100">
+              <p class="text-xs text-green-800 font-medium">This batch was marked as paid on <%= @batch.payout_at&.strftime("%d %b %Y at %H:%M") %>.</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-black text-gray-400 uppercase">Reference</p>
+              <p class="text-sm font-mono text-gray-900"><%= @batch.payout_reference %></p>
+            </div>
+            <% if @batch.receipt.attached? %>
+              <div>
+                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Payment Receipt</p>
+                <%= link_to url_for(@batch.receipt), target: "_blank", class: "btn btn-secondary w-full text-xs py-2" do %>
+                  View Uploaded Receipt
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <%= form_with model: [:admin, @batch], local: true, class: "space-y-4" do |f| %>
+            <div>
+              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Upload Receipt (PDF/Image)</label>
+              <%= f.file_field :receipt, class: "block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" %>
+            </div>
+            <%= f.submit "Save Receipt", class: "btn btn-secondary w-full py-2 text-xs" %>
+          <% end %>
+
+          <hr class="my-6">
+
+          <%= form_with url: mark_as_paid_admin_payout_batch_path(@batch), method: :post, local: true, class: "space-y-4" do |f| %>
+            <div>
+              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Payment Reference</label>
+              <%= text_field_tag :payout_reference, nil, placeholder: "e.g. MYB12345678", class: "form-input py-2 px-3 text-sm", required: true %>
+            </div>
+            <%= f.submit "Mark as Paid", class: "btn btn-gradient w-full py-3 font-bold", data: { confirm: "Confirm that you have transferred RM #{number_with_precision(@batch.amount, precision: 2)} to this hotel?" } %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

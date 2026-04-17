@@ -17,23 +17,15 @@ class Admin::DashboardController < Admin::BaseController
   def analytics
     @start_date = params[:start_date].present? ? params[:start_date].to_date : Date.current.beginning_of_month
     @end_date = params[:end_date].present? ? params[:end_date].to_date : Date.current.end_of_month
+    @date_preset = params[:date_preset] || "custom"
 
-    @bookings = Booking.includes(:hotel).revenue_generating.where(created_at: @start_date.beginning_of_day..@end_date.end_of_day)
-    @total_revenue = @bookings.sum(:total_amount)
-    @total_margin = @bookings.sum("COALESCE(margin_amount, 0)")
-    @total_net = @bookings.sum("COALESCE(net_amount, 0)")
-    @booking_count = @bookings.count
-    @active_hotels_count = @bookings.distinct.count(:hotel_id)
-    @daily_rows = @bookings.group_by { |booking| booking.created_at.to_date }
-                          .sort
-                          .map do |date, bookings|
-      {
-        date: date,
-        booking_count: bookings.count,
-        revenue: bookings.sum(&:total_amount),
-        margin: bookings.sum { |booking| booking.margin_amount || 0 },
-        net: bookings.sum { |booking| booking.net_amount || 0 }
-      }
-    end
+    summary = Booking.analytics_summary(@start_date, @end_date, query: params[:q])
+    @total_revenue = summary[:total_revenue]
+    @total_margin = summary[:total_margin]
+    @total_net = summary[:total_net]
+    @booking_count = summary[:booking_count]
+    @active_hotels_count = summary[:active_hotels_count]
+
+    @daily_rows = Booking.daily_analytics(@start_date, @end_date, query: params[:q])
   end
 end

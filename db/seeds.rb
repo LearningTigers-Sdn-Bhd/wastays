@@ -92,7 +92,7 @@ module SeedData
       status: status,
       payment_status: 'captured',
       tourism_tax_applied: tourism_tax_applied,
-      tourism_tax_amount: tourism_tax_applied ? hotel.tourism_tax_amount_for(guest_attrs[:country]) : 0
+      tourism_tax_amount: tourism_tax_applied ? hotel.send(:tourism_tax_amount_for, guest_attrs[:country]) : 0
     )
 
     BookingRoom.create!(booking: booking, room_type: room_type, quantity: 1, subtotal: room_type.base_price * nights)

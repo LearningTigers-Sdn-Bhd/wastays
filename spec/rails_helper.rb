@@ -72,6 +72,12 @@ RSpec.configure do |config|
   config.filter_rails_from_backtrace!
   # arbitrary gems may also be filtered via:
   # config.filter_gems_from_backtrace("gem name")
+
+  config.before(:each, type: :system) do
+    unless system("google-chrome --version > /dev/null 2>&1") || system("google-chrome-stable --version > /dev/null 2>&1")
+      skip "Skipping system test: Google Chrome is not installed in this environment."
+    end
+  end
 end
 
 Shoulda::Matchers.configure do |config|

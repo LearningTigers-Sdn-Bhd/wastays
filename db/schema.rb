@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_16_010000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_16_075913) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -177,6 +177,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_010000) do
     t.string "guest_document_type"
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "0.0", null: false
     t.boolean "tourism_tax_applied", default: false, null: false
+    t.string "payout_status"
+    t.datetime "payout_at"
+    t.string "payout_reference"
+    t.string "payout_batch_id"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
@@ -189,6 +193,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_010000) do
     t.text "body"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "complaint_requests", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "external_id"
+    t.datetime "requested_at", null: false
+    t.text "complaint_details", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "internal_notes", default: []
+    t.string "status", default: "pending", null: false
+    t.datetime "archived_at"
+    t.datetime "completed_at"
+    t.index ["booking_id", "archived_at"], name: "index_complaint_requests_on_booking_id_and_archived_at"
+    t.index ["booking_id", "completed_at"], name: "index_complaint_requests_on_booking_id_and_completed_at"
+    t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
+    t.index ["booking_id"], name: "index_complaint_requests_on_booking_id"
+    t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
   end
 
   create_table "guests", force: :cascade do |t|
@@ -221,6 +244,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_010000) do
     t.bigint "featured_photo_attachment_id"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
+  end
+
+  create_table "housekeeping_requests", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "external_id"
+    t.datetime "requested_at", null: false
+    t.text "request_details", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "completed_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "internal_notes", default: []
+    t.datetime "archived_at"
+    t.index ["booking_id", "archived_at"], name: "index_housekeeping_requests_on_booking_id_and_archived_at"
+    t.index ["booking_id", "requested_at"], name: "index_housekeeping_requests_on_booking_id_and_requested_at"
+    t.index ["booking_id", "status"], name: "index_housekeeping_requests_on_booking_id_and_status"
+    t.index ["booking_id"], name: "index_housekeeping_requests_on_booking_id"
+    t.index ["external_id"], name: "index_housekeeping_requests_on_external_id", unique: true
   end
 
   create_table "inventory_audit_logs", force: :cascade do |t|
@@ -285,6 +327,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_010000) do
     t.index ["gateway", "external_reference"], name: "idx_payment_transactions_on_gateway_and_external_reference", unique: true, where: "(external_reference IS NOT NULL)"
     t.index ["gateway", "gateway_order_id"], name: "idx_payment_transactions_on_gateway_and_order_id", unique: true, where: "(gateway_order_id IS NOT NULL)"
     t.index ["status"], name: "index_payment_transactions_on_status"
+  end
+
+  create_table "payout_batches", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.decimal "amount"
+    t.string "status"
+    t.date "period_start"
+    t.date "period_end"
+    t.datetime "payout_at"
+    t.string "payout_reference"
+    t.jsonb "metadata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_payout_batches_on_hotel_id"
   end
 
   create_table "permissions", force: :cascade do |t|
@@ -446,12 +502,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_010000) do
   add_foreign_key "booking_rooms", "room_types"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
+  add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "hotels", "accounts"
+  add_foreign_key "housekeeping_requests", "bookings"
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
+  add_foreign_key "payout_batches", "hotels"
   add_foreign_key "pre_checkins", "bookings"
   add_foreign_key "property_policies", "hotels"
   add_foreign_key "role_permissions", "permissions"

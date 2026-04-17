@@ -1,0 +1,83 @@
+<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
+  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800">Superadmin: Hotel Payouts</h1>
+      <p class="text-sm text-gray-600">Review and generate payment batches for hotels.</p>
+    </div>
+
+    <div class="inline-flex gap-x-2">
+      <%= link_to export_payouts_csv_admin_payouts_path, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-brand-primary text-white hover:bg-red-700", data: { turbo: false } do %>
+        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export Payouts CSV
+      <% end %>
+
+      <%= button_to mark_as_paid_admin_payouts_path, method: :post, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700", data: { confirm: "Are you sure you want to mark these as paid?" } do %>
+        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Mark All as Paid
+      <% end %>
+    </div>  </div>
+
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+    <div class="flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm">
+      <div class="p-4 md:p-5">
+        <p class="text-xs uppercase tracking-wide text-gray-500">Current Batch Payout</p>
+        <div class="mt-1 flex items-center gap-x-2">
+          <h3 class="text-xl sm:text-2xl font-bold text-gray-800">MYR <%= number_with_precision(@eligible_bookings.sum(&:net_amount), precision: 2) %></h3>
+        </div>
+        <p class="mt-1 text-xs text-gray-500">Cut-off: Last Friday</p>
+      </div>
+    </div>
+
+    <div class="flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm">
+      <div class="p-4 md:p-5">
+        <p class="text-xs uppercase tracking-wide text-gray-500">Eligible Hotels</p>
+        <div class="mt-1 flex items-center gap-x-2">
+          <h3 class="text-xl sm:text-2xl font-bold text-gray-800"><%= @payout_summary.count %></h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+      <h2 class="text-lg font-semibold text-gray-800">Payment Breakdown per Hotel</h2>
+    </div>
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Hotel</th>
+          <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Bank Details</th>
+          <th class="px-6 py-3 text-center text-xs font-semibold uppercase text-gray-800">Bookings</th>
+          <th class="px-6 py-3 text-end text-xs font-semibold uppercase text-gray-800">Total Net Amount</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <% if @payout_summary.any? %>
+          <% @payout_summary.each do |summary| %>
+            <% banking = summary[:hotel].account.banking_detail %>
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="font-bold text-gray-900"><%= summary[:hotel].name %></div>
+                <div class="text-gray-500 text-xs"><%= summary[:hotel].city %></div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <% if banking %>
+                  <div class="font-medium text-gray-900"><%= banking.account_holder_name %></div>
+                  <div class="text-gray-500 text-xs"><%= banking.bank_name %>: <%= banking.account_number %></div>
+                <% else %>
+                  <span class="text-red-500 italic">No banking details!</span>
+                <% end %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-center font-medium text-gray-800"><%= summary[:booking_count] %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-end font-bold text-brand-primary">MYR <%= number_with_precision(summary[:total_net], precision: 2) %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="4" class="px-6 py-10 text-center text-sm text-gray-500 italic">No payouts currently due.</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
