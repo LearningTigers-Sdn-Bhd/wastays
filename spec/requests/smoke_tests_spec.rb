@@ -23,7 +23,7 @@ RSpec.describe "Platform Smoke Tests", type: :request do
 
     # Give staff user access to the hotel
     create(:user_hotel_access, user: staff_user, hotel: hotel, role: role)
-    
+
     # Setup some basic data to avoid nil errors in views
     create(:property_policy, hotel: hotel)
     room_type # ensure created
