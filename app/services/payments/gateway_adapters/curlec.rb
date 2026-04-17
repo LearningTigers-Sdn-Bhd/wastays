@@ -1,7 +1,7 @@
 module Payments
   module GatewayAdapters
     class Curlec < Payments::BaseAdapter
-      def create_intent(amount:, currency:, description:, metadata:)
+      def create_checkout_session(amount:, currency:, description:, metadata:, callback_url:)
         # In a real integration:
         # curlec_client = Curlec::Client.new(api_key: @setting.api_key, secret_key: @setting.secret_key)
         # response = curlec_client.create_intent(...)
@@ -12,6 +12,13 @@ module Payments
           currency: currency,
           status: "created",
           checkout_url: "/mock_payment_gateway?intent_id=#{SecureRandom.hex(8)}"
+        }
+      end
+
+      def verify_client_callback(payment_response:)
+        {
+          status: "captured",
+          external_reference: payment_response[:external_reference] || "curlec_evt_#{SecureRandom.hex(8)}"
         }
       end
 

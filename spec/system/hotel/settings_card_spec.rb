@@ -27,7 +27,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   it 'allows the hotel admin to update the editable settings card fields' do
     visit hotel_settings_path(hotel)
 
-    within first('.card') do
+    within('section', text: 'Hotel Settings') do
       expect(page).to have_field('Standard Check-in Time', type: 'time')
       expect(page).to have_field('Standard Check-out Time', type: 'time')
       expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Registered')
@@ -58,7 +58,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   it 'shows hotel status and onboarding stage as disabled text inputs' do
     visit hotel_settings_path(hotel)
 
-    within first('.card') do
+    within('section', text: 'Hotel Settings') do
       expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Registered')
       expect(page).to have_field('Onboarding Stage', type: 'text', disabled: true, with: 'Building profile')
     end
@@ -69,7 +69,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
 
     visit hotel_settings_path(hotel)
 
-    within first('.card') do
+    within('section', text: 'Hotel Settings') do
       expect(page).to have_unchecked_field('hotel_tourism_tax_enabled')
       expect(page).to have_field('Tourism Tax Amount', disabled: true)
     end
@@ -83,7 +83,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
 
     click_button 'Save Settings'
 
-    within first('.card') do
+    within('section', text: 'Hotel Settings') do
       expect(page).to have_content('prohibited these settings from being saved')
       expect(page).to have_content("Check out time can't be blank")
       expect(find_field('Standard Check-in Time').value).to eq('15:00')

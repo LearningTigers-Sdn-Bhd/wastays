@@ -22,6 +22,7 @@ class Public::QuotesController < ApplicationController
     @hotel = @quote.hotel
     @quote_items = @quote.booking_quote_items
     @display_currency = display_currency_for_request
+    @payment_gateway = @hotel.checkout_payment_gateway || "razorpay"
   end
 
   private

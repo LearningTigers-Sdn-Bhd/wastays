@@ -32,10 +32,11 @@ class Public::WebhooksController < ApplicationController
       return head :forbidden
     end
 
-    adapter = payment_adapter(gateway, setting)
+    adapter = Payments::GatewayRegistry.fetch(gateway:, setting:)
 
     # 2. Verify signature
-    unless adapter.verify_webhook(payload: raw_payload, signature: request.headers["X-Gateway-Signature"])
+    signature = request.headers["X-Gateway-Signature"] || request.headers["X-Razorpay-Signature"]
+    unless adapter.verify_webhook(payload: raw_payload, signature: signature)
       event.update!(status: "failed", error_message: "Invalid signature")
       return head :unauthorized
     end
@@ -60,13 +61,39 @@ class Public::WebhooksController < ApplicationController
       ).call
 
       if confirm_result.success?
+        safely_record_transaction do
+          Payments::TransactionRecorder.record_webhook(
+            quote: quote,
+            gateway: gateway,
+            webhook_payload: temp_payload,
+            processed_payload: processed_payload,
+            booking: confirm_result.booking
+          )
+        end
         event.update!(status: "processed", processed_at: Time.current)
         head :ok
       else
+        safely_record_transaction do
+          Payments::TransactionRecorder.record_webhook(
+            quote: quote,
+            gateway: gateway,
+            webhook_payload: temp_payload,
+            processed_payload: processed_payload,
+            status: "failed"
+          )
+        end
         event.update!(status: "failed", error_message: confirm_result.message)
         render json: { error: confirm_result.message }, status: :unprocessable_content
       end
     else
+      safely_record_transaction do
+        Payments::TransactionRecorder.record_webhook(
+          quote: quote,
+          gateway: gateway,
+          webhook_payload: temp_payload,
+          processed_payload: processed_payload
+        )
+      end
       event.update!(status: "processed", processed_at: Time.current)
       head :ok
     end
@@ -78,12 +105,9 @@ class Public::WebhooksController < ApplicationController
 
   private
 
-  def payment_adapter(gateway, setting)
-    case gateway
-    when "curlec"
-      Payments::GatewayAdapters::Curlec.new(setting)
-    else
-      raise "Unsupported Gateway: #{gateway}"
-    end
+  def safely_record_transaction
+    yield
+  rescue StandardError => e
+    Rails.logger.error("Webhook payment transaction logging failed: #{e.message}")
   end
 end
