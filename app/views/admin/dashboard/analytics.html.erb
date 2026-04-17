@@ -16,17 +16,17 @@
     <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:grid-cols-2 xl:grid-cols-5 mb-8">
       <div class="p-6 md:border-r md:border-slate-200 md:p-8">
         <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Revenue</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950">RM <%= number_with_precision(@total_revenue, precision: 2) %></h2>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= number_to_currency(@total_revenue, unit: "RM ", precision: 2) %></h2>
         <p class="mt-2 text-sm font-medium text-slate-600">Gross booking value in range</p>
       </div>
       <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
         <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Margin</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600">RM <%= number_with_precision(@total_margin, precision: 2) %></h2>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= number_to_currency(@total_margin, unit: "RM ", precision: 2) %></h2>
         <p class="mt-2 text-sm font-medium text-slate-600">Platform margin captured</p>
       </div>
       <div class="p-6 md:border-r md:border-slate-200 md:p-8">
         <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Net</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-blue-600">RM <%= number_with_precision(@total_net, precision: 2) %></h2>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-blue-600"><%= number_to_currency(@total_net, unit: "RM ", precision: 2) %></h2>
         <p class="mt-2 text-sm font-medium text-slate-600">Net earnings across bookings</p>
       </div>
       <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
@@ -96,15 +96,15 @@
               <dl class="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                 <div>
                   <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Revenue</dt>
-                  <dd class="mt-1 text-slate-700">RM <%= number_with_precision(row[:revenue], precision: 2) %></dd>
+                  <dd class="mt-1 text-slate-700"><%= number_to_currency(row[:revenue], unit: "RM ", precision: 2) %></dd>
                 </div>
                 <div>
                   <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Margin</dt>
-                  <dd class="mt-1 text-emerald-700">RM <%= number_with_precision(row[:margin], precision: 2) %></dd>
+                  <dd class="mt-1 text-emerald-700"><%= number_to_currency(row[:margin], unit: "RM ", precision: 2) %></dd>
                 </div>
                 <div>
                   <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Net</dt>
-                  <dd class="mt-1 font-medium text-blue-700">RM <%= number_with_precision(row[:net], precision: 2) %></dd>
+                  <dd class="mt-1 font-medium text-blue-700"><%= number_to_currency(row[:net], unit: "RM ", precision: 2) %></dd>
                 </div>
               </dl>
             </div>
@@ -134,9 +134,9 @@
                 <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 sm:px-8"><%= row[:date].strftime("%d %b %Y") %></td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600"><%= row[:booking_count] %></td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">RM <%= number_with_precision(row[:revenue], precision: 2) %></td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-emerald-700">RM <%= number_with_precision(row[:margin], precision: 2) %></td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-700 sm:px-8">RM <%= number_with_precision(row[:net], precision: 2) %></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700"><%= number_to_currency(row[:revenue], unit: "RM ", precision: 2) %></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-emerald-700"><%= number_to_currency(row[:margin], unit: "RM ", precision: 2) %></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-700 sm:px-8"><%= number_to_currency(row[:net], unit: "RM ", precision: 2) %></td>
                 </tr>
               <% end %>
             <% else %>

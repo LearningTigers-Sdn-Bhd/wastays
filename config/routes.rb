@@ -107,6 +107,7 @@ Rails.application.routes.draw do
         post :mark_as_paid
       end
     end
+    resources :global_search, only: [ :index ]
     resources :margin_rules, only: [ :index, :create, :destroy ]
     resources :setup_fee_rules, only: [ :index, :create, :destroy ]
     resources :audit_logs, only: [ :index ]
@@ -168,5 +169,6 @@ Rails.application.routes.draw do
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"
     resources :inventory_audit_logs, only: [ :index ]
+    resources :global_search, only: [ :index ]
   end
 end

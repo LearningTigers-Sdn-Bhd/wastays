@@ -13,8 +13,10 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
     @total_net = summary[:total_net]
     @booking_count = summary[:booking_count]
 
-    # Daily data for chart (simplified)
-    @bookings = hotel_bookings.created_between(@start_date, @end_date).search(params[:q])
+    @bookings = hotel_bookings.created_between(@start_date, @end_date)
+                             .search(params[:q])
+                             .includes(booking_rooms: :room_type)
+    @base_bookings = @bookings
     @daily_data = Booking.daily_revenue_data(@bookings)
   end
 
@@ -23,20 +25,26 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
     @active_tab = params[:tab] || "upcoming"
 
     @upcoming_bookings = current_hotel.bookings.unbatched_upcoming(cutoff_date)
-    @upcoming_payout_amount = @upcoming_bookings.sum("COALESCE(net_amount, 0)")
+    @upcoming_payout_amount = current_hotel.upcoming_payout_amount(cutoff_date)
 
     @processing_batches = current_hotel.payout_batches.where(status: "processing")
 
-    # Apply pagination to history
-    @payout_history = current_hotel.payout_batches.order(period_end: :desc).page(params[:page]).per(25)
+    @paid_start_date = parse_date_param(params[:paid_start_date])
+    @paid_end_date = parse_date_param(params[:paid_end_date])
+
+    @payout_history = current_hotel.payout_batches_for_reports(
+      start_date: @paid_start_date,
+      end_date: @paid_end_date
+    ).page(params[:page]).per(25)
   end
 
   def breakdown
-    @base_bookings = current_hotel.bookings.revenue_generating
-                             .where(created_at: @start_date.beginning_of_day..@end_date.end_of_day)
-                             .order(created_at: :desc)
-
-    @bookings = apply_search(@base_bookings, params[:q], %w[guest_name confirmation_token guest_email])
+    @bookings = Booking.for_financial_breakdown(
+      current_hotel,
+      @start_date,
+      @end_date,
+      params[:q]
+    )
 
     respond_to do |format|
       format.html do
@@ -48,5 +56,15 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
         send_data service.generate_breakdown_csv, filename: "financial-breakdown-#{@start_date}-#{@end_date}.csv"
       end
     end
+  end
+
+  private
+
+  def parse_date_param(value)
+    return if value.blank?
+
+    Date.parse(value.to_s)
+  rescue ArgumentError
+    nil
   end
 end
