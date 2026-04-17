@@ -1,17 +1,26 @@
 <div data-controller="command-palette" data-command-palette-endpoint-value="<%= endpoint %>">
   <button type="button"
-          class="hidden sm:inline-flex items-center gap-x-2 rounded-lg border border-layer-line bg-layer px-3 py-1.5 text-sm text-neutral-text-primary hover:bg-surface-hover transition-colors"
+          class="inline-flex sm:hidden items-center justify-center size-9 rounded-lg border border-layer-line bg-layer text-neutral-text-primary hover:bg-surface-hover transition-colors"
           data-action="click->command-palette#open"
           aria-label="Open global search">
     <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-    Search
-    <span class="rounded border border-layer-line bg-layer-alt px-1.5 py-0.5 text-[11px] text-muted-foreground">⌘K</span>
+  </button>
+
+  <button type="button"
+          class="hidden sm:inline-flex items-center justify-between gap-x-2 w-[260px] md:w-[320px] lg:w-[420px] rounded-xl border border-layer-line bg-layer-alt/80 px-3.5 py-2 text-sm text-neutral-text-primary shadow-xs hover:bg-surface-hover transition-colors"
+          data-action="click->command-palette#open"
+          aria-label="Open global search">
+    <span class="inline-flex items-center gap-x-2.5 min-w-0">
+      <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <span class="truncate text-muted-foreground"><%= local_assigns[:placeholder] || "Search pages and records..." %></span>
+    </span>
+    <span class="rounded-md border border-layer-line bg-layer px-1.5 py-0.5 text-[11px] text-muted-foreground" data-command-palette-target="shortcut">⌘K</span>
   </button>
 
   <div class="hidden fixed inset-0 z-[120] bg-slate-900/40 backdrop-blur-sm p-4 sm:p-6"
        data-command-palette-target="overlay"
        data-action="click->command-palette#closeOnBackdrop">
-    <div class="mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-layer-line bg-layer shadow-dropdown">
+    <div class="mx-auto mt-8 w-full max-w-3xl rounded-2xl border border-layer-line bg-layer shadow-dropdown">
       <div class="border-b border-layer-line p-3 sm:p-4">
         <input type="text"
                placeholder="<%= local_assigns[:placeholder] || 'Search pages and records...' %>"

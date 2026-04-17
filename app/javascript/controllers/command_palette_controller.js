@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["overlay", "input", "results", "empty"]
+  static targets = ["overlay", "input", "results", "empty", "shortcut"]
   static values = {
     endpoint: String
   }
@@ -11,6 +11,7 @@ export default class extends Controller {
     this.activeIndex = -1
     this.currentQuery = ""
     this.searchTimer = null
+    this.updateShortcutLabel()
     this.handleGlobalKeydown = this.onGlobalKeydown.bind(this)
     window.addEventListener("keydown", this.handleGlobalKeydown)
   }
@@ -175,6 +176,13 @@ export default class extends Controller {
 
   isOpen() {
     return !this.overlayTarget.classList.contains("hidden")
+  }
+
+  updateShortcutLabel() {
+    if (!this.hasShortcutTarget) return
+    const platform = navigator.platform || ""
+    const isApple = /Mac|iPhone|iPad|iPod/.test(platform)
+    this.shortcutTarget.textContent = isApple ? "⌘K" : "Ctrl+K"
   }
 
   highlightText(text) {
