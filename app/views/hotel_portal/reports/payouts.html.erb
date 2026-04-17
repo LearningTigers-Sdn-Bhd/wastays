@@ -9,9 +9,9 @@
 
   <%= turbo_frame_tag "payouts_content" do %>
     <!-- Search & Filter -->
-    <div class="bg-white border border-gray-200 rounded-xl p-4 mb-8 shadow-sm">
+    <div class="bg-white border border-gray-200 rounded-xl p-4 mb-8 shadow-sm" data-controller="tab-field">
       <%= form_with url: payouts_hotel_reports_path(current_hotel), method: :get, id: "hotel-payout-filter-form", class: "space-y-4", data: { controller: "auto-submit", turbo_frame: "payouts_content" } do |f| %>
-        <%= hidden_field_tag :tab, @active_tab, id: "hotel-payout-active-tab-input" %>
+        <%= hidden_field_tag :tab, @active_tab, id: "hotel-payout-active-tab-input", data: { "tab-field-target": "input" } %>
         
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex-1 relative">
@@ -33,7 +33,8 @@
                 data-hs-tab="#tabs-hotel-payout-1" 
                 aria-controls="tabs-hotel-payout-1" 
                 role="tab"
-                onclick="document.getElementById('hotel-payout-active-tab-input').value = 'upcoming';">
+                data-action="click->tab-field#update"
+                data-tab-value="upcoming">
           Upcoming & Processing
         </button>
         <button type="button" 
@@ -42,7 +43,8 @@
                 data-hs-tab="#tabs-hotel-payout-2" 
                 aria-controls="tabs-hotel-payout-2" 
                 role="tab"
-                onclick="document.getElementById('hotel-payout-active-tab-input').value = 'paid';">
+                data-action="click->tab-field#update"
+                data-tab-value="paid">
           Paid History
           <span class="ms-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
             <%= @payout_history.total_count %>

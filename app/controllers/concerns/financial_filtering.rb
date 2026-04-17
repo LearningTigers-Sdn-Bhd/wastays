@@ -9,7 +9,7 @@ module FinancialFiltering
 
   def set_financial_dates
     @date_preset = params[:date_preset] || "this_month"
-    
+
     case @date_preset
     when "all_time"
       @start_date = Date.new(2024, 1, 1) # System start

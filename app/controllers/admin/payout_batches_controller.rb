@@ -1,5 +1,3 @@
-require "csv"
-
 class Admin::PayoutBatchesController < Admin::BaseController
   include FinancialFiltering
 
@@ -7,15 +5,9 @@ class Admin::PayoutBatchesController < Admin::BaseController
     # We use period_end for date filtering batches
     @base_batches = PayoutBatch.includes(:hotel)
                                .where(period_end: @start_date..@end_date)
-    
-    @active_tab = params[:tab] || "pending"
+                               .search(params[:q])
 
-    if params[:q].present?
-      @base_batches = @base_batches.joins(:hotel).where(
-        "hotels.name ILIKE :q OR payout_reference ILIKE :q", 
-        q: "%#{params[:q]}%"
-      )
-    end
+    @active_tab = params[:tab] || "pending"
 
     @pending_batches = @base_batches.pending.page(params[:pending_page]).per(25)
     @paid_batches = @base_batches.paid.order(payout_at: :desc).page(params[:paid_page]).per(25)
@@ -37,7 +29,7 @@ class Admin::PayoutBatchesController < Admin::BaseController
 
   def mark_as_paid
     @batch = PayoutBatch.find(params[:id])
-    
+
     PayoutBatch.transaction do
       @batch.update!(
         status: "paid",
@@ -50,7 +42,7 @@ class Admin::PayoutBatchesController < Admin::BaseController
     redirect_to admin_payout_batch_path(@batch), notice: "Batch marked as paid."
   end
 
-  def export_maybank
+  def export_payouts_csv
     # Export only pending batches in the selected filter
     batches_to_process = PayoutBatch.pending
                                     .includes(hotel: [ account: :banking_detail ])
@@ -61,45 +53,10 @@ class Admin::PayoutBatchesController < Admin::BaseController
       return
     end
 
-    csv_data = CSV.generate(headers: false) do |csv|
-      csv << [ "Crediting Date (eg. dd/MM/yyyy)", Date.current.strftime("%d/%m/%Y") ]
-      csv << [ "Payment Reference", "WASTAYS-BATCH-#{Date.current.strftime('%Y%m%d')}" ]
-      csv << [ "Payment Description", "Hotel Payouts Batch #{Date.current.to_s}" ]
-      csv << [ "Bulk Payment Type", "PAYMENT" ]
-      csv << []
-      
-      csv << [
-        "Beneficiary Name",
-        "Beneficiary Bank",
-        "Beneficiary Account No",
-        "ID Type",
-        "ID Number",
-        "Payment Amount",
-        "Payment Reference",
-        "Payment Description"
-      ]
+    service = PayoutExportService.new(batches_to_process, type: :batches)
+    csv_data = service.generate_csv
 
-      batches_to_process.each do |batch|
-        hotel = batch.hotel
-        account = hotel.account
-        banking = account.banking_detail
-
-        next unless banking
-
-        csv << [
-          banking.account_holder_name,
-          banking.bank_name,
-          banking.account_number,
-          "BUSINESS",
-          account.slug.upcase,
-          format("%.2f", batch.amount),
-          "BATCH-#{batch.id}",
-          "WAStays Payout #{batch.period_start} to #{batch.period_end}"
-        ]
-      end
-    end
-
-    send_data csv_data, filename: "Maybank_Payout_Batch_#{@start_date}_#{@end_date}.csv", type: "text/csv"
+    send_data csv_data, filename: "Payout_Batch_#{@start_date}_#{@end_date}.csv", type: "text/csv"
   end
 
   private

@@ -6,17 +6,16 @@
     </div>
 
     <div class="inline-flex gap-x-2">
-      <%= link_to export_maybank_admin_payouts_path, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-brand-primary text-white hover:bg-red-700" do %>
+      <%= link_to export_payouts_csv_admin_payouts_path, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-brand-primary text-white hover:bg-red-700", data: { turbo: false } do %>
         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export Maybank CSV
+        Export Payouts CSV
       <% end %>
-      
+
       <%= button_to mark_as_paid_admin_payouts_path, method: :post, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700", data: { confirm: "Are you sure you want to mark these as paid?" } do %>
         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         Mark All as Paid
       <% end %>
-    </div>
-  </div>
+    </div>  </div>
 
   <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
     <div class="flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm">

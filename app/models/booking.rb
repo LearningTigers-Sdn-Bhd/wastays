@@ -41,6 +41,64 @@ class Booking < ApplicationRecord
   scope :revenue_generating, -> { where(status: [ "confirmed", "checked_in", "completed" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
 
+  scope :search, ->(query) {
+    return all if query.blank?
+    joins(:hotel).where(
+      "hotels.name ILIKE :q OR guest_name ILIKE :q OR confirmation_token ILIKE :q OR guest_email ILIKE :q",
+      q: "%#{query}%"
+    )
+  }
+
+  scope :created_between, ->(start_date, end_date) {
+    where(created_at: start_date.beginning_of_day..end_date.end_of_day)
+  }
+
+  def self.analytics_summary(start_date, end_date, query: nil)
+    base = revenue_generating.created_between(start_date, end_date).search(query)
+
+    {
+      total_revenue: base.sum(:total_amount),
+      total_margin: base.sum("COALESCE(margin_amount, 0)"),
+      total_net: base.sum("COALESCE(net_amount, 0)"),
+      booking_count: base.count,
+      active_hotels_count: base.distinct.count(:hotel_id)
+    }
+  end
+
+  def self.daily_analytics(start_date, end_date, query: nil)
+    revenue_generating
+      .created_between(start_date, end_date)
+      .search(query)
+      .group_by { |booking| booking.created_at.to_date }
+      .sort
+      .map do |date, bookings|
+        {
+          date: date,
+          booking_count: bookings.count,
+          revenue: bookings.sum(&:total_amount),
+          margin: bookings.sum { |b| b.margin_amount || 0 },
+          net: bookings.sum { |b| b.net_amount || 0 }
+        }
+      end
+  end
+
+  def self.last_friday
+    date = Date.current
+    date -= 1 while !date.friday?
+    date
+  end
+
+  def self.payout_summary_by_hotel(bookings)
+    bookings.group_by(&:hotel_id).map do |hotel_id, bs|
+      hotel = Hotel.find(hotel_id)
+      {
+        hotel: hotel,
+        booking_count: bs.count,
+        total_net: bs.sum { |b| b.net_amount || 0 }
+      }
+    end
+  end
+
   def checked_in?
     status == "checked_in"
   end

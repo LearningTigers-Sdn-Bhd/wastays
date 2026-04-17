@@ -6,9 +6,9 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
   def index
     # Note: FinancialFiltering sets @start_date and @end_date
     @base_bookings = current_hotel.bookings.revenue_generating.where(created_at: @start_date.beginning_of_day..@end_date.end_of_day)
-    
+
     @bookings = apply_search(@base_bookings, params[:q], %w[guest_name confirmation_token guest_email])
-    
+
     # Aggregates (on full filtered scope without pagination)
     @total_gross = @bookings.sum(:total_amount) || 0
     @total_margin = @bookings.sum("COALESCE(margin_amount, 0)")
@@ -22,7 +22,7 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
   end
 
   def payouts
-    cutoff_date = last_friday.end_of_day
+    cutoff_date = Booking.last_friday.end_of_day
     @active_tab = params[:tab] || "upcoming"
     @upcoming_bookings = current_hotel.bookings.completed
                                       .where(payout_batch_id: nil)
@@ -30,7 +30,7 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
     @upcoming_payout_amount = @upcoming_bookings.sum("COALESCE(net_amount, 0)")
 
     @processing_batches = current_hotel.payout_batches.where(status: "processing")
-    
+
     # Apply pagination to history
     @payout_history = current_hotel.payout_batches.order(period_end: :desc).page(params[:page]).per(25)
   end
@@ -74,11 +74,5 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
         ]
       end
     end
-  end
-
-  def last_friday
-    date = Date.current
-    date -= 1 while !date.friday?
-    date
   end
 end

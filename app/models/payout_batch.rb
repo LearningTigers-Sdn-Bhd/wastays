@@ -1,7 +1,7 @@
 class PayoutBatch < ApplicationRecord
   belongs_to :hotel
   has_many :bookings, dependent: :nullify
-  
+
   has_one_attached :receipt
 
   STATUSES = %w[pending processing paid].freeze
@@ -12,6 +12,14 @@ class PayoutBatch < ApplicationRecord
 
   scope :pending, -> { where(status: "pending") }
   scope :paid, -> { where(status: "paid") }
+
+  scope :search, ->(query) {
+    return all if query.blank?
+    joins(:hotel).where(
+      "hotels.name ILIKE :q OR payout_reference ILIKE :q",
+      q: "%#{query}%"
+    )
+  }
 
   def paid?
     status == "paid"

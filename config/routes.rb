@@ -84,9 +84,15 @@ Rails.application.routes.draw do
     get "reconciliations_dashboard", to: "reconciliations#index", as: :reconciliation_dashboard # Alias for layout
     resources :payout_batches, only: [ :index, :show, :update ] do
       collection do
-        get :export_maybank
+        get :export_payouts_csv
       end
       member do
+        post :mark_as_paid
+      end
+    end
+    resources :payouts, only: [ :index ] do
+      collection do
+        get :export_payouts_csv
         post :mark_as_paid
       end
     end
@@ -140,7 +146,7 @@ Rails.application.routes.draw do
     resources :reports, only: [ :index ] do
       collection do
         get :payouts
-        get :breakdown, defaults: { format: 'html' }
+        get :breakdown, defaults: { format: "html" }
       end
     end
     resources :inventory_dashboards, only: [ :index, :create ], path: "inventory"

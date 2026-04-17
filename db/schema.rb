@@ -205,27 +205,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_075913) do
     t.datetime "updated_at", null: false
     t.jsonb "internal_notes", default: []
     t.string "status", default: "pending", null: false
-    t.datetime "completed_at"
     t.datetime "archived_at"
+    t.datetime "completed_at"
     t.index ["booking_id", "archived_at"], name: "index_complaint_requests_on_booking_id_and_archived_at"
     t.index ["booking_id", "completed_at"], name: "index_complaint_requests_on_booking_id_and_completed_at"
     t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
     t.index ["booking_id"], name: "index_complaint_requests_on_booking_id"
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
-  end
-
-  create_table "complaints", force: :cascade do |t|
-    t.bigint "booking_id", null: false
-    t.string "external_id"
-    t.datetime "reported_at"
-    t.text "issue_details"
-    t.datetime "resolved_at"
-    t.jsonb "metadata"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["booking_id"], name: "index_complaints_on_booking_id"
-    t.index ["external_id"], name: "index_complaints_on_external_id"
-    t.index ["reported_at"], name: "index_complaints_on_reported_at"
   end
 
   create_table "guests", force: :cascade do |t|
@@ -390,16 +376,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_075913) do
     t.index ["hotel_id"], name: "index_property_policies_on_hotel_id"
   end
 
-  create_table "request_notes", force: :cascade do |t|
-    t.string "noteable_type", null: false
-    t.bigint "noteable_id", null: false
-    t.text "body", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["noteable_type", "noteable_id", "created_at"], name: "index_request_notes_on_noteable_and_created_at"
-    t.index ["noteable_type", "noteable_id"], name: "index_request_notes_on_noteable"
-  end
-
   create_table "role_permissions", force: :cascade do |t|
     t.bigint "role_id", null: false
     t.bigint "permission_id", null: false
@@ -527,7 +503,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_075913) do
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
   add_foreign_key "complaint_requests", "bookings"
-  add_foreign_key "complaints", "bookings"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "housekeeping_requests", "bookings"
   add_foreign_key "inventory_audit_logs", "hotels"

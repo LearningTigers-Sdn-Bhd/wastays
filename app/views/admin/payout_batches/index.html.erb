@@ -6,18 +6,18 @@
     </div>
 
     <div class="inline-flex gap-x-2">
-      <%= link_to export_maybank_admin_payout_batches_path(date_preset: @date_preset, start_date: @start_date, end_date: @end_date, tab: @active_tab), class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-brand-primary text-white hover:bg-red-700 shadow-sm transition-all", data: { turbo: false } do %>
+      <%= link_to export_payouts_csv_admin_payout_batches_path(date_preset: @date_preset, start_date: @start_date, end_date: @end_date, tab: @active_tab), class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-brand-primary text-white hover:bg-red-700 shadow-sm transition-all", data: { turbo: false } do %>
         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export Pending Batches (Maybank)
+        Export Pending Batches (CSV)
       <% end %>
     </div>
   </div>
 
   <%= turbo_frame_tag "payout_batches_results" do %>
     <!-- Filters & Search -->
-    <div class="bg-white border border-gray-200 rounded-xl p-4 md:p-6 mb-8 shadow-sm">
+    <div class="bg-white border border-gray-200 rounded-xl p-4 md:p-6 mb-8 shadow-sm" data-controller="tab-field">
       <%= form_with url: admin_payout_batches_path, method: :get, id: "payout-filter-form", class: "space-y-4", data: { controller: "auto-submit", turbo_frame: "payout_batches_results" } do |f| %>
-        <%= hidden_field_tag :tab, @active_tab, id: "payout-active-tab-input" %>
+        <%= hidden_field_tag :tab, @active_tab, id: "payout-active-tab-input", data: { "tab-field-target": "input" } %>
         
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
           <div class="md:col-span-3">
@@ -58,7 +58,8 @@
                 data-hs-tab="#tabs-payout-1" 
                 aria-controls="tabs-payout-1" 
                 role="tab"
-                onclick="document.getElementById('payout-active-tab-input').value = 'pending';">
+                data-action="click->tab-field#update"
+                data-tab-value="pending">
           Pending Settlements
           <span class="ms-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
             <%= @pending_batches.total_count %>
@@ -70,7 +71,8 @@
                 data-hs-tab="#tabs-payout-2" 
                 aria-controls="tabs-payout-2" 
                 role="tab"
-                onclick="document.getElementById('payout-active-tab-input').value = 'paid';">
+                data-action="click->tab-field#update"
+                data-tab-value="paid">
           Paid History
           <span class="ms-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
             <%= @paid_batches.total_count %>
