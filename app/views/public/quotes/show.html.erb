@@ -36,8 +36,12 @@
       </div>
     </div>
 
-    <%= form_with url: mock_payment_path, method: :post, class: "max-w-[85rem] mx-auto" do |f| %>
+    <%= form_with url: verify_payment_path, method: :post, class: "max-w-[85rem] mx-auto", id: "payment-checkout-form", data: { checkout_session_url: checkout_payment_session_path } do |f| %>
       <%= f.hidden_field :quote_token, value: @quote.token %>
+      <%= f.hidden_field :gateway, value: @payment_gateway %>
+      <%= f.hidden_field "payment_response[razorpay_payment_id]", value: "", data: { razorpay_payment_id: true } %>
+      <%= f.hidden_field "payment_response[razorpay_order_id]", value: "", data: { razorpay_order_id: true } %>
+      <%= f.hidden_field "payment_response[razorpay_signature]", value: "", data: { razorpay_signature: true } %>
       
       <div class="grid lg:grid-cols-12 gap-8">
         <!-- Forms Area -->
@@ -239,7 +243,7 @@
             <%= link_to "Back to hotel",
                         hotel_path(@hotel, request.query_parameters),
                         class: "btn btn-secondary min-w-[220px] px-12 py-4 text-base font-black text-center" %>
-            <%= f.submit "Confirm & Pay Now", class: "btn btn-gradient min-w-[220px] px-12 py-4 text-base font-black" %>
+            <%= f.submit "Confirm & Pay Now", class: "btn btn-gradient min-w-[220px] px-12 py-4 text-base font-black", data: { checkout_submit: true } %>
           </div>
         </div>
 
@@ -318,6 +322,98 @@
     <% end %>
   </div>
 </div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+  (function() {
+    const form = document.getElementById("payment-checkout-form");
+    if (!form) return;
+
+    const submitButton = form.querySelector("[data-checkout-submit]");
+    const checkoutSessionUrl = form.dataset.checkoutSessionUrl;
+    const paymentIdField = form.querySelector("[data-razorpay-payment-id]");
+    const orderIdField = form.querySelector("[data-razorpay-order-id]");
+    const signatureField = form.querySelector("[data-razorpay-signature]");
+
+    let submittingToServer = false;
+
+    form.addEventListener("submit", async function(event) {
+      if (submittingToServer) return;
+
+      event.preventDefault();
+      submitButton.disabled = true;
+      const originalLabel = submitButton.value;
+      submitButton.value = "Opening secure checkout...";
+
+      const formData = new FormData(form);
+
+      try {
+        const response = await fetch(checkoutSessionUrl, {
+          method: "POST",
+          headers: {
+            "X-CSRF-Token": document.querySelector("meta[name='csrf-token']").content
+          },
+          body: formData
+        });
+
+        const session = await response.json();
+        if (!response.ok) throw new Error(session.error || "Unable to initialize checkout.");
+
+        if (session.checkout_url) {
+          window.location.href = session.checkout_url;
+          return;
+        }
+
+        if (!session.key_id || !session.order_id) {
+          throw new Error("Unsupported checkout session payload.");
+        }
+        if (!window.Razorpay) {
+          throw new Error("Payment service is temporarily unavailable. Please refresh and try again.");
+        }
+
+        const options = {
+          key: session.key_id,
+          amount: session.amount,
+          currency: session.currency,
+          name: "<%= j @hotel.name %>",
+          description: session.description,
+          order_id: session.order_id,
+          callback_url: session.callback_url,
+          redirect: true,
+          handler: function(paymentResponse) {
+            paymentIdField.value = paymentResponse.razorpay_payment_id || "";
+            orderIdField.value = paymentResponse.razorpay_order_id || "";
+            signatureField.value = paymentResponse.razorpay_signature || "";
+            submittingToServer = true;
+            form.requestSubmit();
+          },
+          prefill: {
+            name: form.querySelector("#name")?.value || "",
+            email: form.querySelector("#email")?.value || "",
+            contact: form.querySelector("#phone")?.value || ""
+          },
+          notes: {
+            quote_token: formData.get("quote_token")
+          },
+          theme: {
+            color: "#d32f2f"
+          }
+        };
+
+        const razorpay = new window.Razorpay(options);
+        razorpay.on("payment.failed", function() {
+          submitButton.disabled = false;
+          submitButton.value = originalLabel;
+        });
+        razorpay.open();
+      } catch (error) {
+        alert(error.message || "Unable to start payment. Please try again.");
+        submitButton.disabled = false;
+        submitButton.value = originalLabel;
+      }
+    });
+  })();
+</script>
 
 <script>
   (function() {

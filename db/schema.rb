@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_16_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_16_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -261,6 +261,32 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_000000) do
     t.index ["settable_type", "settable_id"], name: "index_payment_settings_on_settable"
   end
 
+  create_table "payment_transactions", force: :cascade do |t|
+    t.bigint "booking_quote_id"
+    t.bigint "booking_id"
+    t.string "gateway", null: false
+    t.string "external_reference"
+    t.string "gateway_order_id"
+    t.string "signature"
+    t.string "status", default: "pending", null: false
+    t.string "payment_method"
+    t.integer "amount_subunits"
+    t.string "currency"
+    t.string "event_source"
+    t.datetime "verified_at"
+    t.datetime "captured_at"
+    t.text "error_message"
+    t.jsonb "metadata", default: {}, null: false
+    t.jsonb "gateway_payload", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_payment_transactions_on_booking_id"
+    t.index ["booking_quote_id"], name: "index_payment_transactions_on_booking_quote_id"
+    t.index ["gateway", "external_reference"], name: "idx_payment_transactions_on_gateway_and_external_reference", unique: true, where: "(external_reference IS NOT NULL)"
+    t.index ["gateway", "gateway_order_id"], name: "idx_payment_transactions_on_gateway_and_order_id", unique: true, where: "(gateway_order_id IS NOT NULL)"
+    t.index ["status"], name: "index_payment_transactions_on_status"
+  end
+
   create_table "permissions", force: :cascade do |t|
     t.string "name"
     t.string "slug"
@@ -424,6 +450,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_16_000000) do
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
+  add_foreign_key "payment_transactions", "booking_quotes"
+  add_foreign_key "payment_transactions", "bookings"
   add_foreign_key "pre_checkins", "bookings"
   add_foreign_key "property_policies", "hotels"
   add_foreign_key "role_permissions", "permissions"

@@ -49,6 +49,7 @@ gem "thruster", require: false
 gem "image_processing", "~> 1.2"
 gem "kaminari", "~> 1.2"
 gem "commonmarker", "~> 2.7"
+gem "rqrcode", "~> 2.2"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem

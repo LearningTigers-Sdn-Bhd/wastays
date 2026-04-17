@@ -46,4 +46,41 @@ RSpec.describe Hotel, type: :model do
       expect(hotel.active?).to be false
     end
   end
+
+  describe 'payment setting resolution' do
+    let(:account) { create(:account) }
+    let(:hotel) { create(:hotel, account: account) }
+
+    it 'falls back to account payment setting when hotel has none' do
+      account_setting = create(:payment_setting, settable: account, gateway: 'razorpay', status: 'active')
+
+      expect(hotel.effective_payment_setting('razorpay')).to eq(account_setting)
+    end
+
+    it 'falls back to credential setting when neither hotel nor account has gateway setting' do
+      credential_setting = Payments::CredentialSetting::Setting.new(
+        gateway: 'razorpay',
+        api_key: 'rzp_key',
+        secret_key: 'rzp_secret',
+        webhook_secret: 'whsec',
+        status: 'active'
+      )
+      allow(Payments::CredentialSetting).to receive(:for_gateway).with('razorpay').and_return(credential_setting)
+
+      expect(hotel.effective_payment_setting('razorpay')).to eq(credential_setting)
+    end
+
+    it 'uses credential default as checkout gateway when db settings are missing' do
+      credential_setting = Payments::CredentialSetting::Setting.new(
+        gateway: 'razorpay',
+        api_key: 'rzp_key',
+        secret_key: 'rzp_secret',
+        webhook_secret: 'whsec',
+        status: 'active'
+      )
+      allow(Payments::CredentialSetting).to receive(:default).and_return(credential_setting)
+
+      expect(hotel.checkout_payment_gateway).to eq('razorpay')
+    end
+  end
 end
