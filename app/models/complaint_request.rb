@@ -8,6 +8,16 @@ class ComplaintRequest < ApplicationRecord
   validates :requested_at, presence: true
 
   scope :recent_first, -> { order(created_at: :desc) }
+
+  scope :search, ->(query) {
+    return all if query.blank?
+    q = "%#{ActiveRecord::Base.sanitize_sql_like(query.to_s.downcase)}%"
+    joins(:booking).where(
+      "complaint_requests.external_id ILIKE :q OR complaint_requests.complaint_details ILIKE :q OR bookings.confirmation_token ILIKE :q OR bookings.guest_name ILIKE :q OR bookings.guest_email ILIKE :q OR bookings.guest_phone ILIKE :q",
+      q: q
+    )
+  }
+
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
 

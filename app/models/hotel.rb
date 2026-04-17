@@ -171,6 +171,14 @@ class Hotel < ApplicationRecord
     )
   end
 
+  def payout_batches_for_reports(start_date: nil, end_date: nil)
+    payout_batches.order(period_end: :desc).period_between(start_date, end_date)
+  end
+
+  def upcoming_payout_amount(cutoff_date)
+    bookings.unbatched_upcoming(cutoff_date).sum("COALESCE(net_amount, 0)")
+  end
+
   private
 
   def photos_limit_not_exceeded

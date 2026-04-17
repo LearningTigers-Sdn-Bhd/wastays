@@ -13,6 +13,13 @@ class PayoutBatch < ApplicationRecord
   scope :pending, -> { where(status: "pending") }
   scope :paid, -> { where(status: "paid") }
 
+  scope :period_between, ->(start_date, end_date) {
+    scope = all
+    scope = scope.where("period_end >= ?", start_date.beginning_of_day) if start_date.present?
+    scope = scope.where("period_end <= ?", end_date.end_of_day) if end_date.present?
+    scope
+  }
+
   scope :search, ->(query) {
     return all if query.blank?
     joins(:hotel).where(

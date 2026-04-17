@@ -25,26 +25,26 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
     @active_tab = params[:tab] || "upcoming"
 
     @upcoming_bookings = current_hotel.bookings.unbatched_upcoming(cutoff_date)
-    @upcoming_payout_amount = @upcoming_bookings.sum("COALESCE(net_amount, 0)")
+    @upcoming_payout_amount = current_hotel.upcoming_payout_amount(cutoff_date)
 
     @processing_batches = current_hotel.payout_batches.where(status: "processing")
 
     @paid_start_date = parse_date_param(params[:paid_start_date])
     @paid_end_date = parse_date_param(params[:paid_end_date])
 
-    payout_history_scope = current_hotel.payout_batches.order(period_end: :desc)
-    payout_history_scope = payout_history_scope.where("period_end >= ?", @paid_start_date.beginning_of_day) if @paid_start_date.present?
-    payout_history_scope = payout_history_scope.where("period_end <= ?", @paid_end_date.end_of_day) if @paid_end_date.present?
-
-    @payout_history = payout_history_scope.page(params[:page]).per(25)
+    @payout_history = current_hotel.payout_batches_for_reports(
+      start_date: @paid_start_date,
+      end_date: @paid_end_date
+    ).page(params[:page]).per(25)
   end
 
   def breakdown
-    @base_bookings = current_hotel.bookings.revenue_generating
-                             .where(created_at: @start_date.beginning_of_day..@end_date.end_of_day)
-                             .order(created_at: :desc)
-
-    @bookings = apply_search(@base_bookings, params[:q], %w[guest_name confirmation_token guest_email])
+    @bookings = Booking.for_financial_breakdown(
+      current_hotel,
+      @start_date,
+      @end_date,
+      params[:q]
+    )
 
     respond_to do |format|
       format.html do
