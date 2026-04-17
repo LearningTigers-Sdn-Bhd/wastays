@@ -1,6 +1,8 @@
 class Admin::ApiKeysController < Admin::BaseController
   def index
     @api_keys = ApiKey.all.order(created_at: :desc)
+    @generated_api_key_token = session.delete(:generated_api_key_token)
+    @generated_api_key_name = session.delete(:generated_api_key_name)
   end
 
   def docs
@@ -15,7 +17,9 @@ class Admin::ApiKeysController < Admin::BaseController
   def create
     @api_key = ApiKey.new(api_key_params)
     if @api_key.save
-      redirect_to admin_api_keys_path, notice: "API Key created: #{@api_key.token}"
+      session[:generated_api_key_token] = @api_key.token
+      session[:generated_api_key_name] = @api_key.name
+      redirect_to admin_api_keys_path
     else
       render :new, status: :unprocessable_entity
     end

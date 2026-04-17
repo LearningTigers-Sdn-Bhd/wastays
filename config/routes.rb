@@ -15,9 +15,20 @@ Rails.application.routes.draw do
   get "help", to: "help_center#index", as: :help_center
   get "help/:audience/:id", to: "help_center#show", as: :help_guide
 
+  # Guest Portal
+  scope "/guest", module: :guest, as: :guest do
+    get  "login",      to: "sessions#new",     as: :login
+    post "login",      to: "sessions#create"
+    get  "verify",     to: "sessions#verify",  as: :verify
+    delete "logout",   to: "sessions#destroy", as: :logout
+    get "dashboard",  to: "dashboard#index",  as: :dashboard
+    resources :bookings, only: [ :index, :show ]
+  end
+
   # API Namespace
   namespace :api do
     namespace :v1 do
+      post "guest_sessions", to: "guest_sessions#create"
       post "workflow_webhooks", to: "workflow_webhooks#create"
       post "housekeeping_webhooks", to: "housekeeping_webhooks#create"
       post "complaint_webhooks", to: "complaint_webhooks#create"
