@@ -28,6 +28,9 @@ Rails.application.routes.draw do
     delete "logout",              to: "sessions#destroy",          as: :logout
     get    "dashboard",           to: "dashboard#index",           as: :dashboard
     resources :bookings, only: [ :index, :show ] do
+      member do
+        get :invoice
+      end
       resources :refund_requests, only: [ :new, :create ]
     end
     resources :refund_requests, only: [ :index, :show ]
@@ -56,7 +59,11 @@ Rails.application.routes.draw do
   scope module: :public do
     resources :hotels, only: [ :index, :show ]
     resources :quotes, only: [ :create, :show ]
-    resources :bookings, only: [ :show ]
+    resources :bookings, only: [ :show ] do
+      member do
+        get :invoice
+      end
+    end
     resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
       post :cancel, on: :member
     end
@@ -124,7 +131,10 @@ Rails.application.routes.draw do
       get :docs, on: :collection
     end
     resource :refund_policy, only: [ :show, :update, :destroy ]
+    resource :integrations, only: [ :show, :update, :destroy ] do
+      post :test_ping, on: :collection
     end
+  end
 
   # Hotel admin dashboard
   get "/hotel/settings", to: "hotel_portal/settings#index", as: :legacy_hotel_settings
