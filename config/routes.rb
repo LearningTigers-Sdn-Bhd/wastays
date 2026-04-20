@@ -62,6 +62,7 @@ Rails.application.routes.draw do
     resources :bookings, only: [ :show ] do
       member do
         get :invoice
+        get :voucher
       end
     end
     resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
