@@ -52,9 +52,9 @@
   { label: 'Help & support', path: help_center_path, search_text: 'Help Support', icon: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' }
 ] %>
 <% render_sidebar_nav = lambda do %>
-  <nav class="flex-1 px-4 py-2 space-y-6">
+  <nav class="flex-1 px-4 py-3 space-y-6">
     <% admin_sidebar_sections.each do |section| %>
-      <div>
+      <div class="sidebar-nav-group">
         <span class="sidebar-section-label"><%= section[:label] %></span>
         <div class="space-y-0.5">
           <% section[:items].each do |item| %>
@@ -69,42 +69,18 @@
   </nav>
 <% end %>
 
-<!-- Preline CMS-style Sidebar -->
-<!-- Desktop sidebar -->
-<aside id="admin-sidebar" class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full overflow-y-auto custom-scrollbar">
-  <%= capture(&render_sidebar_nav) %>
-
-  <div class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
-    <% admin_sidebar_footer_items.each do |item| %>
-      <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
-        <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
-        <span><%= item[:label] %></span>
-      </a>
-    <% end %>
-  </div>
-</aside>
-
-<!-- Mobile sidebar overlay -->
-<div id="admin-sidebar-overlay" class="fixed inset-0 z-[79] bg-black/50 hidden lg:hidden" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#close"></div>
-<aside id="admin-sidebar-mobile" data-controller="sidebar-toggle" class="fixed top-0 start-0 bottom-0 z-[80] w-[260px] bg-sidebar-bg border-e border-layer-line transform -translate-x-full transition-transform duration-300 lg:hidden overflow-y-auto custom-scrollbar">
-  <div class="flex items-center justify-between p-4 border-b border-layer-line">
-    <a href="<%= admin_dashboard_path %>" class="flex items-center gap-x-2.5">
-      <span class="inline-flex justify-center items-center size-8 bg-brand-primary rounded-lg text-white font-bold text-sm shadow-xs">W</span>
-      <span class="text-sm font-semibold text-neutral-text-primary">WAStays</span>
+<% admin_nav_html = capture(&render_sidebar_nav) %>
+<% admin_footer_html = capture do %>
+  <% admin_sidebar_footer_items.each do |item| %>
+    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
+      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
+      <span><%= item[:label] %></span>
     </a>
-    <button type="button" class="inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-action="click->sidebar-toggle#close">
-      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-    </button>
-  </div>
+  <% end %>
+<% end %>
 
-  <%= capture(&render_sidebar_nav) %>
-
-  <div class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
-    <% admin_sidebar_footer_items.each do |item| %>
-      <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
-        <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
-        <span><%= item[:label] %></span>
-      </a>
-    <% end %>
-  </div>
-</aside>
+<%= render "shared/navigation/sidebar_shell",
+           sidebar_key: "admin",
+           home_path: admin_dashboard_path,
+           nav_html: admin_nav_html,
+           footer_html: admin_footer_html %>

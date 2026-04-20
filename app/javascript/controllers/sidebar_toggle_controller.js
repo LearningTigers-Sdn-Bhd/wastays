@@ -12,9 +12,11 @@ export default class extends Controller {
     const adminOverlay = document.getElementById("admin-sidebar-overlay")
     const hotelSidebar = document.getElementById("hotel-sidebar-mobile")
     const hotelOverlay = document.getElementById("hotel-sidebar-overlay")
+    const guestSidebar = document.getElementById("guest-sidebar-mobile")
+    const guestOverlay = document.getElementById("guest-sidebar-overlay")
 
-    const sidebar = adminSidebar || hotelSidebar
-    const overlay = adminOverlay || hotelOverlay
+    const sidebar = adminSidebar || hotelSidebar || guestSidebar
+    const overlay = adminOverlay || hotelOverlay || guestOverlay
 
     if (!sidebar) return
 
@@ -32,9 +34,11 @@ export default class extends Controller {
     const adminOverlay = document.getElementById("admin-sidebar-overlay")
     const hotelSidebar = document.getElementById("hotel-sidebar-mobile")
     const hotelOverlay = document.getElementById("hotel-sidebar-overlay")
+    const guestSidebar = document.getElementById("guest-sidebar-mobile")
+    const guestOverlay = document.getElementById("guest-sidebar-overlay")
 
-    const sidebar = adminSidebar || hotelSidebar
-    const overlay = adminOverlay || hotelOverlay
+    const sidebar = adminSidebar || hotelSidebar || guestSidebar
+    const overlay = adminOverlay || hotelOverlay || guestOverlay
 
     if (sidebar) this.closeSidebar(sidebar, overlay)
   }
@@ -71,6 +75,7 @@ export default class extends Controller {
   }
 
   applyDesktopState(sidebar, collapsed) {
+    sidebar.classList.toggle("sidebar-collapsed", collapsed)
     sidebar.classList.toggle("w-[260px]", !collapsed)
     sidebar.classList.toggle("w-[84px]", collapsed)
 
@@ -100,11 +105,13 @@ export default class extends Controller {
   }
 
   desktopSidebar() {
-    return document.getElementById("admin-sidebar") || document.getElementById("hotel-sidebar")
+    return document.getElementById("admin-sidebar") || document.getElementById("hotel-sidebar") || document.getElementById("guest-sidebar")
   }
 
   storageKey() {
-    return document.getElementById("admin-sidebar") ? "wastays:admin-sidebar-collapsed" : "wastays:hotel-sidebar-collapsed"
+    if (document.getElementById("admin-sidebar")) return "wastays:admin-sidebar-collapsed"
+    if (document.getElementById("hotel-sidebar")) return "wastays:hotel-sidebar-collapsed"
+    return "wastays:guest-sidebar-collapsed"
   }
 
   persistDesktopState(collapsed) {

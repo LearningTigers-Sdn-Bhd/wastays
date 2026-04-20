@@ -28,6 +28,7 @@ Rails.application.routes.draw do
     delete "logout",              to: "sessions#destroy",          as: :logout
     get    "dashboard",           to: "dashboard#index",           as: :dashboard
     resources :bookings, only: [ :index, :show ]
+    resources :global_search, only: [ :index ]
   end
 
   # API Namespace

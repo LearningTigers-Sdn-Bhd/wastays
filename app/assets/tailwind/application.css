@@ -285,6 +285,14 @@
     @apply block text-[11px] font-semibold text-sidebar-section-label uppercase tracking-wide px-2.5 mb-2;
   }
 
+  .sidebar-nav-group:first-child .sidebar-section-label {
+    @apply pt-1;
+  }
+
+  .sidebar-collapsed .sidebar-nav-group + .sidebar-nav-group {
+    @apply border-t border-layer-line pt-3;
+  }
+
   /* ─── Navbar Items (Preline CMS Style) ─── */
   .navbar-link {
     @apply flex items-center gap-x-1.5 py-1.5 px-2.5 text-sm text-navbar-nav-foreground rounded-lg hover:bg-navbar-nav-hover transition-colors duration-150;
