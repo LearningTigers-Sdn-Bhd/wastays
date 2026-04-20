@@ -56,11 +56,11 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
           </div>
           <h3 class="font-bold text-sm text-neutral-text-primary uppercase tracking-widest mb-3">Save Voucher</h3>
-          <p class="text-xs text-neutral-text-secondary leading-relaxed mb-4 font-medium">Download or print this page. You'll need to show it upon arrival.</p>
-          <button onclick="window.print()" class="text-[10px] font-bold text-brand-primary hover:text-[#d9c5a0] transition-colors uppercase tracking-widest flex items-center gap-x-2">
-            Print Voucher
+          <p class="text-xs text-neutral-text-secondary leading-relaxed mb-4 font-medium">Download your booking voucher as a PDF. You'll need to show it upon arrival.</p>
+          <%= link_to voucher_booking_path(@booking.confirmation_token), data: { turbo: false }, class: "text-[10px] font-bold text-brand-primary hover:text-[#d9c5a0] transition-colors uppercase tracking-widest flex items-center gap-x-2" do %>
+            Download Voucher
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
+          <% end %>
         </div>
 
         <div class="group">
