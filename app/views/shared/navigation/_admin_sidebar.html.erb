@@ -5,6 +5,7 @@
 <% margin_rules_active = controller_name == 'margin_rules' %>
 <% setup_fee_rules_active = controller_name == 'setup_fee_rules' %>
 <% reconciliations_active = controller_name == 'reconciliations' %>
+<% refund_requests_active = controller_name == 'refund_requests' %>
 <% payouts_active = controller_name == 'payout_batches' %>
 <% audit_logs_active = controller_name == 'audit_logs' %>
 <% integrations_active = controller_name == 'integrations' %>
@@ -31,7 +32,8 @@
       { label: 'Payouts', path: admin_payout_batches_path, search_text: 'Payouts Settlements Hotel Payments', active: payouts_active, icon: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 15h.01"/><path d="M11 15h.01"/><path d="M15 15h.01"/>' },
       { label: 'Margin Settings', path: admin_margin_rules_path, search_text: 'Margin Settings Margin Rules', active: margin_rules_active, icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/>' },
       { label: 'Setup Fee Settings', path: admin_setup_fee_rules_path, search_text: 'Setup Fee Settings Hotel Setup Fees', active: setup_fee_rules_active, icon: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/><path d="M7 14h3"/><path d="M14 14h3"/>' },
-      { label: "Refund Policy", path: admin_refund_policy_path, search_text: "Refund Policy Guest Refunds Finance", active: controller_name == "refund_policies", icon: '<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/>' },
+      { label: "Refund Policy", path: admin_refund_policy_path, search_text: "Refund Policy Guest Refunds Finance", active: controller_name == "refund_policies", icon: '<rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>' },
+      { label: "Refund Requests", path: admin_refund_requests_path, search_text: "Refund Requests Guest Refunds Finance", active: refund_requests_active, icon: '<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/>' },
       { label: 'Payment Issues', path: admin_reconciliation_dashboard_path, search_text: 'Payment Issues Reconciliations', active: reconciliations_active, icon: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' }
     ]
   },
