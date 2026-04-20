@@ -27,7 +27,10 @@ Rails.application.routes.draw do
     post   "request_magic_link",  to: "sessions#request_magic_link", as: :request_magic_link
     delete "logout",              to: "sessions#destroy",          as: :logout
     get    "dashboard",           to: "dashboard#index",           as: :dashboard
-    resources :bookings, only: [ :index, :show ]
+    resources :bookings, only: [ :index, :show ] do
+      resources :refund_requests, only: [ :new, :create ]
+    end
+    resources :refund_requests, only: [ :index, :show ]
     resources :global_search, only: [ :index ]
   end
 
@@ -120,6 +123,7 @@ Rails.application.routes.draw do
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
     end
+    resource :refund_policy, only: [ :show, :update, :destroy ]
     end
 
   # Hotel admin dashboard
@@ -176,5 +180,13 @@ Rails.application.routes.draw do
     patch "settings", to: "settings#update"
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
+
+    resources :refund_requests, only: [ :index, :show ] do
+      member do
+        patch :approve
+        patch :reject
+        patch :complete
+      end
+    end
   end
 end
