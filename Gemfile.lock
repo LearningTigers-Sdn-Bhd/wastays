@@ -411,10 +411,10 @@ GEM
     resend (0.27.0)
       httparty (>= 0.21.0)
     rexml (3.4.4)
-    rqrcode (2.2.0)
+    rqrcode (3.2.0)
       chunky_png (~> 1.0)
-      rqrcode_core (~> 1.0)
-    rqrcode_core (1.2.0)
+      rqrcode_core (~> 2.0)
+    rqrcode_core (2.1.0)
     rspec-core (3.13.6)
       rspec-support (~> 3.13.0)
     rspec-expectations (3.13.5)
@@ -593,7 +593,7 @@ DEPENDENCIES
   rails (~> 8.0.4)
   rails-mcp-server
   resend (~> 0.8)
-  rqrcode (~> 2.2)
+  rqrcode (~> 3.2)
   rspec-rails
   rubocop-rails-omakase
   selenium-webdriver
