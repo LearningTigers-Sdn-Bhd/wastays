@@ -58,13 +58,18 @@ export default class extends Controller {
     const viewportPadding = 16
     const maxLeft = window.innerWidth - menuWidth - viewportPadding
     const left = Math.min(rect.left, maxLeft)
-    const top = rect.bottom + 8
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding
+    const spaceAbove = rect.top - viewportPadding
+    const openUpward = spaceBelow < 240 && spaceAbove > spaceBelow
+    const menuMaxHeight = Math.max(160, openUpward ? spaceAbove : spaceBelow)
+    const top = openUpward ? Math.max(viewportPadding, rect.top - Math.min(menuMaxHeight, 288) - 8) : rect.bottom + 8
 
     this.menuTarget.style.position = "fixed"
     this.menuTarget.style.left = `${Math.max(viewportPadding, left)}px`
     this.menuTarget.style.top = `${top}px`
     this.menuTarget.style.minWidth = `${menuWidth}px`
-    this.menuTarget.style.maxHeight = "18rem"
+    this.menuTarget.style.maxHeight = `${Math.min(menuMaxHeight, 288)}px`
+    this.menuTarget.style.overflowY = "auto"
     this.menuTarget.style.zIndex = "9999"
   }
 
@@ -76,6 +81,7 @@ export default class extends Controller {
     this.menuTarget.style.top = ""
     this.menuTarget.style.minWidth = ""
     this.menuTarget.style.maxHeight = ""
+    this.menuTarget.style.overflowY = ""
     this.menuTarget.style.zIndex = ""
   }
 }
