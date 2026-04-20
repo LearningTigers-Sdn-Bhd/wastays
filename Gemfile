@@ -49,7 +49,7 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
 gem "kaminari", "~> 1.2"
-gem "commonmarker", "~> 2.7"
+gem "commonmarker", "~> 2.8"
 gem "rqrcode", "~> 2.2"
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
