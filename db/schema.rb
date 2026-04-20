@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_20_014937) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_20_072550) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -62,6 +62,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_20_014937) do
     t.datetime "updated_at", null: false
     t.index ["bearer_type", "bearer_id"], name: "index_api_keys_on_bearer"
     t.index ["token"], name: "index_api_keys_on_token", unique: true
+  end
+
+  create_table "app_configs", force: :cascade do |t|
+    t.string "key"
+    t.text "value"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_app_configs_on_key", unique: true
   end
 
   create_table "banking_details", force: :cascade do |t|
