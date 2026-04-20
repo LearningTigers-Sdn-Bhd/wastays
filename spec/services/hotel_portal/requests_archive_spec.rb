@@ -24,8 +24,8 @@ RSpec.describe HotelPortal::RequestsArchive do
     it 'only returns archived requests' do
       archive = described_class.new(hotel)
       expect(archive.rows.size).to eq(3)
-      row_keys = archive.rows.map { |row| [row[:kind], row[:request_id]] }
-      expect(row_keys).not_to include(["housekeeping", unarchived_request.id])
+      row_keys = archive.rows.map { |row| [ row[:kind], row[:request_id] ] }
+      expect(row_keys).not_to include([ "housekeeping", unarchived_request.id ])
     end
 
     context 'filtering by status' do
