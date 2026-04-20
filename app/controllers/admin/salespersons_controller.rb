@@ -9,47 +9,40 @@ class Admin::SalespersonsController < Admin::BaseController
     @selected_hotel_ids = []
   end
 
-  def edit; end
-
   def create
-    @query = search_query
-    result = Admin::Salespersons::CreateService.new(
-      account: current_user.account,
-      params: salesperson_params,
-      hotel_ids: selected_hotel_ids
-    ).call
+    @salespersons = User.where(role: "salesperson").order(:name)
+    @hotels = Hotel.order(:name)
+    @selected_hotel_ids = selected_hotel_ids
+    @new_salesperson = User.new(salesperson_params)
+    @new_salesperson.role = "salesperson"
+    @new_salesperson.account = current_user.account
+    @new_salesperson.email ||= generated_salesperson_email
+    @new_salesperson.password ||= generated_salesperson_password
+    @new_salesperson.password_confirmation ||= @new_salesperson.password
 
-    if result.success?
-      redirect_to admin_salespersons_path(query: @query.presence), notice: "Salesperson created successfully."
+    if @new_salesperson.save
+      assign_hotels(@new_salesperson, @selected_hotel_ids)
+      redirect_to admin_salespersons_path, notice: "Salesperson created successfully."
     else
-      @new_salesperson = result.salesperson
-      @salespersons = Admin::Salespersons::Filter.new(current_user.account.users, @query).call.order(:name)
-      @selected_hotel_ids = selected_hotel_ids
       render :index, status: :unprocessable_content
     end
   end
 
   def update
-    @query = search_query
-    result = Admin::Salespersons::UpdateService.new(
-      salesperson: @salesperson,
-      params: salesperson_params,
-      hotel_ids: selected_hotel_ids
-    ).call
-
-    if result.success?
-      handle_update_success(result)
+    if @salesperson.update(salesperson_params)
+      assign_hotels(@salesperson, selected_hotel_ids)
+      redirect_to admin_salespersons_path, notice: "Salesperson updated successfully."
     else
-      handle_update_failure
+      index
+      @salespersons = @salespersons.map { |record| record.id == @salesperson.id ? @salesperson : record }
+      render :index, status: :unprocessable_content
     end
   end
 
   def destroy
-    @salesperson.destroy!
-    respond_to do |format|
-      format.html { redirect_to admin_salespersons_path(query: search_query.presence), notice: "Salesperson deleted successfully." }
-      format.turbo_stream { render_turbo_remove("Salesperson deleted successfully.") }
-    end
+    @salesperson.update(role: "hotel_staff")
+    Hotel.where(salesperson_id: @salesperson.id).update_all(salesperson_id: nil)
+    redirect_to admin_salespersons_path, notice: "Salesperson removed successfully."
   end
 
   private
@@ -58,62 +51,24 @@ class Admin::SalespersonsController < Admin::BaseController
     @salesperson = User.find(params[:id])
   end
 
-  def set_hotels
-    @hotels = Hotel.order(:name)
-  end
-
-  def handle_update_success(result)
-    notice = result.action == :destroyed ? "Salesperson removed because no hotels are assigned." : "Salesperson updated successfully."
-
-    respond_to do |format|
-      format.html { redirect_to admin_salespersons_path(query: @query.presence), notice: notice }
-      format.turbo_stream do
-        if result.action == :destroyed || (@query.present? && !Admin::Salespersons::Filter.matches?(@salesperson, @query))
-          render_turbo_remove(notice)
-        else
-          render_turbo_update(notice)
-        end
-      end
-    end
-  end
-
-  def handle_update_failure
-    @salespersons = Admin::Salespersons::Filter.new(current_user.account.users, @query).call.order(:name)
-    @salespersons = @salespersons.map { |r| r.id == @salesperson.id ? @salesperson : r }
-    @editing_salesperson_id = @salesperson.id
-    render :index, status: :unprocessable_content
-  end
-
-  def render_turbo_remove(notice)
-    flash.now[:notice] = notice
-    render turbo_stream: [
-      turbo_stream.remove(helpers.dom_id(@salesperson, :row)),
-      turbo_stream.prepend("flash_toasts", partial: "shared/toast", locals: { key: "notice", value: notice })
-    ]
-  end
-
-  def render_turbo_update(notice)
-    flash.now[:notice] = notice
-    @salespersons = Admin::Salespersons::Filter.new(current_user.account.users, @query).call.order(:name)
-    render turbo_stream: [
-      turbo_stream.replace(
-        helpers.dom_id(@salesperson, :row),
-        partial: "admin/salespersons/salesperson_row",
-        locals: { salesperson: @salesperson, index: @salespersons.index(@salesperson) || 0, editing: false }
-      ),
-      turbo_stream.prepend("flash_toasts", partial: "shared/toast", locals: { key: "notice", value: notice })
-    ]
-  end
-
   def salesperson_params
-    params.fetch(:user, ActionController::Parameters.new).permit(:name, :email)
+    params.require(:user).permit(:name)
   end
 
   def selected_hotel_ids
     Array(params[:hotel_ids]).reject(&:blank?).map(&:to_i)
   end
 
-  def search_query
-    params[:query].to_s.strip
+  def assign_hotels(salesperson, hotel_ids)
+    Hotel.where(salesperson_id: salesperson.id).update_all(salesperson_id: nil)
+    Hotel.where(id: hotel_ids).update_all(salesperson_id: salesperson.id)
+  end
+
+  def generated_salesperson_email
+    "salesperson-#{SecureRandom.hex(6)}@wastays.local"
+  end
+
+  def generated_salesperson_password
+    SecureRandom.hex(16)
   end
 end
