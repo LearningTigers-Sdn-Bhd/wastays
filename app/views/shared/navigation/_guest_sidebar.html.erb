@@ -17,13 +17,13 @@
 ] %>
 
 <% render_sidebar_nav = lambda do %>
-  <nav class="flex-1 px-4 py-2 space-y-6">
+  <nav class="flex-1 px-4 py-3 space-y-6">
     <% guest_sidebar_sections.each do |section| %>
-      <div data-admin-sidebar-search-target="section">
+      <div class="sidebar-nav-group">
         <span class="sidebar-section-label"><%= section[:label] %></span>
         <div class="space-y-0.5">
           <% section[:items].each do |item| %>
-            <a data-admin-sidebar-search-target="item" data-search-text="<%= item[:search_text] %>" class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= item[:path] %>">
+            <a class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= item[:path] %>">
               <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
               <span><%= item[:label] %></span>
             </a>
@@ -34,73 +34,19 @@
   </nav>
 <% end %>
 
-<!-- Desktop sidebar -->
-<aside id="guest-sidebar" data-controller="admin-sidebar-search" class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full overflow-y-auto custom-scrollbar">
-  <div class="p-4 pb-2">
-    <label class="block" for="guest-sidebar-search-desktop">
-      <span class="sr-only">Search navigation</span>
-      <span class="relative block">
-        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground-2">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        </span>
-        <input id="guest-sidebar-search-desktop" type="search" placeholder="Search navigation" autocomplete="off" data-admin-sidebar-search-target="input" data-action="input->admin-sidebar-search#filter" class="w-full rounded-lg border border-layer-line bg-layer-alt py-2 pl-10 pr-3 text-sm text-neutral-text-primary placeholder:text-muted-foreground-2 shadow-xs focus:border-slate-300 focus:outline-none focus:ring-0">
-      </span>
-    </label>
-  </div>
-
-  <%= capture(&render_sidebar_nav) %>
-
-  <div data-admin-sidebar-search-target="section" class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
-    <% guest_sidebar_footer_items.each do |item| %>
-      <a data-admin-sidebar-search-target="item" data-search-text="<%= item[:search_text] %>" class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
-        <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
-        <span><%= item[:label] %></span>
-      </a>
-    <% end %>
-  </div>
-
-  <div data-admin-sidebar-search-target="empty" class="hidden mx-4 mb-4 rounded-xl border border-dashed border-layer-line bg-layer-alt px-4 py-5 text-center text-sm text-muted-foreground-2">
-    No navigation matches that search.
-  </div>
-</aside>
-
-<!-- Mobile sidebar overlay -->
-<div id="guest-sidebar-overlay" class="fixed inset-0 z-[79] bg-black/50 hidden lg:hidden" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#close"></div>
-<aside id="guest-sidebar-mobile" data-controller="admin-sidebar-search sidebar-toggle" class="fixed top-0 start-0 bottom-0 z-[80] w-[260px] bg-sidebar-bg border-e border-layer-line transform -translate-x-full transition-transform duration-300 lg:hidden overflow-y-auto custom-scrollbar">
-  <div class="flex items-center justify-between p-4 border-b border-layer-line">
-    <a href="<%= guest_dashboard_path %>" class="flex items-center gap-x-2.5">
-      <span class="inline-flex justify-center items-center size-8 bg-brand-primary rounded-lg text-white font-bold text-sm shadow-xs">W</span>
-      <span class="text-sm font-semibold text-neutral-text-primary">WAStays</span>
+<% guest_nav_html = capture(&render_sidebar_nav) %>
+<% guest_footer_html = capture do %>
+  <% guest_sidebar_footer_items.each do |item| %>
+    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
+      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
+      <span><%= item[:label] %></span>
     </a>
-    <button type="button" class="inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-action="click->sidebar-toggle#close">
-      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-    </button>
-  </div>
+  <% end %>
+<% end %>
 
-  <div class="p-4 pb-2">
-    <label class="block" for="guest-sidebar-search-mobile">
-      <span class="sr-only">Search navigation</span>
-      <span class="relative block">
-        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground-2">
-          <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        </span>
-        <input id="guest-sidebar-search-mobile" type="search" placeholder="Search navigation" autocomplete="off" data-admin-sidebar-search-target="input" data-action="input->admin-sidebar-search#filter" class="w-full rounded-lg border border-layer-line bg-layer-alt py-2 pl-10 pr-3 text-sm text-neutral-text-primary placeholder:text-muted-foreground-2 shadow-xs focus:border-slate-300 focus:outline-none focus:ring-0">
-      </span>
-    </label>
-  </div>
-
-  <%= capture(&render_sidebar_nav) %>
-
-  <div data-admin-sidebar-search-target="section" class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
-    <% guest_sidebar_footer_items.each do |item| %>
-      <a data-admin-sidebar-search-target="item" data-search-text="<%= item[:search_text] %>" class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
-        <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
-        <span><%= item[:label] %></span>
-      </a>
-    <% end %>
-  </div>
-
-  <div data-admin-sidebar-search-target="empty" class="hidden mx-4 mb-4 rounded-xl border border-dashed border-layer-line bg-layer-alt px-4 py-5 text-center text-sm text-muted-foreground-2">
-    No navigation matches that search.
-  </div>
-</aside>
+<%= render "shared/navigation/sidebar_shell",
+           sidebar_key: "guest",
+           home_path: guest_dashboard_path,
+           nav_html: guest_nav_html,
+           footer_html: guest_footer_html,
+           search_enabled: false %>
