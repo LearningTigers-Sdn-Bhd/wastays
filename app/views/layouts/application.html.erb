@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title><%= content_for(:title) || "Wastays" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -18,11 +18,13 @@
 
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/preline@2.4.1/dist/preline.min.css">
+    <% unless controller_name == "static_pages" && action_name == "home" %>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/preline@2.4.1/dist/preline.min.css">
+    <% end %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased">
+  <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased" data-preline-enabled="<%= !(controller_name == 'static_pages' && action_name == 'home') %>">
     <script>
       document.documentElement.classList.remove("landing-loader-active")
     </script>
@@ -35,7 +37,7 @@
 
         <!-- Logo -->
         <a class="flex items-center flex-none focus:outline-none group" href="<%= root_path %>" aria-label="WAStays">
-          <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "block h-11 w-auto" %>
+          <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "block h-11 w-auto" %>
         </a>
 
         <!-- Nav links (desktop) -->
@@ -190,7 +192,7 @@
           <!-- Brand column -->
           <div class="lg:col-span-2">
             <a class="inline-block mb-4" href="<%= root_path %>" aria-label="WAStays">
-              <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "block h-12 w-auto -ml-2" %>
+              <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "block h-12 w-auto -ml-2" %>
             </a>
             <p class="text-sm text-gray-400 leading-relaxed max-w-xs mb-8">
               Helping independent hotels automate guest communication, grow direct revenue, and deliver exceptional hospitality — through WhatsApp.

@@ -4,6 +4,9 @@ import "controllers"
 import "turbo_confirm"
 
 async function initializePreline() {
+  const enabled = document.body?.dataset?.prelineEnabled !== "false"
+  if (!enabled) return
+
   try {
     await import("preline")
 

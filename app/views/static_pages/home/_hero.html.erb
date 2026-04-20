@@ -13,12 +13,21 @@
     <!-- Mobile dark overlay for text contrast -->
     <div class="lg:hidden absolute inset-0 z-[5] bg-black/40"></div>
 
-    <% hero_backgrounds = ["landing/bg-1.jpg", "landing/bg-2.jpg", "landing/bg-3.jpg", "landing/bg-4.jpg"] %>
+    <% hero_backgrounds = ["landing/bg-1.webp", "landing/bg-2.webp", "landing/bg-3.webp", "landing/bg-4.webp"] %>
     <% hero_backgrounds.each_with_index do |path, index| %>
-      <% asset = Rails.application.assets.load_path.find(path) %>
       <img
-        src="/assets/<%= asset.digested_path %>"
+        <% if index.zero? %>
+        src="<%= asset_path(path) %>"
+        fetchpriority="high"
+        <% else %>
+        data-src="<%= asset_path(path) %>"
+        loading="lazy"
+        fetchpriority="low"
+        <% end %>
+        width="<%= index.zero? ? 1600 : 1280 %>"
+        height="<%= index.zero? ? 1067 : 720 %>"
         alt="Sabah hospitality scene"
+        decoding="async"
         class="absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 <%= index.zero? ? "opacity-100" : "opacity-0" %>"
         data-hero-background-target="slide"
       >
