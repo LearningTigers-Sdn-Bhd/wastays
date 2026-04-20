@@ -85,4 +85,29 @@ RSpec.describe Booking, type: :model do
       end
     end
   end
+
+  describe "after_create_commit - WhatsApp invoice" do
+    let(:hotel)     { create(:hotel) }
+    let(:room_type) { create(:room_type, hotel: hotel) }
+
+    def booking_with_room(status:)
+      booking = create(:booking, hotel: hotel, status: status,
+                       tourism_tax_applied: false, tourism_tax_amount: 0.0)
+      create(:booking_room, booking: booking, room_type: room_type,
+             subtotal: 200.0, room_type_snapshot: { "name" => room_type.name })
+      booking
+    end
+
+    it "enqueues SendWhatsappInvoiceJob when status is confirmed" do
+      expect {
+        booking_with_room(status: "confirmed")
+      }.to have_enqueued_job(SendWhatsappInvoiceJob)
+    end
+
+    it "does not enqueue SendWhatsappInvoiceJob when status is pending" do
+      expect {
+        booking_with_room(status: "pending")
+      }.not_to have_enqueued_job(SendWhatsappInvoiceJob)
+    end
+  end
 end

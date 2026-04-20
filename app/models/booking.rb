@@ -132,6 +132,7 @@ class Booking < ApplicationRecord
 
   before_save :set_payout_status, if: :status_changed?
   after_create_commit :enqueue_invoice_email, if: -> { status == "confirmed" }
+  after_create_commit :enqueue_whatsapp_invoice, if: -> { status == "confirmed" }
 
   def pre_checkin_display_status
     metadata = pre_checkin&.metadata || {}
@@ -167,6 +168,10 @@ class Booking < ApplicationRecord
 
   def enqueue_invoice_email
     SendInvoiceEmailJob.perform_later(id)
+  end
+
+  def enqueue_whatsapp_invoice
+    SendWhatsappInvoiceJob.perform_later(id)
   end
 
   def generate_confirmation_token

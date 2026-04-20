@@ -33,7 +33,7 @@ RSpec.describe BookingMailer, type: :mailer do
   subject(:mail) { described_class.invoice(booking) }
 
   it "sends to the guest email" do
-    expect(mail.to).to eq(["aisha@example.com"])
+    expect(mail.to).to eq([ "aisha@example.com" ])
   end
 
   it "includes the confirmation token in the subject" do

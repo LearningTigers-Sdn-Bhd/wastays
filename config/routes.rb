@@ -131,7 +131,10 @@ Rails.application.routes.draw do
       get :docs, on: :collection
     end
     resource :refund_policy, only: [ :show, :update, :destroy ]
+    resource :integrations, only: [ :show, :update, :destroy ] do
+      post :test_ping, on: :collection
     end
+  end
 
   # Hotel admin dashboard
   get "/hotel/settings", to: "hotel_portal/settings#index", as: :legacy_hotel_settings

@@ -84,6 +84,7 @@ group :test do
   gem "cuprite"
   gem "shoulda-matchers"
   gem "simplecov", require: false
+  gem "webmock"
 end
 
 group :development do
