@@ -1,5 +1,8 @@
-<div class="relative overflow-hidden bg-landing-bg" data-controller="scroll-reveal landing-loader" data-landing-loader-delay-value="1650">
-  <%= render "static_pages/home/loading_screen" %>
+<% content_for :head do %>
+  <link rel="preload" as="image" href="<%= asset_path('landing/bg-1.webp') %>" fetchpriority="high">
+<% end %>
+
+<div class="relative bg-landing-bg" data-controller="scroll-reveal">
   <%= render "static_pages/home/hero" %>
   <%= render "static_pages/home/problem_solution" %>
   <%= render "static_pages/home/benefits_marquee" %>
