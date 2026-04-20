@@ -58,7 +58,11 @@ Rails.application.routes.draw do
   # Public Booking Engine
   scope module: :public do
     resources :hotels, only: [ :index, :show ]
-    resources :quotes, only: [ :create, :show ]
+    resources :quotes, only: [ :create, :show ] do
+      member do
+        get :guest_lookup
+      end
+    end
     resources :bookings, only: [ :show ] do
       member do
         get :invoice
@@ -132,6 +136,13 @@ Rails.application.routes.draw do
       get :docs, on: :collection
     end
     resource :refund_policy, only: [ :show, :update, :destroy ]
+    resources :refund_requests, only: [ :index, :show ] do
+      member do
+        patch :approve
+        patch :reject
+        patch :complete
+      end
+    end
     resource :integrations, only: [ :show, :update, :destroy ] do
       post :test_ping, on: :collection
     end
@@ -191,13 +202,5 @@ Rails.application.routes.draw do
     patch "settings", to: "settings#update"
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
-
-    resources :refund_requests, only: [ :index, :show ] do
-      member do
-        patch :approve
-        patch :reject
-        patch :complete
-      end
-    end
   end
 end

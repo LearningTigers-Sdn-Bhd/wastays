@@ -25,6 +25,24 @@ class Public::QuotesController < ApplicationController
     @payment_gateway = @hotel.checkout_payment_gateway || "razorpay"
   end
 
+  def guest_lookup
+    quote = BookingQuote.find_by!(token: params[:id])
+    email = params[:email].to_s.strip.downcase
+
+    if email.blank?
+      return render json: { found: false, message: "Email is required." }, status: :unprocessable_content
+    end
+
+    guest = Guest.find_by(email: email)
+    found = guest.present?
+
+    render json: {
+      found: found,
+      guest_details: found ? guest_lookup_payload(guest) : {},
+      quote_token: quote.token
+    }
+  end
+
   private
 
   def quote_params
@@ -73,5 +91,17 @@ class Public::QuotesController < ApplicationController
     addr.loopback? || addr.private?
   rescue IPAddr::InvalidAddressError
     false
+  end
+
+  def guest_lookup_payload(guest)
+    {
+      name: guest.name,
+      email: guest.email,
+      phone: guest.phone,
+      government_id: guest.government_id,
+      gender: guest.gender,
+      country: guest.country,
+      document_type: guest.document_type
+    }.compact
   end
 end
