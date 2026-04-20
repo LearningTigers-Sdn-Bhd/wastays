@@ -95,6 +95,7 @@ Rails.application.routes.draw do
       end
     end
     resources :bookings, only: [ :index, :show ] # Added stub
+    resources :salespersons, only: [ :index, :create, :update, :destroy ]
     resources :reconciliations, only: [ :index, :show ] do
       member do
         post :retry

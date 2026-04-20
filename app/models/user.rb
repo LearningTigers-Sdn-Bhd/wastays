@@ -17,7 +17,7 @@ class User < ApplicationRecord
   validates :role, presence: true
   validates :time_zone, inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }
 
-  ROLES = %w[superadmin admin hotel_staff].freeze
+  ROLES = %w[superadmin admin hotel_staff salesperson].freeze
 
   before_validation :assign_default_time_zone
 
