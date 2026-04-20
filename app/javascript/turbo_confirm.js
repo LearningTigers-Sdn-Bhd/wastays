@@ -21,9 +21,9 @@ class TurboConfirm {
       
       // Update button color based on action type if provided
       if (element.dataset.turboConfirmColor === 'red') {
-        this.confirmButton.className = "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none"
+        this.confirmButton.className = "inline-flex items-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none"
       } else {
-        this.confirmButton.className = "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
+        this.confirmButton.className = "inline-flex items-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
       }
 
       this.confirmModal.classList.remove("hidden")
@@ -38,6 +38,13 @@ class TurboConfirm {
         this.cancelButton.onclick = () => {
           this.hide()
           resolve(false)
+        }
+
+        this.confirmModal.onclick = (event) => {
+          if (event.target === this.confirmModal) {
+            this.hide()
+            resolve(false)
+          }
         }
 
         // Close on ESC
@@ -56,6 +63,7 @@ class TurboConfirm {
   hide() {
     this.confirmModal.classList.add("hidden")
     this.confirmModal.classList.remove("flex")
+    this.confirmModal.onclick = null
   }
 }
 

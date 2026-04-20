@@ -164,6 +164,14 @@
                 if (countryMenu) countryMenu.classList.add('hidden');
               };
 
+              const applyCountrySelection = (option) => {
+                if (!option || !countryInputField) return;
+                countryInputField.value = option.dataset.countryOption || '';
+                closeCountryMenu();
+                updateEnabled();
+                autoSelectDocumentType();
+              };
+
               if (countryInputField) {
                 countryInputField.addEventListener('input', (event) => {
                   renderCountryOptions(event.target.value);
@@ -179,13 +187,18 @@
               }
 
               if (countryMenu) {
+                countryMenu.addEventListener('mousedown', (event) => {
+                  const option = event.target.closest('[data-country-option]');
+                  if (!option) return;
+                  // Select before input blur hides the dropdown.
+                  event.preventDefault();
+                  applyCountrySelection(option);
+                });
+
                 countryMenu.addEventListener('click', (event) => {
                   const option = event.target.closest('[data-country-option]');
-                  if (!option || !countryInputField) return;
-                  countryInputField.value = option.dataset.countryOption;
-                  closeCountryMenu();
-                  updateEnabled();
-                  autoSelectDocumentType();
+                  if (!option) return;
+                  applyCountrySelection(option);
                 });
               }
 

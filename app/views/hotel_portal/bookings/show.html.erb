@@ -181,6 +181,41 @@
               <%= render "hotel_portal/bookings/internal_notes", booking: @booking %>
             </div>
           </div>
+
+          <% if @booking.refund_request.present? %>
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="font-semibold text-gray-800">Refund Request</h2>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider
+                  <%= case @booking.refund_request.status
+                      when "pending" then "bg-yellow-100 text-yellow-700"
+                      when "approved" then "bg-blue-100 text-blue-700"
+                      when "completed" then "bg-green-100 text-green-700"
+                      when "rejected" then "bg-red-100 text-red-700"
+                      end %>">
+                  <%= @booking.refund_request.status.humanize %>
+                </span>
+              </div>
+              <div class="p-6 space-y-3 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-gray-500">Refund Amount</span>
+                  <span class="font-semibold text-gray-900"><%= number_to_currency(@booking.refund_request.refund_amount, unit: @booking.currency + " ") %></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-500">Bank</span>
+                  <span class="font-medium text-gray-900"><%= @booking.refund_request.bank_name %></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-500">Account Number</span>
+                  <span class="font-mono font-medium text-gray-900"><%= @booking.refund_request.account_number %></span>
+                </div>
+                <div class="pt-3 border-t border-gray-200">
+                  <%= link_to "Manage Refund Request", hotel_refund_request_path(current_hotel, @booking.refund_request),
+                      class: "text-sm font-semibold text-blue-600 hover:text-blue-800" %>
+                </div>
+              </div>
+            </div>
+          <% end %>
         </div>
 
         <div data-booking-tabs-target="panel" data-tab-panel="requests" class="space-y-6 hidden">

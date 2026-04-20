@@ -7,6 +7,7 @@ class Booking < ApplicationRecord
   has_many :booking_guests, dependent: :destroy
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
+  has_one :refund_request, dependent: :destroy
   has_many :housekeeping_requests, dependent: :destroy
   has_many :complaint_requests, dependent: :destroy
   attr_accessor :estimated_arrival_time
