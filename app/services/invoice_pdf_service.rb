@@ -163,14 +163,6 @@ class InvoicePdfService
     end
 
     tax_rows = []
-    if @booking.tourism_tax_applied && @booking.tourism_tax_amount.to_f.positive?
-      tax_rows << [
-        { content: "Tourism Tax", size: 10, text_color: TEXT_MUTED },
-        { content: "—", size: 10, text_color: TEXT_MUTED, align: :center },
-        { content: "—", size: 10, text_color: TEXT_MUTED, align: :center },
-        { content: "MYR #{fmt(@booking.tourism_tax_amount)}", size: 10, text_color: TEXT_MUTED, align: :right }
-      ]
-    end
 
     pdf.table(
       [header_row] + room_rows + tax_rows,
