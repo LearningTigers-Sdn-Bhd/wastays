@@ -42,6 +42,7 @@ class Admin::SalespersonsController < Admin::BaseController
     else
       index
       @salespersons = @salespersons.map { |record| record.id == @salesperson.id ? @salesperson : record }
+      @editing_salesperson_id = @salesperson.id
       render :index, status: :unprocessable_content
     end
   end
