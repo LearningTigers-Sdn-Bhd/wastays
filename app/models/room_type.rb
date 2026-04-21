@@ -3,6 +3,8 @@ class RoomType < ApplicationRecord
 
   has_many :room_rates, dependent: :destroy
   has_many :room_inventories, dependent: :destroy
+  has_many :rate_plans, dependent: :destroy
+  has_one :channel_mapping, as: :mappable, dependent: :destroy
   has_many_attached :photos
 
   validates :name, presence: true
