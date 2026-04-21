@@ -1,5 +1,5 @@
 class Admin::HotelsController < Admin::BaseController
-  before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend ]
+  before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend, :onboard_channex, :disconnect_channex ]
 
   def index
     @hotels = Hotel.all.order(created_at: :desc)
