@@ -295,6 +295,7 @@ handle_failure() {
 trap 'handle_failure "$?"' ERR
 
 print_banner
+run_step "🧹" "Rails Cache Clear" "bin/rails tmp:cache:clear"
 run_step "🔍" "RuboCop" "bin/rubocop"
 run_step "🔰" "Brakeman" "bin/brakeman --no-pager"
 run_step "💎" "Bundle Audit" "bundle exec bundle-audit update && bundle exec bundle-audit check"

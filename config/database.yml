@@ -58,6 +58,46 @@ test:
   <<: *default
   database: wastays_test
 
+# Demo environment — completely isolated database.
+# In Coolify, set DEMO_DATABASE_URL (or DATABASE_URL when RAILS_ENV=demo)
+# to point to the demo PostgreSQL database.
+<%
+  demo_database_url = ENV["DEMO_DATABASE_URL"].presence || (Rails.env.demo? ? ENV["DATABASE_URL"] : nil)
+
+  if demo_database_url.present?
+    demo_uri = URI.parse(demo_database_url)
+    demo_database_name = demo_uri.path.delete_prefix("/")
+
+    if demo_database_name.empty?
+      demo_database_name = "wastays_demo"
+      demo_uri.path = "/#{demo_database_name}"
+      demo_database_url = demo_uri.to_s
+    end
+
+    demo_cache_database_url = demo_uri.dup.tap { |uri| uri.path = "/#{demo_database_name}_cache" }.to_s
+    demo_queue_database_url = demo_uri.dup.tap { |uri| uri.path = "/#{demo_database_name}_queue" }.to_s
+    demo_cable_database_url = demo_uri.dup.tap { |uri| uri.path = "/#{demo_database_name}_cable" }.to_s
+  end
+%>
+
+demo:
+  primary: &primary_demo
+    <<: *default
+    url: <%= demo_database_url %>
+    database: wastays_demo
+  cache:
+    <<: *primary_demo
+    url: <%= demo_cache_database_url %>
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *primary_demo
+    url: <%= demo_queue_database_url %>
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *primary_demo
+    url: <%= demo_cable_database_url %>
+    migrations_paths: db/cable_migrate
+
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
 # ever seen by anyone, they now have access to your database.

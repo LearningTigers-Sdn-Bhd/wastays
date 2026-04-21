@@ -10,8 +10,15 @@ class Admin::GlobalSearchService < BaseGlobalSearchService
     { title: "Payout Batches", subtitle: "Weekly settlements", url: :admin_payout_batches_path, keywords: "payout settlements batches" },
     { title: "Margin Settings", subtitle: "Platform margin rules", url: :admin_margin_rules_path, keywords: "margin rules settings" },
     { title: "Setup Fee Settings", subtitle: "Setup fee rules", url: :admin_setup_fee_rules_path, keywords: "setup fee rules settings" },
+    { title: "Refund Policy", subtitle: "Platform refund policy", url: :admin_refund_policy_path, keywords: "refund policy guest refunds finance" },
+    { title: "Refund Requests", subtitle: "Guest refund request queue", url: :admin_refund_requests_path, keywords: "refund requests guest refunds finance" },
     { title: "Audit Logs", subtitle: "System activity", url: :admin_audit_logs_path, keywords: "audit logs activity" },
-    { title: "API Access Management", subtitle: "API keys", url: :admin_api_keys_path, keywords: "api access keys integration" }
+    { title: "API Access Management", subtitle: "API keys", url: :admin_api_keys_path, keywords: "api access keys integration" },
+    { title: "Integrations", subtitle: "Webhook and automation settings", url: :admin_integrations_path, keywords: "integrations webhook whatsapp n8n automation" },
+    { title: "Developer Guide", subtitle: "API setup and docs", url: :docs_admin_api_keys_path, keywords: "api developer guide docs" },
+    { title: "My Profile", subtitle: "Admin account settings", url: :edit_admin_profile_path, keywords: "profile account settings" },
+    { title: "Homepage", subtitle: "Public marketing site", url: :root_path, keywords: "homepage website home" },
+    { title: "Help & Support", subtitle: "Help center guides", url: :help_center_path, keywords: "help support faq guides" }
   ].freeze
 
   def perform
