@@ -7,19 +7,23 @@ module ChannelManagers
 
       # 1. Create Property
       property_id = ensure_property(client)
-      return failure("Failed to create Channex property") unless property_id
+      return failure("Failed to create Channex property. Check logs for details.") unless property_id
 
       # 2. Create Room Types
       @hotel.room_types.each do |room_type|
-        ensure_room_type(client, room_type, property_id)
+        rt_id = ensure_room_type(client, room_type, property_id)
+        return failure("Failed to create Channex room type: #{room_type.name}") unless rt_id
       end
 
       # 3. Create Rate Plans (for each room type)
       @hotel.room_types.each do |room_type|
-        ensure_rate_plans(client, room_type)
+        result = ensure_rate_plans(client, room_type)
+        return failure("Failed to create Channex rate plans for: #{room_type.name}") unless result
       end
 
       success("Hotel onboarded to Channex")
+    rescue StandardError => e
+      failure("Onboarding error: #{e.message}")
     end
 
     def push_ari(date_range:)
@@ -36,14 +40,11 @@ module ChannelManagers
     end
 
     def ingest_booking(payload:)
-      # payload is the raw JSON from Channex booking revision feed or GET /booking_revisions/:id
       data = payload["data"] || payload
 
-      # Map Channex status to WAStays status
-      # Channex statuses: new, modified, cancelled
       wa_status = case data["status"]
-      when "cancelled" then "cancelled"
-      else "confirmed"
+                  when "cancelled" then "cancelled"
+                  else "confirmed"
       end
 
       {
@@ -59,7 +60,6 @@ module ChannelManagers
           email: data.dig("customer", "email"),
           phone: data.dig("customer", "phone"),
           country: data.dig("customer", "country")
-          # Channex doesn't always provide gender/doc_type, but we'll take what we can
         },
         rooms: parse_booking_rooms(data["rooms"] || []),
         total_amount: data["amount"].to_f,
@@ -136,10 +136,10 @@ module ChannelManagers
       payload = {
         property: {
           name: @hotel.name,
-          city: @hotel.city,
+          city: @hotel.city || "Unknown City",
           country: "MY", # Channex expects ISO 2-letter country code
           currency: @hotel.default_currency || "MYR",
-          timezone: "Kuala Lumpur" # Default for now
+          timezone: "Kuala Lumpur"
         }
       }
 
@@ -148,6 +148,7 @@ module ChannelManagers
         mapping.update!(external_id: response["data"]["id"])
         response["data"]["id"]
       else
+        Rails.logger.error "Channex Property Creation Failed: #{response}"
         nil
       end
     end
@@ -173,6 +174,7 @@ module ChannelManagers
         mapping.update!(external_id: response["data"]["id"])
         response["data"]["id"]
       else
+        Rails.logger.error "Channex Room Type Creation Failed (#{room_type.name}): #{response}"
         nil
       end
     end
@@ -183,8 +185,8 @@ module ChannelManagers
         room_type.rate_plans.create!(name: "Standard Rate", sell_mode: "per_room", currency: @hotel.default_currency || "MYR")
       end
 
-      room_type.rate_plans.each do |rate_plan|
-        ensure_rate_plan(client, rate_plan, room_type.channel_mapping.external_id)
+      room_type.rate_plans.all? do |rate_plan|
+        ensure_rate_plan(client, rate_plan, room_type.channel_mapping.external_id).present?
       end
     end
 
@@ -206,6 +208,7 @@ module ChannelManagers
         mapping.update!(external_id: response["data"]["id"])
         response["data"]["id"]
       else
+        Rails.logger.error "Channex Rate Plan Creation Failed (#{rate_plan.name}): #{response}"
         nil
       end
     end

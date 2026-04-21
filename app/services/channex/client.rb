@@ -6,9 +6,11 @@ module Channex
     STAGING_URL = "https://staging.channex.io/api/v1".freeze
     PRODUCTION_URL = "https://channex.io/api/v1".freeze
 
-    def initialize(api_key: nil, environment: :staging)
+    def initialize(api_key: nil, environment: nil)
       @api_key = api_key || AppConfig.get("channex_api_key")
-      @base_url = environment == :production ? PRODUCTION_URL : STAGING_URL
+      
+      env = environment || AppConfig.get("channex_environment") || "staging"
+      @base_url = env == "production" ? PRODUCTION_URL : STAGING_URL
     end
 
     def get(path, params = {})
