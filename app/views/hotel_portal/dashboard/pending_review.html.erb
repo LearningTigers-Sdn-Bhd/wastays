@@ -7,29 +7,6 @@
     <h1 class="text-3xl font-bold text-gray-900">Pending Review</h1>
     <p class="mt-3 text-sm text-gray-600">Our team is reviewing your hotel setup.</p>
     
-    <% if @upcoming_sessions.any? %>
-      <div class="mt-8 text-left p-6 rounded-2xl border border-blue-100 bg-blue-50/50 shadow-sm">
-        <h2 class="text-sm font-bold uppercase tracking-wider text-blue-800 mb-4 flex items-center gap-2">
-          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5L4.2 5.8c-.3.3-.5.7-.5 1.1v11.2c0 .4.2.8.5 1.1l3.3 3.3c.3.3.7.5 1.1.5h6.9c.4 0 .8-.2 1.1-.5l3.3-3.3c.3-.3.5-.7.5-1.1V7c0-.4-.2-.8-.5-1.1L16.6 2.5c-.3-.3-.7-.5-1.1-.5z"/><path d="M10 10h.01"/><path d="M14 10h.01"/><path d="M10 14h.01"/><path d="M14 14h.01"/><path d="M10 18h.01"/><path d="M14 18h.01"/></svg>
-          Your Scheduled Training
-        </h2>
-        <% @upcoming_sessions.each do |session| %>
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2 border-b border-blue-100 last:border-0">
-            <div>
-              <p class="text-sm font-bold text-slate-900">Training with <%= session.trainer.name %></p>
-              <p class="text-xs text-slate-600"><%= session.scheduled_at.strftime("%d %b %Y at %I:%M %p") %></p>
-            </div>
-            <% if session.meeting_link.present? %>
-              <%= link_to session.meeting_link, target: "_blank", class: "inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition shadow-sm" do %>
-                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                Join Meeting
-              <% end %>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
-
     <p class="mt-6 text-sm text-gray-600">You have completed the onboarding steps and submitted your property for approval. We will contact you once your hotel is approved.</p>
     <p class="mt-2 text-sm text-gray-600">You will be able to access the full hotel system once your hotel is approved.</p>
 

@@ -358,7 +358,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
     t.index ["settable_type", "settable_id"], name: "index_margin_rules_on_settable"
   end
 
-<<<<<<< HEAD
   create_table "observation_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "entry_type", null: false
     t.string "request_id"
@@ -375,7 +374,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
     t.index ["request_id"], name: "index_observation_entries_on_request_id"
     t.index ["status"], name: "index_observation_entries_on_status"
     t.index ["tags"], name: "index_observation_entries_on_tags", using: :gin
-=======
+    
   create_table "onboarding_sessions", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.bigint "trainer_id", null: false
@@ -388,7 +387,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_onboarding_sessions_on_hotel_id"
     t.index ["trainer_id"], name: "index_onboarding_sessions_on_trainer_id"
->>>>>>> 2950168 (feat: add onboarding page under hotels in admin dashboard)
   end
 
   create_table "onboarding_sessions", force: :cascade do |t|
@@ -652,11 +650,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
   add_foreign_key "bookings", "hotels"
   add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
-<<<<<<< HEAD
   add_foreign_key "hotel_pricing_rules", "hotels"
-=======
   add_foreign_key "complaints", "bookings"
->>>>>>> e2526a4 (feat: add salesperson page under bookings)
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "users", column: "salesperson_id"
   add_foreign_key "housekeeping_requests", "bookings"
