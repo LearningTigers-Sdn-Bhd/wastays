@@ -16,6 +16,7 @@ class Hotel < ApplicationRecord
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
+  has_many :onboarding_sessions, dependent: :destroy
 
   validates :name, presence: true
   validates :status, presence: true

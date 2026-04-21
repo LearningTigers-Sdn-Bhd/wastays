@@ -1,0 +1,105 @@
+<div class="max-w-[85rem] mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="text-center mb-10">
+    <h1 class="text-3xl font-bold text-gray-800">Welcome to WAStays!</h1>
+    <p class="mt-2 text-sm text-gray-600">Complete these steps to get your hotel ready for review.</p>
+  </div>
+
+  <div class="max-w-2xl mx-auto space-y-6">
+    <!-- Training Session Section -->
+    <% if @upcoming_sessions.any? %>
+      <div class="mb-10 p-6 rounded-2xl border border-blue-100 bg-blue-50/50 shadow-sm">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-blue-800 mb-4 flex items-center gap-2">
+          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5L4.2 5.8c-.3.3-.5.7-.5 1.1v11.2c0 .4.2.8.5 1.1l3.3 3.3c.3.3.7.5 1.1.5h6.9c.4 0 .8-.2 1.1-.5l3.3-3.3c.3-.3.5-.7.5-1.1V7c0-.4-.2-.8-.5-1.1L16.6 2.5c-.3-.3-.7-.5-1.1-.5z"/><path d="M10 10h.01"/><path d="M14 10h.01"/><path d="M10 14h.01"/><path d="M14 14h.01"/><path d="M10 18h.01"/><path d="M14 18h.01"/></svg>
+          Your Scheduled Training
+        </h2>
+        <% @upcoming_sessions.each do |session| %>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2 border-b border-blue-100 last:border-0">
+            <div>
+              <p class="text-sm font-bold text-slate-900">Training with <%= session.trainer.name %></p>
+              <p class="text-xs text-slate-600"><%= session.scheduled_at.strftime("%d %b %Y at %I:%M %p") %></p>
+            </div>
+            <% if session.meeting_link.present? %>
+              <%= link_to session.meeting_link, target: "_blank", class: "inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition shadow-sm" do %>
+                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Join Meeting
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Step 1: Hotel Profile -->
+    <% profile_done = @current_hotel.profile_completed? %>
+    <div id="step-profile" class="<%= onboarding_step_card_classes(profile_done) %>">
+      <div class="flex items-center gap-x-4">
+        <%= onboarding_step_status_icon(profile_done) do %>
+          <div class="flex-shrink-0 size-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">1</div>
+        <% end %>
+        <div class="flex-grow">
+          <h3 class="text-lg font-semibold text-gray-800">Hotel Profile</h3>
+          <p class="text-sm text-gray-600">Complete your hotel's general information and contact details.</p>
+        </div>
+        <div>
+          <%= link_to (profile_done ? "Edit" : "Update"), edit_hotel_profile_path(@current_hotel), class: onboarding_button_classes(profile_done) %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Hotel Policies -->
+    <% policies_done = @current_hotel.policies_completed? %>
+    <div id="step-policies" class="<%= onboarding_step_card_classes(policies_done) %>">
+      <div class="flex items-center gap-x-4 <%= onboarding_step_content_classes(profile_done) %>">
+        <%= onboarding_step_status_icon(policies_done) do %>
+          <div class="flex-shrink-0 size-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold">2</div>
+        <% end %>
+        <div class="flex-grow">
+          <h3 class="text-lg font-semibold text-gray-800">Hotel Policies</h3>
+          <p class="text-sm text-gray-600">Set your check-in, check-out, and cancellation policies.</p>
+        </div>
+        <div>
+          <% if profile_done %>
+            <%= link_to (policies_done ? "Edit" : "Update"), edit_hotel_property_policy_path(@current_hotel), class: onboarding_button_classes(policies_done) %>
+          <% else %>
+            <button disabled class="py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-gray-600 text-white disabled:opacity-50 disabled:pointer-events-none">Pending</button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Room Setup -->
+    <% rooms_done = @current_hotel.rooms_completed? %>
+    <div id="step-rooms" class="<%= onboarding_step_card_classes(rooms_done) %>">
+      <div class="flex items-center gap-x-4 <%= onboarding_step_content_classes(policies_done) %>">
+        <%= onboarding_step_status_icon(rooms_done) do %>
+          <div class="flex-shrink-0 size-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold">3</div>
+        <% end %>
+        <div class="flex-grow">
+          <h3 class="text-lg font-semibold text-gray-800">Room Setup</h3>
+          <p class="text-sm text-gray-600">Define your room types, occupancy, and base rates.</p>
+        </div>
+        <div>
+          <% if policies_done %>
+            <%= link_to (rooms_done ? "Manage" : "Update"), hotel_room_types_path(@current_hotel), class: onboarding_button_classes(rooms_done) %>
+          <% else %>
+            <button disabled class="py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-gray-600 text-white disabled:opacity-50 disabled:pointer-events-none">Pending</button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Ready for Review -->
+    <% review_ready = @current_hotel.ready_for_review? %>
+    <div id="step-review" class="mt-10 p-6 <%= rooms_done ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200' %> rounded-xl text-center">
+      <h3 class="text-lg font-bold <%= rooms_done ? 'text-green-800' : 'text-blue-800' %>">Almost There!</h3>
+      <p class="text-sm <%= rooms_done ? 'text-green-600' : 'text-blue-600' %> mb-4">Once you've completed the steps above, you can submit your hotel for our team to review and approve.</p>
+      <% if review_ready %>
+        <%= button_to "Submit for Review", hotel_submit_for_review_path(@current_hotel), class: "py-3 px-6 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700 mx-auto" %>
+      <% else %>
+        <button disabled class="py-3 px-6 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white disabled:opacity-50 disabled:pointer-events-none mx-auto">
+          Submit for Review
+        </button>
+      <% end %>
+    </div>
+  </div>
+</div>

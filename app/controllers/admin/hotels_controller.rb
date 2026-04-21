@@ -8,8 +8,42 @@ class Admin::HotelsController < Admin::BaseController
     @hotels = @all_hotels.page(params[:page]).per(25)
   end
 
+  def onboarding_index
+    @hotels = Hotel.where(status: ["registered", "email_verified", "profile_incomplete", "rooms_incomplete", "inventory_incomplete", "pending_review"]).order(created_at: :desc)
+  end
+
   def show
     @configured_margin_rate = @hotel.effective_margin_rate
+  end
+
+  def onboarding
+    @hotel = Hotel.find(params[:id])
+    @tasks = @hotel.onboarding_tasks.order(:created_at)
+    @sessions = @hotel.onboarding_sessions.order(scheduled_at: :desc)
+    @trainers = User.where(role: ["admin", "superadmin"]).order(:name)
+  end
+
+  def create_onboarding_session
+    @hotel = Hotel.find(params[:id])
+    @session = @hotel.onboarding_sessions.new(onboarding_session_params)
+    @session.status = "scheduled"
+
+    if @session.save
+      redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session scheduled successfully."
+    else
+      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}"
+    end
+  end
+
+  def complete_onboarding_session
+    @hotel = Hotel.find(params[:id])
+    @session = @hotel.onboarding_sessions.find(params[:session_id])
+
+    if @session.complete!
+      redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session marked as completed."
+    else
+      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to update session."
+    end
   end
 
   def new
@@ -106,6 +140,10 @@ class Admin::HotelsController < Admin::BaseController
 
   def user_params
     params.require(:user).permit(:name, :email)
+  end
+
+  def onboarding_session_params
+    params.permit(:trainer_id, :scheduled_at, :meeting_link)
   end
 
   def load_salespersons

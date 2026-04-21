@@ -44,19 +44,30 @@ class Admin::SalespersonsController < Admin::BaseController
         @salesperson.destroy
         respond_to do |format|
           format.html { redirect_to admin_salespersons_path(query: @query.presence), notice: "Salesperson removed because no hotels are assigned." }
-          format.turbo_stream { render turbo_stream: turbo_stream.remove(helpers.dom_id(@salesperson, :row)) }
+          format.turbo_stream do
+            flash.now[:notice] = "Salesperson removed because no hotels are assigned."
+            render turbo_stream: [
+              turbo_stream.remove(helpers.dom_id(@salesperson, :row)),
+              turbo_stream.prepend("flash_toasts", partial: "shared/toast", locals: { key: "notice", value: flash[:notice] })
+            ]
+          end
         end
       else
         assign_hotels(@salesperson, hotel_ids)
         respond_to do |format|
           format.html { redirect_to admin_salespersons_path(query: @query.presence), notice: "Salesperson updated successfully." }
           format.turbo_stream do
+            flash.now[:notice] = "Salesperson updated successfully."
             @salespersons = filtered_salespersons(@query).order(:name)
             @hotels = Hotel.order(:name)
+            streams = [
+              turbo_stream.prepend("flash_toasts", partial: "shared/toast", locals: { key: "notice", value: flash[:notice] })
+            ]
+
             if @query.present? && !salesperson_matches_query?(@salesperson, @query)
-              render turbo_stream: turbo_stream.remove(helpers.dom_id(@salesperson, :row))
+              streams << turbo_stream.remove(helpers.dom_id(@salesperson, :row))
             else
-              render turbo_stream: turbo_stream.replace(
+              streams << turbo_stream.replace(
                 helpers.dom_id(@salesperson, :row),
                 partial: "admin/salespersons/salesperson_row",
                 locals: {
@@ -66,6 +77,7 @@ class Admin::SalespersonsController < Admin::BaseController
                 }
               )
             end
+            render turbo_stream: streams
           end
         end
       end
@@ -79,8 +91,17 @@ class Admin::SalespersonsController < Admin::BaseController
   end
 
   def destroy
-    @salesperson.update(role: "hotel_staff")
-    redirect_to admin_salespersons_path(query: params[:query].presence), notice: "Salesperson removed successfully."
+    @salesperson.destroy!
+    respond_to do |format|
+      format.html { redirect_to admin_salespersons_path(query: params[:query].presence), notice: "Salesperson deleted successfully." }
+      format.turbo_stream do
+        flash.now[:notice] = "Salesperson deleted successfully."
+        render turbo_stream: [
+          turbo_stream.remove(helpers.dom_id(@salesperson, :row)),
+          turbo_stream.prepend("flash_toasts", partial: "shared/toast", locals: { key: "notice", value: flash[:notice] })
+        ]
+      end
+    end
   end
 
   private
