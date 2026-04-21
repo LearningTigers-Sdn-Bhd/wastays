@@ -63,6 +63,7 @@ Rails.application.configure do
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: demo_host, protocol: demo_protocol }
   Rails.application.routes.default_url_options = { host: demo_host, protocol: demo_protocol }
+  config.x.mailer_from = Rails.application.credentials.dig(:resend, :from_email).presence || "WAStays <noreply@demomail.wastays.com>"
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.perform_deliveries = true
   config.action_mailer.raise_delivery_errors = true
