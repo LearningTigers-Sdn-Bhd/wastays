@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["form", "nameDisplay", "nameInput", "hotelDisplay", "hotelSelector", "readonlyActions", "editActions", "primaryButton"]
+  static targets = ["form", "nameDisplay", "nameInput", "emailDisplay", "emailInput", "hotelDisplay", "hotelSelector", "readonlyActions", "editActions", "primaryButton"]
   static values = { startEditing: Boolean }
 
   connect() {
@@ -34,6 +34,15 @@ export default class extends Controller {
     this.nameInputTarget.classList.toggle("cursor-not-allowed", !editing)
     this.nameInputTarget.classList.toggle("bg-white", editing)
     this.nameInputTarget.classList.toggle("text-slate-700", editing)
+
+    this.emailDisplayTarget.classList.toggle("hidden", editing)
+    this.emailInputTarget.classList.toggle("hidden", !editing)
+    this.emailInputTarget.disabled = !editing
+    this.emailInputTarget.classList.toggle("bg-slate-50", !editing)
+    this.emailInputTarget.classList.toggle("text-slate-500", !editing)
+    this.emailInputTarget.classList.toggle("cursor-not-allowed", !editing)
+    this.emailInputTarget.classList.toggle("bg-white", editing)
+    this.emailInputTarget.classList.toggle("text-slate-700", editing)
 
     this.hotelDisplayTarget.classList.toggle("hidden", editing)
     this.hotelSelectorTarget.hidden = !editing

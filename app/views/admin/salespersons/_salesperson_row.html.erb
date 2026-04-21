@@ -1,0 +1,43 @@
+<% form_id = "salesperson-form-#{salesperson.id}" %>
+<% assigned_hotels = salesperson.assigned_hotels %>
+<tr id="<%= dom_id(salesperson, :row) %>" data-controller="salesperson-inline-edit" data-salesperson-inline-edit-start-editing-value="<%= local_assigns.fetch(:editing, false) %>" class="transition-colors hover:bg-slate-100/80 <%= local_assigns.fetch(:index, 0).even? ? 'bg-white' : 'bg-slate-50/55' %>">
+  <td class="px-6 py-4 align-top sm:px-8">
+    <div data-salesperson-inline-edit-target="nameDisplay" class="text-sm font-medium text-slate-700">
+      <%= salesperson.name.capitalize %>
+    </div>
+    <%= text_field_tag "user[name]", salesperson.name, form: form_id, disabled: true, data: { salesperson_inline_edit_target: "nameInput" }, class: "hidden w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0 cursor-not-allowed" %>
+  </td>
+  <td class="px-6 py-4 align-top">
+    <div data-salesperson-inline-edit-target="emailDisplay" class="text-sm text-slate-600">
+      <%= salesperson.email %>
+    </div>
+    <%= email_field_tag "user[email]", salesperson.email, form: form_id, disabled: true, data: { salesperson_inline_edit_target: "emailInput" }, class: "hidden w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0 cursor-not-allowed" %>
+  </td>
+  <td class="px-6 py-4 align-top">
+    <div data-salesperson-inline-edit-target="hotelDisplay" class="flex flex-col gap-2 text-xs text-slate-500">
+      <% if assigned_hotels.any? %>
+        <% assigned_hotels.sort_by(&:name).each do |hotel| %>
+          <span class="rounded-xl bg-slate-100 px-3 py-2 font-medium text-slate-700"><%= hotel.name %></span>
+        <% end %>
+      <% else %>
+        <span>No hotels assigned</span>
+      <% end %>
+    </div>
+    <%= render "hotel_dropdown", hotels: @hotels, selected_hotel_ids: assigned_hotels.map(&:id), field_name: "hotel_ids", form_id: form_id, hidden: true %>
+  </td>
+  <td class="px-6 py-4 align-top text-right">
+    <div data-salesperson-inline-edit-target="readonlyActions" class="flex items-center justify-end gap-3">
+      <%= button_tag "Edit", type: "button", data: { action: "click->salesperson-inline-edit#primaryAction", salesperson_inline_edit_target: "primaryButton" }, class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" %>
+      <%= link_to admin_salesperson_path(salesperson), data: { turbo_method: :delete, turbo_confirm: "Delete this salesperson?" }, class: "inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100" do %>
+        Delete
+      <% end %>
+    </div>
+    <div data-salesperson-inline-edit-target="editActions" class="hidden flex items-center justify-end gap-3">
+      <%= button_tag "Save", type: "button", data: { action: "click->salesperson-inline-edit#primaryAction", salesperson_inline_edit_target: "primaryButton" }, class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" %>
+      <%= button_tag "Cancel", type: "button", data: { action: "click->salesperson-inline-edit#cancel" }, class: "inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
+    </div>
+    <%= form_tag admin_salesperson_path(salesperson), method: :patch, id: form_id, class: "hidden", data: { salesperson_inline_edit_target: "form" } do %>
+      <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <% end %>
+  </td>
+</tr>

@@ -49,8 +49,44 @@
             <label for="country" class="mb-2 block text-sm font-medium text-slate-700">Country</label>
             <%= f.text_field :country, class: input_classes %>
           </div>
+
+          <% if hotel.persisted? %>
+            <div class="sm:col-span-2">
+              <div class="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label for="hotel_salesperson_name" class="mb-2 block text-sm font-medium text-slate-700">Salesperson Name</label>
+                  <%= text_field_tag "hotel[salesperson_name]", hotel.salesperson&.name, id: "hotel_salesperson_name", class: input_classes, placeholder: "Enter salesperson name" %>
+                </div>
+
+                <div>
+                  <label for="hotel_salesperson_email" class="mb-2 block text-sm font-medium text-slate-700">Salesperson Email</label>
+                  <%= email_field_tag "hotel[salesperson_email]", hotel.salesperson&.email, id: "hotel_salesperson_email", class: input_classes, placeholder: "email@example.com" %>
+                </div>
+              </div>
+            </div>
+          <% end %>
         </div>
       </section>
+
+      <% unless hotel.persisted? %>
+        <section class="space-y-5 border-t border-slate-200 pt-8">
+          <div>
+            <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Salesperson</h2>
+          </div>
+
+          <div class="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label for="hotel_salesperson_id" class="mb-2 block text-sm font-medium text-slate-700">Salesperson</label>
+              <% if @salespersons.present? %>
+                <%= f.collection_select :salesperson_id, @salespersons, :id, :name, { include_blank: "No salesperson" }, id: "hotel_salesperson_id", class: input_classes %>
+              <% else %>
+                <%= f.select :salesperson_id, [], { include_blank: "No salesperson" }, id: "hotel_salesperson_id", class: input_classes %>
+              <% end %>
+              <p class="mt-2 text-sm text-slate-500">Choose an existing salesperson from the admin account.</p>
+            </div>
+          </div>
+        </section>
+      <% end %>
 
       <% unless hotel.persisted? %>
         <section class="space-y-5 border-t border-slate-200 pt-8">
