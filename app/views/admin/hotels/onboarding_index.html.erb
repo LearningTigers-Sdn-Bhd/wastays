@@ -21,27 +21,45 @@
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">City</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Current Phase</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Registered</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Duration</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Completed</th>
             <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Action</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 bg-white">
           <% if @hotels.any? %>
             <% @hotels.each_with_index do |hotel, index| %>
+              <% comp_date = hotel.onboarding_completion_date %>
+              <% is_live_or_approved = ["approved", "live"].include?(hotel.status) %>
               <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium sm:px-8">
                   <%= hotel.name %>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600"><%= hotel.city %></td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200">
+                  <span class="inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-semibold <%= is_live_or_approved ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200' %>">
                     <%= hotel.status.titleize %>
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600"><%= hotel.created_at.strftime("%d %b %Y") %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                  <%= format_duration(hotel.onboarding_duration) %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                  <%= comp_date&.strftime("%d %b %Y %H:%M") || "In Progress" %>
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right">
-                  <%= link_to onboarding_admin_hotel_path(hotel), class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800" do %>
-                    Manage Training
-                  <% end %>
+                  <div class="flex items-center justify-end gap-2">
+                    <%= link_to onboarding_admin_hotel_path(hotel), class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800" do %>
+                      Manage
+                    <% end %>
+
+                    <% unless is_live_or_approved %>
+                      <%= button_to complete_onboarding_admin_hotel_path(hotel), class: "inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700", data: { turbo_confirm: "Are you sure you want to mark onboarding as completed for #{hotel.name}?" } do %>
+                        Complete
+                      <% end %>
+                    <% end %>
+                  </div>
                 </td>
               </tr>
             <% end %>

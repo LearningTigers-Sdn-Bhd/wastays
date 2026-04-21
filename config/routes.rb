@@ -96,6 +96,7 @@ Rails.application.routes.draw do
         get :onboarding
         post :create_onboarding_session
         post :complete_onboarding_session
+        post :complete_onboarding
         post :approve
         post :suspend
       end

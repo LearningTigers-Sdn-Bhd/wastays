@@ -181,6 +181,18 @@ class Hotel < ApplicationRecord
     bookings.unbatched_upcoming(cutoff_date).sum("COALESCE(net_amount, 0)")
   end
 
+  def onboarding_completion_date
+    return nil unless ["approved", "live"].include?(status)
+    onboarding_sessions.completed.where(notes: "FINAL_ONBOARDING_COMPLETION").order(completed_at: :desc).first&.completed_at
+  end
+
+  def onboarding_duration
+    comp_date = onboarding_completion_date
+    return nil unless comp_date
+    
+    comp_date - created_at
+  end
+
   private
 
   def photos_limit_not_exceeded

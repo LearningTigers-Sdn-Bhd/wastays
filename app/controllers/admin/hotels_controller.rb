@@ -7,7 +7,7 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def onboarding_index
-    @hotels = Hotel.where(status: ["registered", "email_verified", "profile_incomplete", "rooms_incomplete", "inventory_incomplete", "pending_review"]).order(created_at: :desc)
+    @hotels = Hotel.where(status: "pending_review").order(created_at: :desc)
   end
 
   def show
@@ -22,9 +22,7 @@ class Admin::HotelsController < Admin::BaseController
 
   def onboarding
     @hotel = Hotel.find(params[:id])
-    @tasks = @hotel.onboarding_tasks.order(:created_at)
     @sessions = @hotel.onboarding_sessions.order(scheduled_at: :desc)
-    @trainers = User.where(role: ["admin", "superadmin"]).order(:name)
   end
 
   def create_onboarding_session
@@ -48,6 +46,28 @@ class Admin::HotelsController < Admin::BaseController
     else
       redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to update session."
     end
+  end
+
+  def complete_onboarding
+    @hotel = Hotel.find(params[:id])
+    
+    ActiveRecord::Base.transaction do
+      # 1. Ensure status is moved forward
+      @hotel.update!(status: "approved") if @hotel.onboarding? || @hotel.status == "pending_review"
+      
+      # 2. Record the completion event in the sessions table
+      @hotel.onboarding_sessions.create!(
+        trainer_name: current_user.name,
+        status: "completed",
+        scheduled_at: Time.current,
+        completed_at: Time.current,
+        notes: "FINAL_ONBOARDING_COMPLETION"
+      )
+    end
+
+    redirect_to onboarding_admin_hotels_path, notice: "Onboarding for #{@hotel.name} completed successfully."
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to onboarding_admin_hotels_path, alert: "Failed to complete onboarding: #{e.message}"
   end
 
   def new
@@ -136,7 +156,7 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def onboarding_session_params
-    params.permit(:trainer_id, :scheduled_at, :meeting_link)
+    params.permit(:trainer_name, :scheduled_at, :meeting_link)
   end
 
   def load_salespersons

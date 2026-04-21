@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_21_075546) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -315,7 +315,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
 
   create_table "onboarding_sessions", force: :cascade do |t|
     t.bigint "hotel_id", null: false
-    t.bigint "trainer_id", null: false
     t.string "meeting_link"
     t.datetime "scheduled_at"
     t.datetime "completed_at"
@@ -323,8 +322,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "trainer_name", default: "", null: false
     t.index ["hotel_id"], name: "index_onboarding_sessions_on_hotel_id"
-    t.index ["trainer_id"], name: "index_onboarding_sessions_on_trainer_id"
   end
 
   create_table "payment_settings", force: :cascade do |t|
@@ -571,7 +570,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
   add_foreign_key "onboarding_sessions", "hotels"
-  add_foreign_key "onboarding_sessions", "users", column: "trainer_id"
   add_foreign_key "payout_batches", "hotels"
   add_foreign_key "pre_checkins", "bookings"
   add_foreign_key "property_policies", "hotels"
