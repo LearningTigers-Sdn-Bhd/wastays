@@ -2,7 +2,8 @@ class Admin::SalespersonsController < Admin::BaseController
   before_action :set_salesperson, only: [ :edit, :update, :destroy ]
 
   def index
-    @salespersons = User.where(role: "salesperson").order(:name)
+    @query = params[:query].to_s.strip
+    @salespersons = filtered_salespersons(@query).order(:name)
     @hotels = Hotel.order(:name)
     @new_salesperson = User.new(role: "salesperson")
     @selected_hotel_ids = []
@@ -13,7 +14,8 @@ class Admin::SalespersonsController < Admin::BaseController
   end
 
   def create
-    @salespersons = User.where(role: "salesperson").order(:name)
+    @query = params[:query].to_s.strip
+    @salespersons = filtered_salespersons(@query).order(:name)
     @hotels = Hotel.order(:name)
     @selected_hotel_ids = selected_hotel_ids
     @new_salesperson = User.new(salesperson_params)
@@ -25,13 +27,14 @@ class Admin::SalespersonsController < Admin::BaseController
 
     if @new_salesperson.save
       assign_hotels(@new_salesperson, @selected_hotel_ids)
-      redirect_to admin_salespersons_path, notice: "Salesperson created successfully."
+      redirect_to admin_salespersons_path(query: @query.presence), notice: "Salesperson created successfully."
     else
       render :index, status: :unprocessable_content
     end
   end
 
   def update
+    @query = params[:query].to_s.strip
     hotel_ids = selected_hotel_ids
 
     if @salesperson.update(salesperson_params)
@@ -39,32 +42,37 @@ class Admin::SalespersonsController < Admin::BaseController
         Hotel.where(salesperson_id: @salesperson.id).update_all(salesperson_id: nil)
         @salesperson.destroy
         respond_to do |format|
-          format.html { redirect_to admin_salespersons_path, notice: "Salesperson removed because no hotels are assigned." }
+          format.html { redirect_to admin_salespersons_path(query: @query.presence), notice: "Salesperson removed because no hotels are assigned." }
           format.turbo_stream { render turbo_stream: turbo_stream.remove(helpers.dom_id(@salesperson, :row)) }
         end
       else
         assign_hotels(@salesperson, hotel_ids)
         respond_to do |format|
-          format.html { redirect_to admin_salespersons_path, notice: "Salesperson updated successfully." }
+          format.html { redirect_to admin_salespersons_path(query: @query.presence), notice: "Salesperson updated successfully." }
           format.turbo_stream do
-            @salespersons = User.where(role: "salesperson").order(:name)
+            @salespersons = filtered_salespersons(@query).order(:name)
             @hotels = Hotel.order(:name)
-            render turbo_stream: turbo_stream.replace(
-              helpers.dom_id(@salesperson, :row),
-              partial: "admin/salespersons/salesperson_row",
-              locals: {
-                salesperson: @salesperson,
-                index: @salespersons.index(@salesperson) || 0,
-                editing: false
-              }
-            )
+            if @query.present? && !salesperson_matches_query?(@salesperson, @query)
+              render turbo_stream: turbo_stream.remove(helpers.dom_id(@salesperson, :row))
+            else
+              render turbo_stream: turbo_stream.replace(
+                helpers.dom_id(@salesperson, :row),
+                partial: "admin/salespersons/salesperson_row",
+                locals: {
+                  salesperson: @salesperson,
+                  index: @salespersons.index(@salesperson) || 0,
+                  editing: false
+                }
+              )
+            end
           end
         end
       end
     else
-      index
+      @salespersons = filtered_salespersons(@query).order(:name)
       @salespersons = @salespersons.map { |record| record.id == @salesperson.id ? @salesperson : record }
       @editing_salesperson_id = @salesperson.id
+      @hotels = Hotel.order(:name)
       render :index, status: :unprocessable_content
     end
   end
@@ -72,7 +80,7 @@ class Admin::SalespersonsController < Admin::BaseController
   def destroy
     Hotel.where(salesperson_id: @salesperson.id).update_all(salesperson_id: nil)
     @salesperson.update(role: "hotel_staff")
-    redirect_to admin_salespersons_path, notice: "Salesperson removed successfully."
+    redirect_to admin_salespersons_path(query: params[:query].presence), notice: "Salesperson removed successfully."
   end
 
   private
@@ -100,5 +108,31 @@ class Admin::SalespersonsController < Admin::BaseController
 
   def generated_salesperson_password
     SecureRandom.hex(16)
+  end
+
+  def filtered_salespersons(query)
+    scope = current_user.account.users.where(role: "salesperson").includes(:assigned_hotels)
+
+    return scope if query.blank?
+
+    pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query.downcase)}%"
+    scope.left_outer_joins(:assigned_hotels)
+      .where(
+        "LOWER(users.name) LIKE :query OR LOWER(users.email) LIKE :query OR LOWER(hotels.name) LIKE :query",
+        query: pattern
+      )
+      .distinct
+  end
+
+  def salesperson_matches_query?(salesperson, query)
+    return true if query.blank?
+
+    haystack = [
+      salesperson.name,
+      salesperson.email,
+      salesperson.assigned_hotels.map(&:name).join(" ")
+    ].join(" ").downcase
+
+    haystack.include?(query.downcase)
   end
 end
