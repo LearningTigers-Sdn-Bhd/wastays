@@ -2,7 +2,6 @@ module HotelPortal
   class SettingsController < HotelPortal::BaseController
     before_action :set_account
     before_action :set_hotel
-    before_action :set_payment_setting, only: [ :index, :update ]
 
     def index
       load_settings
@@ -19,8 +18,8 @@ module HotelPortal
 
       if settings_update_request?
         update_settings
-      elsif payment_setting_update_request?
-        update_payment_setting
+      elsif params[:payment_setting].present?
+        redirect_to hotel_settings_path(@hotel), alert: "Payment gateway credentials are managed by superadmin."
       else
         update_banking_details
       end
@@ -35,12 +34,6 @@ module HotelPortal
     def set_hotel
       @hotel = current_hotel
       @property_policy = @hotel&.property_policy || @hotel&.build_property_policy
-    end
-
-    def set_payment_setting
-      selected_gateway = params.dig(:payment_setting, :gateway).presence || @hotel&.checkout_payment_gateway || "razorpay"
-      @payment_setting = @hotel&.payment_settings&.find_or_initialize_by(gateway: selected_gateway)
-      @payment_setting.status ||= "active" if @payment_setting
     end
 
     def load_settings
@@ -62,10 +55,6 @@ module HotelPortal
 
     def settings_update_request?
       params[:hotel].present?
-    end
-
-    def payment_setting_update_request?
-      params[:payment_setting].present?
     end
 
     def update_settings
@@ -91,25 +80,6 @@ module HotelPortal
         redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
       else
         load_settings
-        render :index, status: :unprocessable_entity
-      end
-    end
-
-    def update_payment_setting
-      authorize_settings_update!
-
-      gateway = payment_setting_params[:gateway].to_s.downcase
-      @payment_setting = @hotel.payment_settings.find_or_initialize_by(gateway: gateway)
-      attrs = payment_setting_params.merge(gateway: gateway)
-      attrs[:api_key] = @payment_setting.api_key if attrs[:api_key].blank?
-      attrs[:secret_key] = @payment_setting.secret_key if attrs[:secret_key].blank?
-      attrs[:webhook_secret] = @payment_setting.webhook_secret if attrs[:webhook_secret].blank?
-
-      if @payment_setting.update(attrs)
-        redirect_to hotel_settings_path(@hotel), notice: "Payment gateway configuration updated successfully."
-      else
-        load_settings
-        @account.build_banking_detail unless @account.banking_detail
         render :index, status: :unprocessable_entity
       end
     end
@@ -148,16 +118,6 @@ module HotelPortal
           :check_out_time
         ]
       ).fetch(:property_policy_attributes)
-    end
-
-    def payment_setting_params
-      params.require(:payment_setting).permit(
-        :gateway,
-        :api_key,
-        :secret_key,
-        :webhook_secret,
-        :status
-      )
     end
 
     def settings_policy

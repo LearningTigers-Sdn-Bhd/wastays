@@ -2,6 +2,10 @@
   <link rel="preload" as="image" href="<%= asset_path('landing/bg-1.webp') %>" fetchpriority="high">
 <% end %>
 
+<div data-controller="landing-loader">
+  <%= render "static_pages/home/loading_screen" %>
+</div>
+
 <div class="relative bg-landing-bg" data-controller="scroll-reveal">
   <%= render "static_pages/home/hero" %>
   <%= render "static_pages/home/problem_solution" %>
