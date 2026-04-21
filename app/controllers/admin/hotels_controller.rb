@@ -132,20 +132,20 @@ class Admin::HotelsController < Admin::BaseController
       updates[:name] = salesperson_name if salesperson_name.present? && salesperson.name != salesperson_name
       updates[:email] = salesperson_email if salesperson_email.present? && salesperson.email != salesperson_email
       salesperson.update!(updates) if updates.any?
-      @hotel.update!(salesperson_id: salesperson.id) if @hotel.salesperson_id != salesperson.id
-      return
+    elsif salesperson_name.present?
+      # Create new salesperson if they don't exist
+      password = SecureRandom.hex(16)
+      salesperson = current_user.account.users.create!(
+        role: "salesperson",
+        name: salesperson_name,
+        email: salesperson_email.presence || "salesperson-#{SecureRandom.hex(6)}@wastays.local",
+        password: password,
+        password_confirmation: password
+      )
     end
 
-    return if salesperson_name.blank?
-
-    salesperson = current_user.account.users.create!(
-      role: "salesperson",
-      name: salesperson_name,
-      email: salesperson_email.presence || generated_salesperson_email,
-      password: generated_salesperson_password,
-      password_confirmation: generated_salesperson_password
-    )
-
-    @hotel.update!(salesperson_id: salesperson.id)
+    if salesperson && @hotel.salesperson_id != salesperson.id
+      @hotel.update!(salesperson_id: salesperson.id)
+    end
   end
 end
