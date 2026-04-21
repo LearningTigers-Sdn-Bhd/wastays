@@ -5,18 +5,24 @@ module Admin
 
     def index
       # Optimization: Do not select the large payload column in index
+      # Prioritize errors (status >= 400) first, then chronological
       @entries = ObservationEntry.select(:id, :entry_type, :request_id, :status, :duration, :path, :tags, :created_at)
-                                .order(created_at: :desc)
+                                .order(Arel.sql("CASE WHEN status >= 400 THEN 0 ELSE 1 END ASC, created_at DESC"))
+
+      @error_count = ObservationEntry.where("status >= 400").where("created_at > ?", 24.hours.ago).count
 
       if params[:entry_type].present?
         @entries = @entries.where(entry_type: params[:entry_type])
       end
 
-      if params[:status_group] == "error"
+      effective_status_group = params[:status_group].presence
+
+      if effective_status_group == "error"
         @entries = @entries.where("status >= 400")
       elsif params[:status].present?
         @entries = @entries.where(status: params[:status])
       end
+      @effective_status_group = effective_status_group
 
       if params[:query].present?
         # Search in tags or path
@@ -52,6 +58,11 @@ module Admin
     def clear
       ObservationEntry.delete_all
       redirect_to admin_observation_deck_index_path, notice: "Observation deck cleared."
+    end
+
+    def test_email
+      SystemMailer.observability_test(current_user.email).deliver_now
+      redirect_to admin_observation_deck_index_path, notice: "Test email sent. Check 'mail' filter."
     end
   end
 end

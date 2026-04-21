@@ -13,7 +13,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
   describe '#onboard_hotel' do
     it 'creates property, room types and rate plans' do
       # Mock Property Creation
-      expect(client_double).to receive(:post).with("/properties", hash_including(property: hash_including(name: "Test Hotel")))
+      expect(client_double).to receive(:post).with("/properties", hash_including(property: hash_including(title: "Test Hotel", timezone: "Asia/Kuala_Lumpur")))
         .and_return({ "data" => { "id" => "ch_prop_123" } })
 
       # Mock Room Type Creation

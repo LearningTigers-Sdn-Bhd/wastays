@@ -29,6 +29,48 @@
       </div>
     </div>
 
+    <!-- Request Metadata -->
+    <% if @entry.entry_type == 'request' %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
+        <div class="space-y-3">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">User Identity</p>
+          <% 
+            user_id_tag = @entry.tags.find { |t| t.start_with?("user:") }
+            user = User.find_by(id: user_id_tag.split(":").last) if user_id_tag
+          %>
+          <% if user %>
+            <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <div class="size-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase">
+                <%= user.name.first %>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-slate-900"><%= user.name %></p>
+                <p class="text-[11px] text-slate-500"><%= user.email %></p>
+              </div>
+            </div>
+          <% else %>
+            <p class="text-sm text-slate-400 italic">Guest / Unauthenticated</p>
+          <% end %>
+        </div>
+
+        <div class="space-y-3">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Network Info</p>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-slate-500">IP Address</span>
+              <span class="text-xs font-mono text-slate-900 font-bold"><%= @entry.payload['remote_ip'] || 'Unknown' %></span>
+            </div>
+            <div class="flex flex-col gap-1">
+              <span class="text-xs text-slate-500">User Agent</span>
+              <span class="text-[10px] font-mono text-slate-400 leading-tight truncate" title="<%= @entry.payload['user_agent'] %>">
+                <%= @entry.payload['user_agent'] %>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
     <!-- Tags -->
     <% if @entry.tags.present? %>
       <div class="space-y-2">

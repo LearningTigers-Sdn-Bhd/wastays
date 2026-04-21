@@ -1,23 +1,24 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["input", "form"]
+  static targets = ["panel", "frame"]
 
-  connect() {
-    this.timeout = null
+  open(event) {
+    const entryId = event.currentTarget.dataset.entryId
+    if (!entryId) return
+
+    this.frameTarget.id = `entry_detail_${entryId}`
+    this.frameTarget.src = `/admin/observation_deck/${entryId}`
+    this.panelTarget.classList.remove("hidden")
   }
 
-  search() {
-    clearTimeout(this.timeout)
-    this.timeout = setTimeout(() => {
-      this.formTarget.requestSubmit()
-    }, 300)
+  close() {
+    this.panelTarget.classList.add("hidden")
   }
 
-  toggleJson(event) {
-    const target = event.currentTarget
-    const content = target.nextElementSibling
-    content.classList.toggle('hidden')
-    target.querySelector('svg').classList.toggle('rotate-90')
+  closeOnBackdrop(event) {
+    if (event.target === event.currentTarget) {
+      this.close()
+    }
   }
 }

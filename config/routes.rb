@@ -138,7 +138,10 @@ Rails.application.routes.draw do
       get :docs, on: :collection
     end
     resources :observation_deck, only: [ :index, :show ], constraints: SuperadminConstraint.new do
-      delete :clear, on: :collection
+      collection do
+        delete :clear
+        post :test_email
+      end
     end
     resource :refund_policy, only: [ :show, :update, :destroy ]
     resources :refund_requests, only: [ :index, :show ] do
