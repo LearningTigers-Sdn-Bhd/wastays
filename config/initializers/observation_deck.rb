@@ -11,7 +11,12 @@ def capture_observation_entry(entry_data)
     Current.observation_buffer << entry_data
   else
     # Outside of a request (e.g., background job), save immediately
-    ObservationEntry.create!(entry_data) rescue nil
+    begin
+      ObservationEntry.create!(entry_data)
+    rescue => e
+      puts "[ObservationDeck] ERROR: #{e.message}"
+      Rails.logger.error "[ObservationDeck] Failed to log entry: #{e.message}"
+    end
   end
 end
 
@@ -112,15 +117,21 @@ end
 ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
   event = ActiveSupport::Notifications::Event.new(*args)
   payload = event.payload
-  mail = payload[:mail]
+  mail_obj = payload[:mail]
+  is_mail_object = mail_obj.respond_to?(:subject) && !mail_obj.is_a?(String)
 
-  next unless mail.respond_to?(:subject)
+  subject = is_mail_object ? mail_obj.subject : payload[:subject]
+  to = is_mail_object ? mail_obj.to : payload[:to]
+  from = is_mail_object ? mail_obj.from : payload[:from]
 
-  # Truncate body to 50k chars
-  html_body = mail.respond_to?(:html_part) ? mail.html_part&.body&.to_s : nil
-  html_body ||= mail.body.to_s if mail.respond_to?(:body)
+  # Extract body if possible
+  html_body = nil
+  text_body = nil
   
-  text_body = mail.respond_to?(:text_part) ? mail.text_part&.body&.to_s : nil
+  if is_mail_object
+    html_body = mail_obj.html_part&.body&.to_s || mail_obj.body&.to_s
+    text_body = mail_obj.text_part&.body&.to_s
+  end
 
   capture_observation_entry({
     entry_type: "mail",
@@ -129,9 +140,9 @@ ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
     duration: event.duration,
     path: payload[:mailer],
     payload: OBSERVATION_SCRUBBER.filter({
-      subject: payload[:mail].subject,
-      to: payload[:mail].to,
-      from: payload[:mail].from,
+      subject: subject,
+      to: to,
+      from: from,
       html_body: html_body&.truncate(50000),
       text_body: text_body&.truncate(50000)
     }),

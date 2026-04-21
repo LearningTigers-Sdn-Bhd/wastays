@@ -56,7 +56,18 @@ module Channex
       http.read_timeout = 30
       http.open_timeout = 10
 
-      response = http.request(request)
+      response = nil
+      ActiveSupport::Notifications.instrument("request.faraday", {
+        method: request.method,
+        url: uri.to_s,
+        request_headers: request.to_hash
+      }) do |payload|
+        response = http.request(request)
+        payload[:status] = response.code.to_i
+        payload[:response_headers] = response.to_hash
+        payload[:body] = response.body
+      end
+      
       parse_response(response)
     rescue JSON::ParserError => e
       { error: "Invalid JSON response from Channex API", details: e.message }
