@@ -1,5 +1,6 @@
 module Admin
   class ObservationDeckController < Admin::BaseController
+    layout "observation_deck"
     before_action :authenticate_superadmin!
 
     def index

@@ -44,7 +44,7 @@
     label: 'System',
     items: [
       { label: 'Audit Logs', path: admin_audit_logs_path, search_text: 'Audit Logs System Activity', active: audit_logs_active, icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>' },
-      { label: 'Observation Deck', path: admin_observation_deck_index_path, search_text: 'Observation Deck Telescope Debug Mission Control', active: observation_deck_active, icon: '<path d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><circle cx="12" cy="12" r="3"/>' }
+      { label: 'Observation Deck', path: admin_observation_deck_index_path, search_text: 'Observation Deck Telescope Debug Mission Control', active: observation_deck_active, icon: '<path d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><circle cx="12" cy="12" r="3"/>', external: true }
     ]
   },
   {
@@ -69,7 +69,9 @@
         <span class="sidebar-section-label"><%= section[:label] %></span>
         <div class="space-y-0.5">
           <% section[:items].each do |item| %>
-            <a class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= item[:path] %>">
+            <a class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" 
+               href="<%= item[:path] %>"
+               <%= 'target="_blank"'.html_safe if item[:external] %>>
               <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
               <span><%= item[:label] %></span>
             </a>
