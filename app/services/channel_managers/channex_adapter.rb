@@ -135,11 +135,11 @@ module ChannelManagers
 
       payload = {
         property: {
-          name: @hotel.name,
+          title: @hotel.name,
           city: @hotel.city || "Unknown City",
           country: "MY", # Channex expects ISO 2-letter country code
           currency: @hotel.default_currency || "MYR",
-          timezone: "Kuala Lumpur"
+          timezone: "Asia/Kuala_Lumpur"
         }
       }
 
