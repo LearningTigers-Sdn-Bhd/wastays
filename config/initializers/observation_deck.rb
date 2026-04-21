@@ -63,7 +63,28 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
   end
 end
 
-# Job Watcher
+# Job Watcher (Enqueue)
+ActiveSupport::Notifications.subscribe("enqueue.active_job") do |*args|
+  event = ActiveSupport::Notifications::Event.new(*args)
+  payload = event.payload
+  job = payload[:job]
+
+  capture_observation_entry({
+    entry_type: "job",
+    request_id: Current.request_id || "none",
+    status: 100, # Enqueued status
+    duration: 0.0,
+    path: "#{job.class.name} (Enqueued)",
+    payload: OBSERVATION_SCRUBBER.filter({
+      arguments: job.arguments,
+      queue: job.queue_name,
+      executions: job.executions
+    }),
+    tags: ["enqueued"]
+  })
+end
+
+# Job Watcher (Perform)
 ActiveSupport::Notifications.subscribe("perform.active_job") do |*args|
   event = ActiveSupport::Notifications::Event.new(*args)
   payload = event.payload
@@ -118,19 +139,30 @@ ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
   event = ActiveSupport::Notifications::Event.new(*args)
   payload = event.payload
   mail_obj = payload[:mail]
+  
+  # Handle cases where mail_obj might be a String (already encoded)
   is_mail_object = mail_obj.respond_to?(:subject) && !mail_obj.is_a?(String)
 
   subject = is_mail_object ? mail_obj.subject : payload[:subject]
   to = is_mail_object ? mail_obj.to : payload[:to]
   from = is_mail_object ? mail_obj.from : payload[:from]
 
-  # Extract body if possible
+  # Extract body
   html_body = nil
   text_body = nil
   
   if is_mail_object
-    html_body = mail_obj.html_part&.body&.to_s || mail_obj.body&.to_s
-    text_body = mail_obj.text_part&.body&.to_s
+    html_body = mail_obj.html_part&.body&.to_s || (mail_obj.content_type =~ /html/ ? mail_obj.body&.to_s : nil)
+    text_body = mail_obj.text_part&.body&.to_s || (mail_obj.content_type =~ /plain/ ? mail_obj.body&.to_s : nil)
+  else
+    # Fallback for string payloads: try to parse if it looks like raw mail
+    begin
+      parsed = Mail.new(mail_obj)
+      html_body = parsed.html_part&.body&.to_s || (parsed.content_type =~ /html/ ? parsed.body&.to_s : nil)
+      text_body = parsed.text_part&.body&.to_s || (parsed.content_type =~ /plain/ ? parsed.body&.to_s : nil)
+    rescue
+      html_body = mail_obj.to_s if mail_obj.to_s.include?("<html")
+    end
   end
 
   capture_observation_entry({
