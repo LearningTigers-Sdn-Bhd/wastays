@@ -49,6 +49,11 @@
             <label for="country" class="mb-2 block text-sm font-medium text-slate-700">Country</label>
             <%= f.text_field :country, class: input_classes %>
           </div>
+
+          <div>
+            <label for="preferred_channel_manager" class="mb-2 block text-sm font-medium text-slate-700">Preferred Channel Manager</label>
+            <%= f.select :preferred_channel_manager, [["None", ""], ["Channex", "channex"]], {}, class: input_classes %>
+          </div>
         </div>
       </section>
 
