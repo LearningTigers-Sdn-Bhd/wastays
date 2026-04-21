@@ -71,6 +71,26 @@ class Admin::HotelsController < Admin::BaseController
     redirect_to admin_hotel_path(@hotel), alert: "Failed to suspend account and hotel."
   end
 
+  def onboard_channex
+    @hotel.update!(preferred_channel_manager: "channex")
+    result = ChannelManagers::OnboardingService.new(hotel: @hotel).call
+
+    if result.success?
+      redirect_to admin_hotel_path(@hotel), notice: "Hotel successfully onboarded to Channex."
+    else
+      redirect_to admin_hotel_path(@hotel), alert: "Onboarding failed: #{result.message}"
+    end
+  end
+
+  def disconnect_channex
+    @hotel.update!(preferred_channel_manager: nil)
+    @hotel.channel_mapping&.destroy
+    @hotel.room_types.each { |rt| rt.channel_mapping&.destroy }
+    # Note: We don't delete rate plans as they are now part of our core model
+
+    redirect_to admin_hotel_path(@hotel), notice: "Disconnected from Channex. Channel mappings removed."
+  end
+
   private
 
   def set_hotel
@@ -78,11 +98,11 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def create_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating).merge(status: "approved")
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :preferred_channel_manager).merge(status: "approved")
   end
 
   def update_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating)
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :preferred_channel_manager)
   end
 
   def account_params

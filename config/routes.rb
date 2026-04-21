@@ -77,6 +77,7 @@ Rails.application.routes.draw do
     post "payments/verify", to: "payments#verify", as: :verify_payment
     get "mock_payment", to: "payment_mocks#show", as: :mock_payment
     post "mock_payment", to: "payment_mocks#update"
+    post "webhooks/channex", to: "channel_manager_webhooks#channex", as: :channex_webhook
     post "webhooks/:gateway", to: "webhooks#create", as: :payment_webhook
   end
 
@@ -104,6 +105,8 @@ Rails.application.routes.draw do
       member do
         post :approve
         post :suspend
+        post :onboard_channex
+        post :disconnect_channex
       end
     end
     resources :bookings, only: [ :index, :show ] # Added stub
