@@ -43,8 +43,8 @@ module ChannelManagers
       data = payload["data"] || payload
 
       wa_status = case data["status"]
-                  when "cancelled" then "cancelled"
-                  else "confirmed"
+      when "cancelled" then "cancelled"
+      else "confirmed"
       end
 
       {

@@ -11,12 +11,12 @@ module ChannelManagers
 
       adapter = ChannelManagers::SyncOrchestrator.adapter_for(@hotel)
       result = adapter.onboard_hotel
-      
+
       # Log full result for debugging
       unless result.success?
         Rails.logger.error "Onboarding Failed for Hotel #{@hotel.id}: #{result.message}"
       end
-      
+
       result
     rescue StandardError => e
       Rails.logger.error "Onboarding Exception for Hotel #{@hotel.id}: #{e.message}\n#{e.backtrace.first(5).join("\n")}"

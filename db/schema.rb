@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_21_034722) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_21_061153) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -322,6 +322,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_21_034722) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["settable_type", "settable_id"], name: "index_margin_rules_on_settable"
+  end
+
+  create_table "observation_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "entry_type", null: false
+    t.string "request_id"
+    t.integer "status"
+    t.float "duration"
+    t.string "path"
+    t.jsonb "payload", default: {}
+    t.jsonb "tags", default: []
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_observation_entries_on_created_at"
+    t.index ["entry_type"], name: "index_observation_entries_on_entry_type"
+    t.index ["request_id"], name: "index_observation_entries_on_request_id"
+    t.index ["status"], name: "index_observation_entries_on_status"
+    t.index ["tags"], name: "index_observation_entries_on_tags", using: :gin
   end
 
   create_table "payment_settings", force: :cascade do |t|

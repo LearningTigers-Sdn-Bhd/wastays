@@ -8,7 +8,7 @@ module Channex
 
     def initialize(api_key: nil, environment: nil)
       @api_key = api_key || AppConfig.get("channex_api_key")
-      
+
       env = environment || AppConfig.get("channex_environment") || "staging"
       @base_url = env == "production" ? PRODUCTION_URL : STAGING_URL
     end

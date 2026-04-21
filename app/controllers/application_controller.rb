@@ -15,6 +15,7 @@ class ApplicationController < ActionController::Base
 
   def set_current_request_id
     Current.request_id = request.uuid
+    Current.user_id = session[:user_id]
   end
 
   def user_not_authorized

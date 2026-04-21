@@ -1,179 +1,233 @@
 <% content_for :title, "Observation Deck | Mission Control" %>
 
-<div class="min-h-screen bg-slate-950 text-slate-200 font-sans antialiased">
-  <div class="max-w-[1600px] mx-auto px-4 py-8 space-y-8">
+<div class="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased" 
+     x-data="{ 
+       showDetail: false, 
+       selectedEntryId: null,
+       openEntry(id) {
+         this.selectedEntryId = id;
+         this.showDetail = true;
+       }
+     }">
+  
+  <div class="max-w-[1600px] mx-auto px-4 py-8 space-y-6">
     
     <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-slate-900/50 p-6 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-sm">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
       <div>
         <div class="flex items-center gap-3">
-          <div class="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-            <svg class="size-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <div class="p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+            <svg class="size-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 12.a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
             </svg>
           </div>
-          <h1 class="text-2xl font-bold tracking-tight text-white uppercase">Observation Deck</h1>
+          <h1 class="text-xl font-bold tracking-tight text-slate-900 uppercase">Observation Deck</h1>
         </div>
-        <p class="mt-2 text-sm font-medium text-slate-400">System internals, requests, and background jobs in real-time.</p>
+        <p class="mt-1 text-sm font-medium text-slate-500">System internals, requests, and background jobs.</p>
       </div>
 
       <div class="flex items-center gap-4">
-        <%= link_to admin_dashboard_path, class: "px-4 py-2 text-sm font-bold text-slate-400 hover:text-white transition-colors" do %>
-          Exit Mission Control
+        <%= link_to admin_dashboard_path, class: "px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors" do %>
+          Exit
         <% end %>
         <%= button_to clear_admin_observation_deck_index_path, 
             method: :delete,
-            data: { turbo_confirm: "Are you sure you want to purge all observation records? This cannot be undone." },
-            class: "px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold rounded-xl transition shadow-lg shadow-rose-900/20" do %>
+            data: { turbo_confirm: "Purge all records?" },
+            class: "px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-xl transition shadow-lg shadow-rose-200" do %>
           Clear All
         <% end %>
       </div>
     </div>
 
-    <!-- Filters -->
-    <div class="flex flex-wrap items-center gap-3 bg-slate-900/30 p-4 rounded-xl border border-slate-800/50">
-      <% %w[request sql job cache].each do |type| %>
-        <%= link_to admin_observation_deck_index_path(entry_type: type), 
-            class: "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition #{params[:entry_type] == type ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}" do %>
-          <%= type %>
+    <!-- Toolbar -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm"
+         data-controller="observation-deck">
+      <div class="flex flex-wrap items-center gap-2">
+        <%= link_to "All", admin_observation_deck_index_path, 
+            class: "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition #{params[:entry_type].blank? && params[:status_group].blank? ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}" %>
+        
+        <% %w[request sql job mail api].each do |type| %>
+          <%= link_to type, admin_observation_deck_index_path(entry_type: type), 
+              class: "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition #{params[:entry_type] == type ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}" %>
         <% end %>
-      <% end %>
-      <% if params[:entry_type].present? %>
-        <%= link_to "Reset", admin_observation_deck_index_path, class: "text-xs font-bold text-slate-500 hover:text-slate-300 ml-2" %>
-      <% end %>
+
+        <div class="w-px h-6 bg-slate-200 mx-2"></div>
+
+        <%= link_to "Errors", admin_observation_deck_index_path(status_group: 'error'), 
+            class: "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition #{params[:status_group] == 'error' ? 'bg-rose-600 text-white shadow-md' : 'bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100'}" %>
+      </div>
+
+      <div class="relative flex-1 max-w-md">
+        <%= form_with url: admin_observation_deck_index_path, method: :get, data: { turbo_frame: "entries_table", observation_deck_target: "form" } do |f| %>
+          <%= f.text_field :query, value: params[:query],
+                 placeholder: "Search path, tags, or IDs...",
+                 class: "w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all",
+                 data: { action: "input->observation-deck#search", observation_deck_target: "input" } %>
+          <svg class="absolute left-3 top-2.5 size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+        <% end %>
+      </div>
     </div>
 
     <!-- Entries Table -->
-    <div class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
+    <%= turbo_frame_tag "entries_table", class: "block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" do %>
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
-            <tr class="bg-slate-800/50 border-b border-slate-800">
-              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Type</th>
-              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Path / Class</th>
-              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Status</th>
-              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Duration</th>
-              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Timestamp</th>
-              <th class="px-6 py-4"></th>
+            <tr class="bg-slate-50 border-b border-slate-200">
+              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-500">Type</th>
+              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-500">Path / Class</th>
+              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-500">Status</th>
+              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-500 text-right">Duration</th>
+              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-500">Timestamp</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-800/50">
+          <tbody class="divide-y divide-slate-100">
             <% @entries.each do |entry| %>
-              <tr class="hover:bg-slate-800/30 transition-colors group">
+              <tr class="hover:bg-slate-50 transition-colors cursor-pointer group" 
+                  @click="openEntry('<%= entry.id %>')">
                 <td class="px-6 py-4">
                   <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter <%= case entry.entry_type
-                      when 'request' then 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      when 'job' then 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      when 'sql' then 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                      else 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                      when 'request' then 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                      when 'job' then 'bg-amber-50 text-amber-700 border border-amber-100'
+                      when 'sql' then 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                      when 'mail' then 'bg-blue-50 text-blue-700 border border-blue-100'
+                      when 'api' then 'bg-purple-50 text-purple-700 border border-purple-100'
+                      else 'bg-slate-50 text-slate-700 border border-slate-100'
                       end %>">
                     <%= entry.entry_type %>
                   </span>
                 </td>
                 <td class="px-6 py-4">
-                  <div class="text-sm font-mono text-slate-300 truncate max-w-md group-hover:text-white transition-colors" title="<%= entry.path %>">
+                  <div class="text-sm font-mono text-slate-900 truncate max-w-2xl font-medium">
                     <%= entry.path %>
                   </div>
-                  <div class="text-[10px] font-mono text-slate-600 mt-1"><%= entry.request_id %></div>
+                  <div class="flex items-center gap-2 mt-1">
+                    <% entry.tags.to_a.each do |tag| %>
+                      <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold"><%= tag %></span>
+                    <% end %>
+                    <% if entry.request_id.present? && entry.request_id != "none" %>
+                      <span class="text-[10px] font-mono text-slate-400">#<%= entry.request_id.first(8) %></span>
+                    <% end %>
+                  </div>
                 </td>
                 <td class="px-6 py-4">
-                  <span class="text-sm font-bold <%= entry.status.to_i >= 400 ? 'text-rose-500' : 'text-slate-400' %>">
-                    <%= entry.status || '-' %>
-                  </span>
+                  <% if entry.status.present? %>
+                    <span class="text-sm font-bold <%= entry.status.to_i >= 400 ? 'text-rose-600' : 'text-slate-600' %>">
+                      <%= entry.status %>
+                    </span>
+                  <% else %>
+                    <span class="text-slate-300">-</span>
+                  <% end %>
                 </td>
-                <td class="px-6 py-4">
-                  <div class="text-sm font-mono text-slate-400 italic">
-                    <%= number_with_precision(entry.duration, precision: 2) %> <span class="text-[10px] opacity-50">ms</span>
+                <td class="px-6 py-4 text-right">
+                  <div class="text-sm font-mono text-slate-600">
+                    <%= number_with_precision(entry.duration, precision: 1) %> <span class="text-[10px] opacity-50">ms</span>
                   </div>
                 </td>
                 <td class="px-6 py-4">
                   <div class="text-xs text-slate-500 tabular-nums">
-                    <%= entry.created_at.strftime("%H:%M:%S.%L") %>
-                    <div class="text-[10px] opacity-50 mt-0.5"><%= entry.created_at.strftime("%b %d") %></div>
-                  </div>
-                </td>
-                <td class="px-6 py-4 text-right">
-                  <div x-data="{ open: false }">
-                    <button @click="open = !open" class="text-slate-500 hover:text-white transition-colors p-2 hover:bg-slate-700 rounded-lg">
-                      <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
-                      </svg>
-                    </button>
-                    
-                    <div x-show="open" @click.away="open = false" 
-                         class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 md:p-8" 
-                         style="display: none;">
-                      <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col shadow-2xl ring-1 ring-white/10">
-                        <div class="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-800/30">
-                          <div class="flex items-center gap-3">
-                            <span class="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-widest border border-indigo-500/20"><%= entry.entry_type %></span>
-                            <h3 class="text-lg font-bold text-white font-mono truncate max-w-xl"><%= entry.path %></h3>
-                          </div>
-                          <button @click="open = false" class="text-slate-400 hover:text-white transition-colors">
-                            <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                          </button>
-                        </div>
-                        <div class="p-8 overflow-y-auto custom-scrollbar flex-1 bg-[#0d1117]">
-                           <pre class="text-sm font-mono leading-relaxed"><code class="text-emerald-400"><%= JSON.pretty_generate(entry.payload) %></code></pre>
-                        </div>
-                      </div>
-                    </div>
+                    <%= entry.created_at.strftime("%H:%M:%S") %>
+                    <div class="text-[10px] opacity-50"><%= entry.created_at.strftime("%b %d") %></div>
                   </div>
                 </td>
               </tr>
             <% end %>
           </tbody>
         </table>
-      </div>
 
-      <% if @entries.total_pages > 1 %>
-        <div class="px-6 py-6 border-t border-slate-800 bg-slate-800/20">
-          <%= paginate @entries %>
+        <% if @entries.total_pages > 1 %>
+          <div class="px-6 py-6 border-t border-slate-100 bg-slate-50/50">
+            <%= paginate @entries %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Detail Slide-over -->
+  <div x-show="showDetail" 
+       class="fixed inset-0 z-50 overflow-hidden" 
+       style="display: none;"
+       x-transition:enter="transition ease-in-out duration-300 transform"
+       x-transition:enter-start="translate-x-full"
+       x-transition:enter-end="translate-x-0"
+       x-transition:leave="transition ease-in-out duration-300 transform"
+       x-transition:leave-start="translate-x-0"
+       x-transition:leave-end="translate-x-full">
+    
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showDetail = false"></div>
+    
+    <div class="absolute inset-y-0 right-0 max-w-full flex">
+      <div class="w-screen max-w-4xl bg-white shadow-2xl flex flex-col">
+        <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <div class="flex items-center gap-3">
+             <h3 class="text-lg font-bold text-slate-900 tracking-tight">Entry Details</h3>
+          </div>
+          <button @click="showDetail = false" class="text-slate-400 hover:text-slate-900 transition-colors p-2 hover:bg-slate-200 rounded-lg">
+            <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
         </div>
-      <% end %>
+        
+        <div class="flex-1 overflow-y-auto custom-scrollbar bg-white">
+          <template x-if="selectedEntryId">
+            <turbo-frame :id="'entry_detail_' + selectedEntryId" 
+                         :src="'/admin/observation_deck/' + selectedEntryId"
+                         class="block">
+              <div class="p-12 flex justify-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            </turbo-frame>
+          </template>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <style>
   .custom-scrollbar::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: #0d1117;
+    background: #f8fafc;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #21262d;
-    border-radius: 5px;
-    border: 2px solid #0d1117;
+    background: #e2e8f0;
+    border-radius: 4px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #30363d;
+    background: #cbd5e1;
   }
 
-  /* Kaminari Overrides for Dark Theme */
+  /* Kaminari Light Theme */
   .pagination {
     display: flex;
     gap: 0.25rem;
     align-items: center;
   }
   .pagination a, .pagination span {
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 0.875rem;
     font-size: 0.75rem;
     font-weight: 700;
-    border-radius: 0.5rem;
-    background: #1e293b;
-    color: #94a3b8;
+    border-radius: 0.75rem;
+    background: white;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
     transition: all 0.2s;
   }
   .pagination .current {
     background: #4f46e5;
     color: white;
+    border-color: #4f46e5;
+    box-shadow: 0 4px 6px -1px rgb(79 70 229 / 0.1), 0 2px 4px -2px rgb(79 70 229 / 0.1);
   }
   .pagination a:hover {
-    background: #334155;
-    color: white;
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #cbd5e1;
   }
 </style>

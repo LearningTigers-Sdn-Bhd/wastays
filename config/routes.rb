@@ -93,7 +93,6 @@ Rails.application.routes.draw do
 
   # Superadmin dashboard
   namespace :admin do
-    # ...
     resource :profile, only: [ :edit, :update ], controller: "profiles"
     get "audit_logs/index"
     get "margin_rules/index"
