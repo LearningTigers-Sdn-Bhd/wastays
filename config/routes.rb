@@ -89,7 +89,13 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index"
     get "analytics", to: "dashboard#analytics"
     resources :hotels do
+      collection do
+        get :onboarding, action: :onboarding_index
+      end
       member do
+        get :onboarding
+        post :create_onboarding_session
+        post :complete_onboarding_session
         post :approve
         post :suspend
       end

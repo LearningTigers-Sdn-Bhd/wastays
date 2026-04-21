@@ -7,10 +7,12 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
     end
 
     if @current_hotel.onboarding?
+      @upcoming_sessions = @current_hotel.onboarding_sessions.upcoming.order(:scheduled_at)
       render :onboarding and return
     end
 
     if @current_hotel.status == "pending_review"
+      @upcoming_sessions = @current_hotel.onboarding_sessions.upcoming.order(:scheduled_at)
       render :pending_review and return
     end
 
