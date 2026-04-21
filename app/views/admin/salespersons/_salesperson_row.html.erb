@@ -1,10 +1,9 @@
 <% form_id = "salesperson-form-#{salesperson.id}" %>
 <% assigned_hotels = salesperson.assigned_hotels %>
-<% query = local_assigns[:query].presence || @query.presence %>
 <tr id="<%= dom_id(salesperson, :row) %>" data-controller="salesperson-inline-edit" data-salesperson-inline-edit-start-editing-value="<%= local_assigns.fetch(:editing, false) %>" class="transition-colors hover:bg-slate-100/80 <%= local_assigns.fetch(:index, 0).even? ? 'bg-white' : 'bg-slate-50/55' %>">
   <td class="px-6 py-4 align-top sm:px-8">
     <div data-salesperson-inline-edit-target="nameDisplay" class="text-sm font-medium text-slate-700">
-      <%= salesperson.name %>
+      <%= salesperson.name.capitalize %>
     </div>
     <%= text_field_tag "user[name]", salesperson.name, form: form_id, disabled: true, data: { salesperson_inline_edit_target: "nameInput" }, class: "hidden w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0 cursor-not-allowed" %>
   </td>
@@ -37,9 +36,14 @@
       <%= button_tag "Save", type: "button", data: { action: "click->salesperson-inline-edit#primaryAction", salesperson_inline_edit_target: "primaryButton" }, class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" %>
       <%= button_tag "Cancel", type: "button", data: { action: "click->salesperson-inline-edit#cancel" }, class: "inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
     </div>
+<<<<<<< HEAD
     <%= form_tag admin_salesperson_path(salesperson), method: :patch, id: form_id, class: "hidden", data: { salesperson_inline_edit_target: "form", turbo_stream: true } do %>
       <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
       <%= hidden_field_tag :query, query if query.present? %>
+=======
+    <%= form_tag admin_salesperson_path(salesperson), method: :patch, id: form_id, class: "hidden", data: { salesperson_inline_edit_target: "form" } do %>
+      <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+>>>>>>> ca04d49 (feat: add editable salesperson info in hotel details page)
     <% end %>
   </td>
 </tr>

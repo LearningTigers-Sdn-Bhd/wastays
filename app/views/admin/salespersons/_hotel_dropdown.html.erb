@@ -1,8 +1,11 @@
 <% selected_ids = Array(local_assigns[:selected_hotel_ids]).map(&:to_i) %>
 <% field_name = local_assigns[:field_name] || "hotel_ids" %>
+<% form_id = local_assigns[:form_id] %>
+<% disabled = local_assigns.fetch(:disabled, false) %>
+<% hidden = local_assigns.fetch(:hidden, false) %>
 
-<div class="relative inline-flex w-full" data-controller="dropdown" data-dropdown-floating="true">
-  <button type="button" data-action="click->dropdown#toggle" class="flex w-full items-center justify-between gap-3 rounded-lg border border-layer-line bg-layer px-3 py-2 text-left text-sm text-neutral-text-primary shadow-sm hover:bg-surface-hover">
+<div class="<%= hidden ? 'hidden' : '' %> relative inline-flex w-full" data-controller="dropdown" data-dropdown-floating="true" data-salesperson-inline-edit-target="hotelSelector">
+  <button type="button" data-action="click->dropdown#toggle" <%= "disabled" if disabled %> class="flex w-full items-center justify-between gap-3 rounded-lg border border-layer-line bg-layer px-3 py-3 text-left text-sm text-neutral-text-primary shadow-sm hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-70">
     <span class="truncate">
       <%= selected_ids.any? ? "#{selected_ids.size} hotel#{selected_ids.size == 1 ? '' : 's'} selected" : "Select hotels..." %>
     </span>

@@ -9,6 +9,10 @@ class Admin::SalespersonsController < Admin::BaseController
     @selected_hotel_ids = []
   end
 
+  def edit
+    @hotels = Hotel.order(:name)
+  end
+
   def create
     @salespersons = User.where(role: "salesperson").order(:name)
     @hotels = Hotel.order(:name)
@@ -16,7 +20,7 @@ class Admin::SalespersonsController < Admin::BaseController
     @new_salesperson = User.new(salesperson_params)
     @new_salesperson.role = "salesperson"
     @new_salesperson.account = current_user.account
-    @new_salesperson.email ||= generated_salesperson_email
+    @new_salesperson.email = salesperson_params[:email].presence || generated_salesperson_email
     @new_salesperson.password ||= generated_salesperson_password
     @new_salesperson.password_confirmation ||= @new_salesperson.password
 
@@ -30,8 +34,32 @@ class Admin::SalespersonsController < Admin::BaseController
 
   def update
     if @salesperson.update(salesperson_params)
-      assign_hotels(@salesperson, selected_hotel_ids)
-      redirect_to admin_salespersons_path, notice: "Salesperson updated successfully."
+      if hotel_ids.empty?
+        Hotel.where(salesperson_id: @salesperson.id).update_all(salesperson_id: nil)
+        @salesperson.destroy
+        respond_to do |format|
+          format.html { redirect_to admin_salespersons_path, notice: "Salesperson removed because no hotels are assigned." }
+          format.turbo_stream { render turbo_stream: turbo_stream.remove(helpers.dom_id(@salesperson, :row)) }
+        end
+      else
+        assign_hotels(@salesperson, hotel_ids)
+        respond_to do |format|
+          format.html { redirect_to admin_salespersons_path, notice: "Salesperson updated successfully." }
+          format.turbo_stream do
+            @salespersons = User.where(role: "salesperson").order(:name)
+            @hotels = Hotel.order(:name)
+            render turbo_stream: turbo_stream.replace(
+              helpers.dom_id(@salesperson, :row),
+              partial: "admin/salespersons/salesperson_row",
+              locals: {
+                salesperson: @salesperson,
+                index: @salespersons.index(@salesperson) || 0,
+                editing: false
+              }
+            )
+          end
+        end
+      end
     else
       index
       @salespersons = @salespersons.map { |record| record.id == @salesperson.id ? @salesperson : record }
@@ -52,7 +80,7 @@ class Admin::SalespersonsController < Admin::BaseController
   end
 
   def salesperson_params
-    params.require(:user).permit(:name)
+    params.fetch(:user, ActionController::Parameters.new).permit(:name, :email)
   end
 
   def selected_hotel_ids
