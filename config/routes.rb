@@ -95,6 +95,9 @@ Rails.application.routes.draw do
       member do
         get :onboarding
         post :create_onboarding_session
+        get :show_onboarding_session
+        get :edit_onboarding_session
+        patch :update_onboarding_session
         post :complete_onboarding_session
         post :complete_onboarding
         post :approve

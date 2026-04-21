@@ -37,6 +37,34 @@ class Admin::HotelsController < Admin::BaseController
     end
   end
 
+  def edit_onboarding_session
+    @hotel = Hotel.find(params[:id])
+    @session = @hotel.onboarding_sessions.find(params[:session_id])
+    
+    respond_to do |format|
+      format.html { render partial: "onboarding_session", locals: { session: @session, hotel: @hotel, editing: true } }
+      format.turbo_stream
+    end
+  end
+
+  def show_onboarding_session
+    @hotel = Hotel.find(params[:id])
+    @session = @hotel.onboarding_sessions.find(params[:session_id])
+    
+    render partial: "onboarding_session", locals: { session: @session, hotel: @hotel, editing: false }
+  end
+
+  def update_onboarding_session
+    @hotel = Hotel.find(params[:id])
+    @session = @hotel.onboarding_sessions.find(params[:session_id])
+
+    if @session.update(onboarding_session_params)
+      redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session updated successfully."
+    else
+      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to update session: #{@session.errors.full_messages.to_sentence}"
+    end
+  end
+
   def complete_onboarding_session
     @hotel = Hotel.find(params[:id])
     @session = @hotel.onboarding_sessions.find(params[:session_id])
