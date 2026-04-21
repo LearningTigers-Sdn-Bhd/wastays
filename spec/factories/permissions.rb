@@ -1,6 +1,6 @@
 FactoryBot.define do
   factory :permission do
-    name { "MyString" }
-    slug { "MyString" }
+    sequence(:name) { |n| "Manage Resource #{n}" }
+    sequence(:slug) { |n| "manage-resource-#{n}" }
   end
 end

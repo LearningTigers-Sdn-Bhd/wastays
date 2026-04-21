@@ -1,0 +1,42 @@
+require "rails_helper"
+
+RSpec.describe GuestArrival::CreateOrMatchGuest do
+  let(:params) do
+    {
+      name: "Jane Doe",
+      email: "JANE@EXAMPLE.COM",
+      phone: "+60111111111",
+      government_id: "A123456",
+      gender: "FEMALE",
+      country: "Singapore",
+      document_type: "PASSPORT"
+    }
+  end
+
+  it "creates new guest when no match exists" do
+    result = described_class.new(params).call
+
+    expect(result.success?).to be(true)
+    expect(result.guest).to be_persisted
+    expect(result.guest.email).to eq("jane@example.com")
+    expect(result.is_repeat?).to be(false)
+  end
+
+  it "matches existing guest by phone" do
+    existing = create(:guest, government_id: "A123456", email: "old@example.com", phone: "+60111111111")
+
+    result = described_class.new(params).call
+
+    expect(result.guest.id).to eq(existing.id)
+  end
+
+  it "marks repeat guest when guest has revenue-generating bookings" do
+    guest = create(:guest, government_id: "A123456", phone: "+60111111111")
+    booking = create(:booking, status: "completed")
+    create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+    result = described_class.new(params).call
+
+    expect(result.is_repeat?).to be(true)
+  end
+end
