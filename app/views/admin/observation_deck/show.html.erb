@@ -71,6 +71,19 @@
       </div>
     <% end %>
 
+    <!-- Error Callout for Failures -->
+    <% if @entry.status.to_i >= 400 %>
+      <div class="bg-rose-50 border border-rose-100 rounded-2xl p-6 space-y-3">
+        <div class="flex items-center gap-2 text-rose-700">
+          <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <h4 class="text-sm font-bold uppercase tracking-tight">Execution Failure</h4>
+        </div>
+        <% if @entry.payload['exception'] || @entry.payload['exception_object'] %>
+          <pre class="text-xs font-mono text-rose-800 bg-rose-100/50 p-4 rounded-xl overflow-x-auto whitespace-pre-wrap"><%= @entry.payload['exception'] || @entry.payload['exception_object'] %></pre>
+        <% end %>
+      </div>
+    <% end %>
+
     <!-- Tags -->
     <% if @entry.tags.present? %>
       <div class="space-y-2">
@@ -99,8 +112,11 @@
           </div>
         </div>
 
-        <div x-show="view === 'html'" class="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
-          <iframe srcdoc="<%= @entry.payload['html_body'] %>" class="w-full min-h-[500px]" frameborder="0"></iframe>
+        <div x-show="view === 'html'" class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-inner ring-1 ring-slate-100">
+          <iframe srcdoc="<%= @entry.payload['html_body'] %>" 
+                  class="w-full min-h-[600px] bg-white" 
+                  sandbox="allow-popups allow-popups-to-escape-sandbox"
+                  frameborder="0"></iframe>
         </div>
 
         <div x-show="view === 'text'" class="border border-slate-200 rounded-2xl p-6 bg-slate-50 font-mono text-sm text-slate-700 whitespace-pre-wrap">

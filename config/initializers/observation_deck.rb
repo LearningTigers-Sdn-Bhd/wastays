@@ -168,7 +168,7 @@ ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
   capture_observation_entry({
     entry_type: "mail",
     request_id: Current.request_id || "none",
-    status: 200,
+    status: payload[:exception].present? ? 500 : 200,
     duration: event.duration,
     path: payload[:mailer],
     payload: OBSERVATION_SCRUBBER.filter({
@@ -176,9 +176,11 @@ ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
       to: to,
       from: from,
       html_body: html_body&.truncate(50000),
-      text_body: text_body&.truncate(50000)
+      text_body: text_body&.truncate(50000),
+      exception: payload[:exception],
+      exception_object: payload[:exception_object]&.message
     }),
-    tags: []
+    tags: payload[:exception].present? ? ["error"] : []
   })
 end
 
