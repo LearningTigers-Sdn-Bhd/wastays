@@ -9,6 +9,8 @@ class User < ApplicationRecord
   has_many :hotels, through: :user_hotel_accesses
   has_many :hotel_roles, through: :user_hotel_accesses, source: :role
 
+  has_many :assigned_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
+
   has_many :user_roles, dependent: :destroy
   has_many :roles, through: :user_roles
 

@@ -4,7 +4,6 @@ class Hotel < ApplicationRecord
   has_many_attached :photos
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :users, through: :user_hotel_accesses
-  has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
   has_one :property_policy, dependent: :destroy
   has_many :room_types, dependent: :destroy

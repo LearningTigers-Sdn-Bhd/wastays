@@ -28,9 +28,17 @@ class Admin::SalespersonsController < Admin::BaseController
   end
 
   def update
+    hotel_ids = selected_hotel_ids
+
     if @salesperson.update(salesperson_params)
-      assign_hotels(@salesperson, selected_hotel_ids)
-      redirect_to admin_salespersons_path, notice: "Salesperson updated successfully."
+      if hotel_ids.empty?
+        Hotel.where(salesperson_id: @salesperson.id).update_all(salesperson_id: nil)
+        @salesperson.destroy
+        redirect_to admin_salespersons_path, notice: "Salesperson removed because no hotels are assigned."
+      else
+        assign_hotels(@salesperson, hotel_ids)
+        redirect_to admin_salespersons_path, notice: "Salesperson updated successfully."
+      end
     else
       index
       @salespersons = @salespersons.map { |record| record.id == @salesperson.id ? @salesperson : record }
@@ -39,8 +47,8 @@ class Admin::SalespersonsController < Admin::BaseController
   end
 
   def destroy
-    @salesperson.update(role: "hotel_staff")
     Hotel.where(salesperson_id: @salesperson.id).update_all(salesperson_id: nil)
+    @salesperson.update(role: "hotel_staff")
     redirect_to admin_salespersons_path, notice: "Salesperson removed successfully."
   end
 
