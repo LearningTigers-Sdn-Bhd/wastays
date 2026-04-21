@@ -22,24 +22,27 @@ class ObservationDeckMiddleware
   private
 
   def flush_buffer
-    # Use insert_all for high performance (ignores callbacks/validations)
-    # Ensure created_at and updated_at are set manually since insert_all skips them
+    count = Current.observation_buffer.size
     now = Time.current
+
+    # All objects must have the same keys for insert_all
     entries = Current.observation_buffer.map do |entry|
-      entry.merge(
+      {
         id: SecureRandom.uuid,
+        entry_type: entry[:entry_type],
+        request_id: entry[:request_id] || "none",
+        status: entry[:status],
+        duration: entry[:duration] || 0.0,
+        path: entry[:path],
+        payload: entry[:payload] || {},
+        tags: entry[:tags] || [],
         created_at: now,
-        updated_at: now,
-        payload: entry[:payload].to_json,
-        tags: entry[:tags].to_json
-      )
+        updated_at: now
+      }
     end
 
-    # Run in a separate thread or just ensure it doesn't block the client?
-    # Rack middleware call is after response is returned from app,
-    # but still blocking the server thread.
-    # For dev/small-scale, this is fine.
-    # For large scale, we would use a background job or a dedicated thread.
     ObservationEntry.insert_all(entries)
+  rescue => e
+    Rails.logger.error "[ObservationDeck] Flush failed: #{e.message}"
   end
 end
