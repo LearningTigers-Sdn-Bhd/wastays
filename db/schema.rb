@@ -663,7 +663,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
   add_foreign_key "onboarding_sessions", "hotels"
-  add_foreign_key "onboarding_sessions", "users", column: "trainer_id"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
   add_foreign_key "payout_batches", "hotels"
