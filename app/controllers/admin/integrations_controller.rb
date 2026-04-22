@@ -6,11 +6,24 @@ module Admin
   class IntegrationsController < Admin::BaseController
     def show
       @webhook_url = AppConfig.get("webhook_url")
+      @channex_api_key = AppConfig.get("channex_api_key")
+      @channex_environment = AppConfig.get("channex_environment") || "staging"
     end
 
     def update
-      AppConfig.set("webhook_url", params[:webhook_url].to_s.strip)
-      redirect_to admin_integrations_path, notice: "Webhook URL saved successfully."
+      if params[:webhook_url].present?
+        AppConfig.set("webhook_url", params[:webhook_url].to_s.strip)
+      end
+
+      if params[:channex_api_key].present?
+        AppConfig.set("channex_api_key", params[:channex_api_key].to_s.strip)
+      end
+
+      if params[:channex_environment].present?
+        AppConfig.set("channex_environment", params[:channex_environment].to_s.strip)
+      end
+
+      redirect_to admin_integrations_path, notice: "Integration settings saved successfully."
     end
 
     def destroy

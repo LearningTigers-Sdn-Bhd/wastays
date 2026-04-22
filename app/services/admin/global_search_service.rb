@@ -14,6 +14,7 @@ class Admin::GlobalSearchService < BaseGlobalSearchService
     { title: "Refund Requests", subtitle: "Guest refund request queue", url: :admin_refund_requests_path, keywords: "refund requests guest refunds finance" },
     { title: "Audit Logs", subtitle: "System activity", url: :admin_audit_logs_path, keywords: "audit logs activity" },
     { title: "API Access Management", subtitle: "API keys", url: :admin_api_keys_path, keywords: "api access keys integration" },
+    { title: "Observation Deck", subtitle: "System monitoring & logs", url: :admin_observation_deck_index_path, keywords: "observation deck observability logs monitoring ai analysis" },
     { title: "Integrations", subtitle: "Webhook and automation settings", url: :admin_integrations_path, keywords: "integrations webhook whatsapp n8n automation" },
     { title: "Developer Guide", subtitle: "API setup and docs", url: :docs_admin_api_keys_path, keywords: "api developer guide docs" },
     { title: "My Profile", subtitle: "Admin account settings", url: :edit_admin_profile_path, keywords: "profile account settings" },

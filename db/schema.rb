@@ -188,12 +188,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.string "payout_status"
     t.datetime "payout_at"
     t.string "payout_reference"
-    t.bigint "payout_batch_id"
+    t.string "payout_batch_id"
+    t.string "source", default: "internal"
+    t.string "external_reference"
+    t.string "channel_manager_reference"
+    t.integer "revision_number", default: 0
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
+    t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
+    t.index ["external_reference"], name: "index_bookings_on_external_reference"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
-    t.index ["payout_batch_id"], name: "index_bookings_on_payout_batch_id"
+    t.index ["source"], name: "index_bookings_on_source"
     t.index ["status"], name: "index_bookings_on_status"
   end
 
@@ -202,6 +208,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.text "body"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "channel_mappings", force: :cascade do |t|
+    t.string "mappable_type", null: false
+    t.bigint "mappable_id", null: false
+    t.string "provider", null: false
+    t.string "external_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["mappable_type", "mappable_id"], name: "index_channel_mappings_on_mappable"
+    t.index ["provider", "external_id"], name: "index_channel_mappings_on_provider_and_external_id", unique: true
+    t.index ["provider", "mappable_type", "mappable_id"], name: "idx_channel_mappings_provider_mappable", unique: true
   end
 
   create_table "complaint_requests", force: :cascade do |t|
@@ -272,6 +290,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.boolean "tourism_tax_enabled", default: false, null: false
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "10.0", null: false
     t.bigint "featured_photo_attachment_id"
+    t.string "preferred_channel_manager"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
   end
@@ -318,6 +337,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["settable_type", "settable_id"], name: "index_margin_rules_on_settable"
+  end
+
+  create_table "observation_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "entry_type", null: false
+    t.string "request_id"
+    t.integer "status"
+    t.float "duration"
+    t.string "path"
+    t.jsonb "payload", default: {}
+    t.jsonb "tags", default: []
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "ai_analysis"
+    t.index ["created_at"], name: "index_observation_entries_on_created_at"
+    t.index ["entry_type"], name: "index_observation_entries_on_entry_type"
+    t.index ["request_id"], name: "index_observation_entries_on_request_id"
+    t.index ["status"], name: "index_observation_entries_on_status"
+    t.index ["tags"], name: "index_observation_entries_on_tags", using: :gin
   end
 
   create_table "payment_settings", force: :cascade do |t|
@@ -406,6 +443,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.index ["hotel_id"], name: "index_property_policies_on_hotel_id"
   end
 
+  create_table "rate_plans", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "room_type_id", null: false
+    t.string "sell_mode", default: "per_room", null: false
+    t.string "currency", default: "MYR", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["room_type_id"], name: "index_rate_plans_on_room_type_id"
+  end
+
   create_table "refund_policies", force: :cascade do |t|
     t.integer "min_days_before_checkin", default: 0, null: false
     t.decimal "refund_percentage", precision: 5, scale: 2, default: "100.0", null: false
@@ -466,6 +513,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.string "currency", default: "MYR", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "rate_plan_id"
+    t.index ["rate_plan_id"], name: "index_room_rates_on_rate_plan_id"
     t.index ["room_type_id", "date"], name: "index_room_rates_on_room_type_id_and_date", unique: true
     t.index ["room_type_id"], name: "index_room_rates_on_room_type_id"
   end
@@ -554,7 +603,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
   add_foreign_key "booking_rooms", "room_types"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
-  add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotels", "accounts"
@@ -567,11 +615,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
   add_foreign_key "payout_batches", "hotels"
   add_foreign_key "pre_checkins", "bookings"
   add_foreign_key "property_policies", "hotels"
+  add_foreign_key "rate_plans", "room_types"
   add_foreign_key "refund_requests", "bookings"
   add_foreign_key "role_permissions", "permissions"
   add_foreign_key "role_permissions", "roles"
   add_foreign_key "roles", "accounts"
   add_foreign_key "room_inventories", "room_types"
+  add_foreign_key "room_rates", "rate_plans"
   add_foreign_key "room_rates", "room_types"
   add_foreign_key "room_types", "hotels"
   add_foreign_key "user_hotel_accesses", "hotels"

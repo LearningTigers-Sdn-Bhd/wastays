@@ -9,6 +9,14 @@ RSpec.describe Payments::GatewayAdapters::Razorpay do
       @body = body
     end
 
+    def code
+      "200"
+    end
+
+    def to_hash
+      {}
+    end
+
     def is_a?(klass)
       klass == Net::HTTPSuccess || super
     end

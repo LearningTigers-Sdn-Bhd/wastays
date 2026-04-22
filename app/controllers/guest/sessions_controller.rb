@@ -40,7 +40,8 @@ class Guest::SessionsController < Guest::BaseController
     guest = ::Guest.find_by(email: email)
 
     unless guest
-      redirect_to guest_login_path(email_sent: true)
+      flash.now[:alert] = "No account found for that email. Please create an account to continue."
+      render :new, status: :unprocessable_entity
       return
     end
 

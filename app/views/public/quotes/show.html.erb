@@ -36,7 +36,7 @@
       </div>
     </div>
 
-    <%= form_with url: verify_payment_path, method: :post, class: "max-w-[85rem] mx-auto", id: "payment-checkout-form", data: { checkout_session_url: checkout_payment_session_path, guest_lookup_url: guest_lookup_quote_path(@quote.token) } do |f| %>
+    <%= form_with url: verify_payment_path, method: :post, class: "max-w-[85rem] mx-auto", id: "payment-checkout-form", data: { checkout_session_url: checkout_payment_session_path, guest_lookup_url: guest_lookup_quote_path(@quote.token), payment_ready: @payment_ready } do |f| %>
       <%= f.hidden_field :quote_token, value: @quote.token %>
       <%= f.hidden_field :gateway, value: @payment_gateway %>
       <%= f.hidden_field "payment_response[razorpay_payment_id]", value: "", data: { razorpay_payment_id: true } %>
@@ -436,13 +436,21 @@
             <p class="mt-6 text-xs text-neutral-text-secondary text-center">
               Your connection is encrypted. We do not store your full card details.
             </p>
+            <% unless @payment_ready %>
+              <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Online payment is temporarily unavailable for this hotel. Please contact the hotel to complete booking.
+              </div>
+            <% end %>
           </div>
 
           <div class="flex items-center justify-end gap-4 pt-4">
             <%= link_to "Back to hotel",
                         hotel_path(@hotel, request.query_parameters),
                         class: "btn btn-secondary min-w-[220px] px-12 py-4 text-base font-black text-center" %>
-            <%= f.submit "Confirm & Pay Now", class: "btn btn-gradient min-w-[220px] px-12 py-4 text-base font-black", data: { checkout_submit: true } %>
+            <%= f.submit "Confirm & Pay Now",
+                         class: "btn btn-gradient min-w-[220px] px-12 py-4 text-base font-black disabled:cursor-not-allowed disabled:opacity-60",
+                         data: { checkout_submit: true },
+                         disabled: !@payment_ready %>
           </div>
         </div>
 
@@ -530,14 +538,18 @@
 
     const submitButton = form.querySelector("[data-checkout-submit]");
     const checkoutSessionUrl = form.dataset.checkoutSessionUrl;
+    const paymentReady = form.dataset.paymentReady === "true";
     const paymentIdField = form.querySelector("[data-razorpay-payment-id]");
     const orderIdField = form.querySelector("[data-razorpay-order-id]");
     const signatureField = form.querySelector("[data-razorpay-signature]");
+
+    if (!submitButton || !checkoutSessionUrl) return;
 
     let submittingToServer = false;
 
     form.addEventListener("submit", async function(event) {
       if (submittingToServer) return;
+      if (!paymentReady) return;
 
       event.preventDefault();
       submitButton.disabled = true;
@@ -555,7 +567,12 @@
           body: formData
         });
 
-        const session = await response.json();
+        let session = {};
+        try {
+          session = await response.json();
+        } catch (_jsonError) {
+          throw new Error("Unable to initialize payment right now. Please try again.");
+        }
         if (!response.ok) throw new Error(session.error || "Unable to initialize checkout.");
 
         if (session.checkout_url) {
