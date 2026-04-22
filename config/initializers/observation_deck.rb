@@ -3,11 +3,13 @@
 # Helper to deeply scrub sensitive data
 # We explicitly remove :email from the global filters for the Observation Deck so devs can debug user issues
 OBSERVATION_SCRUBBER = ActiveSupport::ParameterFilter.new(
-  (Rails.application.config.filter_parameters - [:email]) + [ :credit_card, :cvv, :passport, :ssn ]
+  (Rails.application.config.filter_parameters - [ :email ]) + [ :credit_card, :cvv, :passport, :ssn ]
 )
 
 # Helper to store entries (buffered for requests, immediate for jobs)
 def capture_observation_entry(entry_data)
+  return if Rails.env.test?
+
   entry_data[:request_id] = entry_data[:request_id].presence || Current.request_id || "none"
 
   if Current.respond_to?(:observation_buffer) && Current.observation_buffer.is_a?(Array)
@@ -57,7 +59,7 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
     else
       payload[:params] || {}
     end
-    
+
     capture_observation_entry({
       entry_type: "request",
       request_id: payload[:request_id].presence || Current.request_id || "none",

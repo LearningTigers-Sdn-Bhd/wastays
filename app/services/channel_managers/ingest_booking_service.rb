@@ -25,6 +25,7 @@ module ChannelManagers
           check_in: @data[:check_in],
           check_out: @data[:check_out],
           status: @data[:status],
+          adults: @data[:adults] || 1,
           total_amount: @data[:total_amount],
           currency: @data[:currency],
           source: @data[:source],

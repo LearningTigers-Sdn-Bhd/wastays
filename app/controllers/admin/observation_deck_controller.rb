@@ -25,7 +25,7 @@ module Admin
       if params[:entry_type].present?
         @entries = @entries.where(entry_type: params[:entry_type])
       elsif params[:focus_mode] == "true"
-        @entries = @entries.where(entry_type: ["request", "job", "mail"])
+        @entries = @entries.where(entry_type: [ "request", "job", "mail" ])
       end
 
       effective_status_group = params[:status_group].presence
@@ -84,7 +84,6 @@ module Admin
     end
 
     def analyze
-
       @entry = ObservationEntry.find(params[:id])
       @analysis = PlatformControl::AiAnalyzerService.new(@entry).analyze
 
@@ -96,6 +95,15 @@ module Admin
     def acknowledge
       AppConfig.set("observation_deck_last_acknowledged_at", Time.current)
       redirect_to admin_observation_deck_index_path, notice: "All recent errors acknowledged."
+    end
+
+    def update_config
+      if params[:gemini_api_key].present?
+        AppConfig.set("gemini_api_key", params[:gemini_api_key])
+        redirect_to admin_observation_deck_index_path, notice: "Gemini API key updated successfully."
+      else
+        redirect_to admin_observation_deck_index_path, alert: "API key cannot be blank."
+      end
     end
   end
 end

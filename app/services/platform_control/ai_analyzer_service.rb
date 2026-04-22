@@ -13,7 +13,9 @@ module PlatformControl
     def analyze
       return { error: "Gemini API key not configured in AppConfig ('gemini_api_key')" } if @api_key.blank?
 
-      uri = URI("#{GEMINI_API_URL}?key=#{@api_key}")
+      uri = URI(GEMINI_API_URL)
+      uri.query = "key=#{@api_key}"
+
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
 

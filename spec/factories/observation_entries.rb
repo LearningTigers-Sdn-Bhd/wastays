@@ -1,10 +1,11 @@
 FactoryBot.define do
   factory :observation_entry do
-    entry_type { "MyString" }
-    request_id { "MyString" }
-    status { 1 }
-    duration { 1.5 }
-    path { "MyString" }
-    payload { "" }
+    entry_type { "request" }
+    request_id { SecureRandom.uuid }
+    status { 200 }
+    duration { 10.5 }
+    path { "GET /test" }
+    payload { { key: "value" } }
+    tags { [] }
   end
 end

@@ -5,7 +5,7 @@ class ObservationDeckMiddleware
 
   def call(env)
     request = ActionDispatch::Request.new(env)
-    
+
     # Silence instrumentation for internal, health check, and dev noise
     if request.path.start_with?("/admin/observation_deck", "/up", "/rails/", "/hotwire-livereload")
       Thread.current[:observation_deck_silenced] = true
@@ -18,7 +18,7 @@ class ObservationDeckMiddleware
 
     if Current.observation_buffer.present?
       count = Current.observation_buffer.size
-      flush_buffer 
+      flush_buffer
       Rails.logger.info "[ObservationDeck] Successfully flushed #{count} entries."
     end
 
