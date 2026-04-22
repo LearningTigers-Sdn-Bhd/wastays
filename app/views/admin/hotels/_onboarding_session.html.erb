@@ -28,7 +28,7 @@
           <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
         <div>
-          <p class="text-sm font-bold text-slate-900"><%= session.trainer_name.presence&.capitalize || "No trainer assigned" %></p>
+          <p class="text-sm font-bold text-slate-900"><%= session.trainer_name.presence || "No trainer assigned" %></p>
           <p class="text-xs text-slate-500">Scheduled: <%= session.scheduled_at.strftime("%d %b %Y at %I:%M %p") %></p>
         </div>
         </div>
@@ -68,7 +68,7 @@
                     data-action="click->cancel-panel#toggle"
                     aria-expanded="false"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-xs font-semibold transition hover:bg-rose-100">
-              Cancel Session
+              Cancel
             </button>
             <div data-cancel-panel-target="panel"
                  class="absolute right-0 z-20 mt-3 hidden w-[320px] rounded-xl border border-slate-200 bg-white p-4 shadow-2xl ring-1 ring-black/10">
@@ -106,6 +106,17 @@
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-500 text-xs font-semibold border border-slate-200">
               Pending
             </span>
+          <% end %>
+        <% end %>
+
+        <% unless session.status == "completed" %>
+          <%= button_to destroy_onboarding_session_admin_hotel_path(hotel, session_id: session.id),
+                        method: :delete,
+                        form: { class: "inline" },
+                        data: { turbo_confirm: "Delete this training session permanently?" },
+                        class: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-white text-rose-700 text-xs font-semibold transition hover:bg-rose-50" do %>
+            <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            Delete
           <% end %>
         <% end %>
       </div>

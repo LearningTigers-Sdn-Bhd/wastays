@@ -85,12 +85,17 @@ export default class extends Controller {
         method: "POST",
         headers: {
           "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content,
-          "Accept": "application/json"
+          "Accept": "text/vnd.turbo-stream.html, application/json"
         },
         body: formData
       })
       
       if (response.ok) {
+        const contentType = response.headers.get("content-type") || ""
+        if (contentType.includes("text/vnd.turbo-stream.html") && window.Turbo?.renderStreamMessage) {
+          window.Turbo.renderStreamMessage(await response.text())
+          this.dispatchTrackerFilterRefresh()
+        }
         this.close()
         // Optional: show a small success checkmark or toast
       }
@@ -133,5 +138,15 @@ export default class extends Controller {
     }
 
     this.displayTarget.textContent = text
+  }
+
+  dispatchTrackerFilterRefresh() {
+    const searchInput = document.querySelector(
+      "[data-controller~='onboarding-tracker-filter'] [data-onboarding-tracker-filter-target='search']"
+    )
+
+    if (searchInput) {
+      searchInput.dispatchEvent(new Event("input", { bubbles: true }))
+    }
   }
 }

@@ -213,6 +213,20 @@ class Hotel < ApplicationRecord
     end
   end
 
+  def onboarding_duration_days
+    saved_start = self[:onboarding_start_date]
+    saved_end = self[:onboarding_end_date]
+
+    if saved_start.present? && saved_end.present?
+      (saved_end.to_date - saved_start.to_date).to_f
+    else
+      rec = onboarding_period_record
+      return nil unless rec&.scheduled_at.present? && rec&.completed_at.present?
+
+      ((rec.completed_at - rec.scheduled_at) / 1.day).to_f
+    end
+  end
+
   private
 
   def photos_limit_not_exceeded
