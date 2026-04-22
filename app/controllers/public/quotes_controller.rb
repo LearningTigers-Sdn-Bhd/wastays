@@ -23,6 +23,7 @@ class Public::QuotesController < ApplicationController
     @quote_items = @quote.booking_quote_items
     @display_currency = display_currency_for_request
     @payment_gateway = @hotel.checkout_payment_gateway || "razorpay"
+    @payment_ready = @hotel.effective_payment_setting(@payment_gateway).present?
   end
 
   def guest_lookup

@@ -50,6 +50,11 @@
             <%= f.text_field :country, class: input_classes %>
           </div>
 
+          <div>
+            <label for="preferred_channel_manager" class="mb-2 block text-sm font-medium text-slate-700">Preferred Channel Manager</label>
+            <%= f.select :preferred_channel_manager, [["None", ""], ["Channex", "channex"]], {}, class: input_classes %>
+          </div>
+
           <% if hotel.persisted? %>
             <div class="sm:col-span-2">
               <div class="grid gap-5 sm:grid-cols-2">

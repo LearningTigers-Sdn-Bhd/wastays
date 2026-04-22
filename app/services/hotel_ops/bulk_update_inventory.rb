@@ -16,11 +16,11 @@ module HotelOps
           inventory = @room_type.room_inventories.find_or_initialize_by(date: date)
           old_quantity = inventory.quantity
           old_status = inventory.status
-
           inventory.quantity = @quantity
           inventory.status = @status
           inventory.save!
 
+          # Log change
           if old_quantity != @quantity || old_status != @status
             @hotel.inventory_audit_logs.create!(
               room_type: @room_type,
@@ -32,6 +32,12 @@ module HotelOps
             )
           end
         end
+
+        # Trigger ARI Sync if CM is connected
+        if @hotel.preferred_channel_manager.present?
+          ChannelManagers::SyncJob.perform_later(@hotel.id, @start_date, @end_date)
+        end
+
         { success: true }
       end
     rescue => e

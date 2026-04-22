@@ -1,0 +1,298 @@
+<%= turbo_frame_tag "entry_detail_frame" do %>
+  <div class="p-6 space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+    
+    <!-- Top Navigation & Breadcrumbs -->
+    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+      <div class="flex items-center gap-2 text-xs font-medium text-slate-400">
+        <% if @parent_request && @parent_request.id != @entry.id %>
+          <%= link_to admin_observation_deck_path(@parent_request), class: "text-indigo-600 hover:underline", data: { turbo_frame: "entry_detail_frame" } do %>
+            <%= @parent_request.human_title %>
+          <% end %>
+          <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <% end %>
+        <span class="text-slate-900 font-bold"><%= @entry.human_title %></span>
+      </div>
+
+      <% if @parent_request && @parent_request.id != @entry.id %>
+        <%= link_to admin_observation_deck_path(@parent_request), 
+            class: "flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-all",
+            data: { turbo_frame: "entry_detail_frame" } do %>
+          <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"/></svg>
+          Back to Request
+        <% end %>
+      <% end %>
+    </div>
+
+    <!-- AI Insights Area -->
+    <div id="ai_analysis_area" data-controller="ai-analysis">
+      <% if @entry.ai_analysis.present? %>
+        <% analysis = @entry.ai_analysis.with_indifferent_access %>
+        <div class="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-6 space-y-4 shadow-sm group">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-indigo-700">
+              <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <h4 class="text-sm font-bold uppercase tracking-tight">AI Insights</h4>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase"><%= analysis[:model] %></span>
+              <%= button_to analyze_admin_observation_deck_path(@entry, force: true), 
+                  method: :post,
+                  data: { action: "click->ai-analysis#start", ai_analysis_target: "button" },
+                  class: "hidden group-hover:block text-[10px] font-bold text-indigo-400 hover:text-indigo-600 transition-colors uppercase underline decoration-dotted" do %>
+                Regenerate
+              <% end %>
+            </div>
+          </div>
+          
+          <div class="prose prose-sm max-w-none text-slate-700" data-ai-analysis-target="content">
+            <%= sanitize(analysis[:html]) %>
+          </div>
+
+          <div data-ai-analysis_target="loading" class="hidden py-4">
+            <div class="flex items-center justify-center gap-3 text-indigo-600 text-xs font-bold animate-pulse">
+              <svg class="animate-spin size-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              Thinking... refreshing analysis...
+            </div>
+          </div>
+        </div>
+      <% elsif @entry.status.to_i >= 400 || @entry.duration > 1000 %>
+        <div class="bg-indigo-50/30 border border-indigo-100/50 rounded-2xl p-6 text-center space-y-4">
+          <div class="flex flex-col items-center gap-2">
+            <div class="size-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
+              <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <h4 class="text-sm font-bold text-indigo-900">Need help understanding this?</h4>
+            <p class="text-xs text-indigo-700/70 max-w-xs mx-auto leading-relaxed">Let AI analyze this entry to explain the root cause and suggest a fix.</p>
+          </div>
+          
+          <%= button_to analyze_admin_observation_deck_path(@entry), 
+              method: :post,
+              data: { action: "click->ai-analysis#start", ai_analysis_target: "button" },
+              class: "mx-auto flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200" do %>
+            ✨ Analyze with AI
+          <% end %>
+
+          <div data-ai-analysis_target="loading" class="hidden">
+            <div class="flex items-center justify-center gap-3 text-indigo-600 text-xs font-bold animate-pulse">
+              <svg class="animate-spin size-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              Thinking... analyzing logs...
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Core Details -->
+    <div class="grid grid-cols-2 gap-6">
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Entry ID</p>
+        <p class="text-sm font-mono text-slate-900 font-medium select-all"><%= @entry.id %></p>
+      </div>
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Timestamp</p>
+        <p class="text-sm text-slate-900 font-medium"><%= @entry.created_at.strftime("%B %d, %Y at %H:%M:%S.%L") %></p>
+      </div>
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Request ID</p>
+        <% if @entry.request_id.present? && @entry.request_id != "none" %>
+          <%= link_to admin_observation_deck_index_path(request_id: @entry.request_id), 
+              class: "text-sm font-mono text-indigo-600 hover:text-indigo-700 font-bold border-b border-indigo-200 border-dotted", 
+              data: { turbo_frame: "entries_table" } do %>
+            <%= @entry.request_id %>
+          <% end %>
+        <% else %>
+          <p class="text-sm text-slate-400 italic">None</p>
+        <% end %>
+      </div>
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Duration</p>
+        <p class="text-sm text-slate-900 font-bold font-mono"><%= number_with_precision(@entry.duration, precision: 2) %> ms</p>
+      </div>
+    </div>
+
+    <!-- Request Metadata -->
+    <% if @entry.entry_type == 'request' %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
+        <div class="space-y-3">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">User Identity</p>
+          <% 
+            user_id_tag = @entry.tags.find { |t| t.start_with?("user:") }
+            user = User.find_by(id: user_id_tag.split(":").last) if user_id_tag
+          %>
+          <% if user %>
+            <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <div class="size-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase">
+                <%= user.name.first %>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-slate-900"><%= user.name %></p>
+                <p class="text-[11px] text-slate-500"><%= user.email %></p>
+              </div>
+            </div>
+          <% else %>
+            <p class="text-sm text-slate-400 italic">Guest / Unauthenticated</p>
+          <% end %>
+        </div>
+
+        <div class="space-y-3">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Network Info</p>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-slate-500">IP Address</span>
+              <span class="text-xs font-mono text-slate-900 font-bold"><%= @entry.payload['remote_ip'] || 'Unknown' %></span>
+            </div>
+            <div class="flex flex-col gap-1">
+              <span class="text-xs text-slate-500">User Agent</span>
+              <span class="text-[10px] font-mono text-slate-400 leading-tight truncate" title="<%= @entry.payload['user_agent'] %>">
+                <%= @entry.payload['user_agent'] %>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Error Callout for Failures -->
+    <% if @entry.status.to_i >= 400 %>
+      <div class="bg-rose-50 border border-rose-100 rounded-2xl p-6 space-y-3">
+        <div class="flex items-center gap-2 text-rose-700">
+          <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <h4 class="text-sm font-bold uppercase tracking-tight">Execution Failure</h4>
+        </div>
+        <% if @entry.payload['exception'] || @entry.payload['exception_object'] %>
+          <pre class="text-xs font-mono text-rose-800 bg-rose-100/50 p-4 rounded-xl overflow-x-auto whitespace-pre-wrap"><%= @entry.payload['exception'] || @entry.payload['exception_object'] %></pre>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Tags -->
+    <% if @entry.tags.present? %>
+      <div class="space-y-2">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Context Tags</p>
+        <div class="flex flex-wrap gap-2">
+          <% @entry.tags.each do |tag| %>
+            <%= link_to admin_observation_deck_index_path(query: tag), 
+                class: "px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors",
+                data: { turbo_frame: "entries_table" } do %>
+              <%= tag %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Special Viewers -->
+    <% if @entry.entry_type == 'mail' %>
+      <div class="space-y-6" data-controller="mail-viewer">
+        <!-- Email Header Simulation -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
+          <div class="grid grid-cols-[80px_1fr] gap-y-3 items-baseline">
+            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">From</span>
+            <span class="text-sm font-medium text-slate-900">
+              <%= Array(@entry.payload['from']).join(", ") %>
+            </span>
+
+            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">To</span>
+            <span class="text-sm font-medium text-slate-900">
+              <%= Array(@entry.payload['to']).join(", ") %>
+            </span>
+
+            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Subject</span>
+            <span class="text-sm font-bold text-slate-900">
+              <%= @entry.payload['subject'] %>
+            </span>
+
+            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Date</span>
+            <span class="text-sm font-medium text-slate-600">
+              <%= @entry.created_at.strftime("%b %d, %Y %I:%M:%S %p %Z") %>
+            </span>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mail Body</p>
+            <div class="flex bg-slate-100 p-1 rounded-lg">
+              <button data-action="click->mail-viewer#switch" data-view="html" data-mail-viewer-target="button" class="px-3 py-1 text-xs font-bold rounded-md transition-all bg-white shadow-sm text-indigo-600">HTML</button>
+              <button data-action="click->mail-viewer#switch" data-view="text" data-mail-viewer-target="button" class="px-3 py-1 text-xs font-bold rounded-md transition-all text-slate-500">Text</button>
+              <button data-action="click->mail-viewer#switch" data-view="raw" data-mail-viewer-target="button" class="px-3 py-1 text-xs font-bold rounded-md transition-all text-slate-500">Raw JSON</button>
+            </div>
+          </div>
+
+          <div data-mail-viewer-target="view" data-view="html" class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-inner ring-1 ring-slate-100">
+            <iframe srcdoc="<%= @entry.payload['html_body'] %>" 
+                    class="w-full min-h-[600px] bg-white" 
+                    sandbox="allow-popups allow-popups-to-escape-sandbox"
+                    frameborder="0"></iframe>
+          </div>
+
+          <div data-mail-viewer-target="view" data-view="text" class="hidden border border-slate-200 rounded-2xl p-6 bg-slate-50 font-mono text-sm text-slate-700 whitespace-pre-wrap">
+            <%= @entry.payload['text_body'] %>
+          </div>
+          
+          <div data-mail-viewer-target="view" data-view="raw" class="hidden">
+             <pre class="bg-slate-900 rounded-2xl p-6 overflow-x-auto"><code class="text-indigo-300 text-xs"><%= JSON.pretty_generate(@entry.payload) %></code></pre>
+          </div>
+        </div>
+      </div>
+    <% elsif @entry.entry_type == 'sql' %>
+       <div class="space-y-2">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">SQL Query</p>
+        <div class="bg-slate-900 rounded-2xl p-6 border border-slate-800 shadow-inner group relative">
+          <pre class="whitespace-pre-wrap font-mono text-sm leading-relaxed"><code class="text-emerald-400"><%= @entry.payload['sql'] %></code></pre>
+          <button class="absolute top-4 right-4 p-2 bg-slate-800 text-slate-400 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:text-white"
+                  onclick="navigator.clipboard.writeText('<%= j @entry.payload['sql'] %>')">
+            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 011.414.172l3.828 3.828a1 1 0 01.172 1.414V17a2 2 0 01-2 2H10a2 2 0 01-2-2V7z"/></svg>
+          </button>
+        </div>
+      </div>
+    <% else %>
+      <!-- Default JSON Tree View -->
+      <div class="space-y-2">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Payload Data</p>
+        <div class="bg-slate-900 rounded-2xl p-6 overflow-x-auto border border-slate-800 shadow-2xl">
+          <pre class="text-sm font-mono leading-relaxed"><code class="text-indigo-300"><%= JSON.pretty_generate(@entry.payload) %></code></pre>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Sibling Traceability -->
+    <% if @siblings.present? %>
+      <div class="space-y-4 pt-6 border-t border-slate-100">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Trace Timeline (Request ID: <%= @entry.request_id.first(8) %>)</p>
+        <div class="space-y-2">
+          <% @siblings.each do |sibling| %>
+            <% is_current = sibling.id == @entry.id %>
+            <%= link_to admin_observation_deck_path(sibling), 
+                class: "flex items-center justify-between p-3 rounded-xl border transition-all group cursor-pointer #{is_current ? 'bg-indigo-50/50 border-indigo-200 shadow-sm ring-1 ring-indigo-100' : 'border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm'}",
+                data: { turbo_frame: "entry_detail_frame" } do %>
+              <div class="flex items-center gap-3">
+                <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded <%= case sibling.entry_type
+                    when 'request' then 'bg-emerald-100 text-emerald-700'
+                    when 'job' then 'bg-amber-100 text-amber-700'
+                    when 'sql' then 'bg-indigo-100 text-indigo-700'
+                    else 'bg-slate-200 text-slate-600'
+                    end %>">
+                  <%= sibling.entry_type %>
+                </span>
+                <span class="text-xs font-mono font-medium <%= is_current ? 'text-indigo-900' : 'text-slate-600' %> truncate max-w-md">
+                  <%= sibling.path %>
+                </span>
+                <% if is_current %>
+                  <span class="text-[8px] font-black text-indigo-600 tracking-tighter bg-indigo-100 px-1 rounded">CURRENT</span>
+                <% end %>
+              </div>
+              <div class="flex items-center gap-3">
+                <% if sibling.status.present? %>
+                  <span class="text-[10px] font-bold <%= sibling.status.to_i >= 400 ? 'text-rose-600' : 'text-slate-400' %>"><%= sibling.status %></span>
+                <% end %>
+                <span class="text-[10px] font-mono text-slate-400"><%= number_with_precision(sibling.duration, precision: 1) %>ms</span>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+  </div>
+<% end %>

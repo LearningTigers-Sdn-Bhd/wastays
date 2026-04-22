@@ -13,10 +13,16 @@ class Booking < ApplicationRecord
   attr_accessor :estimated_arrival_time
   attr_accessor :guest_government_id
 
+  STATUSES = %w[pending confirmed checked_in cancelled completed overbooked].freeze
+  PAYMENT_STATUSES = %w[pending authorized captured failed refunded].freeze
+  PAYOUT_STATUSES = %w[pending processing paid].freeze
+
   PRE_CHECKIN_STATUSES = %w[not_started pending in_progress completed failed].freeze
   GUARANTEE_METHODS = %w[none pre_checkin_completed manual_at_hotel card_authorization_document charge_now].freeze
   DEPOSIT_STATUSES = %w[not_required pending_at_hotel authorized collected released failed].freeze
 
+  validates :status, presence: true, inclusion: { in: STATUSES }
+  validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
   validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_nil: true }
   validates :deposit_status, inclusion: { in: DEPOSIT_STATUSES, allow_nil: true }
@@ -30,10 +36,6 @@ class Booking < ApplicationRecord
   validates :confirmation_token, uniqueness: true
 
   before_validation :generate_confirmation_token, on: :create
-
-  STATUSES = %w[pending confirmed checked_in cancelled completed].freeze
-  PAYMENT_STATUSES = %w[pending authorized captured failed refunded].freeze
-  PAYOUT_STATUSES = %w[pending processing paid].freeze
 
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }

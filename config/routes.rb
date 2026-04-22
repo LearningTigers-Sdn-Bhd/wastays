@@ -77,6 +77,7 @@ Rails.application.routes.draw do
     post "payments/verify", to: "payments#verify", as: :verify_payment
     get "mock_payment", to: "payment_mocks#show", as: :mock_payment
     post "mock_payment", to: "payment_mocks#update"
+    post "webhooks/channex", to: "channel_manager_webhooks#channex", as: :channex_webhook
     post "webhooks/:gateway", to: "webhooks#create", as: :payment_webhook
   end
 
@@ -92,7 +93,6 @@ Rails.application.routes.draw do
 
   # Superadmin dashboard
   namespace :admin do
-    # ...
     resource :profile, only: [ :edit, :update ], controller: "profiles"
     get "audit_logs/index"
     get "margin_rules/index"
@@ -117,6 +117,8 @@ Rails.application.routes.draw do
         post :save_onboarding_period
         post :approve
         post :suspend
+        post :onboard_channex
+        post :disconnect_channex
       end
     end
     resources :bookings, only: [ :index, :show ] # Added stub
@@ -148,6 +150,16 @@ Rails.application.routes.draw do
     resources :audit_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
+    end
+    resources :observation_deck, only: [ :index, :show ], constraints: SuperadminConstraint.new do
+      collection do
+        delete :clear
+        post :acknowledge
+        post :update_config
+      end
+      member do
+        post :analyze
+      end
     end
     resource :refund_policy, only: [ :show, :update, :destroy ]
     resources :refund_requests, only: [ :index, :show ] do

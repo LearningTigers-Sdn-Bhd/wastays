@@ -14,8 +14,8 @@ class Guest < ApplicationRecord
   validates :name, presence: true
   validates :country, presence: true
   validates :gender, inclusion: { in: %w[male female other], message: "must be male, female, or other" }, allow_blank: true
-  validates :document_type, inclusion: { in: %w[ic passport], message: "must be IC or passport" }
-  validates :government_id, presence: true
+  validates :document_type, inclusion: { in: %w[ic passport], message: "must be IC or passport" }, allow_blank: true
+  validates :government_id, presence: true, allow_blank: true
 
   GENDERS = %w[male female other].freeze
   DOCUMENT_TYPES = %w[ic passport].freeze

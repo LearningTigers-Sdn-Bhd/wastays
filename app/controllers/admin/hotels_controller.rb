@@ -1,5 +1,5 @@
 class Admin::HotelsController < Admin::BaseController
-  before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend, :cancel_onboarding_session, :destroy_onboarding_session ]
+  before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend, :cancel_onboarding_session, :destroy_onboarding_session, :onboard_channex, :disconnect_channex ]
   before_action :load_salespersons, only: [ :new, :create, :edit, :update ]
 
   def index
@@ -307,6 +307,26 @@ class Admin::HotelsController < Admin::BaseController
     redirect_to admin_hotel_path(@hotel), alert: "Failed to suspend account and hotel."
   end
 
+  def onboard_channex
+    @hotel.update!(preferred_channel_manager: "channex")
+    result = ChannelManagers::OnboardingService.new(hotel: @hotel).call
+
+    if result.success?
+      redirect_to admin_hotel_path(@hotel), notice: "Hotel successfully onboarded to Channex."
+    else
+      redirect_to admin_hotel_path(@hotel), alert: "Onboarding failed: #{result.message}"
+    end
+  end
+
+  def disconnect_channex
+    @hotel.update!(preferred_channel_manager: nil)
+    @hotel.channel_mapping&.destroy
+    @hotel.room_types.each { |rt| rt.channel_mapping&.destroy }
+    # Note: We don't delete rate plans as they are now part of our core model
+
+    redirect_to admin_hotel_path(@hotel), notice: "Disconnected from Channex. Channel mappings removed."
+  end
+
   private
 
   def set_hotel
@@ -314,11 +334,11 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def create_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :salesperson_id).merge(status: "approved")
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :salesperson_id, :preferred_channel_manager).merge(status: "approved")
   end
 
   def update_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :salesperson_id)
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :salesperson_id, :preferred_channel_manager)
   end
 
   def account_params
