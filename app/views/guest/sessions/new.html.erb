@@ -1,7 +1,9 @@
 <% content_for :title, "Guest Login | WAStays" %>
 <% content_for :hide_chrome, true %>
 
-<div class="relative min-h-screen flex items-center justify-center bg-landing-bg overflow-hidden py-12 px-4" data-controller="guest-login">
+<div class="relative min-h-screen flex items-center justify-center bg-landing-bg overflow-hidden py-12 px-4" 
+     data-controller="guest-login"
+     data-guest-login-is-error-value="<%= flash[:alert].present? %>">
   <!-- Decorative glows -->
   <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
     <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-primary/5 rounded-full blur-[100px]"></div>

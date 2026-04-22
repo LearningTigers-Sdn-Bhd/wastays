@@ -103,14 +103,42 @@ module Payments
       end
 
       def post_json(path, payload)
-        request = Net::HTTP::Post.new(build_api_path(path), request_headers)
+        uri = URI("#{API_BASE_URL}#{path}")
+        request = Net::HTTP::Post.new(uri, request_headers)
         request.body = payload.to_json
-        parse_json_response(http_client.request(request))
+
+        response = nil
+        ActiveSupport::Notifications.instrument("request.faraday", {
+          method: "POST",
+          url: uri.to_s,
+          request_headers: request.to_hash
+        }) do |n_payload|
+          response = http_client.request(request)
+          n_payload[:status] = response.code.to_i
+          n_payload[:response_headers] = response.to_hash
+          n_payload[:body] = response.body
+        end
+
+        parse_json_response(response)
       end
 
       def get_json(path)
-        request = Net::HTTP::Get.new(build_api_path(path), request_headers)
-        parse_json_response(http_client.request(request))
+        uri = URI("#{API_BASE_URL}#{path}")
+        request = Net::HTTP::Get.new(uri, request_headers)
+
+        response = nil
+        ActiveSupport::Notifications.instrument("request.faraday", {
+          method: "GET",
+          url: uri.to_s,
+          request_headers: request.to_hash
+        }) do |n_payload|
+          response = http_client.request(request)
+          n_payload[:status] = response.code.to_i
+          n_payload[:response_headers] = response.to_hash
+          n_payload[:body] = response.body
+        end
+
+        parse_json_response(response)
       end
 
       def build_api_path(path)

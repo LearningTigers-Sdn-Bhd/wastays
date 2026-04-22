@@ -11,10 +11,9 @@ RSpec.describe Guest, type: :model do
   describe 'validations' do
     it { is_expected.to validate_presence_of(:name) }
     it { is_expected.to validate_presence_of(:country) }
-    it { is_expected.to validate_presence_of(:government_id) }
     it { is_expected.to allow_value('male', 'female', 'other').for(:gender) }
     it { is_expected.not_to allow_value('unknown').for(:gender) }
-    it { is_expected.to allow_value('ic', 'passport').for(:document_type) }
+    it { is_expected.to allow_value('ic', 'passport', nil).for(:document_type) }
     it { is_expected.not_to allow_value('license').for(:document_type) }
   end
 

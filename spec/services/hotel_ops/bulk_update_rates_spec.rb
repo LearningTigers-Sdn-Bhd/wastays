@@ -9,10 +9,11 @@ RSpec.describe HotelOps::BulkUpdateRates do
   let(:price) { 150.0 }
   let(:currency) { 'MYR' }
 
-  subject do
+  let(:rate_plan) { create(:rate_plan, room_type: room_type) }
+  let(:service) do
     described_class.new(
       hotel: hotel,
-      room_type: room_type,
+      rate_plan: rate_plan,
       start_date: start_date,
       end_date: end_date,
       price: price,
@@ -20,6 +21,8 @@ RSpec.describe HotelOps::BulkUpdateRates do
       user: user
     )
   end
+
+  subject { service }
 
   describe '#call' do
     it 'creates room rates for the specified range' do
@@ -31,20 +34,20 @@ RSpec.describe HotelOps::BulkUpdateRates do
 
     it 'sets the correct price and currency' do
       subject.call
-      rate = room_type.room_rates.find_by(date: start_date)
+      rate = rate_plan.room_rates.find_by(date: start_date)
       expect(rate.price).to eq(price)
       expect(rate.currency).to eq(currency)
     end
 
     it 'updates existing room rates if they exist' do
-      create(:room_rate, room_type: room_type, date: start_date, price: 100.0)
+      create(:room_rate, rate_plan: rate_plan, room_type: room_type, date: start_date, price: 100.0)
 
       expect {
         result = subject.call
         expect(result[:success]).to be true
       }.to change(RoomRate, :count).by(6) # 7 total, but 1 already exists
 
-      expect(room_type.room_rates.find_by(date: start_date).price).to eq(price)
+      expect(rate_plan.room_rates.find_by(date: start_date).price).to eq(price)
     end
 
     it 'creates audit logs for changes' do
@@ -59,7 +62,7 @@ RSpec.describe HotelOps::BulkUpdateRates do
     end
 
     it 'does not create audit log if price remains the same' do
-      create(:room_rate, room_type: room_type, date: start_date, price: price)
+      create(:room_rate, rate_plan: rate_plan, room_type: room_type, date: start_date, price: price)
 
       expect {
         subject.call

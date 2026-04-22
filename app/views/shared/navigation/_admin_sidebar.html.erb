@@ -8,9 +8,12 @@
 <% refund_requests_active = controller_name == 'refund_requests' %>
 <% payouts_active = controller_name == 'payout_batches' %>
 <% audit_logs_active = controller_name == 'audit_logs' %>
+<% observation_deck_active = controller_name == 'observation_deck' %>
+<% refund_policy_active = controller_name == 'refund_policies' %>
 <% integrations_active = controller_name == 'integrations' %>
 <% api_keys_active = controller_name == 'api_keys' && action_name != 'docs' %>
 <% api_docs_active = controller_name == 'api_keys' && action_name == 'docs' %>
+
 <% admin_sidebar_sections = [
   {
     label: 'Home',
@@ -32,7 +35,7 @@
       { label: 'Payouts', path: admin_payout_batches_path, search_text: 'Payouts Settlements Hotel Payments', active: payouts_active, icon: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 15h.01"/><path d="M11 15h.01"/><path d="M15 15h.01"/>' },
       { label: 'Margin Settings', path: admin_margin_rules_path, search_text: 'Margin Settings Margin Rules', active: margin_rules_active, icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/>' },
       { label: 'Setup Fee Settings', path: admin_setup_fee_rules_path, search_text: 'Setup Fee Settings Hotel Setup Fees', active: setup_fee_rules_active, icon: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/><path d="M7 14h3"/><path d="M14 14h3"/>' },
-      { label: "Refund Policy", path: admin_refund_policy_path, search_text: "Refund Policy Guest Refunds Finance", active: controller_name == "refund_policies", icon: '<rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>' },
+      { label: "Refund Policy", path: admin_refund_policy_path, search_text: "Refund Policy Guest Refunds Finance", active: refund_policy_active, icon: '<rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>' },
       { label: "Refund Requests", path: admin_refund_requests_path, search_text: "Refund Requests Guest Refunds Finance", active: refund_requests_active, icon: '<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/>' },
       { label: 'Payment Issues', path: admin_reconciliation_dashboard_path, search_text: 'Payment Issues Reconciliations', active: reconciliations_active, icon: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' }
     ]
@@ -40,7 +43,8 @@
   {
     label: 'System',
     items: [
-      { label: 'Audit Logs', path: admin_audit_logs_path, search_text: 'Audit Logs System Activity', active: audit_logs_active, icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>' }
+      { label: 'Audit Logs', path: admin_audit_logs_path, search_text: 'Audit Logs System Activity', active: audit_logs_active, icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>' },
+      { label: 'Observation Deck', path: admin_observation_deck_index_path, search_text: 'Observation Deck Telescope Debug Mission Control', active: observation_deck_active, icon: '<path d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><circle cx="12" cy="12" r="3"/>', external: true }
     ]
   },
   {
@@ -52,10 +56,12 @@
     ]
   }
 ] %>
+
 <% admin_sidebar_footer_items = [
   { label: 'Homepage', path: root_path, search_text: 'Homepage Website', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
   { label: 'Help & support', path: help_center_path, search_text: 'Help Support', icon: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' }
 ] %>
+
 <% render_sidebar_nav = lambda do %>
   <nav class="flex-1 px-4 py-3 space-y-6">
     <% admin_sidebar_sections.each do |section| %>
@@ -63,7 +69,9 @@
         <span class="sidebar-section-label"><%= section[:label] %></span>
         <div class="space-y-0.5">
           <% section[:items].each do |item| %>
-            <a class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= item[:path] %>">
+            <a class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" 
+               href="<%= item[:path] %>"
+               <%= 'target="_blank"'.html_safe if item[:external] %>>
               <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
               <span><%= item[:label] %></span>
             </a>

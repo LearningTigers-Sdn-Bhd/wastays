@@ -90,3 +90,5 @@ end
 group :development do
   gem "bundler-audit", require: false
 end
+
+gem "openssl", "~> 3.1.2"

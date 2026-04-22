@@ -13,7 +13,8 @@
   </div>
 
   <div class="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,350px)] xl:items-start">
-    <div>
+    <div class="space-y-8">
+      <!-- Webhook Card -->
       <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Webhook</h2>
@@ -47,7 +48,44 @@
                   data: { turbo_method: :delete, turbo_confirm: "Remove the configured webhook URL?" },
                   class: "cursor-pointer rounded-xl bg-red-600 hover:bg-red-700 px-4 py-2.5 text-sm font-bold text-white" %>
             <% end %>
-            <%= submit_tag "Save", class: "cursor-pointer rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white hover:bg-slate-700" %>
+            <%= submit_tag "Save Webhook", class: "cursor-pointer rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white hover:bg-slate-700" %>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Channel Manager Card -->
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 px-6 py-5 sm:px-8 bg-brand-secondary/5">
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl text-brand-primary">Channel Manager (Channex)</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Configure global connectivity to OTAs through Channex.</p>
+        </div>
+
+        <%= form_with url: admin_integrations_path, method: :patch, local: true, class: "space-y-6 p-6 sm:p-8" do |f| %>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <%= label_tag :channex_environment, "Environment", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
+              <%= select_tag :channex_environment, options_for_select([["Staging", "staging"], ["Production", "production"]], @channex_environment),
+                  class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
+            </div>
+            
+            <div>
+              <%= label_tag :channex_api_key, "User API Key", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
+              <%= password_field_tag :channex_api_key, @channex_api_key,
+                  placeholder: "Enter Channex User API Key",
+                  class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
+            </div>
+          </div>
+
+          <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+            <h4 class="text-xs font-bold text-blue-900 uppercase tracking-widest mb-1">Webhook Configuration</h4>
+            <p class="text-xs text-blue-700 leading-relaxed">
+              Ensure you have configured the following webhook URL in your Channex dashboard for real-time booking delivery:
+              <code class="block mt-2 font-mono bg-white/50 p-2 rounded border border-blue-200 text-blue-900 select-all"><%= root_url %>webhooks/channex</code>
+            </p>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
+            <%= submit_tag "Save CM Settings", class: "cursor-pointer rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-secondary transition-colors shadow-lg shadow-brand-primary/20" %>
           </div>
         <% end %>
       </div>
