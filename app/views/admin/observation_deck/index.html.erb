@@ -50,18 +50,31 @@
             Send Test Email
           <% end %>
 
-          <%= link_to admin_dashboard_path, class: "px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors" do %>
-            Exit
-          <% end %>
-          <%= button_to clear_admin_observation_deck_index_path, 
-              method: :delete,
-              data: { turbo_confirm: "Purge all records?" },
-              class: "px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-xl transition shadow-lg shadow-rose-200" do %>
-            Clear All
-          <% end %>
-        </div>
-      </div>
+          <div class="flex items-center gap-2">
+            <%= link_to admin_dashboard_path, class: "px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors" do %>
+              Exit
+            <% end %>
 
+            <!-- Pruning Dropdown -->
+            <div class="relative inline-block text-left" data-controller="dropdown">
+              <button data-action="click->dropdown#toggle" type="button" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-xl transition shadow-lg shadow-rose-200 flex items-center gap-2">
+                Prune Logs
+                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div data-dropdown-target="menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden py-1">
+                <%= button_to clear_admin_observation_deck_index_path(keep_days: 7), method: :delete, data: { turbo_confirm: "Delete logs older than 7 days?" }, class: "w-full text-left px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 border-b border-slate-100" do %>
+                  Keep last 7 days
+                <% end %>
+                <%= button_to clear_admin_observation_deck_index_path(keep_days: 30), method: :delete, data: { turbo_confirm: "Delete logs older than 30 days?" }, class: "w-full text-left px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 border-b border-slate-100" do %>
+                  Keep last 30 days
+                <% end %>
+                <%= button_to clear_admin_observation_deck_index_path, method: :delete, data: { turbo_confirm: "Purge ALL records?" }, class: "w-full text-left px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50" do %>
+                  Clear All Logs
+                <% end %>
+              </div>
+            </div>
+          </div>
+          </div>
       <!-- Pulse Metrics (MVP) -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
@@ -151,7 +164,22 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
+            <% current_day = nil %>
             <% @entries.each do |entry| %>
+              <% entry_day = entry.created_at.to_date %>
+              <% if entry_day != current_day %>
+                <tr class="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-md border-y border-slate-200">
+                  <td colspan="5" class="px-6 py-2">
+                    <div class="flex items-center gap-2">
+                      <svg class="size-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                      <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <%= entry_day == Date.today ? "Today" : (entry_day == Date.yesterday ? "Yesterday" : entry_day.strftime("%A, %B %d, %Y")) %>
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <% current_day = entry_day %>
+              <% end %>
               <tr class="hover:bg-slate-50 transition-colors cursor-pointer group <%= entry.status.to_i >= 400 ? 'bg-rose-50/50' : '' %>"
                   data-action="click->observation-deck#open"
                   data-entry-id="<%= entry.id %>">

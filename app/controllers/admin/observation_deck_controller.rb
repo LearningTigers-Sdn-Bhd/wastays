@@ -69,8 +69,16 @@ module Admin
     end
 
     def clear
-      ObservationEntry.delete_all
-      redirect_to admin_observation_deck_index_path, notice: "Observation deck cleared."
+      if params[:keep_days].present?
+        days = params[:keep_days].to_i
+        ObservationEntry.where("created_at < ?", days.days.ago).delete_all
+        notice = "Cleaned up logs older than #{days} days."
+      else
+        ObservationEntry.delete_all
+        notice = "Observation deck cleared."
+      end
+      
+      redirect_to admin_observation_deck_index_path, notice: notice
     end
 
     def test_email
