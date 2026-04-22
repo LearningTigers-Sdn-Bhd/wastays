@@ -20,4 +20,11 @@ export default class extends Controller {
       this.close()
     }
   }
+
+  toggleSettings() {
+    const banner = document.getElementById("ai_config_banner")
+    if (banner) {
+      banner.classList.toggle("hidden")
+    }
+  }
 }

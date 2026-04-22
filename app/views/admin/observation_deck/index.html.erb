@@ -108,24 +108,26 @@
       </div>
 
       <!-- AI Configuration Banner -->
-      <% if AppConfig.get("gemini_api_key").blank? %>
-        <div class="bg-indigo-600 rounded-2xl p-6 shadow-xl shadow-indigo-100 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div class="flex items-center gap-4 text-white">
-            <div class="size-12 bg-white/10 rounded-xl flex items-center justify-center">
-              <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            </div>
-            <div>
-              <h3 class="font-bold text-lg">Activate Gemini AI Analysis</h3>
-              <p class="text-indigo-100 text-sm opacity-90">Unlock automated error root-cause analysis and performance insights.</p>
-            </div>
+      <% api_key_missing = AppConfig.get("gemini_api_key").blank? %>
+      <div id="ai_config_banner" class="<%= 'hidden' unless api_key_missing %> bg-indigo-600 rounded-2xl p-6 shadow-xl shadow-indigo-100 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-4 text-white">
+          <div class="size-12 bg-white/10 rounded-xl flex items-center justify-center">
+            <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           </div>
-          
-          <%= form_with url: update_config_admin_observation_deck_index_path, method: :post, class: "flex items-center gap-2 bg-white/10 p-1.5 rounded-xl border border-white/20 w-full md:w-auto" do |f| %>
-            <%= f.password_field :gemini_api_key, placeholder: "Paste Gemini API Key...", class: "bg-transparent border-none text-white placeholder:text-white/50 text-sm focus:ring-0 w-full md:w-64" %>
-            <%= f.submit "Save Key", class: "bg-white text-indigo-600 px-4 py-2 rounded-lg text-sm font-black hover:bg-indigo-50 transition-all cursor-pointer whitespace-nowrap" %>
-          <% end %>
+          <div>
+            <h3 class="font-bold text-lg"><%= api_key_missing ? "Activate Gemini AI Analysis" : "Update Gemini API Key" %></h3>
+            <p class="text-indigo-100 text-sm opacity-90">Unlock automated error root-cause analysis and performance insights.</p>
+          </div>
         </div>
-      <% end %>
+        
+        <%= form_with url: update_config_admin_observation_deck_index_path, method: :post, class: "flex items-center gap-2 bg-white/10 p-1.5 rounded-xl border border-white/20 w-full md:w-auto" do |f| %>
+          <%= f.password_field :gemini_api_key, 
+                value: AppConfig.get("gemini_api_key"),
+                placeholder: "Paste Gemini API Key...", 
+                class: "bg-transparent border-none text-white placeholder:text-white/50 text-sm focus:ring-0 w-full md:w-64" %>
+          <%= f.submit "Save Key", class: "bg-white text-indigo-600 px-4 py-2 rounded-lg text-sm font-black hover:bg-indigo-50 transition-all cursor-pointer whitespace-nowrap" %>
+        <% end %>
+      </div>
 
     <!-- Toolbar -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -158,6 +160,12 @@
       </div>
 
       <div class="flex items-center gap-3">
+        <button data-action="click->observation-deck#toggleSettings" 
+                class="p-2 bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 rounded-xl transition-all shadow-sm group"
+                title="AI Settings">
+          <svg class="size-5 group-hover:rotate-45 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </button>
+
         <%= link_to admin_observation_deck_index_path(params.to_unsafe_h.except(:action, :controller)), 
             class: "p-2 bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 rounded-xl transition-all shadow-sm group",
             title: "Refresh Logs",
