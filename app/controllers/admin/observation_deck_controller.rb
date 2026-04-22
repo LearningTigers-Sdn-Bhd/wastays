@@ -85,7 +85,18 @@ module Admin
 
     def analyze
       @entry = ObservationEntry.find(params[:id])
-      @analysis = PlatformControl::AiAnalyzerService.new(@entry).analyze
+      
+      # Use existing analysis unless 'force' is passed
+      if @entry.ai_analysis.present? && params[:force] != "true"
+        @analysis = @entry.ai_analysis.with_indifferent_access
+      else
+        @analysis = PlatformControl::AiAnalyzerService.new(@entry).analyze
+        
+        # Persist successful analysis
+        if @analysis[:html].present?
+          @entry.update!(ai_analysis: @analysis)
+        end
+      end
 
       respond_to do |format|
         format.turbo_stream
