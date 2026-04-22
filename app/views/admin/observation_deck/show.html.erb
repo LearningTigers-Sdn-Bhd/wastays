@@ -1,6 +1,57 @@
 <%= turbo_frame_tag "entry_detail_frame" do %>
   <div class="p-6 space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
     
+    <!-- Top Navigation & Breadcrumbs -->
+    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+      <div class="flex items-center gap-2 text-xs font-medium text-slate-400">
+        <% if @parent_request && @parent_request.id != @entry.id %>
+          <%= link_to admin_observation_deck_path(@parent_request), class: "text-indigo-600 hover:underline", data: { turbo_frame: "entry_detail_frame" } do %>
+            <%= @parent_request.human_title %>
+          <% end %>
+          <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <% end %>
+        <span class="text-slate-900 font-bold"><%= @entry.human_title %></span>
+      </div>
+
+      <% if @parent_request && @parent_request.id != @entry.id %>
+        <%= link_to admin_observation_deck_path(@parent_request), 
+            class: "flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-all",
+            data: { turbo_frame: "entry_detail_frame" } do %>
+          <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"/></svg>
+          Back to Request
+        <% end %>
+      <% end %>
+    </div>
+
+    <!-- AI Insights Area (MVP: Gemini integration) -->
+    <div id="ai_analysis_area" data-controller="ai-analysis">
+      <% if @entry.status.to_i >= 400 || @entry.duration > 1000 %>
+        <div class="bg-indigo-50/30 border border-indigo-100/50 rounded-2xl p-6 text-center space-y-4">
+          <div class="flex flex-col items-center gap-2">
+            <div class="size-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
+              <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <h4 class="text-sm font-bold text-indigo-900">Need help understanding this?</h4>
+            <p class="text-xs text-indigo-700/70 max-w-xs mx-auto leading-relaxed">Let Gemini AI analyze this entry to explain the root cause and suggest a fix.</p>
+          </div>
+          
+          <%= button_to analyze_admin_observation_deck_path(@entry), 
+              method: :post,
+              data: { action: "click->ai-analysis#start", ai_analysis_target: "button" },
+              class: "mx-auto flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200" do %>
+            ✨ Analyze with Gemini
+          <% end %>
+
+          <div data-ai-analysis_target="loading" class="hidden">
+            <div class="flex items-center justify-center gap-3 text-indigo-600 text-xs font-bold animate-pulse">
+              <svg class="animate-spin size-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              Thinking... analyzing logs...
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
     <!-- Core Details -->
     <div class="grid grid-cols-2 gap-6">
       <div class="space-y-1">
@@ -181,8 +232,9 @@
         <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Trace Timeline (Request ID: <%= @entry.request_id.first(8) %>)</p>
         <div class="space-y-2">
           <% @siblings.each do |sibling| %>
+            <% is_current = sibling.id == @entry.id %>
             <%= link_to admin_observation_deck_path(sibling), 
-                class: "flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm transition-all group cursor-pointer",
+                class: "flex items-center justify-between p-3 rounded-xl border transition-all group cursor-pointer #{is_current ? 'bg-indigo-50/50 border-indigo-200 shadow-sm ring-1 ring-indigo-100' : 'border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm'}",
                 data: { turbo_frame: "entry_detail_frame" } do %>
               <div class="flex items-center gap-3">
                 <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded <%= case sibling.entry_type
@@ -193,7 +245,12 @@
                     end %>">
                   <%= sibling.entry_type %>
                 </span>
-                <span class="text-xs font-mono text-slate-600 truncate max-w-md"><%= sibling.path %></span>
+                <span class="text-xs font-mono font-medium <%= is_current ? 'text-indigo-900' : 'text-slate-600' %> truncate max-w-md">
+                  <%= sibling.path %>
+                </span>
+                <% if is_current %>
+                  <span class="text-[8px] font-black text-indigo-600 tracking-tighter bg-indigo-100 px-1 rounded">CURRENT</span>
+                <% end %>
               </div>
               <div class="flex items-center gap-3">
                 <% if sibling.status.present? %>

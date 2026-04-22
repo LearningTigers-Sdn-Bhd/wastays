@@ -192,7 +192,7 @@ ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
   })
 end
 
-# Outbound HTTP (Faraday)
+# Outbound HTTP (Faraday / Channex / etc)
 ActiveSupport::Notifications.subscribe("request.faraday") do |*args|
   event = ActiveSupport::Notifications::Event.new(*args)
   payload = event.payload
@@ -208,6 +208,39 @@ ActiveSupport::Notifications.subscribe("request.faraday") do |*args|
       response_headers: payload[:response_headers],
       body: payload[:body]
     }),
-    tags: []
+    tags: [payload[:url].include?("channex") ? "channex" : "api"]
   })
+end
+
+# Manual instrumentation helper for services not using notifications
+def capture_api_call(provider, method, url, payload = {})
+  start_time = Time.current
+  result = yield
+  duration = (Time.current - start_time) * 1000
+  
+  status, body = result
+  
+  capture_observation_entry({
+    entry_type: "api",
+    request_id: Current.request_id || "none",
+    status: status,
+    duration: duration,
+    path: "#{method.to_s.upcase} [#{provider}] #{url}",
+    payload: OBSERVATION_SCRUBBER.filter(payload.merge(response_body: body)),
+    tags: [provider.downcase]
+  })
+  
+  result
+rescue => e
+  duration = (Time.current - start_time) * 1000
+  capture_observation_entry({
+    entry_type: "api",
+    request_id: Current.request_id || "none",
+    status: 500,
+    duration: duration,
+    path: "#{method.to_s.upcase} [#{provider}] #{url}",
+    payload: { error: e.message, backtrace: e.backtrace.first(5) },
+    tags: [provider.downcase, "error"]
+  })
+  raise e
 end

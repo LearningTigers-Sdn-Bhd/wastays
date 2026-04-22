@@ -142,6 +142,9 @@ Rails.application.routes.draw do
         delete :clear
         post :test_email
       end
+      member do
+        post :analyze
+      end
     end
     resource :refund_policy, only: [ :show, :update, :destroy ]
     resources :refund_requests, only: [ :index, :show ] do

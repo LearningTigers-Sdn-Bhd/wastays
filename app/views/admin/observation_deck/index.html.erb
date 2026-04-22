@@ -7,52 +7,51 @@
     <div class="max-w-[1600px] mx-auto px-4 py-8 space-y-6">
       
       <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-      <div>
-        <div class="flex items-center gap-3">
-          <div class="p-2 bg-indigo-50 rounded-lg border border-indigo-100">
-            <svg class="size-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12.a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-            </svg>
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        ... (omitted content from read_file) ...
+      </div>
+
+      <!-- Pulse Metrics (MVP) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div class="size-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+            <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
           </div>
-          <h1 class="text-xl font-bold tracking-tight text-slate-900 uppercase">Observation Deck</h1>
-          <% if @error_count > 0 %>
-            <div class="flex items-center gap-1.5 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full border border-rose-100 animate-pulse">
-              <span class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-              </span>
-              <span class="text-[10px] font-black uppercase tracking-widest"><%= @error_count %> Recent Errors</span>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">24h Throughput</p>
+            <div class="flex items-baseline gap-2">
+              <span class="text-2xl font-black text-slate-900"><%= number_with_delimiter(@total_requests_24h) %></span>
+              <span class="text-xs font-bold text-slate-400">Requests</span>
             </div>
-          <% end %>
+          </div>
         </div>
-        <p class="mt-1 text-sm font-medium text-slate-500">System internals, requests, and background jobs.</p>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div class="size-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+            <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Avg Latency</p>
+            <div class="flex items-baseline gap-2">
+              <span class="text-2xl font-black text-slate-900"><%= @avg_latency_24h %></span>
+              <span class="text-xs font-bold text-slate-400">ms / req</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div class="size-12 <%= @error_rate_24h > 5 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600' %> rounded-xl flex items-center justify-center">
+            <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Error Rate</p>
+            <div class="flex items-baseline gap-2">
+              <span class="text-2xl font-black <%= @error_rate_24h > 5 ? 'text-rose-600' : 'text-slate-900' %>"><%= @error_rate_24h %>%</span>
+              <span class="text-xs font-bold text-slate-400">Failures</span>
+            </div>
+          </div>
+        </div>
       </div>
-
-      <div class="flex items-center gap-4">
-        <%= link_to "/letter_opener", target: "_blank", class: "px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-2" do %>
-          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          Letter Opener
-        <% end %>
-
-        <%= button_to test_email_admin_observation_deck_index_path, 
-            method: :post,
-            class: "px-4 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition border border-indigo-100" do %>
-          Send Test Email
-        <% end %>
-
-        <%= link_to admin_dashboard_path, class: "px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors" do %>
-          Exit
-        <% end %>
-        <%= button_to clear_admin_observation_deck_index_path, 
-            method: :delete,
-            data: { turbo_confirm: "Purge all records?" },
-            class: "px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-xl transition shadow-lg shadow-rose-200" do %>
-          Clear All
-        <% end %>
-      </div>
-    </div>
 
     <!-- Toolbar -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -118,15 +117,20 @@
                   </span>
                 </td>
                 <td class="px-6 py-4">
-                  <div class="text-sm font-mono text-slate-900 truncate max-w-2xl font-medium">
+                  <div class="text-sm font-bold text-slate-900 truncate max-w-2xl">
+                    <%= entry.human_title %>
+                  </div>
+                  <div class="text-[10px] font-mono text-slate-400 truncate max-w-2xl mt-0.5">
                     <%= entry.path %>
                   </div>
-                  <div class="flex items-center gap-2 mt-1">
+                  <div class="flex items-center gap-2 mt-2">
+                    <span class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter border border-indigo-100"><%= entry.human_identity %></span>
                     <% 
                       tags = entry.tags
                       tags = JSON.parse(tags) if tags.is_a?(String)
                     %>
                     <% Array(tags).each do |tag| %>
+                      <% next if tag.start_with?('user:') || tag.start_with?('booking:') %>
                       <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold"><%= tag %></span>
                     <% end %>
                     <% if entry.request_id.present? && entry.request_id != "none" %>

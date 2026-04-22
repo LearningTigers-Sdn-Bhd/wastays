@@ -1,0 +1,21 @@
+<%= turbo_stream.replace "ai_analysis_area" do %>
+  <div id="ai_analysis_area" class="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-300">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2 text-indigo-700">
+        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <h4 class="text-sm font-bold uppercase tracking-tight">Gemini AI Analysis</h4>
+      </div>
+      <span class="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase">gemini-1.5-flash</span>
+    </div>
+    
+    <% if @analysis[:error] %>
+      <div class="p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-xs font-medium">
+        <%= @analysis[:error] %>
+      </div>
+    <% else %>
+      <div class="prose prose-sm max-w-none text-slate-700">
+        <%= @analysis[:html].html_safe %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
