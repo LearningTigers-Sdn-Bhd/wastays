@@ -1,5 +1,6 @@
 <% is_editing = local_assigns[:editing] %>
 <% can_mark_completed = session.status == "scheduled" && session.scheduled_at.present? && session.scheduled_at <= Time.current %>
+<% cancellation_reason = session.notes.to_s[/CANCELLED:\s*(.*)\z/m, 1] || session.notes %>
 
 <%= turbo_frame_tag dom_id(session) do %>
   <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-slate-200 gap-4 bg-white">
@@ -30,6 +31,11 @@
         <div>
           <p class="text-sm font-bold text-slate-900"><%= session.trainer_name.presence || "No trainer assigned" %></p>
           <p class="text-xs text-slate-500">Scheduled: <%= session.scheduled_at.strftime("%d %b %Y at %I:%M %p") %></p>
+          <% if session.status == "cancelled" %>
+            <p class="mt-1 text-xs text-rose-600">
+              Cancellation note: <%= cancellation_reason.presence || "No note provided." %>
+            </p>
+          <% end %>
         </div>
         </div>
 
@@ -74,7 +80,7 @@
                  class="absolute right-0 z-20 mt-3 hidden w-[320px] rounded-xl border border-slate-200 bg-white p-4 shadow-2xl ring-1 ring-black/10">
               <p class="text-xs text-slate-500">Please add a note before cancelling this session.</p>
               <%= form_with url: cancel_onboarding_session_admin_hotel_path(hotel, session_id: session.id), method: :post, class: "mt-3 space-y-3" do |f| %>
-                <%= text_area_tag :cancel_reason, nil, rows: 3, required: true, minlength: 10, placeholder: "Reason for cancellation", class: "w-full rounded-xl border-slate-200 text-sm focus:border-rose-400 focus:ring-0" %>
+                <%= text_area_tag :cancel_reason, nil, rows: 3, required: true, minlength: 10, placeholder: "Reason for cancellation", class: "w-full rounded-md border-slate-200 text-sm focus:border-rose-400 focus:ring-0" %>
                 <div class="flex items-center justify-end gap-2">
                   <%= f.submit "Confirm Cancel", class: "inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-rose-700" %>
                 </div>
@@ -87,7 +93,6 @@
               Completed at <%= session.completed_at&.strftime("%d %b, %H:%M") %>
             </span>
           <% elsif session.status == "cancelled" %>
-            <% cancellation_reason = session.notes.to_s[/CANCELLED:\s*(.*)\z/m, 1] || session.notes %>
             <div class="relative" data-controller="floating-panel">
               <button type="button"
                       data-floating-panel-target="trigger"
