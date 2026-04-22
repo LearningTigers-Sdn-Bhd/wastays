@@ -12,14 +12,13 @@
       { label: "In-House Guest", path: hotel_in_house_guests_path(current_hotel), search_text: "In-House Guests Operations", active: controller_name == "in_house_guests", icon: '<path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M12 4v6"/><path d="M2 18h20"/>' },
       { label: "Bookings", path: hotel_bookings_path(current_hotel), search_text: "Bookings Reservations Operations", active: controller_name == "bookings", icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
       { label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Operations", active: controller_name == "requests", icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M3 10h18"/><path d="M8 14h8"/><path d="M8 18h5"/>' },
-      { label: "Refund Requests", path: hotel_refund_requests_path(current_hotel), search_text: "Refund Requests Finance Operations", active: controller_name == "refund_requests", icon: '<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/>' },
-      { label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory", active: controller_name == "guests", icon: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' }
+{ label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory", active: controller_name == "guests", icon: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' }
     ]
   },
   {
     label: "Property",
     items: [
-      { label: "Room Categories", path: hotel_room_types_path(current_hotel), search_text: "Room Categories Rooms Property", active: controller_name == "room_types", icon: '<path d="M2 20h20"/><path d="M7 20v-5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/><path d="M10 8V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v3"/><path d="M12 17v.01"/><path d="M10 13h4"/>' },
+      { label: "Room Categories", path: hotel_room_types_path(current_hotel), search_text: "Room Categories Rooms Property", active: controller_name == "room_types", icon: '<path d="M3 3h18"/><path d="M20 7H8"/><path d="M20 11H8"/><path d="M10 19h10"/><path d="M8 15h12"/><path d="M4 3v14"/><circle cx="4" cy="19" r="2"/>' },
       { label: "Rates & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Rates Inventory Calendar Property", active: controller_name == "inventory_dashboards", icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M7 14h.01"/><path d="M12 14h.01"/><path d="M17 14h.01"/><path d="M7 18h.01"/><path d="M12 18h.01"/><path d="M17 18h.01"/>' },
       { label: "Hotel Details", path: edit_hotel_profile_path(current_hotel), search_text: "Hotel Details Profile Property", active: controller_name == "profiles", icon: '<path d="M3 21h18"/><path d="M5 21V7l8-4 6 3v15"/><path d="M9 21v-8h6v8"/>' }
     ]

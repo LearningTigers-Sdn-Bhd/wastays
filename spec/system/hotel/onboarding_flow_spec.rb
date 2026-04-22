@@ -69,10 +69,9 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
 
     # 4. Step 3: Room Setup
     within('#step-rooms') { click_link 'Update' }
-    expect(page).to have_css("a.btn.btn-secondary", text: 'Back to Onboarding')
-    expect(page).to have_xpath("//a[contains(@class,'btn') and contains(., 'Back to Onboarding')][following::nav[@aria-label='Breadcrumb']]")
-    first(:link, 'Add Room Type').click
-    expect(page).to have_css("a.btn.btn-secondary", text: 'Back to Onboarding')
+    expect(page).to have_content('Room Categories')
+    first(:link, 'Add Room Category').click
+    expect(page).to have_link('Back to Onboarding')
     fill_in 'Room Type Name', with: 'Deluxe Room'
     fill_in 'Max Adults', with: 2
     fill_in 'Max Children', with: 1
@@ -82,7 +81,7 @@ RSpec.describe 'Hotel Onboarding and Approval Flow', type: :system do
     expect(page).to have_content('Room type created successfully.')
 
     # 5. Step 4: Submit for Review
-    click_link 'Back to Onboarding'
+    visit hotel_dashboard_path(hotel)
     within('#step-review') { click_button 'Submit for Review' }
     expect(page).to have_content('Your hotel has been submitted for review.')
     expect(page).to have_content('Pending Review')

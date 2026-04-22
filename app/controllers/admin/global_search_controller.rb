@@ -17,7 +17,7 @@ module Admin
     private
 
     def cache_key_for(query)
-      "admin:global_search:v6:user:#{current_user.id}:q:#{Digest::SHA256.hexdigest(query)}"
+      "admin:global_search:v7:user:#{current_user.id}:q:#{Digest::SHA256.hexdigest(query)}"
     end
   end
 end

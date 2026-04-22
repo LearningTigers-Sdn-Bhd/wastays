@@ -28,6 +28,9 @@ Rails.application.routes.draw do
     delete "logout",              to: "sessions#destroy",          as: :logout
     get    "dashboard",           to: "dashboard#index",           as: :dashboard
     resources :bookings, only: [ :index, :show ] do
+      member do
+        get :invoice
+      end
       resources :refund_requests, only: [ :new, :create ]
     end
     resources :refund_requests, only: [ :index, :show ]
@@ -55,8 +58,17 @@ Rails.application.routes.draw do
   # Public Booking Engine
   scope module: :public do
     resources :hotels, only: [ :index, :show ]
-    resources :quotes, only: [ :create, :show ]
-    resources :bookings, only: [ :show ]
+    resources :quotes, only: [ :create, :show ] do
+      member do
+        get :guest_lookup
+      end
+    end
+    resources :bookings, only: [ :show ] do
+      member do
+        get :invoice
+        get :voucher
+      end
+    end
     resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
       post :cancel, on: :member
     end
@@ -138,7 +150,17 @@ Rails.application.routes.draw do
       get :docs, on: :collection
     end
     resource :refund_policy, only: [ :show, :update, :destroy ]
+    resources :refund_requests, only: [ :index, :show ] do
+      member do
+        patch :approve
+        patch :reject
+        patch :complete
+      end
     end
+    resource :integrations, only: [ :show, :update, :destroy ] do
+      post :test_ping, on: :collection
+    end
+  end
 
   # Hotel admin dashboard
   get "/hotel/settings", to: "hotel_portal/settings#index", as: :legacy_hotel_settings
@@ -153,6 +175,10 @@ Rails.application.routes.draw do
     delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
     delete "profile/photos", to: "profiles#destroy_photos", as: :profile_photos
     patch "profile/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature
+    post "profile/photo_queue", to: "profiles#enqueue_photo", as: :profile_photo_queue
+    delete "profile/photo_queue", to: "profiles#clear_photo_queue", as: :clear_profile_photo_queue
+    delete "profile/photo_queue/:signed_id", to: "profiles#remove_photo_from_queue", as: :profile_photo_queue_item
+    post "profile/photo_queue/commit", to: "profiles#commit_photo_queue", as: :commit_profile_photo_queue
     resource :property_policy, only: [ :edit, :update ]
 
     resources :room_types do
@@ -187,7 +213,14 @@ Rails.application.routes.draw do
         get :breakdown, defaults: { format: "html" }
       end
     end
-    resources :inventory_dashboards, only: [ :index, :create ], path: "inventory"
+    resources :inventory_dashboards, only: [ :index ], path: "inventory" do
+      collection do
+        post :apply_pricing_rules
+        post :apply_availability_override
+        delete "pricing_tiers/:rule_type", action: :destroy_pricing_tier_rule, as: :destroy_pricing_tier_rule
+        delete "public_holidays/:id", action: :destroy_public_holiday_rule, as: :destroy_public_holiday_rule
+      end
+    end
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
     resources :guests, only: [ :index, :show ]
     resources :in_house_guests, only: [ :index ]
@@ -196,13 +229,5 @@ Rails.application.routes.draw do
     patch "settings", to: "settings#update"
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
-
-    resources :refund_requests, only: [ :index, :show ] do
-      member do
-        patch :approve
-        patch :reject
-        patch :complete
-      end
-    end
   end
 end

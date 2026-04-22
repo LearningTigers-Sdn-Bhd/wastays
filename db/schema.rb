@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -62,6 +62,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
     t.datetime "updated_at", null: false
     t.index ["bearer_type", "bearer_id"], name: "index_api_keys_on_bearer"
     t.index ["token"], name: "index_api_keys_on_token", unique: true
+  end
+
+  create_table "app_configs", force: :cascade do |t|
+    t.string "key"
+    t.text "value"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_app_configs_on_key", unique: true
   end
 
   create_table "banking_details", force: :cascade do |t|
@@ -248,6 +256,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
   end
 
+  create_table "hotel_pricing_rules", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "rule_type", null: false
+    t.string "name"
+    t.decimal "price", precision: 10, scale: 2, null: false
+    t.date "start_date"
+    t.date "end_date"
+    t.integer "weekdays", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "rule_type"], name: "index_hotel_pricing_rules_on_hotel_and_type"
+    t.index ["hotel_id", "start_date", "end_date"], name: "index_hotel_pricing_rules_on_hotel_and_dates"
+    t.index ["hotel_id"], name: "index_hotel_pricing_rules_on_hotel_id"
+  end
+
   create_table "hotels", force: :cascade do |t|
     t.string "name"
     t.string "address"
@@ -342,29 +365,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
   end
 
   create_table "payment_transactions", force: :cascade do |t|
-    t.bigint "booking_quote_id"
-    t.bigint "booking_id"
-    t.string "gateway", null: false
-    t.string "external_reference"
-    t.string "gateway_order_id"
-    t.string "signature"
-    t.string "status", default: "pending", null: false
-    t.string "payment_method"
-    t.integer "amount_subunits"
-    t.string "currency"
-    t.string "event_source"
-    t.datetime "verified_at"
-    t.datetime "captured_at"
-    t.text "error_message"
-    t.jsonb "metadata", default: {}, null: false
-    t.jsonb "gateway_payload", default: {}, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["booking_id"], name: "index_payment_transactions_on_booking_id"
-    t.index ["booking_quote_id"], name: "index_payment_transactions_on_booking_quote_id"
-    t.index ["gateway", "external_reference"], name: "idx_payment_transactions_on_gateway_and_external_reference", unique: true, where: "(external_reference IS NOT NULL)"
-    t.index ["gateway", "gateway_order_id"], name: "idx_payment_transactions_on_gateway_and_order_id", unique: true, where: "(gateway_order_id IS NOT NULL)"
-    t.index ["status"], name: "index_payment_transactions_on_status"
   end
 
   create_table "payout_batches", force: :cascade do |t|
@@ -591,6 +591,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
   add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "complaints", "bookings"
+  add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "users", column: "salesperson_id"
   add_foreign_key "housekeeping_requests", "bookings"

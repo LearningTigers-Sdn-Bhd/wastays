@@ -1,6 +1,6 @@
 FactoryBot.define do
   factory :pre_checkin do
-    booking { nil }
+    association :booking
     status { "pending" }
     token { SecureRandom.hex(20) }
     completed_at { nil }

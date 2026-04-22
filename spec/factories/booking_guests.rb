@@ -1,7 +1,7 @@
 FactoryBot.define do
   factory :booking_guest do
-    booking { nil }
-    guest { nil }
+    association :booking
+    association :guest
     is_primary { false }
   end
 end

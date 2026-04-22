@@ -1,10 +1,10 @@
 FactoryBot.define do
   factory :webhook_event do
-    gateway { "MyString" }
-    external_id { "MyString" }
-    payload { "" }
-    status { "MyString" }
-    error_message { "MyText" }
-    processed_at { "2026-03-26 11:43:25" }
+    gateway { "toyyibpay" }
+    sequence(:external_id) { |n| "evt_#{n}" }
+    payload { {} }
+    status { "pending" }
+    error_message { nil }
+    processed_at { nil }
   end
 end

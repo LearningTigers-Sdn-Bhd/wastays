@@ -30,8 +30,8 @@ RSpec.describe 'Room Setup', type: :system do
       click_link 'Update'
     end
 
-    expect(page).to have_content('No room types found')
-    first(:link, 'Add Room Type').click
+    expect(page).to have_content('No room categories found')
+    first(:link, 'Add Room Category').click
 
     fill_in 'Room Type Name', with: 'Deluxe Suite'
     fill_in 'Max Adults', with: 2
@@ -46,7 +46,7 @@ RSpec.describe 'Room Setup', type: :system do
     expect(hotel.reload.status).to eq('inventory_incomplete')
 
     # Go back to onboarding to check step completion
-    click_link 'Back to Onboarding'
+    visit hotel_dashboard_path(hotel)
     within('#step-rooms') do
       expect(page).to have_content('✓')
       expect(page).to have_link('Manage')

@@ -25,9 +25,11 @@
   </head>
 
   <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased" data-preline-enabled="<%= !(controller_name == 'static_pages' && action_name == 'home') %>">
+    <% unless controller_name == "static_pages" && action_name == "home" %>
     <script>
       document.documentElement.classList.remove("landing-loader-active")
     </script>
+    <% end %>
 
 
     <% unless content_for?(:hide_chrome) %>

@@ -26,6 +26,6 @@ RSpec.describe "Guest global search", type: :request do
     json = JSON.parse(response.body)
     titles = json.fetch("results").map { |row| row.fetch("title") }
 
-    expect(titles).to include("Guest Dashboard", "My Bookings")
+    expect(titles).to include("Guest Dashboard", "My Bookings", "Refunds", "Help & Support", "Homepage")
   end
 end

@@ -7,6 +7,7 @@ class Hotel < ApplicationRecord
   belongs_to :salesperson, class_name: "User", optional: true
   has_one :property_policy, dependent: :destroy
   has_many :room_types, dependent: :destroy
+  has_many :pricing_rules, class_name: "HotelPricingRule", dependent: :destroy
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy

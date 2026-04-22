@@ -13,6 +13,24 @@ class Public::BookingsController < ApplicationController
     @qr_svg = build_qr_svg(@booking.confirmation_token)
   end
 
+  def invoice
+    @booking = Booking.find_by!(confirmation_token: params[:id])
+    pdf_bytes = InvoicePdfService.new(@booking).generate
+    send_data pdf_bytes,
+      filename: "wastays-invoice-#{@booking.confirmation_token}.pdf",
+      type: "application/pdf",
+      disposition: "attachment"
+  end
+
+  def voucher
+    @booking = Booking.find_by!(confirmation_token: params[:id])
+    pdf_bytes = VoucherPdfService.new(@booking).generate
+    send_data pdf_bytes,
+      filename: "wastays-voucher-#{@booking.confirmation_token}.pdf",
+      type: "application/pdf",
+      disposition: "attachment"
+  end
+
   private
 
   def build_qr_svg(token)

@@ -77,7 +77,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(property_policy.check_out_time).to eq('11:00 AM')
     end
 
-    it 'updates hotel-level payment gateway configuration' do
+    it 'does not allow hotel users to update payment gateway configuration' do
       patch hotel_settings_path(hotel), params: {
         payment_setting: {
           gateway: 'razorpay',
@@ -90,14 +90,8 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       expect(response).to redirect_to(hotel_settings_path(hotel))
       follow_redirect!
-      expect(response.body).to include('Payment gateway configuration updated successfully.')
-
-      setting = hotel.payment_settings.find_by(gateway: 'razorpay')
-      expect(setting).to be_present
-      expect(setting.api_key).to eq('rzp_test_key')
-      expect(setting.secret_key).to eq('rzp_test_secret')
-      expect(setting.webhook_secret).to eq('whsec_test')
-      expect(setting.status).to eq('active')
+      expect(response.body).to include('Payment gateway credentials are managed by superadmin.')
+      expect(hotel.payment_settings.find_by(gateway: 'razorpay')).to be_nil
     end
   end
 end

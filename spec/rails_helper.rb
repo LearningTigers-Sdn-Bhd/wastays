@@ -8,6 +8,9 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 # that will avoid rails generators crashing because migrations haven't been run yet
 # return unless Rails.env.test?
 require 'rspec/rails'
+require 'capybara/cuprite'
+require 'webmock/rspec'
+WebMock.disable_net_connect!(allow_localhost: true)
 # Add additional requires below this line. Rails is not loaded until this point!
 
 # Requires supporting ruby files with custom matchers and macros, etc, in
@@ -78,6 +81,15 @@ RSpec.configure do |config|
       skip "Skipping system test: Google Chrome is not installed in this environment."
     end
   end
+end
+
+Capybara.register_driver :cuprite do |app|
+  Capybara::Cuprite::Driver.new(
+    app,
+    browser_options: { "no-sandbox" => nil, "disable-dev-shm-usage" => nil },
+    headless: true,
+    timeout: 10
+  )
 end
 
 Shoulda::Matchers.configure do |config|

@@ -68,6 +68,29 @@ RSpec.describe "Guest::RefundRequests", type: :request do
       expect(response.body).to include(booking.confirmation_token)
     end
 
+    it "shows a warm message based on refund status" do
+      expected_message_by_status = {
+        "pending" => "Thanks for your patience. We have received your refund request and our team is reviewing it now.",
+        "approved" => "Good news. Your refund request has been approved and we are preparing the payout.",
+        "completed" => "Your refund is complete. The amount has been processed to your bank account.",
+        "rejected" => "We are sorry. Your refund request could not be approved this time. Please check the hotel note for details."
+      }
+
+      expected_message_by_status.each do |status, expected_message|
+        refund = create(:refund_request, booking: booking, status: status)
+
+        get guest_refund_request_path(refund)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("Refund Status")
+        expect(response.body).to include("Status")
+        expect(response.body).to include(status.humanize)
+        expect(response.body).to include(expected_message)
+
+        refund.destroy!
+      end
+    end
+
     it "redirects when refund request does not belong to guest" do
       other_booking = create(:booking, status: "cancelled", check_in: Date.current + 7.days)
       other_refund = create(:refund_request, booking: other_booking, status: "pending")

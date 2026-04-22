@@ -6,7 +6,7 @@ module HotelPortal
 
     def index
       unless current_hotel
-        @guests = []
+        @guests = Guest.none.page(params[:page]).per(25)
         @country_options = []
         @guest_stays_count = {}
         @guest_currency_totals = {}
@@ -31,6 +31,8 @@ module HotelPortal
         scope
           .group("guests.id")
           .order(Arel.sql("COALESCE(MAX(bookings.checked_out_at), MAX(bookings.check_out::timestamp)) DESC NULLS LAST"))
+          .page(params[:page])
+          .per(25)
       end
 
       @country_options = ActiveRecord::Encryption.without_encryption do
