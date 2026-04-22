@@ -110,6 +110,7 @@ Rails.application.routes.draw do
         get :onboarding
         post :create_onboarding_session
         post :complete_onboarding_session
+        post :cancel_onboarding_session
         post :complete_onboarding
         post :save_onboarding_period
         post :approve
