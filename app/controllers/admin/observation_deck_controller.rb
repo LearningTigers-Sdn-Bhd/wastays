@@ -24,6 +24,8 @@ module Admin
 
       if params[:entry_type].present?
         @entries = @entries.where(entry_type: params[:entry_type])
+      elsif params[:focus_mode] == "true"
+        @entries = @entries.where(entry_type: ["request", "job", "mail"])
       end
 
       effective_status_group = params[:status_group].presence

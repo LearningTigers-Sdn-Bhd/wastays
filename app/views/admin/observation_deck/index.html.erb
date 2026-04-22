@@ -111,32 +111,53 @@
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
       <div class="flex flex-wrap items-center gap-2">
         <% effective_status_group = @effective_status_group.presence || params[:status_group].presence %>
+        <% focus_mode = params[:focus_mode] == "true" %>
+        
+        <%# Focus Mode Toggle %>
+        <%= link_to admin_observation_deck_index_path(focus_mode: !focus_mode), 
+            class: "flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition #{focus_mode ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}" do %>
+          <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c3.55 0 6.715 1.844 8.542 4.646M2.458 12c1.274 4.057 5.065 7 9.542 7 3.55 0 6.715-1.844 8.542-4.646M12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7"/></svg>
+          <%= focus_mode ? "Focus: System Story" : "Focus: Show All" %>
+        <% end %>
+
+        <div class="w-px h-6 bg-slate-200 mx-1"></div>
+
         <% all_active = params[:entry_type].blank? && params[:status].blank? && (effective_status_group.blank? || effective_status_group == "all") %>
-        <%= link_to "All", admin_observation_deck_index_path, 
+        <%= link_to "All", admin_observation_deck_index_path(focus_mode: params[:focus_mode]), 
             class: "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition #{all_active ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}" %>
         
         <% %w[request sql job mail api].each do |type| %>
-          <%= link_to type, admin_observation_deck_index_path(entry_type: type), 
+          <%= link_to type, admin_observation_deck_index_path(entry_type: type, focus_mode: params[:focus_mode]), 
               class: "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition #{params[:entry_type] == type ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}" %>
         <% end %>
 
-        <div class="w-px h-6 bg-slate-200 mx-2"></div>
+        <div class="w-px h-6 bg-slate-200 mx-1"></div>
 
-        <%= link_to "Errors", admin_observation_deck_index_path(status_group: 'error'), 
+        <%= link_to "Errors", admin_observation_deck_index_path(status_group: 'error', focus_mode: params[:focus_mode]), 
             class: "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition #{effective_status_group == 'error' ? 'bg-rose-600 text-white shadow-md' : 'bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100'}" %>
       </div>
 
-      <div class="relative flex-1 max-w-md">
-        <%= form_with url: admin_observation_deck_index_path, method: :get, data: { turbo_frame: "entries_table", observation_deck_target: "form" } do |f| %>
-          <%= hidden_field_tag :status_group, effective_status_group if effective_status_group.present? %>
-          <%= f.text_field :query, value: params[:query],
-                 placeholder: "Search path, tags, or IDs...",
-                 class: "w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all",
-                 data: { action: "input->observation-deck#search", observation_deck_target: "input" } %>
-          <svg class="absolute left-3 top-2.5 size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-          </svg>
+      <div class="flex items-center gap-3">
+        <%= link_to admin_observation_deck_index_path(params.to_unsafe_h.except(:action, :controller)), 
+            class: "p-2 bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 rounded-xl transition-all shadow-sm group",
+            title: "Refresh Logs",
+            data: { turbo_frame: "entries_table" } do %>
+          <svg class="size-5 group-active:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
         <% end %>
+
+        <div class="relative flex-1 min-w-[300px]">
+          <%= form_with url: admin_observation_deck_index_path, method: :get, data: { turbo_frame: "entries_table", observation_deck_target: "form" } do |f| %>
+            <%= hidden_field_tag :status_group, effective_status_group if effective_status_group.present? %>
+            <%= hidden_field_tag :focus_mode, params[:focus_mode] if params[:focus_mode].present? %>
+            <%= f.text_field :query, value: params[:query],
+                   placeholder: "Search path, tags, or IDs...",
+                   class: "w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-100 outline-none transition-all",
+                   data: { action: "input->observation-deck#search", observation_deck_target: "input" } %>
+            <svg class="absolute left-3 top-2.5 size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+          <% end %>
+        </div>
       </div>
     </div>
 
