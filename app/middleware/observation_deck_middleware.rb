@@ -46,7 +46,11 @@ class ObservationDeckMiddleware
       }
     end
 
-    ObservationEntry.insert_all(entries)
+    ObservationEntry.insert_all(entries) if ActiveRecord::Base.connection.data_source_exists?("observation_entries")
+  rescue ActiveRecord::StatementInvalid => e
+    # Silently ignore if table doesn't exist yet
+    return if e.message.include?("relation \"observation_entries\" does not exist")
+    Rails.logger.error "[ObservationDeck] Flush failed: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
   rescue => e
     Rails.logger.error "[ObservationDeck] Flush failed: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
   end
