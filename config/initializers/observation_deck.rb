@@ -1,5 +1,18 @@
 # Observation Deck Instrumentation Initializer
 
+# Guard: Disable in test environment to avoid transaction conflicts and boot noise
+return if Rails.env.test?
+
+# Guard: Disable instrumentation during migrations or database setup
+# This prevents PG::UndefinedTable errors when the system is preparing the database
+if defined?(Rake) && Rake.respond_to?(:application)
+  begin
+    return if Rake.application.top_level_tasks.any? { |t| t.include?("db:") }
+  rescue StandardError
+    # Ignore errors accessing rake tasks during boot
+  end
+end
+
 # Helper to deeply scrub sensitive data
 # We explicitly remove :email from the global filters for the Observation Deck so devs can debug user issues
 OBSERVATION_SCRUBBER = ActiveSupport::ParameterFilter.new(
@@ -8,8 +21,6 @@ OBSERVATION_SCRUBBER = ActiveSupport::ParameterFilter.new(
 
 # Helper to store entries (buffered for requests, immediate for jobs)
 def capture_observation_entry(entry_data)
-  return if Rails.env.test?
-
   entry_data[:request_id] = entry_data[:request_id].presence || Current.request_id || "none"
 
   if Current.respond_to?(:observation_buffer) && Current.observation_buffer.is_a?(Array)
@@ -17,9 +28,15 @@ def capture_observation_entry(entry_data)
   else
     # Outside of a request (e.g., background job), save immediately
     begin
+      # Safety check: skip if the table hasn't been created yet (migration phase)
+      return unless ActiveRecord::Base.connection.data_source_exists?("observation_entries")
+
       ObservationEntry.create!(entry_data)
+    rescue ActiveRecord::StatementInvalid => e
+      # Silently ignore if table doesn't exist yet
+      return if e.message.include?("relation \"observation_entries\" does not exist")
+      Rails.logger.error "[ObservationDeck] Failed to log entry: #{e.message}"
     rescue => e
-      puts "[ObservationDeck] ERROR: #{e.message}"
       Rails.logger.error "[ObservationDeck] Failed to log entry: #{e.message}"
     end
   end
