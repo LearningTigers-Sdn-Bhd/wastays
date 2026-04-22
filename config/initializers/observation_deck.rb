@@ -27,6 +27,10 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
   event = ActiveSupport::Notifications::Event.new(*args)
   payload = event.payload
   status = payload[:status].to_i
+  path = payload[:path]
+
+  # Guard: Ignore all internal, health check, and dev noise
+  next if path.start_with?("/admin/observation_deck", "/up", "/rails/", "/hotwire-livereload")
 
   # Sampling Strategy: 100% Errors/Slow, 10% Success (100% in dev)
   is_error = status >= 400
@@ -122,8 +126,9 @@ ActiveSupport::Notifications.subscribe("sql.active_record") do |*args|
   payload = event.payload
 
   # Guard: prevent recursive writes and ignore noisy queries
-  next if payload[:sql].include?("observation_entries")
-  next if payload[:name] == "SCHEMA" || payload[:sql].include?("BEGIN") || payload[:sql].include?("COMMIT")
+  sql = payload[:sql]
+  next if sql.include?("observation_entries") || sql.include?("ar_internal_metadata") || sql.include?("schema_migrations")
+  next if payload[:name] == "SCHEMA" || sql.include?("BEGIN") || sql.include?("COMMIT")
 
   # Only log slow SQL (> 100ms) or if we are in a request (all SQL for now to help dev)
   if event.duration > 100 || Current.respond_to?(:observation_buffer)
