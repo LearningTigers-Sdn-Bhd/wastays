@@ -8,4 +8,15 @@ class RoomInventory < ApplicationRecord
 
   scope :open, -> { where(status: "open") }
   scope :closed, -> { where(status: "closed") }
+
+  after_commit :trigger_ari_sync, on: [ :create, :update ]
+
+  private
+
+  def trigger_ari_sync
+    return if room_type.hotel.preferred_channel_manager.blank?
+
+    # Sync a window of 7 days around the changed date to be safe, or just the date
+    ChannelManagers::SyncJob.perform_later(room_type.hotel_id, date, date)
+  end
 end
