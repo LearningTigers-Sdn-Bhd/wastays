@@ -4,13 +4,16 @@ class ObservationDeckMiddleware
   end
 
   def call(env)
+    request = ActionDispatch::Request.new(env)
+    Current.request_id = request.request_id || SecureRandom.uuid
     Current.observation_buffer = []
 
     status, headers, response = @app.call(env)
 
     if Current.observation_buffer.present?
-      Rails.logger.info "[ObservationDeck] Found #{Current.observation_buffer.size} entries to flush."
+      count = Current.observation_buffer.size
       flush_buffer 
+      Rails.logger.info "[ObservationDeck] Successfully flushed #{count} entries."
     end
 
     [ status, headers, response ]
@@ -26,7 +29,7 @@ class ObservationDeckMiddleware
       {
         id: SecureRandom.uuid,
         entry_type: entry[:entry_type].to_s,
-        request_id: entry[:request_id].to_s || "none",
+        request_id: entry[:request_id].presence || "none",
         status: entry[:status],
         duration: entry[:duration].to_f || 0.0,
         path: entry[:path].to_s,
@@ -37,8 +40,7 @@ class ObservationDeckMiddleware
       }
     end
 
-    result = ObservationEntry.insert_all(entries)
-    Rails.logger.info "[ObservationDeck] Successfully inserted #{result.size} entries."
+    ObservationEntry.insert_all(entries)
   rescue => e
     Rails.logger.error "[ObservationDeck] Flush failed: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
   end

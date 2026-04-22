@@ -7,6 +7,8 @@ OBSERVATION_SCRUBBER = ActiveSupport::ParameterFilter.new(
 
 # Helper to store entries (buffered for requests, immediate for jobs)
 def capture_observation_entry(entry_data)
+  entry_data[:request_id] = entry_data[:request_id].presence || Current.request_id || "none"
+  
   if Current.respond_to?(:observation_buffer) && Current.observation_buffer.is_a?(Array)
     Current.observation_buffer << entry_data
   else
@@ -44,7 +46,7 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
 
     capture_observation_entry({
       entry_type: "request",
-      request_id: payload[:request_id],
+      request_id: payload[:request_id].presence || Current.request_id || "none",
       status: status,
       duration: event.duration,
       path: "#{payload[:method]} #{payload[:path]}",
@@ -61,6 +63,12 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
       })
     })
   end
+end
+
+# Job Watcher (Catch-all for debug)
+ActiveSupport::Notifications.subscribe(/active_job/) do |*args|
+  event = ActiveSupport::Notifications::Event.new(*args)
+  Rails.logger.info "[ObservationDeck] Job event: #{event.name} for #{event.payload[:job]&.class&.name}"
 end
 
 # Job Watcher (Enqueue)
@@ -140,7 +148,7 @@ ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
   payload = event.payload
   mail_obj = payload[:mail]
   
-  # Handle cases where mail_obj might be a String (already encoded)
+  Rails.logger.info "[ObservationDeck] Capturing mail delivery: #{payload[:mailer]}"
   is_mail_object = mail_obj.respond_to?(:subject) && !mail_obj.is_a?(String)
 
   subject = is_mail_object ? mail_obj.subject : payload[:subject]

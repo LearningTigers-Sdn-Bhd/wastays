@@ -1,4 +1,4 @@
-<%= turbo_frame_tag "entry_detail_#{@entry.id}" do %>
+<%= turbo_frame_tag "entry_detail_frame" do %>
   <div class="p-6 space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
     
     <!-- Core Details -->
@@ -102,29 +102,56 @@
 
     <!-- Special Viewers -->
     <% if @entry.entry_type == 'mail' %>
-      <div class="space-y-4" x-data="{ view: 'html' }">
-        <div class="flex items-center justify-between">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mail Content</p>
-          <div class="flex bg-slate-100 p-1 rounded-lg">
-            <button @click="view = 'html'" :class="view === 'html' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'" class="px-3 py-1 text-xs font-bold rounded-md transition-all">HTML</button>
-            <button @click="view = 'text'" :class="view === 'text' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'" class="px-3 py-1 text-xs font-bold rounded-md transition-all">Text</button>
-            <button @click="view = 'raw'" :class="view === 'raw' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'" class="px-3 py-1 text-xs font-bold rounded-md transition-all">Raw JSON</button>
+      <div class="space-y-6" data-controller="mail-viewer">
+        <!-- Email Header Simulation -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
+          <div class="grid grid-cols-[80px_1fr] gap-y-3 items-baseline">
+            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">From</span>
+            <span class="text-sm font-medium text-slate-900">
+              <%= Array(@entry.payload['from']).join(", ") %>
+            </span>
+
+            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">To</span>
+            <span class="text-sm font-medium text-slate-900">
+              <%= Array(@entry.payload['to']).join(", ") %>
+            </span>
+
+            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Subject</span>
+            <span class="text-sm font-bold text-slate-900">
+              <%= @entry.payload['subject'] %>
+            </span>
+
+            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Date</span>
+            <span class="text-sm font-medium text-slate-600">
+              <%= @entry.created_at.strftime("%b %d, %Y %I:%M:%S %p %Z") %>
+            </span>
           </div>
         </div>
 
-        <div x-show="view === 'html'" class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-inner ring-1 ring-slate-100">
-          <iframe srcdoc="<%= @entry.payload['html_body'] %>" 
-                  class="w-full min-h-[600px] bg-white" 
-                  sandbox="allow-popups allow-popups-to-escape-sandbox"
-                  frameborder="0"></iframe>
-        </div>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mail Body</p>
+            <div class="flex bg-slate-100 p-1 rounded-lg">
+              <button data-action="click->mail-viewer#switch" data-view="html" data-mail-viewer-target="button" class="px-3 py-1 text-xs font-bold rounded-md transition-all bg-white shadow-sm text-indigo-600">HTML</button>
+              <button data-action="click->mail-viewer#switch" data-view="text" data-mail-viewer-target="button" class="px-3 py-1 text-xs font-bold rounded-md transition-all text-slate-500">Text</button>
+              <button data-action="click->mail-viewer#switch" data-view="raw" data-mail-viewer-target="button" class="px-3 py-1 text-xs font-bold rounded-md transition-all text-slate-500">Raw JSON</button>
+            </div>
+          </div>
 
-        <div x-show="view === 'text'" class="border border-slate-200 rounded-2xl p-6 bg-slate-50 font-mono text-sm text-slate-700 whitespace-pre-wrap">
-          <%= @entry.payload['text_body'] %>
-        </div>
-        
-        <div x-show="view === 'raw'">
-           <pre class="bg-slate-900 rounded-2xl p-6 overflow-x-auto"><code class="text-indigo-300 text-xs"><%= JSON.pretty_generate(@entry.payload) %></code></pre>
+          <div data-mail-viewer-target="view" data-view="html" class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-inner ring-1 ring-slate-100">
+            <iframe srcdoc="<%= @entry.payload['html_body'] %>" 
+                    class="w-full min-h-[600px] bg-white" 
+                    sandbox="allow-popups allow-popups-to-escape-sandbox"
+                    frameborder="0"></iframe>
+          </div>
+
+          <div data-mail-viewer-target="view" data-view="text" class="hidden border border-slate-200 rounded-2xl p-6 bg-slate-50 font-mono text-sm text-slate-700 whitespace-pre-wrap">
+            <%= @entry.payload['text_body'] %>
+          </div>
+          
+          <div data-mail-viewer-target="view" data-view="raw" class="hidden">
+             <pre class="bg-slate-900 rounded-2xl p-6 overflow-x-auto"><code class="text-indigo-300 text-xs"><%= JSON.pretty_generate(@entry.payload) %></code></pre>
+          </div>
         </div>
       </div>
     <% elsif @entry.entry_type == 'sql' %>
@@ -154,8 +181,9 @@
         <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Trace Timeline (Request ID: <%= @entry.request_id.first(8) %>)</p>
         <div class="space-y-2">
           <% @siblings.each do |sibling| %>
-            <div class="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm transition-all group cursor-pointer"
-                 @click="openEntry('<%= sibling.id %>')">
+            <%= link_to admin_observation_deck_path(sibling), 
+                class: "flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm transition-all group cursor-pointer",
+                data: { turbo_frame: "entry_detail_frame" } do %>
               <div class="flex items-center gap-3">
                 <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded <%= case sibling.entry_type
                     when 'request' then 'bg-emerald-100 text-emerald-700'
@@ -173,7 +201,7 @@
                 <% end %>
                 <span class="text-[10px] font-mono text-slate-400"><%= number_with_precision(sibling.duration, precision: 1) %>ms</span>
               </div>
-            </div>
+            <% end %>
           <% end %>
         </div>
       </div>

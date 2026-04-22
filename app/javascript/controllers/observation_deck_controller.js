@@ -7,7 +7,6 @@ export default class extends Controller {
     const entryId = event.currentTarget.dataset.entryId
     if (!entryId) return
 
-    this.frameTarget.id = `entry_detail_${entryId}`
     this.frameTarget.src = `/admin/observation_deck/${entryId}`
     this.panelTarget.classList.remove("hidden")
   }

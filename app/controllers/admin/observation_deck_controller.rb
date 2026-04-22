@@ -7,7 +7,7 @@ module Admin
       # Optimization: Do not select the large payload column in index
       # Prioritize errors (status >= 400) first, then chronological
       @entries = ObservationEntry.select(:id, :entry_type, :request_id, :status, :duration, :path, :tags, :created_at)
-                                .order(Arel.sql("CASE WHEN status >= 400 THEN 0 ELSE 1 END ASC, created_at DESC"))
+                                .order(created_at: :desc)
 
       @error_count = ObservationEntry.where("status >= 400").where("created_at > ?", 24.hours.ago).count
 
