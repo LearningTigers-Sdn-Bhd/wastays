@@ -120,6 +120,34 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
     end
   end
 
+  describe "POST /admin/hotels/:id/onboarding-sessions" do
+    let(:hotel) do
+      create(
+        :hotel,
+        account: admin_account,
+        name: "Create Reset #{token}",
+        city: "Kuala Lumpur",
+        status: "pending_review"
+      )
+    end
+
+    it "resets the add session form after a successful save" do
+      post create_onboarding_session_admin_hotel_path(hotel),
+           params: {
+             trainer_name: "New Trainer",
+             scheduled_at: "2026-04-24T09:00",
+             meeting_link: "https://meet.example.com/new"
+           },
+           headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('turbo-stream action="replace" target="new_onboarding_session_form"')
+      expect(response.body).to include('value=""')
+      expect(OnboardingSession.where(hotel: hotel).count).to eq(1)
+    end
+  end
+
   describe "DELETE /admin/hotels/:id/onboarding-sessions/:session_id" do
     let(:hotel) do
       create(

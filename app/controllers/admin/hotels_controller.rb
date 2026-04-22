@@ -37,12 +37,45 @@ class Admin::HotelsController < Admin::BaseController
     if @session.save
       respond_to do |format|
         format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session scheduled successfully." }
-        format.turbo_stream { render_onboarding_sessions_list("Training session scheduled successfully.") }
+        format.turbo_stream do
+          @sessions = onboarding_sessions_scope(@hotel)
+          render turbo_stream: [
+            turbo_stream.replace(
+              "new_onboarding_session_form",
+              partial: "admin/hotels/onboarding_session_form",
+              locals: { session: OnboardingSession.new }
+            ),
+            turbo_stream.replace(
+              "onboarding_sessions_list",
+              partial: "admin/hotels/onboarding_sessions_list",
+              locals: { sessions: @sessions, hotel: @hotel }
+            ),
+            turbo_stream.prepend(
+              "flash_toasts",
+              partial: "shared/toast",
+              locals: { key: "notice", value: "Training session scheduled successfully." }
+            )
+          ]
+        end
       end
     else
       respond_to do |format|
         format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}" }
-        format.turbo_stream { render_onboarding_sessions_list("Failed to schedule session: #{@session.errors.full_messages.to_sentence}", :alert, status: :unprocessable_content) }
+        format.turbo_stream do
+          @sessions = onboarding_sessions_scope(@hotel)
+          render turbo_stream: [
+            turbo_stream.replace(
+              "new_onboarding_session_form",
+              partial: "admin/hotels/onboarding_session_form",
+              locals: { session: @session }
+            ),
+            turbo_stream.prepend(
+              "flash_toasts",
+              partial: "shared/toast",
+              locals: { key: "alert", value: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}" }
+            )
+          ], status: :unprocessable_content
+        end
       end
     end
   end
