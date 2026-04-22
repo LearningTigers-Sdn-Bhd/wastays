@@ -19,6 +19,9 @@ production:
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
+  prune_observation_entries:
+    command: "bin/rake observation:prune"
+    schedule: at 3am every day
 
 demo:
   release_expired_holds:

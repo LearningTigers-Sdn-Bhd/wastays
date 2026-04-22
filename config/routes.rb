@@ -138,6 +138,9 @@ Rails.application.routes.draw do
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
     end
+    resources :observation_deck, only: [ :index, :show ], constraints: SuperadminConstraint.new do
+      delete :clear, on: :collection
+    end
     resource :refund_policy, only: [ :show, :update, :destroy ]
     resources :refund_requests, only: [ :index, :show ] do
       member do

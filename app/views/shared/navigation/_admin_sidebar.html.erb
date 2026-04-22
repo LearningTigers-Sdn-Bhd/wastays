@@ -8,9 +8,12 @@
 <% refund_requests_active = controller_name == 'refund_requests' %>
 <% payouts_active = controller_name == 'payout_batches' %>
 <% audit_logs_active = controller_name == 'audit_logs' %>
+<% observation_deck_active = controller_name == 'observation_deck' %>
+<% refund_policy_active = controller_name == 'refund_policies' %>
 <% integrations_active = controller_name == 'integrations' %>
 <% api_keys_active = controller_name == 'api_keys' && action_name != 'docs' %>
 <% api_docs_active = controller_name == 'api_keys' && action_name == 'docs' %>
+
 <% admin_sidebar_sections = [
   {
     label: 'Home',
@@ -40,7 +43,8 @@
   {
     label: 'System',
     items: [
-      { label: 'Audit Logs', path: admin_audit_logs_path, search_text: 'Audit Logs System Activity', active: audit_logs_active, icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>' }
+      { label: 'Audit Logs', path: admin_audit_logs_path, search_text: 'Audit Logs System Activity', active: audit_logs_active, icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>' },
+      { label: 'Observation Deck', path: admin_observation_deck_index_path, search_text: 'Observation Deck Telescope Debug Mission Control', active: observation_deck_active, icon: '<path d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><circle cx="12" cy="12" r="3"/>' }
     ]
   },
   {
@@ -52,10 +56,12 @@
     ]
   }
 ] %>
+
 <% admin_sidebar_footer_items = [
   { label: 'Homepage', path: root_path, search_text: 'Homepage Website', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
   { label: 'Help & support', path: help_center_path, search_text: 'Help Support', icon: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' }
 ] %>
+
 <% render_sidebar_nav = lambda do %>
   <nav class="flex-1 px-4 py-3 space-y-6">
     <% admin_sidebar_sections.each do |section| %>

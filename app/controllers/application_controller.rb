@@ -8,9 +8,14 @@ class ApplicationController < ActionController::Base
 
   helper_method :current_user, :logged_in?
   around_action :use_user_time_zone
+  before_action :set_current_request_id
   before_action :redirect_legacy_hotel_portal_path
 
   private
+
+  def set_current_request_id
+    Current.request_id = request.uuid
+  end
 
   def user_not_authorized
     flash[:alert] = "You are not authorized to perform this action."

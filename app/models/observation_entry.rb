@@ -1,0 +1,2 @@
+class ObservationEntry < ApplicationRecord
+end
