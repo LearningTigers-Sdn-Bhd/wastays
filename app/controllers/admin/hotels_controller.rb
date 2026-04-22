@@ -1,5 +1,5 @@
 class Admin::HotelsController < Admin::BaseController
-  before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend, :onboard_channex, :disconnect_channex, :cancel_onboarding_session ]
+  before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend, :onboard_channex, :disconnect_channex, :cancel_onboarding_session, :destroy_onboarding_session ]
   before_action :load_salespersons, only: [ :new, :create, :edit, :update ]
 
 
@@ -9,7 +9,7 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def onboarding_index
-    @hotels = Hotel.where(status: "pending_review").order(created_at: :desc)
+    @hotels = sorted_onboarding_hotels
   end
 
   def show
@@ -21,7 +21,7 @@ class Admin::HotelsController < Admin::BaseController
     @sessions = @hotel.onboarding_sessions
                       .where.not(notes: "DRAFT_PERIOD")
                       .or(@hotel.onboarding_sessions.where(notes: nil))
-                      .order(scheduled_at: :desc)
+                      .order(scheduled_at: :asc, created_at: :asc)
   end
 
   def create_onboarding_session
@@ -31,9 +31,49 @@ class Admin::HotelsController < Admin::BaseController
     @session.notes = "TRAINING_SESSION"
 
     if @session.save
-      redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session scheduled successfully."
+      respond_to do |format|
+        format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session scheduled successfully." }
+        format.turbo_stream { render_onboarding_sessions_list("Training session scheduled successfully.") }
+      end
     else
-      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}"
+      respond_to do |format|
+        format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}" }
+        format.turbo_stream { render_onboarding_sessions_list("Failed to schedule session: #{@session.errors.full_messages.to_sentence}", :alert, status: :unprocessable_content) }
+      end
+    end
+  end
+
+  def edit_onboarding_session
+    @hotel = Hotel.find(params[:id])
+    @session = @hotel.onboarding_sessions.find(params[:session_id])
+
+    respond_to do |format|
+      format.html { render partial: "onboarding_session", locals: { session: @session, hotel: @hotel, editing: true } }
+      format.turbo_stream
+    end
+  end
+
+  def show_onboarding_session
+    @hotel = Hotel.find(params[:id])
+    @session = @hotel.onboarding_sessions.find(params[:session_id])
+
+    render partial: "onboarding_session", locals: { session: @session, hotel: @hotel, editing: false }
+  end
+
+  def update_onboarding_session
+    @hotel = Hotel.find(params[:id])
+    @session = @hotel.onboarding_sessions.find(params[:session_id])
+
+    if @session.update(onboarding_session_params)
+      respond_to do |format|
+        format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session updated successfully." }
+        format.turbo_stream { render_onboarding_sessions_list("Training session updated successfully.") }
+      end
+    else
+      respond_to do |format|
+        format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to update session: #{@session.errors.full_messages.to_sentence}" }
+        format.turbo_stream { render_onboarding_sessions_list("Failed to update session: #{@session.errors.full_messages.to_sentence}", :alert, status: :unprocessable_content) }
+      end
     end
   end
 
@@ -47,9 +87,15 @@ class Admin::HotelsController < Admin::BaseController
     end
 
     if @session.complete!
-      redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session marked as completed."
+      respond_to do |format|
+        format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session marked as completed." }
+        format.turbo_stream { render_onboarding_sessions_list("Training session marked as completed.") }
+      end
     else
-      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to update session."
+      respond_to do |format|
+        format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to update session." }
+        format.turbo_stream { render_onboarding_sessions_list("Failed to update session.", :alert, status: :unprocessable_content) }
+      end
     end
   end
 
@@ -72,10 +118,38 @@ class Admin::HotelsController < Admin::BaseController
       notes: [ @session.notes.presence, "CANCELLED: #{cancel_reason}" ].compact.join("\n")
     )
 
-    redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session cancelled successfully."
+    respond_to do |format|
+      format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session cancelled successfully." }
+      format.turbo_stream { render_onboarding_sessions_list("Training session cancelled successfully.") }
+    end
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to cancel session: #{e.message}"
+    respond_to do |format|
+      format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to cancel session: #{e.message}" }
+      format.turbo_stream { render_onboarding_sessions_list("Failed to cancel session: #{e.message}", :alert, status: :unprocessable_content) }
+    end
   end
+
+  def destroy_onboarding_session
+    @session = @hotel.onboarding_sessions.find(params[:session_id])
+
+    if @session.destroy
+      respond_to do |format|
+        format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session deleted successfully." }
+        format.turbo_stream { render_onboarding_sessions_list("Training session deleted successfully.") }
+      end
+    else
+      respond_to do |format|
+        format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to delete session." }
+        format.turbo_stream { render_onboarding_sessions_list("Failed to delete session.", :alert, status: :unprocessable_content) }
+      end
+    end
+  rescue ActiveRecord::RecordInvalid => e
+    respond_to do |format|
+      format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to delete session: #{e.message}" }
+      format.turbo_stream { render_onboarding_sessions_list("Failed to delete session: #{e.message}", :alert, status: :unprocessable_content) }
+    end
+  end
+
   def complete_onboarding
     @hotel = Hotel.find(params[:id])
 
@@ -106,9 +180,29 @@ class Admin::HotelsController < Admin::BaseController
     end_date = params[:end_date].presence ? Date.parse(params[:end_date]) : Date.current
 
     if @hotel.update(onboarding_start_date: start_date, onboarding_end_date: end_date)
-      render json: { success: true }
+      respond_to do |format|
+        format.json { render json: { success: true } }
+        format.turbo_stream do
+          @hotels = sorted_onboarding_hotels
+          render turbo_stream: turbo_stream.replace(
+            "onboarding_tracker_table",
+            partial: "admin/hotels/onboarding_tracker_table",
+            locals: { hotels: @hotels }
+          )
+        end
+      end
     else
-      render json: { success: false, errors: @hotel.errors.full_messages }, status: :unprocessable_entity
+      respond_to do |format|
+        format.json { render json: { success: false, errors: @hotel.errors.full_messages }, status: :unprocessable_entity }
+        format.turbo_stream do
+          @hotels = sorted_onboarding_hotels
+          render turbo_stream: turbo_stream.replace(
+            "onboarding_tracker_table",
+            partial: "admin/hotels/onboarding_tracker_table",
+            locals: { hotels: @hotels }
+          ), status: :unprocessable_content
+        end
+      end
     end
   end
 
@@ -252,5 +346,39 @@ class Admin::HotelsController < Admin::BaseController
     if salesperson && @hotel.salesperson_id != salesperson.id
       @hotel.update!(salesperson_id: salesperson.id)
     end
+  end
+
+  def render_onboarding_sessions_list(message, key = :notice, status: :ok)
+    @sessions = onboarding_sessions_scope(@hotel)
+
+    render turbo_stream: [
+      turbo_stream.replace(
+        "onboarding_sessions_list",
+        partial: "admin/hotels/onboarding_sessions_list",
+        locals: { sessions: @sessions, hotel: @hotel }
+      ),
+      turbo_stream.prepend(
+        "flash_toasts",
+        partial: "shared/toast",
+        locals: { key: key.to_s, value: message }
+      )
+    ], status: status
+  end
+
+  def onboarding_sessions_scope(hotel)
+    hotel.onboarding_sessions
+      .where.not(notes: "DRAFT_PERIOD")
+      .or(hotel.onboarding_sessions.where(notes: nil))
+      .order(scheduled_at: :asc, created_at: :asc)
+  end
+
+  def sorted_onboarding_hotels
+    Hotel.where(status: "pending_review").to_a.sort_by { |hotel| onboarding_sort_key(hotel) }
+  end
+
+  def onboarding_sort_key(hotel)
+    duration_value = hotel.onboarding_duration_days
+    duration_value = duration_value.present? ? duration_value.to_f : Float::INFINITY
+    [ duration_value, hotel.created_at ]
   end
 end
