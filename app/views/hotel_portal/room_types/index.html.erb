@@ -1,107 +1,119 @@
-<div class="space-y-6 pb-12">
-  <!-- Page Header -->
-  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-y-4">
-    <div>
-      <div class="mb-4">
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900">Room Categories</span>
+  </div>
+<% end %>
+
+<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+  <div class="px-4 md:px-0">
+    <div class="mt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Room Categories</h1>
+        <p class="mt-1 text-sm font-medium text-slate-600">Define categories, occupancy, and base pricing for your rooms.</p>
+      </div>
+
+      <div class="inline-flex gap-x-2">
         <% if locked_hotel_portal_shell? %>
-          <%= link_to hotel_dashboard_path(current_hotel), class: "btn btn-secondary py-2 px-4 inline-flex items-center gap-x-2" do %>
-            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <%= link_to hotel_dashboard_path(current_hotel), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" do %>
+            <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
             Back to Onboarding
           <% end %>
-        <% else %>
-          <%= link_to hotel_dashboard_path(current_hotel), class: "inline-flex items-center gap-x-1.5 text-sm text-neutral-text-secondary hover:text-brand-primary" do %>
-            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            Back to Dashboard
-          <% end %>
+        <% end %>
+
+        <%= link_to new_hotel_room_type_path(current_hotel), class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
+          <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          Add Room Category
         <% end %>
       </div>
-      <nav class="flex mb-2" aria-label="Breadcrumb">
-        <ol class="flex items-center whitespace-nowrap min-w-0">
-          <li class="flex items-center text-sm text-neutral-text-secondary">
-            <%= link_to "Dashboard", hotel_dashboard_path(current_hotel), class: "hover:text-brand-primary" %>
-            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </li>
-          <li class="flex items-center text-sm text-neutral-text-secondary">
-            Hotel Admin
-            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </li>
-          <li class="text-sm font-semibold text-brand-primary truncate" aria-current="page">
-            Room Types
-          </li>
-        </ol>
-      </nav>
-      <h1 class="text-2xl font-bold text-neutral-text-primary">Manage Room Types</h1>
-      <p class="text-sm text-neutral-text-secondary">Define categories, occupancy, and base pricing.</p>
-    </div>
-
-    <div class="inline-flex gap-x-2">
-      <%= link_to new_hotel_room_type_path(current_hotel), class: "btn btn-primary" do %>
-        <svg class="w-4 h-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-        Add Room Type
-      <% end %>
     </div>
   </div>
 
-  <!-- Room Types List -->
-  <div class="flex flex-col">
-    <div class="-m-1.5 overflow-visible">
-      <div class="p-1.5 min-w-full inline-block align-middle">
-        <div class="card overflow-visible">
-          <div class="overflow-visible">
-            <table class="table-container">
-        <thead class="table-header">
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8">
+      <div>
+        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Room Types</h2>
+        <p class="mt-1 text-sm font-medium text-slate-600">All available room configurations for this property.</p>
+      </div>
+      <span class="text-sm font-medium text-slate-500">Total Categories <span class="font-semibold text-slate-900"><%= @room_types.size %></span></span>
+    </div>
+
+    <div class="hidden lg:block overflow-x-auto">
+      <table class="min-w-full table-fixed">
+        <colgroup>
+          <col class="w-[35%]">
+          <col class="w-[20%]">
+          <col class="w-[10%]">
+          <col class="w-[15%]">
+          <col class="w-[20%]">
+        </colgroup>
+        <thead class="bg-slate-100">
           <tr>
-            <th class="px-6 py-3">Room Category</th>
-            <th class="px-6 py-3">Max Occupancy</th>
-            <th class="px-6 py-3">Units</th>
-            <th class="px-6 py-3">Base Price</th>
-            <th class="px-6 py-3 text-right">Actions</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Category / Description</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Occupancy</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Units</th>
+            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Base Price</th>
+            <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Action</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-neutral-border">
+        <tbody class="divide-y divide-slate-200 bg-white">
           <% if @room_types.any? %>
-            <% @room_types.each do |room_type| %>
-              <tr class="hover:bg-neutral-bg transition-colors">
-                <td class="px-6 py-4">
-                  <div class="flex items-center gap-x-3">
-                    <div class="w-10 h-10 rounded-lg bg-neutral-bg flex items-center justify-center shrink-0">
-                      <svg class="w-5 h-5 text-neutral-text-secondary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="7" height="5" x="7" y="7" rx="1"/><rect width="7" height="5" x="10" y="12" rx="1"/></svg>
+            <% @room_types.each_with_index do |room_type, index| %>
+              <tr class="align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
+                <td class="px-6 py-4 sm:px-8">
+                  <div class="flex items-start gap-x-4">
+                    <div class="flex-none size-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
+                      <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="7" height="5" x="7" y="7" rx="1"/><rect width="7" height="5" x="10" y="12" rx="1"/></svg>
                     </div>
-                    <div>
-                      <span class="block text-sm font-bold text-neutral-text-primary"><%= room_type.name %></span>
-                      <span class="block text-xs text-neutral-text-secondary truncate max-w-[200px]"><%= room_type.description %></span>
+                    <div class="flex flex-col gap-1">
+                      <span class="text-sm font-bold text-slate-900"><%= room_type.name %></span>
+                      <span class="text-xs text-slate-500 line-clamp-2 leading-relaxed"><%= room_type.description %></span>
                     </div>
                   </div>
                 </td>
-                <td class="px-6 py-4 text-sm text-neutral-text-primary">
-                  <span class="badge badge-neutral"><%= room_type.max_adults %> Adults</span>
-                  <% if room_type.max_children > 0 %>
-                    <span class="badge badge-neutral"><%= room_type.max_children %> Kids</span>
-                  <% end %>
+                <td class="px-6 py-4">
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                      <%= room_type.max_adults %> Adults
+                    </span>
+                    <% if room_type.max_children > 0 %>
+                      <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                        <%= room_type.max_children %> Kids
+                      </span>
+                    <% end %>
+                  </div>
                 </td>
-                <td class="px-6 py-4 text-sm font-bold text-neutral-text-primary">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">
                   <%= room_type.quantity %>
                 </td>
-                <td class="px-6 py-4 text-sm font-black text-brand-primary">
-                  RM <%= number_with_precision(room_type.base_price, precision: 2) %>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="text-sm font-bold text-slate-900">MYR <%= number_with_precision(room_type.base_price, precision: 2) %></span>
                 </td>
-                <td class="px-6 py-4 text-right">
+                <td class="px-6 py-4 text-right whitespace-nowrap sm:px-8">
                   <div class="relative inline-flex" data-controller="dropdown">
-                    <button type="button" data-action="click->dropdown#toggle" class="py-1.5 px-2 inline-flex justify-center items-center gap-2 rounded-lg border border-neutral-border bg-white text-neutral-text-secondary shadow-sm align-middle hover:bg-neutral-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-all text-sm">
-                      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                    <button type="button" data-action="click->dropdown#toggle" class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
+                      Manage
+                      <svg class="ms-1.5 size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                     </button>
-                    <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[999] min-w-[12rem] bg-white shadow-2xl rounded-xl p-2 mt-2 border border-neutral-border">
-                      <%= link_to hotel_room_type_rates_path(current_hotel, room_type), class: "flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-neutral-bg focus:ring-2 focus:ring-brand-primary" do %>
+                    <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[100] mt-2 min-w-[14rem] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in duration-200">
+                      <%= link_to hotel_room_type_rates_path(current_hotel, room_type), class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors" do %>
+                        <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 15h.01"/><path d="M11 15h.01"/><path d="M15 15h.01"/></svg>
                         Manage Rates
                       <% end %>
-                      <%= link_to hotel_room_type_inventories_path(current_hotel, room_type), class: "flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-neutral-bg focus:ring-2 focus:ring-brand-primary" do %>
+                      <%= link_to hotel_room_type_inventories_path(current_hotel, room_type), class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors" do %>
+                        <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
                         Manage Inventory
                       <% end %>
-                      <div class="my-2 border-t border-neutral-border"></div>
-                      <%= link_to edit_hotel_room_type_path(current_hotel, room_type), class: "flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-neutral-bg focus:ring-2 focus:ring-brand-primary" do %>
+                      <div class="my-1 border-t border-slate-100"></div>
+                      <%= link_to edit_hotel_room_type_path(current_hotel, room_type), class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors" do %>
+                        <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                         Edit Details
                       <% end %>
-                      <%= link_to hotel_room_type_path(current_hotel, room_type), data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to delete this room type?" }, class: "flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-status-error hover:bg-red-50 focus:ring-2 focus:ring-status-error" do %>
+                      <%= link_to hotel_room_type_path(current_hotel, room_type), 
+                          data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to delete this room category?" }, 
+                          class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors" do %>
+                        <svg class="size-4 text-red-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                         Delete Category
                       <% end %>
                     </div>
@@ -111,18 +123,69 @@
             <% end %>
           <% else %>
             <tr>
-              <td colspan="5" class="px-6 py-20 text-center">
-                <div class="inline-flex justify-center items-center w-12 h-12 rounded-full bg-neutral-bg text-neutral-text-secondary mb-4">
-                  <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="7" height="5" x="7" y="7" rx="1"/><rect width="7" height="5" x="10" y="12" rx="1"/></svg>
+              <td colspan="5" class="px-6 py-20 text-center sm:px-8">
+                <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
+                  <svg class="size-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="7" height="5" x="7" y="7" rx="1"/><rect width="7" height="5" x="10" y="12" rx="1"/></svg>
                 </div>
-                <h3 class="text-lg font-bold text-neutral-text-primary mb-1">No room types found</h3>
-                <p class="text-sm text-neutral-text-secondary mb-6">Start by adding your first room category.</p>
-                <%= link_to "Add Room Type", new_hotel_room_type_path(current_hotel), class: "btn btn-primary" %>
+                <h3 class="mt-4 text-sm font-bold text-slate-900">No room categories found</h3>
+                <p class="mt-1 text-sm text-slate-500 text-sm">Start by adding your first room configuration.</p>
+                <div class="mt-6">
+                  <%= link_to "Add Room Category", new_hotel_room_type_path(current_hotel), class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+                </div>
               </td>
             </tr>
           <% end %>
         </tbody>
       </table>
+    </div>
+
+    <!-- Mobile View -->
+    <div class="space-y-4 p-4 sm:p-6 lg:hidden">
+      <% if @room_types.any? %>
+        <% @room_types.each do |room_type| %>
+          <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
+            <div class="flex items-start gap-3">
+              <div class="flex-none size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 shadow-sm">
+                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="7" height="5" x="7" y="7" rx="1"/><rect width="7" height="5" x="10" y="12" rx="1"/></svg>
+              </div>
+              <div class="min-w-0">
+                <p class="text-sm font-bold text-slate-900 truncate"><%= room_type.name %></p>
+                <p class="mt-1 text-xs text-slate-500 line-clamp-1"><%= room_type.description %></p>
+              </div>
+            </div>
+
+            <dl class="mt-4 space-y-3 text-sm">
+              <div class="flex items-center justify-between">
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Occupancy</dt>
+                <dd class="flex gap-1">
+                  <span class="text-[11px] font-bold text-slate-700 bg-slate-200/50 px-2 py-0.5 rounded-md"><%= room_type.max_adults %>A</span>
+                  <% if room_type.max_children > 0 %>
+                    <span class="text-[11px] font-bold text-slate-700 bg-slate-200/50 px-2 py-0.5 rounded-md"><%= room_type.max_children %>C</span>
+                  <% end %>
+                </dd>
+              </div>
+              <div class="flex items-center justify-between">
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Inventory</dt>
+                <dd class="text-slate-900 font-bold"><%= room_type.quantity %> Units</dd>
+              </div>
+              <div class="flex items-center justify-between">
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Base Price</dt>
+                <dd class="text-slate-900 font-bold">MYR <%= number_with_precision(room_type.base_price, precision: 2) %></dd>
+              </div>
+            </dl>
+
+            <div class="mt-6 flex flex-wrap items-center justify-end gap-2">
+              <%= link_to "Rates", hotel_room_type_rates_path(current_hotel, room_type), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition" %>
+              <%= link_to "Inventory", hotel_room_type_inventories_path(current_hotel, room_type), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition" %>
+              <%= link_to "Edit", edit_hotel_room_type_path(current_hotel, room_type), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition" %>
+            </div>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center shadow-sm">
+          <p class="text-sm font-medium text-slate-500">No room categories found.</p>
+        </div>
+      <% end %>
     </div>
   </div>
 </div>

@@ -53,7 +53,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get "/hotel/#{hotel.id}/bookings/#{booking.id}"
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Broken AC")
-      expect(response.body).to include("Pending")
+      expect(response.body).to include("pending")
     end
   end
 

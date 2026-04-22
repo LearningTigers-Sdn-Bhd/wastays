@@ -159,6 +159,10 @@ Rails.application.routes.draw do
     delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
     delete "profile/photos", to: "profiles#destroy_photos", as: :profile_photos
     patch "profile/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature
+    post "profile/photo_queue", to: "profiles#enqueue_photo", as: :profile_photo_queue
+    delete "profile/photo_queue", to: "profiles#clear_photo_queue", as: :clear_profile_photo_queue
+    delete "profile/photo_queue/:signed_id", to: "profiles#remove_photo_from_queue", as: :profile_photo_queue_item
+    post "profile/photo_queue/commit", to: "profiles#commit_photo_queue", as: :commit_profile_photo_queue
     resource :property_policy, only: [ :edit, :update ]
 
     resources :room_types do
