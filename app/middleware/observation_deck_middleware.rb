@@ -12,7 +12,7 @@ class ObservationDeckMiddleware
 
     if Current.observation_buffer.present?
       count = Current.observation_buffer.size
-      flush_buffer 
+      flush_buffer
       Rails.logger.info "[ObservationDeck] Successfully flushed #{count} entries."
     end
 
@@ -44,5 +44,4 @@ class ObservationDeckMiddleware
   rescue => e
     Rails.logger.error "[ObservationDeck] Flush failed: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
   end
-
 end

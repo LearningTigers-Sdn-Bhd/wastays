@@ -6,10 +6,10 @@ module Admin
     def index
       # Last 24h Pulse Metrics
       last_24h = ObservationEntry.where("created_at > ?", 24.hours.ago)
-      @total_requests_24h = last_24h.where(entry_type: 'request').count
+      @total_requests_24h = last_24h.where(entry_type: "request").count
       @error_count_24h = last_24h.where("status >= 400").count
       @error_rate_24h = @total_requests_24h > 0 ? (@error_count_24h.to_f / @total_requests_24h * 100).round(1) : 0
-      @avg_latency_24h = last_24h.where(entry_type: 'request').average(:duration).to_f.round(1)
+      @avg_latency_24h = last_24h.where(entry_type: "request").average(:duration).to_f.round(1)
 
       # Optimization: Do not select the large payload column in index
       # Prioritize errors (status >= 400) first, then chronological
@@ -57,8 +57,8 @@ module Admin
 
       # For traceability, find sibling entries
       if @entry.request_id.present? && @entry.request_id != "none"
-        @parent_request = ObservationEntry.find_by(request_id: @entry.request_id, entry_type: 'request')
-        
+        @parent_request = ObservationEntry.find_by(request_id: @entry.request_id, entry_type: "request")
+
         # Siblings include the current one for highlighting logic in view
         @siblings = ObservationEntry.where(request_id: @entry.request_id)
                                    .select(:id, :entry_type, :path, :duration, :status)
@@ -77,16 +77,12 @@ module Admin
         ObservationEntry.delete_all
         notice = "Observation deck cleared."
       end
-      
+
       redirect_to admin_observation_deck_index_path, notice: notice
     end
 
-    def test_email
-      SystemMailer.observability_test(current_user.email).deliver_now
-      redirect_to admin_observation_deck_index_path, notice: "Test email sent. Check 'mail' filter."
-    end
-
     def analyze
+
       @entry = ObservationEntry.find(params[:id])
       @analysis = PlatformControl::AiAnalyzerService.new(@entry).analyze
 

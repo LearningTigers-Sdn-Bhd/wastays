@@ -67,7 +67,7 @@ module Channex
         payload[:response_headers] = response.to_hash
         payload[:body] = response.body
       end
-      
+
       parse_response(response)
     rescue JSON::ParserError => e
       { error: "Invalid JSON response from Channex API", details: e.message }

@@ -106,7 +106,7 @@ module Payments
         uri = URI("#{API_BASE_URL}#{path}")
         request = Net::HTTP::Post.new(uri, request_headers)
         request.body = payload.to_json
-        
+
         response = nil
         ActiveSupport::Notifications.instrument("request.faraday", {
           method: "POST",
@@ -125,7 +125,7 @@ module Payments
       def get_json(path)
         uri = URI("#{API_BASE_URL}#{path}")
         request = Net::HTTP::Get.new(uri, request_headers)
-        
+
         response = nil
         ActiveSupport::Notifications.instrument("request.faraday", {
           method: "GET",

@@ -8,7 +8,7 @@ OBSERVATION_SCRUBBER = ActiveSupport::ParameterFilter.new(
 # Helper to store entries (buffered for requests, immediate for jobs)
 def capture_observation_entry(entry_data)
   entry_data[:request_id] = entry_data[:request_id].presence || Current.request_id || "none"
-  
+
   if Current.respond_to?(:observation_buffer) && Current.observation_buffer.is_a?(Array)
     Current.observation_buffer << entry_data
   else
@@ -88,7 +88,7 @@ ActiveSupport::Notifications.subscribe("enqueue.active_job") do |*args|
       queue: job.queue_name,
       executions: job.executions
     }),
-    tags: ["enqueued"]
+    tags: [ "enqueued" ]
   })
 end
 
@@ -147,7 +147,7 @@ ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
   event = ActiveSupport::Notifications::Event.new(*args)
   payload = event.payload
   mail_obj = payload[:mail]
-  
+
   Rails.logger.info "[ObservationDeck] Capturing mail delivery: #{payload[:mailer]}"
   is_mail_object = mail_obj.respond_to?(:subject) && !mail_obj.is_a?(String)
 
@@ -158,7 +158,7 @@ ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
   # Extract body
   html_body = nil
   text_body = nil
-  
+
   if is_mail_object
     html_body = mail_obj.html_part&.body&.to_s || (mail_obj.content_type =~ /html/ ? mail_obj.body&.to_s : nil)
     text_body = mail_obj.text_part&.body&.to_s || (mail_obj.content_type =~ /plain/ ? mail_obj.body&.to_s : nil)
@@ -188,7 +188,7 @@ ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
       exception: payload[:exception],
       exception_object: payload[:exception_object]&.message
     }),
-    tags: payload[:exception].present? ? ["error"] : []
+    tags: payload[:exception].present? ? [ "error" ] : []
   })
 end
 
@@ -208,7 +208,7 @@ ActiveSupport::Notifications.subscribe("request.faraday") do |*args|
       response_headers: payload[:response_headers],
       body: payload[:body]
     }),
-    tags: [payload[:url].include?("channex") ? "channex" : "api"]
+    tags: [ payload[:url].include?("channex") ? "channex" : "api" ]
   })
 end
 
@@ -217,9 +217,9 @@ def capture_api_call(provider, method, url, payload = {})
   start_time = Time.current
   result = yield
   duration = (Time.current - start_time) * 1000
-  
+
   status, body = result
-  
+
   capture_observation_entry({
     entry_type: "api",
     request_id: Current.request_id || "none",
@@ -227,9 +227,9 @@ def capture_api_call(provider, method, url, payload = {})
     duration: duration,
     path: "#{method.to_s.upcase} [#{provider}] #{url}",
     payload: OBSERVATION_SCRUBBER.filter(payload.merge(response_body: body)),
-    tags: [provider.downcase]
+    tags: [ provider.downcase ]
   })
-  
+
   result
 rescue => e
   duration = (Time.current - start_time) * 1000
@@ -240,7 +240,7 @@ rescue => e
     duration: duration,
     path: "#{method.to_s.upcase} [#{provider}] #{url}",
     payload: { error: e.message, backtrace: e.backtrace.first(5) },
-    tags: [provider.downcase, "error"]
+    tags: [ provider.downcase, "error" ]
   })
   raise e
 end

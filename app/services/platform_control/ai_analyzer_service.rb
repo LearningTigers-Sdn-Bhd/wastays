@@ -30,7 +30,7 @@ module PlatformControl
           temperature: 0.2,
           topP: 0.8,
           topK: 40,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 1024
         }
       }.to_json
 

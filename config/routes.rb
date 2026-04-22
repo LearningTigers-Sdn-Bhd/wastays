@@ -140,7 +140,6 @@ Rails.application.routes.draw do
     resources :observation_deck, only: [ :index, :show ], constraints: SuperadminConstraint.new do
       collection do
         delete :clear
-        post :test_email
         post :acknowledge
       end
       member do
