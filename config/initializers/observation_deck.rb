@@ -1,8 +1,9 @@
 # Observation Deck Instrumentation Initializer
 
 # Helper to deeply scrub sensitive data
+# We explicitly remove :email from the global filters for the Observation Deck so devs can debug user issues
 OBSERVATION_SCRUBBER = ActiveSupport::ParameterFilter.new(
-  Rails.application.config.filter_parameters + [ :credit_card, :cvv, :passport, :ssn ]
+  (Rails.application.config.filter_parameters - [:email]) + [ :credit_card, :cvv, :passport, :ssn ]
 )
 
 # Helper to store entries (buffered for requests, immediate for jobs)
@@ -48,6 +49,15 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
       tags << "booking:#{booking_id}" if booking_id.present?
     end
 
+    # Use raw parameters from the request object to bypass Rails' automatic pre-filtering
+    # This allows OUR OBSERVATION_SCRUBBER (which allows email) to handle the filtering.
+    request = payload[:request]
+    raw_params = if request
+      request.request_parameters.merge(request.query_parameters)
+    else
+      payload[:params] || {}
+    end
+    
     capture_observation_entry({
       entry_type: "request",
       request_id: payload[:request_id].presence || Current.request_id || "none",
@@ -56,7 +66,7 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
       path: "#{payload[:method]} #{payload[:path]}",
       tags: tags.uniq,
       payload: OBSERVATION_SCRUBBER.filter({
-        params: payload[:params].except("controller", "action"),
+        params: raw_params.except("controller", "action", "authenticity_token"),
         view_runtime: payload[:view_runtime],
         db_runtime: payload[:db_runtime],
         format: payload[:format],
