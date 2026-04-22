@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_22_052913) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -258,6 +258,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_052913) do
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
+  end
+
+  create_table "hotel_pricing_rules", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "rule_type", null: false
+    t.string "name"
+    t.decimal "price", precision: 10, scale: 2, null: false
+    t.date "start_date"
+    t.date "end_date"
+    t.integer "weekdays", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "rule_type"], name: "index_hotel_pricing_rules_on_hotel_and_type"
+    t.index ["hotel_id", "start_date", "end_date"], name: "index_hotel_pricing_rules_on_hotel_and_dates"
+    t.index ["hotel_id"], name: "index_hotel_pricing_rules_on_hotel_id"
   end
 
   create_table "hotels", force: :cascade do |t|
@@ -589,6 +604,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_052913) do
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
   add_foreign_key "complaint_requests", "bookings"
+  add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "housekeeping_requests", "bookings"
   add_foreign_key "inventory_audit_logs", "hotels"

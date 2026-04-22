@@ -209,7 +209,14 @@ Rails.application.routes.draw do
         get :breakdown, defaults: { format: "html" }
       end
     end
-    resources :inventory_dashboards, only: [ :index, :create ], path: "inventory"
+    resources :inventory_dashboards, only: [ :index ], path: "inventory" do
+      collection do
+        post :apply_pricing_rules
+        post :apply_availability_override
+        delete "pricing_tiers/:rule_type", action: :destroy_pricing_tier_rule, as: :destroy_pricing_tier_rule
+        delete "public_holidays/:id", action: :destroy_public_holiday_rule, as: :destroy_public_holiday_rule
+      end
+    end
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
     resources :guests, only: [ :index, :show ]
     resources :in_house_guests, only: [ :index ]
