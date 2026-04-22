@@ -18,14 +18,22 @@
             </div>
             <h1 class="text-xl font-bold tracking-tight text-slate-900 uppercase">Observation Deck</h1>
             <% if @error_count > 0 %>
-              <div class="flex items-center gap-1.5 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full border border-rose-100 animate-pulse">
-                <span class="relative flex h-2 w-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-                </span>
-                <span class="text-[10px] font-black uppercase tracking-widest"><%= @error_count %> Recent Errors</span>
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full border border-rose-100 animate-pulse">
+                  <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                  <span class="text-[10px] font-black uppercase tracking-widest"><%= @error_count %> New Errors</span>
+                </div>
+                <%= button_to acknowledge_admin_observation_deck_index_path, 
+                    method: :post,
+                    class: "text-[10px] font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-tight" do %>
+                  Acknowledge All
+                <% end %>
               </div>
             <% end %>
+
           </div>
           <p class="mt-1 text-sm font-medium text-slate-500">System internals, requests, and background jobs.</p>
         </div>

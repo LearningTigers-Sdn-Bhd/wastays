@@ -141,6 +141,7 @@ Rails.application.routes.draw do
       collection do
         delete :clear
         post :test_email
+        post :acknowledge
       end
       member do
         post :analyze

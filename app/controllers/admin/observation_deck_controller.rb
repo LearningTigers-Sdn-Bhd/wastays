@@ -16,7 +16,11 @@ module Admin
       @entries = ObservationEntry.select(:id, :entry_type, :request_id, :status, :duration, :path, :tags, :created_at)
                                 .order(created_at: :desc)
 
-      @error_count = ObservationEntry.where("status >= 400").where("created_at > ?", 24.hours.ago).count
+      last_ack = AppConfig.get("observation_deck_last_acknowledged_at")
+      @error_count = ObservationEntry.where("status >= 400")
+                                    .where("created_at > ?", 24.hours.ago)
+      @error_count = @error_count.where("created_at > ?", last_ack) if last_ack.present?
+      @error_count = @error_count.count
 
       if params[:entry_type].present?
         @entries = @entries.where(entry_type: params[:entry_type])
@@ -81,6 +85,11 @@ module Admin
       respond_to do |format|
         format.turbo_stream
       end
+    end
+
+    def acknowledge
+      AppConfig.set("observation_deck_last_acknowledged_at", Time.current)
+      redirect_to admin_observation_deck_index_path, notice: "All recent errors acknowledged."
     end
   end
 end
