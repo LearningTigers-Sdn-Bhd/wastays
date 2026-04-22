@@ -10,11 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-<<<<<<< HEAD
 ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
-=======
-ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
->>>>>>> 07ed162 (fix: prevent onboarding from being marked complete before start date)
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -237,8 +233,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
     t.datetime "updated_at", null: false
     t.jsonb "internal_notes", default: []
     t.string "status", default: "pending", null: false
-    t.datetime "completed_at"
     t.datetime "archived_at"
+    t.datetime "completed_at"
     t.index ["booking_id", "archived_at"], name: "index_complaint_requests_on_booking_id_and_archived_at"
     t.index ["booking_id", "completed_at"], name: "index_complaint_requests_on_booking_id_and_completed_at"
     t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
@@ -404,6 +400,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
     t.datetime "updated_at", null: false
     t.string "trainer_name", default: "", null: false
     t.index ["hotel_id"], name: "index_onboarding_sessions_on_hotel_id"
+    t.index ["trainer_id"], name: "index_onboarding_sessions_on_trainer_id"
   end
 
   create_table "payment_settings", force: :cascade do |t|
@@ -446,11 +443,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
     t.string "status"
     t.string "token"
     t.datetime "completed_at"
+    t.string "document_status"
+    t.string "signature_status"
     t.jsonb "metadata"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "signature_status"
-    t.string "document_status"
     t.index ["booking_id"], name: "index_pre_checkins_on_booking_id"
   end
 
@@ -496,16 +493,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["booking_id"], name: "index_refund_requests_on_booking_id", unique: true
-  end
-
-  create_table "request_notes", force: :cascade do |t|
-    t.string "noteable_type", null: false
-    t.bigint "noteable_id", null: false
-    t.text "body", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["noteable_type", "noteable_id", "created_at"], name: "index_request_notes_on_noteable_and_created_at"
-    t.index ["noteable_type", "noteable_id"], name: "index_request_notes_on_noteable"
   end
 
   create_table "role_permissions", force: :cascade do |t|
@@ -563,22 +550,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
-  end
-
-  create_table "salespeople", force: :cascade do |t|
-    t.string "name", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-  end
-
-  create_table "salesperson_hotels", force: :cascade do |t|
-    t.bigint "salesperson_id", null: false
-    t.bigint "hotel_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["hotel_id"], name: "index_salesperson_hotels_on_hotel_id"
-    t.index ["salesperson_id", "hotel_id"], name: "index_salesperson_hotels_on_salesperson_and_hotel", unique: true
-    t.index ["salesperson_id"], name: "index_salesperson_hotels_on_salesperson_id"
   end
 
   create_table "setup_fee_rules", force: :cascade do |t|
@@ -677,8 +648,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
   add_foreign_key "room_rates", "rate_plans"
   add_foreign_key "room_rates", "room_types"
   add_foreign_key "room_types", "hotels"
-  add_foreign_key "salesperson_hotels", "hotels"
-  add_foreign_key "salesperson_hotels", "salespeople"
   add_foreign_key "user_hotel_accesses", "hotels"
   add_foreign_key "user_hotel_accesses", "roles"
   add_foreign_key "user_hotel_accesses", "users"
