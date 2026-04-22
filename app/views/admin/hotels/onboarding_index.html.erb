@@ -21,6 +21,7 @@
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">City</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Registered</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Onboarding Period</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Scheduled Session</th>
             <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Action</th>
           </tr>
         </thead>
@@ -107,6 +108,29 @@
                   <% end %>
                 </td>
 
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                  <% scheduled_sessions = hotel.onboarding_sessions.where(status: "scheduled").order(scheduled_at: :asc, created_at: :asc) %>
+                  <% if scheduled_sessions.any? %>
+                    <div class="space-y-2">
+                      <% scheduled_sessions.each do |scheduled_session| %>
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                          <p class="text-sm font-bold text-slate-900">
+                            <%= scheduled_session.scheduled_at&.strftime("%d %b %Y") || "Not scheduled" %>
+                            <span class="font-normal text-slate-500">
+                              <%= scheduled_session.scheduled_at&.strftime("%I:%M %p") || "" %>
+                            </span>
+                          </p>
+                          <p class="text-xs text-slate-500">
+                            Trainer: <%= scheduled_session.trainer_name.presence || "Not assigned" %>
+                          </p>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% else %>
+                    <span class="text-sm text-slate-400">No session</span>
+                  <% end %>
+                </td>
+
                 <td class="px-6 py-4 whitespace-nowrap text-right">
                   <div class="flex items-center justify-end gap-2">
                     <%= link_to onboarding_admin_hotel_path(hotel), class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800" do %>
@@ -124,7 +148,7 @@
             <% end %>
           <% else %>
             <tr>
-              <td colspan="5" class="px-6 py-20 text-center text-slate-500 italic">
+              <td colspan="6" class="px-6 py-20 text-center text-slate-500 italic">
                 No hotels found.
               </td>
             </tr>

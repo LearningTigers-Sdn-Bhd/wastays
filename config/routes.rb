@@ -99,6 +99,7 @@ Rails.application.routes.draw do
         get :edit_onboarding_session
         patch :update_onboarding_session
         post :complete_onboarding_session
+        post :cancel_onboarding_session
         post :complete_onboarding
         post :save_onboarding_period
         post :approve

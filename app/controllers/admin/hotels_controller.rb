@@ -1,5 +1,5 @@
 class Admin::HotelsController < Admin::BaseController
-  before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend ]
+  before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend, :cancel_onboarding_session ]
   before_action :load_salespersons, only: [ :new, :create, :edit, :update ]
 
   def index
@@ -83,6 +83,30 @@ class Admin::HotelsController < Admin::BaseController
     else
       redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to update session."
     end
+  end
+
+  def cancel_onboarding_session
+    @session = @hotel.onboarding_sessions.find(params[:session_id])
+
+    unless @session.status == "scheduled"
+      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Only scheduled sessions can be cancelled."
+      return
+    end
+
+    cancel_reason = params[:cancel_reason].to_s.strip
+    if cancel_reason.blank?
+      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Please provide a reason before cancelling the session."
+      return
+    end
+
+    @session.update!(
+      status: "cancelled",
+      notes: [ @session.notes.presence, "CANCELLED: #{cancel_reason}" ].compact.join("\n")
+    )
+
+    redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session cancelled successfully."
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to cancel session: #{e.message}"
   end
   def complete_onboarding
     @hotel = Hotel.find(params[:id])
