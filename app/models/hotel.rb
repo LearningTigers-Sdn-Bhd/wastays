@@ -182,7 +182,7 @@ class Hotel < ApplicationRecord
   end
 
   def onboarding_completion_date
-    return nil unless ["approved", "live"].include?(status)
+    return nil unless [ "approved", "live" ].include?(status)
     final_onboarding_session&.completed_at
   end
 

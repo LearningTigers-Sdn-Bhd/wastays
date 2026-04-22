@@ -44,7 +44,7 @@ class Admin::HotelsController < Admin::BaseController
   def edit_onboarding_session
     @hotel = Hotel.find(params[:id])
     @session = @hotel.onboarding_sessions.find(params[:session_id])
-    
+
     respond_to do |format|
       format.html { render partial: "onboarding_session", locals: { session: @session, hotel: @hotel, editing: true } }
       format.turbo_stream
@@ -54,7 +54,7 @@ class Admin::HotelsController < Admin::BaseController
   def show_onboarding_session
     @hotel = Hotel.find(params[:id])
     @session = @hotel.onboarding_sessions.find(params[:session_id])
-    
+
     render partial: "onboarding_session", locals: { session: @session, hotel: @hotel, editing: false }
   end
 

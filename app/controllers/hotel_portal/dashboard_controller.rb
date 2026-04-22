@@ -89,7 +89,7 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
 
     @session.update!(
       status: "cancelled",
-      notes: [@session.notes.presence, "CANCELLED: #{cancel_reason}"].compact.join("\n")
+      notes: [ @session.notes.presence, "CANCELLED: #{cancel_reason}" ].compact.join("\n")
     )
 
     redirect_to hotel_onboarding_sessions_path(@current_hotel), notice: "Onboarding session cancelled."

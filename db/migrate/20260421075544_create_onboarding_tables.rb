@@ -19,6 +19,6 @@ class CreateOnboardingTables < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :onboarding_tasks, [:hotel_id, :task_name], unique: true
+    add_index :onboarding_tasks, [ :hotel_id, :task_name ], unique: true
   end
 end
