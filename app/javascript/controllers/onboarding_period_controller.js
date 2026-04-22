@@ -101,6 +101,7 @@ export default class extends Controller {
       }
     } catch (error) {
       console.error("Failed to save onboarding period:", error)
+      console.error("Failed to save draft dates:", error)
     }
   }
 

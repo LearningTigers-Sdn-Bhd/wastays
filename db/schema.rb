@@ -10,7 +10,11 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
+<<<<<<< HEAD
 ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
+=======
+ActiveRecord::Schema[8.0].define(version: 2026_04_22_000000) do
+>>>>>>> 07ed162 (fix: prevent onboarding from being marked complete before start date)
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -658,17 +662,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_21_075545) do
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
-<<<<<<< HEAD
-<<<<<<< HEAD
-  add_foreign_key "onboarding_sessions", "hotels"
-  add_foreign_key "payment_transactions", "booking_quotes"
-  add_foreign_key "payment_transactions", "bookings"
-=======
->>>>>>> f0ce63a (feat: add salesperson page under bookings)
-=======
   add_foreign_key "onboarding_sessions", "hotels"
   add_foreign_key "onboarding_sessions", "users", column: "trainer_id"
->>>>>>> 339e8de (feat: add onboarding page under hotels in admin dashboard)
+  add_foreign_key "payment_transactions", "booking_quotes"
+  add_foreign_key "payment_transactions", "bookings"
   add_foreign_key "payout_batches", "hotels"
   add_foreign_key "pre_checkins", "bookings"
   add_foreign_key "property_policies", "hotels"

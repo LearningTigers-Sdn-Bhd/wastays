@@ -1,6 +1,9 @@
 <% is_editing = local_assigns[:editing] %>
 <% can_mark_completed = session.status == "scheduled" && session.scheduled_at.present? && session.scheduled_at <= Time.current %>
+<<<<<<< HEAD
 <% cancellation_reason = session.notes.to_s[/CANCELLED:\s*(.*)\z/m, 1] || session.notes %>
+=======
+>>>>>>> 07ed162 (fix: prevent onboarding from being marked complete before start date)
 
 <%= turbo_frame_tag dom_id(session) do %>
   <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-slate-200 gap-4 bg-white">
@@ -44,12 +47,18 @@
       <div class="flex flex-wrap items-center gap-3">
         <% if session.meeting_link.present? %>
           <% if session.status == "scheduled" %>
+<<<<<<< HEAD
             <% meeting_url = session.formatted_meeting_link.to_s %>
             <% if meeting_url.start_with?("http://", "https://") %>
               <%= link_to meeting_url, target: "_blank", class: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100 hover:bg-blue-100 transition" do %>
                 <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 Join Call
               <% end %>
+=======
+            <%= link_to session.formatted_meeting_link, target: "_blank", class: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100 hover:bg-blue-100 transition" do %>
+              <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Join Call
+>>>>>>> 07ed162 (fix: prevent onboarding from being marked complete before start date)
             <% end %>
           <% else %>
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-400 text-xs font-semibold border border-slate-200 cursor-not-allowed">
@@ -65,7 +74,11 @@
             Edit
           <% end %>
 
+<<<<<<< HEAD
           <%= button_to complete_admin_hotel_onboarding_session_path(hotel, session), disabled: !can_mark_completed, class: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition #{can_mark_completed ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100' : 'cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 opacity-70'}" do %>
+=======
+          <%= button_to complete_onboarding_session_admin_hotel_path(hotel, session_id: session.id), disabled: !can_mark_completed, class: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition #{can_mark_completed ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100' : 'cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 opacity-70'}" do %>
+>>>>>>> 07ed162 (fix: prevent onboarding from being marked complete before start date)
             <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
             Mark Completed
           <% end %>
