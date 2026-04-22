@@ -1,3 +1,5 @@
+require_relative "../app/constraints/superadmin_constraint"
+
 Rails.application.routes.draw do
   if Rails.env.development?
     require "letter_opener_web"
