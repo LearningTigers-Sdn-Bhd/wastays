@@ -22,13 +22,17 @@ class Admin::HotelsController < Admin::BaseController
 
   def onboarding
     @hotel = Hotel.find(params[:id])
-    @sessions = @hotel.onboarding_sessions.order(scheduled_at: :desc)
+    @sessions = @hotel.onboarding_sessions
+                      .where.not(notes: "DRAFT_PERIOD")
+                      .or(@hotel.onboarding_sessions.where(notes: nil))
+                      .order(scheduled_at: :desc)
   end
 
   def create_onboarding_session
     @hotel = Hotel.find(params[:id])
     @session = @hotel.onboarding_sessions.new(onboarding_session_params)
     @session.status = "scheduled"
+    @session.notes = "TRAINING_SESSION"
 
     if @session.save
       redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session scheduled successfully."
@@ -69,27 +73,33 @@ class Admin::HotelsController < Admin::BaseController
     @hotel = Hotel.find(params[:id])
     @session = @hotel.onboarding_sessions.find(params[:session_id])
 
+    if @session.scheduled_at.blank? || @session.scheduled_at > Time.current
+      redirect_to onboarding_admin_hotel_path(@hotel), alert: "This training session cannot be marked completed until its scheduled time."
+      return
+    end
+
     if @session.complete!
       redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session marked as completed."
     else
       redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to update session."
     end
   end
-
   def complete_onboarding
     @hotel = Hotel.find(params[:id])
-    
+
+    start_date = params[:start_date].presence ? Time.zone.parse(params[:start_date]) : @hotel.onboarding_start_date.beginning_of_day
+    end_date = params[:end_date].presence ? Time.zone.parse(params[:end_date]).end_of_day : @hotel.onboarding_end_date.end_of_day
+
     ActiveRecord::Base.transaction do
       # 1. Ensure status is moved forward
       @hotel.update!(status: "approved") if @hotel.onboarding? || @hotel.status == "pending_review"
-      
-      # 2. Record the completion event in the sessions table
-      @hotel.onboarding_sessions.create!(
-        trainer_name: current_user.name,
+
+      final_session = @hotel.onboarding_sessions.find_or_initialize_by(notes: "FINAL_ONBOARDING_COMPLETION")
+      final_session.update!(
+        trainer_name: "Onboarding System",
         status: "completed",
-        scheduled_at: Time.current,
-        completed_at: Time.current,
-        notes: "FINAL_ONBOARDING_COMPLETION"
+        scheduled_at: start_date,
+        completed_at: end_date
       )
     end
 
@@ -97,6 +107,19 @@ class Admin::HotelsController < Admin::BaseController
   rescue ActiveRecord::RecordInvalid => e
     redirect_to onboarding_admin_hotels_path, alert: "Failed to complete onboarding: #{e.message}"
   end
+
+  def save_onboarding_period
+    @hotel = Hotel.find(params[:id])
+    start_date = params[:start_date].presence ? Date.parse(params[:start_date]) : @hotel.created_at.to_date
+    end_date = params[:end_date].presence ? Date.parse(params[:end_date]) : Date.current
+
+    if @hotel.update(onboarding_start_date: start_date, onboarding_end_date: end_date)
+      render json: { success: true }
+    else
+      render json: { success: false, errors: @hotel.errors.full_messages }, status: :unprocessable_entity
+    end
+  end
+
 
   def new
     @hotel = Hotel.new

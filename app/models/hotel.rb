@@ -183,14 +183,34 @@ class Hotel < ApplicationRecord
 
   def onboarding_completion_date
     return nil unless ["approved", "live"].include?(status)
-    onboarding_sessions.completed.where(notes: "FINAL_ONBOARDING_COMPLETION").order(completed_at: :desc).first&.completed_at
+    final_onboarding_session&.completed_at
+  end
+
+  def onboarding_start_date
+    saved = self[:onboarding_start_date]
+    return saved if saved.present?
+
+    onboarding_period_record&.scheduled_at&.to_date || created_at.to_date
+  end
+
+  def onboarding_end_date
+    saved = self[:onboarding_end_date]
+    return saved if saved.present?
+
+    onboarding_period_record&.completed_at&.to_date || Date.current
   end
 
   def onboarding_duration
-    comp_date = onboarding_completion_date
-    return nil unless comp_date
-    
-    comp_date - created_at
+    saved_start = self[:onboarding_start_date]
+    saved_end = self[:onboarding_end_date]
+    if saved_start.present? && saved_end.present?
+      saved_end - saved_start
+    else
+      rec = onboarding_period_record
+      return nil unless rec
+
+      rec.completed_at - rec.scheduled_at
+    end
   end
 
   private
@@ -206,5 +226,14 @@ class Hotel < ApplicationRecord
     return if photos.attachments.any? { |a| a.id == featured_photo_attachment_id }
 
     errors.add(:featured_photo_attachment_id, "must belong to this hotel")
+  end
+
+  def onboarding_period_record
+    final_onboarding_session
+  end
+
+  def final_onboarding_session
+    onboarding_sessions.completed.where(notes: "FINAL_ONBOARDING_COMPLETION").order(completed_at: :desc).first ||
+      onboarding_sessions.where(notes: "FINAL_ONBOARDING_COMPLETION").order(updated_at: :desc).first
   end
 end

@@ -100,6 +100,7 @@ Rails.application.routes.draw do
         patch :update_onboarding_session
         post :complete_onboarding_session
         post :complete_onboarding
+        post :save_onboarding_period
         post :approve
         post :suspend
       end
