@@ -32,14 +32,14 @@
               <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
             <h4 class="text-sm font-bold text-indigo-900">Need help understanding this?</h4>
-            <p class="text-xs text-indigo-700/70 max-w-xs mx-auto leading-relaxed">Let Gemini AI analyze this entry to explain the root cause and suggest a fix.</p>
+            <p class="text-xs text-indigo-700/70 max-w-xs mx-auto leading-relaxed">Let AI analyze this entry to explain the root cause and suggest a fix.</p>
           </div>
           
           <%= button_to analyze_admin_observation_deck_path(@entry), 
               method: :post,
               data: { action: "click->ai-analysis#start", ai_analysis_target: "button" },
               class: "mx-auto flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200" do %>
-            ✨ Analyze with Gemini
+            ✨ Analyze with AI
           <% end %>
 
           <div data-ai-analysis_target="loading" class="hidden">

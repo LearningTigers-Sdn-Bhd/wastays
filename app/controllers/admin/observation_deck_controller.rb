@@ -98,12 +98,19 @@ module Admin
     end
 
     def update_config
+      if params[:ai_provider].present?
+        AppConfig.set("ai_provider", params[:ai_provider])
+      end
+
       if params[:gemini_api_key].present?
         AppConfig.set("gemini_api_key", params[:gemini_api_key])
-        redirect_to admin_observation_deck_index_path, notice: "Gemini API key updated successfully."
-      else
-        redirect_to admin_observation_deck_index_path, alert: "API key cannot be blank."
       end
+
+      if params[:openai_api_key].present?
+        AppConfig.set("openai_api_key", params[:openai_api_key])
+      end
+
+      redirect_to admin_observation_deck_index_path, notice: "AI configuration updated successfully."
     end
   end
 end

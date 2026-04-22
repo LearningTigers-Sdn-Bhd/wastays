@@ -3,9 +3,9 @@
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2 text-indigo-700">
         <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        <h4 class="text-sm font-bold uppercase tracking-tight">Gemini AI Analysis</h4>
+        <h4 class="text-sm font-bold uppercase tracking-tight">AI Insights</h4>
       </div>
-      <span class="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase">gemini-1.5-flash</span>
+      <span class="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase"><%= @analysis[:model] || "Analysis" %></span>
     </div>
     
     <% if @analysis[:error] %>
