@@ -1,5 +1,10 @@
 # frozen_string_literal: true
 
+if Rails.env.demo?
+  require_relative "demo_seeds"
+  DemoSeeds.run
+else
+
 SEED_PASSWORD = '12345678'.freeze
 
 module SeedLog
@@ -445,3 +450,4 @@ if Rails.env.development?
 end
 
 SeedLog.section('Seeding complete')
+end

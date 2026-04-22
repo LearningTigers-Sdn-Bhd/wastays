@@ -1,105 +1,131 @@
-<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
-  <!-- Header -->
-  <div class="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
-    <div>
-      <%= link_to hotel_reports_path(current_hotel), class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600 mb-2 transition-colors" do %>
-        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-        Back to Report
-      <% end %>
-      <h1 class="text-3xl font-bold text-gray-800">Financial Breakdown</h1>
-      <p class="text-sm text-gray-600">Showing 25 bookings per page.</p>
-    </div>
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <%= link_to "Reports", hotel_reports_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900">Financial Breakdown</span>
+  </div>
+<% end %>
 
-    <div class="inline-flex gap-x-2">
-      <%= link_to breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv), class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none transition-all", data: { turbo: false } do %>
-        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export All to CSV
-      <% end %>
+<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+  <!-- Header -->
+  <div class="px-4 md:px-0">
+    <div class="mt-5 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Financial Breakdown</h1>
+        <p class="mt-1 text-sm font-medium text-slate-600">Detailed transaction log for your records.</p>
+      </div>
+
+      <div class="inline-flex gap-x-2">
+        <%= link_to breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv), class: "inline-flex items-center rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50", data: { turbo: false } do %>
+          <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        <% end %>
+      </div>
     </div>
   </div>
 
   <%= turbo_frame_tag "breakdown_results" do %>
-    <!-- Filters & Search -->
-    <div class="bg-white border border-gray-200 rounded-xl p-4 md:p-6 mb-8 shadow-sm">
-      <%= form_with url: breakdown_hotel_reports_path(current_hotel), method: :get, class: "space-y-4", data: { controller: "auto-submit", turbo_frame: "breakdown_results" } do |f| %>
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-          <div class="md:col-span-3">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Time Period</label>
-            <%= f.select :date_preset, options_for_select(date_preset_options, @date_preset), {}, class: "form-select py-2 px-3 text-sm", data: { action: "change->auto-submit#submitNow" } %>
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <!-- Filters & Search -->
+      <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+        <%= form_with url: breakdown_hotel_reports_path(current_hotel), method: :get, class: "flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-end", data: { controller: "auto-submit", turbo_frame: "breakdown_results" } do |f| %>
+          <div class="flex-1 max-w-xs">
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Time Period</label>
+            <%= f.select :date_preset, options_for_select(date_preset_options, @date_preset), {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
           </div>
 
-          <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'grid' : 'hidden' %> md:col-span-4 grid-cols-2 gap-2">
-            <div>
-              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">From</label>
-              <%= f.date_field :start_date, value: @start_date, class: "form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
+          <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> flex-1 max-w-sm gap-3">
+            <div class="flex-1">
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">From</label>
+              <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
             </div>
-            <div>
-              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">To</label>
-              <%= f.date_field :end_date, value: @end_date, class: "form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
+            <div class="flex-1">
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">To</label>
+              <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
             </div>
           </div>
 
-          <div class="md:col-span-5">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Search Anything</label>
+          <div class="flex-1">
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Search Records</label>
             <div class="relative">
-              <%= f.text_field :q, value: params[:q], placeholder: "Search guest, email, token...", class: "form-input py-2 pl-9 pr-3 text-sm", data: { action: "input->auto-submit#submit" } %>
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="size-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
+                <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               </div>
+              <%= f.text_field :q, value: params[:q], placeholder: "Guest, email, or reference token...", class: "w-full rounded-xl border border-slate-200 bg-white ps-11 pe-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "input->auto-submit#submit" } %>
             </div>
           </div>
-        </div>
-      <% end %>
-    </div>
+        <% end %>
+      </div>
 
-    <!-- Table -->
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Booking Ref</th>
-            <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Guest</th>
-            <th scope="col" class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Status</th>
-            <th scope="col" class="px-6 py-3 text-end text-xs font-semibold uppercase text-gray-800">Gross Price</th>
-            <th scope="col" class="px-6 py-3 text-end text-xs font-semibold uppercase text-gray-800 text-red-600">Margin</th>
-            <th scope="col" class="px-6 py-3 text-end text-xs font-semibold uppercase text-gray-800 text-green-600 font-bold">Net Payout</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200">
-          <% if @grouped_bookings.any? %>
-            <% @grouped_bookings.each do |date, bookings| %>
-              <tr class="bg-gray-50/50">
-                <td colspan="6" class="px-6 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  <%= date.strftime("%d %B %Y") %>
+      <!-- Table -->
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-fixed">
+          <colgroup>
+            <col class="w-[20%]">
+            <col class="w-[25%]">
+            <col class="w-[15%]">
+            <col class="w-[13%]">
+            <col class="w-[12%]">
+            <col class="w-[15%]">
+          </colgroup>
+          <thead class="bg-slate-100">
+            <tr>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Booking Reference</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Guest Name</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
+              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Gross Price</th>
+              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Margin</th>
+              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Net Payout</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 bg-white">
+            <% if @grouped_bookings.any? %>
+              <% @grouped_bookings.each do |date, bookings| %>
+                <tr class="bg-slate-50/80">
+                  <td colspan="6" class="px-6 py-2.5 sm:px-8 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                    <%= date.strftime("%d %b %Y") %>
+                  </td>
+                </tr>
+                <% bookings.each_with_index do |booking, index| %>
+                  <tr class="align-top transition-colors hover:bg-slate-100/80">
+                    <td class="px-6 py-4 sm:px-8">
+                      <%= link_to "##{booking.confirmation_token}", hotel_booking_path(current_hotel, booking), class: "text-sm font-mono font-bold text-slate-900 hover:underline", data: { turbo: false } %>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= booking_status_class(booking.status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10">
+                        <%= booking.status %>
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-slate-600">
+                      RM <%= number_with_precision(booking.total_amount, precision: 2) %>
+                    </td>
+                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-red-500">
+                      - <%= number_with_precision(booking.margin_amount || 0, precision: 2) %>
+                    </td>
+                    <td class="px-6 py-4 text-right whitespace-nowrap sm:px-8">
+                      <span class="text-sm font-bold text-emerald-700">RM <%= number_with_precision(booking.net_amount || 0, precision: 2) %></span>
+                    </td>
+                  </tr>
+                <% end %>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="6" class="px-6 py-20 text-center sm:px-8">
+                  <p class="text-sm font-medium text-slate-500 italic">No bookings found for the selected criteria.</p>
                 </td>
               </tr>
-              <% bookings.each do |booking| %>
-                <tr>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
-                    <%= link_to "##{booking.confirmation_token}", hotel_booking_path(current_hotel, booking), class: "text-blue-600 hover:underline", data: { turbo: false } %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= booking.guest_name %></td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                    <span class="px-2 py-1 rounded text-[10px] font-bold uppercase <%= booking_status_class(booking.status) %>">
-                      <%= booking.status %>
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-end text-gray-800">RM <%= number_with_precision(booking.total_amount, precision: 2) %></td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-end text-red-500">- <%= number_with_precision(booking.margin_amount || 0, precision: 2) %></td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-end font-bold text-gray-900">RM <%= number_with_precision(booking.net_amount || 0, precision: 2) %></td>
-                </tr>
-              <% end %>
             <% end %>
-          <% else %>
-            <tr>
-              <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500 italic">No bookings found for this search.</td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
       
       <% if @paginated_bookings&.total_pages.to_i > 1 %>
-        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div class="px-6 py-4 border-t border-slate-200 bg-slate-50/50 sm:px-8">
           <%= paginate @paginated_bookings %>
         </div>
       <% end %>
@@ -113,10 +139,10 @@
     if (!customRange) return;
     if (e.target.value === 'custom') {
       customRange.classList.remove('hidden');
-      customRange.classList.add('grid');
+      customRange.classList.add('flex');
     } else {
       customRange.classList.add('hidden');
-      customRange.classList.remove('grid');
+      customRange.classList.remove('flex');
     }
   });
 </script>

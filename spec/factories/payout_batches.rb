@@ -1,12 +1,12 @@
 FactoryBot.define do
   factory :payout_batch do
-    hotel { nil }
-    amount { "9.99" }
-    status { "MyString" }
-    period_start { "2026-04-16" }
-    period_end { "2026-04-16" }
-    payout_at { "2026-04-16 15:58:54" }
-    payout_reference { "MyString" }
-    metadata { "" }
+    association :hotel
+    amount { 999.99 }
+    status { "pending" }
+    period_start { 7.days.ago.to_date }
+    period_end { Date.current }
+    payout_at { nil }
+    sequence(:payout_reference) { |n| "PB-#{n}" }
+    metadata { {} }
   end
 end

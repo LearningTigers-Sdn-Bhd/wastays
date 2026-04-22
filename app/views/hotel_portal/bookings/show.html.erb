@@ -1,176 +1,204 @@
-<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
-  <!-- Back link -->
-  <div class="mb-5">
-    <%= link_to hotel_bookings_path(current_hotel), class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600" do %>
-      <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Back to Bookings
-    <% end %>
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <%= link_to "Bookings", hotel_bookings_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900"><%= @booking.confirmation_token %></span>
   </div>
+<% end %>
 
-  <div class="grid lg:grid-cols-3 gap-y-10 lg:gap-x-10">
-    <!-- Main Content -->
-    <div class="lg:col-span-2 space-y-8">
-      <!-- Header -->
-      <div class="flex justify-between items-start">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-800">Booking <%= @booking.confirmation_token %></h1>
-          <p class="text-sm text-gray-500">Created on <%= @booking.created_at.strftime("%d %b %Y at %H:%M") %></p>
+<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+  <!-- Header -->
+  <div class="px-4 md:px-0 mt-5">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Booking <%= @booking.confirmation_token %></h1>
+          <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wider <%= booking_status_class(@booking.status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10 uppercase">
+            <%= @booking.status %>
+          </span>
         </div>
-        <div class="flex gap-x-2">
-          <% if @booking.status == 'confirmed' %>
-            <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-bold rounded-lg border border-transparent bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-100 hover:bg-emerald-700" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
-              Check In Guest
-            </button>
-            <%= button_to "Cancel Booking", cancel_hotel_booking_path(current_hotel, @booking), method: :post, data: { turbo_confirm: "Are you sure you want to cancel this booking?", turbo_confirm_title: "Cancel Booking", turbo_confirm_color: "red" }, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 bg-white text-red-600 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none" %>
-          <% elsif @booking.status == 'checked_in' %>
-            <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-bold rounded-lg border border-transparent bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-100 hover:bg-indigo-700" onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').showModal()">
-              Check Out Guest
-            </button>
-            <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
-              Edit Check-In Time
-            </button>
-          <% end %>
-        </div>
+        <p class="text-sm font-medium text-slate-600">Created on <%= @booking.created_at.strftime("%d %b %Y at %H:%M") %></p>
       </div>
 
-      <dialog id="check-in-modal-show-<%= @booking.id %>" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,28rem)] max-w-md backdrop:bg-black/40" onclick="if(event.target===this){this.close()}">
-        <div class="p-5 bg-white rounded-xl">
-          <h3 class="text-base font-bold text-gray-800"><%= @booking.checked_in? ? "Edit Check-In Date & Time" : "Confirm Check-In" %></h3>
-          <p class="text-xs text-gray-500 mt-1">Timezone: <%= current_user.time_zone %></p>
-          <%= form_with url: check_in_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
-            <%= f.datetime_local_field :checked_in_at, value: (@booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
-            <div class="flex items-center justify-end gap-x-2">
-              <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').close()">Cancel</button>
-              <%= f.submit (@booking.checked_in? ? "Save Check-In Time" : "Confirm Check-In"), class: "py-2 px-3 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700", onclick: "this.closest('dialog').close()" %>
-            </div>
-          <% end %>
+      <div class="flex flex-wrap items-center gap-3">
+        <% if @booking.status == 'confirmed' %>
+          <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
+            Check In Guest
+          </button>
+          <%= button_to "Cancel Booking", cancel_hotel_booking_path(current_hotel, @booking), method: :post, data: { turbo_confirm: "Are you sure you want to cancel this booking?", turbo_confirm_title: "Cancel Booking", turbo_confirm_color: "red" }, class: "inline-flex items-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700" %>
+        <% elsif @booking.status == 'checked_in' %>
+          <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').showModal()">
+            Check Out Guest
+          </button>
+          <button type="button" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
+            Edit Check-In
+          </button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <dialog id="check-in-modal-show-<%= @booking.id %>" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,28rem)] max-w-md shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
+    <div class="p-6 bg-white" onclick="event.stopPropagation()">
+      <h3 class="text-lg font-bold text-slate-900"><%= @booking.checked_in? ? "Edit Check-In" : "Confirm Check-In" %></h3>
+      <p class="text-sm text-slate-500 mt-1">Set check-in time for <%= @booking.guest_name %>.</p>
+      
+      <%= form_with url: check_in_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
+          <%= f.datetime_local_field :checked_in_at, 
+              value: (@booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"), 
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
-      </dialog>
-
-      <dialog id="check-out-modal-show-<%= @booking.id %>" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,28rem)] max-w-md backdrop:bg-black/40" onclick="if(event.target===this){this.close()}">
-        <div class="p-5 bg-white rounded-xl">
-          <h3 class="text-base font-bold text-gray-800">Confirm Check-Out</h3>
-          <p class="text-xs text-gray-500 mt-1">Timezone: <%= current_user.time_zone %></p>
-          <%= form_with url: check_out_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-4 space-y-4" do |f| %>
-            <%= f.datetime_local_field :checked_out_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
-            <div class="flex items-center justify-end gap-x-2">
-              <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').close()">Cancel</button>
-              <%= f.submit "Confirm Check-Out", class: "py-2 px-3 text-sm font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700", onclick: "this.closest('dialog').close()" %>
-            </div>
-          <% end %>
+        
+        <div class="flex items-center justify-end gap-x-3 pt-2">
+          <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
+          <%= f.submit (@booking.checked_in? ? "Save Changes" : "Confirm Check In"), class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
         </div>
-      </dialog>
+      <% end %>
+    </div>
+  </dialog>
 
-      <% pre_checkin_metadata = @pre_checkin&.metadata || {} %>
-      <% pre_checkin_arrival_time = pre_checkin_metadata["estimated_arrival_time"].presence || @booking.estimated_arrival_time.presence %>
-      <% pre_checkin_government_id = pre_checkin_metadata["guest_government_id"].presence %>
-      <% housekeeping_requests = @housekeeping_requests || [] %>
-      <% complaint_requests = @complaint_requests || [] %>
+  <dialog id="check-out-modal-show-<%= @booking.id %>" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,28rem)] max-w-md shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
+    <div class="p-6 bg-white" onclick="event.stopPropagation()">
+      <h3 class="text-lg font-bold text-slate-900">Confirm Check-Out</h3>
+      <p class="text-sm text-slate-500 mt-1">Set check-out time for <%= @booking.guest_name %>.</p>
+      
+      <%= form_with url: check_out_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-out Date & Time</label>
+          <%= f.datetime_local_field :checked_out_at, 
+              value: Time.current.strftime("%Y-%m-%dT%H:%M"), 
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+        
+        <div class="flex items-center justify-end gap-x-3 pt-2">
+          <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
+          <%= f.submit "Confirm Check-Out", class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
+        </div>
+      <% end %>
+    </div>
+  </dialog>
 
+  <div class="grid lg:grid-cols-12 gap-8 px-4 md:px-0">
+    <!-- Main Column -->
+    <div class="lg:col-span-9 space-y-8">
       <div data-controller="booking-tabs" class="space-y-6">
-        <div class="flex flex-wrap gap-2">
-          <button type="button" data-booking-tabs-target="tab" data-tab-name="booking-details" data-action="click->booking-tabs#switch" class="inline-flex items-center gap-x-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50">
+        <!-- Preline Style Underlined Tabs -->
+        <nav class="relative z-0 flex border border-slate-200 rounded-xl overflow-hidden" aria-label="Tabs" role="tablist">
+          <button type="button" 
+                  data-booking-tabs-target="tab" 
+                  data-tab-name="booking-details" 
+                  data-action="click->booking-tabs#switch" 
+                  class="relative min-w-0 flex-1 bg-white first:border-s-0 border-s border-b-2 border-slate-200 py-4 px-4 text-slate-500 hover:text-slate-900 text-sm font-bold text-center overflow-hidden transition-all
+                         data-[active=true]:border-b-blue-600 data-[active=true]:text-slate-950 data-[active=true]:bg-slate-50/50"
+                  role="tab">
             Booking Details
           </button>
-          <button type="button" data-booking-tabs-target="tab" data-tab-name="requests" data-action="click->booking-tabs#switch" class="inline-flex items-center gap-x-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50">
+          <button type="button" 
+                  data-booking-tabs-target="tab" 
+                  data-tab-name="requests" 
+                  data-action="click->booking-tabs#switch" 
+                  class="relative min-w-0 flex-1 bg-white first:border-s-0 border-s border-b-2 border-slate-200 py-4 px-4 text-slate-500 hover:text-slate-900 text-sm font-bold text-center overflow-hidden transition-all
+                         data-[active=true]:border-b-blue-600 data-[active=true]:text-slate-950 data-[active=true]:bg-slate-50/50 flex items-center justify-center gap-2"
+                  role="tab">
             Requests
             <% if @pending_requests_count.to_i > 0 %>
-              <span class="ml-1 inline-flex items-center justify-center min-w-5 h-5 rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-800">
+              <span class="inline-flex items-center justify-center size-5 rounded-full bg-amber-100 text-[10px] font-black text-amber-800">
                 <%= @pending_requests_count %>
               </span>
             <% end %>
           </button>
-        </div>
+        </nav>
 
-        <div data-booking-tabs-target="panel" data-tab-panel="booking-details" class="space-y-8">
-          <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-              <h2 class="text-lg font-semibold text-gray-800">Guest Information</h2>
+        <div data-booking-tabs-target="panel" data-tab-panel="booking-details" class="space-y-8 animate-in fade-in duration-300">
+          <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+              <h2 class="text-lg font-bold tracking-tight text-slate-950">Guest Information</h2>
+              <p class="mt-1 text-sm font-medium text-slate-600">Contact details and identity information.</p>
             </div>
-            <div class="p-6">
-              <%= form_with model: @booking, url: hotel_booking_path(current_hotel, @booking), method: :patch, local: true, class: "grid sm:grid-cols-2 gap-4" do |f| %>
+            <div class="p-6 sm:p-8">
+              <%= form_with model: @booking, url: hotel_booking_path(current_hotel, @booking), method: :patch, local: true, class: "grid sm:grid-cols-2 gap-6" do |f| %>
                 <div class="sm:col-span-2">
-                  <label class="block text-sm font-medium mb-2 text-gray-700">Guest Name</label>
-                  <%= f.text_field :guest_name, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+                  <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Full Guest Name</label>
+                  <%= f.text_field :guest_name, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-2 text-gray-700">Email Address</label>
-                  <%= f.email_field :guest_email, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+                  <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
+                  <%= f.email_field :guest_email, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-2 text-gray-700">Phone Number</label>
-                  <%= f.telephone_field :guest_phone, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
+                  <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Phone Number</label>
+                  <%= f.telephone_field :guest_phone, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                 </div>
-                <div class="sm:col-span-2 pt-4 border-t border-gray-100 flex justify-end">
-                  <%= f.submit "Update Guest Details", class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 transition" %>
+                <div class="sm:col-span-2 pt-4 flex justify-end">
+                  <%= f.submit "Save Changes", class: "inline-flex items-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
                 </div>
               <% end %>
             </div>
           </div>
 
           <% if @pre_checkin.present? && @booking.pre_checkin_display_status == "completed" %>
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-              <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+            <% pre_checkin_metadata = @pre_checkin&.metadata || {} %>
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 flex items-center justify-between gap-3">
                 <div>
-                  <h2 class="text-lg font-semibold text-gray-800">Pre Check-In Details</h2>
-                  <p class="text-xs text-gray-500 mt-1">Guest-submitted arrival information.</p>
+                  <h2 class="text-lg font-bold tracking-tight text-slate-950">Pre Check-In Details</h2>
+                  <p class="mt-1 text-sm font-medium text-slate-600">Guest-submitted arrival information.</p>
                 </div>
-                <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium 
-                  <%= pre_checkin_status_class(pre_checkin_display_status(@booking)) %>">
-                  <%= pre_checkin_display_status(@booking).titleize %>
-                </span>
+                <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">Completed</span>
               </div>
-              <div class="p-6">
-                <div class="grid sm:grid-cols-2 gap-4">
+              <div class="p-6 sm:p-8">
+                <div class="grid sm:grid-cols-2 gap-8">
                   <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Estimated Arrival</label>
-                    <p class="text-gray-800 font-medium"><%= pre_checkin_arrival_time.present? ? pre_checkin_arrival_time : "Not provided" %></p>
+                    <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Estimated Arrival</dt>
+                    <dd class="text-base font-semibold text-slate-900"><%= pre_checkin_metadata["estimated_arrival_time"].presence || @booking.estimated_arrival_time.presence || "Not provided" %></dd>
                   </div>
                   <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">ID / Passport Number</label>
-                    <p class="text-gray-800 font-medium"><%= pre_checkin_government_id.present? ? pre_checkin_government_id : "Not provided" %></p>
+                    <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">ID / Passport Number</dt>
+                    <dd class="text-base font-semibold text-slate-900"><%= pre_checkin_metadata["guest_government_id"].presence || "Not provided" %></dd>
                   </div>
                 </div>
               </div>
             </div>
           <% end %>
 
-          <div class="grid lg:grid-cols-2 gap-6">
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-              <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 class="text-lg font-semibold text-gray-800">Stay & Room Details</h2>
+          <div class="grid lg:grid-cols-2 gap-8">
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+                <h2 class="text-lg font-bold tracking-tight text-slate-950">Stay & Room Details</h2>
               </div>
-              <div class="p-6 space-y-6">
-                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-4">
+              <div class="p-6 sm:p-8 space-y-8">
+                <div class="grid grid-cols-2 gap-6">
                   <div>
-                    <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Check-in</p>
-                    <p class="text-gray-800 font-medium"><%= @booking.check_in.strftime("%d %b %Y") %></p>
+                    <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Check-in</dt>
+                    <dd class="text-sm font-semibold text-slate-900"><%= @booking.check_in.strftime("%d %b %Y") %></dd>
                   </div>
                   <div>
-                    <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Check-out</p>
-                    <p class="text-gray-800 font-medium"><%= @booking.check_out.strftime("%d %b %Y") %></p>
+                    <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Check-out</dt>
+                    <dd class="text-sm font-semibold text-slate-900"><%= @booking.check_out.strftime("%d %b %Y") %></dd>
                   </div>
                   <div>
-                    <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Adults</p>
-                    <p class="text-gray-800 font-medium"><%= @booking.adults %></p>
+                    <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Adults</dt>
+                    <dd class="text-sm font-semibold text-slate-900"><%= @booking.adults %></dd>
                   </div>
                   <div>
-                    <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Children</p>
-                    <p class="text-gray-800 font-medium"><%= @booking.children %></p>
+                    <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Children</dt>
+                    <dd class="text-sm font-semibold text-slate-900"><%= @booking.children %></dd>
                   </div>
                 </div>
 
-                <div class="space-y-4">
-                  <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider">Rooms</h3>
+                <div class="space-y-3">
+                  <h3 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Reserved Units</h3>
                   <% @booking_rooms.each do |room| %>
-                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex justify-between items-center p-4 rounded-xl border border-slate-100 bg-slate-50/50">
                       <div>
-                        <p class="font-bold text-gray-800"><%= room.room_type_snapshot['name'] %></p>
-                        <p class="text-xs text-gray-500"><%= room.quantity %> room(s)</p>
+                        <p class="text-sm font-bold text-slate-900"><%= room.room_type_snapshot['name'] %></p>
+                        <p class="text-xs text-slate-500"><%= pluralize(room.quantity, 'room') %></p>
                       </div>
-                      <div class="text-right">
-                        <p class="font-bold text-blue-600">MYR <%= room.subtotal %></p>
-                      </div>
+                      <p class="text-sm font-bold text-slate-900">MYR <%= number_with_precision(room.subtotal, precision: 2) %></p>
                     </div>
                   <% end %>
                 </div>
@@ -181,243 +209,95 @@
               <%= render "hotel_portal/bookings/internal_notes", booking: @booking %>
             </div>
           </div>
-
-          <% if @booking.refund_request.present? %>
-            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 class="font-semibold text-gray-800">Refund Request</h2>
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-                  <%= case @booking.refund_request.status
-                      when "pending" then "bg-yellow-100 text-yellow-700"
-                      when "approved" then "bg-blue-100 text-blue-700"
-                      when "completed" then "bg-green-100 text-green-700"
-                      when "rejected" then "bg-red-100 text-red-700"
-                      end %>">
-                  <%= @booking.refund_request.status.humanize %>
-                </span>
-              </div>
-              <div class="p-6 space-y-3 text-sm">
-                <div class="flex justify-between">
-                  <span class="text-gray-500">Refund Amount</span>
-                  <span class="font-semibold text-gray-900"><%= number_to_currency(@booking.refund_request.refund_amount, unit: @booking.currency + " ") %></span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-500">Bank</span>
-                  <span class="font-medium text-gray-900"><%= @booking.refund_request.bank_name %></span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-500">Account Number</span>
-                  <span class="font-mono font-medium text-gray-900"><%= @booking.refund_request.account_number %></span>
-                </div>
-              </div>
-            </div>
-          <% end %>
         </div>
 
-        <div data-booking-tabs-target="panel" data-tab-panel="requests" class="space-y-6 hidden">
-          <div class="grid lg:grid-cols-2 gap-6">
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-              <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+        <div data-booking-tabs-target="panel" data-tab-panel="requests" class="space-y-8 hidden animate-in fade-in duration-300">
+          <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Housekeeping -->
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm h-fit">
+              <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 flex items-center justify-between gap-3">
                 <div>
-                  <h2 class="text-lg font-semibold text-gray-800">Housekeeping Requests</h2>
-                  <p class="text-xs text-gray-500 mt-1">Guest housekeeping requests.</p>
+                  <h2 class="text-lg font-bold tracking-tight text-slate-950">Housekeeping</h2>
+                  <p class="mt-1 text-sm font-medium text-slate-600">Guest requests for room services.</p>
                 </div>
-                <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  <%= pluralize(housekeeping_requests.count, "request") %>
+                <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                  <%= @housekeeping_requests.to_a.count %>
                 </span>
               </div>
-              <div class="p-6">
-                <% if housekeeping_requests.any? %>
-                  <div class="space-y-4">
-                    <% housekeeping_requests.each do |request| %>
-                      <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-4">
-                        <div class="flex items-start justify-between gap-4">
-                          <div class="flex-1 min-w-0 space-y-2">
-                            <div>
-                              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Requested At</label>
-                              <p class="text-gray-800 text-sm"><%= display_housekeeping_datetime(request.display_requested_at) %></p>
-                            </div>
-                            <% if request.completed_at.present? %>
-                              <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Completed At</label>
-                                <p class="text-gray-800 text-sm"><%= display_housekeeping_datetime(request.completed_at) %></p>
-                              </div>
-                            <% end %>
-                            <div>
-                              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Requests</label>
-                              <p class="text-gray-800 text-sm leading-relaxed"><%= request.request_details %></p>
-                            </div>
+              <div class="p-6 space-y-4">
+                <% if @housekeeping_requests.any? %>
+                  <% @housekeeping_requests.each do |request| %>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
+                      <div class="flex items-start justify-between gap-4">
+                        <div class="flex-1 min-w-0 space-y-2">
+                          <div>
+                            <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Requested</dt>
+                            <dd class="text-xs font-semibold text-slate-900"><%= display_housekeeping_datetime(request.display_requested_at) %></dd>
                           </div>
-
-                          <div class="shrink-0 flex flex-col items-end gap-2">
-                            <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium <%= housekeeping_status_class(request.status) %>">
-                              <%= request.status.titleize %>
-                            </span>
-                            <% unless request.completed? || request.cancelled? %>
-                              <%= button_to "Complete", complete_housekeeping_request_hotel_booking_path(current_hotel, @booking, housekeeping_request_id: request.id), method: :post, class: "inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
-                            <% end %>
+                          <div>
+                            <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Details</dt>
+                            <dd class="text-sm text-slate-700 leading-relaxed"><%= request.request_details %></dd>
                           </div>
                         </div>
-
-                        <div class="<%= (request.completed? || request.cancelled?) ? "" : "hidden" %> -mt-2 w-full">
-                          <div class="w-full">
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Internal Notes</label>
-                            <% if request.internal_notes_list.any? %>
-                              <div class="space-y-2 mb-3">
-                                <% request.internal_notes_list.each do |note| %>
-                                  <% note_time = Time.zone.parse(note["created_at"].to_s) rescue nil %>
-                                  <div class="rounded-lg border border-gray-200 bg-white p-3">
-                                    <div class="flex items-center justify-between gap-2">
-                                      <p class="text-[10px] text-gray-500"><%= note_time ? display_housekeeping_datetime(note_time) : "Not provided" %></p>
-                                    </div>
-                                    <p class="mt-1 text-sm text-gray-800 whitespace-pre-wrap"><%= note["body"] %></p>
-                                  </div>
-                                <% end %>
-                              </div>
-                            <% else %>
-                              <p class="text-sm text-gray-500 mb-3">No internal notes yet.</p>
-                            <% end %>
-
-                            <% unless request.cancelled? %>
-                              <%= form_with url: complete_housekeeping_request_hotel_booking_path(current_hotel, @booking, housekeeping_request_id: request.id), method: :post, local: true, class: "space-y-3" do |f| %>
-                                <%= text_area_tag :internal_note, nil, rows: 3, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border", placeholder: "Add internal note..." %>
-                                <div class="flex justify-end">
-                                  <%= f.submit "Add Note", class: "inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
-                                </div>
-                              <% end %>
-                            <% end %>
-                          </div>
-                        </div>
-
-                        <% unless request.completed? || request.cancelled? %>
-                          <details class="group w-full">
-                            <summary class="flex justify-end list-none cursor-pointer">
-                              <span class="inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-gray-50">
-                                Cancel
-                              </span>
-                            </summary>
-                            <div class="mt-3 rounded-xl border border-red-100 bg-red-50/60 p-4">
-                              <p class="text-xs font-semibold uppercase tracking-wider text-red-600">Cancel Request</p>
-                              <p class="mt-1 text-xs text-red-600/80">Please add a note explaining why this request is cancelled.</p>
-                              <%= form_with url: hotel_cancel_request_path(current_hotel, kind: "housekeeping", request_id: request.id), method: :post, local: true, class: "mt-3 space-y-3" do |f| %>
-                                <%= hidden_field_tag :redirect_to, hotel_booking_path(current_hotel, @booking, tab: "requests") %>
-                                <%= text_area_tag :internal_note, nil, rows: 3, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-red-500 focus:ring-red-500 border", placeholder: "Reason for cancellation..." %>
-                                <div class="flex justify-end gap-2">
-                                  <button type="button" class="inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" onclick="this.closest('details').removeAttribute('open')">Close</button>
-                                  <%= f.submit "Cancel Request", class: "inline-flex items-center gap-x-2 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-50" %>
-                                </div>
-                              <% end %>
-                            </div>
-                          </details>
-                        <% end %>
+                        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= housekeeping_status_class(request.status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10">
+                          <%= request.status %>
+                        </span>
                       </div>
-                    <% end %>
-                  </div>
+                      <% unless request.completed? || request.cancelled? %>
+                        <div class="flex justify-end gap-2 pt-2">
+                           <%= button_to "Complete Request", complete_housekeeping_request_hotel_booking_path(current_hotel, @booking, housekeeping_request_id: request.id), method: :post, class: "inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
                 <% else %>
-                  <div class="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
-                    No housekeeping requests yet.
+                  <div class="py-10 text-center border border-dashed border-slate-200 rounded-2xl">
+                    <p class="text-sm font-medium text-slate-500">No housekeeping requests.</p>
                   </div>
                 <% end %>
               </div>
             </div>
 
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-              <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+            <!-- Complaints -->
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm h-fit">
+              <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 flex items-center justify-between gap-3">
                 <div>
-                  <h2 class="text-lg font-semibold text-gray-800">Complaint Requests</h2>
-                  <p class="text-xs text-gray-500 mt-1">Guest complaint requests.</p>
+                  <h2 class="text-lg font-bold tracking-tight text-slate-950">Complaints</h2>
+                  <p class="mt-1 text-sm font-medium text-slate-600">Guest-reported issues and status.</p>
                 </div>
-                <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  <%= pluralize(complaint_requests.count, "complaint") %>
+                <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                  <%= @complaint_requests.to_a.count %>
                 </span>
               </div>
-              <div class="p-6">
-                <% if complaint_requests.any? %>
-                  <div class="space-y-4">
-                    <% complaint_requests.each do |request| %>
-                      <% complaint_notes_id = "complaint-notes-#{request.id}" %>
-                      <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                        <div class="flex items-start justify-between gap-4">
-                          <div class="flex-1 min-w-0 space-y-3">
-                            <div>
-                              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Requested At</label>
-                              <p class="text-gray-800 text-sm"><%= display_housekeeping_datetime(request.display_requested_at) %></p>
-                            </div>
-                            <% if request.completed_at.present? %>
-                              <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Completed At</label>
-                                <p class="text-gray-800 text-sm"><%= display_housekeeping_datetime(request.completed_at) %></p>
-                              </div>
-                            <% end %>
-                            <div>
-                              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Complaint</label>
-                              <p class="text-gray-800 text-sm leading-relaxed"><%= request.complaint_details %></p>
-                            </div>
+              <div class="p-6 space-y-4">
+                <% if @complaint_requests.any? %>
+                  <% @complaint_requests.each do |request| %>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
+                      <div class="flex items-start justify-between gap-4">
+                        <div class="flex-1 min-w-0 space-y-2">
+                          <div>
+                            <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reported</dt>
+                            <dd class="text-xs font-semibold text-slate-900"><%= display_housekeeping_datetime(request.display_requested_at) %></dd>
                           </div>
-                          <div class="shrink-0 flex flex-col items-end gap-2">
-                            <span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium <%= complaint_status_class(request.status) %>">
-                              <%= request.status.titleize %>
-                            </span>
-                            <% unless request.resolved? || request.cancelled? %>
-                              <%= button_to "Resolve", resolve_complaint_request_hotel_booking_path(current_hotel, @booking, complaint_request_id: request.id), method: :post, class: "inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
-                            <% end %>
+                          <div>
+                            <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Details</dt>
+                            <dd class="text-sm text-slate-700 leading-relaxed"><%= request.complaint_details %></dd>
                           </div>
                         </div>
-                        <div id="<%= complaint_notes_id %>" class="<%= (request.resolved? || request.cancelled?) ? "" : "hidden" %> mt-2 w-full">
-                          <div class="w-full">
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Internal Notes</label>
-                            <% if request.internal_notes_list.any? %>
-                              <div class="space-y-2 mb-3">
-                                <% request.internal_notes_list.each do |note| %>
-                                  <% note_time = Time.zone.parse(note["created_at"].to_s) rescue nil %>
-                                  <div class="rounded-lg border border-gray-200 bg-white p-3">
-                                    <p class="text-[10px] text-gray-500"><%= note_time ? display_housekeeping_datetime(note_time) : "Not provided" %></p>
-                                    <p class="mt-1 text-sm text-gray-800 whitespace-pre-wrap"><%= note["body"] %></p>
-                                  </div>
-                                <% end %>
-                              </div>
-                            <% else %>
-                              <p class="text-sm text-gray-500 mb-3">No internal notes yet.</p>
-                            <% end %>
-
-                            <% unless request.cancelled? %>
-                              <%= form_with url: update_complaint_request_hotel_booking_path(current_hotel, @booking, complaint_request_id: request.id), method: :patch, local: true, class: "space-y-3" do |f| %>
-                                <%= text_area_tag :internal_note, nil, rows: 3, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border", placeholder: "Add internal note..." %>
-                                <div class="flex justify-end">
-                                  <%= f.submit "Add Note", class: "inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
-                                </div>
-                              <% end %>
-                            <% end %>
-                          </div>
-                        </div>
-
-                        <% unless request.resolved? || request.cancelled? %>
-                          <details class="group w-full mt-3">
-                            <summary class="flex justify-end list-none cursor-pointer">
-                              <span class="inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-gray-50">
-                                Cancel
-                              </span>
-                            </summary>
-                            <div class="mt-3 rounded-xl border border-red-100 bg-red-50/60 p-4">
-                              <p class="text-xs font-semibold uppercase tracking-wider text-red-600">Cancel Request</p>
-                              <p class="mt-1 text-xs text-red-600/80">Please add a note explaining why this request is cancelled.</p>
-                              <%= form_with url: hotel_cancel_request_path(current_hotel, kind: "complaint", request_id: request.id), method: :post, local: true, class: "mt-3 space-y-3" do |f| %>
-                                <%= hidden_field_tag :redirect_to, hotel_booking_path(current_hotel, @booking, tab: "requests") %>
-                                <%= text_area_tag :internal_note, nil, rows: 3, class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-red-500 focus:ring-red-500 border", placeholder: "Reason for cancellation..." %>
-                                <div class="flex justify-end gap-2">
-                                  <button type="button" class="inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" onclick="this.closest('details').removeAttribute('open')">Close</button>
-                                  <%= f.submit "Cancel Request", class: "inline-flex items-center gap-x-2 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-50" %>
-                                </div>
-                              <% end %>
-                            </div>
-                          </details>
-                        <% end %>
+                        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= complaint_status_class(request.status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10">
+                          <%= request.status %>
+                        </span>
                       </div>
-                    <% end %>
-                  </div>
+                      <% unless request.resolved? || request.cancelled? %>
+                        <div class="flex justify-end gap-2 pt-2">
+                           <%= button_to "Resolve Complaint", resolve_complaint_request_hotel_booking_path(current_hotel, @booking, complaint_request_id: request.id), method: :post, class: "inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
                 <% else %>
-                  <div class="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
-                    No complaint requests yet.
+                  <div class="py-10 text-center border border-dashed border-slate-200 rounded-2xl">
+                    <p class="text-sm font-medium text-slate-500">No complaint requests.</p>
                   </div>
                 <% end %>
               </div>
@@ -427,54 +307,50 @@
       </div>
     </div>
 
-    <!-- Sidebar -->
-    <div class="space-y-6">
-      <!-- Status Card -->
-      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6">
-        <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Status Summary</h3>
-        <div class="space-y-4">
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-500">Booking Status</span>
-            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= booking_status_class(@booking.status) %>">
-              <%= @booking.status.titleize %>
+    <!-- Sidebar Column -->
+    <div class="lg:col-span-3 space-y-8">
+      <!-- Summary Card -->
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+          <h3 class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Summary</h3>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-slate-500 font-medium">Payment</span>
+            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider <%= payment_status_class(@booking.payment_status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10 uppercase">
+              <%= @booking.payment_status %>
             </span>
           </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-500">Payment Status</span>
-            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= payment_status_class(@booking.payment_status) %>">
-              <%= @booking.payment_status.titleize %>
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-slate-500 font-medium">Check-In Step</span>
+            <% pc_status = pre_checkin_display_status(@booking) %>
+            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider <%= pre_checkin_status_class(pc_status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10 uppercase">
+              <%= pc_status %>
             </span>
           </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-500">Pre Check-In Status</span>
-            <% pre_checkin_status = pre_checkin_display_status(@booking) %>
-            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full <%= pre_checkin_status_class(pre_checkin_status) %>">
-              <%= pre_checkin_status.titleize %>
-            </span>
-          </div>
-          <div class="flex justify-between items-center pt-4 border-t border-gray-100">
-            <span class="text-sm font-bold text-gray-800">Total Charged</span>
-            <span class="text-lg font-bold text-blue-600">MYR <%= @booking.total_amount %></span>
+          <div class="pt-4 border-t border-slate-100 flex justify-between items-baseline">
+            <span class="text-xs font-bold text-slate-900 uppercase">Total Paid</span>
+            <span class="text-xl font-bold text-slate-900">MYR <%= number_with_precision(@booking.total_amount, precision: 2) %></span>
           </div>
         </div>
       </div>
 
       <!-- Quick Actions -->
-      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6">
-        <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Quick Actions</h3>
-        <div class="space-y-2">
-          <button class="w-full py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50">
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+          <h3 class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Actions</h3>
+        </div>
+        <div class="p-4 space-y-2">
+          <button type="button" class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
             Resend Confirmation
+            <svg class="size-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </button>
-          <button class="w-full py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50">
+          <button type="button" class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
             Resend Pre-Check-in
-          </button>
-          <button class="w-full py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50">
-            Add Internal Note
+            <svg class="size-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </button>
         </div>
       </div>
     </div>
   </div>
-
 </div>

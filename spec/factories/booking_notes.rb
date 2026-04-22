@@ -1,7 +1,7 @@
 FactoryBot.define do
   factory :booking_note do
-    booking { nil }
-    body { "MyText" }
-    created_by { nil }
+    association :booking
+    association :user
+    body { "Guest requested late check-in." }
   end
 end

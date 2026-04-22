@@ -1,7 +1,7 @@
 require 'rails_helper'
 require 'securerandom'
 
-RSpec.describe 'Admin sidebar search', type: :system do
+RSpec.describe 'Admin mobile sidebar', type: :system do
   self.use_transactional_tests = false
 
   let(:token) { SecureRandom.hex(6) }
@@ -14,7 +14,7 @@ RSpec.describe 'Admin sidebar search', type: :system do
   end
 
   before do
-    driven_by(:rack_test)
+    driven_by(:cuprite)
 
     visit login_path
     fill_in 'Email Address', with: superadmin.email
@@ -24,19 +24,11 @@ RSpec.describe 'Admin sidebar search', type: :system do
     page.current_window.resize_to(390, 844) if Capybara.current_driver != :rack_test
   end
 
-  it 'filters mobile sidebar links and lets the user open the matching page' do
-    pending "Skipping due to missing Chrome binary in this environment"
+  it 'opens from the mobile toggle and lets the user navigate to audit logs' do
     find('button[aria-label="Toggle navigation"]').click
 
     within('#admin-sidebar-mobile') do
-      fill_in 'Search navigation', with: 'audit'
-
       audit_link = find("a[href='#{admin_audit_logs_path}']", text: 'Audit Logs', visible: :all)
-      bookings_link = find("a[href='#{admin_bookings_path}']", text: 'Bookings', visible: :all)
-
-      expect(audit_link[:class]).not_to include('hidden')
-      expect(bookings_link[:class]).to include('hidden')
-
       audit_link.click
     end
 

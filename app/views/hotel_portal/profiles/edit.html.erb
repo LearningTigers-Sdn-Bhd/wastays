@@ -60,20 +60,11 @@
           </div>
         </section>
 
-        <section data-controller="photo-limit" data-photo-limit-existing-count-value="<%= @hotel.photos.count %>" data-photo-limit-max-count-value="20">
+        <section>
           <h3 class="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Media</h3>
           <div class="rounded-2xl border border-slate-200 bg-slate-50/40 p-4 sm:p-5">
-            <%= f.label :photos, "Hotel Photos", class: "mb-2 block text-sm font-medium text-slate-900" %>
-            <%= f.file_field :photos,
-                             multiple: true,
-                             accept: "image/*",
-                             class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:ring-slate-300",
-                             data: { photo_limit_target: "input", action: "change->photo-limit#update" } %>
-            <div class="mt-3 flex items-center justify-between gap-3">
-              <p class="text-xs text-slate-500">Upload high-quality photos. Max 20 files.</p>
-              <p class="text-xs font-semibold text-slate-700" data-photo-limit-target="counter"><%= "#{@hotel.photos.count}/20 photos" %></p>
-            </div>
-            <p class="mt-2 hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700" data-photo-limit-target="warning"></p>
+            <p class="text-sm font-medium text-slate-900">Hotel Photos</p>
+            <p class="mt-1 text-xs text-slate-500">Use the Photos section below to queue and confirm uploads in bulk (max 20).</p>
           </div>
         </section>
 
@@ -95,44 +86,127 @@
     <% end %>
   </div>
 
-  <% if @hotel.photos.attached? %>
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <%= form_with url: hotel_profile_photos_path(@hotel), method: :delete, local: true do %>
-        <div class="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+       data-controller="hotel-photo-queue"
+       data-hotel-photo-queue-upload-url-value="<%= hotel_profile_photo_queue_path(@hotel) %>"
+       data-hotel-photo-queue-clear-url-value="<%= hotel_clear_profile_photo_queue_path(@hotel) %>"
+       data-hotel-photo-queue-commit-url-value="<%= hotel_commit_profile_photo_queue_path(@hotel) %>"
+       data-hotel-photo-queue-remove-url-template-value="<%= hotel_profile_photo_queue_item_path(@hotel, "__SIGNED_ID__") %>"
+       data-hotel-photo-queue-existing-count-value="<%= @hotel.photos.count %>"
+       data-hotel-photo-queue-max-count-value="<%= Hotel::MAX_PHOTOS %>">
+    <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+      <h2 class="text-lg font-semibold text-slate-950">Photos</h2>
+      <p class="mt-1 text-sm text-slate-600">Queue photos in bulk, then confirm to publish them.</p>
+    </div>
+
+    <div class="space-y-6 p-6 sm:p-8">
+      <section class="rounded-2xl border border-slate-200 bg-slate-50/40 p-4 sm:p-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 class="text-lg font-semibold text-slate-950">Current Photos</h2>
-            <p class="mt-1 text-sm text-slate-600">Select one or more photos to remove in bulk.</p>
+            <p class="text-sm font-semibold text-slate-900">Upload Queue</p>
+            <p class="mt-1 text-xs text-slate-500">Select photos multiple times. Files stay in queue until you confirm upload.</p>
           </div>
-          <%= submit_tag "Remove Selected Photos",
-                         class: "inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100",
-                         data: { turbo_confirm: "Remove the selected photos?" } %>
+          <p class="text-xs font-semibold text-slate-700" data-hotel-photo-queue-target="counterText"></p>
         </div>
 
-        <div class="p-6 sm:p-8">
-          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            <% @hotel.photos.attachments.each do |photo| %>
-              <% featured_photo = @hotel.featured_photo_attachment %>
-              <label class="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
-                <%= image_tag photo, class: "h-32 w-full object-cover" %>
-                <div class="absolute inset-0 bg-black/0 transition group-hover:bg-black/10"></div>
-                <div class="absolute left-2 top-2">
-                  <%= check_box_tag "photo_ids[]", photo.id, false, class: "h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400" %>
+        <label class="mt-4 block">
+          <span class="sr-only">Choose hotel photos</span>
+          <input type="file"
+                 multiple
+                 accept="image/*"
+                 class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:ring-slate-300"
+                 data-hotel-photo-queue-target="input"
+                 data-action="change->hotel-photo-queue#queueSelectedFiles">
+        </label>
+
+        <p class="mt-3 hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700"
+           data-hotel-photo-queue-target="warning"></p>
+        <p class="mt-2 hidden rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+           data-hotel-photo-queue-target="error"></p>
+
+        <div class="mt-4 space-y-2" data-hotel-photo-queue-target="queueList">
+          <% @queued_photo_items.each do |item| %>
+            <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3"
+                 data-signed-id="<%= item[:signed_id] %>">
+              <div class="flex min-w-0 items-center gap-3">
+                <img src="<%= item[:preview_url] %>" alt="<%= item[:filename] %>" class="h-12 w-12 rounded-lg border border-slate-200 object-cover">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium text-slate-900"><%= item[:filename] %></p>
+                  <p class="text-xs text-slate-500"><%= item[:byte_size] %></p>
                 </div>
-                <div class="absolute inset-x-0 bottom-0 flex items-end justify-between px-2 pb-2">
-                  <% if featured_photo&.id == photo.id %>
-                    <span class="inline-flex items-center rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-slate-900 shadow-sm">Featured</span>
-                  <% else %>
-                    <%= link_to "Set Featured",
-                                hotel_profile_photo_feature_path(@hotel, photo.id),
-                                data: { turbo_method: :patch },
-                                class: "inline-flex items-center rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-slate-700 shadow-sm opacity-0 transition-opacity hover:text-slate-900 group-hover:opacity-100" %>
-                  <% end %>
-                </div>
-              </label>
-            <% end %>
-          </div>
+              </div>
+              <button type="button"
+                      class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                      data-action="hotel-photo-queue#removeQueuedPhoto">
+                Remove
+              </button>
+            </div>
+          <% end %>
         </div>
-      <% end %>
+
+        <p class="<%= @queued_photo_items.any? ? 'hidden ' : '' %>mt-4 text-xs text-slate-500"
+           data-hotel-photo-queue-target="emptyState">
+          No photos queued yet.
+        </p>
+
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+          <button type="button"
+                  class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  data-hotel-photo-queue-target="confirmButton"
+                  data-action="hotel-photo-queue#commitQueue">
+            Confirm Upload
+          </button>
+          <button type="button"
+                  class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  data-hotel-photo-queue-target="discardButton"
+                  data-action="hotel-photo-queue#discardQueue">
+            Discard All
+          </button>
+        </div>
+      </section>
+
+      <section>
+        <%= form_with url: hotel_profile_photos_path(@hotel), method: :delete, local: true do %>
+          <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-950">Current Photos</h3>
+              <p class="mt-1 text-sm text-slate-600">Select one or more photos to remove in bulk.</p>
+            </div>
+            <%= submit_tag "Remove Selected Photos",
+                           class: "inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100",
+                           data: { turbo_confirm: "Remove the selected photos?" } %>
+          </div>
+
+          <% if @hotel.photos.attached? %>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <% @hotel.photos.attachments.each do |photo| %>
+                <% featured_photo = @hotel.featured_photo_attachment %>
+                <label class="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                  <%= image_tag photo, class: "h-32 w-full object-cover" %>
+                  <div class="absolute inset-0 bg-black/0 transition group-hover:bg-black/10"></div>
+                  <div class="absolute left-2 top-2">
+                    <%= check_box_tag "photo_ids[]", photo.id, false, class: "h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400" %>
+                  </div>
+                  <div class="absolute inset-x-0 bottom-0 flex items-end justify-between px-2 pb-2">
+                    <% if featured_photo&.id == photo.id %>
+                      <span class="inline-flex items-center rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-slate-900 shadow-sm">Featured</span>
+                    <% else %>
+                      <%= link_to "Set Featured",
+                                  hotel_profile_photo_feature_path(@hotel, photo.id),
+                                  data: { turbo_method: :patch },
+                                  class: "inline-flex items-center rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-slate-700 shadow-sm opacity-0 transition-opacity hover:text-slate-900 group-hover:opacity-100" %>
+                    <% end %>
+                  </div>
+                </label>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-600">
+              No current photos yet. Queue photos above and click Confirm Upload.
+            </p>
+          <% end %>
+        <% end %>
+      </section>
     </div>
-  <% end %>
+  </div>
 </div>

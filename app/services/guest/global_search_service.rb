@@ -2,7 +2,10 @@ class Guest::GlobalSearchService < BaseGlobalSearchService
   GROUP_PRIORITY = { "Bookings" => 0, "Pages" => 1 }.freeze
   PAGE_RESULTS = [
     { title: "Guest Dashboard", subtitle: "Overview and upcoming stays", route: :guest_dashboard_path, keywords: "guest dashboard overview home" },
-    { title: "My Bookings", subtitle: "All your reservations", route: :guest_bookings_path, keywords: "bookings reservations stays history" }
+    { title: "My Bookings", subtitle: "All your reservations", route: :guest_bookings_path, keywords: "bookings reservations stays history" },
+    { title: "Refunds", subtitle: "Track and review refund requests", route: :guest_refund_requests_path, keywords: "refunds refund requests cancellations" },
+    { title: "Homepage", subtitle: "Public marketing site", route: :root_path, keywords: "homepage website home" },
+    { title: "Help & Support", subtitle: "Help center guides", route: :help_center_path, keywords: "help support faq guides" }
   ].freeze
 
   def initialize(guest, query)
@@ -21,6 +24,7 @@ class Guest::GlobalSearchService < BaseGlobalSearchService
   def quick_actions
     [
       { group: "Bookings", label: "Go to bookings", url: guest_bookings_path },
+      { group: "Pages", label: "Go to refunds", url: guest_refund_requests_path },
       { group: "Pages", label: "Go to dashboard", url: guest_dashboard_path }
     ]
   end

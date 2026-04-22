@@ -1,79 +1,78 @@
-<div class="space-y-6 pb-12">
-  <!-- Page Header -->
-  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-y-4">
-    <div>
-      <nav class="flex mb-2" aria-label="Breadcrumb">
-        <ol class="flex items-center whitespace-nowrap min-w-0">
-          <li class="flex items-center text-sm text-neutral-text-secondary">
-            Hotel Admin
-            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </li>
-          <li class="flex items-center text-sm text-neutral-text-secondary">
-            <%= link_to "Room Types", hotel_room_types_path(current_hotel), class: "hover:text-brand-primary" %>
-            <svg class="flex-shrink-0 mx-2 overflow-visible h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </li>
-          <li class="text-sm font-semibold text-brand-primary truncate" aria-current="page">
-            Rates
-          </li>
-        </ol>
-      </nav>
-      <h1 class="text-2xl font-bold text-neutral-text-primary">Manage Rates: <%= @room_type.name %></h1>
-      <p class="text-sm text-neutral-text-secondary">Set seasonal or event-based pricing for this room category.</p>
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <%= link_to "Room Categories", hotel_room_types_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900">Rates</span>
+  </div>
+<% end %>
+
+<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+  <div class="px-4 md:px-0">
+    <div class="mt-5 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Manage Rates</h1>
+        <p class="mt-1 text-sm font-medium text-slate-600">Pricing for <span class="font-bold text-slate-900"><%= @room_type.name %></span></p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="inline-flex bg-slate-100 rounded-xl p-1 shadow-sm border border-slate-200">
+          <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date - 14.days), 
+              class: "p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition text-slate-500 hover:text-slate-900" do %>
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <% end %>
+          <span class="px-4 flex items-center text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <%= @start_date.strftime("%b %d") %> - <%= @end_date.strftime("%b %d") %>
+          </span>
+          <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date + 14.days), 
+              class: "p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition text-slate-500 hover:text-slate-900" do %>
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          <% end %>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
     <!-- Rate Calendar Card -->
     <div class="lg:col-span-8">
-      <div class="card overflow-hidden">
-        <div class="p-4 md:p-5 border-b border-neutral-border flex flex-col sm:flex-row justify-between items-center gap-4">
-          <h3 class="text-sm font-bold text-neutral-text-primary uppercase tracking-widest">Rate Calendar</h3>
-          
-          <div class="flex items-center bg-neutral-bg p-1 rounded-lg border border-neutral-border">
-            <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date - 14.days), class: "p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
-              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            <% end %>
-            <span class="px-4 text-xs font-black text-neutral-text-primary uppercase tracking-tighter">
-              <%= @start_date.strftime("%b %d") %> - <%= @end_date.strftime("%b %d") %>
-            </span>
-            <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date + 14.days), class: "p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-neutral-text-secondary hover:text-brand-primary" do %>
-              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-            <% end %>
-          </div>
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Rate Calendar</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Daily pricing overview for this room type.</p>
         </div>
 
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-x divide-neutral-border">
+          <table class="min-w-full divide-x divide-slate-200">
             <thead>
-              <tr class="bg-neutral-bg/50">
+              <tr class="bg-slate-50">
                 <% (@start_date..@end_date).each do |date| %>
-                  <th class="px-4 py-3 text-center border-e border-neutral-border last:border-e-0">
-                    <span class="block text-[10px] font-black uppercase tracking-widest <%= date == Date.today ? 'text-brand-primary' : 'text-neutral-text-secondary' %>"><%= date.strftime("%a") %></span>
-                    <span class="block text-sm font-bold <%= date == Date.today ? 'text-brand-primary' : 'text-neutral-text-primary' %>"><%= date.strftime("%d %b") %></span>
+                  <th class="px-4 py-4 text-center border-e border-slate-200 last:border-e-0">
+                    <span class="block text-[10px] font-bold uppercase tracking-[0.1em] <%= date == Date.today ? 'text-slate-900' : 'text-slate-500' %>"><%= date.strftime("%a") %></span>
+                    <span class="block text-sm font-bold <%= date == Date.today ? 'text-slate-900' : 'text-slate-700' %>"><%= date.strftime("%d %b") %></span>
                   </th>
                 <% end %>
               </tr>
             </thead>
-            <tbody class="divide-y divide-neutral-border">
+            <tbody class="divide-y divide-slate-200">
               <tr>
                 <% (@start_date..@end_date).each do |date| %>
-                  <td class="px-4 py-8 text-center border-e border-neutral-border last:border-e-0 hover:bg-neutral-bg transition-colors">
-                    <% rate = @rates[date] %>
-                    <div class="inline-flex flex-col items-center">
-                      <span class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mb-1">RM</span>
-                      <span class="text-xl font-black text-neutral-text-primary">
+                  <% rate = @rates[date] %>
+                  <td class="px-4 py-10 text-center border-e border-slate-200 last:border-e-0 transition-colors hover:bg-slate-50">
+                    <div class="flex flex-col items-center">
+                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">RM</span>
+                      <span class="text-xl font-bold text-slate-900">
                         <%= number_with_precision(rate&.price || @room_type.base_price, precision: 0) %>
                       </span>
                       
-                      <% unless rate %>
-                        <div class="mt-2">
-                          <span class="text-[9px] font-black text-neutral-text-secondary uppercase tracking-widest px-1.5 py-0.5 rounded bg-neutral-border/30">Base</span>
-                        </div>
-                      <% else %>
-                        <div class="mt-2">
-                          <span class="badge badge-success text-[9px] uppercase">Custom</span>
-                        </div>
-                      <% end %>
+                      <div class="mt-3">
+                        <% unless rate %>
+                          <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Base</span>
+                        <% else %>
+                          <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Custom</span>
+                        <% end %>
+                      </div>
                     </div>
                   </td>
                 <% end %>
@@ -86,46 +85,53 @@
 
     <!-- Bulk Update Side Card -->
     <div class="lg:col-span-4">
-      <div class="card shadow-lg border-brand-secondary/10">
-        <div class="p-4 md:p-5 border-b border-neutral-border bg-brand-secondary/5">
-          <h3 class="text-sm font-black text-neutral-text-primary uppercase tracking-widest">Bulk Rate Update</h3>
+      <div class="rounded-2xl border border-slate-200 bg-white shadow-lg">
+        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+          <h2 class="text-lg font-bold tracking-tight text-slate-950">Bulk Update</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Update rates for a date range.</p>
         </div>
-        <div class="p-6">
-          <%= form_with scope: :rate, url: hotel_room_type_rates_path(current_hotel, @room_type), local: true, class: "space-y-5" do |f| %>
+        
+        <div class="p-6 sm:p-8">
+          <%= form_with scope: :rate, url: hotel_room_type_rates_path(current_hotel, @room_type), local: true, class: "space-y-6" do |f| %>
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label for="start_date" class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">Start Date</label>
-                <%= f.date_field :start_date, value: @start_date, id: "start_date", class: "form-input py-2 text-xs" %>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Start Date</label>
+                <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
               </div>
               <div>
-                <label for="end_date" class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">End Date</label>
-                <%= f.date_field :end_date, value: @end_date, id: "end_date", class: "form-input py-2 text-xs" %>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">End Date</label>
+                <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
               </div>
             </div>
 
             <div>
-              <label for="price" class="block text-[10px] font-black uppercase tracking-widest text-neutral-text-secondary mb-1.5">New Rate (RM)</label>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">New Rate (RM)</label>
               <div class="relative">
-                <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                  <span class="text-xs font-bold text-neutral-text-secondary">RM</span>
+                <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
+                  <span class="text-sm font-bold text-slate-400">RM</span>
                 </div>
-                <%= f.number_field :price, step: 0.01, value: @room_type.base_price, id: "price", class: "form-input py-2 ps-10 text-sm font-bold", required: true %>
+                <%= f.number_field :price, step: 0.01, value: @room_type.base_price, class: "w-full rounded-xl border border-slate-200 bg-white ps-11 pe-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", required: true %>
               </div>
-              <p class="text-[10px] text-neutral-text-secondary mt-1.5 italic">This will override the base price for the selected range.</p>
+              <p class="mt-2 text-[11px] text-slate-500 italic leading-relaxed">This update will override any existing custom rates for the selected date range.</p>
             </div>
 
             <%= f.hidden_field :currency, value: 'MYR' %>
 
             <div class="pt-2">
-              <%= f.submit "Apply New Rates", class: "btn btn-primary w-full py-3 text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-primary/20" %>
+              <%= f.submit "Apply New Rates", class: "w-full inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-slate-700" %>
             </div>
           <% end %>
         </div>
       </div>
       
-      <div class="mt-6 p-4 rounded-xl bg-neutral-surface border border-neutral-border">
-        <h4 class="text-[10px] font-black text-neutral-text-primary uppercase tracking-widest mb-2">Seasonal Pricing</h4>
-        <p class="text-xs text-neutral-text-secondary leading-relaxed">Consider increasing rates during public holidays and peak travel seasons in Malaysia.</p>
+      <div class="mt-6 p-5 rounded-2xl bg-slate-50 border border-slate-200">
+        <div class="flex gap-3">
+          <svg class="size-5 text-slate-400 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <div class="min-w-0">
+            <h4 class="text-[11px] font-bold text-slate-900 uppercase tracking-wider mb-1">Pricing Strategy</h4>
+            <p class="text-xs text-slate-600 leading-relaxed">Consider increasing rates during public holidays and peak travel seasons to maximize revenue per available room (RevPAR).</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>

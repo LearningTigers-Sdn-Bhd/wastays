@@ -6,13 +6,20 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
     { title: "In-House Guests", subtitle: "Current in-house guests", route: :hotel_in_house_guests_path, keywords: "in house guests" },
     { title: "Bookings", subtitle: "All hotel bookings", route: :hotel_bookings_path, keywords: "bookings reservations recent bookings" },
     { title: "Requests", subtitle: "Housekeeping and complaints", route: :hotel_requests_path, keywords: "requests housekeeping complaints" },
+    { title: "Request Archive", subtitle: "Archived housekeeping and complaint requests", route: :hotel_request_archive_path, keywords: "request archive archived housekeeping complaints" },
     { title: "Guest Records", subtitle: "Past and upcoming guest history", route: :hotel_guests_path, keywords: "guest records guests" },
     { title: "Room Categories", subtitle: "Manage room types", route: :hotel_room_types_path, keywords: "room categories room types" },
     { title: "Rates & Inventory", subtitle: "Rates calendar and inventory", route: :hotel_inventory_index_path, keywords: "rates inventory calendar" },
+    { title: "Hotel Details", subtitle: "Property profile and public information", route: :edit_hotel_profile_path, keywords: "hotel details profile property" },
+    { title: "My Profile", subtitle: "Signed-in user account profile", route: :edit_hotel_user_profile_path, keywords: "my profile user profile account" },
     { title: "Reports", subtitle: "Financial performance", route: :hotel_reports_path, keywords: "reports financial performance" },
     { title: "Weekly Settlements", subtitle: "Payout reports", route: :payouts_hotel_reports_path, keywords: "payouts settlements weekly" },
+    { title: "Daily Performance Breakdown", subtitle: "Detailed financial breakdown", route: :breakdown_hotel_reports_path, keywords: "daily performance breakdown financial reports" },
     { title: "Operation Audit Logs", subtitle: "Operational changes history", route: :hotel_audit_logs_path, keywords: "audit logs operations" },
-    { title: "Settings", subtitle: "Hotel and payment settings", route: :hotel_settings_path, keywords: "settings preferences payment" }
+    { title: "Inventory Audit Logs", subtitle: "Inventory and rate change history", route: :hotel_inventory_audit_logs_path, keywords: "inventory audit logs rates changes history" },
+    { title: "Settings", subtitle: "Hotel and account settings", route: :hotel_settings_path, keywords: "settings preferences banking account" },
+    { title: "Homepage", subtitle: "Public marketing site", route: :root_path, keywords: "homepage website home" },
+    { title: "Help & Support", subtitle: "Help center guides", route: :help_center_path, keywords: "help support faq guides" }
   ].freeze
 
   def initialize(hotel, query)
@@ -120,6 +127,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
   end
 
   def hotel_portal_route(route_name)
-    send(route_name, @hotel)
+    method = method(route_name)
+    method.arity.zero? ? method.call : method.call(@hotel)
   end
 end

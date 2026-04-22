@@ -18,6 +18,6 @@ class Guest::GlobalSearchController < Guest::BaseController
   private
 
   def cache_key_for(query)
-    "guest:global_search:v1:guest:#{current_guest.id}:q:#{Digest::SHA256.hexdigest(query)}"
+    "guest:global_search:v2:guest:#{current_guest.id}:q:#{Digest::SHA256.hexdigest(query)}"
   end
 end
