@@ -55,6 +55,48 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
     end
   end
 
+  def onboarding_sessions
+    @current_hotel = current_hotel
+    unless @current_hotel
+      redirect_to admin_hotels_path, alert: "Select a hotel before viewing the portal."
+      return
+    end
+
+    @sessions = @current_hotel.onboarding_sessions
+      .where.not(notes: "DRAFT_PERIOD")
+      .order(scheduled_at: :desc, created_at: :desc)
+  end
+
+  def cancel_onboarding_session
+    @current_hotel = current_hotel
+    unless @current_hotel
+      redirect_to admin_hotels_path, alert: "Select a hotel before viewing the portal."
+      return
+    end
+
+    @session = @current_hotel.onboarding_sessions.find(params[:session_id])
+
+    unless @session.status == "scheduled"
+      redirect_to hotel_onboarding_sessions_path(@current_hotel), alert: "Only scheduled sessions can be cancelled."
+      return
+    end
+
+    cancel_reason = params[:cancel_reason].to_s.strip
+    if cancel_reason.blank?
+      redirect_to hotel_onboarding_sessions_path(@current_hotel), alert: "Please provide a reason before cancelling the session."
+      return
+    end
+
+    @session.update!(
+      status: "cancelled",
+      notes: [@session.notes.presence, "CANCELLED: #{cancel_reason}"].compact.join("\n")
+    )
+
+    redirect_to hotel_onboarding_sessions_path(@current_hotel), notice: "Onboarding session cancelled."
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to hotel_onboarding_sessions_path(@current_hotel), alert: "Failed to cancel session: #{e.message}"
+  end
+
   def submit_for_review
     @hotel = current_hotel
     authorize @hotel, :update?, policy_class: HotelPolicy

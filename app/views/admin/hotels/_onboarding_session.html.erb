@@ -30,6 +30,13 @@
         <div>
           <p class="text-sm font-bold text-slate-900"><%= session.trainer_name.presence&.capitalize || "No trainer assigned" %></p>
           <p class="text-xs text-slate-500">Scheduled: <%= session.scheduled_at.strftime("%d %b %Y at %I:%M %p") %></p>
+          <% if session.status == "cancelled" && session.notes.present? %>
+            <% cancellation_reason = session.notes.to_s[/CANCELLED:\s*(.*)\z/m, 1] || session.notes %>
+            <div class="mt-2 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+              <span class="font-semibold">Cancellation note:</span>
+              <%= cancellation_reason %>
+            </div>
+          <% end %>
         </div>
         </div>
 
@@ -60,9 +67,19 @@
             Mark Completed
           <% end %>
         <% else %>
-          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-semibold border border-emerald-600">
-            Completed at <%= session.completed_at&.strftime("%d %b, %H:%M") %>
-          </span>
+          <% if session.status == "completed" %>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-semibold border border-emerald-600">
+              Completed at <%= session.completed_at&.strftime("%d %b, %H:%M") %>
+            </span>
+          <% elsif session.status == "cancelled" %>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold border border-rose-100">
+              Cancelled
+            </span>
+          <% else %>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-500 text-xs font-semibold border border-slate-200">
+              Pending
+            </span>
+          <% end %>
         <% end %>
       </div>
     <% end %>

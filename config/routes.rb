@@ -143,6 +143,8 @@ Rails.application.routes.draw do
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
     get "dashboard", to: "dashboard#index", as: :dashboard
+    get "onboarding-sessions", to: "dashboard#onboarding_sessions", as: :onboarding_sessions
+    post "onboarding-sessions/:session_id/cancel", to: "dashboard#cancel_onboarding_session", as: :cancel_onboarding_session
     post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
     resource :profile, only: [ :edit, :update ]
