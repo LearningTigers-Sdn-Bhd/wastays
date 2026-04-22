@@ -32,7 +32,7 @@ module PlatformControl
       uri.query = "key=#{@api_key}"
 
       response = post_request(uri, {
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [ { parts: [ { text: prompt } ] } ],
         generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
       })
 
@@ -47,10 +47,10 @@ module PlatformControl
 
     def analyze_openai
       uri = URI(OPENAI_API_URL)
-      
+
       response = post_request(uri, {
         model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
+        messages: [ { role: "user", content: prompt } ],
         temperature: 0.2,
         max_tokens: 1024
       }, { "Authorization" => "Bearer #{@api_key}" })
@@ -67,7 +67,7 @@ module PlatformControl
     def post_request(uri, body, headers = {})
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      
+
       request = Net::HTTP::Post.new(uri.request_uri, { "Content-Type" => "application/json" }.merge(headers))
       request.body = body.to_json
       http.request(request)

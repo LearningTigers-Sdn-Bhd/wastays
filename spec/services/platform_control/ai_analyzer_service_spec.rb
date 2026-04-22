@@ -12,11 +12,11 @@ RSpec.describe PlatformControl::AiAnalyzerService do
 
     it "uses gemini-1.5-flash model" do
       fake_response = double(is_a?: true, body: {
-        candidates: [{ content: { parts: [{ text: "Gemini Analysis" }] } }]
+        candidates: [ { content: { parts: [ { text: "Gemini Analysis" } ] } } ]
       }.to_json)
-      
+
       allow(Net::HTTP).to receive(:new).and_return(double(use_ssl: true, "use_ssl=": true, request: fake_response))
-      
+
       result = service.analyze
       expect(result[:model]).to eq("gemini-1.5-flash")
       expect(result[:html]).to include("Gemini Analysis")
@@ -31,11 +31,11 @@ RSpec.describe PlatformControl::AiAnalyzerService do
 
     it "uses gpt-4o-mini model" do
       fake_response = double(is_a?: true, body: {
-        choices: [{ message: { content: "OpenAI Analysis" } }]
+        choices: [ { message: { content: "OpenAI Analysis" } } ]
       }.to_json)
-      
+
       allow(Net::HTTP).to receive(:new).and_return(double(use_ssl: true, "use_ssl=": true, request: fake_response))
-      
+
       result = service.analyze
       expect(result[:model]).to eq("gpt-4o-mini")
       expect(result[:html]).to include("OpenAI Analysis")

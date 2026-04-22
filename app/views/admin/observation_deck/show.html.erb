@@ -45,7 +45,7 @@
           </div>
           
           <div class="prose prose-sm max-w-none text-slate-700" data-ai-analysis-target="content">
-            <%= analysis[:html].html_safe %>
+            <%= sanitize(analysis[:html]) %>
           </div>
 
           <div data-ai-analysis_target="loading" class="hidden py-4">
