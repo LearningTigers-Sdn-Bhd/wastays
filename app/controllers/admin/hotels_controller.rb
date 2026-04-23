@@ -23,8 +23,6 @@ class Admin::HotelsController < Admin::BaseController
   def onboarding
     @hotel = Hotel.find(params[:id])
     @sessions = @hotel.onboarding_sessions
-                      .where.not(notes: "DRAFT_PERIOD")
-                      .or(@hotel.onboarding_sessions.where(notes: nil))
                       .order(scheduled_at: :asc, created_at: :asc)
   end
 
@@ -413,8 +411,6 @@ class Admin::HotelsController < Admin::BaseController
 
   def onboarding_sessions_scope(hotel)
     hotel.onboarding_sessions
-      .where.not(notes: "DRAFT_PERIOD")
-      .or(hotel.onboarding_sessions.where(notes: nil))
       .order(scheduled_at: :asc, created_at: :asc)
   end
 

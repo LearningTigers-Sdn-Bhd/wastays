@@ -63,7 +63,6 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
     end
 
     @sessions = @current_hotel.onboarding_sessions
-      .where.not(notes: "DRAFT_PERIOD")
       .order(scheduled_at: :desc, created_at: :desc)
   end
 

@@ -33,13 +33,13 @@
           </label>
           <select data-onboarding-tracker-filter-target="sort"
                   data-action="change->onboarding-tracker-filter#sort"
-                  class="w-full rounded-2xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 focus:border-blue-500 focus:bg-white focus:ring-0">
+                  class="w-full appearance-none rounded-2xl border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-900 focus:border-blue-500 focus:bg-white focus:ring-0">
             <option value="shortest_first" selected>Shortest to Longest</option>
             <option value="longest_first">Longest to Shortest</option>
           </select>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:col-span-3">
+        <div class="grid gap-4 sm:grid-cols-2 lg:col-span-4">
           <div>
             <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
               From date
@@ -61,7 +61,7 @@
           </div>
         </div>
 
-        <div class="flex items-end lg:col-span-2">
+        <div class="flex items-end lg:col-span-1">
           <button type="button"
                   data-action="click->onboarding-tracker-filter#clear"
                   class="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">

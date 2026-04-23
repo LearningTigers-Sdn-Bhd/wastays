@@ -100,7 +100,7 @@ export default class extends Controller {
         // Optional: show a small success checkmark or toast
       }
     } catch (error) {
-      console.error("Failed to save draft dates:", error)
+      console.error("Failed to save onboarding period:", error)
     }
   }
 
