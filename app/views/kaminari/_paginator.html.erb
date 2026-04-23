@@ -1,5 +1,6 @@
 <nav class="flex items-center sm:-space-x-px justify-center sm:justify-start gap-x-1 sm:gap-x-0" aria-label="Pagination">
   <%= paginator.render do %>
+    <%= first_page_tag %>
     <%= prev_page_tag %>
     
     <% each_page do |page| %>
@@ -20,6 +21,7 @@
     </div>
 
     <%= next_page_tag %>
+    <%= last_page_tag %>
   <% end %>
 
   <% if total_pages <= 1 %>

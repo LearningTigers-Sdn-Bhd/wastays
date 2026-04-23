@@ -67,11 +67,11 @@
         <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 bg-white">
           <div>
             <h2 class="text-sm font-bold uppercase tracking-wider text-slate-900"><%= label %></h2>
-            <p class="text-[11px] font-medium text-slate-500"><%= pluralize(@board_columns[bucket_key].size, "active request") %></p>
+            <p class="text-[11px] font-medium text-slate-500"><%= pluralize(@board_counts[bucket_key], "active request") %></p>
           </div>
           <div class="flex items-center gap-2">
             <span class="inline-flex size-7 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-700">
-              <%= @board_columns[bucket_key].size %>
+              <%= @board_counts[bucket_key] %>
             </span>
             <button
               type="button"
@@ -214,6 +214,17 @@
             <div class="rounded-2xl border border-dashed border-slate-200 bg-white/50 p-12 text-center">
               <p class="text-sm font-medium text-slate-400">Empty column</p>
             </div>
+          <% end %>
+        </div>
+
+        <% page_params = request.query_parameters.except(:housekeeping_page, :complaint_page, :completed_page) %>
+        <div class="border-t border-slate-200 bg-white px-4 py-4 flex justify-center">
+          <% if bucket_key == :housekeeping %>
+            <%= paginate @board_columns[:housekeeping], param_name: :housekeeping_page, params: page_params %>
+          <% elsif bucket_key == :complaint %>
+            <%= paginate @board_columns[:complaint], param_name: :complaint_page, params: page_params %>
+          <% else %>
+            <%= paginate @board_columns[:completed], param_name: :completed_page, params: page_params %>
           <% end %>
         </div>
       </section>

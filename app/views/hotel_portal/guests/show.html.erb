@@ -51,12 +51,12 @@
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Last Stay</p>
         <p class="text-sm font-semibold text-neutral-text-primary">
-          <%= @bookings.first&.check_out ? @bookings.first.check_out.strftime("%d %b %Y") : "—" %>
+          <%= @all_bookings.first&.check_out ? @all_bookings.first.check_out.strftime("%d %b %Y") : "—" %>
         </p>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Total Visits</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= @bookings.count %></p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @all_bookings.count %></p>
       </div>
     </div>
   </div>
@@ -91,13 +91,13 @@
   </div>
 
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-      <div>
-        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Booking History</h2>
-        <p class="mt-1 text-sm font-medium text-slate-600">Timeline of this guest's stays at the property.</p>
+      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+        <div>
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Booking History</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Timeline of this guest's stays at the property.</p>
+        </div>
+      <span class="text-sm font-medium text-slate-500">Stays <span class="font-semibold text-slate-900"><%= @all_bookings.count %></span></span>
       </div>
-      <span class="text-sm font-medium text-slate-500">Stays <span class="font-semibold text-slate-900"><%= @bookings.count %></span></span>
-    </div>
 
     <% if @bookings.any? %>
       <div class="hidden md:block overflow-x-auto">
@@ -202,5 +202,9 @@
         <p class="text-sm font-medium text-slate-500">No bookings yet.</p>
       </div>
     <% end %>
+
+    <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center">
+      <%= paginate @bookings %>
+    </div>
   </div>
 </div>

@@ -26,7 +26,8 @@ RSpec.describe HotelPortal::RequestsBoard do
       columns = board.board_columns
       total_cards = columns.values.flatten.size
       expect(total_cards).to eq(3)
-      expect(columns.values.flatten.map { |c| c[:request_id] }).not_to include(archived_request.id)
+      card_keys = columns.values.flatten.map { |c| [ c[:kind], c[:request_id] ] }
+      expect(card_keys).not_to include([ "housekeeping", archived_request.id ])
     end
 
     context 'searching' do

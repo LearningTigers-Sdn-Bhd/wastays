@@ -3,11 +3,16 @@ class HotelPortal::RequestsController < HotelPortal::BaseController
     @board = ::HotelPortal::RequestsBoard.new(current_hotel, params)
     @board_columns = @board.board_columns
     @board_counts = @board.board_counts
+    @board_columns = {
+      housekeeping: Kaminari.paginate_array(@board_columns[:housekeeping]).page(params[:housekeeping_page]).per(25),
+      complaint: Kaminari.paginate_array(@board_columns[:complaint]).page(params[:complaint_page]).per(25),
+      completed: Kaminari.paginate_array(@board_columns[:completed]).page(params[:completed_page]).per(25)
+    }
   end
 
   def archive
     @archive = ::HotelPortal::RequestsArchive.new(current_hotel, params)
-    @archive_rows = @archive.rows
+    @archive_rows = Kaminari.paginate_array(@archive.rows).page(params[:page]).per(25)
     @archive_counts = @archive.summary_counts
   end
 

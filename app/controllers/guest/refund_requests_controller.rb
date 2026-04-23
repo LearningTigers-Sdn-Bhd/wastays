@@ -31,7 +31,8 @@ class Guest::RefundRequestsController < Guest::BaseController
       scope = scope.where(refund_requests: { status: @status_filter })
     end
 
-    @bookings = scope.order("refund_requests.created_at DESC").distinct
+    @all_bookings = scope.order("refund_requests.created_at DESC").distinct
+    @bookings = @all_bookings.page(params[:page]).per(25)
   end
 
   def new

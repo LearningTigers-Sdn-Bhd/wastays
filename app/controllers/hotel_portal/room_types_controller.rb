@@ -3,7 +3,8 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
 
   def index
     @hotel = current_hotel
-    @room_types = @hotel.room_types
+    @all_room_types = @hotel.room_types.order(created_at: :desc)
+    @room_types = @all_room_types.page(params[:page]).per(25)
     authorize @hotel, :update?, policy_class: HotelPolicy
   end
 

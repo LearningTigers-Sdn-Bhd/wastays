@@ -164,6 +164,10 @@
     <% else %>
       <div class="p-8 text-sm text-gray-500">No requests match your filters.</div>
     <% end %>
+
+    <div class="px-6 py-5 border-t border-gray-200 bg-gray-50/50 flex justify-center">
+      <%= paginate @archive_rows %>
+    </div>
   </div>
   <% end %>
 </div>
