@@ -2,7 +2,7 @@
 <% analytics_active = controller_name == 'dashboard' && action_name == 'analytics' %>
 <% hotels_active = controller_name == 'hotels' %>
 <% bookings_active = controller_name == 'bookings' %>
-<% onboarding_active = controller_name == 'hotels' && (action_name == 'onboarding_index' || action_name == 'onboarding') %>
+<% onboarding_active = controller_path == 'admin/hotels/onboarding' || controller_path == 'admin/hotels/onboarding_sessions' %>
 <% salespersons_active = controller_name == 'salespersons' %>
 <% margin_rules_active = controller_name == 'margin_rules' %>
 <% setup_fee_rules_active = controller_name == 'setup_fee_rules' %>
