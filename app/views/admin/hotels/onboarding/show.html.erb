@@ -37,10 +37,10 @@
 
         <div class="px-6 py-6 sm:px-8 space-y-6">
           <!-- Add Session Form -->
-          <%= render "onboarding_session_form", session: OnboardingSession.new %>
+          <%= render "admin/hotels/onboarding_session_form", session: OnboardingSession.new %>
 
           <!-- Sessions List -->
-          <%= render "onboarding_sessions_list", sessions: @sessions, hotel: @hotel %>
+          <%= render "admin/hotels/onboarding_sessions_list", sessions: @sessions, hotel: @hotel %>
         </div>
       </section>
     </div>

@@ -68,7 +68,7 @@ RSpec.describe "Admin::OnboardingTracker", type: :request do
     end
 
     it "renders the tracker filters and formatted scheduled sessions" do
-      get onboarding_admin_hotels_path
+      get onboarding_admin_hotels_path(format: :html)
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('data-controller="onboarding-tracker-filter"')
@@ -89,7 +89,7 @@ RSpec.describe "Admin::OnboardingTracker", type: :request do
     end
 
     it "sorts hotels from the shortest onboarding period to the longest" do
-      get onboarding_admin_hotels_path
+      get onboarding_admin_hotels_path(format: :html)
 
       expect(response).to have_http_status(:ok)
 

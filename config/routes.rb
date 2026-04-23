@@ -104,23 +104,22 @@ Rails.application.routes.draw do
     get "analytics", to: "dashboard#analytics"
     resources :hotels do
       collection do
-        get :onboarding, action: :onboarding_index
+        get :onboarding, to: "hotels/onboarding#index", as: :onboarding
       end
       member do
-        get :onboarding
-        post :create_onboarding_session
-        get :show_onboarding_session
-        get :edit_onboarding_session
-        patch :update_onboarding_session
-        post :complete_onboarding_session
-        post :cancel_onboarding_session
-        delete :destroy_onboarding_session
-        post :complete_onboarding
-        post :save_onboarding_period
-        post :approve
-        post :suspend
-        post :onboard_channex
-        post :disconnect_channex
+        get :onboarding, to: "hotels/onboarding#show"
+        post :complete_onboarding, to: "hotels/onboarding#complete"
+        post :save_onboarding_period, to: "hotels/onboarding#save_period"
+        post :approve, to: "hotels/status#approve"
+        post :suspend, to: "hotels/status#suspend"
+        post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
+        post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
+      end
+      resources :onboarding_sessions, module: :hotels do
+        member do
+          post :complete
+          post :cancel
+        end
       end
     end
     resources :bookings, only: [ :index, :show ] # Added stub

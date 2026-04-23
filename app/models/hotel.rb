@@ -229,6 +229,26 @@ class Hotel < ApplicationRecord
     end
   end
 
+  def mtd_bookings
+    bookings.revenue_generating.where(created_at: Time.current.all_month)
+  end
+
+  def gross_revenue_mtd
+    mtd_bookings.sum(:total_amount)
+  end
+
+  def wastays_margin_mtd
+    mtd_bookings.sum("COALESCE(margin_amount, 0)")
+  end
+
+  def hotel_net_earnings_mtd
+    mtd_bookings.sum("COALESCE(net_amount, 0)")
+  end
+
+  def booking_count_mtd
+    mtd_bookings.count
+  end
+
   private
 
   def photos_limit_not_exceeded
