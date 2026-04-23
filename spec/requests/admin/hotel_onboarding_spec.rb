@@ -46,7 +46,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
     end
 
     it "lists training sessions in increasing date and time order" do
-      get onboarding_admin_hotel_path(hotel)
+      get onboarding_admin_hotel_path(hotel, format: :html)
 
       expect(response).to have_http_status(:ok)
 
@@ -94,7 +94,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
     end
 
     it "returns a turbo stream update after editing a session" do
-      patch update_onboarding_session_admin_hotel_path(hotel, session_id: second_session.id),
+      patch admin_hotel_onboarding_session_path(hotel, second_session),
             params: {
               trainer_name: "Beta Trainer",
               scheduled_at: "2026-04-23T09:00",
@@ -172,7 +172,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
 
     it "deletes the onboarding session and returns to the updated list" do
       expect do
-        delete destroy_onboarding_session_admin_hotel_path(hotel, session_id: session.id),
+        delete admin_hotel_onboarding_session_path(hotel, session),
                headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
       end.to change(OnboardingSession, :count).by(-1)
 
@@ -207,7 +207,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
     end
 
     it "does not show delete for completed sessions" do
-      get onboarding_admin_hotel_path(hotel)
+      get onboarding_admin_hotel_path(hotel, format: :html)
 
       expect(response).to have_http_status(:ok)
 
