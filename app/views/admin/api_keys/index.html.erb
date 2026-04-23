@@ -67,7 +67,7 @@
         <p class="mt-1 text-sm font-medium text-slate-600">Active and revoked credentials for platform integrations.</p>
       </div>
 
-      <span class="text-sm font-medium text-slate-500">Total <span class="font-semibold text-slate-900"><%= @api_keys.size %></span></span>
+      <span class="text-sm font-medium text-slate-500">Total <span class="font-semibold text-slate-900"><%= @all_api_keys.size %></span></span>
     </div>
 
     <div id="admin-api-keys-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
@@ -172,6 +172,10 @@
           <% end %>
         </tbody>
       </table>
+    </div>
+
+    <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+      <%= paginate @api_keys %>
     </div>
   </div>
 </div>

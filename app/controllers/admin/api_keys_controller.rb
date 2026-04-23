@@ -1,6 +1,7 @@
 class Admin::ApiKeysController < Admin::BaseController
   def index
-    @api_keys = ApiKey.all.order(created_at: :desc)
+    @all_api_keys = ApiKey.all.order(created_at: :desc)
+    @api_keys = @all_api_keys.page(params[:page]).per(25)
     @generated_api_key_token = session.delete(:generated_api_key_token)
     @generated_api_key_name = session.delete(:generated_api_key_name)
   end

@@ -2,10 +2,10 @@
   <%= render "shared/navigation/admin_breadcrumbs", current: "Hotels" %>
 <% end %>
 
-<% total_hotels = @hotels.size %>
-<% pending_hotels = @hotels.count { |hotel| hotel.status == "pending_review" } %>
-<% active_hotels = @hotels.count { |hotel| ["approved", "live"].include?(hotel.status) } %>
-<% suspended_hotels = @hotels.count { |hotel| hotel.status == "suspended" } %>
+<% total_hotels = @all_hotels.size %>
+<% pending_hotels = @all_hotels.count { |hotel| hotel.status == "pending_review" } %>
+<% active_hotels = @all_hotels.count { |hotel| ["approved", "live"].include?(hotel.status) } %>
+<% suspended_hotels = @all_hotels.count { |hotel| hotel.status == "suspended" } %>
 
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
   <div class="px-4 md:px-0">
@@ -175,6 +175,10 @@
           <% end %>
         </tbody>
       </table>
+    </div>
+
+    <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+      <%= paginate @hotels %>
     </div>
   </div>
 </div>

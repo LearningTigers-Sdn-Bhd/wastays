@@ -8,9 +8,11 @@ class Admin::ReconciliationsController < Admin::BaseController
     @summary_processed_events = base_scope.where(status: "processed").count
     @gateway_options = base_scope.reorder(nil).distinct.pluck(:gateway).compact.sort
 
-    @events = base_scope
-    @events = @events.where(status: params[:status]) if params[:status].present?
-    @events = @events.where(gateway: params[:gateway]) if params[:gateway].present?
+    @all_events = base_scope
+    @all_events = @all_events.where(status: params[:status]) if params[:status].present?
+    @all_events = @all_events.where(gateway: params[:gateway]) if params[:gateway].present?
+
+    @events = @all_events.page(params[:page]).per(25)
   end
 
   def show

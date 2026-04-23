@@ -26,7 +26,8 @@ class Admin::SetupFeeRulesController < Admin::BaseController
   private
 
   def load_index_dependencies
-    @setup_fee_rules = SetupFeeRule.includes(:settable).order(created_at: :desc)
+    @all_setup_fee_rules = SetupFeeRule.includes(:settable).order(created_at: :desc)
+    @setup_fee_rules = @all_setup_fee_rules.page(params[:page]).per(25)
     @new_rule ||= SetupFeeRule.new(currency: SetupFeeRule::CURRENCY)
     @hotels = Hotel.order(:name)
   end

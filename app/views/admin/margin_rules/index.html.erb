@@ -2,10 +2,10 @@
   <%= render "shared/navigation/admin_breadcrumbs", current: "Margin Settings" %>
 <% end %>
 
-<% rules = @margin_rules.to_a %>
-<% total_rules = rules.size %>
-<% active_rules = rules.count { |rule| rule.status == "active" } %>
-<% global_defaults = rules.count { |rule| rule.settable_type.blank? } %>
+<% all_rules = @all_margin_rules.to_a %>
+<% total_rules = all_rules.size %>
+<% active_rules = all_rules.count { |rule| rule.status == "active" } %>
+<% global_defaults = all_rules.count { |rule| rule.settable_type.blank? } %>
 <% override_rules = total_rules - global_defaults %>
 
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
@@ -103,8 +103,8 @@
       </div>
 
       <div id="admin-margin-rules-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
-        <% if rules.any? %>
-          <% rules.each do |rule| %>
+        <% if @margin_rules.any? %>
+          <% @margin_rules.each do |rule| %>
             <% status_classes = rule.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200" %>
             <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
                  ["Global Default", "Applied when no hotel or room override exists", "text-blue-700"]
@@ -154,8 +154,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 bg-white">
-            <% if rules.any? %>
-              <% rules.each_with_index do |rule, index| %>
+            <% if @margin_rules.any? %>
+              <% @margin_rules.each_with_index do |rule, index| %>
                 <% status_classes = rule.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200" %>
                 <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
                      ["Global Default", "Applied when no hotel or room override exists", "text-blue-700"]
@@ -196,7 +196,12 @@
             <% end %>
           </tbody>
         </table>
-      </div>
-    </div>
-  </div>
+        </div>
+
+        <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+        <%= paginate @margin_rules %>
+        </div>
+        </div>
+        </div>
+
 </div>

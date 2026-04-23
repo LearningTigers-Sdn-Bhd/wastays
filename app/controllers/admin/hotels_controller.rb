@@ -3,7 +3,8 @@ class Admin::HotelsController < Admin::BaseController
   before_action :load_salespersons, only: [ :new, :create, :edit, :update ]
 
   def index
-    @hotels = Hotel.all.order(created_at: :desc)
+    @all_hotels = Hotel.all.order(created_at: :desc)
+    @hotels = @all_hotels.page(params[:page]).per(25)
   end
 
   def show
