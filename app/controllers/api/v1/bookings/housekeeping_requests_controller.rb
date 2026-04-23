@@ -7,7 +7,10 @@ class Api::V1::Bookings::HousekeepingRequestsController < Api::V1::BaseControlle
     @housekeeping_request.requested_at ||= Time.current
 
     if @housekeeping_request.save
-      render json: @housekeeping_request, status: :created
+      render json: {
+        message: "Housekeeping request created successfully.",
+        housekeeping_request: @housekeeping_request
+      }, status: :created
     else
       render json: { errors: @housekeeping_request.errors.full_messages }, status: :unprocessable_entity
     end

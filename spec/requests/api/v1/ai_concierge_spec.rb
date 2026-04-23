@@ -41,20 +41,25 @@ RSpec.describe "AI Concierge API", type: :request do
            headers: headers
 
       expect(response).to have_http_status(:created)
+      json = JSON.parse(response.body)
+      expect(json["message"]).to eq("Housekeeping request created successfully.")
+      expect(json["housekeeping_request"]["request_details"]).to eq("Need extra towels")
       expect(booking.housekeeping_requests.count).to eq(1)
-      expect(booking.housekeeping_requests.first.request_details).to eq("Need extra towels")
-    end
-  end
+      end
+      end
 
-  describe "POST /api/v1/bookings/:id/complaint_requests" do
-    it "creates a complaint request for the booking" do
-      post "/api/v1/bookings/#{booking.id}/complaint_requests",
+      describe "POST /api/v1/bookings/:id/complaint_requests" do
+      it "creates a complaint request for the booking" do
+      post "/api/v1/bookings/#{booking.id}/complaint_requests", 
            params: { complaint_request: { complaint_details: "AC not cold" } }.to_json,
            headers: headers
 
       expect(response).to have_http_status(:created)
+      json = JSON.parse(response.body)
+      expect(json["message"]).to eq("Complaint request created successfully.")
+      expect(json["complaint_request"]["complaint_details"]).to eq("AC not cold")
       expect(booking.complaint_requests.count).to eq(1)
-      expect(booking.complaint_requests.first.complaint_details).to eq("AC not cold")
-    end
-  end
+      end
+      end
+
 end
