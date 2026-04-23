@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ChannelManagers
   class DisconnectService
     Result = Struct.new(:success?, :error)

@@ -1,7 +1,8 @@
-class Admin::HotelsController < Admin::BaseController
-  before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend, :onboard_channex, :disconnect_channex, :cancel_onboarding_session, :destroy_onboarding_session ]
-  before_action :load_salespersons, only: [ :new, :create, :edit, :update ]
+# frozen_string_literal: true
 
+class Admin::HotelsController < Admin::BaseController
+  before_action :set_hotel, only: [ :show, :edit, :update ]
+  before_action :load_salespersons, only: [ :new, :create, :edit, :update ]
 
   def index
     @all_hotels = Hotel.all.order(created_at: :desc)
@@ -50,30 +51,6 @@ class Admin::HotelsController < Admin::BaseController
 
   def set_hotel
     @hotel = Hotel.find(params[:id])
-  end
-
-  def load_salespersons
-    @salespersons = current_user.account.users.where(role: "salesperson").order(:name)
-  end
-
-  def create_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :salesperson_id, :preferred_channel_manager).merge(status: "approved")
-  end
-
-  def update_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :salesperson_id, :salesperson_name, :salesperson_email, :preferred_channel_manager)
-  end
-
-  def account_params
-    params.require(:account).permit(:name)
-  end
-
-  def user_params
-    params.require(:user).permit(:name, :email)
-  end
-
-  def onboarding_session_params
-    params.permit(:trainer_name, :scheduled_at, :meeting_link)
   end
 
   def load_salespersons

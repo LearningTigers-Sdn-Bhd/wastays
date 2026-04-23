@@ -251,6 +251,21 @@ class Hotel < ApplicationRecord
     mtd_bookings.count
   end
 
+  def active_setup_fee
+    SetupFeeRule.active.find_by(settable: self) ||
+      SetupFeeRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ])
+  end
+
+  def setup_fee_source
+    if SetupFeeRule.active.find_by(settable: self)
+      "Hotel Override"
+    elsif SetupFeeRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ]).present?
+      "Global Default"
+    else
+      "Not Configured"
+    end
+  end
+
   private
 
   def photos_limit_not_exceeded
