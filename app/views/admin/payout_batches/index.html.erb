@@ -122,11 +122,9 @@
               <% end %>
             </tbody>
           </table>
-          <% if @pending_batches.total_pages > 1 %>
-            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <%= paginate @pending_batches, param_name: :pending_page, params: { tab: 'pending' } %>
-            </div>
-          <% end %>
+          <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+            <%= paginate @pending_batches, param_name: :pending_page, params: { tab: 'pending' } %>
+          </div>
         </div>
       </div>
 
@@ -168,11 +166,9 @@
               <% end %>
             </tbody>
           </table>
-          <% if @paid_batches.total_pages > 1 %>
-            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <%= paginate @paid_batches, param_name: :paid_page, params: { tab: 'paid' } %>
-            </div>
-          <% end %>
+          <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+            <%= paginate @paid_batches, param_name: :paid_page, params: { tab: 'paid' } %>
+          </div>
         </div>
       </div>
     </div>

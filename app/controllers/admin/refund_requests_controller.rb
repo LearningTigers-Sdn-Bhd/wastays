@@ -3,14 +3,15 @@ module Admin
     before_action :set_refund_request, only: [ :show, :approve, :reject, :complete ]
 
     def index
-      @refund_requests = RefundRequest.includes(booking: :hotel).order(created_at: :desc)
+      @all_refund_requests = RefundRequest.includes(booking: :hotel).order(created_at: :desc)
+      @refund_requests = @all_refund_requests.page(params[:page]).per(25)
 
-      @refund_status_counts = @refund_requests.except(:order).group(:status).count
+      @refund_status_counts = @all_refund_requests.except(:order).group(:status).count
       @pending_count   = @refund_status_counts.fetch("pending", 0)
       @approved_count  = @refund_status_counts.fetch("approved", 0)
       @completed_count = @refund_status_counts.fetch("completed", 0)
       @rejected_count  = @refund_status_counts.fetch("rejected", 0)
-      @total_refunds   = @refund_requests.size
+      @total_refunds   = @all_refund_requests.size
     end
 
     def show; end

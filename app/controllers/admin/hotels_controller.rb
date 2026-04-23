@@ -2,7 +2,8 @@ class Admin::HotelsController < Admin::BaseController
   before_action :set_hotel, only: [ :show, :edit, :update, :approve, :suspend, :onboard_channex, :disconnect_channex ]
 
   def index
-    @hotels = Hotel.all.order(created_at: :desc)
+    @all_hotels = Hotel.all.order(created_at: :desc)
+    @hotels = @all_hotels.page(params[:page]).per(25)
   end
 
   def show
