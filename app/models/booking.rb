@@ -5,6 +5,7 @@ class Booking < ApplicationRecord
   belongs_to :hotel
   belongs_to :payout_batch, optional: true
   has_many :booking_rooms, dependent: :destroy
+  accepts_nested_attributes_for :booking_rooms
   has_many :booking_notes, dependent: :destroy
   has_many :booking_guests, dependent: :destroy
   has_many :guests, through: :booking_guests
@@ -159,6 +160,23 @@ class Booking < ApplicationRecord
 
   def tourism_tax?
     tourism_tax_applied && tourism_tax_amount.positive?
+  end
+
+  def room_numbers
+    booking_rooms.pluck(:room_number).compact.join(", ")
+  end
+
+  def self.lookup_by_phone(phone)
+    # Normalize phone: remove everything except digits
+    normalized_query = phone.to_s.gsub(/\D/, "")
+    return none if normalized_query.blank?
+
+    # Fuzzy match: match the last 9 digits of the phone number
+    # This covers cases with different country codes or leading zeros
+    suffix = normalized_query.last(9)
+
+    # Search in guest_phone field of bookings
+    where("regexp_replace(guest_phone, '\D', '', 'g') LIKE ?", "%#{suffix}")
   end
 
   private

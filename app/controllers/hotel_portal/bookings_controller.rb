@@ -75,6 +75,14 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def check_in
     transition_status("checked_in", params[:checked_in_at], "Guest checked in successfully.")
+    @booking = current_hotel.bookings.find(params[:id])
+
+    # Allow updating room numbers during check-in
+    if @booking.update(booking_params.merge(status: "checked_in", checked_in_at: resolve_event_time(:checked_in_at)))
+      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest has been checked in."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to check in guest."
+    end
   end
 
   def check_out
@@ -87,6 +95,11 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   private
 
+  def booking_params
+    params.fetch(:booking, {}).permit(
+      :guest_name, :guest_email, :guest_phone, :status, :checked_in_at, :checked_out_at,
+      booking_rooms_attributes: [ :id, :room_number ]
+    )
   def transition_status(status, timestamp, success_notice)
     @booking = current_hotel.bookings.find(params[:id])
     result = Bookings::TransitionStatus.new(
@@ -94,6 +107,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       status: status,
       timestamp: timestamp
     ).call
+  end
 
     if result.success?
       redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice

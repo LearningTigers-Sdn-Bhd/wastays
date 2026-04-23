@@ -149,6 +149,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_24_104502) do
     t.jsonb "occupancy_snapshot", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "room_number"
     t.index ["booking_id"], name: "index_booking_rooms_on_booking_id"
     t.index ["room_type_id"], name: "index_booking_rooms_on_room_type_id"
   end
