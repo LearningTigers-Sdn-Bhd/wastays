@@ -271,41 +271,75 @@
                 <pre class="text-[11px] font-mono text-white leading-relaxed"><code data-clipboard-target="source">curl -X GET "https://wastays.com/api/v1/bookings/lookup?phone=+60123456789" \
      -H "Authorization: Bearer YOUR_API_KEY_HERE"</code></pre>
               </div>
-              <div class="p-3 bg-neutral-bg rounded-lg border border-neutral-border mt-4">
-                <p class="text-[10px] font-black uppercase text-neutral-text-secondary mb-2">Example Output</p>
-                <pre class="text-[10px] font-mono text-brand-primary break-all"><code>{
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div class="p-3 bg-neutral-bg rounded-lg border border-neutral-border">
+                  <p class="text-[10px] font-black uppercase text-emerald-600 mb-2">Success Response (200 OK)</p>
+                  <pre class="text-[10px] font-mono text-emerald-600 break-all"><code>{
   "id": 123,
   "confirmation_token": "WS-ABC12345",
   "guest_name": "John Doe",
   "room_numbers": "101, 102",
   "status": "checked_in"
 }</code></pre>
+                </div>
+                <div class="p-3 bg-neutral-bg rounded-lg border border-neutral-border">
+                  <p class="text-[10px] font-black uppercase text-red-600 mb-2">Error Response (404 Not Found)</p>
+                  <pre class="text-[10px] font-mono text-red-600 break-all"><code>{
+  "error": "No active booking found for this phone number"
+}</code></pre>
+                </div>
               </div>
             </div>
 
             <hr class="border-neutral-border">
 
-            <div data-controller="clipboard">
-              <div class="flex justify-between items-center mb-2">
-                <h3 class="text-lg font-bold text-neutral-text-primary">2. Submit Guest Request</h3>
-                <button data-clipboard-target="button" data-action="clipboard#copy" class="text-[10px] font-bold text-neutral-text-secondary hover:text-brand-primary px-2 py-1 rounded border border-neutral-border transition-all flex items-center gap-x-1">
-                  <svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  Copy CURL
-                </button>
+            <div class="space-y-6">
+              <div data-controller="clipboard">
+                <div class="flex justify-between items-center mb-2">
+                  <h3 class="text-lg font-bold text-neutral-text-primary">2. Submit Housekeeping Request</h3>
+                  <button data-clipboard-target="button" data-action="clipboard#copy" class="text-[10px] font-bold text-neutral-text-secondary hover:text-brand-primary px-2 py-1 rounded border border-neutral-border transition-all flex items-center gap-x-1">
+                    <svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    Copy CURL
+                  </button>
+                </div>
+                <p class="text-sm text-neutral-text-secondary mb-4">Create a housekeeping task (e.g. extra towels, cleaning) for the guest.</p>
+                <div class="bg-neutral-text-primary p-4 rounded-xl overflow-x-auto shadow-inner">
+                  <pre class="text-[11px] font-mono text-white leading-relaxed"><code data-clipboard-target="source">curl -X POST "https://wastays.com/api/v1/bookings/:id/housekeeping_requests" \
+     -H "Authorization: Bearer YOUR_API_KEY_HERE" \
+     -H "Content-Type: application/json" \
+     -d '{ "housekeeping_request": { "request_details": "Extra pillow" } }'</code></pre>
+                </div>
               </div>
-              <p class="text-sm text-neutral-text-secondary mb-4">Post housekeeping or complaint requests directly from the AI agent.</p>
-              <div class="bg-neutral-text-primary p-4 rounded-xl overflow-x-auto shadow-inner">
-                <pre class="text-[11px] font-mono text-white leading-relaxed"><code data-clipboard-target="source"># For Housekeeping
-curl -X POST "https://wastays.com/api/v1/bookings/:id/housekeeping_requests" \
-     -H "Authorization: Bearer YOUR_API_KEY_HERE" \
-     -H "Content-Type: application/json" \
-     -d '{ "housekeeping_request": { "request_details": "Extra pillow" } }'
 
-# For Complaints
-curl -X POST "https://wastays.com/api/v1/bookings/:id/complaint_requests" \
+              <div data-controller="clipboard">
+                <div class="flex justify-between items-center mb-2">
+                  <h3 class="text-lg font-bold text-neutral-text-primary">3. Submit Complaint Request</h3>
+                  <button data-clipboard-target="button" data-action="clipboard#copy" class="text-[10px] font-bold text-neutral-text-secondary hover:text-brand-primary px-2 py-1 rounded border border-neutral-border transition-all flex items-center gap-x-1">
+                    <svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    Copy CURL
+                  </button>
+                </div>
+                <p class="text-sm text-neutral-text-secondary mb-4">Log a guest complaint (e.g. AC leak, noisy neighbor) for staff attention.</p>
+                <div class="bg-neutral-text-primary p-4 rounded-xl overflow-x-auto shadow-inner">
+                  <pre class="text-[11px] font-mono text-white leading-relaxed"><code data-clipboard-target="source">curl -X POST "https://wastays.com/api/v1/bookings/:id/complaint_requests" \
      -H "Authorization: Bearer YOUR_API_KEY_HERE" \
      -H "Content-Type: application/json" \
-     -d '{ "complaint_request": { "complaint_details": "AC leak" } }'</code></pre>
+     -d '{ "complaint_request": { "complaint_details": "AC is leaking water" } }'</code></pre>
+                </div>
+              </div>
+
+              <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">Common Error Responses</h4>
+                <div class="space-y-3">
+                  <div>
+                    <p class="text-[10px] font-bold text-slate-700">404 Not Found (Invalid ID)</p>
+                    <pre class="text-[10px] font-mono text-red-600"><code>{ "error": "Booking not found" }</code></pre>
+                  </div>
+                  <div>
+                    <p class="text-[10px] font-bold text-slate-700">422 Unprocessable Entity (Missing Fields)</p>
+                    <pre class="text-[10px] font-mono text-red-600"><code>{ "errors": ["Request details can't be blank"] }</code></pre>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
