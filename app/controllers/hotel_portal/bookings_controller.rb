@@ -1,16 +1,18 @@
 class HotelPortal::BookingsController < HotelPortal::BaseController
   def index
-    @bookings = current_hotel.bookings.order(created_at: :desc)
+    @all_bookings = current_hotel.bookings.order(created_at: :desc)
 
     # Simple filtering
     if params[:status].present?
-      @bookings = @bookings.where(status: params[:status])
+      @all_bookings = @all_bookings.where(status: params[:status])
     end
 
     if params[:query].present?
       query = params[:query].strip
-      @bookings = @bookings.where("guest_name ILIKE :q OR guest_email ILIKE :q OR guest_phone ILIKE :q OR confirmation_token ILIKE :q", q: "%#{query}%")
+      @all_bookings = @all_bookings.where("guest_name ILIKE :q OR guest_email ILIKE :q OR guest_phone ILIKE :q OR confirmation_token ILIKE :q", q: "%#{query}%")
     end
+
+    @bookings = @all_bookings.page(params[:page]).per(25)
   end
 
   def show

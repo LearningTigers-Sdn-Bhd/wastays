@@ -17,7 +17,8 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
                              .search(params[:q])
                              .includes(booking_rooms: :room_type)
     @base_bookings = @bookings
-    @daily_data = Booking.daily_revenue_data(@bookings)
+    @daily_data = Booking.daily_revenue_data(@bookings).to_a
+    @paginated_daily_data = Kaminari.paginate_array(@daily_data).page(params[:page]).per(25)
   end
 
   def payouts

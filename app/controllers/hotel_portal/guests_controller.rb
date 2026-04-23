@@ -68,9 +68,10 @@ module HotelPortal
         .joins(:booking_guests)
         .where(hotel_id: current_hotel.id, booking_guests: { guest_id: @guest.id })
 
-      @bookings = guest_booking_scope
+      @all_bookings = guest_booking_scope
         .includes(:pre_checkin)
         .order(check_out: :desc, id: :desc)
+      @bookings = @all_bookings.page(params[:page]).per(25)
 
       @currency_totals = guest_booking_scope
         .reorder(nil)

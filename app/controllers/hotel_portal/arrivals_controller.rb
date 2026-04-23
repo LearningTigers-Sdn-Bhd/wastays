@@ -16,7 +16,8 @@ class HotelPortal::ArrivalsController < HotelPortal::BaseController
       )
     end
 
-    @arrivals = arrivals_scope.order(created_at: :asc)
+    @all_arrivals = arrivals_scope.order(created_at: :asc)
+    @arrivals = @all_arrivals.page(params[:page]).per(25)
 
     @today_count = current_hotel.bookings.active.where(check_in: Date.today).count
     @tomorrow_count = current_hotel.bookings.active.where(check_in: Date.tomorrow).count
