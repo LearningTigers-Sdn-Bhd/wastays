@@ -4,7 +4,7 @@
 <tr id="<%= dom_id(salesperson, :row) %>" data-controller="salesperson-inline-edit" data-salesperson-inline-edit-start-editing-value="<%= local_assigns.fetch(:editing, false) %>" class="transition-colors hover:bg-slate-100/80 <%= local_assigns.fetch(:index, 0).even? ? 'bg-white' : 'bg-slate-50/55' %>">
   <td class="px-6 py-4 align-top sm:px-8">
     <div data-salesperson-inline-edit-target="nameDisplay" class="text-sm font-medium text-slate-700">
-      <%= salesperson.name.capitalize %>
+      <%= salesperson.name.split.map(&:capitalize).join(' ') %>
     </div>
     <%= text_field_tag "user[name]", salesperson.name, form: form_id, disabled: true, data: { salesperson_inline_edit_target: "nameInput" }, class: "hidden w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0 cursor-not-allowed" %>
   </td>

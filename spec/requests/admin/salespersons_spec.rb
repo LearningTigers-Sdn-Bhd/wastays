@@ -43,10 +43,10 @@ RSpec.describe "Admin::Salespersons", type: :request do
       expect(response.body).to include("Salespersons")
       expect(response.body).to include('placeholder="Search name, email, or hotel..."')
       expect(response.body).to include('data-controller="live-filter"')
-      expect(response.body).to include("Mira Tan #{token}")
+      expect(response.body).to include("Mira Tan #{token.capitalize}")
       expect(response.body).to include("mira-#{token}@example.com")
       expect(response.body).to include("Luma Stay #{token}")
-      expect(response.body).to include("Farid Osman #{token}")
+      expect(response.body).to include("Farid Osman #{token.capitalize}")
       expect(response.body).to include("Ocean Breeze #{token}")
     end
 
@@ -58,8 +58,8 @@ RSpec.describe "Admin::Salespersons", type: :request do
       doc = Nokogiri::HTML(response.body)
       names = doc.css('#salespersons_results [data-salesperson-inline-edit-target="nameDisplay"]').map(&:text).map(&:strip)
 
-      expect(names).to include("Mira Tan #{token}")
-      expect(names).not_to include("Farid Osman #{token}")
+      expect(names).to include("Mira Tan #{token.capitalize}")
+      expect(names).not_to include("Farid Osman #{token.capitalize}")
     end
 
     it "filters salespersons by matching email" do
@@ -70,8 +70,8 @@ RSpec.describe "Admin::Salespersons", type: :request do
       doc = Nokogiri::HTML(response.body)
       names = doc.css('#salespersons_results [data-salesperson-inline-edit-target="nameDisplay"]').map(&:text).map(&:strip)
 
-      expect(names).to include("Farid Osman #{token}")
-      expect(names).not_to include("Mira Tan #{token}")
+      expect(names).to include("Farid Osman #{token.capitalize}")
+      expect(names).not_to include("Mira Tan #{token.capitalize}")
     end
   end
 

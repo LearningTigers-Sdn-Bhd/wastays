@@ -370,22 +370,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.index ["request_id"], name: "index_observation_entries_on_request_id"
     t.index ["status"], name: "index_observation_entries_on_status"
     t.index ["tags"], name: "index_observation_entries_on_tags", using: :gin
-<<<<<<< HEAD
-    
-  create_table "onboarding_sessions", force: :cascade do |t|
-    t.bigint "hotel_id", null: false
-    t.bigint "trainer_id", null: false
-    t.string "meeting_link"
-    t.datetime "scheduled_at"
-    t.datetime "completed_at"
-    t.string "status", default: "scheduled", null: false
-    t.text "notes"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["hotel_id"], name: "index_onboarding_sessions_on_hotel_id"
-    t.index ["trainer_id"], name: "index_onboarding_sessions_on_trainer_id"
-=======
->>>>>>> 79d4e63 (fix: resolve CI test failures)
   end
 
   create_table "onboarding_sessions", force: :cascade do |t|
@@ -412,6 +396,32 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["settable_type", "settable_id"], name: "index_payment_settings_on_settable"
+  end
+
+  create_table "payment_transactions", force: :cascade do |t|
+    t.bigint "booking_quote_id"
+    t.bigint "booking_id"
+    t.string "gateway", null: false
+    t.string "external_reference"
+    t.string "gateway_order_id"
+    t.string "signature"
+    t.string "status", default: "pending", null: false
+    t.string "payment_method"
+    t.integer "amount_subunits"
+    t.string "currency"
+    t.string "event_source"
+    t.datetime "verified_at"
+    t.datetime "captured_at"
+    t.text "error_message"
+    t.jsonb "metadata", default: {}, null: false
+    t.jsonb "gateway_payload", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_payment_transactions_on_booking_id"
+    t.index ["booking_quote_id"], name: "index_payment_transactions_on_booking_quote_id"
+    t.index ["gateway", "external_reference"], name: "idx_payment_transactions_on_gateway_and_external_reference", unique: true, where: "(external_reference IS NOT NULL)"
+    t.index ["gateway", "gateway_order_id"], name: "idx_payment_transactions_on_gateway_and_order_id", unique: true, where: "(gateway_order_id IS NOT NULL)"
+    t.index ["status"], name: "index_payment_transactions_on_status"
   end
 
   create_table "payout_batches", force: :cascade do |t|

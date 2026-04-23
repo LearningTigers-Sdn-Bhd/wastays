@@ -107,19 +107,6 @@ Rails.application.routes.draw do
         get :onboarding, to: "hotels/onboarding#index", as: :onboarding
       end
       member do
-<<<<<<< HEAD
-        get :onboarding
-        post :create_onboarding_session
-        post :complete_onboarding_session
-        post :cancel_onboarding_session
-        delete :destroy_onboarding_session
-        post :complete_onboarding
-        post :save_onboarding_period
-        post :approve
-        post :suspend
-        post :onboard_channex
-        post :disconnect_channex
-=======
         get :onboarding, to: "hotels/onboarding#show"
         post :complete_onboarding, to: "hotels/onboarding#complete"
         post :save_onboarding_period, to: "hotels/onboarding#save_period"
@@ -133,11 +120,9 @@ Rails.application.routes.draw do
           post :complete
           post :cancel
         end
->>>>>>> 931e4b8 (refactor: clean up admin hotels controller and extract business logic)
       end
     end
-
-    resources :bookings, only: [ :index, :show ]
+    resources :bookings, only: [ :index, :show ] # Added stub
     resources :salespersons, only: [ :index, :create, :update, :destroy ]
     resources :reconciliations, only: [ :index, :show ] do
       member do
@@ -195,12 +180,13 @@ Rails.application.routes.draw do
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
     get "dashboard", to: "dashboard#index", as: :dashboard
+    post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
+
     resources :onboarding_sessions, only: [ :index ] do
       member do
         post :cancel
       end
     end
-    post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
     resource :profile, only: [ :edit, :update ]
     delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo

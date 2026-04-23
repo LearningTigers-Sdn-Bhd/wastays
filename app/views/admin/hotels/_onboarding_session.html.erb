@@ -29,11 +29,7 @@
           <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
         <div>
-<<<<<<< HEAD
-          <p class="text-sm font-bold text-slate-900"><%= session.trainer_name.presence&.titleize || "No trainer assigned" %></p>
-=======
           <p class="text-sm font-bold text-slate-900"><%= session.trainer_name.presence || "No trainer assigned" %></p>
->>>>>>> aa7858e (feat: add delete button for onboarding training sessions in admin page)
           <p class="text-xs text-slate-500">Scheduled: <%= session.scheduled_at.strftime("%d %b %Y at %I:%M %p") %></p>
           <% if session.status == "cancelled" %>
             <div class="mt-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs text-rose-700">
@@ -48,7 +44,7 @@
       <div class="flex flex-wrap items-center gap-3">
         <% if session.meeting_link.present? %>
           <% if session.status == "scheduled" %>
-            <%= link_to session.formatted_meeting_link, target: "_blank", class: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100 hover:bg-blue-100 transition" do %>
+            <%= link_to sanitize_href(session.formatted_meeting_link), target: "_blank", class: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100 hover:bg-blue-100 transition" do %>
               <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
               Join Call
             <% end %>
@@ -75,11 +71,7 @@
                     data-cancel-panel-target="trigger"
                     data-action="click->cancel-panel#toggle"
                     aria-expanded="false"
-<<<<<<< HEAD
-                    class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100">
-=======
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-xs font-semibold transition hover:bg-rose-100">
->>>>>>> aa7858e (feat: add delete button for onboarding training sessions in admin page)
               Cancel
             </button>
             <div data-cancel-panel-target="panel"
@@ -111,7 +103,6 @@
 
         <% unless session.status == "completed" %>
           <%= button_to admin_hotel_onboarding_session_path(hotel, session),
-          <%= button_to destroy_onboarding_session_admin_hotel_path(hotel, session_id: session.id),
                         method: :delete,
                         form: { class: "inline" },
                         data: { turbo_confirm: "Delete this training session permanently?" },
