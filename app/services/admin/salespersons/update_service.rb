@@ -14,14 +14,8 @@ module Admin
       def call
         ActiveRecord::Base.transaction do
           if @salesperson.update(@params)
-            if @hotel_ids.empty?
-              detach_all_hotels
-              @salesperson.destroy
-              Result.new(true, @salesperson, :destroyed, nil)
-            else
-              sync_hotels
-              Result.new(true, @salesperson, :updated, nil)
-            end
+            sync_hotels
+            Result.new(true, @salesperson, :updated, nil)
           else
             Result.new(false, @salesperson, nil, @salesperson.errors.full_messages.to_sentence)
           end

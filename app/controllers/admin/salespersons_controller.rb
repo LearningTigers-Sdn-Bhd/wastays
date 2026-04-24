@@ -63,12 +63,12 @@ class Admin::SalespersonsController < Admin::BaseController
   end
 
   def handle_update_success(result)
-    notice = result.action == :destroyed ? "Salesperson removed because no hotels are assigned." : "Salesperson updated successfully."
+    notice = "Salesperson updated successfully."
 
     respond_to do |format|
       format.html { redirect_to admin_salespersons_path(query: @query.presence), notice: notice }
       format.turbo_stream do
-        if result.action == :destroyed || (@query.present? && !Admin::Salespersons::Filter.matches?(@salesperson, @query))
+        if @query.present? && !Admin::Salespersons::Filter.matches?(@salesperson, @query)
           render_turbo_remove(notice)
         else
           render_turbo_update(notice)

@@ -56,9 +56,27 @@ export default class extends Controller {
     const rect = this.toggleButton.getBoundingClientRect()
     const menuWidth = Math.max(rect.width, 320)
     const viewportPadding = 16
+    const spacing = 8
+    
+    // Estimate menu height (max-height is 18rem = 288px)
+    // We use a safe estimate to decide flipping
+    const estimatedMenuHeight = 288 
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    
+    let top
+    let isFlipped = false
+
+    // If not enough space below AND more space above, flip it
+    if (spaceBelow < (estimatedMenuHeight + spacing) && spaceAbove > spaceBelow) {
+      top = rect.top - estimatedMenuHeight - spacing
+      isFlipped = true
+    } else {
+      top = rect.bottom + spacing
+    }
+
     const maxLeft = window.innerWidth - menuWidth - viewportPadding
     const left = Math.min(rect.left, maxLeft)
-    const top = rect.bottom + 8
 
     this.menuTarget.style.position = "fixed"
     this.menuTarget.style.left = `${Math.max(viewportPadding, left)}px`
@@ -66,6 +84,9 @@ export default class extends Controller {
     this.menuTarget.style.minWidth = `${menuWidth}px`
     this.menuTarget.style.maxHeight = "18rem"
     this.menuTarget.style.zIndex = "9999"
+
+    // Optional: add a class for styling adjustments if needed
+    this.menuTarget.classList.toggle("dropdown-flipped", isFlipped)
   }
 
   resetFloatingMenu() {

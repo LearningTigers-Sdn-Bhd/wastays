@@ -25,6 +25,12 @@ class Hotel < ApplicationRecord
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
 
+  scope :search, ->(query) {
+    return all if query.blank?
+    q = "%#{sanitize_sql_like(query.to_s.downcase)}%"
+    where("LOWER(hotels.name) LIKE :q OR LOWER(hotels.city) LIKE :q", q: q)
+  }
+
   STATUSES = %w[
     registered
     email_verified
