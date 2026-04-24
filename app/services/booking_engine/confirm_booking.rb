@@ -62,7 +62,8 @@ module BookingEngine
             government_id: @payment_details[:government_id],
             gender: gender,
             country: guest_country,
-            document_type: document_type
+            document_type: document_type,
+            marketing_consent: @payment_details[:marketing_consent]
           ).call
 
           if guest_result.success?

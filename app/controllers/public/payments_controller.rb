@@ -89,6 +89,7 @@ class Public::PaymentsController < ApplicationController
         gender: guest_details[:gender],
         country: guest_details[:country],
         document_type: guest_details[:document_type],
+        marketing_consent: guest_details[:marketing_consent],
         external_reference: external_reference
       }
     ).call
@@ -103,7 +104,8 @@ class Public::PaymentsController < ApplicationController
       government_id: guest_details_params[:government_id],
       gender: guest_details_params[:gender],
       country: guest_details_params[:country],
-      document_type: guest_details_params[:document_type]
+      document_type: guest_details_params[:document_type],
+      marketing_consent: guest_details_params[:marketing_consent]
     }
   end
 
@@ -116,7 +118,7 @@ class Public::PaymentsController < ApplicationController
   end
 
   def guest_details_params
-    params.require(:guest_details).permit(:name, :email, :phone, :government_id, :gender, :country, :document_type)
+    params.require(:guest_details).permit(:name, :email, :phone, :government_id, :gender, :country, :document_type, :marketing_consent)
   end
 
   def guest_details_for_confirmation(metadata)
@@ -132,7 +134,8 @@ class Public::PaymentsController < ApplicationController
       government_id: metadata[:government_id],
       gender: metadata[:gender],
       country: metadata[:country],
-      document_type: metadata[:document_type]
+      document_type: metadata[:document_type],
+      marketing_consent: metadata[:marketing_consent]
     }.compact
   rescue ActionController::ParameterMissing
     nil
