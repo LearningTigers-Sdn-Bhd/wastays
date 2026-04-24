@@ -15,6 +15,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
     { title: "Hotel Details", subtitle: "Property profile and public information", route: :edit_hotel_profile_path, keywords: "hotel details profile property" },
     { title: "My Profile", subtitle: "Signed-in user account profile", route: :edit_hotel_user_profile_path, keywords: "my profile user profile account" },
     { title: "Reports", subtitle: "Financial performance", route: :hotel_reports_path, keywords: "reports financial performance" },
+    { title: "Night Audit", subtitle: "Close day and review blockers", route: :hotel_night_audits_path, keywords: "night audit business date day close blockers warnings" },
     { title: "Weekly Settlements", subtitle: "Payout reports", route: :payouts_hotel_reports_path, keywords: "payouts settlements weekly" },
     { title: "Daily Performance Breakdown", subtitle: "Detailed financial breakdown", route: :breakdown_hotel_reports_path, keywords: "daily performance breakdown financial reports" },
     { title: "Operation Audit Logs", subtitle: "Operational changes history", route: :hotel_audit_logs_path, keywords: "audit logs operations" },

@@ -8,6 +8,7 @@ class User < ApplicationRecord
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :hotels, through: :user_hotel_accesses
   has_many :hotel_roles, through: :user_hotel_accesses, source: :role
+  has_many :performed_night_audits, class_name: "NightAudit", foreign_key: :performed_by_user_id, dependent: :nullify
 
   has_many :assigned_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
 
