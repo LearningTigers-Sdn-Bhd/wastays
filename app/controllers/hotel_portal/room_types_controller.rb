@@ -62,6 +62,6 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   end
 
   def room_type_params
-    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, photos: [])
+    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, photos: [], room_numbers: [])
   end
 end
