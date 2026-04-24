@@ -4,7 +4,7 @@ require "bundler/setup"
 require "tmpdir"
 
 # Ensure RuboCop cache is writable across constrained/local CI environments.
-ENV["RUBOCOP_CACHE_ROOT"] ||= File.join(Dir.tmpdir, "rubocop_cache")
+ENV["RUBOCOP_CACHE_ROOT"] ||= File.join(File.realpath(Dir.tmpdir), "rubocop_cache")
 
 # explicit rubocop config increases performance slightly while avoiding config confusion.
 ARGV.unshift("--config", File.expand_path("../.rubocop.yml", __dir__))
