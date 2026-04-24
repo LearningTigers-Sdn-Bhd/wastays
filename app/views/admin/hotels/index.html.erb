@@ -22,30 +22,8 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4">
-    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Hotels</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= total_hotels %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">All registered hotel accounts</p>
-    </div>
-
-    <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Pending Review</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-600"><%= pending_hotels %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Waiting for admin action</p>
-    </div>
-
-    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Approved / Live</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= active_hotels %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Operational hotel accounts</p>
-    </div>
-
-    <div class="p-6 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Suspended</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-rose-600"><%= suspended_hotels %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Accounts needing follow-up</p>
-    </div>
+  <div id="hotel_stats">
+    <%= render "stats", all_hotels: @all_hotels %>
   </div>
 
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -55,30 +33,27 @@
         <p class="mt-1 text-sm font-medium text-slate-600">Current hotel records with registration and status visibility.</p>
       </div>
 
-      <span class="text-sm font-medium text-slate-500">Total <span class="font-semibold text-slate-900"><%= total_hotels %></span></span>
+      <span class="text-sm font-medium text-slate-500">Total <span class="font-semibold text-slate-900"><%= @all_hotels.size %></span></span>
     </div>
 
     <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50/70 px-6 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
-      <label class="relative block w-full max-w-xl">
-        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        </span>
-        <input type="text" placeholder="Search hotels..." class="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0">
-      </label>
+      <%= form_with url: admin_hotels_path, method: :get, class: "contents", data: { controller: "auto-submit", turbo_frame: "hotels_list", turbo_action: "advance" } do |f| %>
+        <label class="relative block w-full max-w-xl">
+          <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </span>
+          <%= f.text_field :q, value: params[:q], placeholder: "Search hotels...", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "input->auto-submit#submit" } %>
+        </label>
 
-      <div class="flex items-center gap-3">
-        <label for="hotel-status-filter" class="text-sm font-medium text-slate-600">Status</label>
-        <select id="hotel-status-filter" class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0">
-          <option>All Status</option>
-          <option>Pending Review</option>
-          <option>Approved</option>
-          <option>Live</option>
-          <option>Suspended</option>
-        </select>
-      </div>
+        <div class="flex items-center gap-3">
+          <label for="hotel-status-filter" class="text-sm font-medium text-slate-600">Status</label>
+          <%= f.select :status, options_for_select(["All Status", "Pending Review", "Approved", "Live", "Suspended"].map { |s| [s, s.parameterize.underscore] }.map { |l, v| [l, v == "pending_review" ? "pending_review" : (v == "all_status" ? "All Status" : v)] }, params[:status]), {}, id: "hotel-status-filter", class: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submitNow" } %>
+        </div>
+      <% end %>
     </div>
 
-    <div id="admin-hotels-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
+    <%= turbo_frame_tag "hotels_list" do %>
+      <div id="admin-hotels-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
       <% @hotels.each do |hotel| %>
         <% status_dot_classes = case hotel.status
            when "approved", "live"
@@ -104,7 +79,7 @@
         <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <%= link_to admin_hotel_path(hotel), class: "group inline-flex items-center gap-1 text-base font-semibold text-slate-950 hover:text-red-700" do %>
+              <%= link_to admin_hotel_path(hotel), class: "group inline-flex items-center gap-1 text-base font-semibold text-slate-950 hover:text-red-700", data: { turbo_frame: "_top" } do %>
                 <span class="underline decoration-slate-300 underline-offset-2 group-hover:decoration-red-400"><%= hotel.name %></span>
                 <svg class="size-3.5 text-slate-400 group-hover:text-red-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
               <% end %>
@@ -158,7 +133,7 @@
 
             <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium sm:px-8">
-                <%= link_to admin_hotel_path(hotel), class: "group inline-flex items-center gap-1 text-slate-900 hover:text-red-700" do %>
+                <%= link_to admin_hotel_path(hotel), class: "group inline-flex items-center gap-1 text-slate-900 hover:text-red-700", data: { turbo_frame: "_top" } do %>
                   <span class="underline decoration-slate-300 underline-offset-2 group-hover:decoration-red-400"><%= hotel.name %></span>
                   <svg class="size-3.5 text-slate-400 group-hover:text-red-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
                 <% end %>
@@ -180,5 +155,6 @@
     <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
       <%= paginate @hotels %>
     </div>
+    <% end %>
   </div>
 </div>

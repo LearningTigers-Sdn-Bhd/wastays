@@ -116,7 +116,7 @@ RSpec.describe 'Admin::Dashboard', type: :request do
     it 'filters analytics by the selected date range' do
       selected_date = (Time.current.beginning_of_month + 5.days).to_date
 
-      get admin_analytics_path, params: { start_date: selected_date, end_date: selected_date }
+      get admin_analytics_path, params: { date_preset: "custom", start_date: selected_date, end_date: selected_date }
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('RM 300.00')
@@ -131,7 +131,7 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       future_start = Date.current.next_month.beginning_of_month
       future_end = Date.current.next_month.end_of_month
 
-      get admin_analytics_path, params: { start_date: future_start, end_date: future_end }
+      get admin_analytics_path, params: { date_preset: "custom", start_date: future_start, end_date: future_end }
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('No analytics data found.')

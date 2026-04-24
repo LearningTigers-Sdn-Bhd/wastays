@@ -6,11 +6,18 @@
 
     <h1 class="text-3xl font-bold text-gray-900">Pending Review</h1>
     <p class="mt-3 text-sm text-gray-600">Our team is reviewing your hotel setup.</p>
-    <p class="mt-2 text-sm text-gray-600">You have completed the onboarding steps and submitted your property for approval. We will contact you once your hotel is approved.</p>
+    
+    <p class="mt-6 text-sm text-gray-600">You have completed the onboarding steps and submitted your property for approval. We will contact you once your hotel is approved.</p>
     <p class="mt-2 text-sm text-gray-600">You will be able to access the full hotel system once your hotel is approved.</p>
 
     <div class="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
       Status: Pending review
+    </div>
+
+    <div class="mt-4">
+      <%= link_to hotel_onboarding_sessions_path(current_hotel), class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" do %>
+        View Onboarding Sessions
+      <% end %>
     </div>
   </div>
 </div>

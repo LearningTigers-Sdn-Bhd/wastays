@@ -1,3 +1,5 @@
+require_relative "../app/constraints/superadmin_constraint"
+
 Rails.application.routes.draw do
   if Rails.env.development?
     require "letter_opener_web"
@@ -101,14 +103,27 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index"
     get "analytics", to: "dashboard#analytics"
     resources :hotels do
+      collection do
+        get :onboarding, to: "hotels/onboarding#index", as: :onboarding
+      end
       member do
-        post :approve
-        post :suspend
-        post :onboard_channex
-        post :disconnect_channex
+        get :onboarding, to: "hotels/onboarding#show"
+        post :complete_onboarding, to: "hotels/onboarding#complete"
+        post :save_onboarding_period, to: "hotels/onboarding#save_period"
+        post :approve, to: "hotels/status#approve"
+        post :suspend, to: "hotels/status#suspend"
+        post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
+        post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
+      end
+      resources :onboarding_sessions, module: :hotels do
+        member do
+          post :complete
+          post :cancel
+        end
       end
     end
     resources :bookings, only: [ :index, :show ] # Added stub
+    resources :salespersons, only: [ :index, :create, :update, :destroy ]
     resources :reconciliations, only: [ :index, :show ] do
       member do
         post :retry
@@ -166,6 +181,12 @@ Rails.application.routes.draw do
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
     get "dashboard", to: "dashboard#index", as: :dashboard
     post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
+
+    resources :onboarding_sessions, only: [ :index ] do
+      member do
+        post :cancel
+      end
+    end
 
     resource :profile, only: [ :edit, :update ]
     delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo

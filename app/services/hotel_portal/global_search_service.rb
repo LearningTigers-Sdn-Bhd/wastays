@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class HotelPortal::GlobalSearchService < BaseGlobalSearchService
   GROUP_PRIORITY = { "Bookings" => 0, "Pages" => 1, "Requests" => 2 }.freeze
   PAGE_RESULTS = [

@@ -4,6 +4,8 @@ class Hotel < ApplicationRecord
   has_many_attached :photos
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :users, through: :user_hotel_accesses
+  has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
+  belongs_to :salesperson, class_name: "User", optional: true
   has_one :property_policy, dependent: :destroy
   has_many :room_types, dependent: :destroy
   has_many :pricing_rules, class_name: "HotelPricingRule", dependent: :destroy
@@ -13,7 +15,9 @@ class Hotel < ApplicationRecord
   has_many :night_audits, dependent: :destroy
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
+  has_many :onboarding_sessions, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
+  has_many :onboarding_sessions, dependent: :destroy
 
   validates :name, presence: true
   validates :status, presence: true
@@ -21,6 +25,12 @@ class Hotel < ApplicationRecord
   validates :country, presence: true
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
+
+  scope :search, ->(query) {
+    return all if query.blank?
+    q = "%#{sanitize_sql_like(query.to_s.downcase)}%"
+    where("LOWER(hotels.name) LIKE :q OR LOWER(hotels.city) LIKE :q", q: q)
+  }
 
   STATUSES = %w[
     registered
@@ -47,6 +57,15 @@ class Hotel < ApplicationRecord
         "This hotel already has #{Hotel::MAX_PHOTOS} photos. Remove some before uploading more."
       end
     end
+  end
+
+  def self.pending_review_onboarding
+    where(status: "pending_review").to_a.sort_by(&:onboarding_sort_key)
+  end
+
+  def onboarding_sort_key
+    duration = onboarding_duration_days
+    [ duration.present? ? duration.to_f : Float::INFINITY, created_at ]
   end
 
   def active?
@@ -182,6 +201,87 @@ class Hotel < ApplicationRecord
     bookings.unbatched_upcoming(cutoff_date).sum("COALESCE(net_amount, 0)")
   end
 
+  def onboarding_completion_date
+    return nil unless [ "approved", "live" ].include?(status)
+    final_onboarding_session&.completed_at
+  end
+
+  def onboarding_start_date
+    saved = self[:onboarding_start_date]
+    return saved if saved.present?
+
+    onboarding_period_record&.scheduled_at&.to_date || created_at.to_date
+  end
+
+  def onboarding_end_date
+    saved = self[:onboarding_end_date]
+    return saved if saved.present?
+
+    onboarding_period_record&.completed_at&.to_date || Date.current
+  end
+
+  def onboarding_duration
+    saved_start = self[:onboarding_start_date]
+    saved_end = self[:onboarding_end_date]
+    if saved_start.present? && saved_end.present?
+      saved_end - saved_start
+    else
+      rec = onboarding_period_record
+      return nil unless rec
+
+      rec.completed_at - rec.scheduled_at
+    end
+  end
+
+  def onboarding_duration_days
+    saved_start = self[:onboarding_start_date]
+    saved_end = self[:onboarding_end_date]
+
+    if saved_start.present? && saved_end.present?
+      (saved_end.to_date - saved_start.to_date).to_f
+    else
+      rec = onboarding_period_record
+      return nil unless rec&.scheduled_at.present? && rec&.completed_at.present?
+
+      ((rec.completed_at - rec.scheduled_at) / 1.day).to_f
+    end
+  end
+
+  def mtd_bookings
+    bookings.revenue_generating.where(created_at: Time.current.all_month)
+  end
+
+  def gross_revenue_mtd
+    mtd_bookings.sum(:total_amount)
+  end
+
+  def wastays_margin_mtd
+    mtd_bookings.sum("COALESCE(margin_amount, 0)")
+  end
+
+  def hotel_net_earnings_mtd
+    mtd_bookings.sum("COALESCE(net_amount, 0)")
+  end
+
+  def booking_count_mtd
+    mtd_bookings.count
+  end
+
+  def active_setup_fee
+    SetupFeeRule.active.find_by(settable: self) ||
+      SetupFeeRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ])
+  end
+
+  def setup_fee_source
+    if SetupFeeRule.active.find_by(settable: self)
+      "Hotel Override"
+    elsif SetupFeeRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ]).present?
+      "Global Default"
+    else
+      "Not Configured"
+    end
+  end
+
   private
 
   def photos_limit_not_exceeded
@@ -195,5 +295,14 @@ class Hotel < ApplicationRecord
     return if photos.attachments.any? { |a| a.id == featured_photo_attachment_id }
 
     errors.add(:featured_photo_attachment_id, "must belong to this hotel")
+  end
+
+  def onboarding_period_record
+    final_onboarding_session
+  end
+
+  def final_onboarding_session
+    onboarding_sessions.completed.where(notes: "FINAL_ONBOARDING_COMPLETION").order(completed_at: :desc).first ||
+      onboarding_sessions.where(notes: "FINAL_ONBOARDING_COMPLETION").order(updated_at: :desc).first
   end
 end

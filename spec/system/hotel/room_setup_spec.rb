@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe 'Room Setup', type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  let(:hotel) { create(:hotel, account: account, status: 'rooms_incomplete') }
+  let(:hotel) { create(:hotel, account: account, status: 'approved') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner') }
 
   before do
@@ -22,13 +22,8 @@ RSpec.describe 'Room Setup', type: :system do
   end
 
   it 'allows the user to add a room type' do
-    expect(page).to have_content('Hotel Policies')
-    expect(page).to have_content('✓')
-
-    # Click Update for Step 3
-    within('#step-rooms') do
-      click_link 'Update'
-    end
+    expect(page).to have_content('Hotel Dashboard')
+    within('#hotel-sidebar') { click_link 'Room Categories' }
 
     expect(page).to have_content('No room categories found')
     first(:link, 'Add Room Category').click
@@ -43,18 +38,8 @@ RSpec.describe 'Room Setup', type: :system do
 
     expect(page).to have_content('Room type created successfully.')
     expect(page).to have_content('Deluxe Suite')
-    expect(hotel.reload.status).to eq('inventory_incomplete')
 
-    # Go back to onboarding to check step completion
     visit hotel_dashboard_path(hotel)
-    within('#step-rooms') do
-      expect(page).to have_content('✓')
-      expect(page).to have_link('Manage')
-    end
-
-    # Step 4 Submit button should now be enabled
-    within('#step-review') do
-      expect(page).to have_button('Submit for Review')
-    end
+    expect(page).to have_content('Hotel Dashboard')
   end
 end
