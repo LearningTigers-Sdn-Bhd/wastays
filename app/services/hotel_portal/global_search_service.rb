@@ -6,6 +6,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
     { title: "Hotel Dashboard", subtitle: "Overview and recent activity", route: :hotel_dashboard_path, keywords: "dashboard overview recent bookings" },
     { title: "Arrival Board", subtitle: "Check-ins and arrivals", route: :hotel_arrivals_path, keywords: "arrival board arrivals check in" },
     { title: "In-House Guests", subtitle: "Current in-house guests", route: :hotel_in_house_guests_path, keywords: "in house guests" },
+    { title: "Today's Check-Outs", subtitle: "Guests checked out today", route: :hotel_checked_out_guests_path, keywords: "today check outs checked out departures" },
     { title: "Bookings", subtitle: "All hotel bookings", route: :hotel_bookings_path, keywords: "bookings reservations recent bookings" },
     { title: "Requests", subtitle: "Housekeeping and complaints", route: :hotel_requests_path, keywords: "requests housekeeping complaints" },
     { title: "Request Archive", subtitle: "Archived housekeeping and complaint requests", route: :hotel_request_archive_path, keywords: "request archive archived housekeeping complaints" },
