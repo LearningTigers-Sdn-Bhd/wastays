@@ -10,6 +10,7 @@ class Hotel < ApplicationRecord
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
+  has_many :night_audits, dependent: :destroy
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy

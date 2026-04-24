@@ -209,6 +209,7 @@ Rails.application.routes.draw do
         get :breakdown, defaults: { format: "html" }
       end
     end
+    resources :night_audits, only: [ :index, :show, :create ]
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
         post :apply_pricing_rules
