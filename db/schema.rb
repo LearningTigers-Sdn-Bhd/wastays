@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_24_104500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -340,6 +340,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.index ["settable_type", "settable_id"], name: "index_margin_rules_on_settable"
   end
 
+  create_table "night_audits", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.date "business_date", null: false
+    t.string "status", default: "pending", null: false
+    t.string "trigger_mode", default: "manual", null: false
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.jsonb "summary", default: {}, null: false
+    t.jsonb "exceptions", default: {}, null: false
+    t.text "notes"
+    t.boolean "force_closed", default: false, null: false
+    t.bigint "performed_by_user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "blocked_details", default: {}, null: false
+    t.index ["hotel_id", "business_date"], name: "index_night_audits_on_hotel_id_and_business_date", unique: true
+    t.index ["hotel_id"], name: "index_night_audits_on_hotel_id"
+    t.index ["performed_by_user_id"], name: "index_night_audits_on_performed_by_user_id"
+    t.index ["status"], name: "index_night_audits_on_status"
+  end
+
   create_table "observation_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "entry_type", null: false
     t.string "request_id"
@@ -612,6 +633,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
+  add_foreign_key "night_audits", "hotels"
+  add_foreign_key "night_audits", "users", column: "performed_by_user_id"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
   add_foreign_key "payout_batches", "hotels"
