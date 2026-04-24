@@ -3,7 +3,7 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
   before_action :set_session, only: [ :show, :edit, :update, :complete, :cancel, :destroy ]
 
   def index
-    @sessions = onboarding_sessions_scope
+    @sessions = @hotel.onboarding_sessions.ordered
   end
 
   def create
@@ -15,7 +15,7 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
       respond_to do |format|
         format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session scheduled successfully." }
         format.turbo_stream do
-          @sessions = onboarding_sessions_scope
+          @sessions = @hotel.onboarding_sessions.ordered
           render turbo_stream: [
             turbo_stream.replace(
               "new_onboarding_session_form",
@@ -39,7 +39,7 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
       respond_to do |format|
         format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}" }
         format.turbo_stream do
-          @sessions = onboarding_sessions_scope
+          @sessions = @hotel.onboarding_sessions.ordered
           render turbo_stream: [
             turbo_stream.replace(
               "new_onboarding_session_form",
@@ -162,13 +162,8 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
     params.permit(:trainer_name, :scheduled_at, :meeting_link)
   end
 
-  def onboarding_sessions_scope
-    @hotel.onboarding_sessions
-      .order(scheduled_at: :asc, created_at: :asc)
-  end
-
   def render_onboarding_sessions_list(message, key = :notice, status: :ok)
-    @sessions = onboarding_sessions_scope
+    @sessions = @hotel.onboarding_sessions.ordered
 
     render turbo_stream: [
       turbo_stream.replace(

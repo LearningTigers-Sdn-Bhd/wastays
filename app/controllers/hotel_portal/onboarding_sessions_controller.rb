@@ -5,8 +5,7 @@ module HotelPortal
     before_action :set_hotel
 
     def index
-      @sessions = @current_hotel.onboarding_sessions
-        .order(scheduled_at: :desc, created_at: :desc)
+      @sessions = @current_hotel.onboarding_sessions.recent_first
     end
 
     def cancel

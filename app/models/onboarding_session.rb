@@ -7,6 +7,8 @@ class OnboardingSession < ApplicationRecord
 
   scope :upcoming, -> { where(status: "scheduled").where("scheduled_at >= ?", Time.current) }
   scope :completed, -> { where(status: "completed") }
+  scope :ordered, -> { order(scheduled_at: :asc, created_at: :asc) }
+  scope :recent_first, -> { order(scheduled_at: :desc, created_at: :desc) }
 
   def complete!
     update!(status: "completed", completed_at: Time.current)

@@ -24,7 +24,7 @@ RSpec.describe Admin::Salespersons::UpdateService, type: :service do
         expect {
           result = subject.call
         }.not_to change(User, :count)
-        
+
         expect(result.success?).to be true
         expect(result.action).to eq(:updated)
         expect(salesperson.reload.name).to eq("Updated Name")

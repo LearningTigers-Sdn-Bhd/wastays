@@ -2,7 +2,7 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
   before_action :set_hotel, only: [ :show, :complete, :save_period ]
 
   def index
-    @hotels = sorted_onboarding_hotels
+    @hotels = Hotel.pending_review_onboarding
   end
 
   def show
@@ -35,7 +35,7 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
       respond_to do |format|
         format.json { render json: { success: true } }
         format.turbo_stream do
-          @hotels = sorted_onboarding_hotels
+          @hotels = Hotel.pending_review_onboarding
           render turbo_stream: turbo_stream.replace(
             "onboarding_tracker_table",
             partial: "admin/hotels/onboarding_tracker_table",
@@ -47,7 +47,7 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
       respond_to do |format|
         format.json { render json: { success: false, errors: @hotel.errors.full_messages }, status: :unprocessable_entity }
         format.turbo_stream do
-          @hotels = sorted_onboarding_hotels
+          @hotels = Hotel.pending_review_onboarding
           render turbo_stream: turbo_stream.replace(
             "onboarding_tracker_table",
             partial: "admin/hotels/onboarding_tracker_table",
@@ -62,15 +62,5 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
 
   def set_hotel
     @hotel = Hotel.find(params[:id])
-  end
-
-  def sorted_onboarding_hotels
-    Hotel.where(status: "pending_review").to_a.sort_by { |hotel| onboarding_sort_key(hotel) }
-  end
-
-  def onboarding_sort_key(hotel)
-    duration_value = hotel.onboarding_duration_days
-    duration_value = duration_value.present? ? duration_value.to_f : Float::INFINITY
-    [ duration_value, hotel.created_at ]
   end
 end

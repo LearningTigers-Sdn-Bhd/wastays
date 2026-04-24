@@ -8,8 +8,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     end
 
     if params[:query].present?
-      query = params[:query].strip
-      @all_bookings = @all_bookings.where("guest_name ILIKE :q OR guest_email ILIKE :q OR guest_phone ILIKE :q OR confirmation_token ILIKE :q", q: "%#{query}%")
+      @all_bookings = @all_bookings.search(params[:query])
     end
 
     @bookings = @all_bookings.page(params[:page]).per(25)

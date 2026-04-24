@@ -6,7 +6,7 @@ class Admin::HotelsController < Admin::BaseController
 
   def index
     @all_hotels = Hotel.all.order(created_at: :desc)
-    
+
     # Apply filters
     @all_hotels = @all_hotels.where(status: params[:status]) if params[:status].present? && params[:status] != "All Status"
     @all_hotels = @all_hotels.search(params[:q]) if params[:q].present?
