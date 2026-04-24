@@ -31,9 +31,29 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def update
     @booking = current_hotel.bookings.find(params[:id])
-    if @booking.update(booking_params)
+    
+    update_params = booking_params
+    room_number = update_params.delete(:room_number)
+
+    if room_number.present?
+      @booking.hotel_snapshot ||= {}
+      @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => room_number)
+    end
+
+    if @booking.update(update_params)
       redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking updated successfully."
     else
+      @booking_rooms = @booking.booking_rooms
+      @pre_checkin = @booking.pre_checkin
+      @housekeeping_requests = @booking.housekeeping_requests.where(archived_at: nil).or(
+        @booking.housekeeping_requests.where(status: "cancelled")
+      ).recent_first
+      @pending_housekeeping_requests_count = @booking.housekeeping_requests.active.where(status: "pending").count
+      @complaint_requests = @booking.complaint_requests.where(archived_at: nil).or(
+        @booking.complaint_requests.where(status: "cancelled")
+      ).recent_first
+      @pending_complaint_requests_count = @booking.complaint_requests.active.where(status: "pending").count
+      @pending_requests_count = @pending_housekeeping_requests_count + @pending_complaint_requests_count
       render :show, status: :unprocessable_content
     end
   end
@@ -119,7 +139,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   private
 
   def booking_params
-    params.require(:booking).permit(:guest_name, :guest_email, :guest_phone, :status)
+    params.require(:booking).permit(:guest_name, :guest_email, :guest_phone, :status, :check_in, :check_out, :room_number)
   end
 
   def release_inventory(booking)
