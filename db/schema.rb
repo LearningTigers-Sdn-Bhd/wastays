@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_24_104501) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_24_104502) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -589,6 +589,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_24_104501) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "room_numbers"
+    t.string "room_number_mode"
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
   end
 

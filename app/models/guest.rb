@@ -20,7 +20,7 @@ class Guest < ApplicationRecord
   GENDERS = %w[male female other].freeze
   DOCUMENT_TYPES = %w[ic passport].freeze
 
-  before_validation :normalize_identity_fields
+  before_validation :normalize_guest_data
 
   def otp_on_cooldown?
     otp_sent_at.present? && otp_sent_at > RESEND_COOLDOWN.ago
@@ -74,7 +74,7 @@ class Guest < ApplicationRecord
 
   private
 
-  def normalize_identity_fields
+  def normalize_guest_data
     self.gender = gender&.downcase
     self.document_type = document_type&.downcase
     self.country = normalized_country

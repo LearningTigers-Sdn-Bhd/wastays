@@ -203,7 +203,10 @@ Rails.application.routes.draw do
       resources :inventories, only: [ :index, :create ]
     end
 
-    resources :bookings, only: [ :index, :show, :update ] do
+    resources :bookings, only: [ :index, :show, :update, :new, :create ] do
+      collection do
+        get :availability
+      end
       member do
         post :check_in
         post :check_out

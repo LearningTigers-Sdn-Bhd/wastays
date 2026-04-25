@@ -44,15 +44,15 @@
     <div class="p-6 bg-white" onclick="event.stopPropagation()">
       <h3 class="text-lg font-bold text-slate-900"><%= @booking.checked_in? ? "Edit Check-In" : "Confirm Check-In" %></h3>
       <p class="text-sm text-slate-500 mt-1">Set check-in time for <%= @booking.guest_name %>.</p>
-      
+
       <%= form_with url: check_in_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
-          <%= f.datetime_local_field :checked_in_at, 
-              value: (@booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"), 
+          <%= f.datetime_local_field :checked_in_at,
+              value: (@booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"),
               class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
-        
+
         <div class="flex items-center justify-end gap-x-3 pt-2">
           <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
           <%= f.submit (@booking.checked_in? ? "Save Changes" : "Confirm Check In"), class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
@@ -65,15 +65,15 @@
     <div class="p-6 bg-white" onclick="event.stopPropagation()">
       <h3 class="text-lg font-bold text-slate-900">Confirm Check-Out</h3>
       <p class="text-sm text-slate-500 mt-1">Set check-out time for <%= @booking.guest_name %>.</p>
-      
+
       <%= form_with url: check_out_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-out Date & Time</label>
-          <%= f.datetime_local_field :checked_out_at, 
-              value: Time.current.strftime("%Y-%m-%dT%H:%M"), 
+          <%= f.datetime_local_field :checked_out_at,
+              value: Time.current.strftime("%Y-%m-%dT%H:%M"),
               class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
-        
+
         <div class="flex items-center justify-end gap-x-3 pt-2">
           <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
           <%= f.submit "Confirm Check-Out", class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
@@ -88,19 +88,19 @@
       <div data-controller="booking-tabs" class="space-y-6">
         <!-- Preline Style Underlined Tabs -->
         <nav class="relative z-0 flex border border-slate-200 rounded-xl overflow-hidden" aria-label="Tabs" role="tablist">
-          <button type="button" 
-                  data-booking-tabs-target="tab" 
-                  data-tab-name="booking-details" 
-                  data-action="click->booking-tabs#switch" 
+          <button type="button"
+                  data-booking-tabs-target="tab"
+                  data-tab-name="booking-details"
+                  data-action="click->booking-tabs#switch"
                   class="relative min-w-0 flex-1 bg-white first:border-s-0 border-s border-b-2 border-slate-200 py-4 px-4 text-slate-500 hover:text-slate-900 text-sm font-bold text-center overflow-hidden transition-all
                          data-[active=true]:border-b-blue-600 data-[active=true]:text-slate-950 data-[active=true]:bg-slate-50/50"
                   role="tab">
             Booking Details
           </button>
-          <button type="button" 
-                  data-booking-tabs-target="tab" 
-                  data-tab-name="requests" 
-                  data-action="click->booking-tabs#switch" 
+          <button type="button"
+                  data-booking-tabs-target="tab"
+                  data-tab-name="requests"
+                  data-action="click->booking-tabs#switch"
                   class="relative min-w-0 flex-1 bg-white first:border-s-0 border-s border-b-2 border-slate-200 py-4 px-4 text-slate-500 hover:text-slate-900 text-sm font-bold text-center overflow-hidden transition-all
                          data-[active=true]:border-b-blue-600 data-[active=true]:text-slate-950 data-[active=true]:bg-slate-50/50 flex items-center justify-center gap-2"
                   role="tab">
@@ -178,24 +178,49 @@
               <dialog id="edit-stay-details-modal" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,32rem)] max-w-lg shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
                 <div class="p-6 bg-white" onclick="event.stopPropagation()">
                   <h3 class="text-lg font-bold text-slate-900">Edit Stay & Room Details</h3>
-                  <p class="text-sm text-slate-500 mt-1">Update booking dates and room number.</p>
+                  <p class="text-sm text-slate-500 mt-1">Update booking dates and room assignment.</p>
 
-                  <%= form_with model: @booking, url: hotel_booking_path(current_hotel, @booking), method: :patch, local: true, class: "mt-6 space-y-4" do |f| %>
+                  <%= form_with model: @booking, url: hotel_booking_path(current_hotel, @booking), method: :patch, local: true, 
+                      class: "mt-6 space-y-4",
+                      data: { 
+                        controller: "booking-calc", 
+                        availability_url: availability_hotel_bookings_path(current_hotel),
+                        booking_id: @booking.id 
+                      } do |f| %>
                     <div class="grid sm:grid-cols-2 gap-4">
                       <div>
                         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date</label>
-                        <%= f.date_field :check_in, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                        <%= f.date_field :check_in, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
                       </div>
                       <div>
                         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-out Date</label>
-                        <%= f.date_field :check_out, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                        <%= f.date_field :check_out, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
                       </div>
                     </div>
 
                     <div>
+                      <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Category</label>
+                      <% current_room_type_id = @booking.booking_rooms.first&.room_type_id %>
+                      <%= f.collection_select :room_type_id, @room_types, :id, :name, { selected: current_room_type_id }, 
+                          { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
+                            data: { 
+                              booking_calc_target: "roomType", 
+                              action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate",
+                              prices: @room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
+                              room_numbers: @room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
+                            } 
+                          } %>
+                    </div>
+
+                    <div data-booking-calc-target="roomNumberContainer">
                       <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
                       <% current_room_number = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
-                      <%= f.text_field :room_number, value: current_room_number, placeholder: "e.g. 101, A-05", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                      <%= f.select :room_number, [[current_room_number, current_room_number]], { selected: current_room_number }, 
+                          { required: true,
+                            class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
+                            data: { booking_calc_target: "roomNumberSelect" } 
+                          } %>
+                      <p class="text-[10px] text-slate-400 mt-1.5 italic">Only available rooms for the selected dates are shown.</p>
                     </div>
 
                     <div class="flex items-center justify-end gap-x-3 pt-4">
@@ -205,7 +230,6 @@
                   <% end %>
                 </div>
               </dialog>
-
               <div class="p-6 sm:p-8 space-y-8">
 
                 <div class="grid grid-cols-2 gap-6">

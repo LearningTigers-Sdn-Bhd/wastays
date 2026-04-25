@@ -1,50 +1,60 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["mode", "rangeFields", "customFields", "start", "customList", "preview", "quantity", "inputContainer"]
+  static targets = ["modeCheckbox", "modeInput", "rangeFields", "customFields", "start", "customList", "preview", "quantity", "inputContainer"]
 
   connect() {
-    if (this.customListTarget.value && !this.startTarget.value) {
-      this.modeTarget.value = "custom"
+    // If we have existing room numbers, try to guess the starting number for range mode
+    if (this.customListTarget.value.trim() !== "") {
+      const match = this.customListTarget.value.match(/\d+/)
+      if (match && !this.startTarget.value) {
+        this.startTarget.value = match[0]
+      }
     }
+
     this.toggleMode()
   }
 
   toggleMode() {
-    const mode = this.modeTarget.value
-    if (mode === "range") {
-      this.rangeFieldsTarget.classList.remove("hidden")
-      this.customFieldsTarget.classList.add("hidden")
-    } else {
+    const isCustom = this.modeCheckboxTarget.checked
+    this.modeInputTarget.value = isCustom ? "custom" : "range"
+
+    if (isCustom) {
       this.rangeFieldsTarget.classList.add("hidden")
       this.customFieldsTarget.classList.remove("hidden")
+    } else {
+      this.rangeFieldsTarget.classList.remove("hidden")
+      this.customFieldsTarget.classList.add("hidden")
+      if (!this.startTarget.value) {
+        this.startTarget.value = "101"
+      }
     }
     this.generate()
   }
 
   generate() {
-    const mode = this.modeTarget.value
-    let numbers = []
+    const isCustom = this.modeCheckboxTarget.checked
     const quantity = parseInt(this.quantityTarget.value) || 0
+    let numbers = []
 
-    if (quantity <= 0) {
-      this.updateInputs([])
-      return
-    }
+    if (quantity > 0) {
+      if (isCustom) {
+        const customVal = this.customListTarget.value
+        numbers = customVal.split(",").map(n => n.trim()).filter(n => n !== "")
 
-    if (mode === "range") {
-      const start = parseInt(this.startTarget.value)
-
-      if (!isNaN(start)) {
+        // REVERSE SYNC: If they type a first number in custom, update the range start
+        if (numbers.length > 0) {
+          const match = numbers[0].match(/\d+/)
+          if (match) {
+            this.startTarget.value = match[0]
+          }
+        }
+      } else {
+        let start = parseInt(this.startTarget.value) || 101
         for (let i = 0; i < quantity; i++) {
           numbers.push(`${start + i}`)
         }
       }
-    } else {
-      const customVal = this.customListTarget.value
-      numbers = customVal.split(",").map(n => n.trim()).filter(n => n !== "")
-      // Limit to quantity? Or maybe update quantity?
-      // Let's just use what they typed but highlight if count doesn't match
     }
 
     this.updateInputs(numbers)
@@ -61,7 +71,7 @@ export default class extends Controller {
     })
 
     const quantity = parseInt(this.quantityTarget.value) || 0
-    let previewHtml = numbers.map(n => 
+    let previewHtml = numbers.map(n =>
       `<span class="inline-flex items-center gap-x-1.5 py-1 px-2 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">${n}</span>`
     ).join(" ")
 
@@ -71,7 +81,6 @@ export default class extends Controller {
 
     this.previewTarget.innerHTML = previewHtml
 
-    // Validation hint
     const hint = document.getElementById("room-numbers-hint")
     if (hint) {
       if (numbers.length !== quantity && quantity > 0) {

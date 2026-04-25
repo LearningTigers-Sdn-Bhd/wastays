@@ -21,6 +21,14 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
 
   def create
     @hotel = current_hotel
+
+    # Sanitize room_numbers: ensure it's an array and filter out empty strings
+    if params[:room_type] && params[:room_type][:room_numbers]
+      params[:room_type][:room_numbers] = Array(params[:room_type][:room_numbers]).reject(&:blank?)
+    else
+      params[:room_type][:room_numbers] = []
+    end
+
     @room_type = @hotel.room_types.build(room_type_params)
     authorize @hotel, :update?, policy_class: HotelPolicy
 
@@ -40,6 +48,13 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   def update
     @hotel = current_hotel
     authorize @hotel, :update?, policy_class: HotelPolicy
+
+    # Sanitize room_numbers: ensure it's an array and filter out empty strings
+    if params[:room_type] && params[:room_type][:room_numbers]
+      params[:room_type][:room_numbers] = Array(params[:room_type][:room_numbers]).reject(&:blank?)
+    else
+      params[:room_type][:room_numbers] = []
+    end
 
     if @room_type.update(room_type_params)
       redirect_to hotel_room_types_path(@hotel), notice: "Room type updated successfully."
@@ -62,6 +77,6 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   end
 
   def room_type_params
-    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, photos: [], room_numbers: [])
+    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, :room_number_mode, photos: [], room_numbers: [])
   end
 end
