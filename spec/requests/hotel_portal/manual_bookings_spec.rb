@@ -13,6 +13,41 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     sign_in_as(user)
   end
 
+  describe "GET /index" do
+    let!(:booking1) { create(:booking, hotel: hotel, guest_name: "Alice Smith", status: "confirmed", confirmation_token: "WS-ALICE") }
+    let!(:booking2) { create(:booking, hotel: hotel, guest_name: "Bob Jones", status: "cancelled", confirmation_token: "WS-BOB") }
+
+    it "returns all bookings by default" do
+      get "/hotel/#{hotel.id}/bookings"
+      expect(response.body).to include("Alice Smith")
+      expect(response.body).to include("Bob Jones")
+    end
+
+    it "filters by query (name)" do
+      get "/hotel/#{hotel.id}/bookings", params: { query: "Alice" }
+      expect(response.body).to include("Alice Smith")
+      expect(response.body).not_to include("Bob Jones")
+    end
+
+    it "filters by query (reference)" do
+      get "/hotel/#{hotel.id}/bookings", params: { query: "WS-BOB" }
+      expect(response.body).not_to include("Alice Smith")
+      expect(response.body).to include("Bob Jones")
+    end
+
+    it "filters by status" do
+      get "/hotel/#{hotel.id}/bookings", params: { status: "cancelled" }
+      expect(response.body).not_to include("Alice Smith")
+      expect(response.body).to include("Bob Jones")
+    end
+
+    it "combines query and status" do
+      get "/hotel/#{hotel.id}/bookings", params: { query: "Alice", status: "cancelled" }
+      expect(response.body).not_to include("Alice Smith")
+      expect(response.body).not_to include("Bob Jones")
+    end
+  end
+
   describe "GET /new" do
     it "returns http success" do
       get "/hotel/#{hotel.id}/bookings/new"
