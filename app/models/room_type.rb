@@ -24,6 +24,6 @@ class RoomType < ApplicationRecord
   private
 
   def set_default_room_number_mode
-    self.room_number_mode ||= "range"
+    self.room_number_mode = room_number_mode.presence || "range"
   end
 end

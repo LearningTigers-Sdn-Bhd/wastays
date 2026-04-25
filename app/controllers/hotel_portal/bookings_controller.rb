@@ -94,7 +94,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @booking = current_hotel.bookings.find(params[:id])
 
     if @booking.update(status: "completed", checked_out_at: params[:checked_out_at])
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest checked out successfully."
+      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest has been checked out."
     else
       setup_show_variables
       render :show, status: :unprocessable_content
