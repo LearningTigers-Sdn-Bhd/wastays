@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Guest < ApplicationRecord
   has_many :booking_guests, dependent: :destroy
   has_many :bookings, through: :booking_guests

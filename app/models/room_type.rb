@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class RoomType < ApplicationRecord
   include HotelScopable
 
@@ -11,6 +13,7 @@ class RoomType < ApplicationRecord
   validates :quantity, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :max_adults, presence: true, numericality: { greater_than: 0 }
   validates :base_price, presence: true, numericality: { greater_than_or_equal_to: 0 }
+  validates :room_number_mode, presence: true, inclusion: { in: %w[range custom] }
 
   def room_numbers
     Array(super).flatten.compact.map(&:to_s).reject(&:blank?)

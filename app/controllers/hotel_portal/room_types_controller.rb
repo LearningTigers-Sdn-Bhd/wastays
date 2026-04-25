@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class HotelPortal::RoomTypesController < HotelPortal::BaseController
   before_action :set_room_type, only: [ :show, :edit, :update, :destroy ]
 

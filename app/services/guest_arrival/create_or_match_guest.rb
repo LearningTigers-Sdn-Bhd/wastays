@@ -23,7 +23,7 @@ module GuestArrival
         updates[:gender] = @gender if @gender.present? && guest.gender.blank?
         updates[:document_type] = @document_type if @document_type.present? && guest.document_type.blank?
         updates[:government_id] = @government_id if @government_id.present? && guest.government_id.blank?
-        
+
         if @marketing_consent.present?
           guest.metadata ||= {}
           guest.metadata["marketing_consent"] = @marketing_consent == "1" || @marketing_consent == true

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Booking < ApplicationRecord
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
@@ -37,6 +39,7 @@ class Booking < ApplicationRecord
 
   before_validation :generate_confirmation_token, on: :create
 
+  scope :recent_first, -> { order(created_at: :desc) }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
