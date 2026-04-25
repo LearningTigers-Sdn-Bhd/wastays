@@ -81,8 +81,9 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def check_in
     @booking = current_hotel.bookings.find(params[:id])
+    timestamp = params[:checked_in_at].presence || Time.current
 
-    if @booking.update(status: "checked_in", checked_in_at: params[:checked_in_at])
+    if @booking.update(status: "checked_in", checked_in_at: timestamp)
       redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest checked in successfully."
     else
       setup_show_variables
@@ -92,8 +93,9 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def check_out
     @booking = current_hotel.bookings.find(params[:id])
+    timestamp = params[:checked_out_at].presence || Time.current
 
-    if @booking.update(status: "completed", checked_out_at: params[:checked_out_at])
+    if @booking.update(status: "completed", checked_out_at: timestamp)
       redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest has been checked out."
     else
       setup_show_variables
