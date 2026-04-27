@@ -16,11 +16,17 @@ module HotelPortal
       end
 
       @guests = ActiveRecord::Encryption.without_encryption do
-        # Guests who have stayed at this hotel OR were registered by this hotel
+        # Guests who have stayed at this hotel (checked_in or completed)
+        # OR were registered by this hotel and have NO bookings yet (manually added)
+        # Guests with ONLY confirmed/cancelled bookings shouldn't appear yet.
         scope = Guest
           .select("guests.*, COALESCE(MAX(bookings.checked_out_at), MAX(bookings.check_out::timestamp)) AS last_stay_at")
           .left_joins(:bookings)
-          .where("bookings.hotel_id = :hotel_id OR guests.created_by_hotel_id = :hotel_id", hotel_id: current_hotel.id)
+          .where(
+            "(bookings.hotel_id = :hotel_id AND bookings.status IN ('checked_in', 'completed')) OR " \
+            "(guests.created_by_hotel_id = :hotel_id AND bookings.id IS NULL)",
+            hotel_id: current_hotel.id
+          )
 
         if params[:query].present?
           query = "%#{params[:query].to_s.downcase.strip}%"
@@ -42,7 +48,11 @@ module HotelPortal
       @country_options = ActiveRecord::Encryption.without_encryption do
         Guest
           .left_joins(:bookings)
-          .where("bookings.hotel_id = :hotel_id OR guests.created_by_hotel_id = :hotel_id", hotel_id: current_hotel.id)
+          .where(
+            "(bookings.hotel_id = :hotel_id AND bookings.status IN ('checked_in', 'completed')) OR " \
+            "(guests.created_by_hotel_id = :hotel_id AND bookings.id IS NULL)",
+            hotel_id: current_hotel.id
+          )
           .where.not(country: [ nil, "" ])
           .distinct
           .order(:country)
@@ -74,6 +84,7 @@ module HotelPortal
       guest_booking_scope = Booking
         .joins(:booking_guests)
         .where(hotel_id: current_hotel.id, booking_guests: { guest_id: @guest.id })
+        .where(status: [ "checked_in", "completed" ])
 
       @all_bookings = guest_booking_scope
         .includes(:pre_checkin)
