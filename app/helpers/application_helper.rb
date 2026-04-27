@@ -71,4 +71,25 @@ module ApplicationHelper
   rescue ArgumentError, TypeError
     value.to_s
   end
+
+  def format_duration(seconds)
+    return "N/A" if seconds.blank?
+
+    days = (seconds / 86400).to_i
+    hours = ((seconds % 86400) / 3600).to_i
+    minutes = ((seconds % 3600) / 60).to_i
+
+    parts = []
+    parts << "#{days}d" if days > 0
+    parts << "#{hours}h" if hours > 0
+    parts << "#{minutes}m" if minutes > 0 && days == 0 # Only show minutes if less than a day
+
+    parts.any? ? parts.join(" ") : "< 1m"
+  end
+
+  def sanitize_href(url)
+    return "#" if url.blank?
+    return url if url.start_with?("http://", "https://")
+    "#"
+  end
 end

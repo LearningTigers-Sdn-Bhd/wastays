@@ -54,6 +54,22 @@
             <label for="preferred_channel_manager" class="mb-2 block text-sm font-medium text-slate-700">Preferred Channel Manager</label>
             <%= f.select :preferred_channel_manager, [["None", ""], ["Channex", "channex"]], {}, class: input_classes %>
           </div>
+
+          <% if hotel.persisted? %>
+            <div class="sm:col-span-2">
+              <div class="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label for="hotel_salesperson_name" class="mb-2 block text-sm font-medium text-slate-700">Salesperson Name</label>
+                  <%= text_field_tag "hotel[salesperson_name]", hotel.salesperson&.name, id: "hotel_salesperson_name", class: input_classes, placeholder: "Enter salesperson name" %>
+                </div>
+
+                <div>
+                  <label for="hotel_salesperson_email" class="mb-2 block text-sm font-medium text-slate-700">Salesperson Email</label>
+                  <%= email_field_tag "hotel[salesperson_email]", hotel.salesperson&.email, id: "hotel_salesperson_email", class: input_classes, placeholder: "email@example.com" %>
+                </div>
+              </div>
+            </div>
+          <% end %>
         </div>
       </section>
 

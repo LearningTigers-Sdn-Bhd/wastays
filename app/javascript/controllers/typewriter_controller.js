@@ -12,10 +12,40 @@ export default class extends Controller {
     this.wordIndex = 0
     this.charIndex = 0
     this.isDeleting = false
-    this.tick()
+    this.isPaused = false
+    
+    this.setupObserver()
   }
 
   disconnect() {
+    this.stopTyping()
+    if (this.observer) {
+      this.observer.disconnect()
+    }
+  }
+
+  setupObserver() {
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            this.startTyping()
+          } else {
+            this.stopTyping()
+          }
+        })
+      },
+      { threshold: 0.1 }
+    )
+    this.observer.observe(this.element)
+  }
+
+  startTyping() {
+    if (this.timer) return
+    this.tick()
+  }
+
+  stopTyping() {
     if (this.timer) {
       window.clearTimeout(this.timer)
       this.timer = null

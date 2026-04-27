@@ -1,4 +1,6 @@
 class Admin::DashboardController < Admin::BaseController
+  include FinancialFiltering
+
   def index
     @hotels_count = Hotel.count
     @pending_hotels_count = Hotel.where(status: "pending_review").count
@@ -15,10 +17,6 @@ class Admin::DashboardController < Admin::BaseController
   end
 
   def analytics
-    @start_date = params[:start_date].present? ? params[:start_date].to_date : Date.current.beginning_of_month
-    @end_date = params[:end_date].present? ? params[:end_date].to_date : Date.current.end_of_month
-    @date_preset = params[:date_preset] || "custom"
-
     summary = Booking.analytics_summary(@start_date, @end_date, query: params[:q])
     @total_revenue = summary[:total_revenue]
     @total_margin = summary[:total_margin]

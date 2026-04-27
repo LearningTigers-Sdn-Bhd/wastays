@@ -1,6 +1,7 @@
 class Admin::MarginRulesController < Admin::BaseController
   def index
-    @margin_rules = MarginRule.all.order(created_at: :desc)
+    @all_margin_rules = MarginRule.all.order(created_at: :desc)
+    @margin_rules = @all_margin_rules.page(params[:page]).per(25)
     @new_rule = MarginRule.new
   end
 
@@ -11,7 +12,8 @@ class Admin::MarginRulesController < Admin::BaseController
     if @new_rule.save
       redirect_to admin_margin_rules_path, notice: "Margin rule created successfully."
     else
-      @margin_rules = MarginRule.all.order(created_at: :desc)
+      @all_margin_rules = MarginRule.all.order(created_at: :desc)
+      @margin_rules = @all_margin_rules.page(params[:page]).per(25)
       render :index, status: :unprocessable_content
     end
   end

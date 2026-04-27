@@ -77,10 +77,17 @@ RSpec.configure do |config|
   # config.filter_gems_from_backtrace("gem name")
 
   config.before(:each, type: :system) do
-    unless system("google-chrome --version > /dev/null 2>&1") || system("google-chrome-stable --version > /dev/null 2>&1")
-      skip "Skipping system test: Google Chrome is not installed in this environment."
+    unless chrome_available?
+      skip "Skipping system test: Chrome executable not detected in supported Linux/macOS locations."
     end
   end
+end
+
+def chrome_available?
+  return true if system("google-chrome --version > /dev/null 2>&1")
+  return true if system("google-chrome-stable --version > /dev/null 2>&1")
+
+  File.executable?("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 end
 
 Capybara.register_driver :cuprite do |app|

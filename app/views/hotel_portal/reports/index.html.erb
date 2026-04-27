@@ -95,8 +95,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 bg-white">
-            <% if @daily_data.any? %>
-              <% @daily_data.each_with_index do |(date, gross), index| %>
+            <% if @paginated_daily_data.any? %>
+              <% @paginated_daily_data.each_with_index do |(date, gross), index| %>
                 <% 
                   daily_bookings = @base_bookings.select { |b| b.created_at.to_date == date }
                   daily_margin = daily_bookings.sum { |b| b.margin_amount || 0 }
@@ -229,6 +229,10 @@
             <% end %>
           </tbody>
         </table>
+      </div>
+
+      <div class="px-8 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center">
+        <%= paginate @paginated_daily_data %>
       </div>
     </div>
   <% end %>

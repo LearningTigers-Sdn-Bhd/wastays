@@ -389,8 +389,6 @@
     display: inline-block;
     min-width: 1ch;
     white-space: nowrap;
-    color: var(--color-brand-primary);
-    font-weight: 900;
   }
 
   .typeword-inline::after {

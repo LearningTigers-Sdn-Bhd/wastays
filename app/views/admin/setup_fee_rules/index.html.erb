@@ -2,11 +2,11 @@
   <%= render "shared/navigation/admin_breadcrumbs", current: "Setup Fee Settings" %>
 <% end %>
 
-<% rules = @setup_fee_rules.to_a %>
+<% all_rules = @all_setup_fee_rules.to_a %>
 <% hotels = Array(@hotels) %>
-<% total_rules = rules.size %>
-<% active_rules = rules.count { |rule| rule.status == "active" } %>
-<% global_defaults = rules.count { |rule| rule.settable_type.blank? } %>
+<% total_rules = all_rules.size %>
+<% active_rules = all_rules.count { |rule| rule.status == "active" } %>
+<% global_defaults = all_rules.count { |rule| rule.settable_type.blank? } %>
 <% hotel_overrides = total_rules - global_defaults %>
 
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
@@ -109,8 +109,8 @@
       </div>
 
       <div id="admin-setup-fee-rules-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
-        <% if rules.any? %>
-          <% rules.each do |rule| %>
+        <% if @setup_fee_rules.any? %>
+          <% @setup_fee_rules.each do |rule| %>
             <% status_classes = rule.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200" %>
             <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
                  ["Global Default", "Applied when no hotel override exists", "text-blue-700"]
@@ -159,8 +159,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 bg-white">
-            <% if rules.any? %>
-              <% rules.each_with_index do |rule, index| %>
+            <% if @setup_fee_rules.any? %>
+              <% @setup_fee_rules.each_with_index do |rule, index| %>
                 <% status_classes = rule.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200" %>
                 <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
                      ["Global Default", "Applied when no hotel override exists", "text-blue-700"]
@@ -200,7 +200,12 @@
             <% end %>
           </tbody>
         </table>
-      </div>
-    </div>
-  </div>
+        </div>
+
+        <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+        <%= paginate @setup_fee_rules %>
+        </div>
+        </div>
+        </div>
+
 </div>

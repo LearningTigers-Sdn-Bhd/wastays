@@ -1,11 +1,20 @@
 module Admin
   class BookingsController < BaseController
     def index
-      @bookings = Booking.all.order(created_at: :desc)
-      if params[:status].present? && Booking::STATUSES.include?(params[:status])
-        @bookings = @bookings.where(status: params[:status])
+      @all_bookings = Booking.all.order(created_at: :desc)
+
+      # Apply filters
+      if params[:status].present? && params[:status] != "All Status"
+        @all_bookings = @all_bookings.where(status: params[:status].downcase.gsub(" ", "_"))
       end
-      @bookings = @bookings.page(params[:page]) if defined?(Kaminari)
+      @all_bookings = @all_bookings.search(params[:q]) if params[:q].present?
+
+      @bookings = @all_bookings.page(params[:page]).per(25)
+
+      respond_to do |format|
+        format.html
+        format.turbo_stream
+      end
     end
 
     def show

@@ -1,0 +1,34 @@
+<% session = local_assigns[:session] %>
+
+<div id="new_onboarding_session_form" class="rounded-xl border border-slate-200 bg-slate-50/50 p-4 sm:p-6">
+  <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-700">Schedule Training Session</h3>
+
+  <% if session&.errors&.any? %>
+    <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+      <p class="font-semibold text-rose-900">Please fix the following before saving:</p>
+      <ul class="mt-2 list-disc space-y-1 pl-5">
+        <% session.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= form_with url: admin_hotel_onboarding_sessions_path(@hotel), class: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end" do |f| %>
+    <div class="sm:col-span-1">
+      <label class="mb-1 block text-xs font-semibold text-slate-600">Onboarding Team Member</label>
+      <%= f.text_field :trainer_name, value: session&.trainer_name, placeholder: "Type name...", required: true, class: "w-full rounded-lg border-slate-200 text-sm" %>
+    </div>
+    <div class="sm:col-span-1">
+      <label class="mb-1 block text-xs font-semibold text-slate-600">Date & Time</label>
+      <%= f.datetime_field :scheduled_at, value: session&.scheduled_at&.strftime("%Y-%m-%dT%H:%M"), class: "w-full rounded-lg border-slate-200 text-sm" %>
+    </div>
+    <div class="lg:col-span-1">
+      <label class="mb-1 block text-xs font-semibold text-slate-600">Meeting Link</label>
+      <%= f.text_field :meeting_link, value: session&.meeting_link, placeholder: "https://zoom.us/...", class: "w-full rounded-lg border-slate-200 text-sm" %>
+    </div>
+    <div>
+      <%= f.submit "Save Training Info", class: "w-full inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800" %>
+    </div>
+  <% end %>
+</div>

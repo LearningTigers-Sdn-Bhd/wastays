@@ -1,0 +1,44 @@
+<% total_bookings = all_bookings.size %>
+<% pending_bookings = all_bookings.count { |booking| booking.status == 'pending' } %>
+<% confirmed_bookings = all_bookings.count { |booking| booking.status == 'confirmed' } %>
+<% checked_in_bookings = all_bookings.count { |booking| booking.status == 'checked_in' } %>
+<% completed_bookings = all_bookings.count { |booking| booking.status == 'completed' } %>
+<% cancelled_bookings = all_bookings.count { |booking| booking.status == 'cancelled' } %>
+
+<div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-3 xl:grid-cols-6">
+  <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Bookings</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= total_bookings %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600">All bookings on platform</p>
+  </div>
+
+  <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Pending</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-600"><%= pending_bookings %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600">Awaiting confirmation</p>
+  </div>
+
+  <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Confirmed</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= confirmed_bookings %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600">Upcoming confirmed stays</p>
+  </div>
+
+  <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Checked In</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-indigo-600"><%= checked_in_bookings %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600">Guests currently staying</p>
+  </div>
+
+  <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Completed</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-blue-600"><%= completed_bookings %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600">Checked-out bookings</p>
+  </div>
+
+  <div class="p-6 md:p-8">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Cancelled</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-red-600"><%= cancelled_bookings %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600">Cancelled reservations</p>
+  </div>
+</div>

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class HotelPortal::DashboardController < HotelPortal::BaseController
   def index
     @current_hotel = current_hotel
@@ -6,57 +8,25 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
       return
     end
 
-    if @current_hotel.onboarding?
-      render :onboarding and return
-    end
-
     if @current_hotel.status == "pending_review"
       render :pending_review and return
     end
 
-    @today_arrivals = @current_hotel.bookings.active.where(check_in: Date.today)
-    @tomorrow_arrivals = @current_hotel.bookings.active.where(check_in: Date.tomorrow)
-    @today_checkouts = @current_hotel.bookings.active.where(check_out: Date.today)
+    stats = HotelPortal::DashboardStats.new(@current_hotel)
+    @today_arrivals = stats.today_arrivals
+    @tomorrow_arrivals = stats.tomorrow_arrivals
+    @today_checkouts = stats.today_checkouts
+    @bookings_this_month_count = stats.bookings_this_month_count
+    @revenue_this_month = stats.revenue_this_month
+    @pending_actions_count = stats.pending_actions_count
+    @occupancy_snapshot = stats.occupancy_snapshot
 
-    this_month = Time.current.beginning_of_month..Time.current.end_of_month
-    @bookings_this_month_count = @current_hotel.bookings.active.where(created_at: this_month).count
-    @revenue_this_month = @current_hotel.bookings.active.where(created_at: this_month).sum(:total_amount)
-
-    arrival_window = Date.today..(Date.today + 1.day)
-    @pending_actions_count = @current_hotel.bookings.active
-      .joins(:pre_checkin)
-      .where(pre_checkins: { status: "pending" })
-      .where(check_in: arrival_window)
-      .count
-
-    setup_fee_override = SetupFeeRule.active.find_by(settable: @current_hotel)
-    setup_fee_default = SetupFeeRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ])
-    active_setup_fee = setup_fee_override || setup_fee_default
-
-    @setup_fee_amount = active_setup_fee&.amount&.to_f || 0.0
-    @setup_fee_currency = active_setup_fee&.currency || SetupFeeRule::CURRENCY
-    @setup_fee_source =
-      if setup_fee_override
-        "Hotel Override"
-      elsif setup_fee_default
-        "Global Default"
-      else
-        "Not Configured"
-      end
+    @active_setup_fee = @current_hotel.active_setup_fee
+    @setup_fee_amount = @active_setup_fee&.amount&.to_f || 0.0
+    @setup_fee_currency = @active_setup_fee&.currency || SetupFeeRule::CURRENCY
+    @setup_fee_source = @current_hotel.setup_fee_source
 
     @recent_bookings = @current_hotel.bookings.order(created_at: :desc).limit(5)
-
-    # 7-day occupancy snapshot (simplified for MVP)
-    @occupancy_snapshot = (Date.today..(Date.today + 6.days)).map do |date|
-      total_inventory = @current_hotel.room_types.joins(:room_inventories).where(room_inventories: { date: date }).sum(:quantity)
-      rooms_sold = @current_hotel.bookings.revenue_generating.where(":date >= check_in AND :date < check_out", date: date).count
-      {
-        date: date,
-        total: total_inventory,
-        sold: rooms_sold,
-        percent: total_inventory > 0 ? (rooms_sold.to_f / total_inventory * 100).round : 0
-      }
-    end
   end
 
   def submit_for_review

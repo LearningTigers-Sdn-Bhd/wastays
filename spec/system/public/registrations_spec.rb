@@ -20,7 +20,8 @@ RSpec.describe 'Hotel Registration', type: :system do
 
     click_button 'Register Your Hotel'
 
-    expect(page).to have_content('Welcome to WAStays!')
+    expect(page).to have_content('Welcome! Your hotel account has been created.')
+    expect(page).to have_content('Hotel Dashboard')
 
     user = User.find_by(email: 'sarah@example.com')
      expect(page).to have_current_path(hotel_dashboard_path(user.hotels.first))

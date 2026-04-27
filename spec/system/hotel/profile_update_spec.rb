@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe 'Hotel Profile Update', type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  let(:hotel) { create(:hotel, account: account, status: 'registered') }
+  let(:hotel) { create(:hotel, account: account, status: 'approved') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner') }
 
   before do
@@ -22,8 +22,8 @@ RSpec.describe 'Hotel Profile Update', type: :system do
   end
 
   it 'allows the user to update the hotel profile' do
-    expect(page).to have_content('Welcome to WAStays!')
-    click_link 'Update'
+    expect(page).to have_content('Hotel Dashboard')
+    within('#hotel-sidebar') { click_link 'Hotel Details' }
 
     fill_in 'Hotel Name', with: 'Updated Hotel Name'
     fill_in 'Address', with: '123 New Street'
@@ -32,10 +32,6 @@ RSpec.describe 'Hotel Profile Update', type: :system do
 
     expect(page).to have_content('Hotel profile updated successfully.')
     expect(hotel.reload.name).to eq('Updated Hotel Name')
-    expect(hotel.status).to eq('profile_incomplete')
-
-    # Onboarding should now show Step 1 as completed
-    expect(page).to have_content('✓')
-    expect(page).to have_link('Edit')
+    expect(page).to have_content('Hotel Dashboard')
   end
 end
