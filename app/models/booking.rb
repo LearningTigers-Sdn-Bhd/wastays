@@ -182,6 +182,6 @@ class Booking < ApplicationRecord
 
   def normalize_guest_data
     self.guest_email = guest_email&.downcase&.strip
-    self.guest_country = guest_country&.downcase&.strip
+    self.guest_country = guest_country&.split&.map(&:capitalize)&.join(" ") if guest_country.present?
   end
 end

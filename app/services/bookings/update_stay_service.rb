@@ -81,7 +81,7 @@ module Bookings
         # If email changed, we might have multiple guests linked?
         # For now, let's just ensure the primary guest is updated if it matches the new email
         # or create a new link if none exists.
-        
+
         # Remove old primary if it exists and we're adding a new one?
         # Actually, standardizing on one primary guest per booking.
         booking.booking_guests.where(is_primary: true).destroy_all
