@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Booking < ApplicationRecord
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
@@ -37,6 +39,7 @@ class Booking < ApplicationRecord
 
   before_validation :generate_confirmation_token, on: :create
 
+  scope :recent_first, -> { order(created_at: :desc) }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
@@ -152,10 +155,6 @@ class Booking < ApplicationRecord
     return "not_started" unless has_real_pre_checkin_data
 
     pre_checkin_status.presence || pre_checkin&.status.presence || "not_started"
-  end
-
-  def tourism_tax?
-    tourism_tax_applied && tourism_tax_amount.positive?
   end
 
   def tourism_tax?

@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe BookingEngine::ReleaseExpiredHoldsJob, type: :job do
   let!(:account) { Account.create!(name: "Test Account", slug: "test-account", status: "active") }
   let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved") }
-  let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100) }
+  let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
 
   let(:check_in) { Date.today }
   let(:check_out) { Date.today + 2.days }

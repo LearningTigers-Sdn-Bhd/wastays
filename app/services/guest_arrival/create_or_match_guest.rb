@@ -10,6 +10,7 @@ module GuestArrival
       @gender = params[:gender]&.downcase&.strip
       @country = params[:country]&.strip
       @document_type = params[:document_type]&.downcase&.strip
+      @marketing_consent = params[:marketing_consent]
     end
 
     def call
@@ -22,8 +23,21 @@ module GuestArrival
         updates[:gender] = @gender if @gender.present? && guest.gender.blank?
         updates[:document_type] = @document_type if @document_type.present? && guest.document_type.blank?
         updates[:government_id] = @government_id if @government_id.present? && guest.government_id.blank?
-        guest.update(updates) if updates.any?
+
+        if @marketing_consent.present?
+          guest.metadata ||= {}
+          guest.metadata["marketing_consent"] = @marketing_consent == "1" || @marketing_consent == true
+          guest.metadata["marketing_consent_updated_at"] = Time.current.iso8601
+        end
+
+        guest.update(updates) if updates.any? || guest.metadata_changed?
       else
+        metadata = {}
+        if @marketing_consent.present?
+          metadata["marketing_consent"] = @marketing_consent == "1" || @marketing_consent == true
+          metadata["marketing_consent_updated_at"] = Time.current.iso8601
+        end
+
         guest = Guest.create!(
           name: @name,
           email: @email,
@@ -31,7 +45,8 @@ module GuestArrival
           government_id: @government_id,
           country: @country,
           gender: @gender,
-          document_type: @document_type
+          document_type: @document_type,
+          metadata: metadata
         )
       end
 

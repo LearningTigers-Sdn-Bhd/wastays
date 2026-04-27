@@ -7,5 +7,6 @@ FactoryBot.define do
     max_children { 1 }
     quantity { 1 }
     base_price { 99.99 }
+    room_number_mode { "range" }
   end
 end

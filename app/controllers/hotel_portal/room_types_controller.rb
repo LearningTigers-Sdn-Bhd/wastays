@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class HotelPortal::RoomTypesController < HotelPortal::BaseController
   before_action :set_room_type, only: [ :show, :edit, :update, :destroy ]
 
@@ -21,13 +23,17 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
 
   def create
     @hotel = current_hotel
-    @room_type = @hotel.room_types.build(room_type_params)
     authorize @hotel, :update?, policy_class: HotelPolicy
 
-    if @room_type.save
-      @hotel.complete_rooms!
+    result = HotelPortal::RoomTypes::SaveRoomType.new(
+      hotel: @hotel,
+      params: room_type_params
+    ).call
+
+    if result.success?
       redirect_to hotel_room_types_path(@hotel), notice: "Room type created successfully."
     else
+      @room_type = result.room_type
       render :new, status: :unprocessable_content
     end
   end
@@ -41,7 +47,13 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
     @hotel = current_hotel
     authorize @hotel, :update?, policy_class: HotelPolicy
 
-    if @room_type.update(room_type_params)
+    result = HotelPortal::RoomTypes::SaveRoomType.new(
+      hotel: @hotel,
+      room_type: @room_type,
+      params: room_type_params
+    ).call
+
+    if result.success?
       redirect_to hotel_room_types_path(@hotel), notice: "Room type updated successfully."
     else
       render :edit, status: :unprocessable_content
@@ -62,6 +74,6 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   end
 
   def room_type_params
-    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, photos: [])
+    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, :room_number_mode, photos: [], room_numbers: [])
   end
 end
