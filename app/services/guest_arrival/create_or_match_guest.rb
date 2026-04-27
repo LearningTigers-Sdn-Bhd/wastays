@@ -6,11 +6,12 @@ module GuestArrival
       @name = params[:name]
       @email = params[:email]&.downcase&.strip
       @phone = params[:phone]&.strip
-      @government_id = params[:government_id]&.strip
+      @government_id = params[:government_id]&.downcase&.strip
       @gender = params[:gender]&.downcase&.strip
-      @country = params[:country]&.strip
+      @country = params[:country]&.downcase&.strip
       @document_type = params[:document_type]&.downcase&.strip
       @marketing_consent = params[:marketing_consent]
+      @created_by_hotel_id = params[:created_by_hotel_id]
     end
 
     def call
@@ -46,7 +47,8 @@ module GuestArrival
           country: @country,
           gender: @gender,
           document_type: @document_type,
-          metadata: metadata
+          metadata: metadata,
+          created_by_hotel_id: @created_by_hotel_id
         )
       end
 

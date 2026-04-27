@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Guest < ApplicationRecord
+  belongs_to :created_by_hotel, class_name: "Hotel", optional: true
   has_many :booking_guests, dependent: :destroy
   has_many :bookings, through: :booking_guests
 
@@ -77,6 +78,8 @@ class Guest < ApplicationRecord
   private
 
   def normalize_guest_data
+    self.email = email&.downcase&.strip
+    self.government_id = government_id&.downcase&.strip
     self.gender = gender&.downcase
     self.document_type = document_type&.downcase
     self.country = normalized_country

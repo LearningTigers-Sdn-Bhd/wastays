@@ -56,6 +56,7 @@ module Bookings
             InventoryManager.new(@booking).deduct
           end
 
+          sync_guest(@booking)
           OpenStruct.new(success?: true, booking: @booking)
         else
           OpenStruct.new(success?: false, errors: @booking.errors.full_messages)
@@ -63,6 +64,29 @@ module Bookings
       end
     rescue => e
       OpenStruct.new(success?: false, errors: [ e.message ])
+    end
+
+    private
+
+    def sync_guest(booking)
+      guest_result = GuestArrival::CreateOrMatchGuest.new(
+        name: booking.guest_name,
+        email: booking.guest_email,
+        phone: booking.guest_phone,
+        country: booking.guest_country.presence || @hotel.country,
+        created_by_hotel_id: @hotel.id
+      ).call
+
+      if guest_result.success? && !booking.booking_guests.exists?(guest: guest_result.guest)
+        # If email changed, we might have multiple guests linked?
+        # For now, let's just ensure the primary guest is updated if it matches the new email
+        # or create a new link if none exists.
+        
+        # Remove old primary if it exists and we're adding a new one?
+        # Actually, standardizing on one primary guest per booking.
+        booking.booking_guests.where(is_primary: true).destroy_all
+        booking.booking_guests.create!(guest: guest_result.guest, is_primary: true)
+      end
     end
   end
 end

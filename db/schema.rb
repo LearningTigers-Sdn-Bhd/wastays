@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_24_104502) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_27_031250) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -268,6 +268,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_24_104502) do
     t.string "magic_token_digest"
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
+    t.bigint "created_by_hotel_id"
+    t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
   end
 
