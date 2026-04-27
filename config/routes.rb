@@ -253,7 +253,7 @@ Rails.application.routes.draw do
       end
     end
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
-    resources :guests, only: [ :index, :show ]
+    resources :guests, only: [ :index, :show, :new, :create, :edit, :update ]
     resources :in_house_guests, only: [ :index ]
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings

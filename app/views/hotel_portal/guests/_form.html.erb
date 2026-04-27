@@ -1,0 +1,84 @@
+<%= form_with(model: [current_hotel, guest], local: true, class: "space-y-8") do |f| %>
+  <% if guest.errors.any? %>
+    <div class="rounded-xl bg-red-50 p-4 border border-red-100">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-bold text-red-800">
+            <%= pluralize(guest.errors.count, "error") %> prohibited this guest from being saved:
+          </h3>
+          <div class="mt-2 text-sm text-red-700">
+            <ul class="list-disc pl-5 space-y-1">
+              <% guest.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+      <h2 class="text-lg font-bold tracking-tight text-slate-950">Basic Information</h2>
+      <p class="mt-1 text-sm font-medium text-slate-600">Primary identity and contact details.</p>
+    </div>
+    <div class="p-6 sm:p-8 space-y-6">
+      <div>
+        <%= f.label :name, "Full Name", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.text_field :name, required: true, placeholder: "e.g. John Doe", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div>
+          <%= f.label :email, "Email Address", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.email_field :email, placeholder: "e.g. john@example.com", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+        <div>
+          <%= f.label :phone, "Phone Number", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.telephone_field :phone, placeholder: "e.g. +60 12 345 6789", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div>
+          <%= f.label :country, "Country", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.text_field :country, required: true, placeholder: "e.g. Malaysia", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+        <div>
+          <%= f.label :gender, "Gender", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.select :gender, Guest::GENDERS.map { |g| [g.capitalize, g] }, { include_blank: "Select Gender" }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+      <h2 class="text-lg font-bold tracking-tight text-slate-950">Identity Verification</h2>
+      <p class="mt-1 text-sm font-medium text-slate-600">Legal identification details.</p>
+    </div>
+    <div class="p-6 sm:p-8 space-y-6">
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div>
+          <%= f.label :document_type, "Document Type", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.select :document_type, Guest::DOCUMENT_TYPES.map { |dt| [dt.upcase, dt] }, { include_blank: "Select Document Type" }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+        <div>
+          <%= f.label :government_id, "ID / Passport Number", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.text_field :government_id, placeholder: "Enter ID number", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-end gap-x-4">
+    <%= link_to "Cancel", hotel_guests_path(current_hotel), class: "px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition" %>
+    <%= f.submit (guest.new_record? ? "Create Guest Profile" : "Save Changes"), class: "inline-flex items-center rounded-xl bg-slate-900 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+  </div>
+<% end %>

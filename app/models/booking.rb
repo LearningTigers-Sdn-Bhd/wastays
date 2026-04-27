@@ -39,6 +39,7 @@ class Booking < ApplicationRecord
   validates :confirmation_token, uniqueness: true
 
   before_validation :generate_confirmation_token, on: :create
+  before_validation :normalize_guest_data
 
   scope :recent_first, -> { order(created_at: :desc) }
   scope :confirmed, -> { where(status: "confirmed") }
@@ -195,5 +196,10 @@ class Booking < ApplicationRecord
 
   def generate_confirmation_token
     self.confirmation_token ||= "WS-#{SecureRandom.alphanumeric(8).upcase}"
+  end
+
+  def normalize_guest_data
+    self.guest_email = guest_email&.downcase&.strip
+    self.guest_country = guest_country&.downcase&.strip
   end
 end

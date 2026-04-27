@@ -8,11 +8,15 @@
 
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
   <div class="px-4 md:px-0">
-    <div class="mt-5">
+    <div class="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Guest Records</h1>
         <p class="mt-1 text-sm font-medium text-slate-600">Review guest profiles, contact details, and property stay history.</p>
       </div>
+      <%= link_to new_hotel_guest_path(current_hotel), class: "inline-flex items-center gap-x-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 w-fit" do %>
+        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        New Guest Profile
+      <% end %>
     </div>
   </div>
 
