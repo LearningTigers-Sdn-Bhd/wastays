@@ -10,11 +10,11 @@ module Guests
     end
 
     def call
-      # 1. Check if guest has ANY bookings at this hotel
-      if @guest.bookings.where(hotel_id: @hotel.id).exists?
+      # 1. Check if guest has any ACTIVE (non-cancelled) bookings at this hotel
+      if @guest.bookings.where(hotel_id: @hotel.id).where.not(status: "cancelled").exists?
         return OpenStruct.new(
           success?: false,
-          message: "Guest cannot be deleted because they have associated bookings. Please cancel and remove bookings first if necessary."
+          message: "Guest cannot be deleted because they have associated active bookings. Please cancel or remove bookings first if necessary."
         )
       end
 
