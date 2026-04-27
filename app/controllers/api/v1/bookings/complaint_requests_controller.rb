@@ -12,16 +12,21 @@ class Api::V1::Bookings::ComplaintRequestsController < Api::V1::BaseController
         complaint_request: @complaint_request
       }, status: :created
     else
-      render json: { errors: @complaint_request.errors.full_messages }, status: :unprocessable_entity
+      render json: {
+        error: "Failed to create complaint request",
+        details: @complaint_request.errors.full_messages
+      }, status: :unprocessable_entity
     end
   end
 
   private
 
   def set_booking
-    @booking = booking_scope.find_by(confirmation_token: params[:booking_id]) || booking_scope.find(params[:booking_id])
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: "Booking not found" }, status: :not_found
+    @booking = booking_scope.find_by(confirmation_token: params[:booking_id]) || booking_scope.find_by(id: params[:booking_id])
+
+    unless @booking
+      render json: { error: "Booking not found or access denied" }, status: :not_found
+    end
   end
 
   def complaint_params

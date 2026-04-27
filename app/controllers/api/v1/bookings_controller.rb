@@ -1,7 +1,7 @@
 class Api::V1::BookingsController < Api::V1::BaseController
   def show
     # Use booking_scope to ensure authorized access
-    booking = booking_scope.find_by(confirmation_token: params[:id]) || booking_scope.find(params[:id])
+    booking = booking_scope.find_by(confirmation_token: params[:id]) || booking_scope.find_by(id: params[:id])
 
     unless booking
       render json: { error: "Booking not found or access denied" }, status: :not_found

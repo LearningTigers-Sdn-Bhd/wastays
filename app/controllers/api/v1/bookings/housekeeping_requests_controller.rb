@@ -12,16 +12,21 @@ class Api::V1::Bookings::HousekeepingRequestsController < Api::V1::BaseControlle
         housekeeping_request: @housekeeping_request
       }, status: :created
     else
-      render json: { errors: @housekeeping_request.errors.full_messages }, status: :unprocessable_entity
+      render json: {
+        error: "Failed to create housekeeping request",
+        details: @housekeeping_request.errors.full_messages
+      }, status: :unprocessable_entity
     end
   end
 
   private
 
   def set_booking
-    @booking = booking_scope.find_by(confirmation_token: params[:booking_id]) || booking_scope.find(params[:booking_id])
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: "Booking not found" }, status: :not_found
+    @booking = booking_scope.find_by(confirmation_token: params[:booking_id]) || booking_scope.find_by(id: params[:booking_id])
+
+    unless @booking
+      render json: { error: "Booking not found or access denied" }, status: :not_found
+    end
   end
 
   def housekeeping_params
