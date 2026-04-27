@@ -50,7 +50,7 @@ RSpec.describe "AI Concierge API", type: :request do
 
       describe "POST /api/v1/bookings/:id/complaint_requests" do
       it "creates a complaint request for the booking" do
-      post "/api/v1/bookings/#{booking.id}/complaint_requests", 
+      post "/api/v1/bookings/#{booking.id}/complaint_requests",
            params: { complaint_request: { complaint_details: "AC not cold" } }.to_json,
            headers: headers
 
@@ -61,5 +61,4 @@ RSpec.describe "AI Concierge API", type: :request do
       expect(booking.complaint_requests.count).to eq(1)
       end
       end
-
 end
