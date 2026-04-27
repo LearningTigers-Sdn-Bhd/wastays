@@ -4,7 +4,7 @@ module HotelPortal
   class GuestsController < HotelPortal::BaseController
     helper_method :safe_guest_attr, :guest_stays_count, :guest_currency_totals
 
-    before_action :set_guest, only: [ :show, :edit, :update ]
+    before_action :set_guest, only: [ :show, :edit, :update, :destroy ]
 
     def index
       unless current_hotel
@@ -15,76 +15,20 @@ module HotelPortal
         return
       end
 
-      @guests = ActiveRecord::Encryption.without_encryption do
-        # Guests who have stayed at this hotel (checked_in or completed)
-        # OR were registered by this hotel and have NO bookings yet (manually added)
-        # Guests with ONLY confirmed/cancelled bookings shouldn't appear yet.
-        scope = Guest
-          .select("guests.*, COALESCE(MAX(bookings.checked_out_at), MAX(bookings.check_out::timestamp)) AS last_stay_at")
-          .left_joins(:bookings)
-          .where(
-            "(bookings.hotel_id = :hotel_id AND bookings.status IN ('checked_in', 'completed')) OR " \
-            "(guests.created_by_hotel_id = :hotel_id AND bookings.id IS NULL)",
-            hotel_id: current_hotel.id
-          )
+      query = Guests::GuestQuery.new(hotel: current_hotel, params: params)
 
-        if params[:query].present?
-          query = "%#{params[:query].to_s.downcase.strip}%"
-          scope = scope.where(
-            "LOWER(guests.name) LIKE :query OR LOWER(guests.email) LIKE :query OR guests.phone LIKE :query",
-            query: query
-          )
-        end
+      @guests = query.call.page(params[:page]).per(25)
+      @country_options = query.country_options
 
-        scope = scope.where(country: params[:country]) if params[:country].present?
-
-        scope
-          .group("guests.id")
-          .order(Arel.sql("COALESCE(MAX(bookings.checked_out_at), MAX(bookings.check_out::timestamp), guests.created_at) DESC NULLS LAST"))
-          .page(params[:page])
-          .per(25)
-      end
-
-      @country_options = ActiveRecord::Encryption.without_encryption do
-        Guest
-          .left_joins(:bookings)
-          .where(
-            "(bookings.hotel_id = :hotel_id AND bookings.status IN ('checked_in', 'completed')) OR " \
-            "(guests.created_by_hotel_id = :hotel_id AND bookings.id IS NULL)",
-            hotel_id: current_hotel.id
-          )
-          .where.not(country: [ nil, "" ])
-          .distinct
-          .order(:country)
-          .pluck(:country)
-      end
-
-      # Totals for guests in the current page
-      guest_ids = @guests.map(&:id)
-
-      booking_scope = Booking
-        .joins(:booking_guests)
-        .where(hotel_id: current_hotel.id, booking_guests: { guest_id: guest_ids })
-
-      @guest_stays_count = booking_scope
-        .group("booking_guests.guest_id")
-        .distinct
-        .count("bookings.id")
-
-      @guest_currency_totals = booking_scope
-        .group("booking_guests.guest_id", :currency)
-        .sum(:total_amount)
-        .each_with_object({}) do |((guest_id, currency), amount), totals|
-          totals[guest_id] ||= {}
-          totals[guest_id][currency] = amount
-        end
+      stats = Guests::StatsService.new(hotel: current_hotel, guest_ids: @guests.map(&:id)).call
+      @guest_stays_count = stats[:stays_count]
+      @guest_currency_totals = stats[:currency_totals]
     end
 
     def show
       guest_booking_scope = Booking
         .joins(:booking_guests)
         .where(hotel_id: current_hotel.id, booking_guests: { guest_id: @guest.id })
-        .where(status: [ "checked_in", "completed" ])
 
       @all_bookings = guest_booking_scope
         .includes(:pre_checkin)
@@ -122,10 +66,18 @@ module HotelPortal
       end
     end
 
+    def destroy
+      result = Guests::DestroyService.new(guest: @guest, hotel: current_hotel).call
+
+      if result.success?
+        redirect_to hotel_guests_path(current_hotel), notice: result.message, status: :see_other
+      else
+        redirect_to hotel_guests_path(current_hotel), alert: result.message, status: :see_other
+      end
+    end
+
     def safe_guest_attr(guest, attribute)
-      guest.public_send(attribute)
-    rescue ActiveRecord::Encryption::Errors::Decryption
-      "Encrypted data"
+      Guests::GuestPresenter.new(guest).public_send(attribute)
     end
 
     def guest_stays_count(guest)
