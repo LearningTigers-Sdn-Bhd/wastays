@@ -23,21 +23,17 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
 
   def create
     @hotel = current_hotel
-
-    # Sanitize room_numbers: ensure it's an array and filter out empty strings
-    if params[:room_type] && params[:room_type][:room_numbers]
-      params[:room_type][:room_numbers] = Array(params[:room_type][:room_numbers]).reject(&:blank?)
-    else
-      params[:room_type][:room_numbers] = []
-    end
-
-    @room_type = @hotel.room_types.build(room_type_params)
     authorize @hotel, :update?, policy_class: HotelPolicy
 
-    if @room_type.save
-      @hotel.complete_rooms!
+    result = HotelPortal::RoomTypes::SaveRoomType.new(
+      hotel: @hotel,
+      params: room_type_params
+    ).call
+
+    if result.success?
       redirect_to hotel_room_types_path(@hotel), notice: "Room type created successfully."
     else
+      @room_type = result.room_type
       render :new, status: :unprocessable_content
     end
   end
@@ -51,14 +47,13 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
     @hotel = current_hotel
     authorize @hotel, :update?, policy_class: HotelPolicy
 
-    # Sanitize room_numbers: ensure it's an array and filter out empty strings
-    if params[:room_type] && params[:room_type][:room_numbers]
-      params[:room_type][:room_numbers] = Array(params[:room_type][:room_numbers]).reject(&:blank?)
-    else
-      params[:room_type][:room_numbers] = []
-    end
+    result = HotelPortal::RoomTypes::SaveRoomType.new(
+      hotel: @hotel,
+      room_type: @room_type,
+      params: room_type_params
+    ).call
 
-    if @room_type.update(room_type_params)
+    if result.success?
       redirect_to hotel_room_types_path(@hotel), notice: "Room type updated successfully."
     else
       render :edit, status: :unprocessable_content

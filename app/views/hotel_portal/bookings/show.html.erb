@@ -105,9 +105,9 @@
                          data-[active=true]:border-b-blue-600 data-[active=true]:text-slate-950 data-[active=true]:bg-slate-50/50 flex items-center justify-center gap-2"
                   role="tab">
             Requests
-            <% if @pending_requests_count.to_i > 0 %>
+            <% if @presenter.pending_requests_count > 0 %>
               <span class="inline-flex items-center justify-center size-5 rounded-full bg-amber-100 text-[10px] font-black text-amber-800">
-                <%= @pending_requests_count %>
+                <%= @presenter.pending_requests_count %>
               </span>
             <% end %>
           </button>
@@ -140,8 +140,8 @@
             </div>
           </div>
 
-          <% if @pre_checkin.present? && @booking.pre_checkin_display_status == "completed" %>
-            <% pre_checkin_metadata = @pre_checkin&.metadata || {} %>
+          <% if @presenter.pre_checkin.present? && @booking.pre_checkin_display_status == "completed" %>
+            <% pre_checkin_metadata = @presenter.pre_checkin&.metadata || {} %>
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 flex items-center justify-between gap-3">
                 <div>
@@ -201,13 +201,13 @@
                     <div>
                       <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Category</label>
                       <% current_room_type_id = @booking.booking_rooms.first&.room_type_id %>
-                      <%= f.collection_select :room_type_id, @room_types, :id, :name, { selected: current_room_type_id }, 
+                      <%= f.collection_select :room_type_id, @presenter.room_types, :id, :name, { selected: current_room_type_id }, 
                           { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
                             data: { 
                               booking_calc_target: "roomType", 
                               action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate",
-                              prices: @room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
-                              room_numbers: @room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
+                              prices: @presenter.room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
+                              room_numbers: @presenter.room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
                             } 
                           } %>
                     </div>
@@ -253,7 +253,7 @@
 
                 <div class="space-y-3">
                   <h3 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Reserved Units</h3>
-                  <% @booking_rooms.each do |room| %>
+                  <% @presenter.booking_rooms.each do |room| %>
                     <div class="flex justify-between items-center p-4 rounded-xl border border-slate-100 bg-slate-50/50">
                       <div>
                         <p class="text-sm font-bold text-slate-900"><%= room.room_type_snapshot['name'] %></p>
@@ -288,12 +288,12 @@
                   <p class="mt-1 text-sm font-medium text-slate-600">Guest requests for room services.</p>
                 </div>
                 <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-                  <%= @housekeeping_requests.to_a.count %>
+                  <%= @presenter.housekeeping_requests.to_a.count %>
                 </span>
               </div>
               <div class="p-6 space-y-4">
-                <% if @housekeeping_requests.any? %>
-                  <% @housekeeping_requests.each do |request| %>
+                <% if @presenter.housekeeping_requests.any? %>
+                  <% @presenter.housekeeping_requests.each do |request| %>
                     <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
                       <div class="flex items-start justify-between gap-4">
                         <div class="flex-1 min-w-0 space-y-2">
@@ -333,12 +333,12 @@
                   <p class="mt-1 text-sm font-medium text-slate-600">Guest-reported issues and status.</p>
                 </div>
                 <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-                  <%= @complaint_requests.to_a.count %>
+                  <%= @presenter.complaint_requests.to_a.count %>
                 </span>
               </div>
               <div class="p-6 space-y-4">
-                <% if @complaint_requests.any? %>
-                  <% @complaint_requests.each do |request| %>
+                <% if @presenter.complaint_requests.any? %>
+                  <% @presenter.complaint_requests.each do |request| %>
                     <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
                       <div class="flex items-start justify-between gap-4">
                         <div class="flex-1 min-w-0 space-y-2">

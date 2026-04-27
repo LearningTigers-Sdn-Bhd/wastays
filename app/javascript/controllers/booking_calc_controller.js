@@ -4,7 +4,6 @@ export default class extends Controller {
   static targets = ["checkIn", "checkOut", "roomType", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer"]
 
   connect() {
-    console.log("Booking Calc Controller Connected")
     // Trigger initial calculation and room numbers load
     if (this.roomTypeTarget.value && this.checkInTarget.value && this.checkOutTarget.value) {
       this.calculate()
@@ -32,14 +31,11 @@ export default class extends Controller {
     try {
       const baseUrl = this.element.dataset.availabilityUrl
       if (!baseUrl) {
-          console.warn("No availability URL found on form element")
           return
       }
       
       const bookingId = this.element.dataset.bookingId || ""
       const url = `${baseUrl}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}&exclude_booking_id=${bookingId}`
-      
-      console.log("Checking availability:", url)
       
       const response = await fetch(url)
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
@@ -80,7 +76,6 @@ export default class extends Controller {
   }
 
   calculate() {
-    console.log("Calculating stay...")
     const checkInDate = new Date(this.checkInTarget.value)
     const checkOutDate = new Date(this.checkOutTarget.value)
     const roomTypeId = this.roomTypeTarget.value
