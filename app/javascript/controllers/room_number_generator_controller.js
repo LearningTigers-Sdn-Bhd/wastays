@@ -1,10 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["modeCheckbox", "modeInput", "rangeFields", "customFields", "start", "customList", "preview", "quantity", "inputContainer"]
+  static targets = ["modeCheckbox", "modeInput", "rangeFields", "customFields", "start", "customList", "preview", "quantity", "inputContainer", "hint"]
+  static values = { defaultStart: { type: Number, default: 101 } }
 
   connect() {
-    // If we have existing room numbers, try to guess the starting number for range mode
+    // ... initial guess logic ...
     if (this.customListTarget.value.trim() !== "") {
       const match = this.customListTarget.value.match(/\d+/)
       if (match && !this.startTarget.value) {
@@ -24,11 +25,9 @@ export default class extends Controller {
       this.rangeFieldsTarget.classList.add("hidden")
       this.customFieldsTarget.classList.remove("hidden")
 
-      // SYNC FROM RANGE: If switching to custom and the list is empty,
-      // pre-fill it with the current range-generated numbers.
       if (previousMode === "range" && !this.customListTarget.value.trim()) {
         const quantity = parseInt(this.quantityTarget.value) || 0
-        const start = parseInt(this.startTarget.value) || 101
+        const start = parseInt(this.startTarget.value) || this.defaultStartValue
         let numbers = []
         for (let i = 0; i < quantity; i++) {
           numbers.push(`${start + i}`)
@@ -39,7 +38,7 @@ export default class extends Controller {
       this.rangeFieldsTarget.classList.remove("hidden")
       this.customFieldsTarget.classList.add("hidden")
       if (!this.startTarget.value) {
-        this.startTarget.value = "101"
+        this.startTarget.value = this.defaultStartValue.toString()
       }
     }
     this.generate()
@@ -55,7 +54,6 @@ export default class extends Controller {
         const customVal = this.customListTarget.value
         numbers = customVal.split(",").map(n => n.trim()).filter(n => n !== "")
 
-        // REVERSE SYNC: If they type a first number in custom, update the range start
         if (numbers.length > 0) {
           const match = numbers[0].match(/\d+/)
           if (match) {
@@ -63,7 +61,7 @@ export default class extends Controller {
           }
         }
       } else {
-        let start = parseInt(this.startTarget.value) || 101
+        let start = parseInt(this.startTarget.value) || this.defaultStartValue
         for (let i = 0; i < quantity; i++) {
           numbers.push(`${start + i}`)
         }
@@ -94,14 +92,13 @@ export default class extends Controller {
 
     this.previewTarget.innerHTML = previewHtml
 
-    const hint = document.getElementById("room-numbers-hint")
-    if (hint) {
+    if (this.hasHintTarget) {
       if (numbers.length !== quantity && quantity > 0) {
-        hint.innerHTML = `Warning: Number of rooms (${numbers.length}) does not match Total Quantity (${quantity})`
-        hint.classList.remove("hidden")
-        hint.classList.add("text-red-500")
+        this.hintTarget.innerHTML = `Warning: Number of rooms (${numbers.length}) does not match Total Quantity (${quantity})`
+        this.hintTarget.classList.remove("hidden")
+        this.hintTarget.classList.add("text-red-500")
       } else {
-        hint.classList.add("hidden")
+        this.hintTarget.classList.add("hidden")
       }
     }
   }

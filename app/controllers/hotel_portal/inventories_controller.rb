@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class HotelPortal::InventoriesController < HotelPortal::BaseController
   before_action :set_room_type
 

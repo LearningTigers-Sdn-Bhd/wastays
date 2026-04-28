@@ -142,7 +142,7 @@
                 <% @room_types.each do |rt| %>
                   <label class="flex items-center gap-x-3 cursor-pointer group">
                     <div class="relative flex items-center">
-                      <%= f.check_box :room_type_ids, { multiple: true, checked: @selected_room_type_ids.include?(rt.id), class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0" }, rt.id, nil %>
+                      <%= f.check_box :room_type_ids, { multiple: true, checked: @pricing_form.selected_room_type_ids.include?(rt.id), class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0" }, rt.id, nil %>
                     </div>
                     <span class="text-xs font-bold text-slate-700 group-hover:text-slate-900 transition-colors"><%= rt.name %></span>
                   </label>
@@ -165,7 +165,7 @@
                 <div class="mb-3 flex items-center justify-between">
                   <h4 class="text-xs font-black uppercase tracking-wider text-slate-900">General Pricing</h4>
                   <div class="flex items-center gap-2">
-                    <% if @general_rule.present? %>
+                    <% if @pricing_form.general_rule.present? %>
                       <%= link_to destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "general", start_date: @start_date),
                         data: { turbo_method: :delete, turbo_confirm: "Remove General pricing?" },
                         class: "inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-red-700" do %>
@@ -178,11 +178,11 @@
                 <div class="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <label for="gp_start_date" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Start</label>
-                    <%= f.date_field :gp_start_date, value: @pricing_form[:gp_start_date], id: "gp_start_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                    <%= f.date_field :gp_start_date, value: @pricing_form.pricing_data[:gp_start_date], id: "gp_start_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                   </div>
                   <div>
                     <label for="gp_end_date" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">End (Optional)</label>
-                    <%= f.date_field :gp_end_date, value: @pricing_form[:gp_end_date], id: "gp_end_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                    <%= f.date_field :gp_end_date, value: @pricing_form.pricing_data[:gp_end_date], id: "gp_end_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                   </div>
                 </div>
                 <label for="gp_price" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Price</label>
@@ -190,7 +190,7 @@
                   <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
                     <span class="text-sm font-bold text-slate-400">RM</span>
                   </div>
-                  <%= f.number_field :gp_price, value: @pricing_form[:gp_price], step: 0.01, id: "gp_price", placeholder: "Optional", class: "w-full rounded-xl border border-slate-200 bg-white ps-11 pe-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                  <%= f.number_field :gp_price, value: @pricing_form.pricing_data[:gp_price], step: 0.01, id: "gp_price", placeholder: "Optional", class: "w-full rounded-xl border border-slate-200 bg-white ps-11 pe-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                 </div>
               </div>
 
@@ -198,7 +198,7 @@
                 <div class="mb-3 flex items-center justify-between">
                   <h4 class="text-xs font-black uppercase tracking-wider text-slate-900">Weekends Pricing</h4>
                   <div class="flex items-center gap-2">
-                    <% if @weekends_rule.present? %>
+                    <% if @pricing_form.weekends_rule.present? %>
                       <%= link_to destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "weekends", start_date: @start_date),
                         data: { turbo_method: :delete, turbo_confirm: "Remove Weekends pricing?" },
                         class: "inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-red-700" do %>
@@ -211,11 +211,11 @@
                 <div class="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <label for="wk_start_date" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Start</label>
-                    <%= f.date_field :wk_start_date, value: @pricing_form[:wk_start_date], id: "wk_start_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                    <%= f.date_field :wk_start_date, value: @pricing_form.pricing_data[:wk_start_date], id: "wk_start_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                   </div>
                   <div>
                     <label for="wk_end_date" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">End (Optional)</label>
-                    <%= f.date_field :wk_end_date, value: @pricing_form[:wk_end_date], id: "wk_end_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                    <%= f.date_field :wk_end_date, value: @pricing_form.pricing_data[:wk_end_date], id: "wk_end_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                   </div>
                 </div>
                 <label for="wk_price" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Price</label>
@@ -223,14 +223,14 @@
                   <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
                     <span class="text-sm font-bold text-slate-400">RM</span>
                   </div>
-                  <%= f.number_field :wk_price, value: @pricing_form[:wk_price], step: 0.01, id: "wk_price", placeholder: "Optional", class: "w-full rounded-xl border border-slate-200 bg-white ps-11 pe-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                  <%= f.number_field :wk_price, value: @pricing_form.pricing_data[:wk_price], step: 0.01, id: "wk_price", placeholder: "Optional", class: "w-full rounded-xl border border-slate-200 bg-white ps-11 pe-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                 </div>
                 <p class="mt-2 text-[10px] text-slate-500">Select which weekdays this weekend rule should target.</p>
                 <div class="mt-3 grid grid-cols-4 gap-2">
                   <% HotelPortal::InventoryDashboardsController::WEEKDAY_OPTIONS.each do |label, value| %>
                     <% input_id = "weekend_day_#{value}" %>
                     <label for="<%= input_id %>" class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                      <%= check_box_tag "pricing_rule[weekend_days][]", value, @weekend_days.include?(value), id: input_id, class: "me-1.5 size-3.5 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0" %>
+                      <%= check_box_tag "pricing_rule[weekend_days][]", value, @pricing_form.weekend_days.include?(value), id: input_id, class: "me-1.5 size-3.5 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0" %>
                       <%= label %>
                     </label>
                   <% end %>
@@ -241,7 +241,7 @@
                 <div class="mb-3 flex items-center justify-between">
                   <h4 class="text-xs font-black uppercase tracking-wider text-slate-900">School Holiday Pricing</h4>
                   <div class="flex items-center gap-2">
-                    <% if @school_rule.present? %>
+                    <% if @pricing_form.school_rule.present? %>
                       <%= link_to destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "school_holiday", start_date: @start_date),
                         data: { turbo_method: :delete, turbo_confirm: "Remove School Holiday pricing?" },
                         class: "inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-red-700" do %>
@@ -254,11 +254,11 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label for="sc_start_date" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Start</label>
-                    <%= f.date_field :sc_start_date, value: @pricing_form[:sc_start_date], id: "sc_start_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                    <%= f.date_field :sc_start_date, value: @pricing_form.pricing_data[:sc_start_date], id: "sc_start_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                   </div>
                   <div>
                     <label for="sc_end_date" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">End (Optional)</label>
-                    <%= f.date_field :sc_end_date, value: @pricing_form[:sc_end_date], id: "sc_end_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                    <%= f.date_field :sc_end_date, value: @pricing_form.pricing_data[:sc_end_date], id: "sc_end_date", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                   </div>
                 </div>
                 <label for="sc_price" class="mt-3 block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Price</label>
@@ -266,7 +266,7 @@
                   <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
                     <span class="text-sm font-bold text-slate-400">RM</span>
                   </div>
-                  <%= f.number_field :sc_price, value: @pricing_form[:sc_price], step: 0.01, id: "sc_price", placeholder: "Optional", class: "w-full rounded-xl border border-slate-200 bg-white ps-11 pe-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                  <%= f.number_field :sc_price, value: @pricing_form.pricing_data[:sc_price], step: 0.01, id: "sc_price", placeholder: "Optional", class: "w-full rounded-xl border border-slate-200 bg-white ps-11 pe-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                 </div>
               </div>
 
@@ -277,7 +277,7 @@
                 <p class="mb-3 text-[10px] text-slate-500">Set named holidays with price. Use only Date for one-day holiday, End Date is optional.</p>
 
                 <div data-public-holiday-rules-target="container" class="space-y-3">
-                  <% @public_holiday_rows.each_with_index do |holiday, index| %>
+                  <% @pricing_form.public_holiday_rows.each_with_index do |holiday, index| %>
                     <div data-public-holiday-row class="rounded-lg border border-slate-200 bg-white p-3">
                       <div class="mb-2 flex items-center justify-between">
                         <% if holiday.persisted? %>
@@ -313,8 +313,8 @@
                           <input type="date" name="pricing_rule[public_holidays][][end_date]" value="<%= holiday&.end_date %>" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm">
                         </div>
                       </div>
-                      <% if @pricing_errors.dig(:public_holidays, index).present? %>
-                        <p class="mt-2 text-[11px] font-medium text-red-600"><%= @pricing_errors.dig(:public_holidays, index) %></p>
+                      <% if @pricing_form.errors.dig(:public_holidays, index).present? %>
+                        <p class="mt-2 text-[11px] font-medium text-red-600"><%= @pricing_form.errors.dig(:public_holidays, index) %></p>
                       <% end %>
                       <div class="mt-3">
                         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Price</label>
@@ -328,9 +328,9 @@
                   </div>
                   <% end %>
                 </div>
-                <% if @pricing_errors[:base].present? %>
+                <% if @pricing_form.errors[:base].present? %>
                   <div class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-medium text-red-700">
-                    <%= @pricing_errors[:base].join(" ") %>
+                    <%= @pricing_form.errors[:base].join(" ") %>
                   </div>
                 <% end %>
 

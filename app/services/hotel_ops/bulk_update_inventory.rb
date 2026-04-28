@@ -31,7 +31,7 @@ module HotelOps
                                      .where(":date >= check_in AND :date < check_out", date: date)
                                      .where("(hotel_snapshot->>'room_number')::text IN (?)", valid_rooms)
                                      .count
-              inventory.quantity = [0, valid_rooms.size - occupied_count].max
+              inventory.quantity = [ 0, valid_rooms.size - occupied_count ].max
             else
               # If RoomNumbers mode is used but this type has none, use global quantity if provided
               inventory.available_room_numbers = []

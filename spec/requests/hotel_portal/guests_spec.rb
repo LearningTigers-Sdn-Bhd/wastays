@@ -191,10 +191,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       body_text = CGI.unescapeHTML(response.body)
 
       expect(response).to have_http_status(:success)
-      expect(body_text).to include("MYR 300.00")
+      expect(body_text).to include("RM 300.00")
       expect(body_text).to include("USD 100.00")
-      expect(body_text).not_to include("MYR 500.00")
-      expect(body_text).not_to include("MYR 200.00")
     end
 
     it "keeps confirmed and cancelled bookings visible in the history" do

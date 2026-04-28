@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["checkIn", "checkOut", "roomType", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer"]
+  static values = { availabilityUrl: String, priceUrl: String, bookingId: String }
 
   connect() {
     // Trigger initial calculation and room numbers load
@@ -29,13 +30,10 @@ export default class extends Controller {
     this.roomNumberSelectTarget.disabled = true
 
     try {
-      const baseUrl = this.element.dataset.availabilityUrl
-      if (!baseUrl) {
-          return
-      }
+      if (!this.hasAvailabilityUrlValue) return
       
-      const bookingId = this.element.dataset.bookingId || ""
-      const url = `${baseUrl}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}&exclude_booking_id=${bookingId}`
+      const bookingId = this.bookingIdValue || ""
+      const url = `${this.availabilityUrlValue}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}&exclude_booking_id=${bookingId}`
       
       const response = await fetch(url)
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
@@ -63,7 +61,7 @@ export default class extends Controller {
       const option = document.createElement("option")
       option.value = num
       option.textContent = num
-      if (num.toString() === currentSelection.toString()) option.selected = true
+      if (num.toString() === (currentSelection || "").toString()) option.selected = true
       this.roomNumberSelectTarget.appendChild(option)
     })
     
@@ -87,12 +85,11 @@ export default class extends Controller {
     // Crucial: Always check availability when dates/room type change
     this.updateRoomNumbers()
 
-    const priceUrl = this.element.dataset.priceUrl
-    if (!priceUrl) return
+    if (!this.hasPriceUrlValue) return
 
     try {
       this.displayTotalTarget.textContent = "Calculating..."
-      const url = `${priceUrl}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}`
+      const url = `${this.priceUrlValue}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}`
       const response = await fetch(url)
       const data = await response.json()
       this.updateDisplay(parseFloat(data.total_amount || 0))

@@ -34,7 +34,7 @@ module HotelOps
 
     def apply_for_room_type(room_type)
       standard_plan = room_type.rate_plans.first
-      
+
       (@start_date..@end_date).each do |date|
         winner = winning_rule_for(date)
 
