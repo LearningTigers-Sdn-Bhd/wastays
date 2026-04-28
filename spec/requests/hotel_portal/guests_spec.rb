@@ -73,8 +73,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         document_type: "ic"
       )
 
-      ravi_booking = create(:booking, hotel: hotel, guest_name: ravi.name, guest_email: ravi.email, guest_phone: ravi.phone)
-      aisha_booking = create(:booking, hotel: hotel, guest_name: aisha.name, guest_email: aisha.email, guest_phone: aisha.phone)
+      ravi_booking = create(:booking, hotel: hotel, status: "completed", guest_name: ravi.name, guest_email: ravi.email, guest_phone: ravi.phone)
+      aisha_booking = create(:booking, hotel: hotel, status: "completed", guest_name: aisha.name, guest_email: aisha.email, guest_phone: aisha.phone)
       create(:booking_guest, booking: ravi_booking, guest: ravi, is_primary: true)
       create(:booking_guest, booking: aisha_booking, guest: aisha, is_primary: true)
 

@@ -6,11 +6,12 @@ module GuestArrival
       @name = params[:name]
       @email = params[:email]&.downcase&.strip
       @phone = params[:phone]&.strip
-      @government_id = params[:government_id]&.strip
+      @government_id = params[:government_id]&.downcase&.strip
       @gender = params[:gender]&.downcase&.strip
-      @country = params[:country]&.strip
+      @country = params[:country]&.downcase&.strip
       @document_type = params[:document_type]&.downcase&.strip
       @marketing_consent = params[:marketing_consent]
+      @created_by_hotel_id = params[:created_by_hotel_id]
     end
 
     def call
@@ -18,7 +19,7 @@ module GuestArrival
 
       if guest
         updates = {}
-        updates[:name] = @name if @name.present? && guest.name.blank?
+        updates[:name] = @name if @name.present? && guest.name != @name
         updates[:country] = @country if @country.present? && guest.country.blank?
         updates[:gender] = @gender if @gender.present? && guest.gender.blank?
         updates[:document_type] = @document_type if @document_type.present? && guest.document_type.blank?
@@ -46,7 +47,8 @@ module GuestArrival
           country: @country,
           gender: @gender,
           document_type: @document_type,
-          metadata: metadata
+          metadata: metadata,
+          created_by_hotel_id: @created_by_hotel_id
         )
       end
 
@@ -62,15 +64,15 @@ module GuestArrival
         return guest if guest
       end
 
-      # 2. Match by phone if provided
-      if @phone.present?
-        guest = Guest.find_by(phone: @phone)
+      # 2. Match by email if provided (More unique than phone)
+      if @email.present?
+        guest = Guest.find_by(email: @email)
         return guest if guest
       end
 
-      # 3. Match by email if provided
-      if @email.present?
-        guest = Guest.find_by(email: @email)
+      # 3. Match by phone if provided
+      if @phone.present?
+        guest = Guest.find_by(phone: @phone)
         return guest if guest
       end
 
