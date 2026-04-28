@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_24_104502) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_28_035128) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -258,6 +258,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_24_104502) do
     t.string "magic_token_digest"
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
+    t.jsonb "chat_history", default: []
+    t.bigint "created_by_hotel_id"
+    t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
   end
 
@@ -295,9 +298,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_24_104502) do
     t.bigint "salesperson_id"
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
+    t.string "whatsapp_number"
+    t.text "ai_persona"
+    t.string "openai_api_key"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
+    t.index ["whatsapp_number"], name: "index_hotels_on_whatsapp_number", unique: true
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
@@ -617,6 +624,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_24_104502) do
     t.string "time_zone", default: "Kuala Lumpur", null: false
     t.index ["account_id"], name: "index_users_on_account_id"
     t.index ["email"], name: "index_users_on_email"
+  end
+
+  create_table "webhook_endpoints", force: :cascade do |t|
+    t.string "name"
+    t.string "url"
+    t.string "event_types"
+    t.boolean "enabled"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "webhook_events", force: :cascade do |t|

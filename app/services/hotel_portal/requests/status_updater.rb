@@ -13,8 +13,10 @@ module HotelPortal
       def call
         @request = find_request
         target_status = normalize_status
+        old_status = @request.status
 
         if update_request(@request, target_status)
+          trigger_webhook_if_done(old_status, target_status)
           @request
         else
           false
@@ -22,6 +24,31 @@ module HotelPortal
       end
 
       private
+
+      def trigger_webhook_if_done(old_status, new_status)
+        return if old_status == new_status
+        
+        is_done = (kind == "housekeeping" && new_status == "completed") || 
+                  (kind == "complaint" && new_status == "resolved")
+                  
+        return unless is_done
+
+        event_type = "#{kind}_#{new_status}"
+        payload = {
+          request_id: @request.id,
+          external_id: @request.external_id,
+          kind: kind,
+          status: new_status,
+          completed_at: @request.completed_at,
+          booking_id: @request.booking_id,
+          confirmation_token: @request.booking.confirmation_token,
+          guest_name: @request.booking.guest_name,
+          guest_phone: @request.booking.guest_phone,
+          hotel_name: @request.booking.hotel.name
+        }
+
+        WebhookBroadcastJob.perform_later(event_type, payload)
+      end
 
       def find_request
         case kind

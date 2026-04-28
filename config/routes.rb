@@ -155,6 +155,12 @@ Rails.application.routes.draw do
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
     end
+    resources :webhook_endpoints do
+      member do
+        post :test_ping
+        patch :toggle
+      end
+    end
     resources :observation_deck, only: [ :index, :show ], constraints: SuperadminConstraint.new do
       collection do
         delete :clear
