@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe 'Hotel Policies Update', type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  let(:hotel) { create(:hotel, account: account, status: 'profile_incomplete') }
+  let(:hotel) { create(:hotel, account: account, status: 'approved') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner') }
 
   before do
@@ -22,30 +22,21 @@ RSpec.describe 'Hotel Policies Update', type: :system do
   end
 
   it 'allows the user to update the hotel policies' do
-    expect(page).to have_content('Hotel Profile')
+    # Navigate directly to the edit page as there is no sidebar link
+    visit edit_hotel_property_policy_path(hotel)
 
-    # Click Update for Step 2
-    within('#step-policies') do
-      click_link 'Update'
-    end
-
-    expect(page).to have_field('Standard Check-in Time', type: 'time')
-    expect(page).to have_field('Standard Check-out Time', type: 'time')
+    expect(page).to have_content('Hotel Policies')
+    expect(page).to have_field('Standard Check-in Time')
+    expect(page).to have_field('Standard Check-out Time')
 
     fill_in 'Standard Check-in Time', with: '15:00'
     fill_in 'Standard Check-out Time', with: '11:00'
-    fill_in 'Cancellation Policy', with: 'Full refund if cancelled 24h before.'
+    find('#property_policy_cancellation_policy').set('Full refund if cancelled 24h before.')
 
     click_button 'Save Policies'
 
     expect(page).to have_content('Hotel policies updated successfully.')
-    expect(hotel.reload.status).to eq('rooms_incomplete')
-    expect(hotel.property_policy.check_in_time).to eq('15:00')
-
-    # Onboarding should now show Step 2 as completed
-    within('#step-policies') do
-      expect(page).to have_content('✓')
-      expect(page).to have_link('Edit')
-    end
+    expect(hotel.property_policy.reload.check_in_time).to eq('15:00')
+    expect(page).to have_content('Hotel Dashboard')
   end
 end

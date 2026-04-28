@@ -9,10 +9,15 @@
 <% end %>
 
 <div class="space-y-6">
-  <div>
+  <div class="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <%= link_to hotel_guests_path(current_hotel), class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600" do %>
       <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       Back to Guest Records
+    <% end %>
+
+    <%= link_to edit_hotel_guest_path(current_hotel, @guest), class: "inline-flex items-center gap-x-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 w-fit" do %>
+      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+      Edit Profile
     <% end %>
   </div>
 
@@ -51,12 +56,12 @@
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Last Stay</p>
         <p class="text-sm font-semibold text-neutral-text-primary">
-          <%= @bookings.first&.check_out ? @bookings.first.check_out.strftime("%d %b %Y") : "—" %>
+          <%= @all_bookings.first&.check_out ? @all_bookings.first.check_out.strftime("%d %b %Y") : "—" %>
         </p>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Total Visits</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= @bookings.count %></p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @all_bookings.count %></p>
       </div>
     </div>
   </div>
@@ -91,13 +96,13 @@
   </div>
 
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-      <div>
-        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Booking History</h2>
-        <p class="mt-1 text-sm font-medium text-slate-600">Timeline of this guest's stays at the property.</p>
+      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+        <div>
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Booking History</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Timeline of this guest's stays at the property.</p>
+        </div>
+      <span class="text-sm font-medium text-slate-500">Stays <span class="font-semibold text-slate-900"><%= @all_bookings.count %></span></span>
       </div>
-      <span class="text-sm font-medium text-slate-500">Stays <span class="font-semibold text-slate-900"><%= @bookings.count %></span></span>
-    </div>
 
     <% if @bookings.any? %>
       <div class="hidden md:block overflow-x-auto">
@@ -114,8 +119,6 @@
           </thead>
           <tbody class="divide-y divide-slate-200 bg-white">
             <% @bookings.each_with_index do |booking, index| %>
-              <% status_class = booking.status == "completed" ? "text-emerald-700" : "text-slate-600" %>
-              <% status_dot_class = booking.status == "completed" ? "bg-emerald-500" : "bg-slate-400" %>
               <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900"><%= booking.confirmation_token %></td>
                 <td class="px-6 py-4 text-sm text-slate-700">
@@ -127,10 +130,9 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_class %>">
-                    <span class="size-2.5 rounded-sm <%= status_dot_class %>"></span>
+                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking.status) %>">
                     <%= booking.status.humanize %>
-                  </div>
+                  </span>
                 </td>
                 <td class="px-6 py-4 text-sm font-medium text-slate-900">
                   <div class="flex flex-col gap-0.5">
@@ -165,7 +167,9 @@
               </div>
               <div class="text-right">
                 <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Status</p>
-                <p class="mt-1 text-sm font-medium <%= booking.status == 'completed' ? 'text-emerald-700' : 'text-slate-600' %>"><%= booking.status.humanize %></p>
+                <span class="inline-flex items-center rounded-full mt-1 px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking.status) %>">
+                  <%= booking.status.humanize %>
+                </span>
               </div>
             </div>
 
@@ -202,5 +206,9 @@
         <p class="text-sm font-medium text-slate-500">No bookings yet.</p>
       </div>
     <% end %>
+
+    <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center">
+      <%= paginate @bookings %>
+    </div>
   </div>
 </div>

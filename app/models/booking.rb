@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Booking < ApplicationRecord
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
@@ -36,7 +38,9 @@ class Booking < ApplicationRecord
   validates :confirmation_token, uniqueness: true
 
   before_validation :generate_confirmation_token, on: :create
+  before_validation :normalize_guest_data
 
+  scope :recent_first, -> { order(created_at: :desc) }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
@@ -158,10 +162,6 @@ class Booking < ApplicationRecord
     tourism_tax_applied && tourism_tax_amount.positive?
   end
 
-  def tourism_tax?
-    tourism_tax_applied && tourism_tax_amount.positive?
-  end
-
   private
 
   def set_payout_status
@@ -178,5 +178,10 @@ class Booking < ApplicationRecord
 
   def generate_confirmation_token
     self.confirmation_token ||= "WS-#{SecureRandom.alphanumeric(8).upcase}"
+  end
+
+  def normalize_guest_data
+    self.guest_email = guest_email&.downcase&.strip
+    self.guest_country = guest_country&.split&.map(&:capitalize)&.join(" ") if guest_country.present?
   end
 end

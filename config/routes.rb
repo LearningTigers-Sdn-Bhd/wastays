@@ -1,3 +1,5 @@
+require_relative "../app/constraints/superadmin_constraint"
+
 Rails.application.routes.draw do
   if Rails.env.development?
     require "letter_opener_web"
@@ -101,14 +103,27 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index"
     get "analytics", to: "dashboard#analytics"
     resources :hotels do
+      collection do
+        get :onboarding, to: "hotels/onboarding#index", as: :onboarding
+      end
       member do
-        post :approve
-        post :suspend
-        post :onboard_channex
-        post :disconnect_channex
+        get :onboarding, to: "hotels/onboarding#show"
+        post :complete_onboarding, to: "hotels/onboarding#complete"
+        post :save_onboarding_period, to: "hotels/onboarding#save_period"
+        post :approve, to: "hotels/status#approve"
+        post :suspend, to: "hotels/status#suspend"
+        post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
+        post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
+      end
+      resources :onboarding_sessions, module: :hotels do
+        member do
+          post :complete
+          post :cancel
+        end
       end
     end
     resources :bookings, only: [ :index, :show ] # Added stub
+    resources :salespersons, only: [ :index, :create, :update, :destroy ]
     resources :reconciliations, only: [ :index, :show ] do
       member do
         post :retry
@@ -167,6 +182,12 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index", as: :dashboard
     post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
+    resources :onboarding_sessions, only: [ :index ] do
+      member do
+        post :cancel
+      end
+    end
+
     resource :profile, only: [ :edit, :update ]
     delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
     delete "profile/photos", to: "profiles#destroy_photos", as: :profile_photos
@@ -182,7 +203,10 @@ Rails.application.routes.draw do
       resources :inventories, only: [ :index, :create ]
     end
 
-    resources :bookings, only: [ :index, :show, :update ] do
+    resources :bookings, only: [ :index, :show, :update, :new, :create ] do
+      collection do
+        get :availability
+      end
       member do
         post :check_in
         post :check_out
@@ -202,6 +226,7 @@ Rails.application.routes.draw do
     patch "requests/:kind/:request_id/unarchive", to: "requests#unarchive_request", as: :unarchive_request
 
     resources :arrivals, only: [ :index ]
+    resources :checked_out_guests, only: [ :index ]
     resources :audit_logs, only: [ :index ]
     resources :reports, only: [ :index ] do
       collection do
@@ -209,6 +234,7 @@ Rails.application.routes.draw do
         get :breakdown, defaults: { format: "html" }
       end
     end
+    resources :night_audits, only: [ :index, :show, :create ]
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
         post :apply_pricing_rules
@@ -218,7 +244,7 @@ Rails.application.routes.draw do
       end
     end
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
-    resources :guests, only: [ :index, :show ]
+    resources :guests, only: [ :index, :show, :new, :create, :edit, :update, :destroy ]
     resources :in_house_guests, only: [ :index ]
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings

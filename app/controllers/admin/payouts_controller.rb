@@ -8,6 +8,7 @@ class Admin::PayoutsController < Admin::BaseController
                                 .where("checked_out_at <= ?", cutoff_date)
 
     @payout_summary = Booking.payout_summary_by_hotel(@eligible_bookings)
+    @payout_summary = Kaminari.paginate_array(@payout_summary).page(params[:page]).per(25)
   end
 
   def export_payouts_csv

@@ -3,7 +3,7 @@ module ApplicationHelper
     case status
     when "confirmed" then "bg-green-100 text-green-800"
     when "checked_in" then "bg-blue-100 text-blue-800"
-    when "completed" then "bg-gray-100 text-gray-800"
+    when "completed" then "bg-emerald-100 text-emerald-800"
     when "cancelled" then "bg-red-100 text-red-800"
     when "pending" then "bg-yellow-100 text-yellow-800"
     else "bg-gray-100 text-gray-800"
@@ -70,5 +70,26 @@ module ApplicationHelper
     parsed_value ? parsed_value.strftime("%d %b %Y, %I:%M %p") : value.to_s
   rescue ArgumentError, TypeError
     value.to_s
+  end
+
+  def format_duration(seconds)
+    return "N/A" if seconds.blank?
+
+    days = (seconds / 86400).to_i
+    hours = ((seconds % 86400) / 3600).to_i
+    minutes = ((seconds % 3600) / 60).to_i
+
+    parts = []
+    parts << "#{days}d" if days > 0
+    parts << "#{hours}h" if hours > 0
+    parts << "#{minutes}m" if minutes > 0 && days == 0 # Only show minutes if less than a day
+
+    parts.any? ? parts.join(" ") : "< 1m"
+  end
+
+  def sanitize_href(url)
+    return "#" if url.blank?
+    return url if url.start_with?("http://", "https://")
+    "#"
   end
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module HotelPortal
   class RequestsArchive
     include Rails.application.routes.url_helpers

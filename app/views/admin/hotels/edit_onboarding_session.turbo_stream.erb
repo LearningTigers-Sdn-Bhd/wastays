@@ -1,0 +1,3 @@
+<%= turbo_stream.replace dom_id(@session) do %>
+  <%= render "onboarding_session", session: @session, hotel: @hotel, editing: true %>
+<% end %>

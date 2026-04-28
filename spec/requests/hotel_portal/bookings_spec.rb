@@ -66,20 +66,20 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
   describe "POST /check_in" do
     it "updates the booking status and redirects within the hotel path" do
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in"
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in", params: { checked_in_at: Time.current.to_s }
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
       expect(booking.reload.status).to eq("checked_in")
-      expect(booking.checked_in_at).to be_present
+      expect(booking.reload.checked_in_at).to be_present
     end
   end
 
   describe "POST /check_out" do
     it "updates the booking status and redirects within the hotel path" do
       booking.update!(status: 'checked_in')
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out"
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out", params: { checked_out_at: Time.current.to_s }
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
       expect(booking.reload.status).to eq("completed")
-      expect(booking.checked_out_at).to be_present
+      expect(booking.reload.checked_out_at).to be_present
     end
   end
 

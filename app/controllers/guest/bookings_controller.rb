@@ -21,7 +21,8 @@ class Guest::BookingsController < Guest::BaseController
       scope = scope.where(status: @status_filter)
     end
 
-    @bookings = scope.order(check_in: :desc)
+    @all_bookings = scope.order(check_in: :desc)
+    @bookings = @all_bookings.page(params[:page]).per(25)
   end
 
   def show

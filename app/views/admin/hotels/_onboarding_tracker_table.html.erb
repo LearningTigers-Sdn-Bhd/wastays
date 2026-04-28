@@ -1,0 +1,147 @@
+<div id="onboarding_tracker_table">
+  <div class="hidden lg:block overflow-x-auto">
+    <table class="min-w-full">
+      <thead class="bg-slate-100">
+        <tr>
+          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Hotel Name</th>
+          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">City</th>
+          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Registered</th>
+          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Onboarding Period</th>
+          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Scheduled Session</th>
+          <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200 bg-white">
+        <% if hotels.any? %>
+          <% hotels.each_with_index do |hotel, index| %>
+            <% is_live_or_approved = ["approved", "live"].include?(hotel.status) %>
+            <% scheduled_sessions = hotel.onboarding_sessions.where(status: "scheduled").order(scheduled_at: :asc, created_at: :asc) %>
+            <% search_text = [hotel.name, hotel.city, scheduled_sessions.map(&:trainer_name)].flatten.compact.join(" ").squish %>
+            <% scheduled_dates = scheduled_sessions.filter_map { |scheduled_session| scheduled_session.scheduled_at&.to_date&.iso8601 }.join("|") %>
+            <% duration_days = hotel.onboarding_duration_days&.to_f %>
+            <tr data-onboarding-tracker-filter-target="row"
+                data-search-text="<%= search_text %>"
+                data-scheduled-dates="<%= scheduled_dates %>"
+                data-onboarding-duration-days="<%= duration_days %>"
+                class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium sm:px-8">
+                <%= hotel.name %>
+                <div class="mt-1">
+                  <span class="inline-flex items-center gap-x-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold <%= is_live_or_approved ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200' %>">
+                    <%= hotel.status.titleize %>
+                  </span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600"><%= hotel.city %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600"><%= hotel.created_at.strftime("%d %b %Y") %></td>
+
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                <% if is_live_or_approved %>
+                  <% comp_record = hotel.onboarding_sessions.completed.where(notes: "FINAL_ONBOARDING_COMPLETION").order(completed_at: :desc).first %>
+                  <div class="flex flex-col">
+                    <span class="text-sm font-bold text-slate-900"><%= format_duration(hotel.onboarding_duration) %></span>
+                    <span class="text-[10px] text-slate-400 font-medium uppercase">
+                      <%= comp_record&.scheduled_at&.strftime("%d %b") %> — <%= comp_record&.completed_at&.strftime("%d %b %Y") %>
+                    </span>
+                  </div>
+                <% else %>
+                  <div data-controller="onboarding-period"
+                       data-onboarding-period-hotel-id-value="<%= hotel.id %>"
+                       class="relative">
+                    <button type="button"
+                            data-onboarding-period-target="trigger"
+                            data-action="click->onboarding-period#toggle"
+                            aria-expanded="false"
+                            class="group inline-flex items-center gap-x-2 rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-700 ring-1 ring-inset ring-blue-200 transition hover:bg-blue-100">
+                      <span data-onboarding-period-target="display">Calculating...</span>
+                      <svg class="size-3 text-blue-400 group-hover:text-blue-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+
+                    <div data-onboarding-period-target="popover"
+                         class="fixed z-[200] hidden w-[350px]">
+                      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-black/10">
+                        <div class="border-b border-slate-100 px-5 py-4">
+                          <h4 class="text-[10px] font-extrabold uppercase tracking-widest text-slate-900">Adjust Onboarding Period</h4>
+                          <p class="mt-1 text-[11px] font-medium text-slate-500">
+                            Pick the start and end dates, then save the period.
+                          </p>
+                        </div>
+                        <div class="flex flex-col gap-4 px-5 py-5">
+                          <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[9px] font-bold uppercase text-slate-400">Onboarding Started</label>
+                              <input type="date" name="start_date"
+                                     form="complete-form-<%= hotel.id %>"
+                                     value="<%= hotel.onboarding_start_date %>"
+                                     data-onboarding-period-target="startInput"
+                                     data-action="change->onboarding-period#update"
+                                     class="w-full rounded-xl border-slate-200 bg-slate-50 text-xs font-semibold focus:border-blue-500 focus:bg-white focus:ring-0">
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[9px] font-bold uppercase text-slate-400">Onboarding Finished</label>
+                              <input type="date" name="end_date"
+                                     form="complete-form-<%= hotel.id %>"
+                                     value="<%= hotel.onboarding_end_date %>"
+                                     data-onboarding-period-target="endInput"
+                                     data-action="change->onboarding-period#update"
+                                     class="w-full rounded-xl border-slate-200 bg-slate-50 text-xs font-semibold focus:border-blue-500 focus:bg-white focus:ring-0">
+                            </div>
+                          </div>
+                          <div class="flex items-center justify-end border-t border-slate-100 pt-4">
+                            <button type="button"
+                                    data-action="click->onboarding-period#save"
+                                    class="rounded-lg bg-slate-900 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-slate-800">
+                              Save Period
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+              </td>
+
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                <% if scheduled_sessions.any? %>
+                  <div class="space-y-2">
+                    <% scheduled_sessions.each do |scheduled_session| %>
+                      <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <p class="text-sm font-bold text-slate-900">
+                          <%= scheduled_session.scheduled_at&.strftime("%d %b %Y, %I:%M %p") || "Not scheduled" %>
+                        </p>
+                        <p class="text-xs text-slate-500">
+                          Trainer: <%= scheduled_session.trainer_name.presence || "Not assigned" %>
+                        </p>
+                      </div>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <span class="text-sm text-slate-400">No session</span>
+                <% end %>
+              </td>
+
+              <td class="px-6 py-4 whitespace-nowrap text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <%= link_to onboarding_admin_hotel_path(hotel), class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800" do %>
+                    Manage
+                  <% end %>
+
+                  <% unless is_live_or_approved %>
+                    <%= form_with url: complete_onboarding_admin_hotel_path(hotel), id: "complete-form-#{hotel.id}", class: "contents" do |f| %>
+                      <%= f.submit "Complete", class: "inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700", data: { turbo_confirm: "Are you sure you want to mark onboarding as completed for #{hotel.name}?" } %>
+                    <% end %>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div data-onboarding-tracker-filter-target="empty"
+       class="<%= hotels.any? ? 'hidden' : '' %> border-t border-slate-200 px-6 py-16 text-center text-sm italic text-slate-500">
+    <%= hotels.any? ? "No hotels match your filters." : "No hotels found." %>
+  </div>
+</div>

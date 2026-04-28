@@ -27,6 +27,7 @@ class HotelPortal::InHouseGuestsController < HotelPortal::BaseController
       in_house_scope = in_house_scope.left_outer_joins(:booking_rooms).where(booking_rooms: { id: nil })
     end
 
-    @in_house_guests = in_house_scope.order(checked_in_at: :desc, created_at: :desc).load
+    @all_in_house_guests = in_house_scope.order(checked_in_at: :desc, created_at: :desc)
+    @in_house_guests = @all_in_house_guests.page(params[:page]).per(25)
   end
 end

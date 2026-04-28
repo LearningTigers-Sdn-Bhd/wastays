@@ -36,13 +36,14 @@ module DemoSeeds
     { name: "Manage Guest Arrival", slug: "manage_guest_arrival" },
     { name: "View Audit Logs", slug: "view_audit_logs" },
     { name: "Export Audit Logs", slug: "export_audit_logs" },
+    { name: "Manage Night Audit", slug: "manage_night_audit" },
     { name: "Manage Users", slug: "manage_users" }
   ].freeze
 
   ROLE_TEMPLATES = [
-    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users] },
-    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users] },
-    { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings manage_bookings manage_guest_arrival] },
+    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit] },
+    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit] },
+    { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit] },
     { name: "Reservation Staff", slug: "reservation_staff", permissions: %w[view_bookings manage_bookings view_guest_phone] }
   ].freeze
 

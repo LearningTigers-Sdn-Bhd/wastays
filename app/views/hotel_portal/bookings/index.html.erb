@@ -7,11 +7,15 @@
 <% end %>
 
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0 mt-5">
+  <div class="px-4 md:px-0 mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Bookings</h1>
       <p class="mt-1 text-sm font-medium text-slate-600">Manage your hotel reservations and guest details.</p>
     </div>
+    <%= link_to new_hotel_booking_path(current_hotel), class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
+      <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+      Add New Booking
+    <% end %>
   </div>
 
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -20,7 +24,7 @@
         <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Reservations</h2>
         <p class="mt-1 text-sm font-medium text-slate-600">Full list of bookings associated with this property.</p>
       </div>
-      <span class="text-sm font-medium text-slate-500">Total Bookings <span class="font-semibold text-slate-900"><%= @bookings.count %></span></span>
+      <span class="text-sm font-medium text-slate-500">Total Bookings <span class="font-semibold text-slate-900"><%= @all_bookings.count %></span></span>
     </div>
 
     <div class="border-b border-slate-200 bg-slate-50/70 px-8 py-5">
@@ -97,7 +101,7 @@
                   </td>
                   <td class="px-8 py-5">
                     <div class="flex flex-col gap-1">
-                      <span class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></span>
+                      <span class="text-sm font-semibold text-slate-900"><%= booking.guest_name.capitalize %></span>
                       <span class="text-xs text-slate-500"><%= booking.guest_email %></span>
                       <span class="text-xs text-slate-500 font-mono"><%= booking.guest_phone %></span>
                     </div>
@@ -188,8 +192,8 @@
       </div>
 
       <!-- Pagination/Summary Footer -->
-      <div class="px-8 py-5 border-t border-slate-200 bg-slate-50/50">
-        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider italic">Showing <%= pluralize(@bookings.count, "reservation") %></p>
+      <div class="px-8 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center">
+        <%= paginate @bookings %>
       </div>
     <% end %>
   </div>

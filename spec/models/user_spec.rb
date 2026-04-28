@@ -20,7 +20,7 @@ RSpec.describe User, type: :model do
 
   describe 'roles' do
     it 'defines allowed roles' do
-      expect(User::ROLES).to match_array(%w[superadmin admin hotel_staff])
+      expect(User::ROLES).to match_array(%w[superadmin admin hotel_staff salesperson])
     end
 
     describe '#superadmin?' do

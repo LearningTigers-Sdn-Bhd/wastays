@@ -43,7 +43,7 @@
         <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Expected Arrivals</h2>
         <p class="mt-1 text-sm font-medium text-slate-600">Guests scheduled to arrive at your property.</p>
       </div>
-      <span class="text-sm font-medium text-slate-500">Total Arrivals <span class="font-semibold text-slate-900"><%= @arrivals.size %></span></span>
+      <span class="text-sm font-medium text-slate-500">Total Arrivals <span class="font-semibold text-slate-900"><%= @all_arrivals.count %></span></span>
     </div>
 
     <div class="border-b border-slate-200 bg-slate-50/70 px-8 py-5">
@@ -317,6 +317,10 @@
           <p class="text-sm font-medium text-slate-500">No arrivals scheduled for this date.</p>
         </div>
       <% end %>
+    </div>
+
+    <div class="px-8 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center">
+      <%= paginate @arrivals %>
     </div>
   </div>
 </div>

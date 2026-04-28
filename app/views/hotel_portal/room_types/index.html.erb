@@ -36,7 +36,7 @@
         <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Room Types</h2>
         <p class="mt-1 text-sm font-medium text-slate-600">All available room configurations for this property.</p>
       </div>
-      <span class="text-sm font-medium text-slate-500">Total Categories <span class="font-semibold text-slate-900"><%= @room_types.size %></span></span>
+      <span class="text-sm font-medium text-slate-500">Total Categories <span class="font-semibold text-slate-900"><%= @all_room_types.count %></span></span>
     </div>
 
     <div class="hidden lg:block overflow-x-auto">
@@ -186,6 +186,10 @@
           <p class="text-sm font-medium text-slate-500">No room categories found.</p>
         </div>
       <% end %>
+    </div>
+
+    <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+      <%= paginate @room_types %>
     </div>
   </div>
 </div>

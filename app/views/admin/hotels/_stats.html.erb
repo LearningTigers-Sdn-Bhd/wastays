@@ -1,0 +1,29 @@
+<% pending_hotels = all_hotels.count { |hotel| hotel.status == "pending_review" } %>
+<% active_hotels = all_hotels.count { |hotel| ["approved", "live"].include?(hotel.status) } %>
+<% suspended_hotels = all_hotels.count { |hotel| hotel.status == "suspended" } %>
+
+<div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4">
+  <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Hotels</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= all_hotels.size %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600">All registered hotel accounts</p>
+  </div>
+
+  <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Pending Review</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-600"><%= pending_hotels %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600">Waiting for admin action</p>
+  </div>
+
+  <div class="p-6 md:border-r md:border-slate-200 md:p-8">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Approved / Live</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= active_hotels %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600">Operational hotel accounts</p>
+  </div>
+
+  <div class="p-6 md:p-8">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Suspended</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-rose-600"><%= suspended_hotels %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600">Accounts needing follow-up</p>
+  </div>
+</div>

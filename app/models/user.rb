@@ -8,6 +8,9 @@ class User < ApplicationRecord
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :hotels, through: :user_hotel_accesses
   has_many :hotel_roles, through: :user_hotel_accesses, source: :role
+  has_many :performed_night_audits, class_name: "NightAudit", foreign_key: :performed_by_user_id, dependent: :nullify
+
+  has_many :assigned_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
 
   has_many :user_roles, dependent: :destroy
   has_many :roles, through: :user_roles
@@ -17,7 +20,7 @@ class User < ApplicationRecord
   validates :role, presence: true
   validates :time_zone, inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }
 
-  ROLES = %w[superadmin admin hotel_staff].freeze
+  ROLES = %w[superadmin admin hotel_staff salesperson].freeze
 
   before_validation :assign_default_time_zone
 

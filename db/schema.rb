@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_27_031250) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -241,6 +241,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
   end
 
+  create_table "complaints", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "category"
+    t.text "description"
+    t.string "status", default: "open"
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_complaints_on_booking_id"
+  end
+
   create_table "guests", force: :cascade do |t|
     t.string "name"
     t.string "email"
@@ -257,6 +268,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.string "magic_token_digest"
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
+    t.bigint "created_by_hotel_id"
+    t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
   end
 
@@ -291,8 +304,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "10.0", null: false
     t.bigint "featured_photo_attachment_id"
     t.string "preferred_channel_manager"
+    t.integer "salesperson_id"
+    t.date "onboarding_start_date"
+    t.date "onboarding_end_date"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
+    t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
@@ -339,6 +356,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.index ["settable_type", "settable_id"], name: "index_margin_rules_on_settable"
   end
 
+  create_table "night_audits", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.date "business_date", null: false
+    t.string "status", default: "pending", null: false
+    t.string "trigger_mode", default: "manual", null: false
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.jsonb "summary", default: {}, null: false
+    t.jsonb "exceptions", default: {}, null: false
+    t.text "notes"
+    t.boolean "force_closed", default: false, null: false
+    t.bigint "performed_by_user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "blocked_details", default: {}, null: false
+    t.index ["hotel_id", "business_date"], name: "index_night_audits_on_hotel_id_and_business_date", unique: true
+    t.index ["hotel_id"], name: "index_night_audits_on_hotel_id"
+    t.index ["performed_by_user_id"], name: "index_night_audits_on_performed_by_user_id"
+    t.index ["status"], name: "index_night_audits_on_status"
+  end
+
   create_table "observation_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "entry_type", null: false
     t.string "request_id"
@@ -355,6 +393,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.index ["request_id"], name: "index_observation_entries_on_request_id"
     t.index ["status"], name: "index_observation_entries_on_status"
     t.index ["tags"], name: "index_observation_entries_on_tags", using: :gin
+  end
+
+  create_table "onboarding_sessions", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "meeting_link"
+    t.datetime "scheduled_at"
+    t.datetime "completed_at"
+    t.string "status", default: "scheduled", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "trainer_name", default: "", null: false
+    t.index ["hotel_id"], name: "index_onboarding_sessions_on_hotel_id"
   end
 
   create_table "payment_settings", force: :cascade do |t|
@@ -475,6 +526,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.index ["booking_id"], name: "index_refund_requests_on_booking_id", unique: true
   end
 
+  create_table "request_notes", force: :cascade do |t|
+    t.string "noteable_type", null: false
+    t.bigint "noteable_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["noteable_type", "noteable_id", "created_at"], name: "index_request_notes_on_noteable_and_created_at"
+    t.index ["noteable_type", "noteable_id"], name: "index_request_notes_on_noteable"
+  end
+
   create_table "role_permissions", force: :cascade do |t|
     t.bigint "role_id", null: false
     t.bigint "permission_id", null: false
@@ -529,7 +590,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
     t.decimal "base_price"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "room_numbers"
+    t.string "room_number_mode"
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
+  end
+
+  create_table "salespeople", force: :cascade do |t|
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "salesperson_hotels", force: :cascade do |t|
+    t.bigint "salesperson_id", null: false
+    t.bigint "hotel_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_salesperson_hotels_on_hotel_id"
+    t.index ["salesperson_id", "hotel_id"], name: "index_salesperson_hotels_on_salesperson_and_hotel", unique: true
+    t.index ["salesperson_id"], name: "index_salesperson_hotels_on_salesperson_id"
   end
 
   create_table "setup_fee_rules", force: :cascade do |t|
@@ -606,10 +685,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotels", "accounts"
+  add_foreign_key "hotels", "users", column: "salesperson_id"
   add_foreign_key "housekeeping_requests", "bookings"
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
+  add_foreign_key "night_audits", "hotels"
+  add_foreign_key "night_audits", "users", column: "performed_by_user_id"
+  add_foreign_key "onboarding_sessions", "hotels"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
   add_foreign_key "payout_batches", "hotels"
@@ -624,6 +707,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_121000) do
   add_foreign_key "room_rates", "rate_plans"
   add_foreign_key "room_rates", "room_types"
   add_foreign_key "room_types", "hotels"
+  add_foreign_key "salesperson_hotels", "salespeople"
   add_foreign_key "user_hotel_accesses", "hotels"
   add_foreign_key "user_hotel_accesses", "roles"
   add_foreign_key "user_hotel_accesses", "users"
