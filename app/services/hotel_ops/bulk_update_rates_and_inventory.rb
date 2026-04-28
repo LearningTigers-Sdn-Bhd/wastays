@@ -1,6 +1,6 @@
 module HotelOps
   class BulkUpdateRatesAndInventory
-    def initialize(hotel:, room_type_ids: [], start_date:, end_date:, price: nil, quantity: nil, status: nil, user:)
+    def initialize(hotel:, room_type_ids: [], start_date:, end_date:, price: nil, quantity: nil, status: nil, user:, room_numbers: nil)
       @hotel = hotel
       @room_type_ids = room_type_ids
       @start_date = start_date.to_date
@@ -9,6 +9,7 @@ module HotelOps
       @quantity = quantity.presence&.to_i
       @status = status.presence
       @user = user
+      @room_numbers = room_numbers
     end
 
     def call
@@ -18,7 +19,7 @@ module HotelOps
       ActiveRecord::Base.transaction do
         room_types.each do |rt|
           update_rates(rt) if @price
-          update_inventory(rt) if @quantity || @status
+          update_inventory(rt) if @quantity || @status || @room_numbers
         end
         { success: true }
       end
@@ -47,9 +48,10 @@ module HotelOps
         room_type: room_type,
         start_date: @start_date,
         end_date: @end_date,
-        quantity: @quantity || room_type.quantity,
+        quantity: @quantity,
         status: @status || "open",
-        user: @user
+        user: @user,
+        room_numbers: @room_numbers
       ).call
     end
   end

@@ -78,4 +78,26 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(response.body).to include("Public holiday entries must include name, date, and price.")
     end
   end
+
+  describe "POST /apply_availability_override" do
+    it "saves the selected room numbers as the inventory quantity" do
+      room_type = create(:room_type, hotel: hotel, quantity: 10, room_numbers: [ "101", "102", "103", "104", "105", "106", "107", "108", "109", "110" ])
+
+      post apply_availability_override_hotel_inventory_dashboards_path(hotel), params: {
+        availability_override: {
+          room_type_ids: [ room_type.id ],
+          start_date: Date.current.to_s,
+          end_date: Date.current.to_s,
+          status: "open",
+          room_numbers: [ "101", "102", "103", "104", "105", "106", "107", "108" ]
+        }
+      }
+
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: Date.current.to_s))
+
+      inventory = room_type.room_inventories.find_by(date: Date.current)
+      expect(inventory.quantity).to eq(8)
+      expect(inventory.available_room_numbers).to match_array([ "101", "102", "103", "104", "105", "106", "107", "108" ])
+    end
+  end
 end

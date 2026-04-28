@@ -5,7 +5,7 @@ class RoomRate < ApplicationRecord
   validates :date, presence: true
   validates :price, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :currency, presence: true
-  validates :date, uniqueness: { scope: :room_type_id }
+  validates :date, uniqueness: { scope: [ :room_type_id, :rate_plan_id ] }
 
   after_commit :trigger_ari_sync, on: [ :create, :update ]
 

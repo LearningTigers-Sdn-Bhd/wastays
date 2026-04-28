@@ -1,6 +1,6 @@
 module HotelOps
   class BulkUpdateInventory
-    def initialize(hotel:, room_type:, start_date:, end_date:, quantity:, status: "open", user:)
+    def initialize(hotel:, room_type:, start_date:, end_date:, quantity: nil, status: "open", user:, room_numbers: nil)
       @hotel = hotel
       @room_type = room_type
       @start_date = start_date.to_date
@@ -8,6 +8,7 @@ module HotelOps
       @quantity = quantity
       @status = status
       @user = user
+      @room_numbers = room_numbers
     end
 
     def call
@@ -16,18 +17,41 @@ module HotelOps
           inventory = @room_type.room_inventories.find_or_initialize_by(date: date)
           old_quantity = inventory.quantity
           old_status = inventory.status
-          inventory.quantity = @quantity
+          old_rooms = inventory.available_room_numbers
+
           inventory.status = @status
+          if @room_numbers.is_a?(Array)
+            if @room_type.room_numbers.any?
+              # 1. Filter room numbers to only those that belong to this RoomType
+              valid_rooms = @room_numbers & @room_type.room_numbers
+              inventory.available_room_numbers = valid_rooms
+
+              # 2. Calculate net quantity (Selected - Already Booked)
+              occupied_count = @hotel.bookings.revenue_generating
+                                     .where(":date >= check_in AND :date < check_out", date: date)
+                                     .where("(hotel_snapshot->>'room_number')::text IN (?)", valid_rooms)
+                                     .count
+              inventory.quantity = [0, valid_rooms.size - occupied_count].max
+            else
+              # If RoomNumbers mode is used but this type has none, use global quantity if provided
+              inventory.available_room_numbers = []
+              inventory.quantity = @quantity if @quantity
+            end
+          else
+            # Traditional quantity mode
+            inventory.available_room_numbers = []
+            inventory.quantity = @quantity || @room_type.quantity
+          end
           inventory.save!
 
           # Log change
-          if old_quantity != @quantity || old_status != @status
+          if old_quantity != inventory.quantity || old_status != inventory.status || old_rooms != inventory.available_room_numbers
             @hotel.inventory_audit_logs.create!(
               room_type: @room_type,
               user: @user,
               action_type: "inventory_update",
-              old_value: { date: date, quantity: old_quantity, status: old_status },
-              new_value: { date: date, quantity: @quantity, status: @status },
+              old_value: { date: date, quantity: old_quantity, status: old_status, room_numbers: old_rooms },
+              new_value: { date: date, quantity: inventory.quantity, status: inventory.status, room_numbers: inventory.available_room_numbers },
               metadata: { source: "bulk_editor" }
             )
           end

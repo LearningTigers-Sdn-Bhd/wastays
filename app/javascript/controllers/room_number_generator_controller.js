@@ -17,11 +17,24 @@ export default class extends Controller {
 
   toggleMode() {
     const isCustom = this.modeCheckboxTarget.checked
+    const previousMode = this.modeInputTarget.value
     this.modeInputTarget.value = isCustom ? "custom" : "range"
 
     if (isCustom) {
       this.rangeFieldsTarget.classList.add("hidden")
       this.customFieldsTarget.classList.remove("hidden")
+
+      // SYNC FROM RANGE: If switching to custom and the list is empty,
+      // pre-fill it with the current range-generated numbers.
+      if (previousMode === "range" && !this.customListTarget.value.trim()) {
+        const quantity = parseInt(this.quantityTarget.value) || 0
+        const start = parseInt(this.startTarget.value) || 101
+        let numbers = []
+        for (let i = 0; i < quantity; i++) {
+          numbers.push(`${start + i}`)
+        }
+        this.customListTarget.value = numbers.join(", ")
+      }
     } else {
       this.rangeFieldsTarget.classList.remove("hidden")
       this.customFieldsTarget.classList.add("hidden")

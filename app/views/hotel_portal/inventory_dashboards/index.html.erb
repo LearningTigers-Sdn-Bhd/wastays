@@ -385,7 +385,7 @@
         <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
           <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Availability Override</h3>
         </div>
-        <div class="p-6 sm:p-8">
+        <div class="p-6 sm:p-8" data-controller="inventory-filter">
           <%= form_with scope: :availability_override, url: apply_availability_override_hotel_inventory_dashboards_path(current_hotel), local: true, class: "space-y-6" do |f| %>
             <div>
               <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Target Room Categories</label>
@@ -393,7 +393,12 @@
                 <% @room_types.each do |rt| %>
                   <label class="flex items-center gap-x-3 cursor-pointer group">
                     <div class="relative flex items-center">
-                      <%= f.check_box :room_type_ids, { multiple: true, checked: true, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0" }, rt.id, nil %>
+                      <%= f.check_box :room_type_ids, {
+                          multiple: true,
+                          checked: true,
+                          class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0",
+                          data: { inventory_filter_target: "category", action: "change->inventory-filter#filter" }
+                        }, rt.id, nil %>
                     </div>
                     <span class="text-xs font-bold text-slate-700 group-hover:text-slate-900 transition-colors"><%= rt.name %></span>
                   </label>
@@ -412,11 +417,32 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label for="availability_quantity" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Units Allot</label>
-                <%= f.number_field :quantity, id: "availability_quantity", min: 0, placeholder: "Optional", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Daily Room Assignments</label>
+              <div class="space-y-1.5 max-h-48 overflow-y-auto p-4 border border-slate-200 rounded-xl bg-slate-50/30 custom-scrollbar">
+                <% @room_types.each do |rt| %>
+                  <%
+                    # Default to all rooms checked so the owner only unchecks rooms that should be blocked.
+                    open_rooms = rt.room_numbers
+                  %>
+                  <% rt.room_numbers.sort.each do |num| %>
+                    <label class="flex items-center gap-x-3 cursor-pointer group" data-inventory-filter-target="roomRow" data-room-type-id="<%= rt.id %>">
+                      <div class="relative flex items-center">
+                        <%= f.check_box :room_numbers, {
+                            multiple: true,
+                            checked: open_rooms.include?(num.to_s),
+                            class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0"
+                          }, num, nil %>
+                      </div>
+                      <span class="text-xs font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Room <%= num %> <span class="text-[10px] font-medium text-slate-400 ml-1">(<%= rt.name %>)</span></span>
+                    </label>
+                  <% end %>
+                <% end %>
               </div>
+              <p class="mt-2 text-[11px] text-slate-500 italic">All rooms are checked by default. Uncheck the rooms that should not be bookable for the selected dates.</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
               <div>
                 <label for="availability_status" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Room Status</label>
                 <%= f.select :status, [ [ "No change", "" ], [ "Open", "open" ], [ "Closed", "closed" ] ], {}, id: "availability_status", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>

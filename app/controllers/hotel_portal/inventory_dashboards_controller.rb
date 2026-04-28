@@ -76,6 +76,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       end_date: availability_params[:end_date],
       quantity: availability_params[:quantity],
       status: availability_params[:status],
+      room_numbers: availability_params[:room_numbers],
       user: current_user
     ).call
 
@@ -246,7 +247,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :end_date,
       :quantity,
       :status,
-      room_type_ids: []
+      room_type_ids: [],
+      room_numbers: []
     )
   end
 end

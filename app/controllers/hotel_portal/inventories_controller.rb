@@ -19,7 +19,8 @@ class HotelPortal::InventoriesController < HotelPortal::BaseController
       end_date: inventory_params[:end_date],
       quantity: inventory_params[:quantity],
       status: inventory_params[:status],
-      user: current_user
+      user: current_user,
+      room_numbers: inventory_params[:available_room_numbers]
     ).call
 
     if result[:success]
@@ -36,6 +37,6 @@ class HotelPortal::InventoriesController < HotelPortal::BaseController
   end
 
   def inventory_params
-    params.require(:inventory).permit(:start_date, :end_date, :quantity, :status)
+    params.require(:inventory).permit(:start_date, :end_date, :quantity, :status, available_room_numbers: [])
   end
 end

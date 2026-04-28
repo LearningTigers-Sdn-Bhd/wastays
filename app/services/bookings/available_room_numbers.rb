@@ -13,10 +13,20 @@ module Bookings
     def call
       return [] unless @room_type
 
-      # 1. Get all room numbers defined for this category
-      all_rooms = @room_type.room_numbers || []
+      # 1. Get room numbers allowed by inventory for these dates
+      inventory_allowed_rooms = (@check_in..(@check_out - 1.day)).map do |date|
+        inv = @room_type.room_inventories.find_by(date: date)
+        if inv
+          inv.status == "open" ? inv.available_room_numbers : []
+        else
+          @room_type.room_numbers
+        end
+      end
 
-      # 2. Find room numbers already occupied for these dates
+      # Intersection of all days (must be available every day of stay)
+      allowed_rooms = inventory_allowed_rooms.reduce(:&) || []
+
+      # 2. Find room numbers already occupied for these dates by other bookings
       occupied = @hotel.bookings.where(status: [ "confirmed", "checked_in", "completed" ])
       occupied = occupied.where.not(id: @exclude_booking_id) if @exclude_booking_id
 
@@ -25,7 +35,7 @@ module Bookings
                                  .compact.map(&:to_s).uniq
 
       # 3. Filter them out
-      (all_rooms - occupied_numbers).reject(&:blank?)
+      (allowed_rooms - occupied_numbers).reject(&:blank?)
     end
   end
 end

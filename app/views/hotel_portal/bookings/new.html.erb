@@ -19,7 +19,8 @@
   <%= form_with model: @booking, url: hotel_bookings_path(current_hotel), local: true, class: "space-y-8", 
       data: { 
         controller: "booking-calc", 
-        availability_url: availability_hotel_bookings_path(current_hotel) 
+        availability_url: availability_hotel_bookings_path(current_hotel),
+        price_url: stay_price_hotel_bookings_path(current_hotel)
       } do |f| %>
     
     <% if @booking.errors.any? %>

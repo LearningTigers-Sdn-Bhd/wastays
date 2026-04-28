@@ -14,8 +14,7 @@ module HotelOps
     def call
       ActiveRecord::Base.transaction do
         (@start_date..@end_date).each do |date|
-          rate = @rate_plan.room_rates.find_or_initialize_by(date: date)
-          rate.room_type = @room_type # Keep it for legacy or direct access
+          rate = @rate_plan.room_rates.find_or_initialize_by(date: date, room_type_id: @room_type.id)
           old_price = rate.price
           rate.price = @price
           rate.currency = @currency

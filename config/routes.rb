@@ -206,6 +206,7 @@ Rails.application.routes.draw do
     resources :bookings, only: [ :index, :show, :update, :new, :create ] do
       collection do
         get :availability
+        get :stay_price
       end
       member do
         post :check_in
