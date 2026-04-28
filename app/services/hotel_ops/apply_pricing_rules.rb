@@ -33,6 +33,8 @@ module HotelOps
     private
 
     def apply_for_room_type(room_type)
+      standard_plan = room_type.rate_plans.first
+      
       (@start_date..@end_date).each do |date|
         winner = winning_rule_for(date)
 
@@ -47,6 +49,7 @@ module HotelOps
 
         rate.price = winner[:price]
         rate.currency = "MYR"
+        rate.rate_plan = standard_plan if standard_plan
         rate.save!
 
         next if old_price == winner[:price] && old_currency == rate.currency

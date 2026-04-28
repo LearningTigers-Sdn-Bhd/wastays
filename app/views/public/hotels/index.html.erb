@@ -176,7 +176,13 @@
                         <% end %>
                       </div>
                       
-                      <%= link_to hotel_path(hotel, request.query_parameters), class: "btn btn-primary py-2 px-6 shadow-md" do %>
+                      <%= link_to hotel_path(hotel, request.query_parameters.merge(
+                                              check_in: Date.current.to_s,
+                                              check_out: Date.tomorrow.to_s,
+                                              adults: params[:adults].presence || 2,
+                                              children: params[:children].presence || 0,
+                                              room_count: params[:rooms].presence || params[:room_count].presence || 1
+                                            )), class: "btn btn-primary py-2 px-6 shadow-md" do %>
                         See Options
                       <% end %>
                     </div>

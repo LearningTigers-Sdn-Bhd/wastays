@@ -36,6 +36,7 @@ module HotelPortal
       @bookings = @all_bookings.page(params[:page]).per(25)
 
       @currency_totals = guest_booking_scope
+        .where(status: [ "checked_in", "completed" ])
         .reorder(nil)
         .group(:currency)
         .sum(:total_amount)

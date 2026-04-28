@@ -17,8 +17,8 @@
   </div>
 
   <% if @show_stay_modal %>
-    <div class="fixed inset-0 z-[200] bg-black/55 backdrop-blur-sm px-4 sm:px-6 flex items-center justify-center overflow-y-auto" role="dialog" aria-modal="true">
-      <div class="w-full max-w-xl my-6 rounded-2xl bg-white shadow-2xl border border-neutral-border p-6 sm:p-8">
+    <div class="fixed inset-0 z-[200] bg-black/55 backdrop-blur-sm px-4 sm:px-6 flex items-center justify-center overflow-y-auto" role="dialog" aria-modal="true" onclick="if (event.target === this) { this.classList.add('hidden') }">
+      <div class="w-full max-w-xl my-6 rounded-2xl bg-white shadow-2xl border border-neutral-border p-6 sm:p-8" onclick="event.stopPropagation()">
         <h2 class="text-2xl font-extrabold text-neutral-text-primary mb-2">Select Your Stay Dates</h2>
         <p class="text-sm text-neutral-text-secondary mb-6">Choose your check-in and check-out dates to see accurate room availability and price.</p>
 
@@ -313,7 +313,7 @@
               <div class="card p-8 text-center">
                 <h3 class="text-lg font-bold text-neutral-text-primary mb-2">No rooms available for selected dates</h3>
                 <p class="text-sm text-neutral-text-secondary mb-6">Try changing your check-in/check-out dates to see available options.</p>
-                <%= link_to "Edit Search", hotel_path(@hotel), class: "btn btn-secondary px-8" %>
+                <%= link_to "Edit Search", hotel_path(@hotel, request.query_parameters.merge(edit_search: 1)), class: "btn btn-secondary px-8" %>
               </div>
             <% end %>
 
@@ -457,7 +457,7 @@
             </div>
             <div class="mt-8">
               <%= link_to "Edit Search",
-                          hotels_path(request.query_parameters),
+                          hotel_path(@hotel, request.query_parameters.merge(edit_search: 1)),
                           class: "btn btn-secondary w-full py-2.5 text-xs font-bold uppercase tracking-widest" %>
             </div>
           </div>

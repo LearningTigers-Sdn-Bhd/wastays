@@ -137,13 +137,20 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   private
 
   def load_dashboard_data
-    @room_types = current_hotel.room_types.includes(:room_inventories, :room_rates)
+    @room_types = current_hotel.room_types.includes(:room_inventories, rate_plans: :room_rates)
     @inventory_matrix = {}
     @rates_matrix = {}
 
     @room_types.each do |rt|
       @inventory_matrix[rt.id] = rt.room_inventories.where(date: @start_date..@end_date).index_by(&:date)
-      @rates_matrix[rt.id] = rt.room_rates.where(date: @start_date..@end_date).index_by(&:date)
+      
+      # Use the first (and now only) rate plan to populate the matrix
+      standard_plan = rt.rate_plans.first
+      if standard_plan
+        @rates_matrix[rt.id] = standard_plan.room_rates.where(date: @start_date..@end_date).index_by(&:date)
+      else
+        @rates_matrix[rt.id] = {}
+      end
     end
 
     @last_pricing_applied_at = current_hotel.inventory_audit_logs

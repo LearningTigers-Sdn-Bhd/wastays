@@ -30,16 +30,17 @@ module HotelOps
     private
 
     def update_rates(room_type)
-      room_type.rate_plans.each do |rp|
-        HotelOps::BulkUpdateRates.new(
-          hotel: @hotel,
-          rate_plan: rp,
-          start_date: @start_date,
-          end_date: @end_date,
-          price: @price,
-          user: @user
-        ).call
-      end
+      standard_plan = room_type.rate_plans.first
+      return unless standard_plan
+
+      HotelOps::BulkUpdateRates.new(
+        hotel: @hotel,
+        rate_plan: standard_plan,
+        start_date: @start_date,
+        end_date: @end_date,
+        price: @price,
+        user: @user
+      ).call
     end
 
     def update_inventory(room_type)

@@ -20,7 +20,7 @@ class Public::HotelsController < ApplicationController
     @children = (params[:children].presence || 0).to_i
     @room_count = (params[:room_count].presence || params[:rooms].presence || 1).to_i
     @search_ready = @check_in.present? && @check_out.present? && @check_out > @check_in
-    @show_stay_modal = !@search_ready
+    @show_stay_modal = params[:edit_search].present? || !@search_ready
 
     if @search_ready
       @availability_service = BookingEngine::AvailabilityService.new(
