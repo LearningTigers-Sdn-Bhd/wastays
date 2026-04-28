@@ -8,51 +8,12 @@
   <div class="px-4 md:px-0">
     <div class="mt-5">
       <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Integrations</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Configure external connections via webhook for WAStays.</p>
+      <p class="mt-1 text-sm font-medium text-slate-600">Configure external connections for WAStays.</p>
     </div>
   </div>
 
   <div class="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,350px)] xl:items-start">
     <div class="space-y-8">
-      <!-- Webhook Card -->
-      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Webhook</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Connect WAStays to external services via webhook.</p>
-        </div>
-
-        <%= form_with url: admin_integrations_path, method: :patch, local: true, class: "space-y-6 p-6 sm:p-8" do |f| %>
-          <div>
-            <%= label_tag :webhook_url, "Webhook URL", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
-            <p class="mb-2 text-sm text-slate-500">Paste your webhook endpoint URL. WAStays will send a POST request to this URL when events occur.</p>
-            <%= text_field_tag :webhook_url, @webhook_url,
-                placeholder: "https://your-webhook-endpoint.com/...",
-                class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
-          </div>
-
-          <% if @webhook_url.present? %>
-            <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <div>
-                <p class="text-sm font-semibold text-slate-700">Test your connection</p>
-                <p class="text-xs text-slate-500">Send a sample payload to verify your webhook is receiving requests correctly.</p>
-              </div>
-              <%= link_to "Send Test Ping", test_ping_admin_integrations_path,
-                  data: { turbo_method: :post },
-                  class: "shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 ml-4" %>
-            </div>
-          <% end %>
-
-          <div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
-            <% if @webhook_url.present? %>
-              <%= link_to "Remove", admin_integrations_path,
-                  data: { turbo_method: :delete, turbo_confirm: "Remove the configured webhook URL?" },
-                  class: "cursor-pointer rounded-xl bg-red-600 hover:bg-red-700 px-4 py-2.5 text-sm font-bold text-white" %>
-            <% end %>
-            <%= submit_tag "Save Webhook", class: "cursor-pointer rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white hover:bg-slate-700" %>
-          </div>
-        <% end %>
-      </div>
-
       <!-- Channel Manager Card -->
       <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8 bg-brand-secondary/5">
@@ -95,9 +56,13 @@
       <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5">
           <h2 class="text-base font-bold text-slate-950">How It Works</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">How WAStays communicates with your external service.</p>
+          <p class="mt-1 text-sm font-medium text-slate-600">How WAStays communicates with external services.</p>
         </div>
         <div class="space-y-4 p-6">
+          <p class="text-sm text-slate-600 mb-4">
+            Manage your outgoing webhooks in the new <%= link_to "Webhooks management", admin_webhook_endpoints_path, class: "text-slate-900 font-semibold underline" %> page.
+          </p>
+
           <div class="rounded-xl border border-slate-200 bg-white p-4">
             <div class="flex items-start gap-3">
               <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-900 px-2 text-xs font-bold text-white">1</span>

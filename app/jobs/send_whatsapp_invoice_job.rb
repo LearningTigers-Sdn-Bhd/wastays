@@ -1,6 +1,4 @@
-require "net/http"
-require "uri"
-require "json"
+# frozen_string_literal: true
 
 class SendWhatsappInvoiceJob < ApplicationJob
   queue_as :default
@@ -9,14 +7,8 @@ class SendWhatsappInvoiceJob < ApplicationJob
     booking = Booking.find_by(id: booking_id)
     return unless booking
 
-    url = AppConfig.get("webhook_url")
-    unless url.present?
-      Rails.logger.warn("[SendWhatsappInvoiceJob] No webhook URL configured — skipping booking #{booking_id}")
-      return
-    end
-
     payload = build_payload(booking)
-    post_to_webhook(url, payload)
+    WebhookBroadcastJob.perform_now("booking_confirmed", payload)
   end
 
   private
@@ -47,17 +39,5 @@ class SendWhatsappInvoiceJob < ApplicationJob
       host: host_options[:host],
       protocol: host_options[:protocol] || "https"
     )
-  end
-
-  def post_to_webhook(url, payload)
-    uri = URI.parse(url)
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = uri.scheme == "https"
-    http.open_timeout = 10
-    http.read_timeout = 10
-
-    request = Net::HTTP::Post.new(uri.request_uri, "Content-Type" => "application/json")
-    request.body = payload.to_json
-    http.request(request)
   end
 end

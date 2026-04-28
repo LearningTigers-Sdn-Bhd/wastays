@@ -27,3 +27,9 @@
 /app/assets/builds/tailwind.css
 /public/assets
 /config/credentials/demo.key
+
+# Parallel tests logs
+/spec/parallel_runtime_rspec.log
+/tmp/parallel_*.log
+/db/test*.db
+/db/test*.sqlite3
