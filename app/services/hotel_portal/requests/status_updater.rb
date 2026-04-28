@@ -27,10 +27,10 @@ module HotelPortal
 
       def trigger_webhook_if_done(old_status, new_status)
         return if old_status == new_status
-        
-        is_done = (kind == "housekeeping" && new_status == "completed") || 
+
+        is_done = (kind == "housekeeping" && new_status == "completed") ||
                   (kind == "complaint" && new_status == "resolved")
-                  
+
         return unless is_done
 
         event_type = "#{kind}_#{new_status}"

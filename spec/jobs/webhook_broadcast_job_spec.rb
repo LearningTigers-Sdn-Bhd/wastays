@@ -52,18 +52,18 @@ RSpec.describe WebhookBroadcastJob, type: :job do
   describe "execution" do
     it "posts to enabled endpoints" do
       payload = { foo: "bar" }
-      
+
       # We already mocked Net::HTTP in before block
       # Just ensuring perform doesn't crash and respects enabled flag
       expect_any_instance_of(WebhookBroadcastJob).to receive(:post_to_webhook).with("https://example.com/webhook", "Test Endpoint", "test_event", payload)
-      
+
       WebhookBroadcastJob.new.perform("test_event", payload)
     end
 
     it "does not post to disabled endpoints" do
       webhook_endpoint.update(enabled: false)
       expect_any_instance_of(WebhookBroadcastJob).not_to receive(:post_to_webhook)
-      
+
       WebhookBroadcastJob.new.perform("test_event", { foo: "bar" })
     end
   end

@@ -11,7 +11,7 @@ class WebhookBroadcastJob < ApplicationJob
   # payload: Hash containing the data to send
   def perform(event_type, payload)
     endpoints = WebhookEndpoint.where(enabled: true)
-    
+
     # 1. New Multi-Webhook System
     endpoints.each do |endpoint|
       # If we want to filter by event_types later, we can add it here
@@ -42,9 +42,9 @@ class WebhookBroadcastJob < ApplicationJob
 
     request = Net::HTTP::Post.new(uri.request_uri, "Content-Type" => "application/json")
     request.body = full_payload.to_json
-    
+
     response = http.request(request)
-    
+
     unless response.code.to_i.between?(200, 299)
       Rails.logger.error("[WebhookBroadcastJob] Failed to post #{event_type} to #{name} (#{url}): HTTP #{response.code}")
     end
