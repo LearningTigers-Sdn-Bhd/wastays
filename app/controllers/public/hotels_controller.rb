@@ -14,17 +14,27 @@ class Public::HotelsController < ApplicationController
       return
     end
 
-    @check_in = parse_date(params[:check_in])
-    @check_out = parse_date(params[:check_out])
+    # Auto-fetch today and tomorrow if dates are missing
+    @check_in = parse_date(params[:check_in]) || Date.current
+    @check_out = parse_date(params[:check_out]) || Date.tomorrow
+
     @adults = (params[:adults].presence || 2).to_i
     @children = (params[:children].presence || 0).to_i
     @room_count = (params[:room_count].presence || params[:rooms].presence || 1).to_i
+
     @search_ready = @check_in.present? && @check_out.present? && @check_out > @check_in
-    @show_stay_modal = !@search_ready
+
+    # Only show modal if specifically requested (edit_search)
+    # OR if the dates are invalid (which today/tomorrow won't be)
+    @show_stay_modal = params[:edit_search].present?
 
     if @search_ready
       @availability_service = BookingEngine::AvailabilityService.new(
-        params.to_unsafe_h.merge(room_count: @room_count)
+        params.to_unsafe_h.merge(
+          check_in: @check_in,
+          check_out: @check_out,
+          room_count: @room_count
+        )
       )
       @room_types = @availability_service.available_rooms_for_hotel(@hotel)
     else

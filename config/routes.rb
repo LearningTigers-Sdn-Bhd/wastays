@@ -53,6 +53,9 @@ Rails.application.routes.draw do
       resources :quotes, only: [ :create, :show ]
       resources :bookings, only: [ :show ] do
         get "reminders", on: :member
+        get "lookup", on: :collection
+        resources :housekeeping_requests, only: [ :create ], module: :bookings
+        resources :complaint_requests, only: [ :create ], module: :bookings
       end
     end
   end
@@ -152,6 +155,12 @@ Rails.application.routes.draw do
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
     end
+    resources :webhook_endpoints do
+      member do
+        post :test_ping
+        patch :toggle
+      end
+    end
     resources :observation_deck, only: [ :index, :show ], constraints: SuperadminConstraint.new do
       collection do
         delete :clear
@@ -206,6 +215,7 @@ Rails.application.routes.draw do
     resources :bookings, only: [ :index, :show, :update, :new, :create ] do
       collection do
         get :availability
+        get :stay_price
       end
       member do
         post :check_in

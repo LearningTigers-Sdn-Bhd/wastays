@@ -133,7 +133,7 @@
       <% if @featured_stays.any? %>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
           <% @featured_stays.each_with_index do |(hotel, room_type), i| %>
-            <%= link_to hotel_path(hotel), class: "group bg-white rounded-3xl border border-neutral-border/60 hover:border-brand-primary/20 hover:shadow-2xl hover:shadow-brand-primary/10 transition-all duration-500 overflow-hidden flex flex-col", data: { animate: "" }, style: "transition-delay: #{i * 0.1}s" do %>
+            <%= link_to hotel_path(hotel, check_in: Date.current.to_s, check_out: Date.tomorrow.to_s, adults: 2, children: 0, room_count: 1), class: "group bg-white rounded-3xl border border-neutral-border/60 hover:border-brand-primary/20 hover:shadow-2xl hover:shadow-brand-primary/10 transition-all duration-500 overflow-hidden flex flex-col", data: { animate: "" }, style: "transition-delay: #{i * 0.1}s" do %>
               <div class="relative h-64 overflow-hidden bg-neutral-bg">
                 <% if hotel.featured_photo_attachment.present? %>
                   <%= image_tag hotel.featured_photo_attachment, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" %>

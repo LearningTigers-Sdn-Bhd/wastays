@@ -44,9 +44,8 @@ module BookingEngine
         next false unless inventory_ok
 
         # Check rates for all stay dates
+        # Since we consolidated to 1 rate per night, simple count is enough
         rates = room_type.room_rates.where(date: stay_dates)
-
-        # Must have rate record for EVERY stay date
         rates_ok = (rates.count == stay_dates.count)
 
         rates_ok

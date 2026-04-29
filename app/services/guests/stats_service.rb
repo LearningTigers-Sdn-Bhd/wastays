@@ -11,6 +11,7 @@ module Guests
       booking_scope = Booking
         .joins(:booking_guests)
         .where(hotel_id: @hotel.id, booking_guests: { guest_id: @guest_ids })
+        .where(status: %w[checked_in completed])
 
       {
         stays_count: calculate_stays(booking_scope),

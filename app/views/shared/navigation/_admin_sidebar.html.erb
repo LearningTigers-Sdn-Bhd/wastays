@@ -13,6 +13,7 @@
 <% observation_deck_active = controller_name == 'observation_deck' %>
 <% refund_policy_active = controller_name == 'refund_policies' %>
 <% integrations_active = controller_name == 'integrations' %>
+<% webhooks_active = controller_name == 'webhook_endpoints' %>
 <% api_keys_active = controller_name == 'api_keys' && action_name != 'docs' %>
 <% api_docs_active = controller_name == 'api_keys' && action_name == 'docs' %>
 
@@ -55,7 +56,7 @@
     label: 'Developers',
     items: [
       { label: 'API Access', path: admin_api_keys_path, search_text: 'API Access Keys Integrations', active: api_keys_active, icon: '<path d="M21 2l-2 2"/><path d="M7.61 11.39a5.5 5.5 0 1 1 7.78 7.78 5.5 5.5 0 0 1-7.78-7.78z"/><path d="m15.5 7.5 3 3L22 7l-3-3-3.5 3.5"/>' },
-      { label: 'Integrations', path: admin_integrations_path, search_text: 'Integrations Webhook WhatsApp n8n', active: integrations_active, icon: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>' },
+      { label: 'Webhooks', path: admin_webhook_endpoints_path, search_text: 'Integrations Webhook WhatsApp n8n', active: webhooks_active || integrations_active, icon: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>' },
       { label: 'Developer Guide', path: docs_admin_api_keys_path, search_text: 'API Developer Guide Docs', active: api_docs_active, icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' }
     ]
   }

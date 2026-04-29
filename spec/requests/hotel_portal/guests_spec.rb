@@ -53,6 +53,32 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("View Timeline")
     end
 
+    it "only counts checked in and completed bookings in lifetime value" do
+      guest = Guest.create!(
+        name: "Ravi Menon",
+        email: "ravi@example.com",
+        phone: "+60123456789",
+        government_id: "A1234567",
+        country: "India",
+        gender: "male",
+        document_type: "passport"
+      )
+
+      confirmed_booking = create(:booking, hotel: hotel, status: "confirmed", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 500.0)
+      checked_in_booking = create(:booking, hotel: hotel, status: "checked_in", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 300.0)
+      cancelled_booking = create(:booking, hotel: hotel, status: "cancelled", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 200.0)
+      create(:booking_guest, booking: confirmed_booking, guest: guest, is_primary: true)
+      create(:booking_guest, booking: checked_in_booking, guest: guest)
+      create(:booking_guest, booking: cancelled_booking, guest: guest)
+
+      get hotel_guests_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(CGI.unescapeHTML(response.body)).to include("MYR 300.00")
+      expect(CGI.unescapeHTML(response.body)).not_to include("MYR 500.00")
+      expect(CGI.unescapeHTML(response.body)).not_to include("MYR 200.00")
+    end
+
     it "filters guests by search query and country" do
       ravi = Guest.create!(
         name: "Ravi Menon",
@@ -139,6 +165,58 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("MYR")
       expect(body_text).to include("USD")
       expect(body_text.downcase).to include("india")
+    end
+
+    it "only totals checked in and completed bookings" do
+      guest = Guest.create!(
+        name: "Ravi Menon",
+        email: "ravi@example.com",
+        phone: "+60123456789",
+        government_id: "A1234567",
+        country: "India",
+        gender: "male",
+        document_type: "passport"
+      )
+
+      confirmed_booking = create(:booking, hotel: hotel, status: "confirmed", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 500.0)
+      checked_in_booking = create(:booking, hotel: hotel, status: "checked_in", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 300.0)
+      completed_booking = create(:booking, hotel: hotel, status: "completed", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "USD", total_amount: 100.0)
+      cancelled_booking = create(:booking, hotel: hotel, status: "cancelled", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 200.0)
+      create(:booking_guest, booking: confirmed_booking, guest: guest, is_primary: true)
+      create(:booking_guest, booking: checked_in_booking, guest: guest)
+      create(:booking_guest, booking: completed_booking, guest: guest)
+      create(:booking_guest, booking: cancelled_booking, guest: guest)
+
+      get hotel_guest_path(hotel, guest)
+      body_text = CGI.unescapeHTML(response.body)
+
+      expect(response).to have_http_status(:success)
+      expect(body_text).to include("RM 300.00")
+      expect(body_text).to include("USD 100.00")
+    end
+
+    it "keeps confirmed and cancelled bookings visible in the history" do
+      guest = Guest.create!(
+        name: "Ravi Menon",
+        email: "ravi@example.com",
+        phone: "+60123456789",
+        government_id: "A1234567",
+        country: "India",
+        gender: "male",
+        document_type: "passport"
+      )
+
+      confirmed_booking = create(:booking, hotel: hotel, status: "confirmed", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 500.0)
+      cancelled_booking = create(:booking, hotel: hotel, status: "cancelled", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 200.0)
+      create(:booking_guest, booking: confirmed_booking, guest: guest, is_primary: true)
+      create(:booking_guest, booking: cancelled_booking, guest: guest)
+
+      get hotel_guest_path(hotel, guest)
+      body_text = CGI.unescapeHTML(response.body)
+
+      expect(response).to have_http_status(:success)
+      expect(body_text).to include(confirmed_booking.confirmation_token)
+      expect(body_text).to include(cancelled_booking.confirmation_token)
     end
   end
 end

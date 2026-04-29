@@ -8,13 +8,13 @@ RSpec.describe Guests::StatsService do
   let(:guest2) { create(:guest) }
 
   before do
-    b1 = create(:booking, hotel: hotel, total_amount: 100, currency: "MYR")
+    b1 = create(:booking, hotel: hotel, total_amount: 100, currency: "MYR", status: "checked_in")
     create(:booking_guest, booking: b1, guest: guest1, is_primary: true)
 
-    b2 = create(:booking, hotel: hotel, total_amount: 150, currency: "MYR")
+    b2 = create(:booking, hotel: hotel, total_amount: 150, currency: "MYR", status: "checked_in")
     create(:booking_guest, booking: b2, guest: guest1, is_primary: true)
 
-    b3 = create(:booking, hotel: hotel, total_amount: 50, currency: "USD")
+    b3 = create(:booking, hotel: hotel, total_amount: 50, currency: "USD", status: "checked_in")
     create(:booking_guest, booking: b3, guest: guest2, is_primary: true)
   end
 
