@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_28_035128) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_29_040144) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -548,6 +548,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_28_035128) do
     t.string "status", default: "open", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "available_room_numbers"
     t.index ["room_type_id", "date"], name: "index_room_inventories_on_room_type_id_and_date", unique: true
     t.index ["room_type_id"], name: "index_room_inventories_on_room_type_id"
   end
