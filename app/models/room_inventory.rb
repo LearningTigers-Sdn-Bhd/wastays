@@ -12,7 +12,7 @@ class RoomInventory < ApplicationRecord
   after_commit :trigger_ari_sync, on: [ :create, :update ]
 
   def available_room_numbers
-    Array(super).flatten.compact.map(&:to_s).reject(&:blank?)
+    Array(self[:available_room_numbers]).flatten.compact.map(&:to_s).reject(&:blank?)
   end
 
   private
