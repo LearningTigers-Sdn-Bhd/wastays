@@ -372,6 +372,21 @@
                             <%= room_type.max_children %> Children
                           </div>
                         <% end %>
+
+                        <% if room_type.amenities.any? %>
+                          <div class="flex flex-wrap gap-2 w-full mt-2">
+                            <% room_type.amenities.take(4).each do |amenity_id| %>
+                              <% amenity = Hotel::AMENITIES.find { |a| a[:id] == amenity_id } %>
+                              <% next unless amenity %>
+                              <span class="inline-flex items-center gap-x-1 px-2 py-0.5 rounded-md bg-neutral-bg border border-neutral-border text-[10px] font-bold text-neutral-text-secondary uppercase">
+                                <%= amenity[:name] %>
+                              </span>
+                            <% end %>
+                            <% if room_type.amenities.size > 4 %>
+                              <span class="text-[10px] font-bold text-neutral-text-secondary uppercase">+<%= room_type.amenities.size - 4 %> more</span>
+                            <% end %>
+                          </div>
+                        <% end %>
                       </div>
                     </div>
 

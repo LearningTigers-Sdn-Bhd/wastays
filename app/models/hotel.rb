@@ -27,18 +27,33 @@ class Hotel < ApplicationRecord
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
 
-  AMENITIES = [
+  HOTEL_AMENITIES = [
     { id: "wifi", name: "Free WiFi", icon: "wifi" },
     { id: "parking", name: "Free Parking", icon: "parking" },
     { id: "pool", name: "Swimming Pool", icon: "pool" },
     { id: "gym", name: "Fitness Center", icon: "gym" },
     { id: "restaurant", name: "Restaurant", icon: "restaurant" },
     { id: "bar", name: "Bar / Lounge", icon: "bar" },
-    { id: "ac", name: "Air Conditioning", icon: "ac" },
     { id: "front_desk", name: "24-Hour Front Desk", icon: "front_desk" },
     { id: "spa", name: "Spa / Wellness Center", icon: "spa" },
     { id: "laundry", name: "Laundry Service", icon: "laundry" }
   ].freeze
+
+  ROOM_AMENITIES = [
+    { id: "wifi", name: "Free WiFi", icon: "wifi" },
+    { id: "ac", name: "Air Conditioning", icon: "ac" },
+    { id: "minibar", name: "Mini Bar", icon: "minibar" },
+    { id: "coffee_maker", name: "Coffee / Tea Maker", icon: "coffee_maker" },
+    { id: "tv", name: "Flat-screen TV", icon: "tv" },
+    { id: "safe", name: "In-room Safe", icon: "safe" },
+    { id: "bathtub", name: "Bathtub", icon: "bathtub" },
+    { id: "balcony", name: "Balcony / Terrace", icon: "balcony" },
+    { id: "desk", name: "Work Desk", icon: "desk" },
+    { id: "hairdryer", name: "Hairdryer", icon: "hairdryer" }
+  ].freeze
+
+  # For backward compatibility and general lookups
+  AMENITIES = (HOTEL_AMENITIES + ROOM_AMENITIES).uniq { |a| a[:id] }.freeze
 
   scope :search, ->(query) {
     return all if query.blank?
@@ -301,7 +316,7 @@ class Hotel < ApplicationRecord
   def amenities_must_be_from_list
     return if amenities.blank?
 
-    allowed_ids = AMENITIES.map { |a| a[:id] }
+    allowed_ids = HOTEL_AMENITIES.map { |a| a[:id] }
     invalid_amenities = amenities - allowed_ids
 
     if invalid_amenities.any?
