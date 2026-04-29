@@ -23,7 +23,7 @@ RSpec.describe HotelPortal::PhotoQueue, type: :service do
         result = service.enqueue(file)
         expect(result[:success]).to be true
         expect(result[:blob]).to be_a(ActiveStorage::Blob)
-        expect(session[:hotel_photo_queue][hotel.id.to_s]).to include(result[:blob].signed_id)
+        expect(session[:hotel_photo_queue][hotel.id.to_s]).to include(result[:blob].id)
       end
     end
 
@@ -53,9 +53,10 @@ RSpec.describe HotelPortal::PhotoQueue, type: :service do
     it "removes a photo from the queue" do
       enqueue_result = service.enqueue(file)
       signed_id = enqueue_result[:blob].signed_id
+      blob_id = enqueue_result[:blob].id
 
       expect(service.remove(signed_id)).to be true
-      expect(session[:hotel_photo_queue][hotel.id.to_s]).not_to include(signed_id)
+      expect(session[:hotel_photo_queue][hotel.id.to_s]).not_to include(blob_id)
     end
 
     it "returns false if the photo is not in the queue" do
