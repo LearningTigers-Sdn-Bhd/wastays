@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_28_030755) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_28_035128) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -149,6 +149,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_28_030755) do
     t.jsonb "occupancy_snapshot", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "room_number"
     t.index ["booking_id"], name: "index_booking_rooms_on_booking_id"
     t.index ["room_type_id"], name: "index_booking_rooms_on_room_type_id"
   end
@@ -656,6 +657,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_28_030755) do
     t.string "time_zone", default: "Kuala Lumpur", null: false
     t.index ["account_id"], name: "index_users_on_account_id"
     t.index ["email"], name: "index_users_on_email"
+  end
+
+  create_table "webhook_endpoints", force: :cascade do |t|
+    t.string "name"
+    t.string "url"
+    t.boolean "enabled"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "webhook_events", force: :cascade do |t|

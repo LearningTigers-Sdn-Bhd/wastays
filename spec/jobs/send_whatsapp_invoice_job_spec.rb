@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rails_helper"
 
 RSpec.describe SendWhatsappInvoiceJob, type: :job do
@@ -24,50 +26,14 @@ RSpec.describe SendWhatsappInvoiceJob, type: :job do
   end
 
   describe "#perform" do
-    context "when webhook URL is configured" do
-      before { AppConfig.set("webhook_url", "https://n8n.example.com/webhook/test") }
+    it "enqueues or runs a WebhookBroadcastJob" do
+      # Since SendWhatsappInvoiceJob calls WebhookBroadcastJob.perform_now
+      expect(WebhookBroadcastJob).to receive(:perform_now).with("booking_confirmed", hash_including(
+        confirmation_token: booking.confirmation_token,
+        guest_name: booking.guest_name
+      ))
 
-      it "POSTs to the configured URL" do
-        stub = stub_request(:post, "https://n8n.example.com/webhook/test")
-          .to_return(status: 200)
-
-        described_class.new.perform(booking.id)
-
-        expect(stub).to have_been_requested
-      end
-
-      it "sends correct payload fields" do
-        stub = stub_request(:post, "https://n8n.example.com/webhook/test")
-          .with(
-            headers: { "Content-Type" => "application/json" },
-            body: hash_including(
-              "confirmation_token" => booking.confirmation_token,
-              "guest_phone"        => booking.guest_phone,
-              "guest_name"         => booking.guest_name,
-              "hotel_name"         => hotel.name,
-              "total_amount"       => format("%.2f", booking.total_amount.to_f)
-            )
-          )
-          .to_return(status: 200)
-
-        described_class.new.perform(booking.id)
-
-        expect(stub).to have_been_requested
-      end
-    end
-
-    context "when webhook URL is not configured" do
-      before { AppConfig.find_by(key: "webhook_url")&.destroy }
-
-      it "does not make any HTTP request" do
-        expect(Net::HTTP).not_to receive(:start)
-        described_class.new.perform(booking.id)
-      end
-
-      it "logs a warning" do
-        expect(Rails.logger).to receive(:warn).with(/No webhook URL configured/)
-        described_class.new.perform(booking.id)
-      end
+      described_class.new.perform(booking.id)
     end
 
     context "when booking does not exist" do

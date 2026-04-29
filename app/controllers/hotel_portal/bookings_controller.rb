@@ -122,6 +122,10 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   end
 
   def booking_params
-    params.require(:booking).permit(:guest_name, :guest_email, :guest_phone, :status, :check_in, :check_out, :room_number, :room_type_id, :adults, :children, :total_amount)
+    params.fetch(:booking, {}).permit(
+      :guest_name, :guest_email, :guest_phone, :status, :checked_in_at, :checked_out_at,
+      :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
+      booking_rooms_attributes: [ :id, :room_number ]
+    )
   end
 end
