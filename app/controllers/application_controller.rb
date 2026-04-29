@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ApplicationController < ActionController::Base
   include Pundit::Authorization
 
@@ -5,6 +7,7 @@ class ApplicationController < ActionController::Base
   allow_browser versions: :modern
 
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
+  rescue_from ActiveRecord::RecordNotFound, with: :not_found
 
   helper_method :current_user, :logged_in?
   around_action :use_user_time_zone
@@ -21,6 +24,13 @@ class ApplicationController < ActionController::Base
   def user_not_authorized
     flash[:alert] = "You are not authorized to perform this action."
     redirect_to(request.referrer || root_path)
+  end
+
+  def not_found
+    respond_to do |format|
+      format.html { render file: Rails.public_path.join("404.html"), status: :not_found, layout: false }
+      format.json { render json: { error: "Resource not found" }, status: :not_found }
+    end
   end
 
   def current_user

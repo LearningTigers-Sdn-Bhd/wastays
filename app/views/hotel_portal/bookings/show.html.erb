@@ -43,14 +43,27 @@
   <dialog id="check-in-modal-show-<%= @booking.id %>" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,28rem)] max-w-md shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
     <div class="p-6 bg-white" onclick="event.stopPropagation()">
       <h3 class="text-lg font-bold text-slate-900"><%= @booking.checked_in? ? "Edit Check-In" : "Confirm Check-In" %></h3>
-      <p class="text-sm text-slate-500 mt-1">Set check-in time for <%= @booking.guest_name %>.</p>
-      
-      <%= form_with url: check_in_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
+      <p class="text-sm text-slate-500 mt-1">Set check-in time and assign rooms for <%= @booking.guest_name %>.</p>
+      <%= form_with model: @booking, url: check_in_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
-          <%= f.datetime_local_field :checked_in_at, 
-              value: (@booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"), 
+          <%= f.datetime_local_field :checked_in_at,
+              value: (@booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"),
               class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div class="space-y-3">
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Room Assignments</label>
+          <%= f.fields_for :booking_rooms do |rf| %>
+            <div class="flex items-center gap-3">
+              <div class="flex-1">
+                <p class="text-[10px] font-medium text-slate-400 uppercase mb-1"><%= rf.object.room_type.name %></p>
+                <%= rf.text_field :room_number, 
+                    placeholder: "Room No.",
+                    class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+              </div>
+            </div>
+          <% end %>
         </div>
         
         <div class="flex items-center justify-end gap-x-3 pt-2">
@@ -65,15 +78,15 @@
     <div class="p-6 bg-white" onclick="event.stopPropagation()">
       <h3 class="text-lg font-bold text-slate-900">Confirm Check-Out</h3>
       <p class="text-sm text-slate-500 mt-1">Set check-out time for <%= @booking.guest_name %>.</p>
-      
+
       <%= form_with url: check_out_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-out Date & Time</label>
-          <%= f.datetime_local_field :checked_out_at, 
-              value: Time.current.strftime("%Y-%m-%dT%H:%M"), 
+          <%= f.datetime_local_field :checked_out_at,
+              value: Time.current.strftime("%Y-%m-%dT%H:%M"),
               class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
-        
+
         <div class="flex items-center justify-end gap-x-3 pt-2">
           <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
           <%= f.submit "Confirm Check-Out", class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
@@ -88,26 +101,26 @@
       <div data-controller="booking-tabs" class="space-y-6">
         <!-- Preline Style Underlined Tabs -->
         <nav class="relative z-0 flex border border-slate-200 rounded-xl overflow-hidden" aria-label="Tabs" role="tablist">
-          <button type="button" 
-                  data-booking-tabs-target="tab" 
-                  data-tab-name="booking-details" 
-                  data-action="click->booking-tabs#switch" 
+          <button type="button"
+                  data-booking-tabs-target="tab"
+                  data-tab-name="booking-details"
+                  data-action="click->booking-tabs#switch"
                   class="relative min-w-0 flex-1 bg-white first:border-s-0 border-s border-b-2 border-slate-200 py-4 px-4 text-slate-500 hover:text-slate-900 text-sm font-bold text-center overflow-hidden transition-all
                          data-[active=true]:border-b-blue-600 data-[active=true]:text-slate-950 data-[active=true]:bg-slate-50/50"
                   role="tab">
             Booking Details
           </button>
-          <button type="button" 
-                  data-booking-tabs-target="tab" 
-                  data-tab-name="requests" 
-                  data-action="click->booking-tabs#switch" 
+          <button type="button"
+                  data-booking-tabs-target="tab"
+                  data-tab-name="requests"
+                  data-action="click->booking-tabs#switch"
                   class="relative min-w-0 flex-1 bg-white first:border-s-0 border-s border-b-2 border-slate-200 py-4 px-4 text-slate-500 hover:text-slate-900 text-sm font-bold text-center overflow-hidden transition-all
                          data-[active=true]:border-b-blue-600 data-[active=true]:text-slate-950 data-[active=true]:bg-slate-50/50 flex items-center justify-center gap-2"
                   role="tab">
             Requests
-            <% if @pending_requests_count.to_i > 0 %>
+            <% if @presenter.pending_requests_count > 0 %>
               <span class="inline-flex items-center justify-center size-5 rounded-full bg-amber-100 text-[10px] font-black text-amber-800">
-                <%= @pending_requests_count %>
+                <%= @presenter.pending_requests_count %>
               </span>
             <% end %>
           </button>
@@ -140,8 +153,8 @@
             </div>
           </div>
 
-          <% if @pre_checkin.present? && @booking.pre_checkin_display_status == "completed" %>
-            <% pre_checkin_metadata = @pre_checkin&.metadata || {} %>
+          <% if @presenter.pre_checkin.present? && @booking.pre_checkin_display_status == "completed" %>
+            <% pre_checkin_metadata = @presenter.pre_checkin&.metadata || {} %>
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 flex items-center justify-between gap-3">
                 <div>
@@ -167,10 +180,71 @@
 
           <div class="grid lg:grid-cols-2 gap-8">
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+              <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 flex items-center justify-between">
                 <h2 class="text-lg font-bold tracking-tight text-slate-950">Stay & Room Details</h2>
+                <button type="button" class="inline-flex items-center gap-x-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition" onclick="document.getElementById('edit-stay-details-modal').showModal()">
+                  <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                  Edit
+                </button>
               </div>
+
+              <dialog id="edit-stay-details-modal" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,32rem)] max-w-lg shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
+                <div class="p-6 bg-white" onclick="event.stopPropagation()">
+                  <h3 class="text-lg font-bold text-slate-900">Edit Stay & Room Details</h3>
+                  <p class="text-sm text-slate-500 mt-1">Update booking dates and room assignment.</p>
+
+                  <%= form_with model: @booking, url: hotel_booking_path(current_hotel, @booking), method: :patch, local: true, 
+                      class: "mt-6 space-y-4",
+                      data: { 
+                        controller: "booking-calc", 
+                        availability_url: availability_hotel_bookings_path(current_hotel),
+                        booking_id: @booking.id 
+                      } do |f| %>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date</label>
+                        <%= f.date_field :check_in, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-out Date</label>
+                        <%= f.date_field :check_out, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Category</label>
+                      <% current_room_type_id = @booking.booking_rooms.first&.room_type_id %>
+                      <%= f.collection_select :room_type_id, @presenter.room_types, :id, :name, { selected: current_room_type_id }, 
+                          { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
+                            data: { 
+                              booking_calc_target: "roomType", 
+                              action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate",
+                              prices: @presenter.room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
+                              room_numbers: @presenter.room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
+                            } 
+                          } %>
+                    </div>
+
+                    <div data-booking-calc-target="roomNumberContainer">
+                      <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
+                      <% current_room_number = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
+                      <%= f.select :room_number, [[current_room_number, current_room_number]], { selected: current_room_number }, 
+                          { required: true,
+                            class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
+                            data: { booking_calc_target: "roomNumberSelect" } 
+                          } %>
+                      <p class="text-[10px] text-slate-400 mt-1.5 italic">Only available rooms for the selected dates are shown.</p>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-x-3 pt-4">
+                      <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
+                      <%= f.submit "Save Changes", class: "px-6 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
+                    </div>
+                  <% end %>
+                </div>
+              </dialog>
               <div class="p-6 sm:p-8 space-y-8">
+
                 <div class="grid grid-cols-2 gap-6">
                   <div>
                     <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Check-in</dt>
@@ -192,13 +266,19 @@
 
                 <div class="space-y-3">
                   <h3 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Reserved Units</h3>
-                  <% @booking_rooms.each do |room| %>
+                  <% @presenter.booking_rooms.each do |room| %>
                     <div class="flex justify-between items-center p-4 rounded-xl border border-slate-100 bg-slate-50/50">
                       <div>
                         <p class="text-sm font-bold text-slate-900"><%= room.room_type_snapshot['name'] %></p>
                         <p class="text-xs text-slate-500"><%= pluralize(room.quantity, 'room') %></p>
                       </div>
-                      <p class="text-sm font-bold text-slate-900">MYR <%= number_with_precision(room.subtotal, precision: 2) %></p>
+                      <div class="text-right">
+                        <p class="text-sm font-bold text-slate-900">MYR <%= number_with_precision(room.subtotal, precision: 2) %></p>
+                        <% room_number = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
+                        <% if room_number.present? %>
+                          <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mt-1">Room <%= room_number %></p>
+                        <% end %>
+                      </div>
                     </div>
                   <% end %>
                 </div>
@@ -221,12 +301,12 @@
                   <p class="mt-1 text-sm font-medium text-slate-600">Guest requests for room services.</p>
                 </div>
                 <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-                  <%= @housekeeping_requests.to_a.count %>
+                  <%= @presenter.housekeeping_requests.to_a.count %>
                 </span>
               </div>
               <div class="p-6 space-y-4">
-                <% if @housekeeping_requests.any? %>
-                  <% @housekeeping_requests.each do |request| %>
+                <% if @presenter.housekeeping_requests.any? %>
+                  <% @presenter.housekeeping_requests.each do |request| %>
                     <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
                       <div class="flex items-start justify-between gap-4">
                         <div class="flex-1 min-w-0 space-y-2">
@@ -266,12 +346,12 @@
                   <p class="mt-1 text-sm font-medium text-slate-600">Guest-reported issues and status.</p>
                 </div>
                 <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-                  <%= @complaint_requests.to_a.count %>
+                  <%= @presenter.complaint_requests.to_a.count %>
                 </span>
               </div>
               <div class="p-6 space-y-4">
-                <% if @complaint_requests.any? %>
-                  <% @complaint_requests.each do |request| %>
+                <% if @presenter.complaint_requests.any? %>
+                  <% @presenter.complaint_requests.each do |request| %>
                     <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
                       <div class="flex items-start justify-between gap-4">
                         <div class="flex-1 min-w-0 space-y-2">

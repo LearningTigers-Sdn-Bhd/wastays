@@ -39,4 +39,12 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
 
     expect(result.is_repeat?).to be(true)
   end
+
+  it "sets created_by_hotel_id for new guests" do
+    hotel = create(:hotel)
+    params[:created_by_hotel_id] = hotel.id
+    result = described_class.new(params).call
+
+    expect(result.guest.created_by_hotel_id).to eq(hotel.id)
+  end
 end

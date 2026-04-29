@@ -1,4 +1,4 @@
-<%= form_with model: [@hotel, room_type], local: true do |f| %>
+<%= form_with model: [@hotel, room_type], local: true, data: { controller: "room-number-generator" } do |f| %>
   <div class="grid gap-y-6">
     <div>
       <%= f.label :name, "Room Type Name", class: "block text-sm mb-2 font-medium" %>
@@ -24,11 +24,61 @@
     <div class="grid grid-cols-2 gap-4">
       <div>
         <%= f.label :quantity, "Total Number of Rooms", class: "block text-sm mb-2 font-medium" %>
-        <%= f.number_field :quantity, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, min: 0 %>
+        <%= f.number_field :quantity,
+            class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500",
+            required: true,
+            min: 0,
+            data: { room_number_generator_target: "quantity", action: "input->room-number-generator#generate" } %>
       </div>
       <div>
         <%= f.label :base_price, "Base Nightly Rate (MYR)", class: "block text-sm mb-2 font-medium" %>
         <%= f.number_field :base_price, step: 0.01, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, min: 0 %>
+      </div>
+    </div>
+
+    <!-- Room Number Management -->
+    <div class="p-5 border border-slate-200 rounded-2xl bg-slate-50/50 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Room Numbering</h3>
+        </div>
+      </div>
+
+      <div data-room-number-generator-target="rangeFields" class="grid sm:grid-cols-1 gap-4">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Start Number</label>
+          <input type="number" data-room-number-generator-target="start" data-action="input->room-number-generator#generate" placeholder="e.g. 101" class="py-2.5 px-4 block w-full border border-gray-200 rounded-xl text-sm focus:border-blue-500 focus:ring-blue-500">
+        </div>
+      </div>
+
+      <div data-room-number-generator-target="customFields" class="hidden">
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Numbers </label>
+        <textarea data-room-number-generator-target="customList" data-action="input->room-number-generator#generate" rows="2" placeholder="101, 102, 103, 105, 107" class="py-2.5 px-4 block w-full border border-gray-200 rounded-xl text-sm focus:border-blue-500 focus:ring-blue-500"><%= room_type.room_numbers&.join(", ") %></textarea>
+      </div>
+
+      <div class="space-y-3">
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Preview</label>
+        <div data-room-number-generator-target="preview" class="flex flex-wrap gap-2 min-h-[40px] p-3 border border-dashed border-slate-200 rounded-xl bg-white">
+          <span class="text-slate-400 italic text-sm">Waiting for input...</span>
+        </div>
+
+        <div class="flex items-center gap-x-2.5 pt-1">
+          <%= f.hidden_field :room_number_mode, data: { room_number_generator_target: "modeInput" } %>
+          <input type="checkbox" id="custom-mode-toggle"
+                 data-room-number-generator-target="modeCheckbox"
+                 data-action="change->room-number-generator#toggleMode"
+                 <%= 'checked' if room_type.room_number_mode == 'custom' %>
+                 class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+          <label for="custom-mode-toggle" class="text-xs font-bold text-slate-700 cursor-pointer">Enable manual customization (Custom Mode)</label>
+        </div>
+
+        <p data-room-number-generator-target="hint" class="text-xs hidden"></p>
+      </div>
+
+      <div data-room-number-generator-target="inputContainer" class="hidden">
+        <% room_type.room_numbers&.each do |num| %>
+          <input type="hidden" name="room_type[room_numbers][]" value="<%= num %>">
+        <% end %>
       </div>
     </div>
 

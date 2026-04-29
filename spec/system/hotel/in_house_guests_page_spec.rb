@@ -139,7 +139,7 @@ RSpec.describe "Hotel in-house guests page", type: :system do
     expect(page).to have_current_path(hotel_booking_path(hotel, matching_booking), ignore_query: true)
     expect(page).to have_content("Guest has been checked out.")
     expect(matching_booking.reload.status).to eq("completed")
-    expect(matching_booking.checked_out_at).to be_present
+    expect(matching_booking.reload.checked_out_at).to be_present
   end
 
   it "keeps the real active-stay count when a search has no matches and shows search-specific empty copy" do

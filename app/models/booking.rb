@@ -1,8 +1,11 @@
+# frozen_string_literal: true
+
 class Booking < ApplicationRecord
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
   belongs_to :payout_batch, optional: true
   has_many :booking_rooms, dependent: :destroy
+  accepts_nested_attributes_for :booking_rooms
   has_many :booking_notes, dependent: :destroy
   has_many :booking_guests, dependent: :destroy
   has_many :guests, through: :booking_guests
@@ -36,7 +39,9 @@ class Booking < ApplicationRecord
   validates :confirmation_token, uniqueness: true
 
   before_validation :generate_confirmation_token, on: :create
+  before_validation :normalize_guest_data
 
+  scope :recent_first, -> { order(created_at: :desc) }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
@@ -158,8 +163,21 @@ class Booking < ApplicationRecord
     tourism_tax_applied && tourism_tax_amount.positive?
   end
 
-  def tourism_tax?
-    tourism_tax_applied && tourism_tax_amount.positive?
+  def room_numbers
+    booking_rooms.pluck(:room_number).compact.join(", ")
+  end
+
+  def self.lookup_by_phone(phone)
+    # Normalize phone: remove everything except digits
+    normalized_query = phone.to_s.gsub(/\D/, "")
+    return none if normalized_query.blank?
+
+    # Fuzzy match: match the last 9 digits of the phone number
+    # This covers cases with different country codes or leading zeros
+    suffix = normalized_query.last(9)
+
+    # Search in guest_phone field of bookings
+    where("regexp_replace(guest_phone, '\D', '', 'g') LIKE ?", "%#{suffix}")
   end
 
   private
@@ -178,5 +196,10 @@ class Booking < ApplicationRecord
 
   def generate_confirmation_token
     self.confirmation_token ||= "WS-#{SecureRandom.alphanumeric(8).upcase}"
+  end
+
+  def normalize_guest_data
+    self.guest_email = guest_email&.downcase&.strip
+    self.guest_country = guest_country&.split&.map(&:capitalize)&.join(" ") if guest_country.present?
   end
 end

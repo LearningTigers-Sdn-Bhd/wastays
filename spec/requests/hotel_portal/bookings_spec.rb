@@ -66,20 +66,20 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
   describe "POST /check_in" do
     it "updates the booking status and redirects within the hotel path" do
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in"
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in", params: { checked_in_at: Time.current.to_s }
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
       expect(booking.reload.status).to eq("checked_in")
-      expect(booking.checked_in_at).to be_present
+      expect(booking.reload.checked_in_at).to be_present
     end
   end
 
   describe "POST /check_out" do
     it "updates the booking status and redirects within the hotel path" do
       booking.update!(status: 'checked_in')
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out"
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out", params: { checked_out_at: Time.current.to_s }
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
       expect(booking.reload.status).to eq("completed")
-      expect(booking.checked_out_at).to be_present
+      expect(booking.reload.checked_out_at).to be_present
     end
   end
 
@@ -87,6 +87,28 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "redirects within the hotel path" do
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/cancel"
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    end
+  end
+
+  describe "GET /stay_price" do
+    let(:room_type) { create(:room_type, hotel: hotel, base_price: 100) }
+
+    it "returns the total amount for the stay" do
+      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)).to eq({ "total_amount" => "200.0" })
+    end
+
+    it "returns 0 if params are missing" do
+      get "/hotel/#{hotel.id}/bookings/stay_price"
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)).to eq({ "total_amount" => 0 })
     end
   end
 end
