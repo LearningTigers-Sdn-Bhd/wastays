@@ -1,6 +1,6 @@
-class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
-  HolidayFormRow = Struct.new(:id, :name, :start_date, :end_date, :price, :persisted?, keyword_init: true)
+# frozen_string_literal: true
 
+class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   WEEKDAY_OPTIONS = [
     [ "Mon", 1 ],
     [ "Tue", 2 ],
@@ -17,7 +17,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days # Show 14 days by default
     load_dashboard_data
-    load_pricing_form_from_saved_rules
+    @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules
   end
 
   def apply_pricing_rules
@@ -42,8 +42,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @start_date = Date.today
       @end_date = @start_date + 13.days
       load_dashboard_data
-      load_pricing_form_from_params(pricing_params)
-      @pricing_errors = sync_result[:errors] || {}
+      @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_params(pricing_params)
+      @pricing_form.errors = sync_result[:errors] || {}
       flash.now[:alert] = sync_result[:error] || "Error saving pricing rules."
       return render :index, status: :unprocessable_entity
     end
@@ -76,6 +76,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       end_date: availability_params[:end_date],
       quantity: availability_params[:quantity],
       status: availability_params[:status],
+      room_numbers: availability_params[:room_numbers],
       user: current_user
     ).call
 
@@ -136,91 +137,25 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   private
 
   def load_dashboard_data
-    @room_types = current_hotel.room_types.includes(:room_inventories, :room_rates)
+    @room_types = current_hotel.room_types.includes(:room_inventories, rate_plans: :room_rates)
     @inventory_matrix = {}
     @rates_matrix = {}
 
     @room_types.each do |rt|
       @inventory_matrix[rt.id] = rt.room_inventories.where(date: @start_date..@end_date).index_by(&:date)
-      @rates_matrix[rt.id] = rt.room_rates.where(date: @start_date..@end_date).index_by(&:date)
+
+      standard_plan = rt.rate_plans.first
+      if standard_plan
+        @rates_matrix[rt.id] = standard_plan.room_rates.where(date: @start_date..@end_date).index_by(&:date)
+      else
+        @rates_matrix[rt.id] = {}
+      end
     end
 
     @last_pricing_applied_at = current_hotel.inventory_audit_logs
       .where(action_type: "rate_update")
       .where("metadata ->> 'source' = ?", "pricing_rules")
       .maximum(:created_at)
-  end
-
-  def load_pricing_form_from_saved_rules
-    general_rule = current_hotel.pricing_rules.find_by(rule_type: "general")
-    weekends_rule = current_hotel.pricing_rules.find_by(rule_type: "weekends")
-    school_rule = current_hotel.pricing_rules.find_by(rule_type: "school_holiday")
-    public_rows = current_hotel.pricing_rules.public_holidays.order(:start_date, :name).map { |rule| row_from_record(rule) }
-
-    @general_rule = general_rule
-    @weekends_rule = weekends_rule
-    @school_rule = school_rule
-    @pricing_form = {
-      gp_price: general_rule&.price,
-      gp_start_date: general_rule&.start_date,
-      gp_end_date: general_rule&.end_date,
-      wk_price: weekends_rule&.price,
-      wk_start_date: weekends_rule&.start_date,
-      wk_end_date: weekends_rule&.end_date,
-      sc_price: school_rule&.price,
-      sc_start_date: school_rule&.start_date,
-      sc_end_date: school_rule&.end_date
-    }
-    @weekend_days = weekends_rule&.weekdays.presence || [ 5, 6, 0 ]
-    @public_holiday_rows = public_rows.presence || [ HolidayFormRow.new(persisted?: false) ]
-    @selected_room_type_ids = @room_types.map(&:id)
-    @pricing_errors = {}
-  end
-
-  def load_pricing_form_from_params(params)
-    @general_rule = nil
-    @weekends_rule = nil
-    @school_rule = nil
-    @pricing_form = {
-      gp_price: params[:gp_price],
-      gp_start_date: params[:gp_start_date],
-      gp_end_date: params[:gp_end_date],
-      wk_price: params[:wk_price],
-      wk_start_date: params[:wk_start_date],
-      wk_end_date: params[:wk_end_date],
-      sc_price: params[:sc_price],
-      sc_start_date: params[:sc_start_date],
-      sc_end_date: params[:sc_end_date]
-    }
-    @weekend_days = Array(params[:weekend_days]).reject(&:blank?).map(&:to_i)
-    @weekend_days = [ 5, 6, 0 ] if @weekend_days.empty?
-    @selected_room_type_ids = Array(params[:room_type_ids]).reject(&:blank?).map(&:to_i)
-    @selected_room_type_ids = @room_types.map(&:id) if @selected_room_type_ids.empty?
-    @public_holiday_rows = Array(params[:public_holidays]).map { |row| row_from_hash(row) }
-    @public_holiday_rows = [ HolidayFormRow.new(persisted?: false) ] if @public_holiday_rows.empty?
-  end
-
-  def row_from_record(rule)
-    HolidayFormRow.new(
-      id: rule.id,
-      name: rule.name,
-      start_date: rule.start_date,
-      end_date: rule.end_date,
-      price: rule.price,
-      persisted?: true
-    )
-  end
-
-  def row_from_hash(row)
-    row = row.to_h.symbolize_keys
-    HolidayFormRow.new(
-      id: nil,
-      name: row[:name],
-      start_date: row[:start_date],
-      end_date: row[:end_date],
-      price: row[:price],
-      persisted?: false
-    )
   end
 
   def pricing_params
@@ -246,7 +181,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :end_date,
       :quantity,
       :status,
-      room_type_ids: []
+      room_type_ids: [],
+      room_numbers: []
     )
   end
 end

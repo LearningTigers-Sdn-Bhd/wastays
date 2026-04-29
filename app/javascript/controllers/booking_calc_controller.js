@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["checkIn", "checkOut", "roomType", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer"]
+  static values = { availabilityUrl: String, priceUrl: String, bookingId: String }
 
   connect() {
     // Trigger initial calculation and room numbers load
@@ -29,20 +30,16 @@ export default class extends Controller {
     this.roomNumberSelectTarget.disabled = true
 
     try {
-      const baseUrl = this.element.dataset.availabilityUrl
-      if (!baseUrl) {
-          return
-      }
+      if (!this.hasAvailabilityUrlValue) return
       
-      const bookingId = this.element.dataset.bookingId || ""
-      const url = `${baseUrl}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}&exclude_booking_id=${bookingId}`
+      const bookingId = this.bookingIdValue || ""
+      const url = `${this.availabilityUrlValue}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}&exclude_booking_id=${bookingId}`
       
       const response = await fetch(url)
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
       
       const data = await response.json()
       if (data.error) throw new Error(data.error)
-
       this.populateDropdown(data.available_rooms, currentSelection)
     } catch (error) {
       console.error("Availability check failed:", error)
@@ -64,7 +61,7 @@ export default class extends Controller {
       const option = document.createElement("option")
       option.value = num
       option.textContent = num
-      if (num.toString() === currentSelection.toString()) option.selected = true
+      if (num.toString() === (currentSelection || "").toString()) option.selected = true
       this.roomNumberSelectTarget.appendChild(option)
     })
     
@@ -75,31 +72,31 @@ export default class extends Controller {
     }
   }
 
-  calculate() {
-    const checkInDate = new Date(this.checkInTarget.value)
-    const checkOutDate = new Date(this.checkOutTarget.value)
+  async calculate() {
+    const checkIn = this.checkInTarget.value
+    const checkOut = this.checkOutTarget.value
     const roomTypeId = this.roomTypeTarget.value
 
-    if (!checkInDate || !checkOutDate || !roomTypeId || isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
+    if (!checkIn || !checkOut || !roomTypeId) {
       if (this.hasDisplayTotalTarget) this.updateDisplay(0)
       return
     }
 
-    const diffTime = checkOutDate.getTime() - checkInDate.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-    if (diffDays > 0) {
-      if (this.hasDisplayTotalTarget) {
-        const prices = JSON.parse(this.roomTypeTarget.dataset.prices || "{}")
-        const basePrice = parseFloat(prices[roomTypeId] || 0)
-        this.updateDisplay(diffDays * basePrice)
-      }
-    } else if (this.hasDisplayTotalTarget) {
-      this.updateDisplay(0)
-    }
-    
     // Crucial: Always check availability when dates/room type change
     this.updateRoomNumbers()
+
+    if (!this.hasPriceUrlValue) return
+
+    try {
+      this.displayTotalTarget.textContent = "Calculating..."
+      const url = `${this.priceUrlValue}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}`
+      const response = await fetch(url)
+      const data = await response.json()
+      this.updateDisplay(parseFloat(data.total_amount || 0))
+    } catch (error) {
+      console.error("Price calculation failed:", error)
+      this.updateDisplay(0)
+    }
   }
 
   updateDisplay(amount) {

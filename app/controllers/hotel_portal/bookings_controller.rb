@@ -36,6 +36,22 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     render json: { available_rooms: available_rooms }
   end
 
+  def stay_price
+    if params[:check_in].blank? || params[:check_out].blank? || params[:room_type_id].blank?
+      return render json: { total_amount: 0 }
+    end
+
+    room_type = current_hotel.room_types.find(params[:room_type_id])
+
+    total = Bookings::CalculateStayPrice.new(
+      room_type: room_type,
+      check_in: Date.parse(params[:check_in]),
+      check_out: Date.parse(params[:check_out])
+    ).call
+
+    render json: { total_amount: total }
+  end
+
   def create
     result = Bookings::CreateManualBooking.new(
       hotel: current_hotel,

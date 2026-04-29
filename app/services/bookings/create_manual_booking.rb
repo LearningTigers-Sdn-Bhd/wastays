@@ -15,12 +15,27 @@ module Bookings
       booking = @hotel.bookings.build(@params)
       room_type = @hotel.room_types.find(@room_type_id)
 
+      # 1. Validate Room Availability based on Grid Selection
+      available_rooms = AvailableRoomNumbers.new(
+        hotel: @hotel,
+        room_type: room_type,
+        check_in: booking.check_in,
+        check_out: booking.check_out
+      ).call
+
+      unless available_rooms.include?(@room_number.to_s)
+        return OpenStruct.new(success?: false, errors: [ "Room #{@room_number} is no longer available for these dates." ])
+      end
+
+      # 2. Calculate accurate total amount from Grid Rates
+      booking.total_amount = (booking.check_in..(booking.check_out - 1.day)).sum do |date|
+        rate = room_type.room_rates.find_by(date: date)
+        rate&.price || room_type.base_price
+      end
+
       booking.status = "confirmed"
       booking.payment_status = "captured"
       booking.hotel_snapshot = @hotel.as_json.merge("room_number" => @room_number)
-
-      # Simple price calculation for manual bookings if not provided
-      booking.total_amount ||= room_type.base_price * (booking.check_out - booking.check_in).to_i
 
       ActiveRecord::Base.transaction do
         if booking.save

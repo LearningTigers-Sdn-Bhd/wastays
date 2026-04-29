@@ -89,4 +89,26 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
     end
   end
+
+  describe "GET /stay_price" do
+    let(:room_type) { create(:room_type, hotel: hotel, base_price: 100) }
+
+    it "returns the total amount for the stay" do
+      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)).to eq({ "total_amount" => "200.0" })
+    end
+
+    it "returns 0 if params are missing" do
+      get "/hotel/#{hotel.id}/bookings/stay_price"
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)).to eq({ "total_amount" => 0 })
+    end
+  end
 end

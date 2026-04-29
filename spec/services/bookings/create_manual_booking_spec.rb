@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Bookings::CreateManualBooking do
   let(:hotel) { create(:hotel) }
-  let(:room_type) { create(:room_type, hotel: hotel, quantity: 5) }
+  let(:room_type) { create(:room_type, hotel: hotel, quantity: 5, room_numbers: [ "101", "102", "103", "104", "105" ]) }
   let(:params) do
     {
       guest_name: "Test Guest",
