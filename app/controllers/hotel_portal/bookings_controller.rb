@@ -42,13 +42,12 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     end
 
     room_type = current_hotel.room_types.find(params[:room_type_id])
-    check_in = Date.parse(params[:check_in])
-    check_out = Date.parse(params[:check_out])
 
-    total = (check_in..(check_out - 1.day)).sum do |date|
-      rate = room_type.room_rates.find_by(date: date)
-      rate&.price || room_type.base_price
-    end
+    total = Bookings::CalculateStayPrice.new(
+      room_type: room_type,
+      check_in: Date.parse(params[:check_in]),
+      check_out: Date.parse(params[:check_out])
+    ).call
 
     render json: { total_amount: total }
   end
