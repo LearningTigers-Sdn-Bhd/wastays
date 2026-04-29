@@ -93,9 +93,8 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
       return
     end
 
-    uploaded_file.tempfile.rewind
     blob = ActiveStorage::Blob.create_and_upload!(
-      io: uploaded_file.tempfile,
+      io: uploaded_file,
       filename: uploaded_file.original_filename,
       content_type: uploaded_file.content_type
     )
@@ -105,7 +104,9 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
     write_queued_photo_signed_ids(queue_signed_ids.uniq)
 
     render json: { queue_item: serialize_queued_blob(blob), summary: queue_summary }
-  rescue StandardError
+  rescue StandardError => e
+    Rails.logger.error "Photo queue error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
     render json: { error: "Unable to queue this photo. Please try again." }, status: :unprocessable_content
   end
 
@@ -224,7 +225,7 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
   end
 
   def write_queued_photo_signed_ids(signed_ids)
-    queue_session[@hotel.id.to_s] = signed_ids
+    session[:hotel_photo_queue] = queue_session.merge(@hotel.id.to_s => signed_ids)
   end
 
   def serialize_queued_blob(blob)
