@@ -11,6 +11,7 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
     authorize @hotel
 
     profile_params = hotel_params
+    profile_params[:amenities] = Array(profile_params[:amenities]).reject(&:blank?) if profile_params[:amenities]
 
     if @hotel.update(profile_params.except(:photos))
       photo_upload_result = @hotel.attach_photos_with_limit(profile_params[:photos])
@@ -168,7 +169,7 @@ class HotelPortal::ProfilesController < HotelPortal::BaseController
   end
 
   def hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :featured_photo_attachment_id, photos: [])
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :featured_photo_attachment_id, photos: [], amenities: [])
   end
 
   def clear_featured_photo_if_needed(photo_ids)
