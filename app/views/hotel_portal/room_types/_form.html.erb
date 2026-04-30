@@ -36,6 +36,62 @@
       </div>
     </div>
 
+    <div data-controller="multi-select-dropdown"
+         data-multi-select-dropdown-selected-value="<%= (room_type.amenities || []).to_json %>"
+         data-multi-select-dropdown-all-value="<%= Hotel::ROOM_AMENITIES.to_json %>"
+         data-action="click@window->multi-select-dropdown#hideDropdown">
+      <div class="flex items-center justify-between mb-2">
+        <%= f.label :amenities, "Room Amenities", class: "block text-sm font-medium" %>
+      </div>
+
+      <div class="relative">
+        <div class="min-h-[52px] w-full rounded-lg border border-gray-200 bg-white p-2 flex flex-wrap items-center gap-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all cursor-text"
+             data-action="click->multi-select-dropdown#focusInput">
+          <div class="flex flex-wrap gap-2" data-multi-select-dropdown-target="pillsContainer">
+            <!-- Pills will be rendered here by Stimulus -->
+          </div>
+          
+          <input type="text" 
+                 class="flex-grow min-w-[150px] border-none bg-transparent focus:ring-0 focus:outline-none text-sm text-slate-900 placeholder:text-slate-400" 
+                 data-multi-select-dropdown-target="input"
+                 data-action="input->multi-select-dropdown#filterOptions focus->multi-select-dropdown#openDropdown click->multi-select-dropdown#stopProp keydown->multi-select-dropdown#navigate">
+
+          <div class="ml-auto pr-2">
+            <svg class="w-4 h-4 text-slate-400 transition-transform duration-200" data-multi-select-dropdown-target="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+
+        <!-- Dropdown Options -->
+        <div class="absolute z-50 mt-2 w-full max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg hidden" 
+             data-multi-select-dropdown-target="dropdown">
+          <% Hotel::ROOM_AMENITIES.each do |amenity| %>
+            <button type="button"
+                    class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
+                    data-id="<%= amenity[:id] %>"
+                    data-name="<%= amenity[:name] %>"
+                    data-multi-select-dropdown-target="option"
+                    data-action="click->multi-select-dropdown#select">
+              <%= amenity[:name] %>
+            </button>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Template for Pills -->
+      <template data-multi-select-dropdown-target="template">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold">
+          <span data-name></span>
+          <button type="button" 
+                  class="hover:text-slate-300 transition-colors"
+                  data-remove-id
+                  data-action="click->multi-select-dropdown#remove">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+          <input type="hidden" name="room_type[amenities][]" value="">
+        </div>
+      </template>
+    </div>
+
     <!-- Room Number Management -->
     <div class="p-5 border border-slate-200 rounded-2xl bg-slate-50/50 space-y-4">
       <div class="flex items-center justify-between">

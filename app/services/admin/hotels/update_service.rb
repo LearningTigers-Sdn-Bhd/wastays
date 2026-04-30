@@ -14,6 +14,7 @@ module Admin
 
       def call
         ActiveRecord::Base.transaction do
+          sanitize_amenities
           @hotel.update!(@hotel_params)
 
           Admin::SyncHotelSalesperson.new(
@@ -29,6 +30,14 @@ module Admin
         Result.new(false, @hotel, error_message)
       rescue => e
         Result.new(false, @hotel, e.message)
+      end
+
+      private
+
+      def sanitize_amenities
+        if @hotel_params[:amenities]
+          @hotel_params[:amenities] = Array(@hotel_params[:amenities]).reject(&:blank?)
+        end
       end
     end
   end
