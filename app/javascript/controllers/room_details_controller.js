@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["modal", "mainImage", "backdropImage", "thumbnails", "name", "description", "adults", "children", "childrenContainer", "indexDisplay", "totalCount"]
+  static targets = ["modal", "mainImage", "backdropImage", "thumbnails", "name", "description", "adults", "children", "childrenContainer", "indexDisplay", "totalCount", "amenitiesSection", "amenitiesList"]
   static values = {
     photos: Array,
     index: Number
@@ -20,6 +20,14 @@ export default class extends Controller {
       if (this.hasChildrenContainerTarget) this.childrenContainerTarget.classList.remove("hidden")
     } else {
       if (this.hasChildrenContainerTarget) this.childrenContainerTarget.classList.add("hidden")
+    }
+
+    // Amenities setup
+    if (data.amenities && data.amenities.length > 0) {
+      this.renderAmenities(data.amenities)
+      this.amenitiesSectionTarget.classList.remove("hidden")
+    } else {
+      this.amenitiesSectionTarget.classList.add("hidden")
     }
     
     // Photos setup
@@ -96,6 +104,25 @@ export default class extends Controller {
       thumb.dataset.action = "click->room-details#switchImage"
       thumb.dataset.index = index
       this.thumbnailsTarget.appendChild(thumb)
+    })
+  }
+
+  renderAmenities(amenities) {
+    this.amenitiesListTarget.innerHTML = ""
+    const template = document.getElementById("amenity-item-template")
+
+    amenities.forEach(amenity => {
+      const clone = document.importNode(template.content, true)
+      clone.querySelector("[data-amenity-name]").textContent = amenity.name
+      
+      const iconContainer = clone.querySelector("[data-amenity-icon-container]")
+      const iconSource = document.getElementById(`icon-${amenity.icon}`)
+      
+      if (iconSource) {
+        iconContainer.innerHTML = iconSource.innerHTML
+      }
+
+      this.amenitiesListTarget.appendChild(clone)
     })
   }
 

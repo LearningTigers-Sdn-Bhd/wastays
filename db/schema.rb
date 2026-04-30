@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_28_035128) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_29_040144) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -308,6 +308,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_28_035128) do
     t.integer "salesperson_id"
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
+    t.jsonb "amenities", default: [], null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
@@ -594,6 +595,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_28_035128) do
     t.datetime "updated_at", null: false
     t.jsonb "room_numbers"
     t.string "room_number_mode"
+    t.jsonb "amenities", default: [], null: false
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
   end
 

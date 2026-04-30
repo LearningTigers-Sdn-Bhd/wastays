@@ -13,6 +13,7 @@ module HotelPortal
 
       def call
         sanitize_room_numbers
+        sanitize_amenities
         @room_type.assign_attributes(@params)
 
         if @room_type.save
@@ -30,6 +31,12 @@ module HotelPortal
           @params[:room_numbers] = Array(@params[:room_numbers]).reject(&:blank?)
         else
           @params[:room_numbers] = []
+        end
+      end
+
+      def sanitize_amenities
+        if @params[:amenities]
+          @params[:amenities] = Array(@params[:amenities]).reject(&:blank?)
         end
       end
     end
