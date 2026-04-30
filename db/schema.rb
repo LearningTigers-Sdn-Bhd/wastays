@@ -306,11 +306,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_04_054013) do
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
-<<<<<<< HEAD
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
-=======
     t.index ["whatsapp_number"], name: "index_hotels_on_whatsapp_number", unique: true
->>>>>>> a55e4ad (feat: implement dynamic Cloudflare R2 storage integration for Active Storage)
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
