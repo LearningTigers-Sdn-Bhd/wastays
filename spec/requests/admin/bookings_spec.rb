@@ -23,6 +23,13 @@ RSpec.describe 'Admin::Bookings', type: :request do
     )
   end
 
+  let!(:booking_room) do
+    create(:booking_room,
+      booking: booking,
+      room_type: create(:room_type, hotel: hotel, name: 'Deluxe Room')
+    )
+  end
+
   before do
     sign_in_as(superadmin)
   end

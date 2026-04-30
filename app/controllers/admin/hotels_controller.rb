@@ -5,12 +5,7 @@ class Admin::HotelsController < Admin::BaseController
   before_action :load_salespersons, only: [ :new, :create, :edit, :update ]
 
   def index
-    @all_hotels = Hotel.all.order(created_at: :desc)
-
-    # Apply filters
-    @all_hotels = @all_hotels.where(status: params[:status]) if params[:status].present? && params[:status] != "All Status"
-    @all_hotels = @all_hotels.search(params[:q]) if params[:q].present?
-
+    @all_hotels = HotelsQuery.new.call(params)
     @hotels = @all_hotels.page(params[:page]).per(25)
 
     respond_to do |format|
@@ -24,17 +19,17 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def new
-    @hotel = Hotel.new
+    @form = Admin::Hotels::CreateForm.new
+    @hotel = @form.hotel
   end
 
   def create
-    @hotel = Hotel.new(create_hotel_params)
-    result = HotelOps::CreateHotel.new(account_params: account_params, user_params: user_params, hotel_params: create_hotel_params).call
+    @form = Admin::Hotels::CreateForm.new(create_params)
 
-    if result[:success]
-      redirect_to admin_hotel_path(result[:hotel]), notice: "Hotel created successfully. Default password: #{HotelOps::CreateHotel::DEFAULT_PASSWORD}."
+    if @form.save
+      redirect_to admin_hotel_path(@form.hotel), notice: "Hotel created successfully. Default password: #{HotelOps::CreateHotel::DEFAULT_PASSWORD}."
     else
-      @hotel.errors.add(:base, result[:error])
+      @hotel = @form.hotel
       render :new, status: :unprocessable_content
     end
   end
@@ -67,20 +62,24 @@ class Admin::HotelsController < Admin::BaseController
     @salespersons = current_user.account.users.where(role: "salesperson").order(:name)
   end
 
-  def create_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :salesperson_id, :preferred_channel_manager, amenities: []).merge(status: "approved")
+  def create_params
+    {
+      account_name: params.dig(:account, :name),
+      user_name: params.dig(:user, :name),
+      user_email: params.dig(:user, :email),
+      hotel_name: params.dig(:hotel, :name),
+      address: params.dig(:hotel, :address),
+      city: params.dig(:hotel, :city),
+      country: params.dig(:hotel, :country),
+      star_rating: params.dig(:hotel, :star_rating),
+      salesperson_id: params.dig(:hotel, :salesperson_id),
+      preferred_channel_manager: params.dig(:hotel, :preferred_channel_manager),
+      amenities: params.dig(:hotel, :amenities)
+    }
   end
 
   def update_hotel_params
     params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :salesperson_id, :preferred_channel_manager, amenities: [])
-  end
-
-  def account_params
-    params.require(:account).permit(:name)
-  end
-
-  def user_params
-    params.require(:user).permit(:name, :email)
   end
 
   def salesperson_name_param

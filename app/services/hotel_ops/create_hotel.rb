@@ -22,7 +22,7 @@ module HotelOps
         UserRole.create!(user: user, role: owner_role)
 
         sanitize_amenities
-        hotel = Hotel.create!(@hotel_params.reverse_merge(status: "registered").merge(account: account))
+        hotel = Hotel.create!(@hotel_params.reverse_merge(status: "registered", amenities: []).merge(account: account))
 
         # Grant hotel access with the owner role
         UserHotelAccess.create!(user: user, hotel: hotel, role: owner_role)
