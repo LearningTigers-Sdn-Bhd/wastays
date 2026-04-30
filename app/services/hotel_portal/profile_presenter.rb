@@ -4,11 +4,11 @@ module HotelPortal
   class ProfilePresenter
     include ActionView::Helpers::NumberHelper
 
-    attr_reader :hotel, :queue_service, :context
+    attr_reader :hotel, :photo_queue, :context
 
-    def initialize(hotel, queue_service, context)
+    def initialize(hotel, photo_queue, context)
       @hotel = hotel
-      @queue_service = queue_service
+      @photo_queue = photo_queue
       @context = context
     end
 
@@ -25,19 +25,13 @@ module HotelPortal
     end
 
     def queued_photo_items
-      queue_service.queued_photo_signed_ids.filter_map do |signed_id|
-        blob = ActiveStorage::Blob.find_signed(signed_id)
-        serialize_queued_blob(blob) if blob
+      photo_queue.items.map do |blob|
+        serialize_queued_blob(blob)
       end
     end
 
     def queue_summary
-      {
-        queued_count: queue_service.queued_count,
-        existing_count: hotel.photos.count,
-        max_count: Hotel::MAX_PHOTOS,
-        remaining_slots: queue_service.remaining_slots
-      }
+      photo_queue.summary
     end
 
     def serialize_queued_blob(blob)

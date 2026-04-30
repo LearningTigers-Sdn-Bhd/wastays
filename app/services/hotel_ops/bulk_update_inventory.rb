@@ -28,9 +28,11 @@ module HotelOps
 
               # 2. Calculate net quantity (Selected - Already Booked)
               occupied_count = @hotel.bookings.revenue_generating
-                                     .where(":date >= check_in AND :date < check_out", date: date)
-                                     .where("(hotel_snapshot->>'room_number')::text IN (?)", valid_rooms)
-                                     .count
+                                     .joins(:booking_rooms)
+                                     .where(":date >= bookings.check_in AND :date < bookings.check_out", date: date)
+                                     .where(booking_rooms: { room_number: valid_rooms })
+                                     .distinct
+                                     .count(:id)
               inventory.quantity = [ 0, valid_rooms.size - occupied_count ].max
             else
               # If RoomNumbers mode is used but this type has none, use global quantity if provided
