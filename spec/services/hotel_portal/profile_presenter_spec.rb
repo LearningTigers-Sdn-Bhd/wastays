@@ -4,7 +4,17 @@ require 'rails_helper'
 
 RSpec.describe HotelPortal::ProfilePresenter do
   let(:hotel) { create(:hotel) }
-  let(:queue_service) { instance_double(HotelPortal::PhotoQueueService, queued_photo_signed_ids: [], queued_count: 0, remaining_slots: 20) }
+  let(:queue_service) do
+    instance_double(
+      HotelPortal::PhotoQueue,
+      summary: {
+        queued_count: 0,
+        existing_count: 0,
+        max_count: 20,
+        remaining_slots: 20
+      }
+    )
+  end
   let(:context) { double('view_context') }
   let(:presenter) { described_class.new(hotel, queue_service, context) }
 
