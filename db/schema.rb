@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_29_040144) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_04_054013) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -309,9 +309,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_29_040144) do
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
     t.jsonb "amenities", default: [], null: false
+    t.string "slug", null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
+    t.index ["slug"], name: "index_hotels_on_slug", unique: true
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|

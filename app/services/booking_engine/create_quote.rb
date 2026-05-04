@@ -3,7 +3,8 @@ require "ostruct"
 module BookingEngine
   class CreateQuote
     def initialize(params)
-      @hotel = Hotel.find(params[:hotel_id])
+      hotel_key = params[:hotel_id].to_s
+      @hotel = Hotel.where(slug: hotel_key).first || Hotel.find(hotel_key)
       @room_type = @hotel.room_types.find(params[:room_type_id])
       @check_in = parse_date(params[:check_in])
       @check_out = parse_date(params[:check_out])

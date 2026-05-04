@@ -151,7 +151,7 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
   private
 
   def set_hotel
-    @hotel = Hotel.find(params[:hotel_id])
+    @hotel = Hotel.friendly.find(params[:hotel_id])
   end
 
   def set_session

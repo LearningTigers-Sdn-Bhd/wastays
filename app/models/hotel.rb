@@ -1,5 +1,7 @@
 class Hotel < ApplicationRecord
   include AccountScopable
+  extend FriendlyId
+  friendly_id :name, use: :slugged
 
   has_many_attached :photos
   has_many :user_hotel_accesses, dependent: :destroy
@@ -20,6 +22,7 @@ class Hotel < ApplicationRecord
   has_many :onboarding_sessions, dependent: :destroy
 
   validates :name, presence: true
+  validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
   validates :city, presence: true
   validates :country, presence: true
@@ -309,6 +312,10 @@ class Hotel < ApplicationRecord
     else
       "Not Configured"
     end
+  end
+
+  def should_generate_new_friendly_id?
+    slug.blank?
   end
 
   private
