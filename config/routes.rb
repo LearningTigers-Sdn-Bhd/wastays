@@ -180,7 +180,7 @@ Rails.application.routes.draw do
       end
     end
     resource :integrations, only: [ :show, :update, :destroy ] do
-      post :test_ping, on: :collection
+      post :test_r2_connection, on: :collection
     end
   end
 

@@ -5,7 +5,11 @@ RSpec.describe "Hotel night audits", type: :system do
   let(:user) { create(:user, account: account, role: "hotel_staff", email: "frontdesk@example.com") }
   let(:hotel) { create(:hotel, account: account, status: "approved") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
-  let!(:permission) { create(:permission, slug: "manage_night_audit", name: "Manage Night Audit") }
+  let!(:permission) do
+    Permission.find_or_create_by!(slug: "manage_night_audit") do |record|
+      record.name = "Manage Night Audit"
+    end
+  end
 
   before do
     driven_by(:rack_test)

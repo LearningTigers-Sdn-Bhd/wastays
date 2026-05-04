@@ -2,7 +2,11 @@ class AppConfig < ApplicationRecord
   validates :key, presence: true, uniqueness: true
 
   def self.get(key)
+    return nil unless table_exists?
+
     find_by(key: key)&.value
+  rescue ActiveRecord::StatementInvalid
+    nil
   end
 
   def self.set(key, value)
