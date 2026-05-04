@@ -13,11 +13,17 @@ module HotelPortal
       return { error: "Only image files are allowed." } unless uploaded_file.content_type.to_s.start_with?("image/")
       return { error: "You already reached the maximum of #{Hotel::MAX_PHOTOS} photos." } if remaining_slots <= 0
 
-      blob = ActiveStorage::Blob.create_and_upload!(
-        io: uploaded_file,
-        filename: uploaded_file.original_filename,
-        content_type: uploaded_file.content_type
-      )
+      # Create blob in local_cache first to avoid auto-upload to R2
+      begin
+        blob = ActiveStorage::Blob.create_and_upload!(
+          io: uploaded_file,
+          filename: uploaded_file.original_filename,
+          content_type: uploaded_file.content_type,
+          service_name: "local_cache"
+        )
+      rescue => e
+        return { error: "Staging upload failed: #{e.message}" }
+      end
 
       add_to_session(blob.id)
       { success: true, blob: blob }
@@ -40,18 +46,41 @@ module HotelPortal
 
     def commit
       ids = blob_ids
-      resolved_items = ids.filter_map do |blob_id|
+
+      # Prepare blobs for final attachment by re-uploading them to the default service (R2)
+      # if they are currently in local_cache
+      resolved_blobs = ids.filter_map do |blob_id|
         blob = ActiveStorage::Blob.find_by(id: blob_id)
-        [ blob_id, blob ] if blob
+        next unless blob
+
+        if blob.service_name == "local_cache"
+          # Download from local_cache and upload to default service (R2)
+          # We create a NEW blob for the default service to ensure it goes to R2
+          begin
+            new_blob = ActiveStorage::Blob.create_and_upload!(
+              io: StringIO.new(blob.download),
+              filename: blob.filename.to_s,
+              content_type: blob.content_type
+              # service_name defaults to config.active_storage.service (r2)
+            )
+            blob.purge # Remove from local_cache
+            new_blob
+          rescue => e
+            Rails.logger.error "Failed to move blob #{blob_id} to R2: #{e.message}"
+            nil
+          end
+        else
+          blob
+        end
       end
 
-      blobs = resolved_items.map(&:second)
-      upload_result = hotel.attach_photos_with_limit(blobs)
+      upload_result = hotel.attach_photos_with_limit(resolved_blobs)
 
-      attached_count = upload_result.attached_count
-      trimmed_ids = resolved_items.map(&:first).drop(attached_count)
+      # Any blobs that couldn't be attached (exceeded limit) should be purged
+      attached_blobs = resolved_blobs.first(upload_result.attached_count)
+      trimmed_blobs = resolved_blobs.drop(upload_result.attached_count)
 
-      purge_blobs(trimmed_ids)
+      purge_blobs(trimmed_blobs.map(&:id))
       persist_session([])
 
       upload_result
