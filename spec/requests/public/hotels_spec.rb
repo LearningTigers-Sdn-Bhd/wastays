@@ -23,7 +23,7 @@ RSpec.describe "Public::Hotels", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("See Options")
-      expect(response.body).to include(%(href="/hotels/#{hotel.id}?))
+      expect(response.body).to include(%(href="/hotels/#{hotel.slug}?))
       expect(response.body).to include("check_in=#{Date.current}")
       expect(response.body).to include("check_out=#{Date.tomorrow}")
     end

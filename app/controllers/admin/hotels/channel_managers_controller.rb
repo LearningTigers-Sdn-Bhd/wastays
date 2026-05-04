@@ -24,6 +24,6 @@ class Admin::Hotels::ChannelManagersController < Admin::BaseController
   private
 
   def set_hotel
-    @hotel = Hotel.find(params[:id])
+    @hotel = Hotel.friendly.find(params[:id])
   end
 end
