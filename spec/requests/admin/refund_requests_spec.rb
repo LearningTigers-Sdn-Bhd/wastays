@@ -76,5 +76,10 @@ RSpec.describe "Admin::RefundRequests", type: :request do
         patch complete_admin_refund_request_path(approved_request)
       }.to have_enqueued_mail(RefundMailer, :completed)
     end
+
+    it "marks the booking payment status as refunded" do
+      patch complete_admin_refund_request_path(approved_request)
+      expect(approved_request.booking.reload.payment_status).to eq("refunded")
+    end
   end
 end
