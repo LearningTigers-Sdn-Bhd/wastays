@@ -22,9 +22,21 @@
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/preline@2.4.1/dist/preline.min.css">
     <% end %>
     <%= javascript_importmap_tags %>
+    <script type="text/javascript" src="https://widget.1automations.com/widget/6cd1b8b4-95e9-443a-91fc-fa863f3d821b.js" data-turbo-track="reload"></script>
+    <script>
+      if (window.sessionStorage && window.sessionStorage.getItem("landing_loader_shown")) {
+        document.documentElement.classList.add("skip-landing-loader")
+      }
+    </script>
+    <style>
+      .skip-landing-loader .landing-loader { display: none !important; }
+      html.skip-landing-loader.landing-loader-active, 
+      html.skip-landing-loader.landing-loader-active body { overflow: auto !important; }
+    </style>
   </head>
-
-  <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased" data-preline-enabled="<%= !(controller_name == 'static_pages' && action_name == 'home') %>">
+  <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased" data-preline-enabled="<%= !(controller_name == 'static_pages' && action_name == 'home') %>" data-controller="widget">
+    <div id="abw-btn-cont" data-turbo-permanent></div>
+    <style id="abw-style" data-turbo-permanent></style>
     <% unless controller_name == "static_pages" && action_name == "home" %>
     <script>
       document.documentElement.classList.remove("landing-loader-active")
