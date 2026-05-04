@@ -18,7 +18,15 @@ RSpec.describe 'Admin::Bookings', type: :request do
       guest_phone: '+60192223344',
       total_amount: 520.0,
       check_in: Date.new(2026, 4, 10),
-      check_out: Date.new(2026, 4, 12)
+      check_out: Date.new(2026, 4, 12),
+      hotel_snapshot: { room_number: "101" }
+    )
+  end
+
+  let!(:booking_room) do
+    create(:booking_room,
+      booking: booking,
+      room_type: create(:room_type, hotel: hotel, name: 'Deluxe Room')
     )
   end
 
@@ -37,6 +45,7 @@ RSpec.describe 'Admin::Bookings', type: :request do
       expect(response.body).to include('Review booking details, guest information, and payment status for this reservation.')
       expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">')
       expect(response.body).to include('Stay & Room Details')
+      expect(response.body).to include('Room 101')
       expect(response.body).to include('class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Status Summary')
       expect(response.body).to include('Booking WS-FBBPGNAT')
       expect(response.body).to include("Hotel: #{hotel.name}")

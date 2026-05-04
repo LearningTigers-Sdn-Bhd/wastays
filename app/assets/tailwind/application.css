@@ -76,6 +76,10 @@
     overflow: hidden;
   }
 
+  html.landing-loader-active #abw-btn-cont {
+    display: none !important;
+  }
+
   body {
     @apply bg-neutral-bg text-neutral-text-primary font-sans antialiased;
   }
@@ -91,7 +95,7 @@
   .landing-loader {
     position: fixed;
     inset: 0;
-    z-index: 80;
+    z-index: 9999;
     display: grid;
     place-items: center;
     overflow: hidden;

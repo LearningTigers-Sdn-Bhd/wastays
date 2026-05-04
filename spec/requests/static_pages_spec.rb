@@ -25,13 +25,13 @@ RSpec.describe "StaticPages", type: :request do
     it "links the footer WhatsApp CTA to the configured number" do
       get "/"
 
-      expect(response.body).to include(%(href="https://wa.me/601139278173"))
+      expect(response.body).to include(%(href="https://wa.me/601162023996"))
     end
 
     it "opens the footer WhatsApp CTA in a new tab" do
       get "/"
 
-      expect(response.body).to include(%(href="https://wa.me/601139278173"))
+      expect(response.body).to include(%(href="https://wa.me/601162023996"))
       expect(response.body).to include(%(target="_blank"))
       expect(response.body).to include(%(rel="noopener noreferrer"))
     end

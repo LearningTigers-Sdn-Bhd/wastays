@@ -7,6 +7,11 @@ export default class extends Controller {
   }
 
   connect() {
+    if (sessionStorage.getItem("landing_loader_shown")) {
+      this.element.remove()
+      return
+    }
+
     this.handleBeforeCache = this.prepareForCache.bind(this)
     this.handleBeforeRender = this.releaseScrollLock.bind(this)
     document.addEventListener("turbo:before-cache", this.handleBeforeCache)
@@ -14,6 +19,8 @@ export default class extends Controller {
 
     this.reset()
     this.dismissWhenReady()
+
+    sessionStorage.setItem("landing_loader_shown", "true")
   }
 
   disconnect() {
@@ -50,7 +57,12 @@ export default class extends Controller {
     if (!this.hasOverlayTarget) return
 
     this.overlayTarget.classList.add("is-hidden")
-    this.releaseScrollLock()
+    
+    // Delay releasing the lock until the fade is partially complete
+    // This also keeps the chat widget hidden until the brand intro is finished
+    setTimeout(() => {
+      this.releaseScrollLock()
+    }, 500)
   }
 
   reset() {
