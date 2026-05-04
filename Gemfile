@@ -94,3 +94,4 @@ end
 
 gem "openssl", "~> 3.1.2"
 gem "friendly_id", "~> 5.5"
+gem "aws-sdk-s3", "~> 1.220"
