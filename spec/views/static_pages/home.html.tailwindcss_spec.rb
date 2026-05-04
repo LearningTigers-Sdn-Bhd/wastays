@@ -1,13 +1,11 @@
 require 'rails_helper'
 
 RSpec.describe "static_pages/home.html.tailwindcss", type: :view do
-  it "renders booking experience with step-attached connectors and no chevron" do
+  it "does not render booking experience section" do
     render template: "static_pages/home"
 
-    expect(rendered).to include("Instant room booking")
-    expect(rendered.scan("booking-step-connector").size).to eq(4)
-    expect(rendered).not_to include('d="M9 5l7 7-7 7"')
-    expect(rendered).not_to include("absolute inset-x-0 top-10 grid-cols-5")
+    expect(rendered).not_to include("Instant room booking")
+    expect(rendered).not_to include("booking-step-connector")
     expect(rendered).not_to include("booking-step-icon-track")
   end
 
