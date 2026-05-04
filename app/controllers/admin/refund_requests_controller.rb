@@ -27,7 +27,10 @@ module Admin
     end
 
     def complete
-      @refund_request.update!(status: "completed")
+      ActiveRecord::Base.transaction do
+        @refund_request.update!(status: "completed")
+        @refund_request.booking.update!(payment_status: "refunded")
+      end
       RefundMailer.completed(@refund_request).deliver_later
       redirect_to admin_refund_request_path(@refund_request), notice: "Refund marked as completed. Guest has been notified."
     end

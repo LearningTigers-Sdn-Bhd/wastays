@@ -397,21 +397,34 @@
         <div class="p-6 space-y-4">
           <div class="flex justify-between items-center text-sm">
             <span class="text-slate-500 font-medium">Payment</span>
-            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider <%= payment_status_class(@booking.payment_status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10 uppercase">
-              <%= @booking.payment_status %>
+            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider <%= hotel_payment_status_class(@booking.payment_status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10 uppercase">
+              <%= hotel_payment_display_status(@booking.payment_status) %>
             </span>
           </div>
           <div class="flex justify-between items-center text-sm">
             <span class="text-slate-500 font-medium">Check-In Step</span>
             <% pc_status = pre_checkin_display_status(@booking) %>
             <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider <%= pre_checkin_status_class(pc_status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10 uppercase">
-              <%= pc_status %>
+              <%= pc_status.to_s.tr("_", " ") %>
             </span>
           </div>
           <div class="pt-4 border-t border-slate-100 flex justify-between items-baseline">
             <span class="text-xs font-bold text-slate-900 uppercase">Total Paid</span>
             <span class="text-xl font-bold text-slate-900">MYR <%= number_with_precision(@booking.total_amount, precision: 2) %></span>
           </div>
+        </div>
+      </div>
+
+      <!-- Invoice Card -->
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+          <h3 class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Invoice</h3>
+        </div>
+        <div class="p-4">
+          <%= link_to invoice_booking_path(@booking.confirmation_token), target: "_blank", class: "w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors", data: { turbo: false } do %>
+            Download Invoice
+            <svg class="size-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          <% end %>
         </div>
       </div>
 
