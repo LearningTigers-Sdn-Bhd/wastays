@@ -66,9 +66,9 @@ class ApplicationController < ActionController::Base
 
   def current_hotel
     @current_hotel ||= if current_user.superadmin? && params[:hotel_id]
-      Hotel.find_by(id: params[:hotel_id])
+      find_hotel_for_scope(Hotel.all, params[:hotel_id])
     elsif params[:hotel_id]
-      current_user.hotels.find_by(id: params[:hotel_id])
+      find_hotel_for_scope(current_user.hotels, params[:hotel_id])
     else
       current_user.hotels.first
     end
@@ -99,7 +99,7 @@ class ApplicationController < ActionController::Base
   end
 
   def hotel_portal_params
-    { hotel_id: current_hotel&.id }.compact
+    { hotel_id: current_hotel&.to_param }.compact
   end
 
   def redirect_legacy_hotel_portal_path
@@ -113,9 +113,16 @@ class ApplicationController < ActionController::Base
 
   def canonical_hotel_portal_path(hotel_id, legacy_path, query_params)
     suffix = legacy_path.delete_prefix("/hotel")
-    path = "/hotel/#{hotel_id}#{suffix}"
+    canonical_hotel_id = current_hotel&.to_param || hotel_id
+    path = "/hotel/#{canonical_hotel_id}#{suffix}"
     query_string = query_params.to_query
     query_string.present? ? "#{path}?#{query_string}" : path
+  end
+
+  def find_hotel_for_scope(scope, hotel_identifier)
+    hotel_key = hotel_identifier.to_s
+
+    scope.where(slug: hotel_key).first || scope.find_by(id: hotel_key)
   end
 
   helper_method :current_hotel, :permitted_hotels, :hotel_portal_params

@@ -7,20 +7,18 @@ class Api::V1::HotelsController < Api::V1::BaseController
   end
 
   def show
-    authorize_hotel!(params[:id])
-    return if performed?
+    hotel = find_hotel_in_scope!(params[:id])
+    return unless hotel
 
-    hotel = Hotel.find(params[:id])
     render json: hotel.as_json(include: {
       room_types: { only: [ :id, :name, :base_price, :max_adults, :max_children ] }
     })
   end
 
   def availability
-    authorize_hotel!(params[:id])
-    return if performed?
+    hotel = find_hotel_in_scope!(params[:id])
+    return unless hotel
 
-    hotel = Hotel.find(params[:id])
     availability_service = BookingEngine::AvailabilityService.new(
       check_in: params[:check_in],
       check_out: params[:check_out],
@@ -49,5 +47,15 @@ class Api::V1::HotelsController < Api::V1::BaseController
       check_out: params[:check_out],
       available_rooms: response_data
     }
+  end
+
+  private
+
+  def find_hotel_in_scope!(identifier)
+    hotel = hotel_scope.where(slug: identifier.to_s).first || hotel_scope.find_by(id: identifier)
+    return hotel if hotel
+
+    render json: { error: "Forbidden: You do not have access to this hotel" }, status: :forbidden
+    nil
   end
 end

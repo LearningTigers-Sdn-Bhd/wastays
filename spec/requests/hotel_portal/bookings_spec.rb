@@ -29,16 +29,16 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:success)
     end
 
-    it "renders hotel portal links with hotel id in the path for superadmin" do
+    it "renders hotel portal links with hotel slug in the path for superadmin" do
       superadmin = create(:user, :superadmin)
       sign_in_as(superadmin)
 
       get "/hotel/#{hotel.id}/bookings"
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include(%(href="/hotel/#{hotel.id}/arrivals"))
-      expect(response.body).to include(%(href="/hotel/#{hotel.id}/bookings"))
-      expect(response.body).to include(%(href="/hotel/#{hotel.id}/audit_logs"))
+      expect(response.body).to include(%(href="/hotel/#{hotel.slug}/arrivals"))
+      expect(response.body).to include(%(href="/hotel/#{hotel.slug}/bookings"))
+      expect(response.body).to include(%(href="/hotel/#{hotel.slug}/audit_logs"))
     end
   end
 

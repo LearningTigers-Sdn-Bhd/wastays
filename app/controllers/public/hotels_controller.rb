@@ -7,7 +7,7 @@ class Public::HotelsController < ApplicationController
   end
 
   def show
-    @hotel = Hotel.find(params[:id])
+    @hotel = Hotel.friendly.find(params[:id])
     # Ensure only active hotels are viewable
     unless @hotel.active?
       redirect_to hotels_path, alert: "Hotel not found"

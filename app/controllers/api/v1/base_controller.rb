@@ -50,9 +50,13 @@ class Api::V1::BaseController < ApplicationController
   end
 
   # Helper to check if a specific hotel is authorized for this key
-  def authorize_hotel!(hotel_id)
-    unless hotel_scope.exists?(id: hotel_id)
+  def authorize_hotel!(hotel_identifier)
+    hotel = hotel_scope.where(slug: hotel_identifier.to_s).first || hotel_scope.find_by(id: hotel_identifier)
+    unless hotel
       render json: { error: "Forbidden: You do not have access to this hotel" }, status: :forbidden
+      return nil
     end
+
+    hotel
   end
 end
