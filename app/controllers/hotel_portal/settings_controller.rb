@@ -62,8 +62,11 @@ module HotelPortal
 
       ActiveRecord::Base.transaction do
         @hotel.update!(hotel_params)
-        @property_policy ||= @hotel.property_policy || @hotel.build_property_policy
-        @property_policy.update!(property_policy_params)
+
+        if params.dig(:hotel, :property_policy_attributes).present?
+          @property_policy ||= @hotel.property_policy || @hotel.build_property_policy
+          @property_policy.update!(property_policy_params)
+        end
       end
 
       redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
@@ -107,7 +110,10 @@ module HotelPortal
       params.require(:hotel).permit(
         :usd_conversion_rate,
         :tourism_tax_enabled,
-        :tourism_tax_amount
+        :tourism_tax_amount,
+        :ai_provider_enabled,
+        :ai_provider_name,
+        :ai_provider_key
       )
     end
 

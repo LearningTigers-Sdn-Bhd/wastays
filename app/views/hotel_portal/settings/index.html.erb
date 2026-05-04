@@ -24,8 +24,9 @@
 
         <div class="px-6 py-5 sm:px-8">
           <%= form_with model: @hotel, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
+            <%= hidden_field_tag :form_id, "hotel_settings" %>
             <% settings_errors = @hotel.errors.full_messages + @property_policy.errors.full_messages %>
-            <% if settings_errors.any? %>
+            <% if settings_errors.any? && params[:form_id] == "hotel_settings" %>
               <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                 <p class="font-semibold"><%= pluralize(settings_errors.count, "error") %> prohibited these settings from being saved:</p>
                 <ul class="mt-2 list-disc space-y-1 ps-5">
@@ -94,6 +95,58 @@
 
             <div class="flex justify-end border-t border-slate-200 pt-4">
               <%= f.submit "Save Settings", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
+            </div>
+          <% end %>
+        </div>
+      </section>
+
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">AI Configuration</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Configure AI providers and keys for automated assistance.</p>
+        </div>
+
+        <div class="px-6 py-5 sm:px-8">
+          <%= form_with model: @hotel, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
+            <%= hidden_field_tag :form_id, "ai_configuration" %>
+            <% if @hotel.errors.any? && params[:form_id] == "ai_configuration" %>
+              <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <p class="font-semibold"><%= pluralize(@hotel.errors.count, "error") %> prohibited these AI settings from being saved:</p>
+                <ul class="mt-2 list-disc space-y-1 ps-5">
+                  <% @hotel.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <div class="grid items-start gap-4 md:grid-cols-2">
+              <div>
+                <span class="mb-2 block text-sm font-medium text-slate-900">AI Features</span>
+                <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4">
+                  <span class="text-sm text-slate-600">Enable AI Assistance</span>
+                  <span class="relative inline-flex items-center">
+                    <%= f.check_box :ai_provider_enabled, class: "sr-only peer" %>
+                    <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
+                  </span>
+                </label>
+              </div>
+
+              <div>
+                <%= f.label :ai_provider_name, "AI Provider", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <% provider_options = { "openai" => "OpenAI", "claude" => "Claude", "deepseek" => "DeepSeek", "gemini" => "Gemini" } %>
+                <%= f.select :ai_provider_name, Hotel.ai_provider_names.keys.map { |k| [provider_options[k] || k.humanize, k] }, { include_blank: "Select Provider" }, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              </div>
+            </div>
+
+            <div>
+              <%= f.label :ai_provider_key, "API Key", class: "mb-2 block text-sm font-medium text-slate-900" %>
+              <%= f.password_field :ai_provider_key, value: @hotel.ai_provider_key, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", placeholder: "sk-..." %>
+              <p class="mt-1.5 text-xs text-slate-500">Your API key is securely encrypted before being saved.</p>
+            </div>
+
+            <div class="flex justify-end border-t border-slate-200 pt-4">
+              <%= f.submit "Save AI Configuration", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
             </div>
           <% end %>
         </div>

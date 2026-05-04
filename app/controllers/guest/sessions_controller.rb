@@ -82,22 +82,6 @@ class Guest::SessionsController < Guest::BaseController
   end
 
   def find_guest_by_phone(raw)
-    digits = raw.to_s.gsub(/\D/, "")
-    return nil if digits.blank?
-
-    variants = if digits.start_with?("60")
-      local = digits.sub(/\A60/, "0")
-      [ "+#{digits}", digits, local ]
-    elsif digits.start_with?("0")
-      [ digits, "60#{digits[1..]}", "+60#{digits[1..]}" ]
-    else
-      [ digits, "0#{digits}", "+60#{digits}", "60#{digits}" ]
-    end
-
-    variants.each do |v|
-      guest = ::Guest.find_by(phone: v)
-      return guest if guest
-    end
-    nil
+    PhoneIdentity.find_guest(raw)
   end
 end
