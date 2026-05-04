@@ -3,6 +3,7 @@ class Api::V1::BaseController < ApplicationController
   skip_before_action :authenticate_user! if respond_to?(:authenticate_user!)
 
   before_action :authenticate_api_key!
+  before_action :set_cors_headers
 
   attr_reader :current_api_key
 
@@ -58,5 +59,11 @@ class Api::V1::BaseController < ApplicationController
     end
 
     hotel
+  end
+
+  def set_cors_headers
+    headers["Access-Control-Allow-Origin"] = "*"
+    headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept"
   end
 end

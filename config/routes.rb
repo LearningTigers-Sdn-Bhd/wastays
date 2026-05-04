@@ -42,6 +42,7 @@ Rails.application.routes.draw do
   # API Namespace
   namespace :api do
     namespace :v1 do
+      match "*path", to: "preflight#handle", via: :options
       post "guest_sessions", to: "guest_sessions#create"
       post "workflow_webhooks", to: "workflow_webhooks#create"
       post "housekeeping_webhooks", to: "housekeeping_webhooks#create"
@@ -49,6 +50,9 @@ Rails.application.routes.draw do
       post "pre_checkin_links", to: "pre_checkin_links#create"
       resources :hotels, only: [ :index, :show ] do
         get "availability", on: :member
+        namespace :ai_concierge do
+          resources :inquiries, only: [ :create ]
+        end
       end
       resources :quotes, only: [ :create, :show ]
       resources :bookings, only: [ :show ] do

@@ -189,7 +189,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.string "payout_status"
     t.datetime "payout_at"
     t.string "payout_reference"
-    t.string "payout_batch_id"
+    t.bigint "payout_batch_id"
     t.string "source", default: "internal"
     t.string "external_reference"
     t.string "channel_manager_reference"
@@ -200,6 +200,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
+    t.index ["payout_batch_id"], name: "index_bookings_on_payout_batch_id"
     t.index ["source"], name: "index_bookings_on_source"
     t.index ["status"], name: "index_bookings_on_status"
   end
@@ -310,6 +311,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.date "onboarding_end_date"
     t.jsonb "amenities", default: [], null: false
     t.string "slug", null: false
+    t.boolean "ai_provider_enabled", default: false
+    t.string "ai_provider_name"
+    t.text "ai_provider_key"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
@@ -496,6 +500,62 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.string "currency", default: "MYR", null: false
     t.decimal "usd_rate", precision: 10, scale: 4, default: "0.21", null: false
     t.index ["hotel_id"], name: "index_property_policies_on_hotel_id"
+  end
+
+  create_table "prospect_conversation_states", force: :cascade do |t|
+    t.bigint "prospect_id", null: false
+    t.string "active_topic"
+    t.string "active_flow"
+    t.string "flow_status", default: "active", null: false
+    t.text "pending_question"
+    t.jsonb "slots_payload", default: {}, null: false
+    t.string "last_intent"
+    t.string "last_action_name"
+    t.datetime "last_user_message_at"
+    t.datetime "last_topic_switch_at"
+    t.integer "reset_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active_topic"], name: "index_prospect_conversation_states_on_active_topic"
+    t.index ["flow_status"], name: "index_prospect_conversation_states_on_flow_status"
+    t.index ["prospect_id"], name: "index_prospect_conversation_states_on_prospect_id", unique: true
+  end
+
+  create_table "prospect_messages", force: :cascade do |t|
+    t.bigint "prospect_id", null: false
+    t.string "direction", null: false
+    t.text "body", null: false
+    t.datetime "sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["prospect_id", "sent_at"], name: "index_prospect_messages_on_prospect_id_and_sent_at"
+    t.index ["prospect_id"], name: "index_prospect_messages_on_prospect_id"
+  end
+
+  create_table "prospect_profile_facts", force: :cascade do |t|
+    t.bigint "prospect_id", null: false
+    t.string "category", null: false
+    t.string "value", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["prospect_id", "category"], name: "index_prospect_profile_facts_on_prospect_id_and_category", unique: true
+    t.index ["prospect_id"], name: "index_prospect_profile_facts_on_prospect_id"
+  end
+
+  create_table "prospects", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "guest_id"
+    t.string "phone_number", null: false
+    t.string "name"
+    t.string "stage", default: "cold", null: false
+    t.datetime "last_contact"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["guest_id"], name: "index_prospects_on_guest_id"
+    t.index ["hotel_id", "phone_number"], name: "index_prospects_on_hotel_id_and_phone_number", unique: true
+    t.index ["hotel_id"], name: "index_prospects_on_hotel_id"
+    t.index ["last_contact"], name: "index_prospects_on_last_contact"
+    t.index ["stage"], name: "index_prospects_on_stage"
   end
 
   create_table "rate_plans", force: :cascade do |t|
@@ -748,6 +808,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
   add_foreign_key "booking_rooms", "room_types"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
+  add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotels", "accounts"
@@ -764,6 +825,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
   add_foreign_key "payout_batches", "hotels"
   add_foreign_key "pre_checkins", "bookings"
   add_foreign_key "property_policies", "hotels"
+  add_foreign_key "prospect_conversation_states", "prospects"
+  add_foreign_key "prospect_messages", "prospects"
+  add_foreign_key "prospect_profile_facts", "prospects"
+  add_foreign_key "prospects", "guests"
+  add_foreign_key "prospects", "hotels"
   add_foreign_key "rate_plans", "room_types"
   add_foreign_key "refund_requests", "bookings"
   add_foreign_key "role_permissions", "permissions"
