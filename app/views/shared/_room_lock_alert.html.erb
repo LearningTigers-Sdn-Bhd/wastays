@@ -1,0 +1,22 @@
+<dialog id="room-lock-alert-modal" class="fixed inset-0 z-[130] m-auto p-0 rounded-3xl bg-transparent backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm" aria-modal="true">
+  <div class="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/30" id="room-lock-alert-content">
+    <div class="px-8 pt-10 pb-6 text-center">
+      <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-50 ring-8 ring-red-50/50">
+        <svg class="h-10 w-10 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+        </svg>
+      </div>
+      
+      <h3 class="text-xl font-black text-slate-950 mb-3">Room Already Occupied</h3>
+      <p id="room-lock-alert-message" class="text-sm font-medium leading-relaxed text-slate-600 px-4">
+        This room is currently being assigned by another staff member. Please select a different room.
+      </p>
+    </div>
+
+    <div class="p-6 pt-0 flex justify-center">
+      <button id="room-lock-alert-close" type="button" class="w-full max-w-[200px] inline-flex items-center justify-center rounded-2xl bg-slate-900 px-6 py-3.5 text-sm font-bold text-white shadow-lg transition active:scale-95 hover:bg-slate-800">
+        Understood
+      </button>
+    </div>
+  </div>
+</div>

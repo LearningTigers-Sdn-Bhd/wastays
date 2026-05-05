@@ -1,6 +1,6 @@
 module Admin
   class BookingsController < BaseController
-    before_action :set_booking, only: [:show, :invoice]
+    before_action :set_booking, only: [ :show, :invoice ]
 
     def index
       @all_bookings = Booking.all.order(created_at: :desc)

@@ -59,6 +59,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     ).call
 
     if result.success?
+      release_room_locks(result.booking)
       redirect_to hotel_booking_path(current_hotel, result.booking), notice: "Booking created successfully."
     else
       @booking = current_hotel.bookings.build(booking_params.except(:room_type_id, :room_number))
@@ -81,6 +82,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     ).call
 
     if result.success?
+      release_room_locks(@booking)
       redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking updated successfully."
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
@@ -103,6 +105,15 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   private
 
+  def release_room_locks(booking)
+    # Release locks for all rooms assigned to this booking
+    # Assuming the admin might have locked multiple rooms if they changed their mind
+    # or if we just want to be safe and release all locks held by current user for this hotel
+    # But more specifically, we should release the lock for the room they just assigned.
+    room_number = booking.hotel_snapshot.is_a?(Hash) ? (booking.hotel_snapshot["room_number"] || booking.hotel_snapshot.dig("assignment", "room_number")) : nil
+    RoomLock.where(hotel: current_hotel, user: current_user, room_number: room_number).destroy_all if room_number.present?
+  end
+
   def transition_status(status, timestamp, success_notice)
     @booking = current_hotel.bookings.find(params[:id])
     result = Bookings::TransitionStatus.new(
@@ -112,6 +123,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     ).call
 
     if result.success?
+      release_room_locks(@booking) if status == "checked_in"
       redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)

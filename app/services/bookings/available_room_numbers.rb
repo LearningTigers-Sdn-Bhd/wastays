@@ -34,8 +34,11 @@ module Bookings
                                  .pluck(Arel.sql("hotel_snapshot->>'room_number'"))
                                  .compact.map(&:to_s).uniq
 
-      # 3. Filter them out
-      (allowed_rooms - occupied_numbers).reject(&:blank?)
+      # 3. Find rooms currently locked by other staff members
+      locked_numbers = @hotel.room_locks.active.where.not(user_id: Current.user_id).pluck(:room_number)
+
+      # 4. Filter them out
+      (allowed_rooms - occupied_numbers - locked_numbers).reject(&:blank?)
     end
   end
 end

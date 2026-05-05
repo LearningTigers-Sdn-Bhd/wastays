@@ -33,3 +33,4 @@
 /tmp/parallel_*.log
 /db/test*.db
 /db/test*.sqlite3
+.aider*

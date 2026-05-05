@@ -34,6 +34,12 @@ module Bookings
 
         # 2. Update room number in snapshot
         if @room_number.present?
+          # Check for locks by others
+          lock = @hotel.room_locks.active.find_by(room_number: @room_number)
+          if lock && lock.user_id != Current.user_id
+            raise "Room #{@room_number} is currently being assigned by another staff member"
+          end
+
           @booking.hotel_snapshot ||= {}
           @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => @room_number)
         end
