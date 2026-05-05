@@ -93,5 +93,5 @@ group :development do
   gem "bundler-audit", require: false
 end
 
-gem "openssl", "~> 3.1.2"
+gem "openssl", "~> 4.0.1"
 gem "aws-sdk-s3", "~> 1.220"
