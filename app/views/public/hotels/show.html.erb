@@ -74,8 +74,8 @@
       "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&q=80&w=600",
       "https://images.unsplash.com/photo-1549443105-2070367f4077?auto=format&fit=crop&q=80&w=600"
     ] %>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="md:col-span-2 md:row-span-2 aspect-video md:aspect-auto rounded-2xl overflow-hidden shadow-lg group">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[420px]">
+      <div class="md:col-span-2 md:row-span-2 aspect-[2/1] md:aspect-auto rounded-2xl overflow-hidden shadow-lg group">
         <% if hotel_gallery_photos.first.present? %>
           <%= image_tag hotel_gallery_photos.first, class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" %>
         <% elsif @hotel.room_types.first&.photos&.attached? %>
