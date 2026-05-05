@@ -125,7 +125,11 @@ Rails.application.routes.draw do
         end
       end
     end
-    resources :bookings, only: [ :index, :show ] # Added stub
+    resources :bookings, only: [ :index, :show ] do
+      member do
+        get :invoice
+      end
+    end
     resources :salespersons, only: [ :index, :create, :update, :destroy ]
     resources :reconciliations, only: [ :index, :show ] do
       member do
@@ -237,6 +241,12 @@ Rails.application.routes.draw do
     post "requests/:kind/:request_id/cancel", to: "requests#cancel_request", as: :cancel_request
     patch "requests/:kind/:request_id/archive", to: "requests#archive_request", as: :archive_request
     patch "requests/:kind/:request_id/unarchive", to: "requests#unarchive_request", as: :unarchive_request
+
+    resources :room_locks, only: [ :create ] do
+      collection do
+        delete :release
+      end
+    end
 
     resources :arrivals, only: [ :index ]
     resources :checked_out_guests, only: [ :index ]

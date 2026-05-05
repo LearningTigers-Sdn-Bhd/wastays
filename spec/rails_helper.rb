@@ -77,6 +77,7 @@ RSpec.configure do |config|
   # config.filter_gems_from_backtrace("gem name")
 
   config.before(:each, type: :system) do
+    driven_by :cuprite
     unless chrome_available?
       skip "Skipping system test: Chrome executable not detected in supported Linux/macOS locations."
     end
