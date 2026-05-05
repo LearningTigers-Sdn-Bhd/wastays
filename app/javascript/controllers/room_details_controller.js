@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["modal", "mainImage", "backdropImage", "thumbnails", "name", "description", "adults", "children", "childrenContainer", "indexDisplay", "totalCount", "amenitiesSection", "amenitiesList"]
+  static targets = ["modal", "mainImage", "backdropImage", "thumbnails", "name", "description", "adults", "children", "childrenContainer", "indexDisplay", "totalCount", "amenitiesSection", "amenitiesList", "hotelAmenitiesSection", "hotelAmenitiesList"]
   static values = {
     photos: Array,
     index: Number
@@ -22,12 +22,21 @@ export default class extends Controller {
       if (this.hasChildrenContainerTarget) this.childrenContainerTarget.classList.add("hidden")
     }
 
-    // Amenities setup
-    if (data.amenities && data.amenities.length > 0) {
-      this.renderAmenities(data.amenities)
+    // Room Amenities setup
+    const roomAmenities = data.room_amenities || data.amenities || []
+    if (roomAmenities.length > 0) {
+      this.renderAmenities(roomAmenities, this.amenitiesListTarget)
       this.amenitiesSectionTarget.classList.remove("hidden")
     } else {
       this.amenitiesSectionTarget.classList.add("hidden")
+    }
+
+    // Hotel Amenities setup
+    if (data.hotel_amenities && data.hotel_amenities.length > 0) {
+      this.renderAmenities(data.hotel_amenities, this.hotelAmenitiesListTarget)
+      this.hotelAmenitiesSectionTarget.classList.remove("hidden")
+    } else {
+      if (this.hasHotelAmenitiesSectionTarget) this.hotelAmenitiesSectionTarget.classList.add("hidden")
     }
     
     // Photos setup
@@ -107,8 +116,8 @@ export default class extends Controller {
     })
   }
 
-  renderAmenities(amenities) {
-    this.amenitiesListTarget.innerHTML = ""
+  renderAmenities(amenities, listTarget) {
+    listTarget.innerHTML = ""
     const template = document.getElementById("amenity-item-template")
 
     amenities.forEach(amenity => {
@@ -122,7 +131,7 @@ export default class extends Controller {
         iconContainer.innerHTML = iconSource.innerHTML
       }
 
-      this.amenitiesListTarget.appendChild(clone)
+      listTarget.appendChild(clone)
     })
   }
 
