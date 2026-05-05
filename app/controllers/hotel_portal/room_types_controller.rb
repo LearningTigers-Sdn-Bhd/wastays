@@ -52,18 +52,28 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   end
 
   def destroy_photo
-    photo = @room_type.photos.find(params[:photo_id])
-    photo.purge
-    redirect_to edit_hotel_room_type_path(@hotel, @room_type), notice: "Photo deleted successfully."
+    result = HotelPortal::RoomTypes::DestroyPhotos.new(
+      room_type: @room_type,
+      photo_ids: [ params[:photo_id] ]
+    ).call
+
+    if result.success?
+      redirect_to edit_hotel_room_type_path(@hotel, @room_type), notice: result.message
+    else
+      redirect_to edit_hotel_room_type_path(@hotel, @room_type), alert: result.message
+    end
   end
 
   def bulk_destroy_photos
-    photo_ids = params[:photo_ids]
-    if photo_ids.present?
-      @room_type.photos.attachments.where(id: photo_ids).each(&:purge)
-      redirect_to edit_hotel_room_type_path(@hotel, @room_type), notice: "Selected photos deleted successfully."
+    result = HotelPortal::RoomTypes::DestroyPhotos.new(
+      room_type: @room_type,
+      photo_ids: params[:photo_ids]
+    ).call
+
+    if result.success?
+      redirect_to edit_hotel_room_type_path(@hotel, @room_type), notice: result.message
     else
-      redirect_to edit_hotel_room_type_path(@hotel, @room_type), alert: "No photos selected."
+      redirect_to edit_hotel_room_type_path(@hotel, @room_type), alert: result.message
     end
   end
 

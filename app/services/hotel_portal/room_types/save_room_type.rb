@@ -14,7 +14,7 @@ module HotelPortal
       def call
         sanitize_room_numbers
         sanitize_amenities
-        
+
         photos = @params.delete(:photos)
         @room_type.assign_attributes(@params)
 
