@@ -19,7 +19,7 @@ class Public::BookingsController < ApplicationController
     send_data pdf_bytes,
       filename: "wastays-invoice-#{@booking.confirmation_token}.pdf",
       type: "application/pdf",
-      disposition: "attachment"
+      disposition: "inline"
   end
 
   def voucher
