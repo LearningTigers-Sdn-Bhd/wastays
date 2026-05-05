@@ -1,12 +1,14 @@
 require_relative "boot"
 
+require "friendly_id"
 require "rails/all"
-require_relative "../app/middleware/observation_deck_middleware"
-require "csv"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
+
+require_relative "../app/middleware/observation_deck_middleware"
+require "csv"
 
 module Wastays
   class Application < Rails::Application

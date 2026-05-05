@@ -3,7 +3,7 @@
 class HotelPortal::RoomTypesController < HotelPortal::BaseController
   before_action :set_hotel
   before_action :authorize_hotel
-  before_action :set_room_type, only: [ :show, :edit, :update, :destroy ]
+  before_action :set_room_type, only: [ :show, :edit, :update, :destroy, :destroy_photo, :bulk_destroy_photos ]
 
   def index
     @all_room_types = RoomTypesQuery.new(@hotel.room_types).call(params)
@@ -49,6 +49,22 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   def destroy
     @room_type.destroy
     redirect_to hotel_room_types_path(@hotel), notice: "Room type deleted successfully."
+  end
+
+  def destroy_photo
+    photo = @room_type.photos.find(params[:photo_id])
+    photo.purge
+    redirect_to edit_hotel_room_type_path(@hotel, @room_type), notice: "Photo deleted successfully."
+  end
+
+  def bulk_destroy_photos
+    photo_ids = params[:photo_ids]
+    if photo_ids.present?
+      @room_type.photos.attachments.where(id: photo_ids).each(&:purge)
+      redirect_to edit_hotel_room_type_path(@hotel, @room_type), notice: "Selected photos deleted successfully."
+    else
+      redirect_to edit_hotel_room_type_path(@hotel, @room_type), alert: "No photos selected."
+    end
   end
 
   private

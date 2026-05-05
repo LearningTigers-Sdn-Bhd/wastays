@@ -145,12 +145,31 @@
     </div>
 
     <% if room_type.photos.attached? %>
-      <div class="grid grid-cols-4 gap-2 mt-2">
-        <% room_type.photos.each do |photo| %>
-          <div class="relative group">
-            <%= image_tag photo, class: "w-full h-24 object-cover rounded-lg border border-gray-200" %>
-          </div>
-        <% end %>
+      <div class="mt-4 p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold text-slate-900">Manage Current Photos</h3>
+          <button type="submit" 
+                  form="bulk-delete-photos-form"
+                  class="py-1.5 px-3 inline-flex items-center gap-x-2 text-xs font-semibold rounded-lg border border-transparent bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                  data-turbo-confirm="Are you sure you want to delete the selected photos?">
+            Delete Selected
+          </button>
+        </div>
+
+        <div class="grid grid-cols-4 gap-4">
+          <% room_type.photos.each do |photo| %>
+            <div class="relative group">
+              <%= image_tag photo, class: "w-full h-24 object-cover rounded-xl border border-gray-200" %>
+              <div class="absolute top-2 right-2">
+                <input type="checkbox" 
+                       name="photo_ids[]" 
+                       value="<%= photo.id %>" 
+                       form="bulk-delete-photos-form"
+                       class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer">
+              </div>
+            </div>
+          <% end %>
+        </div>
       </div>
     <% end %>
 
@@ -158,4 +177,9 @@
       <%= f.submit (room_type.new_record? ? "Create Room Type" : "Update Room Type"), class: "w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
     </div>
   </div>
+<% end %>
+
+<% unless room_type.new_record? %>
+  <%= form_with url: bulk_destroy_photos_hotel_room_type_path(@hotel, room_type), method: :delete, id: "bulk-delete-photos-form", class: "hidden" do |f| %>
+  <% end %>
 <% end %>

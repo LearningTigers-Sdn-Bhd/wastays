@@ -5,6 +5,7 @@ require "active_storage/service/s3_service"
 module ActiveStorage
   class Service::R2Service < Service::S3Service
     def initialize(**config)
+      @config = config
       # We still call super to initialize standard Active Storage behaviors
       super(**config)
     end

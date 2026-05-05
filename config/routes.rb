@@ -208,10 +208,13 @@ Rails.application.routes.draw do
     resource :property_policy, only: [ :edit, :update ]
 
     resources :room_types do
+      member do
+        delete :destroy_photo
+        delete :bulk_destroy_photos
+      end
       resources :rates, only: [ :index, :create ]
       resources :inventories, only: [ :index, :create ]
     end
-
     resources :bookings, only: [ :index, :show, :update, :new, :create ] do
       collection do
         get :availability

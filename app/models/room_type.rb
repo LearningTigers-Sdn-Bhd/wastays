@@ -9,6 +9,8 @@ class RoomType < ApplicationRecord
   has_one :channel_mapping, as: :mappable, dependent: :destroy
   has_many_attached :photos
 
+  MAX_PHOTOS = 10
+
   before_validation :set_default_room_number_mode, on: :create
 
   validates :name, presence: true
@@ -20,6 +22,20 @@ class RoomType < ApplicationRecord
 
   def room_numbers
     Array(super).flatten.compact.map(&:to_s).reject(&:blank?)
+  end
+
+  def attach_photos_with_limit(photo_files)
+    photo_files = Array(photo_files).reject(&:blank?)
+    remaining_slots = [ MAX_PHOTOS - photos.count, 0 ].max
+    photos_to_attach = photo_files.first(remaining_slots)
+
+    photos.attach(photos_to_attach) if photos_to_attach.any?
+
+    # Return summary for parity with Hotel model if needed
+    {
+      attached_count: photos_to_attach.size,
+      trimmed_count: photo_files.size - photos_to_attach.size
+    }
   end
 
   private
