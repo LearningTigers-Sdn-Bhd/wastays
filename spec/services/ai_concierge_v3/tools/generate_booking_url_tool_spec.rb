@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConciergeV3::Tools::GenerateBookingUrlTool do
+RSpec.describe AiConciergeV3::Tools::Booking::GenerateBookingUrlTool do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Deluxe Room", max_adults: 2) }
 

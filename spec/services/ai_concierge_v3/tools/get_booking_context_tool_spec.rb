@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConciergeV3::Tools::GetBookingContextTool do
+RSpec.describe AiConciergeV3::Tools::HotelInformation::GetBookingContextTool do
   it "returns structured booking rows for a matching phone" do
     hotel = create(:hotel)
     room_type = create(:room_type, hotel: hotel, name: "Executive Penthouse")

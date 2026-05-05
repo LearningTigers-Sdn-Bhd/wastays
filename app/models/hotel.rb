@@ -12,6 +12,12 @@ class Hotel < ApplicationRecord
     gemini: "gemini"
   }, prefix: true, validate: { allow_nil: true }
 
+  enum :ai_concierge_tone, {
+    basic: "basic",
+    business: "business",
+    cheerful: "cheerful"
+  }, prefix: true, validate: true
+
   AI_CONCIERGE_MODEL_NAMES = {
     "openai" => "gpt-4o-mini",
     "claude" => "claude-haiku-4-5",
@@ -29,6 +35,7 @@ class Hotel < ApplicationRecord
   belongs_to :salesperson, class_name: "User", optional: true
   has_one :property_policy, dependent: :destroy
   has_many :room_types, dependent: :destroy
+  has_many :nearby_attractions, dependent: :destroy
   has_many :pricing_rules, class_name: "HotelPricingRule", dependent: :destroy
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy

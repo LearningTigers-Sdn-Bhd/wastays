@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConciergeV3::Tools::SelectBookingOptionTool do
+RSpec.describe AiConciergeV3::Tools::Booking::SelectBookingOptionTool do
   let(:suggested_options) do
     [
       {

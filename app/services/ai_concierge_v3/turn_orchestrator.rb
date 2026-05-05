@@ -70,7 +70,7 @@ module AiConciergeV3
     rescue StandardError => e
       Rails.logger.error("AiConciergeV3::TurnOrchestrator error: #{e.class}: #{e.message}")
       Rails.logger.error(e.backtrace.join("\n")) if e.backtrace
-      Result.success(payload: FallbackBuilder.new.call)
+      Result.success(payload: MessageBuilders::FallbackBuilder.new.call)
     end
 
     private
@@ -120,6 +120,12 @@ module AiConciergeV3
         handle_resume(prospect:, conversation_state:, interpretation:)
       when :hotel_policy
         handle_hotel_policy(prospect:, conversation_state:, interpretation:, active_branch:, pause: decision[:pause])
+      when :hotel_information
+        handle_hotel_information(prospect:, conversation_state:, interpretation:, active_branch:, pause: decision[:pause])
+      when :nearby_attractions
+        handle_nearby_attractions(prospect:, conversation_state:, interpretation:, active_branch:, pause: decision[:pause])
+      when :room_information
+        handle_room_information(prospect:, conversation_state:, interpretation:, active_branch:, pause: decision[:pause])
       when :booking_context
         handle_booking_context(prospect:, conversation_state:, interpretation:)
       when :ask_booking_timing
@@ -149,7 +155,7 @@ module AiConciergeV3
       when :search_options
         handle_search_options(prospect:, conversation_state:, interpretation:, active_branch:)
       else
-        build_and_persist_response(prospect:, conversation_state:, interpretation:, slots_payload: conversation_state.slots_payload, reply_type: nil, active_topic: nil, active_flow: nil, pending_question: nil, action_name: nil, extra_context: { message: FallbackBuilder::DEFAULT_MESSAGE })
+        build_and_persist_response(prospect:, conversation_state:, interpretation:, slots_payload: conversation_state.slots_payload, reply_type: nil, active_topic: nil, active_flow: nil, pending_question: nil, action_name: nil, extra_context: { message: MessageBuilders::FallbackBuilder::DEFAULT_MESSAGE })
       end
     end
 
@@ -210,9 +216,7 @@ module AiConciergeV3
     end
 
     def handle_hotel_policy(prospect:, conversation_state:, interpretation:, active_branch:, pause:)
-      slots_payload = conversation_state.slots_payload
-      slots_payload = BranchManager.new(slots_payload: slots_payload).start_branch(active_branch)
-      slots_payload = BranchManager.new(slots_payload: slots_payload).pause_active(topic: "booking_search", pending_question: conversation_state.pending_question || "select_option") if pause
+      slots_payload = info_slots_payload(conversation_state:, active_branch:, pause:)
       result = tool_registry.fetch("get_hotel_policy").new(hotel: hotel, policy_topic: interpretation["topic"]).call
 
       build_and_persist_response(
@@ -223,6 +227,74 @@ module AiConciergeV3
         reply_type: :hotel_policy,
         active_topic: pause ? "hotel_policy" : nil,
         active_flow: pause ? "hotel_policy" : nil,
+        pending_question: nil,
+        action_name: nil,
+        extra_context: { result: result }
+      )
+    end
+
+    def handle_hotel_information(prospect:, conversation_state:, interpretation:, active_branch:, pause:)
+      slots_payload = info_slots_payload(conversation_state:, active_branch:, pause:)
+      tool_name, reply_type = hotel_information_tool_and_reply_type_for(interpretation)
+      result = tool_registry.fetch(tool_name).new(hotel: hotel).call
+
+      build_and_persist_response(
+        prospect: prospect,
+        conversation_state: conversation_state,
+        interpretation: interpretation,
+        slots_payload: slots_payload,
+        reply_type: reply_type,
+        active_topic: pause ? interpretation["topic"] : nil,
+        active_flow: pause ? "hotel_information" : nil,
+        pending_question: nil,
+        action_name: nil,
+        extra_context: { result: result }
+      )
+    end
+
+    def handle_nearby_attractions(prospect:, conversation_state:, interpretation:, active_branch:, pause:)
+      slots_payload = info_slots_payload(conversation_state:, active_branch:, pause:)
+      result = tool_registry.fetch("get_nearby_attractions").new(hotel: hotel).call
+
+      build_and_persist_response(
+        prospect: prospect,
+        conversation_state: conversation_state,
+        interpretation: interpretation,
+        slots_payload: slots_payload,
+        reply_type: :nearby_attractions,
+        active_topic: pause ? "nearby_attractions" : nil,
+        active_flow: pause ? "hotel_information" : nil,
+        pending_question: nil,
+        action_name: nil,
+        extra_context: { result: result }
+      )
+    end
+
+    def handle_room_information(prospect:, conversation_state:, interpretation:, active_branch:, pause:)
+      slots_payload = info_slots_payload(conversation_state:, active_branch:, pause:)
+      tool_name = interpretation["topic"] == "room_type_faq" ? "get_room_type_faq" : "get_room_type_details"
+      result = tool_registry.fetch(tool_name).new(
+        hotel: hotel,
+        query: message,
+        room_type_name: interpretation.dig("slots", "room_type_name")
+      ).call
+
+      reply_type = if result["success"]
+        interpretation["topic"] == "room_type_faq" ? :room_type_faq : :room_type_details
+      elsif result["error"] == "ambiguous_room_type"
+        :ambiguous_room_type
+      else
+        :room_type_not_found
+      end
+
+      build_and_persist_response(
+        prospect: prospect,
+        conversation_state: conversation_state,
+        interpretation: interpretation,
+        slots_payload: slots_payload,
+        reply_type: reply_type,
+        active_topic: pause ? interpretation["topic"] : nil,
+        active_flow: pause ? "room_information" : nil,
         pending_question: nil,
         action_name: nil,
         extra_context: { result: result }
@@ -308,7 +380,7 @@ module AiConciergeV3
       return build_and_persist_response(prospect:, conversation_state:, interpretation:, slots_payload: conversation_state.slots_payload, reply_type: :invalid_selection, active_topic: "booking_search", active_flow: "booking_search", pending_question: "select_option", action_name: "request_quote") unless selected_option
 
       result = tool_registry.fetch("generate_booking_url").new(hotel: hotel, selected_option: selected_option, guest_phone: phone).call
-      return Result.success(payload: FallbackBuilder.new(message: result["error"]).call).payload unless result["success"]
+      return Result.success(payload: MessageBuilders::FallbackBuilder.new(message: result["error"]).call).payload unless result["success"]
 
       active_branch["selected_option"] = selected_option
       active_branch["confirmation_candidate"] = nil
@@ -359,6 +431,23 @@ module AiConciergeV3
       parts << "#{adults} adult#{'s' unless adults == 1}" if adults.positive?
       parts << "#{children} child#{'ren' unless children == 1}" if children.positive?
       parts.join(" and ").presence
+    end
+
+    def info_slots_payload(conversation_state:, active_branch:, pause:)
+      slots_payload = conversation_state.slots_payload
+      slots_payload = BranchManager.new(slots_payload: slots_payload).start_branch(active_branch)
+      return slots_payload unless pause
+
+      BranchManager.new(slots_payload: slots_payload).pause_active(topic: "booking_search", pending_question: conversation_state.pending_question || "select_option")
+    end
+
+    def hotel_information_tool_and_reply_type_for(interpretation)
+      case interpretation["topic"]
+      when "hotel_faq"
+        ["get_hotel_faq", :hotel_faq]
+      else
+        ["get_general_hotel_info", :general_hotel_info]
+      end
     end
 
     def filtered_slots_for_merge(slots:, pending_question:, conversation_signals:)
@@ -457,6 +546,7 @@ module AiConciergeV3
     def resolve_selection_follow_up(prospect:, conversation_state:, interpretation:, active_branch:, pending_question:)
       return interpretation unless pending_question == "select_option"
       return interpretation unless Array(active_branch&.dig("suggested_options")).present?
+      return interpretation if informational_intent?(interpretation["intent"])
 
       branch = active_branch.deep_dup
       result = tool_registry.fetch("select_booking_option").new(
@@ -522,6 +612,10 @@ module AiConciergeV3
 
     def empty_branch
       SlotMerger.new(active_branch: nil, slots: {}, pending_question: nil, message: nil).send(:default_branch)
+    end
+
+    def informational_intent?(intent)
+      %w[hotel_policy hotel_information nearby_attractions room_information booking_context].include?(intent.to_s)
     end
 
     class NullConversationState

@@ -34,4 +34,24 @@ RSpec.describe 'Hotel Profile Update', type: :system do
     expect(hotel.reload.name).to eq('Updated Hotel Name')
     expect(page).to have_content('Hotel Dashboard')
   end
+
+  it 'allows the user to save the hotel faq independently' do
+    visit edit_hotel_profile_path(hotel)
+
+    fill_in 'hotel_faq', with: 'Do you offer airport transfers? Yes, on request.'
+    click_button 'Save FAQ'
+
+    expect(page).to have_content('Hotel profile updated successfully.')
+    expect(hotel.reload.faq).to include('airport transfers')
+  end
+
+  it 'allows the user to save the hotel policy independently' do
+    visit edit_hotel_profile_path(hotel)
+
+    fill_in 'hotel_policy', with: 'Quiet hours start at 10 PM.'
+    click_button 'Save Policy'
+
+    expect(page).to have_content('Hotel profile updated successfully.')
+    expect(hotel.reload.policy).to include('Quiet hours')
+  end
 end

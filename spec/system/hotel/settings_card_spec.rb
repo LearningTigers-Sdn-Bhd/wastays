@@ -93,6 +93,27 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     expect(page).to have_no_content('Settings updated successfully.')
   end
 
+  it 'shows the AI concierge fields and saves the selected tone' do
+    visit hotel_settings_path(hotel)
+
+    within('section', text: 'AI Concierge Configuration') do
+      expect(page).to have_select('Tone', selected: 'Basic')
+      expect(page).to have_select('AI Provider')
+      expect(page).to have_field('API Key')
+
+      select 'Cheerful', from: 'Tone'
+      select 'OpenAI', from: 'AI Provider'
+      fill_in 'API Key', with: 'test-api-key'
+
+      click_button 'Save AI Concierge Configuration'
+    end
+
+    expect(page).to have_content('Settings updated successfully.')
+    hotel.reload
+    expect(hotel.ai_concierge_tone).to eq('cheerful')
+    expect(hotel.ai_provider_name).to eq('openai')
+  end
+
   it 'keeps the selected hotel in the path after a superadmin saves settings' do
     superadmin = create(:user, account: account, role: 'superadmin')
 

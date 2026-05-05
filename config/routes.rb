@@ -223,6 +223,8 @@ Rails.application.routes.draw do
       resources :rates, only: [ :index, :create ]
       resources :inventories, only: [ :index, :create ]
     end
+
+    resources :nearby_attractions, except: [ :show ]
     resources :bookings, only: [ :index, :show, :update, :new, :create ] do
       collection do
         get :availability

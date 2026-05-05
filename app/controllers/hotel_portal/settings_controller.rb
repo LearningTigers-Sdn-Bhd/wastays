@@ -112,6 +112,7 @@ module HotelPortal
         :tourism_tax_enabled,
         :tourism_tax_amount,
         :ai_provider_enabled,
+        :ai_concierge_tone,
         :ai_provider_name,
         :ai_provider_key
       )

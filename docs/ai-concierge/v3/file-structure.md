@@ -6,6 +6,7 @@ This document maps the implementation layout for `AiConciergeV3`.
 
 - `spec.md` defines behavior and state contracts
 - `research.md` explains architecture direction and product reasoning
+- `tooling.md` documents the runtime tool contract, intent/topic mapping, and operator examples
 - this file explains where the implementation lives
 
 ## Top-Level Flow
@@ -20,18 +21,20 @@ This document maps the implementation layout for `AiConciergeV3`.
 
 - central coordinator for a single concierge turn
 - loads conversation state, records inbound events, invokes interpretation, applies deterministic guards, merges slots, runs allowed tools, builds reply context, persists updates, and returns the final payload
+- handles booking flow plus hotel-information and room-information interruptions
 
 ## Core Support Files
 
 ### `app/services/ai_concierge_v3/interpreter_agent.rb`
 
 - converts the raw user message and compact conversation summary into structured interpretation data
+- classifies booking, hotel information, nearby attractions, room information, and booking context requests
 - limited to interpretation only and does not own state changes or tool execution
 
 ### `app/services/ai_concierge_v3/messenger_agent.rb`
 
-- renders deterministic guest-facing replies from structured reply context
-- formats option lists, confirmation prompts, hotel policy replies, and booking context replies
+- deterministic reply router for guest-facing responses
+- delegates final rendering to domain-specific message builders
 
 ### `app/services/ai_concierge_v3/slot_merger.rb`
 
@@ -41,7 +44,7 @@ This document maps the implementation layout for `AiConciergeV3`.
 ### `app/services/ai_concierge_v3/transition_policy.rb`
 
 - decides the next legal action from the current interpreted message and active branch state
-- enforces the booking flow order for timing, duration, guest clarification, selection, confirmation, interruption, and resume
+- enforces booking flow order, interruption handling, nearby-attractions replies, hotel-information replies, room-information replies, and resume behavior
 
 ### `app/services/ai_concierge_v3/branch_manager.rb`
 
@@ -58,6 +61,11 @@ This document maps the implementation layout for `AiConciergeV3`.
 - exposes the deterministic tool set available to the orchestrator
 - keeps tool lookup centralized rather than hard-coded across multiple files
 
+### `app/services/ai_concierge_v3/room_type_matcher.rb`
+
+- shared room-name matcher used by room-information tools
+- handles exact matching, fuzzy token matching, ambiguity, and not-found outcomes
+
 ### `app/services/ai_concierge_v3/conversation_summary_builder.rb`
 
 - produces a compact summary of conversation state for the interpreter
@@ -68,42 +76,88 @@ This document maps the implementation layout for `AiConciergeV3`.
 - builds the final public API payload shape returned by the concierge endpoint
 - keeps response formatting separate from orchestration logic
 
-### `app/services/ai_concierge_v3/fallback_builder.rb`
-
-- produces safe fallback responses when the normal flow cannot complete successfully
-- prevents internal errors from leaking raw implementation details
-
 ### `app/services/ai_concierge_v3/result.rb`
 
 - small result object used to pass structured outcome data through the flow
 - helps keep orchestrator return values consistent
 
+## Message Builders
+
+### `app/services/ai_concierge_v3/message_builders/base_builder.rb`
+
+- shared formatting helpers for dates, prices, times, lists, and option groups
+
+### `app/services/ai_concierge_v3/message_builders/booking_actions_builder.rb`
+
+- renders booking prompts, selection replies, ambiguity replies, confirmation prompts, and booking-link replies
+
+### `app/services/ai_concierge_v3/message_builders/hotel_info_builder.rb`
+
+- renders hotel policy, booking context, general hotel info, hotel FAQ, and nearby attractions replies
+
+### `app/services/ai_concierge_v3/message_builders/room_info_builder.rb`
+
+- renders room details, room FAQ, ambiguous room-match replies, and room-not-found replies
+
+### `app/services/ai_concierge_v3/message_builders/fallback_builder.rb`
+
+- produces safe fallback responses when the normal flow cannot complete successfully
+- prevents internal errors from leaking raw implementation details
+
 ## Tool Files
 
-### `app/services/ai_concierge_v3/tools/search_booking_options_tool.rb`
+### Booking Tools
+
+#### `app/services/ai_concierge_v3/tools/booking/search_booking_options_tool.rb`
 
 - performs booking option search for the current branch inputs
 - returns grouped suggestion data with room type identity, dates, price, and selection metadata
 
-### `app/services/ai_concierge_v3/tools/select_booking_option_tool.rb`
+#### `app/services/ai_concierge_v3/tools/booking/select_booking_option_tool.rb`
 
 - resolves user selection input against the current suggestion set
 - handles room type matching, date matching, option number matching, ambiguity handling, and pending selection context
 
-### `app/services/ai_concierge_v3/tools/generate_booking_url_tool.rb`
+#### `app/services/ai_concierge_v3/tools/booking/generate_booking_url_tool.rb`
 
 - turns a confirmed option into a real booking quote link
 - returns booking URL, pricing, currency, and expiry metadata for the final guest reply
 
-### `app/services/ai_concierge_v3/tools/get_hotel_policy_tool.rb`
+### Hotel Information Tools
 
-- returns structured hotel policy data for deterministic policy replies
-- used when the guest asks policy questions during or outside the booking flow
+#### `app/services/ai_concierge_v3/tools/hotel_information/get_hotel_policy_tool.rb`
 
-### `app/services/ai_concierge_v3/tools/get_booking_context_tool.rb`
+- returns hotel policy information
+- uses `hotel.policy` first and falls back to `property_policy`
+
+#### `app/services/ai_concierge_v3/tools/hotel_information/get_booking_context_tool.rb`
 
 - returns structured booking-context data for the current guest
 - used to render existing booking context in a predictable reply format
+
+#### `app/services/ai_concierge_v3/tools/hotel_information/get_general_hotel_info_tool.rb`
+
+- returns general hotel details such as name, address, location, and summary text
+
+#### `app/services/ai_concierge_v3/tools/hotel_information/get_hotel_faq_tool.rb`
+
+- returns hotel FAQ content when provided by the hotel
+
+#### `app/services/ai_concierge_v3/tools/hotel_information/get_nearby_attractions_tool.rb`
+
+- returns the full nearby-attractions list for the hotel
+
+### Room Information Tools
+
+#### `app/services/ai_concierge_v3/tools/room_information/get_room_type_details_tool.rb`
+
+- returns room details, occupancy, and amenity names for a matched room type
+- uses the shared room matcher to resolve guest phrasing
+
+#### `app/services/ai_concierge_v3/tools/room_information/get_room_type_faq_tool.rb`
+
+- returns room FAQ content for a matched room type
+- also uses the shared room matcher for resolution and ambiguity handling
 
 ## Schema Files
 
@@ -115,14 +169,16 @@ This document maps the implementation layout for `AiConciergeV3`.
 ## Reading Order
 
 1. Read `docs/ai-concierge/v3/spec.md` for behavioral rules and state contracts.
-2. Read `app/services/ai_concierge_v3/inquiry_responder.rb` for the public entry point.
-3. Read `app/services/ai_concierge_v3/turn_orchestrator.rb` for the main request lifecycle.
-4. Read `transition_policy.rb`, `slot_merger.rb`, and `branch_manager.rb` for state and flow control.
-5. Read `messenger_agent.rb` and the files under `tools/` for deterministic output and external actions.
-6. Read `research.md` if you need architecture rationale or product background.
+2. Read `docs/ai-concierge/v3/tooling.md` for the public tool contract and intent/topic mapping.
+3. Read `app/services/ai_concierge_v3/inquiry_responder.rb` for the public entry point.
+4. Read `app/services/ai_concierge_v3/turn_orchestrator.rb` for the main request lifecycle.
+5. Read `transition_policy.rb`, `slot_merger.rb`, `branch_manager.rb`, and `room_type_matcher.rb` for flow control and room resolution.
+6. Read `message_builders/` and `tools/` for deterministic rendering and external actions.
+7. Read `research.md` if you need architecture rationale or product background.
 
 ## Boundaries
 
 - the interpreter is responsible for structured interpretation only
-- the messenger is responsible for deterministic reply rendering only
+- the messenger is responsible for deterministic reply routing only
+- message builders are responsible for final reply text
 - state changes, transition decisions, and tool execution stay in Ruby

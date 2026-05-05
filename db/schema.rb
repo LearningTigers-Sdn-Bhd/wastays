@@ -309,11 +309,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.integer "salesperson_id"
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
-    t.jsonb "amenities", default: [], null: false
-    t.string "slug", null: false
     t.boolean "ai_provider_enabled", default: false
     t.string "ai_provider_name"
     t.text "ai_provider_key"
+    t.jsonb "amenities", default: [], null: false
+    t.string "slug", null: false
+    t.string "ai_concierge_tone", default: "basic", null: false
+    t.text "faq"
+    t.text "policy"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
@@ -362,6 +365,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["settable_type", "settable_id"], name: "index_margin_rules_on_settable"
+  end
+
+  create_table "nearby_attractions", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.text "address"
+    t.string "city", null: false
+    t.string "country", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_nearby_attractions_on_hotel_id"
   end
 
   create_table "night_audits", force: :cascade do |t|
@@ -710,6 +725,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.jsonb "room_numbers"
     t.string "room_number_mode"
     t.jsonb "amenities", default: [], null: false
+    t.text "faq"
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
   end
 
@@ -817,6 +833,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
+  add_foreign_key "nearby_attractions", "hotels"
   add_foreign_key "night_audits", "hotels"
   add_foreign_key "night_audits", "users", column: "performed_by_user_id"
   add_foreign_key "onboarding_sessions", "hotels"

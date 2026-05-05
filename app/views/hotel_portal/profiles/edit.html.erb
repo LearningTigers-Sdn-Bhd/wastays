@@ -22,7 +22,7 @@
     </div>
   </div>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div id="hotel-faq-section" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <%= form_with model: @hotel, url: hotel_profile_path, method: :patch, local: true, html: { multipart: true } do |f| %>
       <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
         <h2 class="text-lg font-semibold text-slate-950">Profile Information</h2>
@@ -137,6 +137,48 @@
 
       <div class="flex items-center justify-end border-t border-slate-200 bg-slate-50/60 px-6 py-4 sm:px-8">
         <%= f.submit "Save Profile",
+                     class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div id="hotel-policy-section" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <%= form_with model: @hotel, url: hotel_profile_path, method: :patch, local: true do |f| %>
+      <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+        <h2 class="text-lg font-semibold text-slate-950">Hotel FAQ</h2>
+        <p class="mt-1 text-sm text-slate-600">Add common guest questions and answers for this hotel.</p>
+      </div>
+
+      <div class="space-y-6 p-6 sm:p-8">
+        <div>
+          <%= f.label :faq, "Frequently Asked Questions", class: "mb-2 block text-sm font-medium text-slate-900" %>
+          <%= f.text_area :faq, rows: 8, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 focus:border-slate-400 focus:ring-slate-300", placeholder: "Add common guest questions and answers for your hotel." %>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end border-t border-slate-200 bg-slate-50/60 px-6 py-4 sm:px-8">
+        <%= f.submit "Save FAQ",
+                     class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <%= form_with model: @hotel, url: hotel_profile_path, method: :patch, local: true do |f| %>
+      <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+        <h2 class="text-lg font-semibold text-slate-950">Hotel Policy</h2>
+        <p class="mt-1 text-sm text-slate-600">Share important hotel rules and guest stay expectations.</p>
+      </div>
+
+      <div class="space-y-6 p-6 sm:p-8">
+        <div>
+          <%= f.label :policy, "Hotel Policy", class: "mb-2 block text-sm font-medium text-slate-900" %>
+          <%= f.text_area :policy, rows: 8, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 focus:border-slate-400 focus:ring-slate-300", placeholder: "Describe house rules, check-in expectations, and important hotel policies." %>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end border-t border-slate-200 bg-slate-50/60 px-6 py-4 sm:px-8">
+        <%= f.submit "Save Policy",
                      class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" %>
       </div>
     <% end %>

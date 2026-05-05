@@ -14,7 +14,10 @@ module AiConciergeV3
       return action(:confirmation_yes) if confirmation_yes?
       return action(:confirmation_no) if confirmation_no?
       return action(:option_selection) if interpretation["intent"] == "option_selection"
-      return action(:hotel_policy, pause: booking_context_active?) if interpretation["intent"] == "hotel_policy"
+      return action(:hotel_policy, pause: info_interruption_active?) if interpretation["intent"] == "hotel_policy"
+      return action(:hotel_information, pause: info_interruption_active?) if interpretation["intent"] == "hotel_information"
+      return action(:nearby_attractions, pause: info_interruption_active?) if interpretation["intent"] == "nearby_attractions"
+      return action(:room_information, pause: info_interruption_active?) if interpretation["intent"] == "room_information"
       return action(:booking_context) if interpretation["intent"] == "booking_context"
       return action(:greeting) if interpretation["intent"] == "greeting"
       return action(:ask_booking_timing) if missing_timing?
@@ -42,7 +45,7 @@ module AiConciergeV3
       interpretation["intent"] == "confirmation" && interpretation.dig("slots", "confirmation") == "no"
     end
 
-    def booking_context_active?
+    def info_interruption_active?
       active_branch.is_a?(Hash) && active_branch.present? && active_branch["target_month"].present?
     end
 

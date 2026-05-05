@@ -30,6 +30,80 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       )
     end
 
+    it "answers general hotel information questions" do
+      post path, params: { message: "Tell me about the hotel" }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to include(hotel.name)
+      expect(parsed_body["reply_message"]).to include(hotel.address)
+      expect(parsed_body["reply_message"]).to include(hotel.city)
+    end
+
+    it "answers hotel faq questions" do
+      hotel.update!(faq: "Breakfast is served daily from 7 AM to 10 AM.")
+
+      post path, params: { message: "Do you have an faq?" }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to eq("Breakfast is served daily from 7 AM to 10 AM.")
+    end
+
+    it "returns the full nearby attractions list" do
+      create(:nearby_attraction, hotel: hotel, name: "Sky Bridge", description: "Scenic landmark", address: "Cable Car Station")
+      create(:nearby_attraction, hotel: hotel, name: "Night Market", description: "Local food and shopping", address: "Town Square")
+
+      post path, params: { message: "What attractions are nearby?" }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to include("Here are the nearby attractions")
+      expect(parsed_body["reply_message"]).to include("Sky Bridge")
+      expect(parsed_body["reply_message"]).to include("Night Market")
+    end
+
+    it "answers room information questions with fuzzy matching" do
+      create(:room_type,
+        hotel: hotel,
+        name: "Executive Suite",
+        description: "Large suite with sea view.",
+        max_adults: 3,
+        max_children: 2,
+        amenities: %w[wifi balcony tv]
+      )
+
+      post path, params: { message: "Tell me about the exec suite" }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to include("Here are the details for Executive Suite")
+      expect(parsed_body["reply_message"]).to include("Large suite with sea view.")
+      expect(parsed_body["reply_message"]).to include("Amenities: Free WiFi, Balcony / Terrace, Flat-screen TV")
+    end
+
+    it "answers room faq questions" do
+      create(:room_type,
+        hotel: hotel,
+        name: "Executive Suite",
+        faq: "This room includes complimentary minibar refills."
+      )
+
+      post path, params: { message: "What is the faq for the exec suite?" }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to include("Here is the FAQ for Executive Suite")
+      expect(parsed_body["reply_message"]).to include("complimentary minibar refills")
+    end
+
+    it "asks the guest to clarify when a room question matches multiple room types" do
+      create(:room_type, hotel: hotel, name: "Ocean Villa King")
+      create(:room_type, hotel: hotel, name: "Ocean Villa Twin")
+
+      post path, params: { message: "Tell me about the ocean villa" }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to include("multiple room types")
+      expect(parsed_body["reply_message"]).to include("Ocean Villa King")
+      expect(parsed_body["reply_message"]).to include("Ocean Villa Twin")
+    end
+
     it "preserves the selected month when the guest only answers duration" do
       post path, params: { message: "hello, any booking for early august?", phone: phone }.to_json, headers: headers
       post path, params: { message: "3 days 2 nights", phone: phone }.to_json, headers: headers
@@ -124,6 +198,27 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Executive Penthouse")
+      expect(parsed_body["reply_message"]).to include("Please reply *Yes* or *No*.")
+    end
+
+    it "resumes the saved option set after a room information interruption" do
+      room_type = seed_room_type_options("Executive Suite", month: 5, days: [ 21, 22, 23, 24, 25, 26 ])
+      room_type.update!(
+        description: "Large suite with sea view.",
+        amenities: %w[wifi balcony]
+      )
+
+      post path, params: { message: "late may", phone: phone }.to_json, headers: headers
+      post path, params: { message: "4 days 3 nights", phone: phone }.to_json, headers: headers
+      post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
+      post path, params: { message: "tell me about the executive suite", phone: phone }.to_json, headers: headers
+
+      expect(parsed_body["reply_message"]).to include("Here are the details for Executive Suite")
+
+      post path, params: { message: "ok i want executive suite on may 22", phone: phone }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to include("Executive Suite")
       expect(parsed_body["reply_message"]).to include("Please reply *Yes* or *No*.")
     end
 
@@ -268,6 +363,26 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       return interpretation(intent: "hotel_policy", topic: "hotel_policy")
     end
 
+    if normalized.match?(/\b(attractions?|nearby|places?)\b/)
+      return interpretation(intent: "nearby_attractions", topic: "nearby_attractions")
+    end
+
+    if normalized.match?(/\bfaq\b/) && normalized.match?(/\b(exec|executive|ocean|villa|suite|room)\b/)
+      return interpretation(intent: "room_information", topic: "room_type_faq", slots: { "room_type_name" => inferred_room_type_name(normalized) })
+    end
+
+    if normalized.match?(/\bfaq\b/)
+      return interpretation(intent: "hotel_information", topic: "hotel_faq")
+    end
+
+    if normalized.match?(/\b(tell me about|details for|about the)\b/) && normalized.match?(/\b(exec|executive|ocean|villa|suite|room)\b/)
+      return interpretation(intent: "room_information", topic: "room_information", slots: { "room_type_name" => inferred_room_type_name(normalized) })
+    end
+
+    if normalized.include?("tell me about the hotel")
+      return interpretation(intent: "hotel_information", topic: "general_hotel_info")
+    end
+
     if normalized.include?("another booking")
       return interpretation(
         intent: "booking_search",
@@ -402,6 +517,8 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       create(:room_rate, room_type: room_type, date: date, price: 220 + index, currency: "MYR")
       create(:room_inventory, room_type: room_type, date: date, quantity: 2, status: "open")
     end
+
+    room_type
   end
 
   def infer_year(month)
@@ -411,5 +528,12 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
   def parsed_body
     JSON.parse(response.body)
+  end
+
+  def inferred_room_type_name(normalized)
+    return "Executive Suite" if normalized.include?("exec") || normalized.include?("executive")
+    return "Ocean Villa" if normalized.include?("ocean villa")
+
+    nil
   end
 end

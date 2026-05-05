@@ -18,7 +18,7 @@ module AiConciergeV3
       ).call
     rescue StandardError => e
       Rails.logger.error("AiConciergeV3::InquiryResponder error: #{e.class}: #{e.message}")
-      Result.success(payload: FallbackBuilder.new.call)
+      Result.success(payload: MessageBuilders::FallbackBuilder.new.call)
     end
 
     private

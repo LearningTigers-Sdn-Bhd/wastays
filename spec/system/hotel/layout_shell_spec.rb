@@ -26,6 +26,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_link('Bookings', href: hotel_bookings_path(hotel))
     expect(page).to have_link('In-House', href: hotel_in_house_guests_path(hotel))
     expect(page).to have_link('Room Categories', href: hotel_room_types_path(hotel))
+    expect(page).to have_link('Nearby Attractions', href: hotel_nearby_attractions_path(hotel))
     expect(page).to have_link('Rates & Inventory', href: hotel_inventory_index_path(hotel))
     expect(page).to have_link('Guest Records', href: hotel_guests_path(hotel))
     expect(page).to have_link('Hotel Details', href: edit_hotel_profile_path(hotel))
