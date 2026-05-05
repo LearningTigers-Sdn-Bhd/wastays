@@ -2,6 +2,7 @@ source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 8.0.4"
+gem "friendly_id", "~> 5.6"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use postgresql as the database for Active Record
@@ -93,5 +94,4 @@ group :development do
 end
 
 gem "openssl", "~> 3.1.2"
-gem "friendly_id", "~> 5.5"
 gem "aws-sdk-s3", "~> 1.220"

@@ -18,9 +18,10 @@
 
   <%= form_with model: @booking, url: hotel_bookings_path(current_hotel), local: true, class: "space-y-8", 
       data: { 
-        controller: "booking-calc", 
-        availability_url: availability_hotel_bookings_path(current_hotel),
-        price_url: stay_price_hotel_bookings_path(current_hotel)
+        controller: "booking-calc room-lock", 
+        room_lock_url_value: hotel_room_locks_path(current_hotel),
+        booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
+        booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel)
       } do |f| %>
     
     <% if @booking.errors.any? %>
@@ -95,11 +96,15 @@
                 } %>
           </div>
           <div class="hidden" data-booking-calc-target="roomNumberContainer">
-            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
+            <label for="booking_room_number" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
             <%= f.select :room_number, [], { prompt: "Select a room" }, 
-                { required: true,
+                { id: "booking_room_number",
+                  required: true,
                   class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
-                  data: { booking_calc_target: "roomNumberSelect" } 
+                  data: { 
+                    booking_calc_target: "roomNumberSelect",
+                    action: "change->room-lock#lock"
+                  } 
                 } %>
           </div>
         </div>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_04_054013) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_05_004439) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -556,6 +556,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_04_054013) do
     t.index ["room_type_id"], name: "index_room_inventories_on_room_type_id"
   end
 
+  create_table "room_locks", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "user_id", null: false
+    t.string "room_number", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_room_locks_on_expires_at"
+    t.index ["hotel_id", "room_number"], name: "index_room_locks_on_hotel_id_and_room_number", unique: true
+    t.index ["hotel_id"], name: "index_room_locks_on_hotel_id"
+    t.index ["user_id"], name: "index_room_locks_on_user_id"
+  end
+
   create_table "room_rates", force: :cascade do |t|
     t.bigint "room_type_id", null: false
     t.date "date", null: false
@@ -687,6 +700,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_04_054013) do
   add_foreign_key "role_permissions", "roles"
   add_foreign_key "roles", "accounts"
   add_foreign_key "room_inventories", "room_types"
+  add_foreign_key "room_locks", "hotels"
+  add_foreign_key "room_locks", "users"
   add_foreign_key "room_rates", "rate_plans"
   add_foreign_key "room_rates", "room_types"
   add_foreign_key "room_types", "hotels"

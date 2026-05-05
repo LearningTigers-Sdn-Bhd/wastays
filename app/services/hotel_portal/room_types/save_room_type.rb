@@ -14,9 +14,12 @@ module HotelPortal
       def call
         sanitize_room_numbers
         sanitize_amenities
+
+        photos = @params.delete(:photos)
         @room_type.assign_attributes(@params)
 
         if @room_type.save
+          @room_type.attach_photos_with_limit(photos) if photos.present?
           @hotel.complete_rooms! if @room_type.previously_new_record?
           OpenStruct.new(success?: true, room_type: @room_type)
         else

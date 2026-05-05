@@ -27,7 +27,6 @@ RSpec.describe ChannelManagers::IngestBookingService do
     service = described_class.new(booking_data: booking_data)
     result = service.call
 
-    puts "DEBUG INGEST RESULT: #{result.inspect}"
     expect(result.success?).to be(true)
     expect(result.booking.persisted?).to be(true)
     expect(result.booking.guest_name).to eq("John Doe")

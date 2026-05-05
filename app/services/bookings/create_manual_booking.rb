@@ -27,6 +27,12 @@ module Bookings
         return OpenStruct.new(success?: false, errors: [ "Room #{@room_number} is no longer available for these dates." ])
       end
 
+      # 1.1 Check for locks by others
+      lock = @hotel.room_locks.active.find_by(room_number: @room_number)
+      if lock && lock.user_id != Current.user_id
+        return OpenStruct.new(success?: false, errors: [ "Room #{@room_number} is currently being assigned by another staff member." ])
+      end
+
       # 2. Calculate accurate total amount from Grid Rates
       booking.total_amount = (booking.check_in..(booking.check_out - 1.day)).sum do |date|
         rate = room_type.room_rates.find_by(date: date)

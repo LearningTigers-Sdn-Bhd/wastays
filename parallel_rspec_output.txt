@@ -1,0 +1,68 @@
+8 processes for 189 specs, ~ 23 specs per process
+.........*...........................................................................................................................................................................................................................................................................................................................................................................................................................................DEBUG INGEST RESULT: #<OpenStruct success?=true, booking=#<Booking id: 76, booking_quote_id: nil, hotel_id: 151, guest_name: "John Doe", guest_email: [FILTERED], guest_phone: "123", total_amount: 0.2e3, currency: "MYR", status: "overbooked", payment_status: "captured", confirmation_token: [FILTERED], check_in: "2026-05-05", check_out: "2026-05-07", adults: 2, children: 0, hotel_snapshot: {}, cancellation_policy_snapshot: nil, created_at: "2026-05-04 07:39:25.949689000 +0000", updated_at: "2026-05-04 07:39:25.949689000 +0000", pre_checkin_status: nil, guarantee_method: nil, deposit_status: nil, margin_amount: nil, net_amount: nil, margin_rate: nil, checked_in_at: nil, checked_out_at: nil, guest_gender: nil, guest_country: "Us", guest_document_type: nil, tourism_tax_amount: 0.0, tourism_tax_applied: false, payout_status: nil, payout_at: nil, payout_reference: nil, payout_batch_id: nil, source: "Expedia", external_reference: "EXT123", channel_manager_reference: "CM456", revision_number: 1>>
+..................................................................................................................................................................
+
+Finished in 18.16 seconds (files took 5.86 seconds to load)
+91 examples, 0 failures
+
+....................................Coverage report generated for rspec-3 to /Users/orsontamin/Code/Jesselton-Pixel/wastays/coverage.
+Line Coverage: 12.17% (1146 / 9417)
+................................
+
+Finished in 21.59 seconds (files took 5.86 seconds to load)
+85 examples, 0 failures
+
+...............Coverage report generated for rspec-3, rspec-4 to /Users/orsontamin/Code/Jesselton-Pixel/wastays/coverage.
+Line Coverage: 28.34% (2363 / 8337)
+...........
+
+Pending: (Failures listed here are expected and do not affect your suite's status)
+
+  1) ObservationEntry add some examples to (or delete) /Users/orsontamin/Code/Jesselton-Pixel/wastays/spec/models/observation_entry_spec.rb
+     # Not yet implemented
+     # ./spec/models/observation_entry_spec.rb:4
+
+Finished in 22.49 seconds (files took 5.89 seconds to load)
+100 examples, 0 failures, 1 pending
+
+....
+
+Finished in 22.81 seconds (files took 5.88 seconds to load)
+93 examples, 0 failures
+
+Coverage report generated for rspec-2, rspec-3, rspec-4 to /Users/orsontamin/Code/Jesselton-Pixel/wastays/coverage.
+Line Coverage: 36.64% (2907 / 7935)
+....Coverage report generated for rspec-2, rspec-3, rspec-4, rspec-5 to /Users/orsontamin/Code/Jesselton-Pixel/wastays/coverage.
+Line Coverage: 48.83% (3584 / 7339)
+.......
+
+Finished in 23.33 seconds (files took 6.4 seconds to load)
+82 examples, 0 failures
+
+.......
+
+Finished in 23.85 seconds (files took 6.01 seconds to load)
+89 examples, 0 failures
+
+..
+
+Finished in 24.01 seconds (files took 5.83 seconds to load)
+109 examples, 0 failures
+
+Coverage report generated for rspec-2, rspec-3, rspec-4, rspec-5, rspec-6 to /Users/orsontamin/Code/Jesselton-Pixel/wastays/coverage.
+Line Coverage: 56.39% (3961 / 7024)
+Coverage report generated for rspec-, rspec-2, rspec-3, rspec-4, rspec-5, rspec-6 to /Users/orsontamin/Code/Jesselton-Pixel/wastays/coverage.
+Line Coverage: 64.54% (4365 / 6763)
+.....................................................................
+
+Finished in 29.08 seconds (files took 6.13 seconds to load)
+137 examples, 0 failures
+
+Coverage report generated for rspec-, rspec-2, rspec-3, rspec-4, rspec-5, rspec-6, rspec-7 to /Users/orsontamin/Code/Jesselton-Pixel/wastays/coverage.
+Line Coverage: 74.16% (4776 / 6440)
+Coverage report generated for rspec-, rspec-2, rspec-3, rspec-4, rspec-5, rspec-6, rspec-7, rspec-8 to /Users/orsontamin/Code/Jesselton-Pixel/wastays/coverage.
+Line Coverage: 76.46% (4894 / 6401)
+
+786 examples, 0 failures, 1 pending
+
+Took 36 seconds
