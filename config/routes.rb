@@ -125,7 +125,11 @@ Rails.application.routes.draw do
         end
       end
     end
-    resources :bookings, only: [ :index, :show ] # Added stub
+    resources :bookings, only: [ :index, :show ] do
+      member do
+        get :invoice
+      end
+    end
     resources :salespersons, only: [ :index, :create, :update, :destroy ]
     resources :reconciliations, only: [ :index, :show ] do
       member do

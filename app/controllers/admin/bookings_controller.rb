@@ -1,5 +1,7 @@
 module Admin
   class BookingsController < BaseController
+    before_action :set_booking, only: [:show, :invoice]
+
     def index
       @all_bookings = Booking.all.order(created_at: :desc)
 
@@ -18,6 +20,20 @@ module Admin
     end
 
     def show
+      # @booking set by before_action
+    end
+
+    def invoice
+      pdf_bytes = InvoicePdfService.new(@booking).generate
+      send_data pdf_bytes,
+        filename: "wastays-invoice-#{@booking.confirmation_token}.pdf",
+        type: "application/pdf",
+        disposition: "attachment"
+    end
+
+    private
+
+    def set_booking
       @booking = Booking.find(params[:id])
     end
   end
