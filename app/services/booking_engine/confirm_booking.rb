@@ -89,7 +89,10 @@ module BookingEngine
           # 4. Finalize Quote status
           @quote.update!(status: "converted")
 
-          # 5. TODO: Trigger notifications (Phase 5 checklist)
+          # 5. Trigger Webhooks
+          Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
+
+          # 6. TODO: Trigger notifications (Phase 5 checklist)
           # Notifications::BookingConfirmedJob.perform_later(booking.id)
 
           OpenStruct.new(success?: true, booking: booking)
