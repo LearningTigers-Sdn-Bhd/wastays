@@ -54,7 +54,8 @@ export default class extends Controller {
     if (!this.toggleButton) return
 
     const rect = this.toggleButton.getBoundingClientRect()
-    const menuWidth = Math.max(rect.width, 320)
+    // Keep floating menus compact by default while still respecting trigger width.
+    const menuWidth = Math.max(rect.width, 220)
     const viewportPadding = 16
     const spacing = 8
     
@@ -76,10 +77,13 @@ export default class extends Controller {
     }
 
     const maxLeft = window.innerWidth - menuWidth - viewportPadding
-    const left = Math.min(rect.left, maxLeft)
+    // Align menu's right edge with trigger's right edge, then clamp to viewport.
+    const preferredLeft = rect.right - menuWidth
+    const left = Math.min(Math.max(viewportPadding, preferredLeft), maxLeft)
 
     this.menuTarget.style.position = "fixed"
-    this.menuTarget.style.left = `${Math.max(viewportPadding, left)}px`
+    this.menuTarget.style.left = `${left}px`
+    this.menuTarget.style.right = "auto"
     this.menuTarget.style.top = `${top}px`
     this.menuTarget.style.minWidth = `${menuWidth}px`
     this.menuTarget.style.maxHeight = "18rem"
@@ -94,6 +98,7 @@ export default class extends Controller {
 
     this.menuTarget.style.position = ""
     this.menuTarget.style.left = ""
+    this.menuTarget.style.right = ""
     this.menuTarget.style.top = ""
     this.menuTarget.style.minWidth = ""
     this.menuTarget.style.maxHeight = ""

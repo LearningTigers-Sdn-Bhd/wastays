@@ -91,7 +91,7 @@
                   <span class="text-sm font-bold text-slate-900">MYR <%= number_with_precision(room_type.base_price, precision: 2) %></span>
                 </td>
                 <td class="px-6 py-4 text-right whitespace-nowrap sm:px-8">
-                  <div class="relative inline-flex" data-controller="dropdown">
+                  <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true">
                     <button type="button" data-action="click->dropdown#toggle" class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
                       Manage
                       <svg class="ms-1.5 size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>

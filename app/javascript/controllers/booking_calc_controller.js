@@ -40,7 +40,7 @@ export default class extends Controller {
       
       const data = await response.json()
       if (data.error) throw new Error(data.error)
-      this.populateDropdown(data.available_rooms, currentSelection)
+      this.populateDropdown(data.available_rooms || [], data.room_options || [], currentSelection)
     } catch (error) {
       console.error("Availability check failed:", error)
       this.roomNumberSelectTarget.innerHTML = `<option value="">Error: ${error.message}</option>`
@@ -49,15 +49,50 @@ export default class extends Controller {
     }
   }
 
-  populateDropdown(numbers, currentSelection) {
+  populateDropdown(numbers, roomOptions, currentSelection) {
     this.roomNumberSelectTarget.innerHTML = ""
     
     const prompt = document.createElement("option")
     prompt.value = ""
-    prompt.textContent = numbers.length > 0 ? "Select an available room" : "No rooms available for these dates"
+    prompt.textContent = numbers.length > 0 ? "Select an available room" : "No ready rooms available for these dates"
     this.roomNumberSelectTarget.appendChild(prompt)
 
-    numbers.forEach(num => {
+    if (Array.isArray(roomOptions) && roomOptions.length > 0) {
+      roomOptions.forEach(room => {
+        const option = document.createElement("option")
+        option.value = room.room_number
+        option.textContent = room.label || room.room_number
+        option.disabled = !room.selectable
+        if (room.room_number?.toString() === (currentSelection || "").toString()) option.selected = true
+        this.roomNumberSelectTarget.appendChild(option)
+      })
+    } else {
+      numbers.forEach(num => {
+        const option = document.createElement("option")
+        option.value = num
+        option.textContent = num
+        if (num.toString() === (currentSelection || "").toString()) option.selected = true
+        this.roomNumberSelectTarget.appendChild(option)
+      })
+    }
+
+    if (numbers.length === 0) {
+      this.roomNumberSelectTarget.classList.add("border-red-500")
+    } else {
+      this.roomNumberSelectTarget.classList.remove("border-red-500")
+    }
+  }
+
+  // Backward compatibility helper if availability API returns only strings
+  populateDropdownLegacy(numbers, currentSelection) {
+    this.roomNumberSelectTarget.innerHTML = ""
+
+    const prompt = document.createElement("option")
+    prompt.value = ""
+    prompt.textContent = numbers.length > 0 ? "Select an available room" : "No ready rooms available for these dates"
+    this.roomNumberSelectTarget.appendChild(prompt)
+
+    numbers.forEach((num) => {
       const option = document.createElement("option")
       option.value = num
       option.textContent = num
@@ -65,11 +100,7 @@ export default class extends Controller {
       this.roomNumberSelectTarget.appendChild(option)
     })
     
-    if (numbers.length === 0) {
-      this.roomNumberSelectTarget.classList.add("border-red-500")
-    } else {
-      this.roomNumberSelectTarget.classList.remove("border-red-500")
-    }
+    this.roomNumberSelectTarget.classList.toggle("border-red-500", numbers.length === 0)
   }
 
   async calculate() {

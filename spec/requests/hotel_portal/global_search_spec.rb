@@ -38,4 +38,13 @@ RSpec.describe "Hotel portal global search", type: :request do
 
     expect(titles).to include("Help & Support")
   end
+
+  it "returns room readiness destination" do
+    get hotel_global_search_index_path(hotel), params: { q: "room readiness" }, headers: { "ACCEPT" => "application/json" }
+
+    expect(response).to have_http_status(:ok)
+    titles = JSON.parse(response.body).fetch("results").map { |row| row.fetch("title") }
+
+    expect(titles).to include("Room Readiness")
+  end
 end

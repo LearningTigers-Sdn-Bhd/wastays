@@ -274,5 +274,7 @@ Rails.application.routes.draw do
     patch "settings", to: "settings#update"
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
+    get "room-status", to: "room_status_board#index", as: :room_status_board
+    resources :room_statuses, only: [ :update ]
   end
 end
