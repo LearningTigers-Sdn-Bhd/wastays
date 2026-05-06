@@ -322,6 +322,23 @@ if Rails.env.development?
     end
   end
 
+  RoomType.includes(:hotel).find_each do |room_type|
+    Array(room_type.room_numbers).each do |room_number|
+      room_number = room_number.to_s.strip
+      next if room_number.blank?
+
+      RoomStatus.find_or_create_by!(
+        hotel: room_type.hotel,
+        room_type: room_type,
+        room_number: room_number
+      ) do |room_status|
+        room_status.status = "ready"
+        room_status.last_changed_at = Time.current
+        room_status.notes = "Seeded from configured room numbers"
+      end
+    end
+  end
+
   superadmin_account = Account.find_by!(slug: 'sample-account')
   SeedData.upsert_user(email: 'superadmin@wastays.com', name: 'Super Admin', role: 'superadmin', account: superadmin_account)
   SeedData.upsert_user(email: 's@s.com', name: 'Platform Admin', role: 'superadmin', account: superadmin_account)

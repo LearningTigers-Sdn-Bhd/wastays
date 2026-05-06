@@ -78,6 +78,7 @@ module DemoSeeds
     configure_platform_defaults
 
     contexts = seed_accounts_hotels_and_users
+    backfill_room_statuses
     seed_quotes(contexts)
     seed_bookings_and_guest_journeys(contexts)
     seed_requests(contexts)
@@ -1204,6 +1205,25 @@ module DemoSeeds
       rate.price = room_type.base_price + (date.saturday? || date.sunday? ? weekend_surcharge : 0.0)
       rate.currency = "MYR"
       rate.save!
+    end
+  end
+
+  def backfill_room_statuses
+    RoomType.includes(:hotel).find_each do |room_type|
+      Array(room_type.room_numbers).each do |room_number|
+        room_number = room_number.to_s.strip
+        next if room_number.blank?
+
+        RoomStatus.find_or_create_by!(
+          hotel: room_type.hotel,
+          room_type: room_type,
+          room_number: room_number
+        ) do |room_status|
+          room_status.status = "ready"
+          room_status.last_changed_at = Time.current
+          room_status.notes = "Seeded from configured room numbers"
+        end
+      end
     end
   end
 

@@ -4,16 +4,19 @@ require "ostruct"
 
 module Bookings
   class CreateManualBooking
-    def initialize(hotel:, params:)
+    def initialize(hotel:, params:, user: nil)
       @hotel = hotel
       @params = params.dup
       @room_type_id = @params.delete(:room_type_id)
       @room_number = @params.delete(:room_number)
+      @user = user
     end
 
     def call
       booking = @hotel.bookings.build(@params)
       room_type = @hotel.room_types.find(@room_type_id)
+      failure_error = nil
+      result = nil
 
       # 1. Validate Room Availability based on Grid Selection
       available_rooms = AvailableRoomNumbers.new(
@@ -43,7 +46,7 @@ module Bookings
       booking.payment_status = "captured"
       booking.hotel_snapshot = @hotel.as_json.merge("room_number" => @room_number)
 
-      ActiveRecord::Base.transaction do
+      result = ActiveRecord::Base.transaction do
         if booking.save
           booking.booking_rooms.create!(
             room_type: room_type,
@@ -51,6 +54,17 @@ module Bookings
             subtotal: booking.total_amount,
             room_type_snapshot: room_type.as_json
           )
+
+          assignment_result = Bookings::AssignRoom.new(
+            booking: booking,
+            room_number: @room_number,
+            user: @user
+          ).call
+
+          unless assignment_result.success?
+            failure_error = assignment_result.error
+            raise ActiveRecord::Rollback
+          end
 
           InventoryManager.new(booking).deduct
           sync_guest(booking)
@@ -63,6 +77,8 @@ module Bookings
           OpenStruct.new(success?: false, errors: booking.errors.full_messages)
         end
       end
+      return OpenStruct.new(success?: false, errors: [ failure_error ]) if failure_error.present?
+      result
     rescue => e
       OpenStruct.new(success?: false, errors: [ e.message ])
     end
