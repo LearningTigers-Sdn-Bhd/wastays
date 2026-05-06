@@ -30,6 +30,7 @@ module Bookings
 
     def check_in
       if @booking.update(status: "checked_in", checked_in_at: @timestamp)
+        Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
         success
       else
         failure(@booking.errors.full_messages.to_sentence)
@@ -42,6 +43,8 @@ module Bookings
         mark_assigned_rooms_pending_cleaning
       end
 
+      Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
+
       success
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
@@ -51,6 +54,7 @@ module Bookings
       Booking.transaction do
         if @booking.update(status: "cancelled")
           InventoryManager.new(@booking).release
+          Bookings::WebhookTriggerService.new(@booking).trigger(:booking_cancelled)
           success
         else
           failure(@booking.errors.full_messages.to_sentence)

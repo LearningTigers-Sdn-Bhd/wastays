@@ -11,6 +11,7 @@ module GuestArrival
       @country = params[:country]&.downcase&.strip
       @document_type = params[:document_type]&.downcase&.strip
       @marketing_consent = params[:marketing_consent]
+      @privacy_consent = params[:privacy_consent]
       @created_by_hotel_id = params[:created_by_hotel_id]
     end
 
@@ -25,10 +26,16 @@ module GuestArrival
         updates[:document_type] = @document_type if @document_type.present? && guest.document_type.blank?
         updates[:government_id] = @government_id if @government_id.present? && guest.government_id.blank?
 
-        if @marketing_consent.present?
+        if @marketing_consent.present? || @privacy_consent.present?
           guest.metadata ||= {}
-          guest.metadata["marketing_consent"] = @marketing_consent == "1" || @marketing_consent == true
-          guest.metadata["marketing_consent_updated_at"] = Time.current.iso8601
+          if @marketing_consent.present?
+            guest.metadata["marketing_consent"] = @marketing_consent == "1" || @marketing_consent == true
+            guest.metadata["marketing_consent_updated_at"] = Time.current.iso8601
+          end
+          if @privacy_consent.present?
+            guest.metadata["privacy_consent"] = @privacy_consent == "1" || @privacy_consent == true
+            guest.metadata["privacy_consent_updated_at"] = Time.current.iso8601
+          end
         end
 
         guest.update(updates) if updates.any? || guest.metadata_changed?
@@ -37,6 +44,10 @@ module GuestArrival
         if @marketing_consent.present?
           metadata["marketing_consent"] = @marketing_consent == "1" || @marketing_consent == true
           metadata["marketing_consent_updated_at"] = Time.current.iso8601
+        end
+        if @privacy_consent.present?
+          metadata["privacy_consent"] = @privacy_consent == "1" || @privacy_consent == true
+          metadata["privacy_consent_updated_at"] = Time.current.iso8601
         end
 
         guest = Guest.create!(

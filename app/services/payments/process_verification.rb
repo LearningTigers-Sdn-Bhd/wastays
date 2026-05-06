@@ -61,7 +61,8 @@ module Payments
         gender: metadata[:gender],
         country: metadata[:country],
         document_type: metadata[:document_type],
-        marketing_consent: metadata[:marketing_consent]
+        marketing_consent: metadata[:marketing_consent],
+        privacy_consent: metadata[:privacy_consent]
       }.compact
     end
 
@@ -77,6 +78,7 @@ module Payments
           country: guest_details[:country],
           document_type: guest_details[:document_type],
           marketing_consent: guest_details[:marketing_consent],
+          privacy_consent: guest_details[:privacy_consent],
           external_reference: external_reference
         }
       ).call

@@ -50,8 +50,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       get "/hotel/#{hotel.id}/bookings/#{booking.id}"
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Open Room Readiness")
-      expect(response.body).to include("Pending Cleaning")
+      expect(response.body).to include("Stay & Room Details")
+      expect(response.body).to include("Room 101")
     end
 
     it "renders successfully when booking has complaint requests" do

@@ -11,8 +11,11 @@ RSpec.describe Bookings::TransitionStatus do
       subject { described_class.new(booking: booking, status: "checked_in", timestamp: timestamp) }
 
       it "updates status and checked_in_at" do
-        result = subject.call
-        expect(result.success?).to be true
+        expect {
+          result = subject.call
+          expect(result.success?).to be true
+        }.to have_enqueued_job(WebhookBroadcastJob).with('booking_checked_in', anything)
+
         expect(booking.reload.status).to eq("checked_in")
         expect(booking.checked_in_at).to be_within(1.second).of(timestamp)
       end
@@ -23,8 +26,11 @@ RSpec.describe Bookings::TransitionStatus do
       subject { described_class.new(booking: booking, status: "completed", timestamp: timestamp) }
 
       it "updates status and checked_out_at" do
-        result = subject.call
-        expect(result.success?).to be true
+        expect {
+          result = subject.call
+          expect(result.success?).to be true
+        }.to have_enqueued_job(WebhookBroadcastJob).with('booking_completed', anything)
+
         expect(booking.reload.status).to eq("completed")
         expect(booking.checked_out_at).to be_within(1.second).of(timestamp)
       end
@@ -38,8 +44,11 @@ RSpec.describe Bookings::TransitionStatus do
         expect(Bookings::InventoryManager).to receive(:new).with(booking).and_return(inventory_manager)
         expect(inventory_manager).to receive(:release)
 
-        result = subject.call
-        expect(result.success?).to be true
+        expect {
+          result = subject.call
+          expect(result.success?).to be true
+        }.to have_enqueued_job(WebhookBroadcastJob).with('booking_cancelled', anything)
+
         expect(booking.reload.status).to eq("cancelled")
       end
     end

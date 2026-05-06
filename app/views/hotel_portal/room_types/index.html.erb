@@ -30,8 +30,8 @@
     </div>
   </div>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8">
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8 rounded-t-2xl">
       <div>
         <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Room Types</h2>
         <p class="mt-1 text-sm font-medium text-slate-600">All available room configurations for this property.</p>
@@ -39,7 +39,7 @@
       <span class="text-sm font-medium text-slate-500">Total Categories <span class="font-semibold text-slate-900"><%= @all_room_types.count %></span></span>
     </div>
 
-    <div class="hidden lg:block overflow-x-auto">
+    <div class="hidden lg:block">
       <table class="min-w-full table-fixed">
         <colgroup>
           <col class="w-[35%]">
@@ -188,7 +188,7 @@
       <% end %>
     </div>
 
-    <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+    <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8 rounded-b-2xl">
       <%= paginate @room_types %>
     </div>
   </div>

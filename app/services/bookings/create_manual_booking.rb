@@ -68,6 +68,10 @@ module Bookings
 
           InventoryManager.new(booking).deduct
           sync_guest(booking)
+
+          # Trigger Webhooks
+          Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
+
           OpenStruct.new(success?: true, booking: booking)
         else
           OpenStruct.new(success?: false, errors: booking.errors.full_messages)

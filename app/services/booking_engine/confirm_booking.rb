@@ -63,7 +63,8 @@ module BookingEngine
             gender: gender,
             country: guest_country,
             document_type: document_type,
-            marketing_consent: @payment_details[:marketing_consent]
+            marketing_consent: @payment_details[:marketing_consent],
+            privacy_consent: @payment_details[:privacy_consent]
           ).call
 
           if guest_result.success?
@@ -88,7 +89,10 @@ module BookingEngine
           # 4. Finalize Quote status
           @quote.update!(status: "converted")
 
-          # 5. TODO: Trigger notifications (Phase 5 checklist)
+          # 5. Trigger Webhooks
+          Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
+
+          # 6. TODO: Trigger notifications (Phase 5 checklist)
           # Notifications::BookingConfirmedJob.perform_later(booking.id)
 
           OpenStruct.new(success?: true, booking: booking)
