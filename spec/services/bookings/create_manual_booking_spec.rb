@@ -21,10 +21,12 @@ RSpec.describe Bookings::CreateManualBooking do
   subject { described_class.new(hotel: hotel, params: params) }
 
   it "creates a booking and deducts inventory" do
-    result = subject.call
-    expect(result.success?).to be true
-    expect(result.booking).to be_persisted
-    expect(result.booking.hotel_snapshot["room_number"]).to eq("101")
+    expect {
+      result = subject.call
+      expect(result.success?).to be true
+      expect(result.booking).to be_persisted
+      expect(result.booking.hotel_snapshot["room_number"]).to eq("101")
+    }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything)
 
     inventory = room_type.room_inventories.find_by(date: Date.current)
     expect(inventory.quantity).to eq(4)

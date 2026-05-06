@@ -36,8 +36,11 @@ RSpec.describe BookingEngine::ConfirmBooking do
 
   describe '#call' do
     it 'creates booking, rooms, guest link, pre-checkin, and converts quote' do
-      result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
+      expect {
+        described_class.new(quote_token: quote.token, payment_details: payment_details).call
+      }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything)
 
+      result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
       expect(result.success?).to be(true)
       booking = result.booking
       expect(booking).to be_persisted
