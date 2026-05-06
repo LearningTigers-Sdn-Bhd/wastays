@@ -1,7 +1,7 @@
 module AiConciergeV3
   module Schemas
     class InterpretationSchema
-      REQUIRED_SIGNAL_KEYS = %w[is_reset is_resume is_correction starts_new_booking_branch].freeze
+      REQUIRED_SIGNAL_KEYS = %w[is_reset is_resume is_correction starts_new_booking_branch end_conversation].freeze
 
       def valid?(interpretation)
         interpretation.is_a?(Hash) &&

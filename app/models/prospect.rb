@@ -3,14 +3,15 @@ class Prospect < ApplicationRecord
 
   belongs_to :hotel
   belongs_to :guest, optional: true
-  has_many :prospect_profile_facts, dependent: :destroy
   has_many :prospect_messages, dependent: :destroy
   has_one :prospect_conversation_state, dependent: :destroy
 
+  validates :public_id, presence: true, uniqueness: true
   validates :phone_number, presence: true
   validates :stage, presence: true, inclusion: { in: STAGES }
   validates :phone_number, uniqueness: { scope: :hotel_id }
 
+  before_validation :ensure_public_id, on: :create
   before_validation :derive_stage
   before_validation :set_last_contact, on: :create
 
@@ -27,11 +28,19 @@ class Prospect < ApplicationRecord
     PhoneIdentity.variants(raw)
   end
 
+  def self.generate_public_id
+    "prsp_#{SecureRandom.urlsafe_base64(18).tr('-_', '').downcase}"
+  end
+
   def touch_last_contact!(at: Time.current)
     update!(last_contact: at)
   end
 
   private
+
+  def ensure_public_id
+    self.public_id ||= self.class.generate_public_id
+  end
 
   def derive_stage
     self.stage = guest_id.present? ? "converted" : stage.presence || "cold"

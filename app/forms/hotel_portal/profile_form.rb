@@ -27,11 +27,13 @@ module HotelPortal
     private
 
     def hotel_params
-      params.require(:hotel).permit(
-        :name, :address, :city, :country, :star_rating, :faq, :policy,
+      permitted = params.require(:hotel).permit(
+        :name, :address, :city, :country, :star_rating,
         :featured_photo_attachment_id,
         photos: [], amenities: []
       )
+
+      permitted
     end
   end
 end

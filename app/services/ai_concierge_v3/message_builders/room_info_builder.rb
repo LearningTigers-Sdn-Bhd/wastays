@@ -1,14 +1,12 @@
 module AiConciergeV3
   module MessageBuilders
     class RoomInfoBuilder < BaseBuilder
-      HANDLED_REPLY_TYPES = %i[room_type_details room_type_faq ambiguous_room_type room_type_not_found].freeze
+      HANDLED_REPLY_TYPES = %i[room_type_details ambiguous_room_type room_type_not_found].freeze
 
       def call(reply_type)
         case reply_type.to_sym
         when :room_type_details
           room_type_details_message
-        when :room_type_faq
-          room_type_faq_message
         when :ambiguous_room_type
           ambiguous_room_type_message
         when :room_type_not_found
@@ -30,13 +28,6 @@ module AiConciergeV3
         lines << "Occupancy: #{occupancy.join(' and ')}" if occupancy.present?
         lines << "Amenities: #{amenities.join(', ')}" if amenities.present?
         lines.join("\n")
-      end
-
-      def room_type_faq_message
-        result = context[:result] || {}
-        return "Here is the FAQ for #{result['room_type_name']}:\n#{result['faq_text']}" if result["faq_text"].present?
-
-        "The hotel has not provided FAQ details for #{result['room_type_name']} yet."
       end
 
       def ambiguous_room_type_message

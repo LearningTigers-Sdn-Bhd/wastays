@@ -15,23 +15,24 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
   describe "POST /api/v1/hotels/:hotel_id/ai_concierge/inquiries" do
     it "answers hotel policy questions" do
-      post path, params: { message: "What is the policy of this hotel?" }.to_json, headers: headers
+      hotel.update!(policy: [
+        {
+          "title" => "Quiet Hours",
+          "content" => "Quiet hours start at 10 PM."
+        }
+      ])
+
+      post path, params: { message: "What is the policy of this hotel?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body).to eq(
-        "reply_message" => [
-          "Welcome to #{hotel.name}! Here is our hotel policy:",
-          "- Check-in starts at: *15:00*",
-          "- Check-out is at: *12:00*",
-          "- Cancellation: *24 hours*"
-        ].join("\n"),
-        "needs_human_support" => false,
-        "action_name" => nil
-      )
+      expect(parsed_body["reply_message"]).to eq("Welcome to #{hotel.name}! Quiet Hours: Quiet hours start at 10 PM.")
+      expect(parsed_body["needs_human_support"]).to be(false)
+      expect(parsed_body["action_name"]).to be_nil
+      expect(parsed_body["prospect_public_id"]).to be_present
     end
 
     it "answers general hotel information questions" do
-      post path, params: { message: "Tell me about the hotel" }.to_json, headers: headers
+      post path, params: { message: "Tell me about the hotel", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include(hotel.name)
@@ -40,19 +41,29 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     end
 
     it "answers hotel faq questions" do
-      hotel.update!(faq: "Breakfast is served daily from 7 AM to 10 AM.")
+      hotel.update!(faq: [
+        {
+          "section_name" => "General",
+          "items" => [
+            {
+              "question" => "What time is breakfast?",
+              "answer" => "Breakfast is served daily from 7 AM to 10 AM."
+            }
+          ]
+        }
+      ])
 
-      post path, params: { message: "Do you have an faq?" }.to_json, headers: headers
+      post path, params: { message: "Do you have an faq?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to eq("Breakfast is served daily from 7 AM to 10 AM.")
+      expect(parsed_body["reply_message"]).to eq("General\n- Q: What time is breakfast?\n  A: Breakfast is served daily from 7 AM to 10 AM.")
     end
 
     it "returns the full nearby attractions list" do
       create(:nearby_attraction, hotel: hotel, name: "Sky Bridge", description: "Scenic landmark", address: "Cable Car Station")
       create(:nearby_attraction, hotel: hotel, name: "Night Market", description: "Local food and shopping", address: "Town Square")
 
-      post path, params: { message: "What attractions are nearby?" }.to_json, headers: headers
+      post path, params: { message: "What attractions are nearby?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Here are the nearby attractions")
@@ -70,7 +81,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
         amenities: %w[wifi balcony tv]
       )
 
-      post path, params: { message: "Tell me about the exec suite" }.to_json, headers: headers
+      post path, params: { message: "Tell me about the exec suite", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Here are the details for Executive Suite")
@@ -78,25 +89,11 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(parsed_body["reply_message"]).to include("Amenities: Free WiFi, Balcony / Terrace, Flat-screen TV")
     end
 
-    it "answers room faq questions" do
-      create(:room_type,
-        hotel: hotel,
-        name: "Executive Suite",
-        faq: "This room includes complimentary minibar refills."
-      )
-
-      post path, params: { message: "What is the faq for the exec suite?" }.to_json, headers: headers
-
-      expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Here is the FAQ for Executive Suite")
-      expect(parsed_body["reply_message"]).to include("complimentary minibar refills")
-    end
-
     it "asks the guest to clarify when a room question matches multiple room types" do
       create(:room_type, hotel: hotel, name: "Ocean Villa King")
       create(:room_type, hotel: hotel, name: "Ocean Villa Twin")
 
-      post path, params: { message: "Tell me about the ocean villa" }.to_json, headers: headers
+      post path, params: { message: "Tell me about the ocean villa", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("multiple room types")
@@ -118,7 +115,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "hello, is there any booking for 2 adults", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("What dates or month")
+      expect(parsed_body["reply_message"]).to include("what dates or month")
       expect(parsed_body["reply_message"]).not_to include("May")
       expect(parsed_body["reply_message"]).not_to include("August")
     end
@@ -149,9 +146,9 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
-      expect(parsed_body["reply_message"]).to include("1. RM")
-      expect(parsed_body["reply_message"]).to include("Check-in *August 1* - Check-out *August 3*")
-      expect(parsed_body["reply_message"]).to include('Reply with the room type name and option number or date you want, for example: "Ocean Villa King option 1" or "Executive Penthouse on May 21".')
+      expect(parsed_body["reply_message"]).to include("1. *RM")
+      expect(parsed_body["reply_message"]).to include("Check-in *1 August 2026* - Check-out *3 August 2026*")
+      expect(parsed_body["reply_message"]).to include('Reply with the room type name and option number or date you want, for example: "Ocean Villa King option 1" or "Executive Penthouse on May 21"')
     end
 
     it "selects a unique shown option by date text" do
@@ -164,7 +161,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
-      expect(parsed_body["reply_message"]).to include("Please reply *Yes* or *No*.")
+      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
     end
 
     it "mentions room type names when a date is ambiguous across room types" do
@@ -198,7 +195,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Executive Penthouse")
-      expect(parsed_body["reply_message"]).to include("Please reply *Yes* or *No*.")
+      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
     end
 
     it "resumes the saved option set after a room information interruption" do
@@ -219,7 +216,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Executive Suite")
-      expect(parsed_body["reply_message"]).to include("Please reply *Yes* or *No*.")
+      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
     end
 
     it "selects the only visible option when the guest replies with just the room type name" do
@@ -233,7 +230,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Executive Penthouse")
-      expect(parsed_body["reply_message"]).to include("Please reply *Yes* or *No*.")
+      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
     end
 
     it "selects an option when the guest says i chose option 1" do
@@ -246,7 +243,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
-      expect(parsed_body["reply_message"]).to include("Please reply *Yes* or *No*.")
+      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
     end
 
     it "uses the pending date context to avoid looping after the guest names the room type" do
@@ -264,7 +261,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Ocean Villa King")
-      expect(parsed_body["reply_message"]).to include("Please reply *Yes* or *No*.")
+      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
     end
 
     it "accepts a unique partial room type name after ambiguous date follow-up" do
@@ -281,7 +278,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
-      expect(parsed_body["reply_message"]).to include("Please reply *Yes* or *No*.")
+      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
     end
 
     it "treats executive one as room type shorthand and asks for the option number" do
@@ -297,7 +294,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Executive Penthouse")
       expect(parsed_body["reply_message"]).to include("I found multiple options under Executive Penthouse:")
-      expect(parsed_body["reply_message"]).to include("1. RM")
+      expect(parsed_body["reply_message"]).to include("1. *RM")
       expect(parsed_body["reply_message"]).to include("Please tell me the option number you want.")
     end
 
@@ -311,10 +308,13 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "yes", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Book here:")
+      expect(parsed_body["reply_message"]).to include("Quotation link:")
       expect(parsed_body["reply_message"]).to include("Total:")
-      expect(parsed_body["reply_message"]).to include("expires")
+      expect(parsed_body["reply_message"]).to include("will expire")
       expect(parsed_body["action_name"]).to be_nil
+      state = Prospect.lookup_by_phone(phone).first.prospect_conversation_state
+      expect(state.flow_status).to eq("ended")
+      expect(state.slots_payload.dig("conversation", "end_reason")).to eq("booking_url_generated")
     end
 
     it "starts a fresh branch after another booking" do
@@ -326,29 +326,76 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "Garden Prestige Suite option 2", phone: phone }.to_json, headers: headers
       post path, params: { message: "yes", phone: phone }.to_json, headers: headers
 
-      expect(parsed_body["reply_message"]).to include("Book here:")
+      expect(parsed_body["reply_message"]).to include("Quotation link:")
 
       post path, params: { message: "another booking", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("What dates or month")
-      expect(parsed_body["reply_message"]).not_to include("Book here:")
-      expect(parsed_body["reply_message"]).not_to include("Please reply *Yes* or *No*.")
+      expect(parsed_body["reply_message"]).to include("what dates or month")
+      expect(parsed_body["reply_message"]).not_to include("Quotation link:")
+      expect(parsed_body["reply_message"]).not_to include("Please reply *Yes* to confirm the book")
       expect(parsed_body["action_name"]).to eq("request_quote")
     end
 
     it "returns 422 when concierge is disabled" do
       hotel.update!(ai_provider_enabled: false)
 
-      post path, params: { message: "Hello" }.to_json, headers: headers
+      post path, params: { message: "Hello", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(parsed_body["error"]).to eq("AI Concierge is not enabled for this hotel.")
     end
+
+    it "returns 422 when phone and prospect public id are missing" do
+      post path, params: { message: "Hello" }.to_json, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(parsed_body["error"]).to eq("Phone or prospect_public_id is required for AI concierge conversations")
+    end
+
+    it "continues a conversation by prospect public id" do
+      post path, params: { message: "hello, any booking for early august?", phone: phone }.to_json, headers: headers
+      prospect_public_id = parsed_body["prospect_public_id"]
+
+      post path, params: { message: "3 days 2 nights", prospect_public_id: prospect_public_id }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["prospect_public_id"]).to eq(prospect_public_id)
+      expect(parsed_body["reply_message"]).to include("early August")
+      expect(parsed_body["reply_message"]).to include("How many guests")
+    end
+
+    it "returns 404 for an invalid prospect public id" do
+      post path, params: { message: "Hello", prospect_public_id: "prsp_missing" }.to_json, headers: headers
+
+      expect(response).to have_http_status(:not_found)
+      expect(parsed_body["error"]).to eq("Prospect not found")
+    end
+
+    it "ends and reactivates the same conversation state" do
+      post path, params: { message: "Hello", phone: phone }.to_json, headers: headers
+      prospect_public_id = parsed_body["prospect_public_id"]
+
+      post path, params: { message: "stop", prospect_public_id: prospect_public_id }.to_json, headers: headers
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to eq("No problem, please let me know if you need anything.")
+
+      state = Prospect.find_by!(public_id: prospect_public_id).prospect_conversation_state
+      expect(state.flow_status).to eq("ended")
+      expect(state.slots_payload.dig("conversation", "end_reason")).to eq("user_ended")
+
+      post path, params: { message: "hello, any booking for early august?", prospect_public_id: prospect_public_id }.to_json, headers: headers
+
+      state.reload
+      expect(response).to have_http_status(:ok)
+      expect(state.flow_status).not_to eq("ended")
+      expect(state.slots_payload.dig("conversation", "status")).to eq("active")
+      expect(state.slots_payload.dig("conversation", "end_reason")).to be_nil
+    end
   end
 
   def stub_interpreter
-    allow_any_instance_of(AiConciergeV3::InterpreterAgent).to receive(:call) do |agent|
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call) do |agent|
       build_interpretation(
         message: agent.instance_variable_get(:@message),
         conversation_summary: agent.instance_variable_get(:@conversation_summary)
@@ -365,10 +412,6 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
     if normalized.match?(/\b(attractions?|nearby|places?)\b/)
       return interpretation(intent: "nearby_attractions", topic: "nearby_attractions")
-    end
-
-    if normalized.match?(/\bfaq\b/) && normalized.match?(/\b(exec|executive|ocean|villa|suite|room)\b/)
-      return interpretation(intent: "room_information", topic: "room_type_faq", slots: { "room_type_name" => inferred_room_type_name(normalized) })
     end
 
     if normalized.match?(/\bfaq\b/)
@@ -495,7 +538,8 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
         "is_reset" => false,
         "is_resume" => false,
         "is_correction" => false,
-        "starts_new_booking_branch" => false
+        "starts_new_booking_branch" => false,
+        "end_conversation" => false
       }.merge(signals)
     }
   end

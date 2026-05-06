@@ -29,7 +29,6 @@ RSpec.describe 'Room Setup', type: :system do
     first(:link, 'Add Room Category').click
 
     fill_in 'Room Type Name', with: 'Deluxe Suite'
-    fill_in 'FAQ', with: 'Is breakfast included? Yes.'
     fill_in 'Max Adults', with: 2
     fill_in 'Max Children', with: 1
     fill_in 'Total Number of Rooms', with: 5
@@ -39,7 +38,6 @@ RSpec.describe 'Room Setup', type: :system do
 
     expect(page).to have_content('Room type created successfully.')
     expect(page).to have_content('Deluxe Suite')
-    expect(RoomType.order(:created_at).last.faq).to eq('Is breakfast included? Yes.')
 
     visit hotel_dashboard_path(hotel)
     expect(page).to have_content('Hotel Dashboard')

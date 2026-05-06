@@ -24,7 +24,7 @@ module AiConciergeV3
             guest_email: guest_email
           ).call
 
-          return({ "success" => false, "error" => result.message }) unless result.success?
+          return ({ "success" => false, "error" => result.message }) unless result.success?
 
           {
             "success" => true,
@@ -45,7 +45,7 @@ module AiConciergeV3
           protocol = host_options[:protocol].presence || "http"
           host = host_options[:host].presence || "example.com"
           port = host_options[:port].presence
-          ["#{protocol}://#{host}", port].compact.join(port ? ":" : "")
+          [ "#{protocol}://#{host}", port ].compact.join(port ? ":" : "")
         end
       end
     end

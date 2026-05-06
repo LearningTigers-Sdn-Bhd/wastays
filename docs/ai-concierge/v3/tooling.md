@@ -14,14 +14,17 @@ This means the public tool names in `ToolRegistry` are the runtime contract. The
 
 ## Runtime Flow
 
-1. `InquiryResponder` receives the API request and validates concierge readiness.
-2. `TurnOrchestrator` loads conversation state, records the inbound message, and calls the interpreter.
-3. `InterpreterAgent` returns structured interpretation data.
-4. `TransitionPolicy` converts the interpretation and current state into a deterministic action.
-5. `ToolRegistry` resolves the tool name to a concrete Ruby class.
-6. The selected tool returns structured result data.
-7. `MessengerAgent` routes the reply type to a domain message builder.
-8. The orchestrator persists state updates and returns the public API payload.
+1. `InquiryResponder` receives the API request, validates concierge readiness, and requires either `phone` or `prospect_public_id`.
+2. `TurnOrchestrator` resolves the hotel-scoped prospect by phone first or by `prospect_public_id` fallback.
+3. `TurnOrchestrator` loads persisted conversation state, records the inbound message, and calls the interpreter.
+4. If the previous conversation was ended, the orchestrator reactivates the same `ProspectConversationState` for the new inbound turn.
+5. Explicit stop/bye/thanks-style messages end the current conversation without running a tool.
+6. `InterpreterAgent` returns structured interpretation data.
+7. `TransitionPolicy` converts the interpretation and current state into a deterministic action.
+8. `ToolRegistry` resolves the tool name to a concrete Ruby class.
+9. The selected tool returns structured result data.
+10. `MessengerAgent` routes the reply type to a domain message builder.
+11. The orchestrator persists state updates and returns the public API payload, including `prospect_public_id` on success.
 
 Booking flows can be interrupted by hotel or room information questions. In those cases the active booking branch is paused and can later be resumed.
 
@@ -38,9 +41,8 @@ Current public tool identifiers:
 - `get_hotel_faq`
 - `get_nearby_attractions`
 - `get_room_type_details`
-- `get_room_type_faq`
 
-These names are registered in `app/services/ai_concierge_v3/tool_registry.rb`.
+These names are registered in `app/services/ai_concierge_v3/tools/tool_registry.rb`.
 
 ## Tool Groups
 
@@ -77,8 +79,9 @@ These names are registered in `app/services/ai_concierge_v3/tool_registry.rb`.
 
 - Path: `app/services/ai_concierge_v3/tools/booking/generate_booking_url_tool.rb`
 - Purpose: convert a confirmed option into a booking quote link
-- Main inputs: selected option and guest phone
+- Main inputs: selected option and resolved prospect phone
 - Success output: booking URL, total amount, currency, expiry, and quote token
+- Lifecycle side effect: successful booking URL generation ends the current conversation with `end_reason: "booking_url_generated"`
 - Example guest questions:
   - `yes`
 
@@ -100,7 +103,7 @@ These names are registered in `app/services/ai_concierge_v3/tool_registry.rb`.
 #### `get_booking_context`
 
 - Path: `app/services/ai_concierge_v3/tools/hotel_information/get_booking_context_tool.rb`
-- Purpose: answer questions about an existing active booking for the guest phone number
+- Purpose: answer questions about an existing active booking for the resolved prospect phone number
 - Success output: structured booking rows with date range and room type name
 - Example guest questions:
   - `what booking do i have`
@@ -152,19 +155,6 @@ These names are registered in `app/services/ai_concierge_v3/tool_registry.rb`.
   - `tell me about the executive suite`
   - `what amenities does the ocean villa have`
 
-#### `get_room_type_faq`
-
-- Path: `app/services/ai_concierge_v3/tools/room_information/get_room_type_faq_tool.rb`
-- Purpose: answer room-specific FAQ questions
-- Main inputs: guest message and optional interpreted `room_type_name`
-- Success output: matched room type and `faq_text`
-- Failure output:
-  - `ambiguous_room_type`
-  - `room_type_not_found`
-- Example guest questions:
-  - `what is the faq for ocean villa king`
-  - `faq for the executive suite`
-
 ## Intent and Topic Mapping
 
 | Guest question type | Intent | Topic | Action | Tool | Reply type |
@@ -178,7 +168,24 @@ These names are registered in `app/services/ai_concierge_v3/tool_registry.rb`.
 | hotel FAQ | `hotel_information` | `hotel_faq` | `hotel_information` | `get_hotel_faq` | `hotel_faq` |
 | nearby places / attractions | `nearby_attractions` | `nearby_attractions` | `nearby_attractions` | `get_nearby_attractions` | `nearby_attractions` |
 | room details / amenities / occupancy | `room_information` | `room_information` | `room_information` | `get_room_type_details` | `room_type_details` |
-| room FAQ | `room_information` | `room_type_faq` | `room_information` | `get_room_type_faq` | `room_type_faq` |
+| end current conversation | any low-confidence or conversational intent with `end_conversation` signal | any | `end_conversation` | none | terminal conversation reply |
+
+## Identity and Continuation
+
+- API clients should store `prospect_public_id` from successful responses.
+- A later request can continue the same prospect conversation with `prospect_public_id` when `phone` is unavailable.
+- If both `phone` and `prospect_public_id` are provided, `phone` takes precedence.
+- `prospect_public_id` lookup is scoped to the current hotel.
+- Invalid public IDs return `404`; missing identity returns `422`.
+- Booking-context lookup and booking URL generation use the resolved prospect phone, so public-ID continuation still has access to the original phone-backed booking context.
+
+## Conversation Lifecycle
+
+- `ProspectConversationState` is the durable state container for V3.
+- Anonymous/incognito state is not part of the runtime contract.
+- Lifecycle metadata is persisted under `slots_payload["conversation"]`.
+- Stop phrases such as `stop`, `bye`, and `thanks` end the current conversation only; they do not unsubscribe the guest.
+- A new valid inbound message after an ended conversation reactivates the same conversation state.
 
 ## Operator Examples
 
@@ -201,7 +208,6 @@ These names are registered in `app/services/ai_concierge_v3/tool_registry.rb`.
 
 - `tell me about the executive suite`
 - `what amenities does the executive suite have`
-- `what is the faq for ocean villa king`
 
 ### Contrast Examples
 
@@ -224,7 +230,7 @@ Examples:
 
 ## Room Matching
 
-Room information tools share `app/services/ai_concierge_v3/room_type_matcher.rb`.
+Room information tools share `app/services/ai_concierge_v3/matching/room_type_matcher.rb`.
 
 Matching behavior:
 
@@ -243,10 +249,10 @@ Examples:
 Reply types are rendered by domain builders.
 
 - `BookingActionsBuilder`
-  - booking prompts
-  - option rendering
-  - confirmation prompts
-  - booking-link replies
+  - booking prompts and specific timing clarification (`early/mid/late`)
+  - option rendering with bolded prices/room types and public hotel search link
+  - structured multiline confirmation prompts enriched with DB amenities
+  - booking-link replies with bolded total and expiry
 - `HotelInfoBuilder`
   - hotel policy
   - booking context
@@ -255,7 +261,6 @@ Reply types are rendered by domain builders.
   - nearby attractions
 - `RoomInfoBuilder`
   - room details
-  - room FAQ
   - ambiguous room match
   - room not found
 - `FallbackBuilder`
@@ -275,10 +280,10 @@ Tool specs:
 
 Shared utility coverage:
 
-- `spec/services/ai_concierge_v3/room_type_matcher_spec.rb`
+- `spec/services/ai_concierge_v3/matching/room_type_matcher_spec.rb`
 
 Reply-format coverage:
 
-- `spec/services/ai_concierge_v3/messenger_agent_spec.rb`
+- `spec/services/ai_concierge_v3/agents/messenger_agent_spec.rb`
 
-This test surface covers booking search, selection, confirmation, hotel information, room information, ambiguity handling, and interruption/resume behavior.
+This test surface covers booking search, selection, confirmation, hotel information, room information, ambiguity handling, public-ID continuation, lifecycle end/reactivation, and interruption/resume behavior.

@@ -206,6 +206,8 @@ Rails.application.routes.draw do
     end
 
     resource :profile, only: [ :edit, :update ]
+    resource :faq, only: [ :edit, :update ], controller: "hotel_faqs"
+    resource :policy, only: [ :edit, :update ], controller: "hotel_policies"
     delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
     delete "profile/photos", to: "profiles#destroy_photos", as: :profile_photos
     patch "profile/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature

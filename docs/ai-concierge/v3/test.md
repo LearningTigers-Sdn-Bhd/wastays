@@ -13,59 +13,74 @@ This document maps the current test surface for `AiConciergeV3`.
 1. Start with `spec/requests/api/v1/ai_concierge/inquiries_spec.rb` for end-to-end concierge behavior.
 2. Read `turn_orchestrator_spec.rb`, `transition_policy_spec.rb`, and `slot_merger_spec.rb` for core flow control.
 3. Read the tool specs under `spec/services/ai_concierge_v3/tools/` for isolated booking, hotel-information, and room-information logic.
-4. Read `room_type_matcher_spec.rb` for fuzzy room resolution behavior.
+4. Read `matching/room_type_matcher_spec.rb` for fuzzy room resolution behavior.
 5. Read `messenger_agent_spec.rb` for deterministic guest-facing reply formatting.
 
 ## Service Specs
 
-### `spec/services/ai_concierge_v3/inquiry_responder_spec.rb`
+### `spec/services/ai_concierge_v3/orchestration/inquiry_responder_spec.rb`
 
 - verifies disabled-concierge failure behavior
 - verifies successful delegation for hotels with concierge enabled
+- verifies missing identity is rejected with `422`
 
-### `spec/services/ai_concierge_v3/turn_orchestrator_spec.rb`
+### `spec/services/ai_concierge_v3/orchestration/turn_orchestrator_spec.rb`
 
-- verifies the top-level deterministic guard flow
+- verifies the top-level deterministic guard flow (stripping hallucinated `check_in` and `month_segment`)
 - covers duration-first handling for month-window requests
 - covers rejecting invented timing for vague booking messages
+- covers specific timing clarification flow (`early/mid/late`)
 - covers preserving `2 people` as unresolved until adult and child split is clarified
+- covers pure digit extraction for guest counts
+- covers prospect continuation by `prospect_public_id`
+- covers invalid public ID returning a not-found result
+- covers explicit end-conversation handling and reactivation of ended state
+- covers explicit abandonment precedence (fixing the selection loop bug)
+- covers booking URL generation ending the current conversation
 
-### `spec/services/ai_concierge_v3/slot_merger_spec.rb`
+### `spec/services/ai_concierge_v3/state/slot_merger.rb`
 
 - verifies follow-up resolution from `2 people` to `adults`
+- verifies smart party split suggestions and confirmation
 - verifies stale downstream state is cleared when timing changes
 - verifies derived `nights` and `check_out` from `days` and `check_in`
 
-### `spec/services/ai_concierge_v3/transition_policy_spec.rb`
+### `spec/services/ai_concierge_v3/orchestration/transition_policy_spec.rb`
 
 - verifies the legal next-action order for booking timing, duration, guest count, adult count, and party split
+- verifies end-conversation has highest precedence
 - verifies search becomes available only after timing, duration, and guest split are resolved
 - verifies paused booking flows resume before validating selection-like follow-ups
 - verifies deterministic action routing for hotel-policy, hotel-information, nearby-attractions, and room-information intents
 
-### `spec/services/ai_concierge_v3/branch_manager_spec.rb`
+### `spec/services/ai_concierge_v3/state/branch_manager_spec.rb`
 
 - verifies the active booking branch can be paused and resumed
 
-### `spec/services/ai_concierge_v3/state_patch_builder_spec.rb`
+### `spec/services/ai_concierge_v3/state/state_patch_builder_spec.rb`
 
 - verifies `paused_flows` and `completed_booking_branches` are normalized in persisted slots payload
+- verifies lifecycle metadata under `slots_payload["conversation"]`
+- verifies `last_user_message_at` updates each persisted turn
+- verifies end reasons are persisted
 
-### `spec/services/ai_concierge_v3/interpreter_agent_spec.rb`
+### `spec/services/ai_concierge_v3/agents/interpreter_agent_spec.rb`
 
 - verifies schema-shaped interpretation output for booking timing and total guest count extraction
 - covers the structured interpreter contract used by booking, hotel information, and room information flows
+- verifies the required `end_conversation` signal shape
 
-### `spec/services/ai_concierge_v3/messenger_agent_spec.rb`
+### `spec/services/ai_concierge_v3/agents/messenger_agent_spec.rb`
 
 - verifies deterministic greeting formatting
-- verifies grouped room-type option rendering with price formatting
+- verifies grouped room-type option rendering with bolded price formatting and public hotel search link
 - verifies narrowed room-type option prompts
-- verifies confirmation formatting with `*Yes*` and `*No*`
+- verifies multiline confirmation formatting with DB-sourced descriptions and amenities
 - verifies hotel policy block formatting
 - verifies structured booking-context rendering for present and empty states
+- verifies specific timing clarification prompt rendering
 
-### `spec/services/ai_concierge_v3/room_type_matcher_spec.rb`
+### `spec/services/ai_concierge_v3/matching/room_type_matcher_spec.rb`
 
 - verifies exact room-name matching
 - verifies fuzzy room-name matching
@@ -79,6 +94,7 @@ This document maps the current test surface for `AiConciergeV3`.
 #### `spec/services/ai_concierge_v3/tools/search_booking_options_tool_spec.rb`
 
 - verifies grouped booking options include room type identity, positions, and selection IDs
+- verifies the date alignment algorithm scoring and synchronization
 
 #### `spec/services/ai_concierge_v3/tools/select_booking_option_tool_spec.rb`
 
@@ -129,11 +145,6 @@ This document maps the current test surface for `AiConciergeV3`.
 - verifies room details and amenity-name rendering for fuzzy room matches
 - verifies ambiguous room-type results when multiple room types match
 
-#### `spec/services/ai_concierge_v3/tools/get_room_type_faq_tool_spec.rb`
-
-- verifies room FAQ text is returned for a matched room type
-- verifies room-not-found behavior when no room type matches
-
 ## Request Specs
 
 ### `spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
@@ -143,7 +154,6 @@ This document maps the current test surface for `AiConciergeV3`.
 - verifies hotel FAQ replies
 - verifies nearby-attractions replies with the full attraction list
 - verifies room-details replies through fuzzy room matching
-- verifies room FAQ replies
 - verifies ambiguous room-information follow-up prompts
 - verifies timing and duration follow-up flow
 - verifies unresolved `2 people` clarification flow
@@ -160,6 +170,13 @@ This document maps the current test surface for `AiConciergeV3`.
 - verifies `yes` returns a booking URL reply with total and expiry
 - verifies `another booking` starts a fresh booking branch and does not reuse the previous selected option
 - verifies disabled concierge returns `422`
+- verifies missing `phone` and missing `prospect_public_id` returns `422`
+- verifies successful responses include `prospect_public_id`
+- verifies valid `prospect_public_id` continues the existing prospect conversation
+- verifies invalid `prospect_public_id` returns `404`
+- verifies explicit end messages end the current conversation only
+- verifies a later valid inbound message reactivates ended state
+- verifies booking URL generation marks the conversation ended
 
 ## Coverage Themes
 
@@ -174,3 +191,6 @@ This document maps the current test surface for `AiConciergeV3`.
 - interruption and resume for paused booking flows
 - confirmation before booking-link generation
 - completed-branch lifecycle and fresh restart through `another booking`
+- phone-first prospect identity with public-ID continuation fallback
+- persisted `ProspectConversationState` lifecycle metadata
+- explicit current-conversation end handling and reactivation

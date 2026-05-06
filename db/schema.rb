@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_06_090001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -315,8 +315,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.jsonb "amenities", default: [], null: false
     t.string "slug", null: false
     t.string "ai_concierge_tone", default: "basic", null: false
-    t.text "faq"
-    t.text "policy"
+    t.jsonb "faq", default: [], null: false
+    t.jsonb "policy", default: [], null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
@@ -547,16 +547,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.index ["prospect_id"], name: "index_prospect_messages_on_prospect_id"
   end
 
-  create_table "prospect_profile_facts", force: :cascade do |t|
-    t.bigint "prospect_id", null: false
-    t.string "category", null: false
-    t.string "value", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["prospect_id", "category"], name: "index_prospect_profile_facts_on_prospect_id_and_category", unique: true
-    t.index ["prospect_id"], name: "index_prospect_profile_facts_on_prospect_id"
-  end
-
   create_table "prospects", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.bigint "guest_id"
@@ -566,10 +556,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.datetime "last_contact"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "public_id", null: false
     t.index ["guest_id"], name: "index_prospects_on_guest_id"
     t.index ["hotel_id", "phone_number"], name: "index_prospects_on_hotel_id_and_phone_number", unique: true
     t.index ["hotel_id"], name: "index_prospects_on_hotel_id"
     t.index ["last_contact"], name: "index_prospects_on_last_contact"
+    t.index ["public_id"], name: "index_prospects_on_public_id", unique: true
     t.index ["stage"], name: "index_prospects_on_stage"
   end
 
@@ -725,7 +717,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
     t.jsonb "room_numbers"
     t.string "room_number_mode"
     t.jsonb "amenities", default: [], null: false
-    t.text "faq"
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
   end
 
@@ -844,7 +835,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_000002) do
   add_foreign_key "property_policies", "hotels"
   add_foreign_key "prospect_conversation_states", "prospects"
   add_foreign_key "prospect_messages", "prospects"
-  add_foreign_key "prospect_profile_facts", "prospects"
   add_foreign_key "prospects", "guests"
   add_foreign_key "prospects", "hotels"
   add_foreign_key "rate_plans", "room_types"

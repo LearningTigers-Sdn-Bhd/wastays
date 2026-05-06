@@ -61,17 +61,53 @@ module AiConciergeV3
         def explicit_range_options_for(room_type)
           return [] unless room_type_available?(room_type, check_in: check_in, check_out: check_out)
 
-          [build_option(room_type, check_in: check_in, check_out: check_out)]
+          [ build_option(room_type, check_in: check_in, check_out: check_out) ]
         end
 
         def window_options_for(room_type)
-          candidate_check_in_days.each_with_object([]) do |candidate, options|
+          options = []
+
+          # 1. Try to fill with best_window_dates first to align options across room types
+          best_window_dates.each do |candidate|
             candidate_check_out = candidate + nights.days
-            next unless candidate_check_out.month == target_month || month_segment.blank?
             next unless room_type_available?(room_type, check_in: candidate, check_out: candidate_check_out)
 
             options << build_option(room_type, check_in: candidate, check_out: candidate_check_out)
-            break options if options.size >= MAX_OPTIONS_PER_ROOM_TYPE
+          end
+
+          # 2. Fill remaining slots with earliest available dates not already included
+          if options.size < MAX_OPTIONS_PER_ROOM_TYPE
+            used_dates = options.map { |o| Date.parse(o["check_in"]) }
+
+            candidate_check_in_days.each do |candidate|
+              break if options.size >= MAX_OPTIONS_PER_ROOM_TYPE
+              next if used_dates.include?(candidate)
+
+              candidate_check_out = candidate + nights.days
+              next unless candidate_check_out.month == target_month || month_segment.blank?
+              next unless room_type_available?(room_type, check_in: candidate, check_out: candidate_check_out)
+
+              options << build_option(room_type, check_in: candidate, check_out: candidate_check_out)
+            end
+          end
+
+          options.sort_by { |o| o["check_in"] }
+        end
+
+        def best_window_dates
+          @best_window_dates ||= begin
+            date_scores = candidate_check_in_days.filter_map do |candidate|
+              candidate_check_out = candidate + nights.days
+              next unless candidate_check_out.month == target_month || month_segment.blank?
+
+              count = hotel.room_types.count { |rt| room_type_available?(rt, check_in: candidate, check_out: candidate_check_out) }
+              next if count.zero?
+
+              [ candidate, count ]
+            end
+
+            sorted_dates = date_scores.sort_by { |candidate, score| [ -score, candidate ] }
+            sorted_dates.first(MAX_OPTIONS_PER_ROOM_TYPE).map(&:first).sort
           end
         end
 
@@ -82,12 +118,12 @@ module AiConciergeV3
 
         def date_range_bounds
           if month_segment == "late"
-            [21, Date.new(target_year, target_month, -1).day]
+            [ 21, Date.new(target_year, target_month, -1).day ]
           elsif WINDOW_DAYS.key?(month_segment)
             range = WINDOW_DAYS.fetch(month_segment)
-            [range.begin, range.end]
+            [ range.begin, range.end ]
           else
-            [1, Date.new(target_year, target_month, -1).day]
+            [ 1, Date.new(target_year, target_month, -1).day ]
           end
         end
 

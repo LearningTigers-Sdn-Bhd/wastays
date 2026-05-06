@@ -21,7 +21,7 @@ module AiConciergeV3
         def call
           option = selected_option
           return option if option.is_a?(Hash) && option["success"] == false
-          return({ "success" => false, "error" => "invalid_selection" }) unless option
+          return ({ "success" => false, "error" => "invalid_selection" }) unless option
 
           {
             "success" => true,

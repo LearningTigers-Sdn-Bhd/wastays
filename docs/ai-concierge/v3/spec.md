@@ -11,46 +11,60 @@ Implement `AiConciergeV3` as a stateful concierge workflow with:
 
 ## Public API Contract
 
-Keep the existing endpoint and response shape.
+V3 runs behind the existing endpoint and response shape.
 
 ### Request
 
 - `message`
 - optional `phone`
+- optional `prospect_public_id`
+
+Identity requirements:
+
+- requests must include either `phone` or `prospect_public_id`
+- when `phone` is present, the concierge resolves or creates the prospect from the hotel-scoped phone number
+- when `phone` is absent and `prospect_public_id` is present, the concierge resumes the hotel-scoped prospect by public ID
+- requests with neither identity return `422`
+- requests with an unknown `prospect_public_id` return `404`
 
 ### Response
 
 - `reply_message`
 - `needs_human_support`
 - `action_name`
+- `prospect_public_id`
 
 ## Module Layout
 
-Create under `app/services/ai_concierge_v3/`:
+Current implementation under `app/services/ai_concierge_v3/`:
 
-- `inquiry_responder.rb`
-- `turn_orchestrator.rb`
-- `interpreter_agent.rb`
-- `messenger_agent.rb`
-- `result.rb`
+- `orchestration/inquiry_responder.rb`
+- `orchestration/turn_orchestrator.rb`
+- `orchestration/result.rb`
+- `orchestration/response_payload_builder.rb`
+- `orchestration/transition_policy.rb`
+- `agents/interpreter_agent.rb`
+- `agents/messenger_agent.rb`
+- `state/branch_manager.rb`
+- `state/slot_merger.rb`
+- `state/state_patch_builder.rb`
 - `fallback_builder.rb`
-- `response_payload_builder.rb`
 - `conversation_summary_builder.rb`
-- `branch_manager.rb`
-- `slot_merger.rb`
-- `transition_policy.rb`
-- `state_patch_builder.rb`
-- `tool_registry.rb`
+- `tools/tool_registry.rb`
 
-Create under `app/services/ai_concierge_v3/tools/`:
+Current tool implementation under `app/services/ai_concierge_v3/tools/`:
 
-- `search_booking_options_tool.rb`
-- `select_booking_option_tool.rb`
-- `generate_booking_url_tool.rb`
-- `get_hotel_policy_tool.rb`
-- `get_booking_context_tool.rb`
+- `booking/search_booking_options_tool.rb`
+- `booking/select_booking_option_tool.rb`
+- `booking/generate_booking_url_tool.rb`
+- `hotel_information/get_hotel_policy_tool.rb`
+- `hotel_information/get_booking_context_tool.rb`
+- `hotel_information/get_general_hotel_info_tool.rb`
+- `hotel_information/get_hotel_faq_tool.rb`
+- `hotel_information/get_nearby_attractions_tool.rb`
+- `room_information/get_room_type_details_tool.rb`
 
-Create under `app/services/ai_concierge_v3/schemas/`:
+Current schema implementation under `app/services/ai_concierge_v3/schemas/`:
 
 - `interpretation_schema.rb`
 
@@ -59,8 +73,8 @@ Create under `app/services/ai_concierge_v3/schemas/`:
 ### `InquiryResponder`
 
 - validate hotel AI readiness
-- normalize incoming message and phone
-- determine identity mode
+- normalize incoming message, phone, and prospect public ID
+- reject requests without a usable prospect identity
 - call orchestrator
 - return fallback on unexpected exceptions
 
@@ -75,23 +89,27 @@ Create under `app/services/ai_concierge_v3/schemas/`:
 ### `TurnOrchestrator`
 
 - resolve or create prospect
-- load conversation state
+- load persisted conversation state
+- reactivate an ended conversation state when a new inbound turn arrives
 - record inbound message
 - call interpreter
-- apply deterministic timing, duration, and guest-count guards
-- merge incoming slots into active branch
+- apply deterministic timing, duration, and guest-count guards (stripping hallucinated `check_in` and `month_segment`)
+- merge incoming slots into active branch, supporting pure digit extraction for guest counts
 - decide next legal action
 - call deterministic tools
 - build state patch
 - call messenger
-- record outbound/system events
+- record inbound and outbound prospect messages
+- explicitly archive active branches on conversation end to prevent state leakage
 - return final payload
 
 ### `MessengerAgent`
 
 - accept structured reply context
 - produce deterministic user-facing `reply_message`
-- format grouped room options, confirmations, policy replies, and booking context
+- format grouped room options with bolded prices/room types and public hotel search links
+- enrichment from `RoomType` descriptions and `Hotel::ROOM_AMENITIES`
+- format structured multiline confirmation and quote replies
 - not allowed to set:
   - `action_name`
   - `needs_human_support`
@@ -101,17 +119,19 @@ Create under `app/services/ai_concierge_v3/schemas/`:
 
 - centralize conversation-state persistence metadata
 - persist active flow, pending question, and slots payload
+- update lifecycle metadata under `slots_payload["conversation"]`
 
 ### `TransitionPolicy`
 
 - enforce legal next actions from current state
 - current order:
-  1. missing timing -> ask booking timing
-  2. timing exists but duration missing -> ask duration
-  3. children-only guest input -> ask adult count
-  4. guest count missing -> ask guest count
-  5. `party_size_total` without adult/child split -> ask clarification
-  6. resolved booking inputs -> search or continue selection/confirmation flow
+  1. explicit end conversation -> end current conversation
+  2. missing timing -> ask booking timing
+  3. timing exists but duration missing -> ask duration
+  4. children-only guest input -> ask adult count
+  5. guest count missing -> ask guest count
+  6. `party_size_total` without adult/child split -> ask clarification
+  7. resolved booking inputs -> search or continue selection/confirmation flow
 
 ### `SlotMerger`
 
@@ -146,7 +166,8 @@ The interpreter must return a strict structure.
     "is_reset": false,
     "is_resume": false,
     "is_correction": false,
-    "starts_new_booking_branch": false
+    "starts_new_booking_branch": false,
+    "end_conversation": false
   }
 }
 ```
@@ -157,12 +178,14 @@ Required conversation signals:
 - `is_resume`
 - `is_correction`
 - `starts_new_booking_branch`
+- `end_conversation`
 
 Interpreter rules:
 
 - never invent timing from generic booking interest
 - never invent duration from month-only messages
 - `2 people` means `party_size_total=2`, not `adults=2`
+- classify user stop phrases such as `stop`, `bye`, and `thanks` as `end_conversation`
 
 ## Messenger Contract
 
@@ -224,7 +247,39 @@ Messenger output:
 
 ## Conversation State Contract
 
-Use the existing conversation-state model with the following `slots_payload` conventions.
+Use `ProspectConversationState` as the durable state container. Anonymous or incognito conversation state is not supported in V3.
+
+### Prospect Identity
+
+- `Prospect#public_id` is the public continuation token returned to API clients as `prospect_public_id`.
+- `phone` takes precedence over `prospect_public_id` when both are present.
+- `prospect_public_id` lookup is scoped to the current hotel.
+- Phone-less new prospect creation is not supported; a phone-less request can only continue an existing prospect by `prospect_public_id`.
+- `ProspectProfileFact` is not part of the current state model; profile and conversation memory live in `ProspectConversationState` for this V3 pass.
+
+### `slots_payload["conversation"]`
+
+```json
+{
+  "status": "active",
+  "started_at": "2026-05-06T09:00:00Z",
+  "last_user_message_at": "2026-05-06T09:02:00Z",
+  "ended_at": null,
+  "end_reason": null,
+  "turn_count": 2
+}
+```
+
+Lifecycle rules:
+
+- `started_at` is set when lifecycle metadata is first created.
+- `last_user_message_at` updates on every persisted inbound turn.
+- `turn_count` increments on every persisted state patch.
+- explicit user stop phrases end only the current conversation and set `end_reason` to `user_ended`.
+- successful booking URL generation ends the current conversation and sets `end_reason` to `booking_url_generated`.
+- a later valid inbound message reactivates the same `ProspectConversationState` rather than creating anonymous state.
+
+Use the following booking-state `slots_payload` conventions.
 
 ### `slots_payload["active"]`
 
@@ -421,18 +476,20 @@ Outputs:
 
 ## Transition Rules
 
-1. no date window or concrete dates -> ask for booking timing
-2. booking timing exists but duration missing -> ask duration
-3. children exist without adults -> ask adult count
-4. guest count missing -> ask guest count
-5. `party_size_total` exists but adult/children split missing -> ask clarification
-6. valid option selection -> set `confirmation_candidate` and ask for confirmation
-7. confirmation `yes` -> generate booking link
-8. confirmation `no` -> clear candidate and return to option selection
-9. hotel-policy question during booking -> pause booking branch and answer policy
-10. return with option selection -> resume paused branch if still valid
-11. `another booking` -> archive completed branch and start fresh branch
-12. change of month/window or party composition -> clear stale suggestions, pending selection, and confirmation state, then rerun search
+1. explicit stop/bye/thanks/nevermind message -> end the current conversation (highest precedence)
+2. no date window or concrete dates -> ask for booking timing
+3. vague month without specific date or segment -> ask for specific timing (early/mid/late)
+4. booking timing exists but duration missing -> ask duration
+5. children exist without adults -> ask adult count
+6. guest count missing -> ask guest count
+7. `party_size_total` exists but adult/children split missing -> ask clarification (smart split with remainder suggestion)
+8. valid option selection -> set `confirmation_candidate` and ask for confirmation
+9. confirmation `yes` -> generate booking link and end the current conversation
+10. confirmation `no` -> clear candidate and return to option selection
+11. hotel-policy question during booking -> pause booking branch and answer policy
+12. return with option selection -> resume paused branch if still valid
+13. `another booking` -> archive completed branch and start fresh branch
+14. change of month/window or party composition -> clear stale suggestions, pending selection, and confirmation state, then rerun search
 
 ## Required State Invalidation
 
@@ -463,7 +520,7 @@ Example structure:
 > Your booking link is ready for July 25 to July 27.  
 > Total: RM 520.00  
 > This link expires at 3:15 PM.  
-> Book here: `https://...`
+> Quotation link: `https://...`
 
 ## Test Coverage Requirements
 
@@ -499,3 +556,9 @@ Example structure:
 12. booking context returns a structured booking list
 13. `late july` -> `late may` correction invalidates old options
 14. completed booking -> `another booking`
+15. missing phone and missing `prospect_public_id` returns `422`
+16. valid `prospect_public_id` continues the existing prospect conversation
+17. invalid `prospect_public_id` returns `404`
+18. explicit end message ends the current conversation
+19. new inbound message reactivates an ended conversation state
+20. booking URL generation marks the current conversation ended

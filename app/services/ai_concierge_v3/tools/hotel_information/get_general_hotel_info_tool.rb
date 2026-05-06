@@ -23,10 +23,10 @@ module AiConciergeV3
         attr_reader :hotel
 
         def summary_text
-          parts = [hotel.name]
+          parts = [ hotel.name ]
           parts << "is a #{hotel.star_rating}-star hotel" if hotel.star_rating.present?
 
-          location = [hotel.address, hotel.city, hotel.country].compact_blank.join(", ")
+          location = [ hotel.address, hotel.city, hotel.country ].compact_blank.join(", ")
           parts << "located at #{location}" if location.present?
 
           parts.join(" ")

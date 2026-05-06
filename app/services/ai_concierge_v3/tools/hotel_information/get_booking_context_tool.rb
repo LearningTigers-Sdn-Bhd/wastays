@@ -31,7 +31,7 @@ module AiConciergeV3
         end
 
         def date_range(booking)
-          [booking.check_in, booking.check_out].map { |date| format_date(date) }.join(" - ")
+          [ booking.check_in, booking.check_out ].map { |date| format_date(date) }.join(" - ")
         end
 
         def room_type_name_for(booking)

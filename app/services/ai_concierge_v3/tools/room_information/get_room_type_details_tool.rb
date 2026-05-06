@@ -9,7 +9,7 @@ module AiConciergeV3
         end
 
         def call
-          match = RoomTypeMatcher.new(room_types: hotel.room_types, query: query, hinted_room_type_name: room_type_name).call
+          match = Matching::RoomTypeMatcher.new(room_types: hotel.room_types, query: query, hinted_room_type_name: room_type_name).call
           return match unless match["success"]
 
           room_type = match.fetch("room_type")

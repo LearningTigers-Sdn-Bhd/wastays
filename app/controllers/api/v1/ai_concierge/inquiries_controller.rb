@@ -8,11 +8,17 @@ class Api::V1::AiConcierge::InquiriesController < Api::V1::BaseController
       return
     end
 
+    if inquiry_params[:phone].blank? && inquiry_params[:prospect_public_id].blank?
+      render json: { error: "Phone or prospect_public_id is required for AI concierge conversations" }, status: :unprocessable_content
+      return
+    end
+
     hotel = hotel_scope.includes(:property_policy, room_types: :room_rates).find(params[:hotel_id])
-    result = AiConciergeV3::InquiryResponder.new(
+    result = AiConciergeV3::Orchestration::InquiryResponder.new(
       hotel: hotel,
       message: inquiry_params[:message],
-      phone: inquiry_params[:phone]
+      phone: inquiry_params[:phone],
+      prospect_public_id: inquiry_params[:prospect_public_id]
     ).call
 
     if result.success?
@@ -25,6 +31,6 @@ class Api::V1::AiConcierge::InquiriesController < Api::V1::BaseController
   private
 
   def inquiry_params
-    params.permit(:message, :phone)
+    params.permit(:message, :phone, :prospect_public_id)
   end
 end

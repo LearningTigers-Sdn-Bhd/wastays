@@ -127,20 +127,23 @@ Completed booking branches should remain only in short-lived conversation state.
 - `2 adults`
 - resolve to `2 adults, 0 children`
 - search options
+- **Smart Party Split**: If the total is known but split is missing, the concierge suggests the remainder (e.g., "are they children?") and asks for "Yes" confirmation.
+- **Pure Digit Extraction**: Pure digits (e.g., "4") are accepted as guest counts when specifically asking for it.
 
 ### Grouped option suggestions
 
 - reply groups options by room type name
-- each option row includes formatted price
+- each option row includes formatted price (bolded) and full dates
 - example:
-  - `1. RM 520.00 : Check-in *July 1* - Check-out *July 3*`
+  - `1. *RM 520.00* : Check-in *3 July 2026* - Check-out *7 July 2026*`
+- includes a public hotel search link prepopulated with search parameters.
 
 ### Option selection and confirmation
 
 - `option 2`
 - validate against current suggestion set
 - save `confirmation_candidate`
-- ask for confirmation
+- ask for confirmation with a professional multiline structure including room description and amenities.
 - `yes`
 - generate real booking link
 
@@ -151,6 +154,18 @@ Completed booking branches should remain only in short-lived conversation state.
 - user replies `ocean villa`
 - combine room type + pending date to resolve a unique option
 - ask for confirmation
+
+### Date Alignment Algorithm
+
+Suggestions are now aligned across all room types using a scoring-based algorithm in `SearchBookingOptionsTool`. This ensures that the suggested check-in/out windows are consistent for every room type shown in the list.
+
+### Abandonment Priority
+
+Explicit abandonment signals (e.g., "nevermind", "forget it", "stop") now have absolute precedence over slot extraction or option selection. This prevents "nevermind" from being misinterpreted as an option or room name.
+
+### Intent Priority
+
+Stronger intents (like `booking_search` or `option_selection`) always win over generic `greeting` intents to ensure the conversation moves forward even when a greeting is included.
 
 ### Partial room-type matching
 
@@ -242,17 +257,17 @@ Every suggested option should persist:
 
 Without `room_type_id`, booking-link generation would need to re-resolve the room later.
 
-## Search Window Support
+### Search Window Support
 
 The interpreter and booking search must understand:
 
 - `early <month>` -> days `1..10`
 - `mid <month>` -> days `11..20`
 - `late <month>` -> days `21..end_of_month`
-- plain month -> full month
+- plain month -> full month (triggers `ask_specific_timing` clarification)
 - `next month`
 
-This logic should stay deterministic in Ruby, not prompt-only.
+This logic stays deterministic in Ruby with hallucination guards that strip `check_in` and `month_segment` if the user's message is vague.
 
 ## Risk Summary
 

@@ -1,5 +1,5 @@
 class ProspectConversationState < ApplicationRecord
-  FLOW_STATUSES = %w[active paused completed abandoned].freeze
+  FLOW_STATUSES = %w[active paused completed abandoned ended].freeze
   PAUSED_FLOW_TTL = 1.hour
 
   belongs_to :prospect
