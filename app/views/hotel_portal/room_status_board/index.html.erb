@@ -1,0 +1,154 @@
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900">Room Status</span>
+  </div>
+<% end %>
+
+<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+  <div class="px-4 md:px-0 mt-5">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Room Status</h1>
+        <p class="mt-1 text-sm font-medium text-slate-600"><%= current_hotel.name %> · Live room status and occupancy timeline</p>
+      </div>
+
+      <div class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+        <%= link_to hotel_room_status_board_path(current_hotel, start_date: (@start_date - 14.days).to_s), class: "inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900" do %>
+          Previous
+        <% end %>
+
+        <%= link_to hotel_room_status_board_path(current_hotel), class: "inline-flex items-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" do %>
+          Today
+        <% end %>
+
+        <%= link_to hotel_room_status_board_path(current_hotel, start_date: (@start_date + 14.days).to_s), class: "inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900" do %>
+          Next
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <% if @room_status_board[:room_groups].blank? %>
+      <div class="px-8 py-20 text-center">
+        <p class="text-sm font-medium text-slate-500">No rooms found for this property.</p>
+      </div>
+    <% else %>
+      <div class="overflow-x-auto">
+        <div class="min-w-[1200px]">
+          <div class="grid border-b border-slate-200 bg-slate-50" style="grid-template-columns: 220px repeat(<%= @room_status_board[:dates].size %>, minmax(92px, 1fr));">
+            <div class="sticky left-0 z-20 border-r border-slate-200 bg-slate-50 px-6 py-4 text-left text-sm font-semibold uppercase tracking-[0.08em] text-slate-600">
+              Rooms
+            </div>
+
+            <% @room_status_board[:dates].each do |date| %>
+              <div class="border-l border-slate-200 px-2 py-3 text-center <%= 'bg-slate-100' if date == Date.current %>">
+                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500"><%= date.strftime('%a') %></p>
+                <p class="text-2xl font-black leading-none text-slate-900"><%= date.day %></p>
+              </div>
+            <% end %>
+          </div>
+
+          <% @room_status_board[:room_groups].each do |group| %>
+            <details open class="group border-b border-slate-200">
+              <summary class="list-none cursor-pointer bg-slate-100 px-6 py-2 [&::-webkit-details-marker]:hidden">
+                <div class="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-600">
+                  <span><%= group[:room_type].name %></span>
+                  <svg class="size-4 text-slate-500 transition-transform duration-150 group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m9 6 6 6-6 6"/>
+                  </svg>
+                </div>
+              </summary>
+
+              <% if group[:rooms].blank? %>
+                <div class="grid min-h-[72px] border-t border-slate-100" style="grid-template-columns: 220px repeat(<%= @room_status_board[:dates].size %>, minmax(92px, 1fr));">
+                  <div class="flex items-center justify-center gap-2 px-6 py-4 text-center" style="grid-column: 1 / -1;">
+                    <p class="text-sm font-semibold text-slate-500">No rooms configured.</p>
+                    <p class="text-sm font-medium text-slate-400">Add room numbers in Room Categories to start tracking readiness for this room type.</p>
+                  </div>
+                </div>
+              <% end %>
+
+              <% group[:rooms].each do |room| %>
+              <% status = room.dig(:status, :status).to_s %>
+              <% max_blocks_same_start = room[:blocks].group_by { |block| block[:check_in] }.values.map(&:size).max || 1 %>
+              <% row_min_height = [112, 24 + (max_blocks_same_start * 62)].max %>
+              <% status_badge_class = case status
+                 when 'ready' then 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                 when 'occupied' then 'border-sky-200 bg-sky-50 text-sky-700'
+                 when 'pending_cleaning' then 'border-orange-200 bg-orange-50 text-orange-700'
+                 when 'preparing' then 'border-blue-200 bg-blue-50 text-blue-700'
+                 when 'inspection_failed' then 'border-rose-200 bg-rose-50 text-rose-700'
+                 else 'border-slate-200 bg-slate-50 text-slate-700'
+                 end %>
+
+              <div class="grid border-b border-slate-100" style="grid-template-columns: 220px repeat(<%= @room_status_board[:dates].size %>, minmax(92px, 1fr)); min-height: <%= row_min_height %>px;">
+                <div class="sticky left-0 z-10 border-r border-slate-200 bg-white px-6 py-4">
+                  <p class="text-2xl font-black leading-none text-slate-950"><%= room[:room_number] %></p>
+                  <span class="mt-2 inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide <%= status_badge_class %>">
+                    <%= status.humanize.titleize %>
+                  </span>
+                  <% if current_user.has_permission?("manage_room_status", hotel: current_hotel) && room.dig(:status, :room_status_id).present? %>
+                    <div class="mt-3 flex flex-wrap gap-1.5">
+                      <% if status == "pending_cleaning" %>
+                        <%= form_with url: hotel_room_status_path(current_hotel, room.dig(:status, :room_status_id)), method: :patch, local: true do |f| %>
+                          <%= hidden_field_tag "room_status[status]", "preparing" %>
+                          <%= hidden_field_tag "start_date", @start_date.to_s %>
+                          <%= f.button class: "group inline-flex items-center gap-1 rounded-md bg-white border border-slate-300 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-700 shadow-sm hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer" do %>
+                            <svg class="h-3 w-3 text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Mark Preparing
+                          <% end %>
+                        <% end %>
+                      <% end %>
+                      <% if ["pending_cleaning", "preparing", "inspection_failed"].include?(status) %>
+                        <%= form_with url: hotel_room_status_path(current_hotel, room.dig(:status, :room_status_id)), method: :patch, local: true do |f| %>
+                          <%= hidden_field_tag "room_status[status]", "ready" %>
+                          <%= hidden_field_tag "start_date", @start_date.to_s %>
+                          <%= f.button class: "group inline-flex items-center gap-1 rounded-md bg-white border border-slate-300 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-700 shadow-sm hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 transition-colors cursor-pointer" do %>
+                            <svg class="h-3 w-3 text-slate-400 group-hover:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Mark Ready
+                          <% end %>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+
+                <% @room_status_board[:dates].each do |date| %>
+                  <div class="relative border-l border-slate-100 px-2 py-2 <%= 'bg-slate-50/50' if date == Date.current %>">
+                    <% room[:blocks].select { |block| block[:check_in] == date }.each_with_index do |block, block_index| %>
+                      <% block_class = case block[:status].to_s
+                         when 'confirmed' then 'border-blue-200 bg-blue-50 text-blue-700'
+                         when 'checked_in' then 'border-violet-200 bg-violet-50 text-violet-700'
+                         when 'completed' then 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                         when 'cancelled' then 'border-slate-300 bg-slate-100 text-slate-600'
+                         else 'border-sky-200 bg-sky-50 text-sky-700'
+                         end %>
+                      <% tooltip_text = "#{block[:guest_name]} (#{block[:status].to_s.humanize}) · #{block[:check_in]} to #{block[:check_out]}" %>
+                      <div
+                        class="absolute left-2 top-2 z-10 overflow-hidden rounded-xl border px-3 py-2 shadow-sm <%= block_class %>"
+                        style="top: <%= 8 + (block_index * 58) %>px; width: calc(<%= block[:span] %> * 100% - 1rem); min-width: 88px;"
+                        title="<%= tooltip_text %>"
+                      >
+                        <p class="truncate text-sm font-bold"><%= block[:guest_name] %></p>
+                        <p class="truncate text-xs font-semibold uppercase tracking-wide"><%= block[:status].to_s.humanize.titleize %></p>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+              <% end %>
+            </details>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

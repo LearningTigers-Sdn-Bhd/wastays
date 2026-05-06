@@ -59,7 +59,7 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
 
       within("#edit-stay-details-modal") do
         expect(page).to have_select("Room Number", disabled: false)
-        expect(page).not_to have_select("Room Number", with_options: [ "206" ])
+        expect(page).to have_select("Room Number", with_options: [ "206 (Locked by another staff)" ])
         expect(page).to have_select("Room Number", with_options: [ "207" ])
         click_button "Cancel"
         end
