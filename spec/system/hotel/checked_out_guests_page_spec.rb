@@ -7,7 +7,7 @@ RSpec.describe "Hotel today's check-outs page", type: :system do
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Deluxe Room") }
   let(:secondary_room_type) { create(:room_type, hotel: hotel, name: "Suite Room") }
-  let(:today) { Date.current }
+  let(:today) { Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current } }
 
   let!(:earlier_checkout_booking) do
     create(

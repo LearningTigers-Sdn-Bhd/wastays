@@ -45,7 +45,7 @@ RSpec.describe "Hotel room status sidebar", type: :system do
     expect(page).to have_no_link("Room Status", href: hotel_room_status_board_path(hotel))
   end
 
-  it "does not show the Room Status link for account-level permissions only" do
+  it "shows the Room Status link for account-level permissions only" do
     user = sign_in_with_permissions
     account_role = create(:role, account: account)
     grant_permission(account_role, "view_room_readiness")
@@ -53,6 +53,6 @@ RSpec.describe "Hotel room status sidebar", type: :system do
 
     visit hotel_dashboard_path(hotel)
 
-    expect(page).to have_no_link("Room Status", href: hotel_room_status_board_path(hotel))
+    expect(page).to have_link("Room Status", href: hotel_room_status_board_path(hotel))
   end
 end

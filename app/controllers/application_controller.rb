@@ -43,7 +43,9 @@ class ApplicationController < ActionController::Base
 
   def can_view_room_status_board?
     current_user&.has_permission?("view_room_readiness", hotel: current_hotel) ||
-      current_user&.has_permission?("manage_room_status", hotel: current_hotel)
+      current_user&.has_permission?("view_room_readiness") ||
+      current_user&.has_permission?("manage_room_status", hotel: current_hotel) ||
+      current_user&.has_permission?("manage_room_status")
   end
 
   def authenticate_user!

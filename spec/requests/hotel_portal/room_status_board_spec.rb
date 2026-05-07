@@ -39,6 +39,14 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
       expect(response).to have_http_status(:success)
     end
 
+    it "allows account-level view_room_readiness permission alone" do
+      sign_in_with_account_permission("view_room_readiness")
+
+      get hotel_room_status_board_path(hotel)
+
+      expect(response).to have_http_status(:success)
+    end
+
     it "responds successfully for users with manage_room_status permission" do
       sign_in_with_permissions("manage_room_status")
 
@@ -58,13 +66,12 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
       expect(flash[:alert]).to include("not authorized")
     end
 
-    it "does not allow account-level room status permissions alone" do
+    it "allows account-level room status permissions alone" do
       sign_in_with_account_permission("manage_room_status")
 
       get hotel_room_status_board_path(hotel)
 
-      expect(response).to redirect_to(root_path)
-      expect(flash[:alert]).to include("not authorized")
+      expect(response).to have_http_status(:success)
     end
 
     it "renders occupancy block for bookings that start before the selected board window" do

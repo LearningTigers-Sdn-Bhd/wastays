@@ -5,7 +5,7 @@ RSpec.describe "HotelPortal::CheckedOutGuests", type: :request do
   let(:other_hotel) { create(:hotel, status: "approved") }
   let(:user) { create(:user) }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Deluxe Room") }
-  let(:today) { Date.current }
+  let(:today) { Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current } }
 
   let(:early_checkout_booking) do
     create(
