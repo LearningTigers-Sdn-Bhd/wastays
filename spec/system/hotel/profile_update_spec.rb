@@ -40,7 +40,7 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
   it 'allows the user to save the hotel faq independently' do
     visit edit_hotel_faq_path(hotel)
 
-    within('form') do
+    within('#hotel-faq-form') do
       click_button 'Add Section'
 
       # Fill section name
@@ -64,7 +64,7 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
   it 'allows the user to save the hotel policy independently' do
     visit edit_hotel_policy_path(hotel)
 
-    within('form') do
+    within('#hotel-policy-form') do
       click_button 'Add Policy'
       find('input[placeholder="e.g., Quiet Hours"]', wait: 5).set('Quiet Hours')
       find('textarea[placeholder="Write the policy details..."]', wait: 5).set('Quiet hours start at 10 PM.')
