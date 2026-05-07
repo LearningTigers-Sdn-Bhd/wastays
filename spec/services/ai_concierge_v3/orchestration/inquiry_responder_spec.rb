@@ -45,4 +45,14 @@ RSpec.describe AiConciergeV3::Orchestration::InquiryResponder do
     expect(result).not_to be_success
     expect(result.error).to eq("Phone or prospect_public_id is required for AI concierge conversations")
   end
+
+  it "returns an internal server error when the turn orchestrator fails unexpectedly" do
+    allow(AiConciergeV3::Orchestration::TurnOrchestrator).to receive(:new).and_raise(StandardError, "boom")
+
+    result = described_class.new(hotel: hotel, message: "hello", phone: "+60123456789").call
+
+    expect(result).not_to be_success
+    expect(result.status).to eq(:internal_server_error)
+    expect(result.error).to eq("AI Concierge is temporarily unavailable.")
+  end
 end

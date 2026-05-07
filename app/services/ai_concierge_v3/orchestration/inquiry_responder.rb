@@ -23,7 +23,7 @@ module AiConciergeV3
       Result.failure(error: e.message, status: :not_found)
     rescue StandardError => e
       Rails.logger.error("AiConciergeV3::InquiryResponder error: #{e.class}: #{e.message}")
-      Result.success(payload: MessageBuilders::FallbackBuilder.new.call)
+      Result.failure(error: "AI Concierge is temporarily unavailable.", status: :internal_server_error)
     end
 
     private

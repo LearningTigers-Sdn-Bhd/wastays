@@ -80,7 +80,8 @@ module AiConciergeV3
         DIRECTIONS:
         - Intent must be one of the enum values.
         - Extract dates, party size, option numbers, and room type names when the user asks about a room.
-        - Map affirmative responses ("ok", "sure", "yes", "go ahead") to confirmation="yes".
+        - Map affirmative responses ("ok", "sure", "yes", "go ahead") to confirmation="yes" only when the user is approving a shown booking option or answering a yes/no clarification.
+        - If an affirmative word appears with a date answer, such as "23 june ok?", extract the date and keep intent=booking_search; do not treat it as confirmation.
         - Set conversation signals (is_reset, is_correction, end_conversation, etc.).
         - Set end_conversation=true for messages that close or abandon the current conversation, such as "stop", "bye", "thanks", "that's all", "end chat", "nevermind", or "forget it". DO NOT set it for a simple "no" or "no thanks" when rejecting a confirmation or option.
         - Choose the most specific intent that matches the user's request. For pure abandonment messages like "nevermind" or "forget it", use intent="greeting" or similar generic intent if no other fits, but prioritize setting end_conversation=true. Do NOT extract option_number or other slots for abandonment messages.
@@ -90,8 +91,8 @@ module AiConciergeV3
         - Use option_selection when the user is choosing from shown booking options by room type, option number, or shown date.
         - Use hotel_policy for operational policy questions such as check-in time, check-out time, cancellation, or hotel rules.
         - Use nearby_attractions for questions about places to visit, nearby spots, attractions, or what is around the hotel.
-        - Use room_information for questions asking about a room type itself, such as details, amenities, or occupancy.
-        - Use hotel_information for general hotel facts or hotel FAQ that are not specifically operational policy.
+        - Use room_information for questions asking about a room type itself, such as details, room amenities, or occupancy.
+        - Use hotel_information for general hotel facts, hotel amenities/facilities, or hotel FAQ that are not specifically operational policy.
         - Use booking_context only when the user is asking about an existing active booking.
         - Use booking_search when the user is asking to find, start, continue, or modify a booking search.
         - Use greeting ONLY for pure greetings or generic opening messages with no other intent. If the message includes a greeting AND a request like "can I book", use the stronger intent (e.g. booking_search).
@@ -110,7 +111,8 @@ module AiConciergeV3
         - Never invent or normalize a room type name that was not clearly implied by the message.
 
         BOOKING VS INFORMATION CONTRAST RULES:
-        - If the user asks about room facts, amenities, or description, prefer room_information.
+        - If the user asks about hotel amenities/facilities, prefer hotel_information.
+        - If the user asks about room facts, named room amenities, or room description, prefer room_information.
         - If the user asks to book, select, reserve, confirm, or check availability for a room, prefer booking_search or option_selection.
         - "tell me about executive suite" -> room_information.
         - "i want executive suite on may 22" -> booking_search or option_selection depending on context, not room_information.
@@ -118,11 +120,16 @@ module AiConciergeV3
         - "what attractions are nearby" -> nearby_attractions, not hotel_information.
         - "what time is check in" -> hotel_policy, not hotel_information.
         - "tell me about the hotel" -> hotel_information with general_hotel_info.
+        - "can i see hotel amenities" -> hotel_information with general_hotel_info.
+        - "what amenities do you have" -> hotel_information with general_hotel_info unless a room type is named.
         - "do you have an faq" -> hotel_information with hotel_faq.
 
         INTERRUPTION RULES:
         - If the conversation summary shows an active booking flow but the current message asks a hotel, room, or attraction question, classify the current message by its actual information intent instead of forcing booking_search.
         - If the message returns to choosing options, dates, or confirming a booking after an interruption, classify it back into booking_search, option_selection, or confirmation as appropriate.
+        - If SUMMARY.booking_task.status="suspended" and SUMMARY.booking_task.pending_question="confirm_selection", classify clear yes/no replies as confirmation unless the message clearly asks a new information question.
+        - If SUMMARY.booking_task.status="suspended" and SUMMARY.booking_task.pending_question="select_option", classify option numbers, room names, shown dates, or references like "that one" as option_selection unless the message clearly asks a new information question.
+        - If SUMMARY.booking_task.status="suspended" and the user says something like "ok, I want to book on 23 june", classify it as booking_search and extract the date slots. Do not treat it as option_selection unless they choose from shown options.
 
         - Use hotel_policy for operational policy questions like check-in, check-out, and cancellation.
         - Use hotel_information with topic general_hotel_info for general hotel details.
@@ -151,6 +158,7 @@ module AiConciergeV3
         - EXAMPLE: "august 3rd for 2 adults" -> explicit check_in set.
         - EXAMPLE: "what time is check in" -> intent=hotel_policy, topic=hotel_policy.
         - EXAMPLE: "tell me about the hotel" -> intent=hotel_information, topic=general_hotel_info.
+        - EXAMPLE: "may i know hotel amenities" -> intent=hotel_information, topic=general_hotel_info.
         - EXAMPLE: "do you have faq" -> intent=hotel_information, topic=hotel_faq.
         - EXAMPLE: "what attractions are nearby" -> intent=nearby_attractions, topic=nearby_attractions.
         - EXAMPLE: "tell me about the executive suite" -> intent=room_information, topic=room_information, room_type_name="Executive Suite" if explicit.
@@ -160,6 +168,8 @@ module AiConciergeV3
         - EXAMPLE: "what amenities does the executive suite have" -> intent=room_information, topic=room_information.
         - EXAMPLE: "during a booking flow, tell me about executive suite" -> intent=room_information, topic=room_information.
         - EXAMPLE: "after a room info answer, option 2 please" -> intent=option_selection, topic=booking_search.
+        - EXAMPLE: "after a hotel info answer, ok i want to book on 23 june" -> intent=booking_search, topic=booking_search, check_in set.
+        - EXAMPLE: "after a hotel info answer, yes" with suspended confirm_selection -> intent=confirmation, topic=booking_search, confirmation=yes.
         - Return strictly JSON.
       PROMPT
     end

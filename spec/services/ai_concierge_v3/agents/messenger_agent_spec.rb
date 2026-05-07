@@ -104,6 +104,24 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
     expect(result["reply_message"]).to include("- *May 21 - May 23*: Executive Penthouse")
   end
 
+  it "renders the end confirmation prompt for a booking flow" do
+    result = described_class.new(hotel: hotel, context: {
+      reply_type: :confirm_to_end_conversation,
+      end_confirmation_mode: :cancel_booking_attempt
+    }).call
+
+    expect(result["reply_message"]).to eq("Dear guest, do you want to cancel your booking quotation attempt?")
+  end
+
+  it "renders the generic end confirmation prompt" do
+    result = described_class.new(hotel: hotel, context: {
+      reply_type: :confirm_to_end_conversation,
+      end_confirmation_mode: :generic
+    }).call
+
+    expect(result["reply_message"]).to eq("Dear guest, do you have anything else to ask?")
+  end
+
   it "renders the smart party split message when adults are partially known" do
     result = described_class.new(hotel: hotel, context: {
       reply_type: :ask_party_split,
@@ -173,7 +191,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
     expect(result["reply_message"]).to eq("According to our system, we could not find an active booking at the moment.")
   end
 
-  it "ends the conversation when the user says nevermind even if options were shown" do
+  it "prompts before ending the conversation when options were shown" do
     prospect = create(:prospect, hotel: hotel)
     conversation_state = create(:prospect_conversation_state, prospect: prospect, pending_question: "select_option")
     conversation_state.update!(slots_payload: {
@@ -201,8 +219,10 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
 
     result = AiConciergeV3::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "nevermind", prospect_public_id: prospect.public_id).call
 
-    expect(result.payload[:reply_message]).to eq("No problem, please let me know if you need anything.")
-    expect(prospect.prospect_conversation_state.reload.flow_status).to eq("ended")
+    expect(result.payload[:reply_message]).to eq("Dear guest, do you have anything else to ask?")
+    state = prospect.prospect_conversation_state.reload
+    expect(state.pending_question).to eq("confirm_to_end_conversation")
+    expect(state.flow_status).to eq("active")
   end
 
   it "extracts pure digit as party_size_total when pending_question is guest_count" do
@@ -228,7 +248,9 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
 
     AiConciergeV3::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "4", prospect_public_id: prospect.public_id).call
 
-    expect(prospect.prospect_conversation_state.reload.slots_payload["active"]["party_size_total"]).to eq(4)
+    payload = prospect.prospect_conversation_state.reload.slots_payload
+    expect(payload.dig("booking_task", "branch", "party_size_total")).to eq(4)
+    expect(payload).not_to have_key("active")
   end
 
   it "strips hallucinated month_segment for vague month requests" do
@@ -249,7 +271,9 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
 
     # Should trigger ask_specific_timing because month_segment was stripped
     expect(result.payload[:reply_message]).to include("May I know the exact check-in date or assumption range")
-    expect(prospect.prospect_conversation_state.reload.slots_payload["active"]["month_segment"]).to be_nil
+    payload = prospect.prospect_conversation_state.reload.slots_payload
+    expect(payload.dig("booking_task", "branch", "month_segment")).to be_nil
+    expect(payload).not_to have_key("active")
   end
 
   it "extracts pure month segment when pending_question is specific_timing" do
@@ -273,6 +297,58 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
 
     # Should now ask for duration because month_segment is extracted
     expect(result.payload[:reply_message]).to include("How many days and nights will you be staying?")
-    expect(prospect.prospect_conversation_state.reload.slots_payload["active"]["month_segment"]).to eq("mid")
+    payload = prospect.prospect_conversation_state.reload.slots_payload
+    expect(payload.dig("booking_task", "branch", "month_segment")).to eq("mid")
+    expect(payload).not_to have_key("active")
+  end
+
+  it "treats a date with ok as a specific timing answer, not confirmation" do
+    prospect = create(:prospect, hotel: hotel)
+    conversation_state = create(:prospect_conversation_state, prospect: prospect, pending_question: "specific_timing")
+    conversation_state.update!(slots_payload: {
+      "active" => { "target_month" => 6, "target_year" => 2026 }
+    })
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return({
+      "intent" => "confirmation",
+      "topic" => "booking_search",
+      "slots" => { "confirmation" => "yes" },
+      "conversation_signals" => {
+        "is_reset" => false,
+        "is_resume" => false,
+        "is_correction" => false,
+        "starts_new_booking_branch" => false,
+        "end_conversation" => false
+      }
+    })
+
+    result = AiConciergeV3::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "23 june ok?", prospect_public_id: prospect.public_id).call
+
+    expect(result.payload[:reply_message]).to eq("How many days and nights will you be staying?")
+    expect(result.payload[:action_name]).to be_nil
+    payload = prospect.prospect_conversation_state.reload.slots_payload
+    expect(payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-23")
+  end
+
+  it "does not attach request quote action to clarification replies" do
+    prospect = create(:prospect, hotel: hotel)
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return({
+      "intent" => "booking_search",
+      "topic" => "booking_search",
+      "slots" => {},
+      "conversation_signals" => {
+        "is_reset" => false,
+        "is_resume" => false,
+        "is_correction" => false,
+        "starts_new_booking_branch" => false,
+        "end_conversation" => false
+      }
+    })
+
+    result = AiConciergeV3::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "can i make booking?", prospect_public_id: prospect.public_id).call
+
+    expect(result.payload[:reply_message]).to eq("Sure, what dates or month would you like to check in?")
+    expect(result.payload[:action_name]).to be_nil
   end
 end

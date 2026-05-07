@@ -40,16 +40,26 @@ Current implementation under `app/services/ai_concierge_v3/`:
 
 - `orchestration/inquiry_responder.rb`
 - `orchestration/turn_orchestrator.rb`
+- `orchestration/booking_orchestrator.rb`
+- `orchestration/librarian_orchestrator.rb`
 - `orchestration/result.rb`
 - `orchestration/response_payload_builder.rb`
 - `orchestration/transition_policy.rb`
+- `orchestration/booking_input_normalizer.rb`
+- `orchestration/information_intent_guard.rb`
 - `agents/interpreter_agent.rb`
 - `agents/messenger_agent.rb`
+- `matching/room_type_matcher.rb`
+- `message_builders/base_builder.rb`
+- `message_builders/booking_actions_builder.rb`
+- `message_builders/fallback_builder.rb`
+- `message_builders/hotel_info_builder.rb`
+- `message_builders/room_info_builder.rb`
 - `state/branch_manager.rb`
 - `state/slot_merger.rb`
+- `state/conversation_task_manager.rb`
 - `state/state_patch_builder.rb`
-- `fallback_builder.rb`
-- `conversation_summary_builder.rb`
+- `state/conversation_summary_builder.rb`
 - `tools/tool_registry.rb`
 
 Current tool implementation under `app/services/ai_concierge_v3/tools/`:
@@ -93,15 +103,37 @@ Current schema implementation under `app/services/ai_concierge_v3/schemas/`:
 - reactivate an ended conversation state when a new inbound turn arrives
 - record inbound message
 - call interpreter
-- apply deterministic timing, duration, and guest-count guards (stripping hallucinated `check_in` and `month_segment`)
+- apply `InformationIntentGuard` and `BookingInputNormalizer`
 - merge incoming slots into active branch, supporting pure digit extraction for guest counts
 - decide next legal action
-- call deterministic tools
+- delegate booking actions to `BookingOrchestrator`
+- delegate information actions to `LibrarianOrchestrator`
 - build state patch
 - call messenger
 - record inbound and outbound prospect messages
 - explicitly archive active branches on conversation end to prevent state leakage
 - return final payload
+
+`TurnOrchestrator` is a coordinator. It should not own booking sub-step branching, selection matching, information tool routing, or task-state mutation rules beyond preparing context and persisting the returned domain result.
+
+### `BookingOrchestrator`
+
+- own booking sub-step decisions after the high-level transition is `:booking` or `:resume`
+- ask timing, specific timing, duration, guest count, adult count, and party split follow-ups
+- search booking options through `search_booking_options`
+- resolve option selections through `select_booking_option`
+- preserve and use `pending_selection` for ambiguous date or room-type follow-ups
+- generate booking URLs through `generate_booking_url`
+- archive completed booking tasks only after successful booking URL generation
+- return safe fallback payloads without completing the booking when booking URL generation fails
+
+### `LibrarianOrchestrator`
+
+- own information tool routing for hotel policy, general hotel information, FAQ, nearby attractions, and room information
+- update `information_task` for each answered knowledge turn
+- suspend active booking tasks only when the transition says the information turn interrupts booking
+- leave active booking tasks unsuspended when `pause: false`
+- return the shared domain result contract consumed by `TurnOrchestrator`
 
 ### `MessengerAgent`
 
@@ -118,20 +150,17 @@ Current schema implementation under `app/services/ai_concierge_v3/schemas/`:
 ### `StatePatchBuilder`
 
 - centralize conversation-state persistence metadata
-- persist active flow, pending question, and slots payload
+- persist active flow, pending question, and V2 task-state slots payload
 - update lifecycle metadata under `slots_payload["conversation"]`
 
 ### `TransitionPolicy`
 
-- enforce legal next actions from current state
-- current order:
-  1. explicit end conversation -> end current conversation
-  2. missing timing -> ask booking timing
-  3. timing exists but duration missing -> ask duration
-  4. children-only guest input -> ask adult count
-  5. guest count missing -> ask guest count
-  6. `party_size_total` without adult/child split -> ask clarification
-  7. resolved booking inputs -> search or continue selection/confirmation flow
+- enforce high-level legal routing only
+- route to `:end_conversation`, `:reset`, `:resume`, `:librarian`, `:booking_context`, `:booking`, `:greeting`, or `:fallback`
+- resume non-expired suspended bookings before general librarian or booking routing when the inbound message is a selection/confirmation follow-up
+- route information intents during active booking to librarian with `pause: true`
+- route information intents outside active booking to librarian with `pause: false`
+- keep booking sub-step branching inside `BookingOrchestrator`
 
 ### `SlotMerger`
 
@@ -140,11 +169,26 @@ Current schema implementation under `app/services/ai_concierge_v3/schemas/`:
 - normalize `days`, `nights`, and derived `check_out`
 - clear stale downstream state when timing or party composition changes
 
-### `BranchManager`
+### `ConversationTaskManager`
 
-- start fresh booking branches
-- store short-lived completed branches
-- pause and resume active booking branches
+- normalize legacy `active` and `paused_flows` state into V2 task state on read
+- write new state using `state_version: 2`
+- activate, suspend, resume, expire, and archive booking tasks
+- update `information_task`
+- avoid writing legacy `active` and `paused_flows` keys
+
+### `BookingInputNormalizer`
+
+- strip hallucinated timing, duration, checkout, and month segment slots unless explicit in the message
+- preserve correction turns
+- extract pure numeric guest-count answers when the pending question is guest count
+- guard `party_size_total`, `adults`, and `children` against LLM over-inference
+
+### `InformationIntentGuard`
+
+- force unscoped hotel/property amenities or facilities questions to `hotel_information` / `general_hotel_info`
+- preserve named room amenities questions as `room_information`
+- prevent `hotel amenities` from being handled as an unknown room type after a booking flow
 
 ## Interpreter Contract
 
@@ -279,32 +323,52 @@ Lifecycle rules:
 - successful booking URL generation ends the current conversation and sets `end_reason` to `booking_url_generated`.
 - a later valid inbound message reactivates the same `ProspectConversationState` rather than creating anonymous state.
 
-Use the following booking-state `slots_payload` conventions.
+Use the following task-state `slots_payload` conventions. New writes use `state_version: 2`; legacy `active` and `paused_flows` payloads are read once and converted, but are not written back.
 
-### `slots_payload["active"]`
+### `slots_payload["booking_task"]`
 
 ```json
 {
-  "branch_id": "uuid",
-  "target_month": 8,
-  "target_year": 2026,
-  "month_segment": "late",
-  "check_in": null,
-  "check_out": null,
-  "nights": null,
-  "days": null,
-  "room_count": 1,
-  "party_size_total": 2,
-  "adults": null,
-  "children": null,
-  "clarification_needed": null,
-  "suggested_options": [],
-  "suggestion_set_version": 1,
-  "pending_selection": null,
-  "confirmation_candidate": null,
-  "selected_option": null
+  "status": "waiting_for_option_selection",
+  "pending_question": "select_option",
+  "branch": {
+    "branch_id": "uuid",
+    "target_month": 8,
+    "target_year": 2026,
+    "month_segment": "late",
+    "check_in": null,
+    "check_out": null,
+    "nights": null,
+    "days": null,
+    "room_count": 1,
+    "party_size_total": 2,
+    "adults": null,
+    "children": null,
+    "clarification_needed": null,
+    "suggested_options": [],
+    "suggestion_set_version": 1,
+    "pending_selection": null,
+    "confirmation_candidate": null,
+    "selected_option": null
+  },
+  "suspended": false,
+  "suspended_at": null,
+  "expires_at": null,
+  "interruption_count": 0,
+  "last_interruption_intent": null,
+  "last_interruption_topic": null
 }
 ```
+
+Booking task statuses:
+
+- `idle`: no active booking task.
+- `collecting_slots`: booking exists and is asking for timing, duration, guest count, or split details.
+- `waiting_for_option_selection`: options were shown and the guest must choose.
+- `waiting_for_confirmation`: a selected option is waiting for yes/no confirmation.
+- `suspended`: booking is preserved while an information/librarian turn is answered.
+- `completed`: booking branch was completed and archived.
+- `expired`: suspended booking is no longer resumable.
 
 ### `pending_selection`
 
@@ -316,20 +380,19 @@ Use the following booking-state `slots_payload` conventions.
 }
 ```
 
-### `slots_payload["paused_flows"]`
+### `slots_payload["information_task"]`
 
 ```json
-[
-  {
-    "topic": "booking_search",
-    "flow": "booking_search",
-    "pending_question": "select_option",
-    "slots": {},
-    "updated_at": "...",
-    "expires_at": "..."
-  }
-]
+{
+  "status": "completed",
+  "intent": "hotel_policy",
+  "topic": "hotel_policy",
+  "last_question": "what time is check in?",
+  "answered_at": "..."
+}
 ```
+
+Information turns are treated as interruptions. They update `information_task` and may suspend `booking_task`, but they do not erase booking options or confirmation candidates.
 
 ### `slots_payload["completed_booking_branches"]`
 
@@ -426,14 +489,9 @@ Supported selection styles:
 
 Inputs:
 
-- `hotel_id`
-- `room_type_id`
-- `check_in`
-- `check_out`
-- `adults`
-- `children`
-- `room_count`
-- optional guest details
+- `hotel`
+- `selected_option`
+- `guest_phone`
 
 Outputs:
 
@@ -474,20 +532,78 @@ Outputs:
 }
 ```
 
+### `GetGeneralHotelInfoTool`
+
+Inputs:
+
+- `hotel`
+
+Outputs:
+
+- hotel name, address, city, country, star rating, mapped hotel amenities, and summary text
+
+### `GetHotelFaqTool`
+
+Inputs:
+
+- `hotel`
+
+Outputs:
+
+- formatted FAQ text and source metadata
+
+### `GetNearbyAttractionsTool`
+
+Inputs:
+
+- `hotel`
+
+Outputs:
+
+- ordered nearby attractions with name, description, address, city, and country
+
+### `GetRoomTypeDetailsTool`
+
+Inputs:
+
+- `hotel`
+- raw guest `query`
+- optional interpreted `room_type_name`
+
+Outputs:
+
+- matched room type details with description, occupancy, and mapped room amenities on success
+- `ambiguous_room_type` when multiple room types match
+- `room_type_not_found` when no room type matches
+
 ## Transition Rules
 
+High-level transition order:
+
 1. explicit stop/bye/thanks/nevermind message -> end the current conversation (highest precedence)
-2. no date window or concrete dates -> ask for booking timing
-3. vague month without specific date or segment -> ask for specific timing (early/mid/late)
-4. booking timing exists but duration missing -> ask duration
-5. children exist without adults -> ask adult count
-6. guest count missing -> ask guest count
-7. `party_size_total` exists but adult/children split missing -> ask clarification (smart split with remainder suggestion)
-8. valid option selection -> set `confirmation_candidate` and ask for confirmation
-9. confirmation `yes` -> generate booking link and end the current conversation
-10. confirmation `no` -> clear candidate and return to option selection
-11. hotel-policy question during booking -> pause booking branch and answer policy
-12. return with option selection -> resume paused branch if still valid
+2. explicit reset -> reset current flow
+3. non-expired suspended booking selection or confirmation follow-up -> resume booking
+4. hotel-policy, hotel-information, nearby-attractions, or room-information intent -> librarian
+5. booking context intent -> booking context
+6. pending booking question -> booking
+7. greeting intent -> greeting
+8. booking, option-selection, or confirmation intent -> booking
+9. unknown intent without state -> fallback
+
+Booking sub-step rules inside `BookingOrchestrator`:
+
+1. no date window or concrete dates -> ask for booking timing
+2. vague month without specific date or segment -> ask for specific timing (early/mid/late)
+3. booking timing exists but duration missing -> ask duration
+4. children exist without adults -> ask adult count
+5. guest count missing -> ask guest count
+6. `party_size_total` exists but adult/children split missing -> ask clarification (smart split with remainder suggestion)
+7. valid option selection -> set `confirmation_candidate` and ask for confirmation
+8. confirmation `yes` -> generate booking link and end the current conversation when URL generation succeeds
+9. confirmation `no` -> clear candidate and return to option selection
+10. failed booking URL generation -> return safe fallback and leave booking uncompleted
+11. hotel-policy or information question during booking -> librarian answer with booking task suspended
+12. return with option selection -> resume suspended branch if still valid
 13. `another booking` -> archive completed branch and start fresh branch
 14. change of month/window or party composition -> clear stale suggestions, pending selection, and confirmation state, then rerun search
 
@@ -530,8 +646,15 @@ Example structure:
 - `turn_orchestrator_spec.rb`
 - `slot_merger_spec.rb`
 - `transition_policy_spec.rb`
+- `booking_orchestrator_spec.rb`
+- `librarian_orchestrator_spec.rb`
+- `conversation_task_manager_spec.rb`
+- `conversation_summary_builder_spec.rb`
 - `branch_manager_spec.rb`
+- `booking_input_normalizer_spec.rb`
+- `information_intent_guard_spec.rb`
 - `state_patch_builder_spec.rb`
+- `room_type_matcher_spec.rb`
 - `interpreter_agent_spec.rb`
 - `messenger_agent_spec.rb`
 - `tools/search_booking_options_tool_spec.rb`
@@ -539,6 +662,10 @@ Example structure:
 - `tools/generate_booking_url_tool_spec.rb`
 - `tools/get_hotel_policy_tool_spec.rb`
 - `tools/get_booking_context_tool_spec.rb`
+- `tools/get_general_hotel_info_tool_spec.rb`
+- `tools/get_hotel_faq_tool_spec.rb`
+- `tools/get_nearby_attractions_tool_spec.rb`
+- `tools/get_room_type_details_tool_spec.rb`
 
 ### Request scenarios
 
@@ -562,3 +689,5 @@ Example structure:
 18. explicit end message ends the current conversation
 19. new inbound message reactivates an ended conversation state
 20. booking URL generation marks the current conversation ended
+21. hotel amenities after completed booking returns hotel amenities, not room-type fallback
+22. booking URL generation failure does not archive booking as completed

@@ -5,6 +5,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
   let(:api_key) { create(:api_key, bearer: hotel) }
   let(:headers) { { "Authorization" => "Bearer #{api_key.token}", "Content-Type" => "application/json" } }
   let(:path) { "/api/v1/hotels/#{hotel.id}/ai_concierge/inquiries" }
+  let(:slug_path) { "/api/v1/hotels/#{hotel.slug}/ai_concierge/inquiries" }
   let(:phone) { "0123456789" }
 
   before do
@@ -29,6 +30,13 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(parsed_body["needs_human_support"]).to be(false)
       expect(parsed_body["action_name"]).to be_nil
       expect(parsed_body["prospect_public_id"]).to be_present
+    end
+
+    it "accepts hotel slugs in the path" do
+      post slug_path, params: { message: "What is the policy of this hotel?", phone: phone }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to include(hotel.name)
     end
 
     it "answers general hotel information questions" do
@@ -337,6 +345,25 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(parsed_body["action_name"]).to eq("request_quote")
     end
 
+    it "answers hotel amenities after a completed booking without room fallback" do
+      hotel.update!(amenities: [ Hotel::HOTEL_AMENITIES.first.fetch(:id) ])
+      seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 11, 12, 13, 14 ])
+
+      post path, params: { message: "mid august", phone: phone }.to_json, headers: headers
+      post path, params: { message: "3 days 2 nights", phone: phone }.to_json, headers: headers
+      post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
+      post path, params: { message: "Garden Prestige Suite option 2", phone: phone }.to_json, headers: headers
+      post path, params: { message: "yes", phone: phone }.to_json, headers: headers
+
+      expect(parsed_body["reply_message"]).to include("Quotation link:")
+
+      post path, params: { message: "may i know hotel amenities", phone: phone }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to include("Hotel amenities:")
+      expect(parsed_body["reply_message"]).not_to include("I couldn't match that room type")
+    end
+
     it "returns 422 when concierge is disabled" do
       hotel.update!(ai_provider_enabled: false)
 
@@ -416,6 +443,10 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
     if normalized.match?(/\bfaq\b/)
       return interpretation(intent: "hotel_information", topic: "hotel_faq")
+    end
+
+    if normalized.match?(/\b(amenit(?:y|ies)|facilit(?:y|ies))\b/) && normalized.match?(/\b(hotel|property)\b/)
+      return interpretation(intent: "hotel_information", topic: "general_hotel_info")
     end
 
     if normalized.match?(/\b(tell me about|details for|about the)\b/) && normalized.match?(/\b(exec|executive|ocean|villa|suite|room)\b/)

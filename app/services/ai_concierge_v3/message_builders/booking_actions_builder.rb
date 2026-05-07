@@ -20,6 +20,8 @@ module AiConciergeV3
         booking_link_ready
         no_options
         ask_specific_timing
+        confirm_to_end_conversation
+        end_conversation_declined
       ].freeze
 
       def call(reply_type)
@@ -60,6 +62,10 @@ module AiConciergeV3
           booking_link_ready_message
         when :no_options
           no_options_message
+        when :confirm_to_end_conversation
+          confirm_to_end_conversation_message
+        when :end_conversation_declined
+          "No problem, please let me know if you need anything."
         end
       end
 
@@ -171,6 +177,17 @@ module AiConciergeV3
       def no_options_message
         label = context[:month_label].presence || "those dates"
         "Sorry, I couldn't find any rooms available for #{label}. If you want, send another date or month and I'll check again."
+      end
+
+      def confirm_to_end_conversation_message
+        case context[:end_confirmation_mode].to_s
+        when "cancel_booking_attempt"
+          "Dear guest, do you want to cancel your booking quotation attempt?"
+        when "continue_booking"
+          "Dear guest, do you have anything else to ask or do you want to continue with your booking?"
+        else
+          "Dear guest, do you have anything else to ask?"
+        end
       end
     end
   end

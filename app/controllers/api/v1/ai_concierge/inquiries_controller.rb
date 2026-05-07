@@ -1,6 +1,6 @@
 class Api::V1::AiConcierge::InquiriesController < Api::V1::BaseController
   def create
-    authorize_hotel!(params[:hotel_id])
+    hotel = authorize_hotel!(params[:hotel_id])
     return if performed?
 
     if inquiry_params[:message].blank?
@@ -13,7 +13,7 @@ class Api::V1::AiConcierge::InquiriesController < Api::V1::BaseController
       return
     end
 
-    hotel = hotel_scope.includes(:property_policy, room_types: :room_rates).find(params[:hotel_id])
+    hotel = hotel.class.includes(:property_policy, room_types: :room_rates).find(hotel.id)
     result = AiConciergeV3::Orchestration::InquiryResponder.new(
       hotel: hotel,
       message: inquiry_params[:message],

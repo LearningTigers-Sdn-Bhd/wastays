@@ -14,7 +14,7 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
     }
   end
 
-  it "asks for booking timing when timing is missing" do
+  it "routes booking requests to booking" do
     result = described_class.new(
       interpretation: interpretation,
       active_branch: { "adults" => 2, "children" => 0 },
@@ -22,10 +22,10 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       pending_question: nil
     ).call
 
-    expect(result[:action]).to eq(:ask_booking_timing)
+    expect(result[:action]).to eq(:booking)
   end
 
-  it "asks for duration when a month window is provided without stay length" do
+  it "routes month-window booking state to booking" do
     result = described_class.new(
       interpretation: interpretation,
       active_branch: { "target_month" => 8, "target_year" => 2026, "month_segment" => "early", "adults" => 2, "children" => 0 },
@@ -33,10 +33,10 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       pending_question: nil
     ).call
 
-    expect(result[:action]).to eq(:ask_duration)
+    expect(result[:action]).to eq(:booking)
   end
 
-  it "asks for duration when only check-in is provided" do
+  it "routes check-in booking state to booking" do
     result = described_class.new(
       interpretation: interpretation,
       active_branch: { "check_in" => "2026-08-03", "adults" => 2, "children" => 0 },
@@ -44,10 +44,10 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       pending_question: nil
     ).call
 
-    expect(result[:action]).to eq(:ask_duration)
+    expect(result[:action]).to eq(:booking)
   end
 
-  it "asks for guest count when timing and duration exist but guests are missing" do
+  it "routes guest collection state to booking" do
     result = described_class.new(
       interpretation: interpretation,
       active_branch: { "target_month" => 8, "target_year" => 2026, "month_segment" => "early", "nights" => 2, "days" => 3 },
@@ -55,10 +55,10 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       pending_question: nil
     ).call
 
-    expect(result[:action]).to eq(:ask_guest_count)
+    expect(result[:action]).to eq(:booking)
   end
 
-  it "asks for adult count when only children are provided" do
+  it "routes adult-count collection state to booking" do
     result = described_class.new(
       interpretation: interpretation,
       active_branch: { "target_month" => 8, "target_year" => 2026, "month_segment" => "early", "nights" => 2, "days" => 3, "children" => 2 },
@@ -66,10 +66,10 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       pending_question: nil
     ).call
 
-    expect(result[:action]).to eq(:ask_adult_count)
+    expect(result[:action]).to eq(:booking)
   end
 
-  it "asks for party split when total guest count is known but composition is not" do
+  it "routes party split collection state to booking" do
     result = described_class.new(
       interpretation: interpretation,
       active_branch: { "target_month" => 8, "target_year" => 2026, "month_segment" => "early", "nights" => 2, "days" => 3, "party_size_total" => 2 },
@@ -77,10 +77,10 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       pending_question: nil
     ).call
 
-    expect(result[:action]).to eq(:ask_party_split)
+    expect(result[:action]).to eq(:booking)
   end
 
-  it "asks for party split when adults + children != total" do
+  it "routes unresolved party split state to booking" do
     result = described_class.new(
       interpretation: interpretation,
       active_branch: { "target_month" => 8, "target_year" => 2026, "month_segment" => "early", "nights" => 2, "days" => 3, "party_size_total" => 3, "adults" => 2, "children" => 0 },
@@ -88,10 +88,10 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       pending_question: nil
     ).call
 
-    expect(result[:action]).to eq(:ask_party_split)
+    expect(result[:action]).to eq(:booking)
   end
 
-  it "routes confirmation during party split back to split resolution" do
+  it "routes confirmation during party split to booking" do
     result = described_class.new(
       interpretation: { "intent" => "confirmation", "slots" => { "confirmation" => "yes" } },
       active_branch: { "party_size_total" => 4, "adults" => 2 },
@@ -99,10 +99,10 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       pending_question: "party_split"
     ).call
 
-    expect(result[:action]).to eq(:ask_party_split)
+    expect(result[:action]).to eq(:booking)
   end
 
-  it "routes straight to search if party split was just resolved" do
+  it "routes resolved party split state to booking" do
     result = described_class.new(
       interpretation: { "intent" => "confirmation", "slots" => { "confirmation" => "yes" } },
       active_branch: { "party_size_total" => 4, "adults" => 2, "children" => 2 },
@@ -110,10 +110,10 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       pending_question: "party_split"
     ).call
 
-    expect(result[:action]).to eq(:search_options)
+    expect(result[:action]).to eq(:booking)
   end
 
-  it "searches when timing, duration, and guest split are resolved" do
+  it "routes resolved booking state to booking" do
     result = described_class.new(
       interpretation: interpretation,
       active_branch: { "check_in" => "2026-08-03", "check_out" => "2026-08-05", "nights" => 2, "days" => 3, "adults" => 2, "children" => 0 },
@@ -121,7 +121,7 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       pending_question: nil
     ).call
 
-    expect(result[:action]).to eq(:search_options)
+    expect(result[:action]).to eq(:booking)
   end
 
   it "resumes paused option selections before validating them" do
@@ -131,6 +131,56 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
       paused_flows: [ { "topic" => "booking_search" } ],
       pending_question: nil,
       message: "option 2"
+    ).call
+
+    expect(result[:action]).to eq(:resume)
+  end
+
+  it "resumes suspended confirmation before handling yes or no" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "confirmation", "slots" => { "confirmation" => "yes" }),
+      active_branch: {},
+      booking_task: { "status" => "suspended", "suspended" => true, "pending_question" => "confirm_selection" },
+      pending_question: nil,
+      message: "yes"
+    ).call
+
+    expect(result[:action]).to eq(:resume)
+  end
+
+  it "does not resume expired suspended bookings" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "confirmation", "slots" => { "confirmation" => "yes" }),
+      active_branch: {},
+      booking_task: {
+        "status" => "expired",
+        "suspended" => true,
+        "pending_question" => "confirm_selection",
+        "expires_at" => 1.hour.ago.iso8601
+      },
+      pending_question: nil,
+      message: "yes"
+    ).call
+
+    expect(result[:action]).to eq(:booking)
+  end
+
+  it "resumes a suspended v2 booking when a shown room type is mentioned" do
+    result = described_class.new(
+      interpretation: interpretation,
+      active_branch: {},
+      booking_task: {
+        "status" => "suspended",
+        "suspended" => true,
+        "pending_question" => "select_option",
+        "branch" => {
+          "suggested_options" => [
+            { "room_type_name" => "Executive Penthouse", "options" => [] }
+          ]
+        }
+      },
+      pending_question: nil,
+      message: "i want the executive"
     ).call
 
     expect(result[:action]).to eq(:resume)
@@ -157,6 +207,40 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
     expect(result[:action]).to eq(:resume)
   end
 
+  it "resumes a suspended slot-collection flow when the user returns with a booking date" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "confirmation", "slots" => { "confirmation" => "yes" }),
+      active_branch: {},
+      booking_task: {
+        "status" => "suspended",
+        "suspended" => true,
+        "pending_question" => "specific_timing",
+        "branch" => { "target_month" => 6, "target_year" => 2026 }
+      },
+      pending_question: nil,
+      message: "ok, i want to book on 23 june"
+    ).call
+
+    expect(result[:action]).to eq(:resume)
+  end
+
+  it "resumes a suspended duration question when the user returns with stay length" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "booking_search", "slots" => { "nights" => 2 }),
+      active_branch: {},
+      booking_task: {
+        "status" => "suspended",
+        "suspended" => true,
+        "pending_question" => "duration",
+        "branch" => { "check_in" => "2026-06-23" }
+      },
+      pending_question: nil,
+      message: "2 nights"
+    ).call
+
+    expect(result[:action]).to eq(:resume)
+  end
+
   it "ends the current conversation before other transitions" do
     result = described_class.new(
       interpretation: interpretation.deep_merge("conversation_signals" => { "end_conversation" => true }),
@@ -166,5 +250,101 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
     ).call
 
     expect(result[:action]).to eq(:end_conversation)
+  end
+
+  it "routes information intents to librarian with pause metadata" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "hotel_information"),
+      active_branch: { "target_month" => 8 },
+      paused_flows: [],
+      pending_question: "duration"
+    ).call
+
+    expect(result[:action]).to eq(:librarian)
+    expect(result[:pause]).to eq(true)
+  end
+
+  it "pauses exact-date booking flows for information intents" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "hotel_information"),
+      active_branch: { "check_in" => "2026-06-23" },
+      paused_flows: [],
+      pending_question: "duration"
+    ).call
+
+    expect(result[:action]).to eq(:librarian)
+    expect(result[:pause]).to eq(true)
+  end
+
+  it "routes booking context separately" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "booking_context"),
+      active_branch: {},
+      paused_flows: [],
+      pending_question: nil
+    ).call
+
+    expect(result[:action]).to eq(:booking_context)
+  end
+
+  it "routes greetings separately" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "greeting"),
+      active_branch: {},
+      paused_flows: [],
+      pending_question: nil
+    ).call
+
+    expect(result[:action]).to eq(:greeting)
+  end
+
+  it "routes pending booking follow-ups to booking before greeting" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "greeting"),
+      active_branch: { "suggested_options" => [ { "room_type_name" => "Executive Penthouse", "options" => [] } ] },
+      paused_flows: [],
+      pending_question: "select_option",
+      message: "executive"
+    ).call
+
+    expect(result[:action]).to eq(:booking)
+  end
+
+  it "routes information intents during option selection to librarian instead of selecting an option" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "room_information", "topic" => "room_information"),
+      active_branch: { "target_month" => 8, "suggested_options" => [ { "room_type_name" => "Executive Penthouse", "options" => [] } ] },
+      paused_flows: [],
+      pending_question: "select_option",
+      message: "what amenities does executive penthouse have?"
+    ).call
+
+    expect(result[:action]).to eq(:librarian)
+    expect(result[:pause]).to eq(true)
+  end
+
+  it "routes hotel amenities after completed booking to librarian" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "hotel_information", "topic" => "general_hotel_info"),
+      active_branch: {},
+      paused_flows: [],
+      booking_task: { "status" => "completed", "pending_question" => nil },
+      pending_question: nil,
+      message: "may i know hotel amenities"
+    ).call
+
+    expect(result[:action]).to eq(:librarian)
+    expect(result[:pause]).to eq(false)
+  end
+
+  it "falls back for unknown intents without booking state" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "unknown"),
+      active_branch: {},
+      paused_flows: [],
+      pending_question: nil
+    ).call
+
+    expect(result[:action]).to eq(:fallback)
   end
 end

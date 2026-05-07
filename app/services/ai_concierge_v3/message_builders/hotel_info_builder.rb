@@ -50,9 +50,13 @@ module AiConciergeV3
       def general_hotel_info_message
         result = context[:result] || {}
         summary = result["summary_text"].presence
-        return "I couldn't find general hotel information right now." if summary.blank?
+        amenities = Array(result["amenities"])
+        return "I couldn't find general hotel information right now." if summary.blank? && amenities.blank?
 
-        summary
+        lines = []
+        lines << summary if summary.present?
+        lines << "Hotel amenities: #{amenities.join(', ')}" if amenities.present?
+        lines.join("\n")
       end
 
       def hotel_faq_message

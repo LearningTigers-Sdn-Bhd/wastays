@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe AiConciergeV3::State::StatePatchBuilder do
-  it "normalizes the slots payload arrays" do
+  it "normalizes slots payload into v2 task state" do
     patch = described_class.new(
       conversation_state: nil,
       slots_payload: { "active" => { "branch_id" => "1" } },
@@ -12,8 +12,12 @@ RSpec.describe AiConciergeV3::State::StatePatchBuilder do
       last_action_name: "request_quote"
     ).call
 
-    expect(patch[:slots_payload]["paused_flows"]).to eq([])
+    expect(patch[:slots_payload]["state_version"]).to eq(2)
+    expect(patch[:slots_payload]["booking_task"]).to be_present
+    expect(patch[:slots_payload]["information_task"]).to be_present
     expect(patch[:slots_payload]["completed_booking_branches"]).to eq([])
+    expect(patch[:slots_payload]).not_to have_key("active")
+    expect(patch[:slots_payload]).not_to have_key("paused_flows")
   end
 
   it "updates user timestamp and conversation lifecycle metadata every turn" do

@@ -32,11 +32,10 @@ module AiConciergeV3
     attr_reader :conversation_state, :slots_payload, :active_topic, :active_flow, :pending_question, :last_intent, :last_action_name, :flow_status, :end_reason, :now
 
     def normalized_slots_payload
-      payload = slots_payload.is_a?(Hash) ? slots_payload.deep_dup : {}
-      payload["paused_flows"] = Array(payload["paused_flows"])
+      payload = ConversationTaskManager.new(slots_payload: slots_payload, now: now).payload
       payload["completed_booking_branches"] = Array(payload["completed_booking_branches"])
       payload["conversation"] = conversation_payload(payload["conversation"])
-      payload
+      payload.except("active", "paused_flows")
     end
 
     def conversation_payload(existing)

@@ -14,6 +14,7 @@ module AiConciergeV3
             "city" => hotel.city,
             "country" => hotel.country,
             "star_rating" => hotel.star_rating,
+            "amenities" => amenity_names,
             "summary_text" => summary_text
           }
         end
@@ -30,6 +31,14 @@ module AiConciergeV3
           parts << "located at #{location}" if location.present?
 
           parts.join(" ")
+        end
+
+        def amenity_names
+          lookup = Hotel::HOTEL_AMENITIES.index_by { |amenity| amenity[:id] }
+
+          Array(hotel.amenities).filter_map do |amenity_id|
+            lookup[amenity_id]&.fetch(:name)
+          end
         end
       end
     end

@@ -6,7 +6,8 @@
 
 - the interpreter classifies `intent`, `topic`, and `slots`
 - the transition policy selects the next legal action
-- the turn orchestrator chooses a registered tool
+- the turn orchestrator delegates to the booking or librarian orchestrator
+- the domain orchestrator chooses the registered tool
 - the tool returns structured data
 - the messenger and message builders render the final guest-facing reply
 
@@ -16,17 +17,32 @@ This means the public tool names in `ToolRegistry` are the runtime contract. The
 
 1. `InquiryResponder` receives the API request, validates concierge readiness, and requires either `phone` or `prospect_public_id`.
 2. `TurnOrchestrator` resolves the hotel-scoped prospect by phone first or by `prospect_public_id` fallback.
-3. `TurnOrchestrator` loads persisted conversation state, records the inbound message, and calls the interpreter.
+3. `TurnOrchestrator` loads persisted conversation state.
 4. If the previous conversation was ended, the orchestrator reactivates the same `ProspectConversationState` for the new inbound turn.
-5. Explicit stop/bye/thanks-style messages end the current conversation without running a tool.
-6. `InterpreterAgent` returns structured interpretation data.
-7. `TransitionPolicy` converts the interpretation and current state into a deterministic action.
-8. `ToolRegistry` resolves the tool name to a concrete Ruby class.
-9. The selected tool returns structured result data.
-10. `MessengerAgent` routes the reply type to a domain message builder.
-11. The orchestrator persists state updates and returns the public API payload, including `prospect_public_id` on success.
+5. `TurnOrchestrator` records the inbound message and builds the interpreter summary.
+6. Explicit stop/bye/thanks-style messages end the current conversation without running a tool.
+7. `InterpreterAgent` returns structured interpretation data.
+8. `InformationIntentGuard` corrects unscoped hotel/property amenities and facilities questions to hotel information.
+9. `BookingInputNormalizer` strips inferred booking slots that were not explicit in the user message.
+10. `TransitionPolicy` converts the interpretation and current state into a high-level deterministic action.
+11. `BookingOrchestrator` owns booking sub-steps, booking tools, option selection, confirmation, and URL generation.
+12. `LibrarianOrchestrator` owns information tools and information task updates.
+13. `ToolRegistry` resolves the tool name to a concrete Ruby class.
+14. The selected tool returns structured result data.
+15. `MessengerAgent` routes the reply type to a domain message builder.
+16. The orchestrator persists state updates and returns the public API payload, including `prospect_public_id` on success.
 
-Booking flows can be interrupted by hotel or room information questions. In those cases the active booking branch is paused and can later be resumed.
+Booking flows can be interrupted by hotel or room information questions. In those cases `booking_task` is marked `suspended` while `information_task` records the answered knowledge turn. A later option selection or confirmation resumes the suspended booking task before tool execution. General hotel amenities and property facilities questions remain hotel information even after a completed booking.
+
+## Ownership Boundaries
+
+- `TurnOrchestrator`: prospect resolution, state loading, interpreter call, deterministic guard invocation, high-level delegation, persistence, message rendering, and final payload.
+- `TransitionPolicy`: high-level action routing only; it does not decide booking sub-steps.
+- `BookingOrchestrator`: booking prompts, option search, option selection, confirmation, booking URL generation, booking completion/archive semantics, and safe URL-failure fallback.
+- `LibrarianOrchestrator`: hotel policy, general hotel info, FAQ, nearby attractions, room information, `information_task`, and booking suspension on interruptions.
+- `ConversationTaskManager`: V2 task-state normalization, legacy read migration, activate/suspend/resume/archive, and avoiding legacy writes.
+- `BookingInputNormalizer`: deterministic booking slot guards before merge.
+- `InformationIntentGuard`: deterministic hotel/property amenities and facilities correction before routing.
 
 ## Tool Registry
 
@@ -82,6 +98,7 @@ These names are registered in `app/services/ai_concierge_v3/tools/tool_registry.
 - Main inputs: selected option and resolved prospect phone
 - Success output: booking URL, total amount, currency, expiry, and quote token
 - Lifecycle side effect: successful booking URL generation ends the current conversation with `end_reason: "booking_url_generated"`
+- Failure behavior: returns safe fallback and does not archive booking as completed
 - Example guest questions:
   - `yes`
 
@@ -114,7 +131,7 @@ These names are registered in `app/services/ai_concierge_v3/tools/tool_registry.
 - Path: `app/services/ai_concierge_v3/tools/hotel_information/get_general_hotel_info_tool.rb`
 - Purpose: return general hotel details outside policy and booking context
 - Main inputs: hotel only
-- Success output: name, address, city, country, star rating, summary text
+- Success output: name, address, city, country, star rating, mapped hotel amenities, summary text
 - Example guest questions:
   - `tell me about the hotel`
   - `where is the hotel located`
@@ -160,8 +177,8 @@ These names are registered in `app/services/ai_concierge_v3/tools/tool_registry.
 | Guest question type | Intent | Topic | Action | Tool | Reply type |
 | --- | --- | --- | --- | --- | --- |
 | booking availability / search | `booking_search` | `booking_search` | booking flow action | booking tools | booking reply types |
-| booking option choice | `option_selection` | `booking_search` | `option_selection` | `select_booking_option` | `ask_confirmation` or ambiguity reply |
-| booking confirmation | `confirmation` | `booking_search` | `confirmation_yes` or `confirmation_no` | `generate_booking_url` on yes | `booking_link_ready` or decline reply |
+| booking option choice | `option_selection` | `booking_search` | high-level `booking`; sub-step option selection | `select_booking_option` | `ask_confirmation` or ambiguity reply |
+| booking confirmation | `confirmation` | `booking_search` | high-level `booking`; sub-step confirmation | `generate_booking_url` on yes | `booking_link_ready` or decline reply |
 | active booking lookup | `booking_context` | `booking_context` | `booking_context` | `get_booking_context` | `booking_context` |
 | check-in / check-out / cancellation | `hotel_policy` | `hotel_policy` | `hotel_policy` | `get_hotel_policy` | `hotel_policy` |
 | general hotel facts | `hotel_information` | `general_hotel_info` | `hotel_information` | `get_general_hotel_info` | `general_hotel_info` |
@@ -213,15 +230,18 @@ These names are registered in `app/services/ai_concierge_v3/tools/tool_registry.
 
 - `tell me about executive suite` -> room information
 - `i want executive suite on may 22` -> booking flow, not room information
+- `may i know hotel amenities` -> hotel information, not room information
+- `available facilities?` -> hotel information, not room information
 - `what attractions are nearby` -> nearby attractions, not general hotel info
 - `what time is check in` -> hotel policy, not general hotel info
 
 ## Pause and Resume Behavior
 
 - hotel and room information questions can interrupt an active booking flow
-- the active booking branch is paused, not discarded
-- after the information reply, selection-like booking follow-ups resume the paused booking flow
+- the active booking task is suspended, not discarded
+- after the information reply, selection-like booking follow-ups resume the suspended booking task
 - informational intents should be preserved as informational requests rather than being forced through option selection
+- expired suspended booking tasks do not resume
 
 Examples:
 
@@ -281,6 +301,13 @@ Tool specs:
 Shared utility coverage:
 
 - `spec/services/ai_concierge_v3/matching/room_type_matcher_spec.rb`
+- `spec/services/ai_concierge_v3/orchestration/booking_input_normalizer_spec.rb`
+- `spec/services/ai_concierge_v3/orchestration/information_intent_guard_spec.rb`
+
+Domain orchestrator coverage:
+
+- `spec/services/ai_concierge_v3/orchestration/booking_orchestrator_spec.rb`
+- `spec/services/ai_concierge_v3/orchestration/librarian_orchestrator_spec.rb`
 
 Reply-format coverage:
 
