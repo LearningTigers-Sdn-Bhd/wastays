@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class HotelPortal::BookingsController < HotelPortal::BaseController
+  before_action :authorize_view_bookings!, only: %i[index show availability stay_price]
+  before_action :authorize_manage_bookings!, only: %i[new create update check_in check_out cancel]
+
   def index
     @all_bookings = current_hotel.bookings.recent_first
     @all_bookings = @all_bookings.search(params[:query]) if params[:query].present?
@@ -143,5 +146,13 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
       booking_rooms_attributes: [ :id, :room_number ]
     )
+  end
+
+  def authorize_view_bookings!
+    raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
+  end
+
+  def authorize_manage_bookings!
+    raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
   end
 end

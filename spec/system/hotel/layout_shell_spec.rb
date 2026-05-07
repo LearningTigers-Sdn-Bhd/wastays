@@ -9,6 +9,16 @@ RSpec.describe 'Hotel layout shell', type: :system do
   before do
     driven_by(:rack_test)
 
+    # Ensure all permissions exist and assign them to the role
+    [
+      "manage_guest_arrival", "view_bookings", "manage_room_status", "manage_requests",
+      "manage_hotel_profile", "manage_users", "view_reports", "view_payouts", "view_audit_logs",
+      "manage_night_audit"
+    ].each do |slug|
+      permission = Permission.find_by(slug: slug) || create(:permission, name: slug.titleize, slug: slug)
+      role.permissions << permission unless role.permissions.include?(permission)
+    end
+
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 

@@ -1,4 +1,6 @@
 class HotelPortal::RequestsController < HotelPortal::BaseController
+  before_action :authorize_manage_requests!
+
   def index
     @board = ::HotelPortal::RequestsBoard.new(current_hotel, params)
     @board_columns = @board.board_columns
@@ -119,5 +121,11 @@ class HotelPortal::RequestsController < HotelPortal::BaseController
       format.html { redirect_to hotel_request_archive_path(current_hotel), alert: "Request not found." }
       format.json { render json: { ok: false }, status: :not_found }
     end
+  end
+
+  private
+
+  def authorize_manage_requests!
+    raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_requests", hotel: current_hotel)
   end
 end

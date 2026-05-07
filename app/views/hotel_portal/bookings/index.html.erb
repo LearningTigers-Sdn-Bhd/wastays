@@ -12,9 +12,11 @@
       <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Bookings</h1>
       <p class="mt-1 text-sm font-medium text-slate-600">Manage your hotel reservations and guest details.</p>
     </div>
-    <%= link_to new_hotel_booking_path(current_hotel), class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
-      <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-      Add New Booking
+    <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+      <%= link_to new_hotel_booking_path(current_hotel), class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
+        <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+        Add New Booking
+      <% end %>
     <% end %>
   </div>
 

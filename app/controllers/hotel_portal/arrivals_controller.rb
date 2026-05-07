@@ -1,4 +1,6 @@
 class HotelPortal::ArrivalsController < HotelPortal::BaseController
+  before_action :authorize_manage_arrivals!
+
   def index
     @date = params[:date].present? ? Date.parse(params[:date]) : Date.today
     @query = params[:q].to_s.strip
@@ -21,5 +23,11 @@ class HotelPortal::ArrivalsController < HotelPortal::BaseController
 
     @today_count = current_hotel.bookings.active.where(check_in: Date.today).count
     @tomorrow_count = current_hotel.bookings.active.where(check_in: Date.tomorrow).count
+  end
+
+  private
+
+  def authorize_manage_arrivals!
+    raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_guest_arrival", hotel: current_hotel)
   end
 end

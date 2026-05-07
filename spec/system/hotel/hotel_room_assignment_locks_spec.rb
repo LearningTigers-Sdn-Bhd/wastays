@@ -15,8 +15,14 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type) }
 
   before do
-    create(:user_hotel_access, user: user1, hotel: hotel)
-    create(:user_hotel_access, user: user2, hotel: hotel)
+    role = create(:role, account: hotel.account)
+    %w[view_bookings manage_bookings].each do |slug|
+      permission = Permission.find_by(slug: slug) || create(:permission, name: slug.titleize, slug: slug)
+      role.permissions << permission
+    end
+
+    create(:user_hotel_access, user: user1, hotel: hotel, role: role)
+    create(:user_hotel_access, user: user2, hotel: hotel, role: role)
 
     # Ensure room_type has inventory
     (Date.current..(Date.current + 5.days)).each do |date|

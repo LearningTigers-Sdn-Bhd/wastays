@@ -7,6 +7,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
   before do
     role = create(:role, account: hotel.account)
+    role.permissions << create(:permission, slug: "view_bookings")
+    role.permissions << create(:permission, slug: "manage_bookings")
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
   end

@@ -3,6 +3,9 @@ require "csv"
 class HotelPortal::ReportsController < HotelPortal::BaseController
   include FinancialFiltering
 
+  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy outstanding_balance arrivals_departures]
+  before_action :authorize_view_payouts!, only: %i[payouts]
+
   def index
     # Note: FinancialFiltering sets @start_date and @end_date
     hotel_bookings = current_hotel.bookings.revenue_generating
@@ -244,6 +247,14 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
     Date.parse(value.to_s)
   rescue ArgumentError, TypeError
     nil
+  end
+
+  def authorize_view_reports!
+    raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_reports", hotel: current_hotel)
+  end
+
+  def authorize_view_payouts!
+    raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_payouts", hotel: current_hotel)
   end
 
   def parse_date_param(value)

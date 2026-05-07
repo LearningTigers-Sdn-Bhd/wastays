@@ -8,7 +8,10 @@ RSpec.describe "Booking room readiness assignment", type: :request do
   let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101" ], quantity: 1) }
 
   before do
-    create(:user_hotel_access, user: user, hotel: hotel)
+    role = create(:role, account: hotel.account)
+    permission = Permission.find_by(slug: "manage_bookings") || create(:permission, name: "Manage Bookings", slug: "manage_bookings")
+    role.permissions << permission
+    create(:user_hotel_access, user: user, hotel: hotel, role: role)
     sign_in_as(user)
   end
 

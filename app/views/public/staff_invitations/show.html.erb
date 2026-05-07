@@ -1,0 +1,64 @@
+<div class="bg-[#fdfbf7] min-h-screen flex items-center justify-center px-6 py-10">
+  <div class="w-full max-w-xl">
+    <div class="mb-10 text-center">
+      <%= link_to root_path, class: "inline-block mb-8" do %>
+        <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-12 w-auto mx-auto" %>
+      <% end %>
+
+      <div class="flex items-center justify-center gap-x-3 mb-6">
+        <span class="w-6 h-px bg-brand-primary/30"></span>
+        <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">Staff Invitation</span>
+        <span class="w-6 h-px bg-brand-primary/30"></span>
+      </div>
+
+      <h1 class="text-4xl font-serif text-neutral-text-primary leading-tight mb-3">
+        Join <span class="italic text-brand-primary"><%= @invitation.hotel.name %></span>
+      </h1>
+      <p class="text-neutral-text-secondary text-sm leading-relaxed">
+        You were invited as <span class="font-semibold text-neutral-text-primary"><%= @invitation.role.name %></span>.
+      </p>
+    </div>
+
+    <div class="rounded-3xl border border-neutral-border bg-white p-6 shadow-sm sm:p-8">
+      <% if @existing_user %>
+        <p class="mb-6 text-sm leading-6 text-neutral-text-secondary">
+          This invitation matches your existing WAStays account at <span class="font-semibold text-neutral-text-primary"><%= @invitation.email %></span>. Accepting will add this property to your account.
+        </p>
+
+        <%= form_with url: staff_invitation_path(@token), method: :patch, local: true do |f| %>
+          <%= f.submit "Accept Invitation", class: "w-full rounded-xl bg-brand-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-primary/90" %>
+        <% end %>
+      <% else %>
+        <%= form_with model: @user, url: staff_invitation_path(@token), method: :patch, local: true, class: "space-y-5" do |f| %>
+          <% if @user.errors.any? %>
+            <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              <%= @user.errors.full_messages.to_sentence %>
+            </div>
+          <% end %>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Email Address</label>
+            <input type="email" value="<%= @invitation.email %>" disabled class="w-full rounded-xl border border-neutral-border bg-neutral-50 px-4 py-3 text-sm text-neutral-text-secondary">
+          </div>
+
+          <div>
+            <%= f.label :name, "Full Name", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.text_field :name, required: true, autocomplete: "name", class: "w-full rounded-xl border border-neutral-border bg-white px-4 py-3 text-sm text-neutral-text-primary focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20" %>
+          </div>
+
+          <div>
+            <%= f.label :password, "Password", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.password_field :password, required: true, autocomplete: "new-password", class: "w-full rounded-xl border border-neutral-border bg-white px-4 py-3 text-sm text-neutral-text-primary focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20" %>
+          </div>
+
+          <div>
+            <%= f.label :password_confirmation, "Confirm Password", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.password_field :password_confirmation, required: true, autocomplete: "new-password", class: "w-full rounded-xl border border-neutral-border bg-white px-4 py-3 text-sm text-neutral-text-primary focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20" %>
+          </div>
+
+          <%= f.submit "Create Account & Accept", class: "w-full rounded-xl bg-brand-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-primary/90" %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</div>
