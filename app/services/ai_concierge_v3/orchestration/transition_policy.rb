@@ -124,7 +124,6 @@ module AiConciergeV3
     def normalize(value)
       value.to_s.downcase.gsub(/[^a-z0-9]+/, " ").squish
     end
-
     end
   end
 end

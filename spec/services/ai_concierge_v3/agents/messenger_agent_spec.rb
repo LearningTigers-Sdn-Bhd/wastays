@@ -52,7 +52,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
   end
 
   it "renders confirmation with yes and no prompt" do
-    room_type = create(:room_type, hotel: hotel, name: "Executive Penthouse", description: "A luxury penthouse with city views.", amenities: ["wifi", "ac"])
+    room_type = create(:room_type, hotel: hotel, name: "Executive Penthouse", description: "A luxury penthouse with city views.", amenities: [ "wifi", "ac" ])
     result = described_class.new(hotel: hotel, context: {
       reply_type: :ask_confirmation,
       selected_option: {
@@ -194,14 +194,22 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
   it "prompts before ending the conversation when options were shown" do
     prospect = create(:prospect, hotel: hotel)
     conversation_state = create(:prospect_conversation_state, prospect: prospect, pending_question: "select_option")
-    conversation_state.update!(slots_payload: {
-      "active_branch" => {
-        "topic" => "booking_search",
-        "suggested_options" => [
-          { "room_type_name" => "Executive Penthouse", "options" => [{ "position" => 1, "selection_id" => "1" }] }
-        ]
+    conversation_state.update!(
+      active_topic: "booking_search",
+      active_flow: "booking_search",
+      slots_payload: {
+        "booking_task" => {
+          "status" => "collecting_slots",
+          "pending_question" => "select_option",
+          "branch" => {
+            "topic" => "booking_search",
+            "suggested_options" => [
+              { "room_type_name" => "Executive Penthouse", "options" => [ { "position" => 1, "selection_id" => "1" } ] }
+            ]
+          }
+        }
       }
-    })
+    )
 
     # We mock the interpreter to ensure it returns end_conversation=true
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return({
@@ -219,7 +227,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
 
     result = AiConciergeV3::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "nevermind", prospect_public_id: prospect.public_id).call
 
-    expect(result.payload[:reply_message]).to eq("Dear guest, do you have anything else to ask?")
+    expect(result.payload[:reply_message]).to eq("Dear guest, do you want to cancel your booking quotation attempt?")
     state = prospect.prospect_conversation_state.reload
     expect(state.pending_question).to eq("confirm_to_end_conversation")
     expect(state.flow_status).to eq("active")
@@ -325,7 +333,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
     result = AiConciergeV3::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "23 june ok?", prospect_public_id: prospect.public_id).call
 
     expect(result.payload[:reply_message]).to eq("How many days and nights will you be staying?")
-    expect(result.payload[:action_name]).to be_nil
+    expect(result.payload[:action_name]).to eq("request_quote")
     payload = prospect.prospect_conversation_state.reload.slots_payload
     expect(payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-23")
   end
@@ -349,6 +357,6 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
     result = AiConciergeV3::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "can i make booking?", prospect_public_id: prospect.public_id).call
 
     expect(result.payload[:reply_message]).to eq("Sure, what dates or month would you like to check in?")
-    expect(result.payload[:action_name]).to be_nil
+    expect(result.payload[:action_name]).to eq("request_quote")
   end
 end

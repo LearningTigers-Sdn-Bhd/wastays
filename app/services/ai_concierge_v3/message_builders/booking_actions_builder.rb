@@ -75,11 +75,11 @@ module AiConciergeV3
         check_in = context[:check_in]
         suffix = if check_in.present?
                    " on #{format_date(check_in)}"
-                 elsif context[:month_label].present?
+        elsif context[:month_label].present?
                    " in #{context[:month_label]}"
-                 else
+        else
                    ""
-                 end
+        end
         "How many guests should I check for#{suffix}?"
       end
 
@@ -151,7 +151,7 @@ module AiConciergeV3
       end
 
       def room_type_requires_option_number_message
-        lines = ["I found multiple options under #{context[:room_type_name]}:"]
+        lines = [ "I found multiple options under #{context[:room_type_name]}:" ]
         lines << option_group_lines(context[:room_options]) if context[:room_options].present?
         lines << "Please tell me the option number you want."
         lines.join("\n\n")

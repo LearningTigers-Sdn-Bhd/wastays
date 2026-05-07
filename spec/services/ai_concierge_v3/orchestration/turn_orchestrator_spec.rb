@@ -16,7 +16,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
 
     expect(result).to be_success
     expect(result.payload[:reply_message]).to include("How many days and nights")
-    expect(result.payload[:action_name]).to be_nil
+    expect(result.payload[:action_name]).to eq("request_quote")
   end
 
   it "asks for booking timing when the interpreter invents a month for a vague message" do
@@ -52,7 +52,12 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     expect(result.error).to eq("AI Concierge is temporarily unavailable.")
   end
 
-  it "ends the conversation when the user repeats an explicit end request" do
+  it "ends the conversation when the user repeats an explicit end request during a booking" do
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(slots: { "target_month" => 8 })
+    )
+    described_class.new(hotel: hotel, message: "book in august", phone: "+60123456789", identity_mode: :known_contact).call
+
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(intent: "greeting")
     )
@@ -105,23 +110,23 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     # TransitionPolicy should ask for timing first, but we want to check that party_size_total didn't leak into state
     # Actually, let's check the persisted state or the response payload if possible.
     # The payload doesn't include the active branch directly, but we can verify the follow-up message.
-    
+
     # If party_size_total was 1, it would ask for adult/child split or timing.
     # If party_size_total is nil, it will ask for timing.
     expect(result.payload[:reply_message]).to include("what dates or month")
-    
+
     # Let's verify that it doesn't ask "For 1 people" in the next turn if we give it a month window.
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(slots: { "target_month" => 7, "target_year" => 2026, "month_segment" => "early" })
     )
-    
+
     follow_up = described_class.new(hotel: hotel, message: "early july", phone: "+60123456789", identity_mode: :known_contact).call
     expect(follow_up.payload[:reply_message]).to include("How many days and nights")
-    
+
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(slots: { "days" => 3, "nights" => 2 })
     )
-    
+
     days_reply = described_class.new(hotel: hotel, message: "3 days", phone: "+60123456789", identity_mode: :known_contact).call
     expect(days_reply.payload[:reply_message]).to include("How many guests") # Not "For 1 people"
   end
@@ -167,7 +172,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(slots: {}) # No slots, just "can i book"
     )
     reactivation_reply = described_class.new(hotel: hotel, message: "hello, can i make booking", phone: "+60123456789", identity_mode: :known_contact).call
-    
+
     # It should ask for timing because the previous branch (with July) was archived
     expect(reactivation_reply.payload[:reply_message]).to include("what dates or month")
   end
@@ -262,11 +267,11 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
     expect(first_reply.payload[:reply_message]).to include("exact check-in date")
-    expect(first_reply.payload[:action_name]).to be_nil
+    expect(first_reply.payload[:action_name]).to eq("request_quote")
     expect(info_reply.payload[:reply_message]).to include("Swimming Pool")
     expect(info_reply.payload[:reply_message]).not_to include("couldn't match")
     expect(resume_reply.payload[:reply_message]).to eq("How many days and nights will you be staying?")
-    expect(resume_reply.payload[:action_name]).to be_nil
+    expect(resume_reply.payload[:action_name]).to eq("request_quote")
     expect(state.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
     expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("duration")
     expect(state.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-23")

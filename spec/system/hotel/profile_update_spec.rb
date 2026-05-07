@@ -8,7 +8,7 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
 
   before do
     driven_by(:cuprite)
-    
+
     # Setup permissions and role
     Permission.find_or_create_by!(slug: 'manage_hotel_profile') { |p| p.name = 'Manage Hotel Profile' }
     RolePermission.find_or_create_by!(role: role, permission: Permission.find_by(slug: 'manage_hotel_profile'))

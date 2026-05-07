@@ -44,7 +44,7 @@ module AiConciergeV3
           "- *#{booking['date_range']}*: #{booking['room_type_name']}"
         end
 
-        [intro, lines.join("\n")].join("\n")
+        [ intro, lines.join("\n") ].join("\n")
       end
 
       def general_hotel_info_message
@@ -71,11 +71,11 @@ module AiConciergeV3
         return "I couldn't find any nearby attractions listed right now." if attractions.empty?
 
         lines = attractions.map do |attraction|
-          details = [attraction["description"], attraction["address"], attraction["city"], attraction["country"]].compact_blank.join(". ")
+          details = [ attraction["description"], attraction["address"], attraction["city"], attraction["country"] ].compact_blank.join(". ")
           details.present? ? "- *#{attraction['name']}*: #{details}" : "- *#{attraction['name']}*"
         end
 
-        ["Here are the nearby attractions:", lines.join("\n")].join("\n")
+        [ "Here are the nearby attractions:", lines.join("\n") ].join("\n")
       end
     end
   end

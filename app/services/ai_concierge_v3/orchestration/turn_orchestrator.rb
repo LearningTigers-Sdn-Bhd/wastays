@@ -30,7 +30,11 @@ module AiConciergeV3
       end
 
       if explicit_end_request?
-        return Result.success(payload: request_end_confirmation(prospect:, conversation_state:, interpretation: interpretation))
+        if end_confirmation_mode(conversation_state) == :generic
+          return Result.success(payload: handle_end_conversation(prospect:, conversation_state:, interpretation: interpretation))
+        else
+          return Result.success(payload: request_end_confirmation(prospect:, conversation_state:, interpretation: interpretation))
+        end
       end
 
       interpretation["conversation_signals"]["end_conversation"] = false
@@ -353,7 +357,6 @@ module AiConciergeV3
 
       :generic
     end
-
     end
   end
 end

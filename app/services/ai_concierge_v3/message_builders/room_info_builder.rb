@@ -19,7 +19,7 @@ module AiConciergeV3
       def room_type_details_message
         result = context[:result] || {}
         amenities = Array(result["amenities"])
-        lines = ["Here are the details for #{result['room_type_name']}:"]
+        lines = [ "Here are the details for #{result['room_type_name']}:" ]
         lines << result["description"] if result["description"].present?
 
         occupancy = []

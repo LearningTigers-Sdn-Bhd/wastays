@@ -41,7 +41,7 @@ module AiConciergeV3
       end
 
       def format_price(currency, amount)
-        [display_currency(currency), format("%.2f", amount.to_f)].join(" ")
+        [ display_currency(currency), format("%.2f", amount.to_f) ].join(" ")
       end
 
       def format_option_price(currency, amount)
@@ -84,7 +84,7 @@ module AiConciergeV3
           "#{option['position']}. *#{format_option_price(option['currency'], option['total_price'])}* : Check-in *#{format_full_date(option['check_in'])}* - Check-out *#{format_full_date(option['check_out'])}*"
         end
 
-        ["*#{group['room_type_name']}*", lines.join("\n")].join("\n")
+        [ "*#{group['room_type_name']}*", lines.join("\n") ].join("\n")
       end
     end
   end

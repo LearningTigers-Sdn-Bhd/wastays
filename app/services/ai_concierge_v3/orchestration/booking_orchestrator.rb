@@ -40,15 +40,15 @@ module AiConciergeV3
     def process_booking_action(action, conversation_state: self.conversation_state, active_branch: self.active_branch)
       case action
       when :ask_booking_timing
-        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_booking_timing, pending_question: "booking_timing", action_name: nil)
+        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_booking_timing, pending_question: "booking_timing")
       when :ask_specific_timing
-        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_specific_timing, pending_question: "specific_timing", action_name: nil, extra_context: { month_label: month_label(active_branch) })
+        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_specific_timing, pending_question: "specific_timing", extra_context: { month_label: month_label(active_branch) })
       when :ask_duration
-        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_duration, pending_question: "duration", action_name: nil)
+        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_duration, pending_question: "duration")
       when :ask_adult_count
-        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_adult_count, pending_question: "guest_count", action_name: nil)
+        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_adult_count, pending_question: "guest_count")
       when :ask_guest_count
-        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_guest_count, pending_question: "guest_count", action_name: nil, extra_context: { month_label: month_label(active_branch), check_in: active_branch["check_in"] })
+        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_guest_count, pending_question: "guest_count", extra_context: { month_label: month_label(active_branch), check_in: active_branch["check_in"] })
       when :ask_party_split
         active_branch["clarification_needed"] = "party_split"
         booking_response(
@@ -56,7 +56,6 @@ module AiConciergeV3
           active_branch: active_branch,
           reply_type: :ask_party_split,
           pending_question: "party_split",
-          action_name: nil,
           extra_context: {
             party_size_total: active_branch["party_size_total"],
             adults: active_branch["adults"],

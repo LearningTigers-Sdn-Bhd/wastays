@@ -21,7 +21,7 @@ RSpec.describe AiConciergeV3::Tools::RoomInformation::GetRoomTypeDetailsTool do
       "description" => "Large suite with sea view.",
       "max_adults" => 3,
       "max_children" => 2,
-      "amenities" => ["Free WiFi", "Balcony / Terrace", "Flat-screen TV"]
+      "amenities" => [ "Free WiFi", "Balcony / Terrace", "Flat-screen TV" ]
     )
   end
 

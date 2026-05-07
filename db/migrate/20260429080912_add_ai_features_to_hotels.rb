@@ -5,4 +5,3 @@ class AddAiFeaturesToHotels < ActiveRecord::Migration[7.2]
     add_column :hotels, :ai_provider_key, :text
   end
 end
-
