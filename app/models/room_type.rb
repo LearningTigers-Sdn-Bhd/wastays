@@ -43,7 +43,7 @@ class RoomType < ApplicationRecord
   def amenities_must_be_from_list
     return if amenities.blank?
 
-    allowed_ids = Hotel::ROOM_AMENITIES.map { |a| a[:id] }
+    allowed_ids = Amenity.room.pluck(:slug)
     invalid_amenities = amenities - allowed_ids
 
     if invalid_amenities.any?

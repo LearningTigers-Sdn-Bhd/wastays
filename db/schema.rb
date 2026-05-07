@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_05_004439) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_07_004644) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -49,6 +49,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_004439) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "amenities", force: :cascade do |t|
+    t.string "name"
+    t.string "slug"
+    t.string "icon"
+    t.string "category"
+    t.string "amenity_type"
+    t.string "channex_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["channex_id"], name: "index_amenities_on_channex_id"
+    t.index ["slug"], name: "index_amenities_on_slug"
   end
 
   create_table "api_keys", force: :cascade do |t|
