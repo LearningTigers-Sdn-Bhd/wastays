@@ -4,16 +4,23 @@ require "ostruct"
 
 module Bookings
   class UpdateStayService
-    def initialize(booking:, params:)
+    def initialize(booking:, params:, user: nil, override: false, override_reason: nil)
       @booking = booking
       @hotel = booking.hotel
       @params = params.dup
       @room_type_id = @params.delete(:room_type_id)
       @room_number = @params.delete(:room_number)
+      @user = user
+      @override = override
+      @override_reason = override_reason
     end
 
     def call
-      ActiveRecord::Base.transaction do
+      failure_error = nil
+      assigned_room_number = extract_assigned_room_number
+      result = nil
+
+      result = ActiveRecord::Base.transaction do
         # 1. Handle Room Type / Inventory Change
         if @room_type_id.present?
           new_room_type = @hotel.room_types.find(@room_type_id)
@@ -33,9 +40,15 @@ module Bookings
         end
 
         # 2. Update room number in snapshot
-        if @room_number.present?
+        if assigned_room_number.present?
+          # Check for locks by others
+          lock = @hotel.room_locks.active.find_by(room_number: assigned_room_number)
+          if lock && lock.user_id != Current.user_id
+            raise "Room #{assigned_room_number} is currently being assigned by another staff member"
+          end
+
           @booking.hotel_snapshot ||= {}
-          @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => @room_number)
+          @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => assigned_room_number)
         end
 
         # 3. Save main booking details
@@ -56,17 +69,49 @@ module Bookings
             InventoryManager.new(@booking).deduct
           end
 
+          if assigned_room_number.present?
+            assignment_result = Bookings::AssignRoom.new(
+              booking: @booking,
+              room_number: assigned_room_number,
+              user: @user,
+              override: @override,
+              override_reason: @override_reason
+            ).call
+
+            unless assignment_result.success?
+              failure_error = assignment_result.error
+              raise ActiveRecord::Rollback
+            end
+          end
+
           sync_guest(@booking)
           OpenStruct.new(success?: true, booking: @booking)
         else
           OpenStruct.new(success?: false, errors: @booking.errors.full_messages)
         end
       end
+      return OpenStruct.new(success?: false, errors: [ failure_error ]) if failure_error.present?
+      result
     rescue => e
       OpenStruct.new(success?: false, errors: [ e.message ])
     end
 
     private
+
+    def extract_assigned_room_number
+      from_nested_params = @params.dig(:booking_rooms_attributes, "0", :room_number) ||
+        @params.dig(:booking_rooms_attributes, 0, :room_number)
+
+      if @params[:booking_rooms_attributes].is_a?(ActionController::Parameters) || @params[:booking_rooms_attributes].is_a?(Hash)
+        @params[:booking_rooms_attributes].each_value do |attributes|
+          next unless attributes.respond_to?(:delete)
+
+          attributes.delete(:room_number)
+        end
+      end
+
+      @room_number.presence || from_nested_params.presence
+    end
 
     def sync_guest(booking)
       guest_result = GuestArrival::CreateOrMatchGuest.new(

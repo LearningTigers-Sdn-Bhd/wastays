@@ -6,9 +6,11 @@ class User < ApplicationRecord
   has_secure_password
 
   has_many :user_hotel_accesses, dependent: :destroy
-  has_many :hotels, through: :user_hotel_accesses
-  has_many :hotel_roles, through: :user_hotel_accesses, source: :role
+  has_many :active_user_hotel_accesses, -> { active }, class_name: "UserHotelAccess"
+  has_many :hotels, through: :active_user_hotel_accesses
+  has_many :hotel_roles, through: :active_user_hotel_accesses, source: :role
   has_many :performed_night_audits, class_name: "NightAudit", foreign_key: :performed_by_user_id, dependent: :nullify
+  has_many :sent_staff_invitations, class_name: "StaffInvitation", foreign_key: :invited_by_user_id, dependent: :restrict_with_error
 
   has_many :assigned_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
 
@@ -37,7 +39,7 @@ class User < ApplicationRecord
 
     if hotel
       # Check hotel-specific permissions
-      access = user_hotel_accesses.find_by(hotel: hotel)
+      access = user_hotel_accesses.active.find_by(hotel: hotel)
       return false unless access
       access.role.permissions.exists?(slug: permission_slug)
     else

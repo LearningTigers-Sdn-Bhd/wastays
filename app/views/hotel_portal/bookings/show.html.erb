@@ -23,28 +23,36 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-3">
-        <% if @booking.status == 'confirmed' %>
-          <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
-            Check In Guest
-          </button>
-          <%= button_to "Cancel Booking", cancel_hotel_booking_path(current_hotel, @booking), method: :post, data: { turbo_confirm: "Are you sure you want to cancel this booking?", turbo_confirm_title: "Cancel Booking", turbo_confirm_color: "red" }, class: "inline-flex items-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700" %>
-        <% elsif @booking.status == 'checked_in' %>
-          <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').showModal()">
-            Check Out Guest
-          </button>
-          <button type="button" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
-            Edit Check-In
-          </button>
+        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+          <% if @booking.status == 'confirmed' %>
+            <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
+              Check In Guest
+            </button>
+            <%= button_to "Cancel Booking", cancel_hotel_booking_path(current_hotel, @booking), method: :post, data: { turbo_confirm: "Are you sure you want to cancel this booking?", turbo_confirm_title: "Cancel Booking", turbo_confirm_color: "red" }, class: "inline-flex items-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700" %>
+          <% elsif @booking.status == 'checked_in' %>
+            <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').showModal()">
+              Check Out Guest
+            </button>
+            <button type="button" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
+              Edit Check-In
+            </button>
+          <% end %>
         <% end %>
       </div>
     </div>
   </div>
 
-  <dialog id="check-in-modal-show-<%= @booking.id %>" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,28rem)] max-w-md shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
+  <dialog id="check-in-modal-show-<%= @booking.id %>" 
+          data-controller="room-lock"
+          data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
+          data-room-lock-current-room-value="<%= @booking.hotel_snapshot.is_a?(Hash) ? (@booking.hotel_snapshot['room_number'] || @booking.hotel_snapshot.dig('assignment', 'room_number')) : nil %>"
+          data-action="close->room-lock#release change->room-lock#lock"
+          class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,28rem)] max-w-md shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
     <div class="p-6 bg-white" onclick="event.stopPropagation()">
       <h3 class="text-lg font-bold text-slate-900"><%= @booking.checked_in? ? "Edit Check-In" : "Confirm Check-In" %></h3>
       <p class="text-sm text-slate-500 mt-1">Set check-in time and assign rooms for <%= @booking.guest_name %>.</p>
-      <%= form_with model: @booking, url: check_in_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
+      <%= form_with model: @booking, url: check_in_hotel_booking_path(current_hotel, @booking), method: :post, local: true, 
+          class: "mt-6 space-y-4" do |f| %>
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
           <%= f.datetime_local_field :checked_in_at,
@@ -60,7 +68,8 @@
                 <p class="text-[10px] font-medium text-slate-400 uppercase mb-1"><%= rf.object.room_type.name %></p>
                 <%= rf.text_field :room_number, 
                     placeholder: "Room No.",
-                    class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                    class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                    data: { action: "change->room-lock#lock" } %>
               </div>
             </div>
           <% end %>
@@ -182,13 +191,22 @@
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 flex items-center justify-between">
                 <h2 class="text-lg font-bold tracking-tight text-slate-950">Stay & Room Details</h2>
-                <button type="button" class="inline-flex items-center gap-x-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition" onclick="document.getElementById('edit-stay-details-modal').showModal()">
-                  <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                  Edit
-                </button>
+                <div class="flex items-center gap-3">
+                  <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+                    <button type="button" class="inline-flex items-center gap-x-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition" onclick="document.getElementById('edit-stay-details-modal').showModal()">
+                      <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                      Edit
+                    </button>
+                  <% end %>
+                </div>
               </div>
 
-              <dialog id="edit-stay-details-modal" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,32rem)] max-w-lg shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
+              <dialog id="edit-stay-details-modal" 
+                      data-controller="room-lock" 
+                      data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
+                      data-room-lock-current-room-value="<%= @booking.hotel_snapshot.is_a?(Hash) ? (@booking.hotel_snapshot['room_number'] || @booking.hotel_snapshot.dig('assignment', 'room_number')) : nil %>"
+                      data-action="close->room-lock#release change->room-lock#lock"
+                      class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,32rem)] max-w-lg shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
                 <div class="p-6 bg-white" onclick="event.stopPropagation()">
                   <h3 class="text-lg font-bold text-slate-900">Edit Stay & Room Details</h3>
                   <p class="text-sm text-slate-500 mt-1">Update booking dates and room assignment.</p>
@@ -197,8 +215,9 @@
                       class: "mt-6 space-y-4",
                       data: { 
                         controller: "booking-calc", 
-                        availability_url: availability_hotel_bookings_path(current_hotel),
-                        booking_id: @booking.id 
+                        booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
+                        booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel),
+                        booking_calc_booking_id_value: @booking.id
                       } do |f| %>
                     <div class="grid sm:grid-cols-2 gap-4">
                       <div>
@@ -225,13 +244,17 @@
                           } %>
                     </div>
 
-                    <div data-booking-calc-target="roomNumberContainer">
-                      <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
+                    <div data-booking-calc-target="roomNumberContainer" data-action="change->room-lock#lock">
+                      <label for="booking_room_number" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
                       <% current_room_number = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
                       <%= f.select :room_number, [[current_room_number, current_room_number]], { selected: current_room_number }, 
-                          { required: true,
+                          { id: "booking_room_number",
+                            required: true,
                             class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
-                            data: { booking_calc_target: "roomNumberSelect" } 
+                            data: { 
+                              booking_calc_target: "roomNumberSelect",
+                              action: "change->room-lock#lock"
+                            } 
                           } %>
                       <p class="text-[10px] text-slate-400 mt-1.5 italic">Only available rooms for the selected dates are shown.</p>
                     </div>
@@ -274,7 +297,7 @@
                       </div>
                       <div class="text-right">
                         <p class="text-sm font-bold text-slate-900">MYR <%= number_with_precision(room.subtotal, precision: 2) %></p>
-                        <% room_number = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
+                        <% room_number = room.room_number.presence || (@booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil) %>
                         <% if room_number.present? %>
                           <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mt-1">Room <%= room_number %></p>
                         <% end %>

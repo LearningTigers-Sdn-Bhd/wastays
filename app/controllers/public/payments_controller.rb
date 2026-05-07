@@ -43,7 +43,7 @@ class Public::PaymentsController < ApplicationController
 
   def guest_details_params
     params.fetch(:guest_details, {}).permit(
-      :name, :email, :phone, :government_id, :gender, :country, :document_type, :marketing_consent
+      :name, :email, :phone, :government_id, :gender, :country, :document_type, :marketing_consent, :privacy_consent
     )
   end
 

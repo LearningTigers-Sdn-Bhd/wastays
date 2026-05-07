@@ -13,7 +13,7 @@ RSpec.describe "Platform Smoke Tests", type: :request do
     [
       'manage_hotel_profile', 'manage_room_types', 'manage_rates', 'manage_inventory',
       'view_bookings', 'manage_bookings', 'view_guest_phone', 'manage_guest_arrival',
-      'view_audit_logs'
+      'view_audit_logs', 'view_reports', 'view_payouts'
     ].each do |slug|
       Permission.find_or_create_by!(slug: slug) { |p| p.name = slug.humanize }
     end

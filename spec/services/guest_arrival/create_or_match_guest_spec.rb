@@ -47,4 +47,15 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
 
     expect(result.guest.created_by_hotel_id).to eq(hotel.id)
   end
+
+  it "stores marketing and privacy consent in metadata" do
+    params[:marketing_consent] = "1"
+    params[:privacy_consent] = "1"
+    result = described_class.new(params).call
+
+    expect(result.guest.metadata["marketing_consent"]).to be(true)
+    expect(result.guest.metadata["privacy_consent"]).to be(true)
+    expect(result.guest.metadata["marketing_consent_updated_at"]).to be_present
+    expect(result.guest.metadata["privacy_consent_updated_at"]).to be_present
+  end
 end

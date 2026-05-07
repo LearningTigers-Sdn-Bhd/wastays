@@ -2,6 +2,7 @@ class Account < ApplicationRecord
   has_many :users, dependent: :destroy
   has_many :hotels, dependent: :destroy
   has_many :roles, dependent: :destroy
+  has_many :staff_invitations, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_one :banking_detail, dependent: :destroy
 

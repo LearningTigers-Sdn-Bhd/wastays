@@ -444,21 +444,22 @@
           </div>
 
           <!-- PDPA Consent -->
-          <div class="card p-6 md:p-8">
-            <div class="space-y-4">
-              <label class="flex items-start gap-3 text-sm text-neutral-text-secondary cursor-pointer">
-                <%= hidden_field_tag "guest_details[marketing_consent]", "0" %>
-                <%= check_box_tag "guest_details[marketing_consent]", "1", false, class: "mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary" %>
-                <span>
-                  I agree to receive marketing communications, exclusive offers, and travel updates from WAStays and its partner hotels.
-                  <span class="block text-xs mt-1 text-neutral-text-secondary/70 italic">
-                    By checking this box, you agree to our 
-                    <%= link_to "Privacy Policy", privacy_policy_path, class: "text-brand-primary underline", target: "_blank" %> 
-                    and the processing of your data for marketing purposes.
-                  </span>
-                </span>
-              </label>
-            </div>
+          <div class="space-y-4 py-4">
+            <label class="flex items-start gap-3 text-sm text-neutral-text-secondary cursor-pointer">
+              <%= hidden_field_tag "guest_details[privacy_consent]", "0" %>
+              <%= check_box_tag "guest_details[privacy_consent]", "1", false, required: true, class: "mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary" %>
+              <span>
+                I have read and agree to the <%= link_to "Privacy Policy", privacy_policy_path, class: "text-brand-primary underline", target: "_blank" %> and how my data will be processed. <span class="text-status-error">*</span>
+              </span>
+            </label>
+
+            <label class="flex items-start gap-3 text-sm text-neutral-text-secondary cursor-pointer">
+              <%= hidden_field_tag "guest_details[marketing_consent]", "0" %>
+              <%= check_box_tag "guest_details[marketing_consent]", "1", false, class: "mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary" %>
+              <span>
+                I agree to receive marketing communications, exclusive offers, and travel updates from WAStays and its partner hotels.
+              </span>
+            </label>
           </div>
 
           <div class="flex items-center justify-end gap-4 pt-4">

@@ -35,7 +35,7 @@ RSpec.describe "Public::Bookings invoice", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.content_type).to eq("application/pdf")
-      expect(response.headers["Content-Disposition"]).to include("attachment")
+      expect(response.headers["Content-Disposition"]).to include("inline")
       expect(response.headers["Content-Disposition"]).to include("wastays-invoice-WS-INVTEST1.pdf")
     end
 

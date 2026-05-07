@@ -13,6 +13,7 @@ class Booking < ApplicationRecord
   has_one :refund_request, dependent: :destroy
   has_many :housekeeping_requests, dependent: :destroy
   has_many :complaint_requests, dependent: :destroy
+  has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time
   attr_accessor :guest_government_id
 
@@ -168,15 +169,9 @@ class Booking < ApplicationRecord
   end
 
   def self.lookup_by_phone(phone)
-    # Normalize phone: remove everything except digits
-    normalized_query = phone.to_s.gsub(/\D/, "")
-    return none if normalized_query.blank?
+    suffix = PhoneIdentity.booking_lookup_suffix(phone)
+    return none if suffix.blank?
 
-    # Fuzzy match: match the last 9 digits of the phone number
-    # This covers cases with different country codes or leading zeros
-    suffix = normalized_query.last(9)
-
-    # Search in guest_phone field of bookings
     where("regexp_replace(guest_phone, '\D', '', 'g') LIKE ?", "%#{suffix}")
   end
 

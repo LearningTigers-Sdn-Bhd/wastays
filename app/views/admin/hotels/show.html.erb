@@ -143,16 +143,11 @@
       </section>
 
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">View Operations</h2>
+        <h2 class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Hotel Dashboard</h2>
         <div class="space-y-3">
-          <%= link_to hotel_arrivals_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50" do %>
-            Arrival Board
-          <% end %>
-          <%= link_to hotel_bookings_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50" do %>
-            Booking List
-          <% end %>
-          <%= link_to hotel_audit_logs_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50" do %>
-            Operation Logs
+          <%= link_to hotel_dashboard_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50", target: "_blank" do %>
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+            Go to Hotel Dashboard
           <% end %>
         </div>
       </section>

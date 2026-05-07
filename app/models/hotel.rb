@@ -3,23 +3,53 @@ class Hotel < ApplicationRecord
   extend FriendlyId
   friendly_id :name, use: :slugged
 
+  encrypts :ai_provider_key
+
+  enum :ai_provider_name, {
+    openai: "openai",
+    claude: "claude",
+    deepseek: "deepseek",
+    gemini: "gemini"
+  }, prefix: true, validate: { allow_nil: true }
+
+  enum :ai_concierge_tone, {
+    basic: "basic",
+    business: "business",
+    cheerful: "cheerful"
+  }, prefix: true, validate: true
+
+  AI_CONCIERGE_MODEL_NAMES = {
+    "openai" => "gpt-4o-mini",
+    "claude" => "claude-haiku-4-5",
+    "deepseek" => "deepseek-chat",
+    "gemini" => "gemini-2.5-flash"
+  }.freeze
+
+  validates :ai_provider_name, presence: true, if: :ai_provider_enabled?
+  validates :ai_provider_key, presence: true, if: :ai_provider_enabled?
+
   has_many_attached :photos
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :users, through: :user_hotel_accesses
+  has_many :staff_invitations, dependent: :destroy
   has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
   has_one :property_policy, dependent: :destroy
   has_many :room_types, dependent: :destroy
+  has_many :nearby_attractions, dependent: :destroy
   has_many :pricing_rules, class_name: "HotelPricingRule", dependent: :destroy
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
+  has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
-  has_many :onboarding_sessions, dependent: :destroy
+  has_many :room_locks, dependent: :destroy
+  has_many :room_statuses, dependent: :destroy
+  has_many :room_operational_audit_logs, dependent: :destroy
 
   validates :name, presence: true
   validates :slug, presence: true, uniqueness: true
@@ -125,6 +155,35 @@ class Hotel < ApplicationRecord
 
   def checkout_payment_gateway
     checkout_payment_setting&.gateway&.downcase
+  end
+
+  def ai_concierge_enabled?
+    ai_provider_enabled?
+  end
+
+  def ai_concierge_ready?
+    ai_concierge_enabled? && ai_provider_name.present? && ai_provider_key.present?
+  end
+
+  def ai_concierge_provider
+    case ai_provider_name
+    when "claude"
+      :anthropic
+    else
+      ai_provider_name&.to_sym
+    end
+  end
+
+  def ai_concierge_model_name
+    AI_CONCIERGE_MODEL_NAMES.fetch(ai_provider_name)
+  end
+
+  def ai_concierge_api_key
+    ai_provider_key
+  end
+
+  def ai_concierge_structured_output_supported?
+    ai_provider_name != "deepseek"
   end
 
   def effective_margin_rate(room_type = nil)

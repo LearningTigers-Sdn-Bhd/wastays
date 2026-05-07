@@ -39,5 +39,30 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request do
       expect(response.body).not_to include("Dates:")
       expect(response.body).to include("Operation Logs")
     end
+
+    it "exports csv/xls/pdf" do
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin")
+      create(
+        :inventory_audit_log,
+        hotel: hotel,
+        room_type: room_type,
+        user: user,
+        action_type: "bulk_inventory_update",
+        old_value: { "date" => "2026-04-01", "quantity" => 3, "status" => "open" },
+        new_value: { "date" => "2026-04-01", "quantity" => 5, "status" => "closed" }
+      )
+
+      get "/hotel/#{hotel.id}/audit_logs.csv"
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+
+      get "/hotel/#{hotel.id}/audit_logs.xls"
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.ms-excel")
+
+      get "/hotel/#{hotel.id}/audit_logs.pdf"
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+    end
   end
 end

@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class HotelPortal::BookingsController < HotelPortal::BaseController
+  before_action :authorize_view_bookings!, only: %i[index show availability stay_price]
+  before_action :authorize_manage_bookings!, only: %i[new create update check_in check_out cancel]
+
   def index
     @all_bookings = current_hotel.bookings.recent_first
     @all_bookings = @all_bookings.search(params[:query]) if params[:query].present?
@@ -25,15 +28,15 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
     room_type = current_hotel.room_types.find(params[:room_type_id])
 
-    available_rooms = Bookings::AvailableRoomNumbers.new(
+    service = Bookings::AvailableRoomNumbers.new(
       hotel: current_hotel,
       room_type: room_type,
       check_in: Date.parse(params[:check_in]),
       check_out: Date.parse(params[:check_out]),
       exclude_booking_id: params[:exclude_booking_id].presence
-    ).call
+    )
 
-    render json: { available_rooms: available_rooms }
+    render json: { available_rooms: service.call, room_options: service.options }
   end
 
   def stay_price
@@ -55,10 +58,12 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def create
     result = Bookings::CreateManualBooking.new(
       hotel: current_hotel,
-      params: booking_params
+      params: booking_params,
+      user: current_user
     ).call
 
     if result.success?
+      release_room_locks(result.booking)
       redirect_to hotel_booking_path(current_hotel, result.booking), notice: "Booking created successfully."
     else
       @booking = current_hotel.bookings.build(booking_params.except(:room_type_id, :room_number))
@@ -77,10 +82,14 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @booking = current_hotel.bookings.find(params[:id])
     result = Bookings::UpdateStayService.new(
       booking: @booking,
-      params: booking_params
+      params: booking_params,
+      user: current_user,
+      override: params[:override_room_status],
+      override_reason: params[:override_room_status_reason]
     ).call
 
     if result.success?
+      release_room_locks(@booking)
       redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking updated successfully."
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
@@ -103,15 +112,26 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   private
 
+  def release_room_locks(booking)
+    # Release locks for all rooms assigned to this booking
+    # Assuming the admin might have locked multiple rooms if they changed their mind
+    # or if we just want to be safe and release all locks held by current user for this hotel
+    # But more specifically, we should release the lock for the room they just assigned.
+    room_number = booking.hotel_snapshot.is_a?(Hash) ? (booking.hotel_snapshot["room_number"] || booking.hotel_snapshot.dig("assignment", "room_number")) : nil
+    RoomLock.where(hotel: current_hotel, user: current_user, room_number: room_number).destroy_all if room_number.present?
+  end
+
   def transition_status(status, timestamp, success_notice)
     @booking = current_hotel.bookings.find(params[:id])
     result = Bookings::TransitionStatus.new(
       booking: @booking,
       status: status,
-      timestamp: timestamp
+      timestamp: timestamp,
+      user: current_user
     ).call
 
     if result.success?
+      release_room_locks(@booking) if status == "checked_in"
       redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
@@ -126,5 +146,13 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
       booking_rooms_attributes: [ :id, :room_number ]
     )
+  end
+
+  def authorize_view_bookings!
+    raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
+  end
+
+  def authorize_manage_bookings!
+    raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
   end
 end

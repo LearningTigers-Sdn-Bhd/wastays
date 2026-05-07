@@ -1,0 +1,26 @@
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <%= link_to "Roles & Permissions", hotel_roles_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900">New Role</span>
+  </div>
+<% end %>
+
+<div class="mx-auto max-w-5xl space-y-8 pb-20">
+  <div class="px-4 md:px-0">
+    <div class="mt-5">
+      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">New Role</h1>
+      <p class="mt-1 text-sm font-medium text-slate-600">Create a custom access level for hotel staff.</p>
+    </div>
+  </div>
+
+  <div class="px-4 md:px-0">
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="p-6">
+        <%= render "form" %>
+      </div>
+    </section>
+  </div>
+</div>

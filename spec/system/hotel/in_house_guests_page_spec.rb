@@ -73,6 +73,12 @@ RSpec.describe "Hotel in-house guests page", type: :system do
   before do
     driven_by(:rack_test)
 
+    # Assign necessary permissions to the role
+    %w[view_bookings manage_bookings].each do |slug|
+      permission = Permission.find_by(slug: slug) || create(:permission, name: slug.titleize, slug: slug)
+      role.permissions << permission unless role.permissions.include?(permission)
+    end
+
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 

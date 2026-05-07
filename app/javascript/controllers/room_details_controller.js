@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["modal", "mainImage", "backdropImage", "thumbnails", "name", "description", "adults", "children", "childrenContainer", "indexDisplay", "totalCount", "amenitiesSection", "amenitiesList"]
+  static targets = ["modal", "mainImage", "backdropImage", "thumbnails", "name", "description", "adults", "children", "childrenContainer", "indexDisplay", "totalCount", "amenitiesSection", "amenitiesList", "hotelAmenitiesSection", "hotelAmenitiesList", "roomAmenitiesToggle", "hotelAmenitiesToggle"]
   static values = {
     photos: Array,
     index: Number
@@ -22,12 +22,21 @@ export default class extends Controller {
       if (this.hasChildrenContainerTarget) this.childrenContainerTarget.classList.add("hidden")
     }
 
-    // Amenities setup
-    if (data.amenities && data.amenities.length > 0) {
-      this.renderAmenities(data.amenities)
+    // Room Amenities setup
+    const roomAmenities = data.room_amenities || data.amenities || []
+    if (roomAmenities.length > 0) {
+      this.renderAmenities(roomAmenities, this.amenitiesListTarget, this.roomAmenitiesToggleTarget)
       this.amenitiesSectionTarget.classList.remove("hidden")
     } else {
       this.amenitiesSectionTarget.classList.add("hidden")
+    }
+
+    // Hotel Amenities setup
+    if (data.hotel_amenities && data.hotel_amenities.length > 0) {
+      this.renderAmenities(data.hotel_amenities, this.hotelAmenitiesListTarget, this.hotelAmenitiesToggleTarget)
+      this.hotelAmenitiesSectionTarget.classList.remove("hidden")
+    } else {
+      if (this.hasHotelAmenitiesSectionTarget) this.hotelAmenitiesSectionTarget.classList.add("hidden")
     }
     
     // Photos setup
@@ -100,30 +109,78 @@ export default class extends Controller {
     this.photosValue.forEach((photo, index) => {
       const thumb = document.createElement("img")
       thumb.src = photo
-      thumb.className = "h-16 w-20 shrink-0 rounded-xl object-cover cursor-pointer border-2 transition-colors border-transparent hover:border-blue-300"
+      thumb.className = "h-28 w-32 shrink-0 rounded-xl object-cover cursor-pointer border-2 transition-colors border-transparent hover:border-blue-300"
       thumb.dataset.action = "click->room-details#switchImage"
       thumb.dataset.index = index
       this.thumbnailsTarget.appendChild(thumb)
     })
   }
 
-  renderAmenities(amenities) {
-    this.amenitiesListTarget.innerHTML = ""
+  renderAmenities(amenities, listTarget, toggleTarget) {
+    listTarget.innerHTML = ""
     const template = document.getElementById("amenity-item-template")
+    const limit = 9
+    const hasMore = amenities.length > limit
 
-    amenities.forEach(amenity => {
+    amenities.forEach((amenity, index) => {
       const clone = document.importNode(template.content, true)
-      clone.querySelector("[data-amenity-name]").textContent = amenity.name
+      const container = clone.firstElementChild
       
-      const iconContainer = clone.querySelector("[data-amenity-icon-container]")
+      container.querySelector("[data-amenity-name]").textContent = amenity.name
+      
+      const iconContainer = container.querySelector("[data-amenity-icon-container]")
       const iconSource = document.getElementById(`icon-${amenity.icon}`)
       
       if (iconSource) {
         iconContainer.innerHTML = iconSource.innerHTML
       }
 
-      this.amenitiesListTarget.appendChild(clone)
+      if (index >= limit) {
+        container.classList.add("hidden", "extra-amenity-item")
+      }
+
+      listTarget.appendChild(container)
     })
+
+    if (hasMore && toggleTarget) {
+      toggleTarget.classList.remove("hidden")
+      this.setToggleLabel(toggleTarget, true, amenities.length)
+      // Reset rotation
+      const svg = toggleTarget.querySelector("svg")
+      if (svg) svg.classList.remove("rotate-180")
+    } else if (toggleTarget) {
+      toggleTarget.classList.add("hidden")
+    }
+  }
+
+  toggleRoomAmenities(event) {
+    this.toggleAmenities(this.amenitiesListTarget, this.roomAmenitiesToggleTarget)
+  }
+
+  toggleHotelAmenities(event) {
+    this.toggleAmenities(this.hotelAmenitiesListTarget, this.hotelAmenitiesToggleTarget)
+  }
+
+  toggleAmenities(listTarget, toggleTarget) {
+    const extras = listTarget.querySelectorAll(".extra-amenity-item")
+    if (extras.length === 0) return
+
+    const isShowingMore = extras[0].classList.contains("hidden")
+    const totalCount = listTarget.children.length
+
+    extras.forEach(el => el.classList.toggle("hidden"))
+    this.setToggleLabel(toggleTarget, !isShowingMore, totalCount)
+    
+    // Toggle SVG rotation
+    const svg = toggleTarget.querySelector("svg")
+    if (svg) svg.classList.toggle("rotate-180")
+  }
+
+  setToggleLabel(button, isCollapsed, count) {
+    const span = button.querySelector("span")
+    if (span) {
+      span.textContent = isCollapsed ? "Show more" : "Show less"
+    }
   }
 
   touchStart(event) {
