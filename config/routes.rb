@@ -42,6 +42,7 @@ Rails.application.routes.draw do
   # API Namespace
   namespace :api do
     namespace :v1 do
+      match "*path", to: "preflight#handle", via: :options
       post "guest_sessions", to: "guest_sessions#create"
       post "workflow_webhooks", to: "workflow_webhooks#create"
       post "housekeeping_webhooks", to: "housekeeping_webhooks#create"
@@ -49,6 +50,9 @@ Rails.application.routes.draw do
       post "pre_checkin_links", to: "pre_checkin_links#create"
       resources :hotels, only: [ :index, :show ] do
         get "availability", on: :member
+        namespace :ai_concierge do
+          resources :inquiries, only: [ :create ]
+        end
       end
       resources :quotes, only: [ :create, :show ]
       resources :bookings, only: [ :show ] do
@@ -94,6 +98,9 @@ Rails.application.routes.draw do
 
     get "register", to: "registrations#new"
     post "register", to: "registrations#create"
+
+    get "staff-invitations/:token", to: "staff_invitations#show", as: :staff_invitation
+    patch "staff-invitations/:token", to: "staff_invitations#update"
   end
 
   # Superadmin dashboard
@@ -202,6 +209,8 @@ Rails.application.routes.draw do
     end
 
     resource :profile, only: [ :edit, :update ]
+    resource :faq, only: [ :edit, :update ], controller: "hotel_faqs"
+    resource :policy, only: [ :edit, :update ], controller: "hotel_policies"
     delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
     delete "profile/photos", to: "profiles#destroy_photos", as: :profile_photos
     patch "profile/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature
@@ -210,6 +219,10 @@ Rails.application.routes.draw do
     delete "profile/photo_queue/:signed_id", to: "profiles#remove_photo_from_queue", as: :profile_photo_queue_item
     post "profile/photo_queue/commit", to: "profiles#commit_photo_queue", as: :commit_profile_photo_queue
     resource :property_policy, only: [ :edit, :update ]
+    resources :users, only: [ :index, :new, :create, :update, :destroy ], path: "staff" do
+      patch :reactivate, on: :member
+    end
+    resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions"
 
     resources :room_types do
       member do
@@ -219,6 +232,8 @@ Rails.application.routes.draw do
       resources :rates, only: [ :index, :create ]
       resources :inventories, only: [ :index, :create ]
     end
+
+    resources :nearby_attractions, except: [ :show ]
     resources :bookings, only: [ :index, :show, :update, :new, :create ] do
       collection do
         get :availability
@@ -255,6 +270,10 @@ Rails.application.routes.draw do
       collection do
         get :payouts
         get :breakdown, defaults: { format: "html" }
+        get :arrivals_departures
+        get :daily_occupancy
+        get :daily_revenue
+        get :outstanding_balance
       end
     end
     resources :night_audits, only: [ :index, :show, :create ]

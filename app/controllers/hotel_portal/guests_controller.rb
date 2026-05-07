@@ -4,6 +4,8 @@ module HotelPortal
   class GuestsController < HotelPortal::BaseController
     helper_method :safe_guest_attr, :guest_stays_count, :guest_currency_totals
 
+    before_action :authorize_view_bookings!, only: %i[index show]
+    before_action :authorize_manage_bookings!, only: %i[new create edit update destroy]
     before_action :set_guest, only: [ :show, :edit, :update, :destroy ]
 
     def index
@@ -103,6 +105,16 @@ module HotelPortal
 
     def guest_params
       params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id)
+    end
+
+    private
+
+    def authorize_view_bookings!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
+    end
+
+    def authorize_manage_bookings!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
     end
   end
 end

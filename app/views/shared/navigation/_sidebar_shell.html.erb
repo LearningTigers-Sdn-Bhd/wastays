@@ -15,7 +15,7 @@
   mobile_search_id = "#{sidebar_key}-sidebar-search-mobile"
 %>
 
-<aside id="<%= desktop_id %>" <% if search_enabled %>data-controller="<%= search_controller %>"<% end %> class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full overflow-y-auto overscroll-contain custom-scrollbar">
+<aside id="<%= desktop_id %>" <% if sidebar_key == "hotel" %>data-turbo-permanent<% end %> <% if search_enabled %>data-controller="<%= search_controller %>"<% end %> class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full overflow-y-auto overscroll-contain custom-scrollbar">
   <% if search_enabled %>
     <div class="p-4 pb-2">
       <label class="block" for="<%= desktop_search_id %>">

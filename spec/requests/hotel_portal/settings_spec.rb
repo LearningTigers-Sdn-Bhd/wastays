@@ -93,5 +93,26 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response.body).to include('Payment gateway credentials are managed by superadmin.')
       expect(hotel.payment_settings.find_by(gateway: 'razorpay')).to be_nil
     end
+
+    it 'updates ai concierge tone and provider configuration' do
+      patch hotel_settings_path(hotel), params: {
+        form_id: 'ai_configuration',
+        hotel: {
+          ai_provider_enabled: '1',
+          ai_concierge_tone: 'cheerful',
+          ai_provider_name: 'openai',
+          ai_provider_key: 'test-api-key'
+        }
+      }
+
+      expect(response).to redirect_to(hotel_settings_path(hotel))
+      follow_redirect!
+      expect(response.body).to include('Settings updated successfully.')
+
+      hotel.reload
+      expect(hotel.ai_provider_enabled).to be(true)
+      expect(hotel.ai_concierge_tone).to eq('cheerful')
+      expect(hotel.ai_provider_name).to eq('openai')
+    end
   end
 end

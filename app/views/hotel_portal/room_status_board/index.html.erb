@@ -73,7 +73,8 @@
 
               <% group[:rooms].each do |room| %>
               <% status = room.dig(:status, :status).to_s %>
-              <% max_blocks_same_start = room[:blocks].group_by { |block| block[:check_in] }.values.map(&:size).max || 1 %>
+              <% visible_start_date = @room_status_board[:dates].first %>
+              <% max_blocks_same_start = room[:blocks].group_by { |block| [block[:check_in], visible_start_date].max }.values.map(&:size).max || 1 %>
               <% row_min_height = [112, 24 + (max_blocks_same_start * 62)].max %>
               <% status_badge_class = case status
                  when 'ready' then 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -123,7 +124,8 @@
 
                 <% @room_status_board[:dates].each do |date| %>
                   <div class="relative border-l border-slate-100 px-2 py-2 <%= 'bg-slate-50/50' if date == Date.current %>">
-                    <% room[:blocks].select { |block| block[:check_in] == date }.each_with_index do |block, block_index| %>
+                    <% visible_end_exclusive = @room_status_board[:dates].last + 1.day %>
+                    <% room[:blocks].select { |block| [block[:check_in], visible_start_date].max == date }.each_with_index do |block, block_index| %>
                       <% block_class = case block[:status].to_s
                          when 'confirmed' then 'border-blue-200 bg-blue-50 text-blue-700'
                          when 'checked_in' then 'border-violet-200 bg-violet-50 text-violet-700'
@@ -131,10 +133,16 @@
                          when 'cancelled' then 'border-slate-300 bg-slate-100 text-slate-600'
                          else 'border-sky-200 bg-sky-50 text-sky-700'
                          end %>
+                      <% clipped_left = block[:check_in] < visible_start_date %>
+                      <% clipped_right = block[:check_out] > visible_end_exclusive %>
+                      <% left_offset = clipped_left ? 0 : 8 %>
+                      <% right_trim = clipped_right ? 0 : 8 %>
+                      <% width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)" %>
+                      <% clip_corner_class = [("rounded-l-none" if clipped_left), ("rounded-r-none" if clipped_right)].compact.join(" ") %>
                       <% tooltip_text = "#{block[:guest_name]} (#{block[:status].to_s.humanize}) · #{block[:check_in]} to #{block[:check_out]}" %>
                       <div
-                        class="absolute left-2 top-2 z-10 overflow-hidden rounded-xl border px-3 py-2 shadow-sm <%= block_class %>"
-                        style="top: <%= 8 + (block_index * 58) %>px; width: calc(<%= block[:span] %> * 100% - 1rem); min-width: 88px;"
+                        class="absolute top-2 z-10 overflow-hidden rounded-xl border px-3 py-2 shadow-sm <%= block_class %> <%= clip_corner_class %>"
+                        style="top: <%= 8 + (block_index * 58) %>px; left: <%= left_offset %>px; width: <%= width_calc %>; min-width: 88px;"
                         title="<%= tooltip_text %>"
                       >
                         <p class="truncate text-sm font-bold"><%= block[:guest_name] %></p>
