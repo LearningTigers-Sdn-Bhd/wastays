@@ -1,0 +1,105 @@
+# frozen_string_literal: true
+
+require "prawn"
+require "prawn/table"
+
+module HotelPortal
+  module Reports
+    class DailyOccupancyPdfExportService
+      def initialize(hotel:, report:)
+        @hotel = hotel
+        @report = report
+      end
+
+      def generate
+        pdf = Prawn::Document.new(page_size: "A4", margin: [ 32, 32, 32, 32 ])
+
+        draw_header(pdf)
+        draw_summary(pdf)
+        draw_daily_table(pdf)
+
+        pdf.render
+      end
+
+      private
+
+      def draw_header(pdf)
+        logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
+        if File.exist?(logo_path)
+          pdf.image logo_path, at: [ pdf.bounds.right - 150, pdf.cursor + 8 ], width: 140
+        else
+          pdf.text_box "WAStays", at: [ pdf.bounds.right - 140, pdf.cursor + 8 ], width: 140, align: :right, size: 12, style: :bold
+        end
+
+        pdf.text "Daily Occupancy Report", size: 18, style: :bold
+        pdf.move_down 4
+        pdf.text @hotel.name.to_s, size: 11, style: :bold
+
+        period = if @report.start_date == @report.end_date
+          @report.start_date.strftime("%d %b %Y")
+        else
+          "#{@report.start_date.strftime('%d %b %Y')} - #{@report.end_date.strftime('%d %b %Y')}"
+        end
+
+        pdf.text period, size: 10
+        pdf.move_down 12
+      end
+
+      def draw_summary(pdf)
+        rows = [
+          [ "Rooms Sold", @report.totals[:rooms_sold].to_s ],
+          [ "Rooms Available", @report.totals[:rooms_available].to_s ],
+          [ "Occupancy", percentage(@report.totals[:occupancy_rate]) ],
+          [ "Room Revenue", money(@report.totals[:room_revenue]) ],
+          [ "Average Daily Rate (ADR)", money(@report.totals[:adr]) ],
+          [ "Revenue per Available Room (RevPAR)", money(@report.totals[:revpar]) ]
+        ]
+
+        pdf.table(rows, width: 280, cell_style: { borders: [ :bottom ], padding: [ 6, 8, 6, 8 ] }) do
+          columns(0).font_style = :bold
+          columns(1).align = :right
+        end
+        pdf.move_down 16
+      end
+
+      def draw_daily_table(pdf)
+        pdf.text "Daily Breakdown", size: 12, style: :bold
+        pdf.move_down 6
+
+        if @report.rows.empty?
+          pdf.text "No occupancy data for this selected period.", size: 10, style: :italic
+          return
+        end
+
+        table_rows = @report.rows.map do |row|
+          [
+            row[:date].strftime("%d %b %Y"),
+            row[:rooms_sold].to_s,
+            row[:rooms_available].to_s,
+            percentage(row[:occupancy_rate]),
+            money(row[:room_revenue]),
+            money(row[:adr]),
+            money(row[:revpar])
+          ]
+        end
+
+        pdf.table(
+          [ [ "Date", "Rooms Sold", "Rooms Available", "Occupancy", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)" ] ] + table_rows,
+          width: pdf.bounds.width,
+          cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }
+        ) do
+          row(0).font_style = :bold
+          row(0).background_color = "F1F5F9"
+        end
+      end
+
+      def percentage(value)
+        format("%.2f%%", value.to_d * 100)
+      end
+
+      def money(value)
+        format("MYR %.2f", value.to_d)
+      end
+    end
+  end
+end

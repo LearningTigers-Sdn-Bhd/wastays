@@ -121,4 +121,73 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("Excel Guest")
     end
   end
+
+  describe "GET /daily_occupancy" do
+    let(:start_date) { Date.new(2026, 5, 6) }
+    let(:end_date) { Date.new(2026, 5, 7) }
+
+    it "renders daily occupancy report for selected range" do
+      room_type = create(:room_type, hotel: hotel, quantity: 10)
+      create(:room_inventory, room_type: room_type, date: start_date, quantity: 8, status: "open")
+      create(:room_inventory, room_type: room_type, date: end_date, quantity: 9, status: "open")
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, guest_name: "Occ Guest")
+      create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 300)
+
+      get daily_occupancy_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Daily Occupancy Report")
+      expect(response.body).to include("Rooms Sold")
+    end
+
+    it "does not include data from another hotel" do
+      room_type = create(:room_type, hotel: create(:hotel), quantity: 10)
+      booking = create(:booking, hotel: room_type.hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
+      create(:booking_room, booking: booking, room_type: room_type, quantity: 5, subtotal: 500)
+
+      get daily_occupancy_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Daily Occupancy Report")
+      expect(response.body).not_to include(booking.confirmation_token)
+    end
+
+    it "exports CSV" do
+      room_type = create(:room_type, hotel: hotel, quantity: 10)
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
+      create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 300)
+
+      get daily_occupancy_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+      expect(response.body).to include("Date,Rooms Sold,Rooms Available,Occupancy %,Room Revenue,Average Daily Rate (ADR),Revenue per Available Room (RevPAR)")
+    end
+
+    it "exports PDF" do
+      room_type = create(:room_type, hotel: hotel, quantity: 10)
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
+      create(:booking_room, booking: booking, room_type: room_type, quantity: 1, subtotal: 120)
+
+      get daily_occupancy_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.headers["Content-Disposition"]).to include(".pdf")
+    end
+
+    it "exports XLS" do
+      room_type = create(:room_type, hotel: hotel, quantity: 10)
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
+      create(:booking_room, booking: booking, room_type: room_type, quantity: 1, subtotal: 120)
+
+      get daily_occupancy_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.ms-excel")
+      expect(response.headers["Content-Disposition"]).to include(".xls")
+      expect(response.body).to include('ss:Name="Summary"')
+      expect(response.body).to include('ss:Name="Daily Occupancy"')
+    end
+  end
 end
