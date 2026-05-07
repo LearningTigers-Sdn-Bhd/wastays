@@ -263,6 +263,7 @@ Rails.application.routes.draw do
       collection do
         get :payouts
         get :breakdown, defaults: { format: "html" }
+        get :arrivals_departures
       end
     end
     resources :night_audits, only: [ :index, :show, :create ]

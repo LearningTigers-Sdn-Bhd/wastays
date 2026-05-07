@@ -15,6 +15,9 @@
       </div>
 
       <div class="inline-flex gap-x-2">
+        <%= link_to arrivals_departures_hotel_reports_path(current_hotel), class: "inline-flex items-center rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50", data: { turbo: false } do %>
+          Arrivals &amp; Departures
+        <% end %>
         <%= link_to breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, date_preset: @date_preset), class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700", data: { turbo: false } do %>
           <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           View Breakdown

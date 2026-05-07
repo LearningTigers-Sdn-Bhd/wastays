@@ -59,7 +59,65 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
     end
   end
 
+  def arrivals_departures
+    @report_start_date, @report_end_date = parse_report_date_range
+    @report = HotelPortal::Reports::ArrivalsDeparturesReport.new(
+      hotel: current_hotel,
+      start_date: @report_start_date,
+      end_date: @report_end_date
+    ).call
+
+    respond_to do |format|
+      format.html
+      format.csv do
+        csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: @report).generate
+        send_data csv,
+          filename: "arrivals-departures-#{@report.start_date}-#{@report.end_date}.csv",
+          type: "text/csv"
+      end
+      format.any(:xls) do
+        workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: @report).generate
+        send_data workbook,
+          filename: "arrivals-departures-#{@report.start_date}-#{@report.end_date}.xls",
+          type: "application/vnd.ms-excel",
+          disposition: "attachment"
+      end
+      format.pdf do
+        pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: @report).generate
+        send_data pdf,
+          filename: "arrivals-departures-#{@report.start_date}-#{@report.end_date}.pdf",
+          type: "application/pdf",
+          disposition: "attachment"
+      end
+    end
+  end
+
   private
+
+  def parse_report_date_range
+    # Backward compatible: if only `date` is provided, treat it as one-day range.
+    if params[:start_date].blank? && params[:end_date].blank? && params[:date].present?
+      parsed_date = parse_single_report_date(params[:date])
+      return [ parsed_date, parsed_date ]
+    end
+
+    start_date = parse_single_report_date(params[:start_date])
+    end_date = parse_single_report_date(params[:end_date])
+
+    start_date ||= end_date || Date.current
+    end_date ||= start_date
+    end_date = start_date if end_date < start_date
+
+    [ start_date, end_date ]
+  end
+
+  def parse_single_report_date(value)
+    return if value.blank?
+
+    Date.parse(value.to_s)
+  rescue ArgumentError, TypeError
+    nil
+  end
 
   def parse_date_param(value)
     return if value.blank?
