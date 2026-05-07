@@ -18,7 +18,7 @@ module HotelPortal
 
       if upload_result
         flash[:alert] = upload_result.alert_message if upload_result.respond_to?(:trimmed?) && upload_result.trimmed?
-        redirect_to hotel_dashboard_path(@hotel), notice: "Hotel profile updated successfully."
+        redirect_to edit_hotel_profile_path(@hotel), notice: "Hotel profile updated successfully."
       else
         @presenter = HotelPortal::ProfilePresenter.new(@hotel, @photo_queue, self)
         render :edit, status: :unprocessable_content
