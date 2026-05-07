@@ -92,6 +92,39 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
     end
   end
 
+  def outstanding_balance
+    @report_start_date, @report_end_date = parse_report_date_range
+    @report = HotelPortal::Reports::OutstandingBalanceReport.new(
+      hotel: current_hotel,
+      start_date: @report_start_date,
+      end_date: @report_end_date
+    ).call
+
+    respond_to do |format|
+      format.html
+      format.csv do
+        csv = HotelPortal::Reports::OutstandingBalanceCsvExportService.new(report: @report).generate
+        send_data csv,
+          filename: "outstanding-balance-#{@report.start_date}-#{@report.end_date}.csv",
+          type: "text/csv"
+      end
+      format.any(:xls) do
+        workbook = HotelPortal::Reports::OutstandingBalanceExcelExportService.new(report: @report).generate
+        send_data workbook,
+          filename: "outstanding-balance-#{@report.start_date}-#{@report.end_date}.xls",
+          type: "application/vnd.ms-excel",
+          disposition: "attachment"
+      end
+      format.pdf do
+        pdf = HotelPortal::Reports::OutstandingBalancePdfExportService.new(hotel: current_hotel, report: @report).generate
+        send_data pdf,
+          filename: "outstanding-balance-#{@report.start_date}-#{@report.end_date}.pdf",
+          type: "application/pdf",
+          disposition: "attachment"
+      end
+    end
+  end
+
   def arrivals_departures
     @report_start_date, @report_end_date = parse_report_date_range
     @report = HotelPortal::Reports::ArrivalsDeparturesReport.new(

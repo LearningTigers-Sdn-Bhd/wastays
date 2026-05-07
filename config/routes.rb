@@ -265,6 +265,7 @@ Rails.application.routes.draw do
         get :breakdown, defaults: { format: "html" }
         get :arrivals_departures
         get :daily_occupancy
+        get :outstanding_balance
       end
     end
     resources :night_audits, only: [ :index, :show, :create ]

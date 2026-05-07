@@ -190,4 +190,54 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include('ss:Name="Daily Occupancy"')
     end
   end
+
+  describe "GET /outstanding_balance" do
+    let(:start_date) { Date.new(2026, 5, 7) }
+    let(:end_date) { Date.new(2026, 5, 8) }
+
+    it "renders outstanding balance report for selected range" do
+      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Unpaid Guest", confirmation_token: "WS-UNPAID")
+      create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", check_in: start_date, check_out: start_date + 1.day, guest_name: "Paid Guest", confirmation_token: "WS-PAID")
+
+      get outstanding_balance_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Outstanding Balance Report")
+      expect(response.body).to include("Unpaid Guest")
+      expect(response.body).not_to include("Paid Guest")
+    end
+
+    it "exports CSV" do
+      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "CSV Outstanding", confirmation_token: "WS-OB-CSV")
+
+      get outstanding_balance_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+      expect(response.body).to include("Guest Name,Booking Ref,Stay,Rooms,Room Numbers,Payment Status,Outstanding Amount,Notes")
+      expect(response.body).to include("CSV Outstanding")
+    end
+
+    it "exports PDF" do
+      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day)
+
+      get outstanding_balance_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.headers["Content-Disposition"]).to include(".pdf")
+    end
+
+    it "exports XLS" do
+      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Outstanding")
+
+      get outstanding_balance_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.ms-excel")
+      expect(response.headers["Content-Disposition"]).to include(".xls")
+      expect(response.body).to include('ss:Name="Summary"')
+      expect(response.body).to include('ss:Name="Outstanding Balances"')
+    end
+  end
 end
