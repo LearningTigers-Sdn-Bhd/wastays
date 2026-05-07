@@ -54,7 +54,7 @@ gem "commonmarker", "~> 2.7"
 gem "rqrcode", "~> 2.2"
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
-gem "ruby_llm", "~> 1.14"
+gem "ruby_llm", "~> 1.15"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
