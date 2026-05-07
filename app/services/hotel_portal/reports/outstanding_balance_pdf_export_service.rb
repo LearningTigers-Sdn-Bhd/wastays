@@ -46,16 +46,36 @@ module HotelPortal
       end
 
       def draw_summary(pdf)
-        rows = [
+        card_gap = 12
+        card_height = 62
+        card_width = (pdf.bounds.width - card_gap) / 2.0
+        top = pdf.cursor
+
+        cards = [
           [ "Outstanding Bookings", @report.totals[:booking_count].to_s ],
           [ "Outstanding Amount", money(@report.totals[:outstanding_amount]) ]
         ]
 
-        pdf.table(rows, width: 280, cell_style: { borders: [ :bottom ], padding: [ 6, 8, 6, 8 ] }) do
-          columns(0).font_style = :bold
-          columns(1).align = :right
+        cards.each_with_index do |(label, value), index|
+          x = index * (card_width + card_gap)
+          y = top
+
+          pdf.bounding_box([ x, y ], width: card_width, height: card_height) do
+            pdf.stroke_color "D1D5DB"
+            pdf.fill_color "FFFFFF"
+            pdf.fill_and_stroke_rounded_rectangle([ 0, card_height ], card_width, card_height, 8)
+            pdf.fill_color "000000"
+            pdf.stroke_color "000000"
+
+            pdf.bounding_box([ 10, card_height - 10 ], width: card_width - 20, height: card_height - 20) do
+              pdf.text label, size: 9, style: :bold
+              pdf.move_down 8
+              pdf.text value, size: 14, style: :bold
+            end
+          end
         end
-        pdf.move_down 16
+
+        pdf.move_cursor_to(top - (card_height + 10))
       end
 
       def draw_detail(pdf)

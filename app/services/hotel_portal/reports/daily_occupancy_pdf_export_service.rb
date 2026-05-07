@@ -46,7 +46,7 @@ module HotelPortal
       end
 
       def draw_summary(pdf)
-        rows = [
+        cards = [
           [ "Rooms Sold", @report.totals[:rooms_sold].to_s ],
           [ "Rooms Available", @report.totals[:rooms_available].to_s ],
           [ "Occupancy", percentage(@report.totals[:occupancy_rate]) ],
@@ -55,11 +55,36 @@ module HotelPortal
           [ "Revenue per Available Room (RevPAR)", money(@report.totals[:revpar]) ]
         ]
 
-        pdf.table(rows, width: 280, cell_style: { borders: [ :bottom ], padding: [ 6, 8, 6, 8 ] }) do
-          columns(0).font_style = :bold
-          columns(1).align = :right
+        card_gap = 10
+        card_height = 62
+        cards_per_row = 3
+        card_width = (pdf.bounds.width - (card_gap * (cards_per_row - 1))) / cards_per_row.to_f
+        top = pdf.cursor
+
+        cards.each_with_index do |(label, value), index|
+          row = index / cards_per_row
+          col = index % cards_per_row
+          x = col * (card_width + card_gap)
+          y = top - (row * (card_height + card_gap))
+
+          pdf.bounding_box([ x, y ], width: card_width, height: card_height) do
+            pdf.stroke_color "D1D5DB"
+            pdf.fill_color "FFFFFF"
+            pdf.fill_and_stroke_rounded_rectangle([ 0, card_height ], card_width, card_height, 8)
+            pdf.fill_color "000000"
+            pdf.stroke_color "000000"
+
+            pdf.bounding_box([ 10, card_height - 10 ], width: card_width - 20, height: card_height - 20) do
+              pdf.text label, size: 8, style: :bold
+              pdf.move_down 8
+              pdf.text value, size: 12, style: :bold
+            end
+          end
         end
-        pdf.move_down 16
+
+        total_rows = (cards.size / cards_per_row.to_f).ceil
+        used_height = (total_rows * card_height) + ((total_rows - 1) * card_gap)
+        pdf.move_cursor_to(top - (used_height + 10))
       end
 
       def draw_daily_table(pdf)

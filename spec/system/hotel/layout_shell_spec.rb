@@ -30,7 +30,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_link('Rates & Inventory', href: hotel_inventory_index_path(hotel))
     expect(page).to have_link('Guest Records', href: hotel_guests_path(hotel))
     expect(page).to have_link('Hotel Details', href: edit_hotel_profile_path(hotel))
-    expect(page).to have_link('Reports', href: hotel_reports_path(hotel))
+    expect(page).to have_link('Financial', href: hotel_reports_path(hotel), visible: :all)
     expect(page).to have_link('Night Audit', href: hotel_night_audits_path(hotel))
     expect(page).to have_css('#flash_toasts')
   end

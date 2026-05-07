@@ -1,4 +1,13 @@
-<% hotel_sidebar_sections = [
+<%
+reports_nav_items = [
+  { label: "Financial", path: hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "index" },
+  { label: "Arrivals & Departures", path: arrivals_departures_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "arrivals_departures" },
+  { label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "daily_occupancy" },
+  { label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "outstanding_balance" }
+]
+reports_nav_active = reports_nav_items.any? { |item| item[:active] }
+
+hotel_sidebar_sections = [
   {
     label: "Home",
     items: [
@@ -32,7 +41,7 @@
   {
     label: "System",
     items: [
-      { label: "Reports", path: hotel_reports_path(current_hotel), search_text: "Reports Analytics System", active: controller_name == "reports" && action_name == "index", icon: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>' },
+      { label: "Reports", path: hotel_reports_path(current_hotel), search_text: "Reports Analytics Financial Arrivals Departures Daily Occupancy Outstanding Balance System", active: reports_nav_active, icon: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>', children: reports_nav_items },
       { label: "Payouts", path: payouts_hotel_reports_path(current_hotel), search_text: "Payouts Settlements System", active: controller_name == "reports" && action_name == "payouts", icon: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 15h.01"/><path d="M11 15h.01"/><path d="M15 15h.01"/>' },
       { label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Activity System", active: controller_name == "audit_logs", icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>' },
       { label: "Settings", path: hotel_settings_path(current_hotel), search_text: "Settings Preferences System", active: controller_name == "settings", icon: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>' }
@@ -50,10 +59,29 @@
         <span class="sidebar-section-label"><%= section[:label] %></span>
         <div class="space-y-0.5">
           <% section[:items].each do |item| %>
-            <a class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= item[:path] %>">
-              <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
-              <span><%= item[:label] %></span>
-            </a>
+            <% if item[:children].present? %>
+              <details class="group" <%= "open" if item[:active] %>>
+                <summary class="sidebar-nav-link list-none cursor-pointer <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>">
+                  <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
+                  <span class="flex-1"><%= item[:label] %></span>
+                  <svg class="size-4 shrink-0 transition-transform group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m6 9 6 6 6-6"/>
+                  </svg>
+                </summary>
+                <div class="ms-6 mt-1 space-y-0.5 border-s border-slate-200 ps-3">
+                  <% item[:children].each do |child| %>
+                    <a class="sidebar-nav-link <%= child[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= child[:path] %>">
+                      <span class="text-sm"><%= child[:label] %></span>
+                    </a>
+                  <% end %>
+                </div>
+              </details>
+            <% else %>
+              <a class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= item[:path] %>">
+                <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
+                <span><%= item[:label] %></span>
+              </a>
+            <% end %>
           <% end %>
         </div>
       </div>
@@ -76,3 +104,76 @@
            home_path: hotel_dashboard_path(current_hotel),
            nav_html: hotel_nav_html,
            footer_html: hotel_footer_html %>
+
+<script>
+  (() => {
+    const ACTIVE = "sidebar-nav-link-active";
+    const INACTIVE = "sidebar-nav-link-default";
+    const DESKTOP_SCROLL_KEY = "hotelSidebarDesktopScrollTop";
+    const MOBILE_SCROLL_KEY = "hotelSidebarMobileScrollTop";
+
+    const normalize = (path) => {
+      if (!path) return "/";
+      return path.endsWith("/") && path.length > 1 ? path.slice(0, -1) : path;
+    };
+
+    const syncHotelSidebar = () => {
+      const sidebar = document.getElementById("hotel-sidebar");
+      if (!sidebar) return;
+
+      const currentPath = normalize(window.location.pathname);
+      const links = sidebar.querySelectorAll("a.sidebar-nav-link[href]");
+
+      links.forEach((link) => {
+        let linkPath;
+        try {
+          linkPath = normalize(new URL(link.href, window.location.origin).pathname);
+        } catch (_) {
+          linkPath = null;
+        }
+        if (!linkPath) return;
+
+        const active = currentPath === linkPath;
+        link.classList.toggle(ACTIVE, active);
+        link.classList.toggle(INACTIVE, !active);
+      });
+
+      sidebar.querySelectorAll("details.group").forEach((details) => {
+        const hasActiveChild = details.querySelector(".sidebar-nav-link." + ACTIVE);
+        if (hasActiveChild) details.setAttribute("open", "open");
+      });
+    };
+
+    const persistSidebarScroll = () => {
+      const desktop = document.getElementById("hotel-sidebar");
+      const mobile = document.getElementById("hotel-sidebar-mobile");
+      if (desktop) sessionStorage.setItem(DESKTOP_SCROLL_KEY, String(desktop.scrollTop || 0));
+      if (mobile) sessionStorage.setItem(MOBILE_SCROLL_KEY, String(mobile.scrollTop || 0));
+    };
+
+    const restoreSidebarScroll = () => {
+      const desktop = document.getElementById("hotel-sidebar");
+      const mobile = document.getElementById("hotel-sidebar-mobile");
+
+      if (desktop) {
+        const savedDesktop = Number(sessionStorage.getItem(DESKTOP_SCROLL_KEY) || 0);
+        desktop.scrollTop = Number.isFinite(savedDesktop) ? savedDesktop : 0;
+      }
+
+      if (mobile) {
+        const savedMobile = Number(sessionStorage.getItem(MOBILE_SCROLL_KEY) || 0);
+        mobile.scrollTop = Number.isFinite(savedMobile) ? savedMobile : 0;
+      }
+    };
+
+    document.addEventListener("turbo:before-visit", persistSidebarScroll);
+    document.addEventListener("turbo:load", () => {
+      syncHotelSidebar();
+      restoreSidebarScroll();
+    });
+    document.addEventListener("DOMContentLoaded", () => {
+      syncHotelSidebar();
+      restoreSidebarScroll();
+    });
+  })();
+</script>

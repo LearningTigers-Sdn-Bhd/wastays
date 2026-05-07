@@ -15,6 +15,22 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get "/hotel/#{hotel.id}/reports"
       expect(response).to have_http_status(:success)
     end
+
+    it "exports financial performance csv/xls/pdf" do
+      create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
+
+      get "/hotel/#{hotel.id}/reports.csv"
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+
+      get "/hotel/#{hotel.id}/reports.xls"
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.ms-excel")
+
+      get "/hotel/#{hotel.id}/reports.pdf"
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+    end
   end
 
   describe "GET /arrivals_departures" do
@@ -238,6 +254,38 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.headers["Content-Disposition"]).to include(".xls")
       expect(response.body).to include('ss:Name="Summary"')
       expect(response.body).to include('ss:Name="Outstanding Balances"')
+    end
+  end
+
+  describe "GET /breakdown" do
+    it "exports xls and pdf" do
+      create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
+
+      get breakdown_hotel_reports_path(hotel, format: :xls), params: { start_date: "2026-05-01", end_date: "2026-05-31" }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.ms-excel")
+
+      get breakdown_hotel_reports_path(hotel, format: :pdf), params: { start_date: "2026-05-01", end_date: "2026-05-31" }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+    end
+  end
+
+  describe "GET /payouts" do
+    it "exports csv/xls/pdf for upcoming tab" do
+      create(:booking, hotel: hotel, status: "completed", payment_status: "captured", net_amount: 120, checked_out_at: Time.zone.local(2026, 5, 7, 10, 0), payout_batch_id: nil)
+
+      get payouts_hotel_reports_path(hotel, format: :csv), params: { tab: "upcoming" }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+
+      get payouts_hotel_reports_path(hotel, format: :xls), params: { tab: "upcoming" }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.ms-excel")
+
+      get payouts_hotel_reports_path(hotel, format: :pdf), params: { tab: "upcoming" }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
     end
   end
 end
