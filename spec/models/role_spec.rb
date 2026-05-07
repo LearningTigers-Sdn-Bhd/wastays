@@ -7,6 +7,7 @@ RSpec.describe Role, type: :model do
     it { is_expected.to have_many(:permissions).through(:role_permissions) }
     it { is_expected.to have_many(:user_roles).dependent(:destroy) }
     it { is_expected.to have_many(:users).through(:user_roles) }
+    it { is_expected.to have_many(:user_hotel_accesses).dependent(:restrict_with_error) }
   end
 
   describe 'validations' do
