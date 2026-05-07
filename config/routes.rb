@@ -272,6 +272,7 @@ Rails.application.routes.draw do
         get :breakdown, defaults: { format: "html" }
         get :arrivals_departures
         get :daily_occupancy
+        get :daily_revenue
         get :outstanding_balance
       end
     end

@@ -1,6 +1,7 @@
 <%
 reports_nav_items = [
   { label: "Financial", path: hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "index" },
+  { label: "Daily Revenue", path: daily_revenue_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "daily_revenue" },
   { label: "Arrivals & Departures", path: arrivals_departures_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "arrivals_departures" },
   { label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "daily_occupancy" },
   { label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "outstanding_balance" }
