@@ -261,6 +261,38 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
   end
 
+  describe "GET /daily_revenue" do
+    let(:start_date) { Date.new(2026, 5, 6) }
+    let(:end_date) { Date.new(2026, 5, 7) }
+
+    it "renders daily revenue report for selected range" do
+      create(:booking, hotel: hotel, status: "confirmed", source: "walk_in", total_amount: 100, tourism_tax_applied: true, tourism_tax_amount: 10, created_at: Time.zone.local(2026, 5, 6, 10, 0))
+      create(:booking, hotel: hotel, status: "completed", source: "agoda", total_amount: 200, created_at: Time.zone.local(2026, 5, 7, 11, 0))
+
+      get daily_revenue_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Daily Revenue Report")
+      expect(response.body).to include("Revenue by Source")
+    end
+
+    it "exports csv/xls/pdf" do
+      create(:booking, hotel: hotel, status: "confirmed", source: "walk_in", total_amount: 100, created_at: Time.zone.local(2026, 5, 6, 10, 0))
+
+      get daily_revenue_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+
+      get daily_revenue_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.ms-excel")
+
+      get daily_revenue_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+    end
+  end
+
   describe "GET /breakdown" do
     it "exports xls and pdf" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
