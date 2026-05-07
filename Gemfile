@@ -95,4 +95,4 @@ group :development do
 end
 
 gem "openssl", "~> 3.1.2"
-gem "aws-sdk-s3", "~> 1.220"
+gem "aws-sdk-s3", "~> 1.221"
