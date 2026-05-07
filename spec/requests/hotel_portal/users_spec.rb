@@ -7,7 +7,7 @@ RSpec.describe "HotelPortal::Users", type: :request do
   let(:hotel) { create(:hotel, account: account) }
   let(:user) { create(:user, account: account, role: "admin") }
   let(:role) { create(:role, account: account, name: "Hotel Owner", slug: "hotel_owner") }
-  let(:permission) { create(:permission, slug: "manage_users") }
+  let(:permission) { Permission.find_by(slug: 'manage_users') || create(:permission, slug: 'manage_users') }
 
   before do
     role.permissions << permission
@@ -82,7 +82,7 @@ RSpec.describe "HotelPortal::Users", type: :request do
     end
 
     it "rejects roles with manage_account" do
-      privileged_permission = create(:permission, slug: "manage_account")
+      privileged_permission = Permission.find_by(slug: 'manage_account') || create(:permission, slug: 'manage_account')
       privileged_role = create(:role, account: account, name: "Privileged Role", slug: "privileged_role")
       privileged_role.permissions << privileged_permission
 
@@ -108,7 +108,7 @@ RSpec.describe "HotelPortal::Users", type: :request do
     end
 
     it "rejects non-assignable roles" do
-      privileged_permission = create(:permission, slug: "manage_account")
+      privileged_permission = Permission.find_by(slug: 'manage_account') || create(:permission, slug: 'manage_account')
       privileged_role = create(:role, account: account, name: "Privileged Role", slug: "privileged_role")
       privileged_role.permissions << privileged_permission
 

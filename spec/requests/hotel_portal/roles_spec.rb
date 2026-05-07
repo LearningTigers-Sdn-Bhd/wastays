@@ -7,7 +7,7 @@ RSpec.describe "HotelPortal::Roles", type: :request do
   let(:hotel) { create(:hotel, account: account) }
   let(:user) { create(:user, account: account) }
   let(:manager_role) { create(:role, account: account, name: "General Manager", slug: "general_manager") }
-  let(:manage_users_permission) { create(:permission, name: "Manage Users", slug: "manage_users") }
+  let(:manage_users_permission) { Permission.find_by(slug: 'manage_users') || create(:permission, slug: 'manage_users', name: 'Manage Users') }
 
   before do
     create(:role_permission, role: manager_role, permission: manage_users_permission)
@@ -37,8 +37,8 @@ RSpec.describe "HotelPortal::Roles", type: :request do
 
   describe "POST /hotel/:hotel_id/roles-and-permissions" do
     it "creates a role with selected permissions" do
-      view_bookings = create(:permission, name: "View Bookings", slug: "view_bookings")
-      manage_bookings = create(:permission, name: "Manage Bookings", slug: "manage_bookings")
+      view_bookings = Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings', name: 'View Bookings')
+      manage_bookings = Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings', name: 'Manage Bookings')
 
       expect do
         post hotel_roles_path(hotel), params: {
@@ -56,7 +56,7 @@ RSpec.describe "HotelPortal::Roles", type: :request do
     end
 
     it "rejects permissions the editor cannot assign" do
-      manage_account = create(:permission, name: "Manage Account", slug: "manage_account")
+      manage_account = Permission.find_by(slug: 'manage_account') || create(:permission, slug: 'manage_account', name: 'Manage Account')
 
       post hotel_roles_path(hotel), params: {
         role: {
@@ -74,8 +74,8 @@ RSpec.describe "HotelPortal::Roles", type: :request do
   describe "PATCH /hotel/:hotel_id/roles-and-permissions/:id" do
     it "updates the role name and replaces permissions" do
       role = create(:role, account: account, name: "Night Staff", slug: "night_staff")
-      old_permission = create(:permission, name: "View Reports", slug: "view_reports")
-      new_permission = create(:permission, name: "Manage Night Audit", slug: "manage_night_audit")
+      old_permission = Permission.find_by(slug: 'view_reports') || create(:permission, slug: 'view_reports', name: 'View Reports')
+      new_permission = Permission.find_by(slug: 'manage_night_audit') || create(:permission, slug: 'manage_night_audit', name: 'Manage Night Audit')
       create(:role_permission, role: role, permission: old_permission)
 
       patch hotel_role_path(hotel, role), params: {
@@ -94,7 +94,7 @@ RSpec.describe "HotelPortal::Roles", type: :request do
   describe "DELETE /hotel/:hotel_id/roles-and-permissions/:id" do
     it "deletes an unused role" do
       role = create(:role, account: account, name: "Unused Role", slug: "unused_role")
-      permission = create(:permission, name: "View Audit Logs", slug: "view_audit_logs")
+      permission = Permission.find_by(slug: 'view_audit_logs') || create(:permission, slug: 'view_audit_logs', name: 'View Audit Logs')
       create(:role_permission, role: role, permission: permission)
 
       expect do

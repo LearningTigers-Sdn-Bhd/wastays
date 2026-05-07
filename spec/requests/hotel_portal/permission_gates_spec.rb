@@ -9,7 +9,7 @@ RSpec.describe "HotelPortal::PermissionGates", type: :request do
   let(:role) { create(:role, account: account, name: "Read Only", slug: "read_only") }
 
   before do
-    role.permissions << create(:permission, slug: "view_bookings")
+    role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings'))
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
   end

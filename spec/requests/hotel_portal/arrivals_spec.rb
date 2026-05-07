@@ -7,7 +7,7 @@ RSpec.describe "HotelPortal::Arrivals", type: :request do
 
   before do
     role = create(:role, account: hotel.account)
-    permission = Permission.find_by(slug: "manage_guest_arrival") || create(:permission, name: "Manage Guest Arrival", slug: "manage_guest_arrival")
+    permission = Permission.find_by(slug: "manage_guest_arrival") || Permission.find_by(slug: 'manage_guest_arrival') || create(:permission, slug: 'manage_guest_arrival', name: 'Manage Guest Arrival')
     role.permissions << permission
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
