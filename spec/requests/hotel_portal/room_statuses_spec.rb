@@ -8,7 +8,7 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
   let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101" ], quantity: 1) }
 
   before do
-    permission = create(:permission, slug: "manage_room_status", name: "Manage Room Status")
+    permission = Permission.find_by(slug: 'manage_room_status') || create(:permission, slug: 'manage_room_status', name: 'Manage Room Status')
     role = create(:role, account: hotel.account)
     create(:role_permission, role: role, permission: permission)
     create(:user_hotel_access, user: user, hotel: hotel, role: role)

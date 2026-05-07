@@ -98,6 +98,9 @@ Rails.application.routes.draw do
 
     get "register", to: "registrations#new"
     post "register", to: "registrations#create"
+
+    get "staff-invitations/:token", to: "staff_invitations#show", as: :staff_invitation
+    patch "staff-invitations/:token", to: "staff_invitations#update"
   end
 
   # Superadmin dashboard
@@ -216,6 +219,10 @@ Rails.application.routes.draw do
     delete "profile/photo_queue/:signed_id", to: "profiles#remove_photo_from_queue", as: :profile_photo_queue_item
     post "profile/photo_queue/commit", to: "profiles#commit_photo_queue", as: :commit_profile_photo_queue
     resource :property_policy, only: [ :edit, :update ]
+    resources :users, only: [ :index, :new, :create, :update, :destroy ], path: "staff" do
+      patch :reactivate, on: :member
+    end
+    resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions"
 
     resources :room_types do
       member do

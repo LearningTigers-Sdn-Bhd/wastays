@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_06_090001) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -712,12 +712,36 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_090001) do
     t.index ["status"], name: "index_setup_fee_rules_on_active_global_default", unique: true, where: "(((status)::text = 'active'::text) AND (settable_type IS NULL) AND (settable_id IS NULL))"
   end
 
+  create_table "staff_invitations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "hotel_id", null: false
+    t.bigint "role_id", null: false
+    t.bigint "invited_by_user_id", null: false
+    t.string "email", null: false
+    t.string "name"
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "accepted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["accepted_at"], name: "index_staff_invitations_on_accepted_at"
+    t.index ["account_id"], name: "index_staff_invitations_on_account_id"
+    t.index ["expires_at"], name: "index_staff_invitations_on_expires_at"
+    t.index ["hotel_id", "email"], name: "index_pending_staff_invites_on_hotel_and_email", unique: true, where: "(accepted_at IS NULL)"
+    t.index ["hotel_id"], name: "index_staff_invitations_on_hotel_id"
+    t.index ["invited_by_user_id"], name: "index_staff_invitations_on_invited_by_user_id"
+    t.index ["role_id"], name: "index_staff_invitations_on_role_id"
+    t.index ["token_digest"], name: "index_staff_invitations_on_token_digest", unique: true
+  end
+
   create_table "user_hotel_accesses", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "hotel_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "role_id"
+    t.datetime "deactivated_at"
+    t.index ["deactivated_at"], name: "index_user_hotel_accesses_on_deactivated_at"
     t.index ["hotel_id"], name: "index_user_hotel_accesses_on_hotel_id"
     t.index ["role_id"], name: "index_user_hotel_accesses_on_role_id"
     t.index ["user_id"], name: "index_user_hotel_accesses_on_user_id"
@@ -818,6 +842,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_06_090001) do
   add_foreign_key "room_statuses", "room_types"
   add_foreign_key "room_statuses", "users", column: "last_changed_by_id"
   add_foreign_key "room_types", "hotels"
+  add_foreign_key "staff_invitations", "accounts"
+  add_foreign_key "staff_invitations", "hotels"
+  add_foreign_key "staff_invitations", "roles"
+  add_foreign_key "staff_invitations", "users", column: "invited_by_user_id"
   add_foreign_key "user_hotel_accesses", "hotels"
   add_foreign_key "user_hotel_accesses", "roles"
   add_foreign_key "user_hotel_accesses", "users"
