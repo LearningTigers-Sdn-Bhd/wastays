@@ -42,13 +42,13 @@ class Public::HotelsController < ApplicationController
       @room_types = @hotel.room_types
     end
 
-    hotel_sort_order = ["General", "Services", "Parking", "Safety And Security", "Food And Drink", "Activities", "Outdoors", "Pets" ]
-    
+    hotel_sort_order = [ "General", "Services", "Parking", "Safety And Security", "Food And Drink", "Activities", "Outdoors", "Pets" ]
+
     @categorized_amenities = Amenity.where(slug: @hotel.amenities, amenity_type: :hotel)
                                     .ordered
                                     .group_by(&:category)
-                                    .sort_by { |category, _| 
-                                      hotel_sort_order.index(category) || hotel_sort_order.size 
+                                    .sort_by { |category, _|
+                                      hotel_sort_order.index(category) || hotel_sort_order.size
                                     }
   end
 
