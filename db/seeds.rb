@@ -316,6 +316,7 @@ if Rails.env.development?
           room.max_children = room_attrs[:children]
           room.quantity = room_attrs[:quantity]
           room.base_price = room_attrs[:base_price]
+          room.room_number_mode = 'range'
         end
 
         room_type.update!(
@@ -323,7 +324,8 @@ if Rails.env.development?
           max_adults: room_attrs[:adults],
           max_children: room_attrs[:children],
           quantity: room_attrs[:quantity],
-          base_price: room_attrs[:base_price]
+          base_price: room_attrs[:base_price],
+          room_number_mode: 'range'
         )
 
         SeedData.ensure_room_calendar(room_type, start_date: Date.current - 10.days, end_date: Date.current + 45.days)

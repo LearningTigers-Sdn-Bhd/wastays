@@ -9,7 +9,7 @@ module AmenitiesSeeder
     SeedLog.section('Seeding Amenities')
 
     data_path = Rails.root.join('db', 'amenities_data.json')
-    
+
     unless File.exist?(data_path)
       SeedLog.step("Warning: db/amenities_data.json not found. Skipping.")
       return
