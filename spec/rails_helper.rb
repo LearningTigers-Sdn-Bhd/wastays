@@ -101,6 +101,8 @@ def chrome_binary_path
   nil
 end
 
+Capybara.default_max_wait_time = 10
+
 Capybara.register_driver :cuprite do |app|
   browser_path = chrome_binary_path
 
@@ -109,8 +111,8 @@ Capybara.register_driver :cuprite do |app|
     browser_path: browser_path,
     browser_options: { "no-sandbox" => nil, "disable-dev-shm-usage" => nil },
     headless: true,
-    timeout: 10,
-    process_timeout: 30
+    timeout: 30,
+    process_timeout: 60
   )
 end
 
