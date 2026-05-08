@@ -26,6 +26,7 @@ class Amenity < ApplicationRecord
       id: slug,
       name: name,
       icon: icon,
+      category: category,
       channex_id: channex_id
     }.compact
   end

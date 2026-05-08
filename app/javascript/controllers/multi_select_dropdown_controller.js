@@ -90,8 +90,11 @@ export default class extends Controller {
       if (categoryHasVisibleOptions) {
         category.classList.remove('hidden')
         if (query.length > 0) {
-          content.classList.remove('hidden')
+          if (content) content.classList.remove('hidden')
           if (chevron) chevron.classList.add('rotate-180')
+        } else {
+          if (content) content.classList.add('hidden')
+          if (chevron) chevron.classList.remove('rotate-180')
         }
       } else {
         category.classList.add('hidden')
