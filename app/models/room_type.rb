@@ -9,6 +9,7 @@ class RoomType < ApplicationRecord
   has_many :inventory_audit_logs, dependent: :nullify
   has_many :booking_rooms, dependent: :restrict_with_error
   has_many :booking_quote_items, dependent: :restrict_with_error
+  has_many :room_statuses, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
   has_many_attached :photos
 

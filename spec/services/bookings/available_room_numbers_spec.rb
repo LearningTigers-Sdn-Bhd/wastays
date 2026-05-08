@@ -15,14 +15,25 @@ RSpec.describe Bookings::AvailableRoomNumbers do
   end
 
   it "excludes room numbers already occupied" do
-    create(:booking, hotel: hotel, check_in: check_in, check_out: check_out, status: "confirmed", hotel_snapshot: { room_number: "101" })
+    booking = create(:booking, hotel: hotel, check_in: check_in, check_out: check_out, status: "confirmed")
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
     expect(subject.call).to match_array([ "102", "103" ])
   end
 
   it "includes room numbers of excluded booking id (for editing)" do
-    booking = create(:booking, hotel: hotel, check_in: check_in, check_out: check_out, status: "confirmed", hotel_snapshot: { room_number: "101" })
+    booking = create(:booking, hotel: hotel, check_in: check_in, check_out: check_out, status: "confirmed")
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
     service = described_class.new(hotel: hotel, room_type: room_type, check_in: check_in, check_out: check_out, exclude_booking_id: booking.id)
     expect(service.call).to match_array([ "101", "102", "103" ])
+  end
+
+  it "excludes occupied room numbers from booking_rooms assignments" do
+    booking = create(:booking, hotel: hotel, check_in: check_in, check_out: check_out, status: "confirmed")
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "102")
+
+    expect(subject.call).to match_array([ "101", "103" ])
   end
 
   it "excludes room numbers locked by other users" do
@@ -40,5 +51,25 @@ RSpec.describe Bookings::AvailableRoomNumbers do
     expect(subject.call).to match_array([ "101", "102", "103" ])
   ensure
     Current.user_id = nil
+  end
+
+  describe "#options" do
+    it "returns non-ready rooms as non-selectable options with labels" do
+      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+
+      options = described_class.new(
+        hotel: hotel,
+        room_type: room_type,
+        check_in: check_in,
+        check_out: check_out
+      ).options
+
+      dirty_option = options.find { |opt| opt[:room_number] == "101" }
+      ready_option = options.find { |opt| opt[:room_number] == "102" }
+
+      expect(dirty_option[:selectable]).to be(false)
+      expect(dirty_option[:label]).to eq("101 (Pending Cleaning)")
+      expect(ready_option[:selectable]).to be(true)
+    end
   end
 end

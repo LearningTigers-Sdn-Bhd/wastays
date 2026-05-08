@@ -4,7 +4,7 @@ RSpec.describe User, type: :model do
   describe 'associations' do
     it { should belong_to(:account) }
     it { should have_many(:user_hotel_accesses).dependent(:destroy) }
-    it { should have_many(:hotels).through(:user_hotel_accesses) }
+    it { should have_many(:hotels).through(:active_user_hotel_accesses) }
   end
 
   describe 'validations' do

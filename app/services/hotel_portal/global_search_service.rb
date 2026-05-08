@@ -5,6 +5,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
   PAGE_RESULTS = [
     { title: "Hotel Dashboard", subtitle: "Overview and recent activity", route: :hotel_dashboard_path, keywords: "dashboard overview recent bookings" },
     { title: "Arrival Board", subtitle: "Check-ins and arrivals", route: :hotel_arrivals_path, keywords: "arrival board arrivals check in" },
+    { title: "Room Status", subtitle: "Live room status and occupancy timeline", route: :hotel_room_status_board_path, keywords: "tape chart room status housekeeping assignment" },
     { title: "In-House Guests", subtitle: "Current in-house guests", route: :hotel_in_house_guests_path, keywords: "in house guests" },
     { title: "Today's Check-Outs", subtitle: "Guests checked out today", route: :hotel_checked_out_guests_path, keywords: "today check outs checked out departures" },
     { title: "Bookings", subtitle: "All hotel bookings", route: :hotel_bookings_path, keywords: "bookings reservations recent bookings" },
@@ -14,6 +15,8 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
     { title: "Room Categories", subtitle: "Manage room types", route: :hotel_room_types_path, keywords: "room categories room types" },
     { title: "Rates & Inventory", subtitle: "Rates calendar and inventory", route: :hotel_inventory_index_path, keywords: "rates inventory calendar" },
     { title: "Hotel Details", subtitle: "Property profile and public information", route: :edit_hotel_profile_path, keywords: "hotel details profile property" },
+    { title: "Hotel FAQ", subtitle: "Guest questions and answers", route: :edit_hotel_faq_path, keywords: "hotel faq questions answers property" },
+    { title: "Hotel Policy", subtitle: "House rules and stay expectations", route: :edit_hotel_policy_path, keywords: "hotel policy house rules property" },
     { title: "My Profile", subtitle: "Signed-in user account profile", route: :edit_hotel_user_profile_path, keywords: "my profile user profile account" },
     { title: "Reports", subtitle: "Financial performance", route: :hotel_reports_path, keywords: "reports financial performance" },
     { title: "Night Audit", subtitle: "Close day and review blockers", route: :hotel_night_audits_path, keywords: "night audit business date day close blockers warnings" },

@@ -105,7 +105,7 @@ class ApplicationController < ActionController::Base
   def redirect_legacy_hotel_portal_path
     return unless request.get? || request.head?
     return unless params[:hotel_id].present?
-    return unless request.path.match?(%r{\A/hotel/(dashboard|profile|property_policy|user_profile|bookings|arrivals|audit_logs|reports|inventory|guests|settings)})
+    return unless request.path.match?(%r{\A/hotel/(dashboard|profile|faq|policy|property_policy|user_profile|bookings|arrivals|audit_logs|reports|inventory|guests|settings)})
     return if request.path.match?(%r{\A/hotel/\d+/})
 
     redirect_to canonical_hotel_portal_path(params[:hotel_id], request.path, request.query_parameters.except(:hotel_id))

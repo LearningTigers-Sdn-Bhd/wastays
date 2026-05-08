@@ -7,6 +7,8 @@ RSpec.describe "HotelPortal::Arrivals", type: :request do
 
   before do
     role = create(:role, account: hotel.account)
+    permission = Permission.find_by(slug: "manage_guest_arrival") || Permission.find_by(slug: 'manage_guest_arrival') || create(:permission, slug: 'manage_guest_arrival', name: 'Manage Guest Arrival')
+    role.permissions << permission
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
   end
@@ -21,6 +23,8 @@ RSpec.describe "HotelPortal::Arrivals", type: :request do
     it "returns http success" do
       get "/hotel/#{hotel.id}/arrivals"
       expect(response).to have_http_status(:success)
+      expect(response.body).to include("View")
+      expect(response.body).not_to include("Assign in Room Readiness")
     end
 
     it 'logs out users whose account has been suspended' do

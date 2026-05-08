@@ -23,18 +23,20 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-3">
-        <% if @booking.status == 'confirmed' %>
-          <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
-            Check In Guest
-          </button>
-          <%= button_to "Cancel Booking", cancel_hotel_booking_path(current_hotel, @booking), method: :post, data: { turbo_confirm: "Are you sure you want to cancel this booking?", turbo_confirm_title: "Cancel Booking", turbo_confirm_color: "red" }, class: "inline-flex items-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700" %>
-        <% elsif @booking.status == 'checked_in' %>
-          <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').showModal()">
-            Check Out Guest
-          </button>
-          <button type="button" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
-            Edit Check-In
-          </button>
+        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+          <% if @booking.status == 'confirmed' %>
+            <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
+              Check In Guest
+            </button>
+            <%= button_to "Cancel Booking", cancel_hotel_booking_path(current_hotel, @booking), method: :post, data: { turbo_confirm: "Are you sure you want to cancel this booking?", turbo_confirm_title: "Cancel Booking", turbo_confirm_color: "red" }, class: "inline-flex items-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700" %>
+          <% elsif @booking.status == 'checked_in' %>
+            <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').showModal()">
+              Check Out Guest
+            </button>
+            <button type="button" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()">
+              Edit Check-In
+            </button>
+          <% end %>
         <% end %>
       </div>
     </div>
@@ -189,10 +191,14 @@
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 flex items-center justify-between">
                 <h2 class="text-lg font-bold tracking-tight text-slate-950">Stay & Room Details</h2>
-                <button type="button" class="inline-flex items-center gap-x-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition" onclick="document.getElementById('edit-stay-details-modal').showModal()">
-                  <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                  Edit
-                </button>
+                <div class="flex items-center gap-3">
+                  <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+                    <button type="button" class="inline-flex items-center gap-x-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition" onclick="document.getElementById('edit-stay-details-modal').showModal()">
+                      <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                      Edit
+                    </button>
+                  <% end %>
+                </div>
               </div>
 
               <dialog id="edit-stay-details-modal" 
@@ -291,7 +297,7 @@
                       </div>
                       <div class="text-right">
                         <p class="text-sm font-bold text-slate-900">MYR <%= number_with_precision(room.subtotal, precision: 2) %></p>
-                        <% room_number = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
+                        <% room_number = room.room_number.presence || (@booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil) %>
                         <% if room_number.present? %>
                           <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mt-1">Room <%= room_number %></p>
                         <% end %>

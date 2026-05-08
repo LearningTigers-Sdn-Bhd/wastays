@@ -131,14 +131,19 @@ platform_permissions = [
   { name: 'View Audit Logs', slug: 'view_audit_logs' },
   { name: 'Export Audit Logs', slug: 'export_audit_logs' },
   { name: 'Manage Night Audit', slug: 'manage_night_audit' },
-  { name: 'Manage Users', slug: 'manage_users' }
+  { name: 'Manage Users', slug: 'manage_users' },
+  { name: 'Manage Room Status', slug: 'manage_room_status' },
+  { name: 'Post Charges', slug: 'post_charges' },
+  { name: 'View Reports', slug: 'view_reports' },
+  { name: 'View Payouts', slug: 'view_payouts' },
+  { name: 'Manage Requests', slug: 'manage_requests' }
 ]
 
 role_templates = [
-  { name: 'Hotel Owner', slug: 'hotel_owner', permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit] },
-  { name: 'General Manager', slug: 'general_manager', permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit] },
-  { name: 'Front Desk', slug: 'front_desk', permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit] },
-  { name: 'Reservation Staff', slug: 'reservation_staff', permissions: %w[view_bookings manage_bookings view_guest_phone] }
+  { name: 'Hotel Owner', slug: 'hotel_owner', permissions: platform_permissions.map { |p| p[:slug] } },
+  { name: 'General Manager', slug: 'general_manager', permissions: platform_permissions.map { |p| p[:slug] }.reject { |s| s == 'manage_account' } },
+  { name: 'Front Desk', slug: 'front_desk', permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit manage_room_status post_charges manage_requests] },
+  { name: 'Housekeeper', slug: 'housekeeper', permissions: %w[manage_room_status manage_requests] }
 ]
 
 cancellation_templates = [
@@ -318,6 +323,23 @@ if Rails.env.development?
         )
 
         SeedData.ensure_room_calendar(room_type, start_date: Date.current - 10.days, end_date: Date.current + 45.days)
+      end
+    end
+  end
+
+  RoomType.includes(:hotel).find_each do |room_type|
+    Array(room_type.room_numbers).each do |room_number|
+      room_number = room_number.to_s.strip
+      next if room_number.blank?
+
+      RoomStatus.find_or_create_by!(
+        hotel: room_type.hotel,
+        room_type: room_type,
+        room_number: room_number
+      ) do |room_status|
+        room_status.status = "ready"
+        room_status.last_changed_at = Time.current
+        room_status.notes = "Seeded from configured room numbers"
       end
     end
   end

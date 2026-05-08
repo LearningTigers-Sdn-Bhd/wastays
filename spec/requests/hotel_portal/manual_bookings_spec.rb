@@ -9,6 +9,10 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
 
   before do
     role = create(:role, account: hotel.account)
+    %w[view_bookings manage_bookings].each do |slug|
+      permission = Permission.find_by(slug: slug) || create(:permission, name: slug.titleize, slug: slug)
+      role.permissions << permission
+    end
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
   end

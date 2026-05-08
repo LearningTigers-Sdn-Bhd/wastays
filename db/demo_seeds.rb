@@ -37,12 +37,14 @@ module DemoSeeds
     { name: "View Audit Logs", slug: "view_audit_logs" },
     { name: "Export Audit Logs", slug: "export_audit_logs" },
     { name: "Manage Night Audit", slug: "manage_night_audit" },
-    { name: "Manage Users", slug: "manage_users" }
+    { name: "Manage Users", slug: "manage_users" },
+    { name: "View Reports", slug: "view_reports" },
+    { name: "View Payouts", slug: "view_payouts" }
   ].freeze
 
   ROLE_TEMPLATES = [
-    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit] },
-    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit] },
+    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit view_reports view_payouts] },
+    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit view_reports view_payouts] },
     { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit] },
     { name: "Reservation Staff", slug: "reservation_staff", permissions: %w[view_bookings manage_bookings view_guest_phone] }
   ].freeze
@@ -78,6 +80,7 @@ module DemoSeeds
     configure_platform_defaults
 
     contexts = seed_accounts_hotels_and_users
+    backfill_room_statuses
     seed_quotes(contexts)
     seed_bookings_and_guest_journeys(contexts)
     seed_requests(contexts)
@@ -1204,6 +1207,25 @@ module DemoSeeds
       rate.price = room_type.base_price + (date.saturday? || date.sunday? ? weekend_surcharge : 0.0)
       rate.currency = "MYR"
       rate.save!
+    end
+  end
+
+  def backfill_room_statuses
+    RoomType.includes(:hotel).find_each do |room_type|
+      Array(room_type.room_numbers).each do |room_number|
+        room_number = room_number.to_s.strip
+        next if room_number.blank?
+
+        RoomStatus.find_or_create_by!(
+          hotel: room_type.hotel,
+          room_type: room_type,
+          room_number: room_number
+        ) do |room_status|
+          room_status.status = "ready"
+          room_status.last_changed_at = Time.current
+          room_status.notes = "Seeded from configured room numbers"
+        end
+      end
     end
   end
 

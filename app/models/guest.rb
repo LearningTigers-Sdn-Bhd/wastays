@@ -4,6 +4,7 @@ class Guest < ApplicationRecord
   belongs_to :created_by_hotel, class_name: "Hotel", optional: true
   has_many :booking_guests, dependent: :destroy
   has_many :bookings, through: :booking_guests
+  has_many :prospects, dependent: :nullify
 
   encrypts :email, deterministic: true
   encrypts :phone, deterministic: true
