@@ -58,6 +58,16 @@ module HotelPortal
           "send_delay_hours" => 2
         )
 
+        @pre_arrival_notification_config = NotificationConfig.find_or_initialize_by(
+          hotel: @hotel,
+          notification_type: "pre_arrival_notification"
+        )
+        @pre_arrival_notification_config.enabled = false if @pre_arrival_notification_config.new_record?
+        @pre_arrival_notification_config.channels = [ "whatsapp", "email" ] if @pre_arrival_notification_config.channels.blank?
+        @pre_arrival_notification_config.settings = @pre_arrival_notification_config.settings.to_h.reverse_merge(
+          "stages" => %w[d2 d1]
+        )
+
         @settings = {
           hotel_status: @hotel.status.humanize,
           onboarding_stage: onboarding_stage(@hotel),
@@ -176,21 +186,32 @@ module HotelPortal
     end
 
     def build_notification_settings(notification_type)
-      return {} unless notification_type == "post_stay_review_request"
+      case notification_type
+      when "post_stay_review_request"
+        raw_settings = params.require(:notification_config).permit(settings: [ :review_link, :send_delay_hours ]).fetch(:settings, {})
+        send_delay_hours_input = raw_settings[:send_delay_hours].to_s.strip
+        send_delay_hours = if send_delay_hours_input.blank?
+          2
+        else
+          parsed_delay = send_delay_hours_input.to_i
+          parsed_delay.negative? ? 2 : parsed_delay
+        end
 
-      raw_settings = params.require(:notification_config).permit(settings: [ :review_link, :send_delay_hours ]).fetch(:settings, {})
-      send_delay_hours_input = raw_settings[:send_delay_hours].to_s.strip
-      send_delay_hours = if send_delay_hours_input.blank?
-        2
+        {
+          "review_link" => raw_settings[:review_link].to_s.strip,
+          "send_delay_hours" => send_delay_hours
+        }
+      when "pre_arrival_notification"
+        raw_settings = params.require(:notification_config).permit(settings: { stages: [] }).fetch(:settings, {})
+        stages = Array(raw_settings[:stages]).map(&:to_s).select { |stage| stage.in?(%w[d2 d1]) }.uniq
+        stages = %w[d2 d1] if stages.empty?
+
+        {
+          "stages" => stages
+        }
       else
-        parsed_delay = send_delay_hours_input.to_i
-        parsed_delay.negative? ? 2 : parsed_delay
+        {}
       end
-
-      {
-        "review_link" => raw_settings[:review_link].to_s.strip,
-        "send_delay_hours" => send_delay_hours
-      }
     end
 
     def settings_policy

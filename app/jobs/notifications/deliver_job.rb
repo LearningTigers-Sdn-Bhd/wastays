@@ -4,10 +4,11 @@ module Notifications
   class DeliverJob < ApplicationJob
     queue_as :default
 
-    def perform(delivery_id)
+    def perform(delivery_id, expected_scheduled_for = nil)
       delivery = NotificationDelivery.find_by(id: delivery_id)
       return unless delivery
       return if delivery.status == "sent"
+      return if stale_schedule?(delivery, expected_scheduled_for)
 
       adapter_for(delivery).call
       delivery.update!(status: "sent", sent_at: Time.current, failed_at: nil, error_message: nil)
@@ -27,6 +28,13 @@ module Notifications
       else
         raise ArgumentError, "Unsupported delivery channel: #{delivery.channel}"
       end
+    end
+
+    def stale_schedule?(delivery, expected_scheduled_for)
+      return false if expected_scheduled_for.blank?
+
+      current = delivery.payload.to_h["scheduled_for"]
+      current.present? && current != expected_scheduled_for
     end
   end
 end

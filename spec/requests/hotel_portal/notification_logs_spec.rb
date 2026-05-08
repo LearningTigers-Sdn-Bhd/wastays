@@ -87,6 +87,24 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
       expect(response.body).not_to include("WS-OTHER999")
     end
 
+    it "shows pre-arrival type and stage in logs" do
+      booking = create(:booking, hotel: hotel, status: "confirmed")
+      create(:notification_delivery,
+        hotel: hotel,
+        booking: booking,
+        notification_type: "pre_arrival_notification",
+        channel: "email",
+        status: "pending",
+        trigger_event: "booking_confirmed",
+        payload: { guest_name: booking.guest_name, stage: "d2" })
+
+      get hotel_notification_logs_path(hotel), params: { notification_type: "pre_arrival_notification" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Pre arrival notification")
+      expect(response.body).to include("d2")
+    end
+
     it "denies access without permission" do
       role_permission = RolePermission.find_by(role: role, permission: Permission.find_by!(slug: "view_audit_logs"))
       role_permission.destroy!

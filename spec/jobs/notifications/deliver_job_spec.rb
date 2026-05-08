@@ -28,4 +28,20 @@ RSpec.describe Notifications::DeliverJob, type: :job do
     expect(delivery.error_message).to eq("timeout")
     expect(delivery.failed_at).to be_present
   end
+
+  it "skips stale delayed jobs when schedule has changed" do
+    scheduled_delivery = create(
+      :notification_delivery,
+      channel: "email",
+      status: "pending",
+      payload: { "scheduled_for" => 2.hours.from_now.iso8601, "guest_name" => "Aisha" }
+    )
+
+    expect(Notifications::Channels::Email).not_to receive(:new)
+
+    described_class.perform_now(scheduled_delivery.id, 1.hour.from_now.iso8601)
+
+    expect(scheduled_delivery.reload.status).to eq("pending")
+    expect(scheduled_delivery.sent_at).to be_nil
+  end
 end

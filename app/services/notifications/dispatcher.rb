@@ -3,8 +3,10 @@
 module Notifications
   class Dispatcher
     EVENT_TO_NOTIFICATION_TYPE = {
+      booking_confirmed: "pre_arrival_notification",
       booking_checked_in: "check_in_confirmation",
-      booking_completed: "post_stay_review_request"
+      booking_completed: "post_stay_review_request",
+      booking_updated: "pre_arrival_notification"
     }.freeze
 
     def initialize(event:, booking:)
@@ -14,6 +16,10 @@ module Notifications
 
     def call
       notification_type = EVENT_TO_NOTIFICATION_TYPE.fetch(@event)
+      if notification_type == "pre_arrival_notification"
+        return dispatch_pre_arrival(@event)
+      end
+
       config = NotificationConfig.find_by(hotel: @booking.hotel, notification_type: notification_type)
       return [] unless config&.enabled?
 
@@ -30,6 +36,13 @@ module Notifications
     end
 
     private
+
+    def dispatch_pre_arrival(event)
+      scheduler = Notifications::PreArrivalScheduler.new(booking: @booking)
+      return scheduler.reschedule_pending!(trigger_event: event.to_s) if event == :booking_updated
+
+      scheduler.schedule!(trigger_event: event.to_s)
+    end
 
     def payload_for(notification_type, config)
       case notification_type
@@ -81,7 +94,8 @@ module Notifications
         if delay_hours.zero?
           Notifications::DeliverJob.perform_later(delivery.id)
         else
-          Notifications::DeliverJob.set(wait_until: Time.current + delay_hours.hours).perform_later(delivery.id)
+          scheduled_for = Time.current + delay_hours.hours
+          Notifications::DeliverJob.set(wait_until: scheduled_for).perform_later(delivery.id, scheduled_for.iso8601)
         end
       else
         Notifications::DeliverJob.perform_later(delivery.id)

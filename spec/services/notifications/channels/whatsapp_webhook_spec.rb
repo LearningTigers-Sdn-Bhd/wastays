@@ -24,4 +24,16 @@ RSpec.describe Notifications::Channels::WhatsappWebhook do
 
     described_class.new(delivery: delivery).call
   end
+
+  it "uses pre-arrival event type for pre-arrival notification" do
+    delivery = create(:notification_delivery,
+      channel: "whatsapp",
+      notification_type: "pre_arrival_notification",
+      trigger_event: "booking_confirmed",
+      payload: { stage: "d1", guest_name: "Aisha" })
+
+    expect(WebhookBroadcastJob).to receive(:perform_now).with("pre_arrival_notification", hash_including("stage" => "d1"))
+
+    described_class.new(delivery: delivery).call
+  end
 end

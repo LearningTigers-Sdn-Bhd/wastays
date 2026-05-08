@@ -24,7 +24,7 @@
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Notification Type</label>
-            <%= f.select :notification_type, [["Check-In Confirmation", "check_in_confirmation"], ["Post-Stay Review Request", "post_stay_review_request"]], { include_blank: "All Types", selected: params[:notification_type] }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
+            <%= f.select :notification_type, [["Pre-Arrival Notification", "pre_arrival_notification"], ["Check-In Confirmation", "check_in_confirmation"], ["Post-Stay Review Request", "post_stay_review_request"]], { include_blank: "All Types", selected: params[:notification_type] }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Channel</label>
@@ -78,6 +78,9 @@
                   </td>
                   <td class="px-6 py-4">
                     <span class="text-sm text-slate-700 font-medium"><%= log.notification_type.to_s.humanize %></span>
+                    <% if log.notification_type == "pre_arrival_notification" && log.payload.to_h["stage"].present? %>
+                      <span class="block text-xs font-semibold text-slate-500 uppercase"><%= log.payload.to_h["stage"] %></span>
+                    <% end %>
                   </td>
                   <td class="px-6 py-4">
                     <span class="text-sm text-slate-700 font-medium"><%= log.channel.to_s.humanize %></span>

@@ -22,6 +22,17 @@ class NotificationMailer < ApplicationMailer
     )
   end
 
+  def pre_arrival_notification(delivery)
+    assign_delivery(delivery)
+
+    stage_label = @payload[:stage].to_s.upcase.presence || "D1"
+
+    mail(
+      to: @booking.guest_email,
+      subject: "#{stage_label} reminder: your stay at #{@payload[:hotel_name]} is coming up"
+    )
+  end
+
   private
 
   def load_delivery_context

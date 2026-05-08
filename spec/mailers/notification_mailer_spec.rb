@@ -50,4 +50,31 @@ RSpec.describe NotificationMailer, type: :mailer do
     expect(review_mail.subject).to include("Cedar Stay")
     expect(review_mail.body.encoded).to include("https://g.page/r/example/review")
   end
+
+  it "builds pre-arrival email with stage and booking details" do
+    pre_arrival_delivery = NotificationDelivery.create!(
+      hotel: delivery.hotel,
+      booking: delivery.booking,
+      notification_type: "pre_arrival_notification",
+      channel: "email",
+      trigger_event: "booking_confirmed",
+      status: "pending",
+      idempotency_key: "#{delivery.hotel_id}:#{delivery.booking_id}:pre_arrival_notification:email:d1",
+      payload: {
+        guest_name: delivery.booking.guest_name,
+        hotel_name: delivery.hotel.name,
+        confirmation_token: delivery.booking.confirmation_token,
+        check_in: delivery.booking.check_in.to_s,
+        check_out: delivery.booking.check_out.to_s,
+        stage: "d1",
+        scheduled_for: Time.current.iso8601
+      }
+    )
+
+    pre_arrival_mail = described_class.pre_arrival_notification(pre_arrival_delivery)
+
+    expect(pre_arrival_mail.to).to eq([ delivery.booking.guest_email ])
+    expect(pre_arrival_mail.subject).to include("D1 reminder")
+    expect(pre_arrival_mail.body.encoded).to include(delivery.booking.confirmation_token)
+  end
 end

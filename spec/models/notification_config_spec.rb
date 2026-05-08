@@ -37,6 +37,31 @@ RSpec.describe NotificationConfig, type: :model do
     expect(config).to be_valid
   end
 
+  it "accepts pre-arrival notification with d2 and d1 stages" do
+    config = described_class.new(
+      hotel: create(:hotel),
+      notification_type: "pre_arrival_notification",
+      enabled: true,
+      channels: [ "whatsapp", "email" ],
+      settings: { stages: %w[d2 d1] }
+    )
+
+    expect(config).to be_valid
+  end
+
+  it "rejects unsupported pre-arrival stages" do
+    config = described_class.new(
+      hotel: create(:hotel),
+      notification_type: "pre_arrival_notification",
+      enabled: true,
+      channels: [ "whatsapp", "email" ],
+      settings: { stages: %w[d3] }
+    )
+
+    expect(config).not_to be_valid
+    expect(config.errors[:settings]).to include("contains unsupported pre-arrival stages")
+  end
+
   it "rejects unsupported channels" do
     config = described_class.new(
       hotel: create(:hotel),

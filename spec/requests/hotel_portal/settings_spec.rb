@@ -88,6 +88,26 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(config.settings['send_delay_hours']).to eq(4)
     end
 
+    it "updates pre-arrival notification settings with channels and stages" do
+      patch hotel_settings_path(hotel), params: {
+        form_id: "notification_settings",
+        notification_config: {
+          notification_type: "pre_arrival_notification",
+          enabled: "1",
+          channels: [ "whatsapp", "email" ],
+          settings: {
+            stages: [ "d2", "d1" ]
+          }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_settings_path(hotel))
+      config = NotificationConfig.find_by!(hotel: hotel, notification_type: "pre_arrival_notification")
+      expect(config.enabled).to be(true)
+      expect(config.channels).to match_array(%w[whatsapp email])
+      expect(config.settings["stages"]).to eq(%w[d2 d1])
+    end
+
     it 'ignores tampered status params and updates allowed banking details' do
       patch hotel_settings_path(hotel), params: {
         account: {
