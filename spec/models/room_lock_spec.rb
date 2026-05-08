@@ -5,9 +5,10 @@ require 'rails_helper'
 RSpec.describe RoomLock, type: :model do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user) }
+  let(:room_type) { create(:room_type, hotel: hotel) }
 
   it "is valid with valid attributes" do
-    lock = RoomLock.new(hotel: hotel, user: user, room_number: "206", expires_at: 10.minutes.from_now)
+    lock = RoomLock.new(hotel: hotel, user: user, room_type: room_type, room_number: "206", expires_at: 10.minutes.from_now)
     expect(lock).to be_valid
   end
 
@@ -16,16 +17,23 @@ RSpec.describe RoomLock, type: :model do
     expect(lock).not_to be_valid
   end
 
-  it "is invalid if room is already locked in same hotel" do
-    create(:room_lock, hotel: hotel, room_number: "206", expires_at: 10.minutes.from_now)
-    lock = RoomLock.new(hotel: hotel, user: user, room_number: "206", expires_at: 10.minutes.from_now)
+  it "is invalid if room is already locked in same hotel and room type" do
+    create(:room_lock, hotel: hotel, room_type: room_type, room_number: "206", expires_at: 10.minutes.from_now)
+    lock = RoomLock.new(hotel: hotel, user: user, room_type: room_type, room_number: "206", expires_at: 10.minutes.from_now)
     expect(lock).not_to be_valid
     expect(lock.errors[:room_number]).to include("is currently being assigned by another staff member")
   end
 
+  it "is valid if same room number is locked in different room type" do
+    other_room_type = create(:room_type, hotel: hotel)
+    create(:room_lock, hotel: hotel, room_type: other_room_type, room_number: "206", expires_at: 10.minutes.from_now)
+    lock = RoomLock.new(hotel: hotel, user: user, room_type: room_type, room_number: "206", expires_at: 10.minutes.from_now)
+    expect(lock).to be_valid
+  end
+
   it "is valid if same room is locked in different hotel" do
     create(:room_lock, hotel: create(:hotel), room_number: "206", expires_at: 10.minutes.from_now)
-    lock = RoomLock.new(hotel: hotel, user: user, room_number: "206", expires_at: 10.minutes.from_now)
+    lock = RoomLock.new(hotel: hotel, user: user, room_type: room_type, room_number: "206", expires_at: 10.minutes.from_now)
     expect(lock).to be_valid
   end
 

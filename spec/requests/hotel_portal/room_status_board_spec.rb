@@ -92,5 +92,24 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Carryover Guest")
     end
+
+    it "renders density controls, legends, and room amenity chips from query params" do
+      sign_in_with_permissions("view_room_readiness")
+      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
+      room_type.update!(smoking_allowed: true, pets_allowed: true)
+
+      get hotel_room_status_board_path(hotel), params: { start_date: Date.current.to_s, days: 7, layout: "compact" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Compact density")
+      expect(response.body).to include("7 days")
+      expect(response.body).to include("-7 days")
+      expect(response.body).to include("+7 days")
+      expect(response.body).to include("Ready")
+      expect(response.body).to include("Smoking allowed")
+      expect(response.body).to include("Pets allowed")
+      expect(response.body).to include('for="start_date"')
+      expect(response.body).to include('for="days"')
+    end
   end
 end
