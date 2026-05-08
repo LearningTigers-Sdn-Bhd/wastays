@@ -1,11 +1,21 @@
 module ChannelManagers
   class PullRevisionsJob < ApplicationJob
     queue_as :default
+    retry_on Channex::Client::RetryableRequestError, wait: :exponentially_longer, attempts: 8
 
     def perform
       client = Channex::Client.new
       # The feed returns revisions that haven't been acknowledged yet
       response = client.get("/booking_revisions/feed")
+      if response[:error] || response["error"]
+        if response[:retryable] || response["retryable"]
+          raise Channex::Client::RetryableRequestError, "Pull revisions retryable failure: #{response[:details] || response['details'] || response}"
+        end
+
+        Rails.logger.error("Channex Pull Revisions Failed: #{response}")
+        return
+      end
+
       return unless response["data"]
 
       response["data"].each do |revision|

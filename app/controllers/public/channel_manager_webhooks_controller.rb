@@ -1,9 +1,13 @@
+require "active_support/security_utils"
+
 module Public
   class ChannelManagerWebhooksController < ApplicationController
     skip_before_action :verify_authenticity_token
     skip_before_action :authenticate_user! if respond_to?(:authenticate_user!)
 
     def channex
+      return head :unauthorized unless webhook_authorized?
+
       # Channex sends a POST request
       # Payload: { "id": "...", "event": "booking.created", "payload": { "revision_id": "...", "property_id": "..." } }
 
@@ -31,6 +35,19 @@ module Public
     rescue => e
       Rails.logger.error "Channex Webhook Error: #{e.message}"
       head :internal_server_error
+    end
+
+    private
+
+    def webhook_authorized?
+      expected_token = AppConfig.get("channex_webhook_token").to_s
+      return true if expected_token.blank?
+
+      provided_token = request.headers["X-Channex-Webhook-Token"].to_s
+      return false if provided_token.blank?
+      return false unless provided_token.bytesize == expected_token.bytesize
+
+      ActiveSupport::SecurityUtils.secure_compare(provided_token, expected_token)
     end
   end
 end

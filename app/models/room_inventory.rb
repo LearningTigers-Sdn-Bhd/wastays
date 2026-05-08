@@ -20,7 +20,6 @@ class RoomInventory < ApplicationRecord
   def trigger_ari_sync
     return if room_type.hotel.preferred_channel_manager.blank?
 
-    # Sync a window of 7 days around the changed date to be safe, or just the date
-    ChannelManagers::SyncJob.perform_later(room_type.hotel_id, date, date)
+    ChannelManagers::BufferAriSyncJob.perform_later(room_type.hotel_id, date)
   end
 end
