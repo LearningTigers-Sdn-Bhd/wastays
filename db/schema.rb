@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_08_001359) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -625,9 +625,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.datetime "expires_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "room_type_id", null: false
     t.index ["expires_at"], name: "index_room_locks_on_expires_at"
-    t.index ["hotel_id", "room_number"], name: "index_room_locks_on_hotel_id_and_room_number", unique: true
+    t.index ["hotel_id", "room_type_id", "room_number"], name: "idx_room_locks_on_hotel_room_type_number", unique: true
     t.index ["hotel_id"], name: "index_room_locks_on_hotel_id"
+    t.index ["room_type_id"], name: "index_room_locks_on_room_type_id"
     t.index ["user_id"], name: "index_room_locks_on_user_id"
   end
 
@@ -676,7 +678,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["hotel_id", "room_number"], name: "index_room_statuses_on_hotel_id_and_room_number", unique: true
+    t.index ["hotel_id", "room_type_id", "room_number"], name: "idx_room_statuses_on_hotel_room_type_number", unique: true
     t.index ["hotel_id", "status"], name: "index_room_statuses_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_room_statuses_on_hotel_id"
     t.index ["last_changed_by_id"], name: "index_room_statuses_on_last_changed_by_id"
@@ -696,6 +698,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.jsonb "room_numbers"
     t.string "room_number_mode", default: "range", null: false
     t.jsonb "amenities", default: [], null: false
+    t.boolean "smoking_allowed", default: false, null: false
+    t.boolean "pets_allowed", default: false, null: false
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
   end
 
@@ -831,6 +835,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
   add_foreign_key "roles", "accounts"
   add_foreign_key "room_inventories", "room_types"
   add_foreign_key "room_locks", "hotels"
+  add_foreign_key "room_locks", "room_types"
   add_foreign_key "room_locks", "users"
   add_foreign_key "room_operational_audit_logs", "bookings"
   add_foreign_key "room_operational_audit_logs", "hotels"
