@@ -189,7 +189,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_001359) do
     t.string "payout_status"
     t.datetime "payout_at"
     t.string "payout_reference"
-    t.string "payout_batch_id"
+    t.bigint "payout_batch_id"
     t.string "source", default: "internal"
     t.string "external_reference"
     t.string "channel_manager_reference"
@@ -200,6 +200,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_001359) do
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
+    t.index ["payout_batch_id"], name: "index_bookings_on_payout_batch_id"
     t.index ["source"], name: "index_bookings_on_source"
     t.index ["status"], name: "index_bookings_on_status"
   end
@@ -258,7 +259,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_001359) do
     t.string "magic_token_digest"
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
-    t.jsonb "chat_history", default: []
     t.bigint "created_by_hotel_id"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
@@ -298,14 +298,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_001359) do
     t.bigint "salesperson_id"
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
-    t.string "whatsapp_number"
-    t.text "ai_persona"
-    t.string "openai_api_key"
-    t.jsonb "amenities", default: [], null: false
-    t.string "slug", null: false
     t.boolean "ai_provider_enabled", default: false
     t.string "ai_provider_name"
     t.text "ai_provider_key"
+    t.jsonb "amenities", default: [], null: false
+    t.string "slug", null: false
     t.string "ai_concierge_tone", default: "basic", null: false
     t.jsonb "faq", default: [], null: false
     t.jsonb "policy", default: [], null: false
@@ -313,7 +310,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_001359) do
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
-    t.index ["whatsapp_number"], name: "index_hotels_on_whatsapp_number", unique: true
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
@@ -780,7 +776,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_001359) do
   create_table "webhook_endpoints", force: :cascade do |t|
     t.string "name"
     t.string "url"
-    t.string "event_types"
     t.boolean "enabled"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -811,6 +806,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_001359) do
   add_foreign_key "booking_rooms", "room_types"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
+  add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotels", "accounts"

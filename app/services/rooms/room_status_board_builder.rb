@@ -9,13 +9,27 @@ module Rooms
     end
 
     def call
+      groups = room_groups
       {
         dates: dates,
-        room_groups: room_groups
+        room_groups: groups,
+        status_counts: calculate_status_counts(groups)
       }
     end
 
     private
+
+    def calculate_status_counts(groups)
+      counts = Hash.new(0)
+      groups.each do |group|
+        group[:rooms].each do |room|
+          status = room.dig(:status, :status).to_s
+          counts[status] += 1
+          counts["all"] += 1
+        end
+      end
+      counts
+    end
 
     def dates
       @dates ||= (@start_date...(@start_date + @days.days)).to_a

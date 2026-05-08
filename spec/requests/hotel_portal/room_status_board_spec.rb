@@ -101,15 +101,15 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
       get hotel_room_status_board_path(hotel), params: { start_date: Date.current.to_s, days: 7, layout: "compact" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Compact density")
+      expect(response.body).to include("Compact Mode")
       expect(response.body).to include("7 days")
-      expect(response.body).to include("-7 days")
-      expect(response.body).to include("+7 days")
+      expect(response.body).to include('title="Previous 7 days"')
+      expect(response.body).to include('title="Next 7 days"')
       expect(response.body).to include("Ready")
-      expect(response.body).to include("Smoking allowed")
-      expect(response.body).to include("Pets allowed")
-      expect(response.body).to include('for="start_date"')
-      expect(response.body).to include('for="days"')
+      expect(response.body).to include("Smoking Allowed")
+      expect(response.body).to include("Pets Allowed")
+      expect(response.body).to include('id="start_date"')
+      expect(response.body).to include('id="days"')
     end
   end
 end
