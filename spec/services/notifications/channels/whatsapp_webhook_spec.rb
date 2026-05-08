@@ -12,4 +12,16 @@ RSpec.describe Notifications::Channels::WhatsappWebhook do
 
     described_class.new(delivery: delivery).call
   end
+
+  it "uses post-stay event type for review requests" do
+    delivery = create(:notification_delivery,
+      channel: "whatsapp",
+      notification_type: "post_stay_review_request",
+      trigger_event: "booking_completed",
+      payload: { review_link: "https://g.page/r/example/review" })
+
+    expect(WebhookBroadcastJob).to receive(:perform_now).with("post_stay_review_request", hash_including("review_link" => "https://g.page/r/example/review"))
+
+    described_class.new(delivery: delivery).call
+  end
 end

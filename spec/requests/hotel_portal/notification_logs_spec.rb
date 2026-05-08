@@ -8,7 +8,9 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
 
   before do
     Permission.find_or_create_by!(slug: "view_audit_logs") { |permission| permission.name = "View Audit Logs" }
+    Permission.find_or_create_by!(slug: "manage_bookings") { |permission| permission.name = "Manage Bookings" }
     RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: "view_audit_logs"))
+    RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: "manage_bookings"))
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
@@ -92,6 +94,33 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
       get hotel_notification_logs_path(hotel)
 
       expect(response).to redirect_to(root_path)
+    end
+  end
+
+  describe "POST /hotel/:hotel_id/notification_logs/:id/resend" do
+    it "creates a new pending delivery with resend metadata" do
+      booking = create(:booking, hotel: hotel, status: "checked_in")
+      original = create(
+        :notification_delivery,
+        hotel: hotel,
+        booking: booking,
+        notification_type: "check_in_confirmation",
+        channel: "whatsapp",
+        status: "failed",
+        trigger_event: "booking_checked_in",
+        payload: { guest_name: booking.guest_name }
+      )
+
+      expect {
+        post resend_hotel_notification_log_path(hotel, original), params: { resend_reason: "Guest requested retry" }
+      }.to change(NotificationDelivery, :count).by(1)
+        .and have_enqueued_job(Notifications::DeliverJob).exactly(1).times
+
+      resent = NotificationDelivery.order(:id).last
+      expect(resent.trigger_event).to eq("manual_resend")
+      expect(resent.status).to eq("pending")
+      expect(resent.payload["resend_reason"]).to eq("Guest requested retry")
+      expect(response).to redirect_to(hotel_notification_logs_path(hotel))
     end
   end
 end

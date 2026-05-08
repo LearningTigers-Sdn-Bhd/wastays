@@ -40,12 +40,23 @@ module HotelPortal
 
     def load_settings
       if @hotel
-        @notification_config = NotificationConfig.find_or_initialize_by(
+        @check_in_notification_config = NotificationConfig.find_or_initialize_by(
           hotel: @hotel,
           notification_type: "check_in_confirmation"
         )
-        @notification_config.enabled = true if @notification_config.new_record?
-        @notification_config.channels = [ "whatsapp" ] if @notification_config.channels.blank?
+        @check_in_notification_config.enabled = true if @check_in_notification_config.new_record?
+        @check_in_notification_config.channels = [ "whatsapp" ] if @check_in_notification_config.channels.blank?
+
+        @post_stay_review_notification_config = NotificationConfig.find_or_initialize_by(
+          hotel: @hotel,
+          notification_type: "post_stay_review_request"
+        )
+        @post_stay_review_notification_config.enabled = false if @post_stay_review_notification_config.new_record?
+        @post_stay_review_notification_config.channels = [ "whatsapp", "email" ] if @post_stay_review_notification_config.channels.blank?
+        @post_stay_review_notification_config.settings = @post_stay_review_notification_config.settings.to_h.reverse_merge(
+          "review_link" => "",
+          "send_delay_hours" => 2
+        )
 
         @settings = {
           hotel_status: @hotel.status.humanize,
@@ -104,12 +115,14 @@ module HotelPortal
       authorize_settings_update!
 
       channels = Array(params.dig(:notification_config, :channels)).reject(&:blank?)
+      notification_type = params.dig(:notification_config, :notification_type).presence || "check_in_confirmation"
       @notification_config = NotificationConfig.find_or_initialize_by(
         hotel: @hotel,
-        notification_type: "check_in_confirmation"
+        notification_type: notification_type
       )
+      settings = build_notification_settings(@notification_config.notification_type)
 
-      if @notification_config.update(notification_config_params.merge(channels: channels))
+      if @notification_config.update(notification_config_params.merge(channels: channels, settings: settings))
         redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
       else
         load_settings
@@ -160,6 +173,24 @@ module HotelPortal
 
     def notification_config_params
       params.require(:notification_config).permit(:enabled)
+    end
+
+    def build_notification_settings(notification_type)
+      return {} unless notification_type == "post_stay_review_request"
+
+      raw_settings = params.require(:notification_config).permit(settings: [ :review_link, :send_delay_hours ]).fetch(:settings, {})
+      send_delay_hours_input = raw_settings[:send_delay_hours].to_s.strip
+      send_delay_hours = if send_delay_hours_input.blank?
+        2
+      else
+        parsed_delay = send_delay_hours_input.to_i
+        parsed_delay.negative? ? 2 : parsed_delay
+      end
+
+      {
+        "review_link" => raw_settings[:review_link].to_s.strip,
+        "send_delay_hours" => send_delay_hours
+      }
     end
 
     def settings_policy

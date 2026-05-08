@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class NotificationConfig < ApplicationRecord
-  NOTIFICATION_TYPES = %w[check_in_confirmation].freeze
+  NOTIFICATION_TYPES = %w[check_in_confirmation post_stay_review_request].freeze
   CHANNELS = %w[email whatsapp].freeze
 
   belongs_to :hotel

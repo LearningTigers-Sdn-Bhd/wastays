@@ -66,6 +66,28 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(config.channels).to eq([ 'email' ])
     end
 
+    it 'updates post-stay review request settings' do
+      patch hotel_settings_path(hotel), params: {
+        form_id: 'notification_settings',
+        notification_config: {
+          notification_type: 'post_stay_review_request',
+          enabled: '1',
+          channels: [ 'whatsapp', 'email' ],
+          settings: {
+            review_link: 'https://g.page/r/sample/review',
+            send_delay_hours: '4'
+          }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_settings_path(hotel))
+      config = NotificationConfig.find_by!(hotel: hotel, notification_type: 'post_stay_review_request')
+      expect(config.enabled).to be(true)
+      expect(config.channels).to match_array(%w[whatsapp email])
+      expect(config.settings['review_link']).to eq('https://g.page/r/sample/review')
+      expect(config.settings['send_delay_hours']).to eq(4)
+    end
+
     it 'ignores tampered status params and updates allowed banking details' do
       patch hotel_settings_path(hotel), params: {
         account: {

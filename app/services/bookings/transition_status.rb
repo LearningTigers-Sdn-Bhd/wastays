@@ -45,6 +45,7 @@ module Bookings
       end
 
       Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
+      Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
 
       success
     rescue ActiveRecord::RecordInvalid => e

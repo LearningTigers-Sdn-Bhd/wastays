@@ -3,14 +3,23 @@
 module Notifications
   module Channels
     class WhatsappWebhook
-      EVENT_NAME = "check_in_confirmation"
+      EVENT_NAMES = {
+        "check_in_confirmation" => "check_in_confirmation",
+        "post_stay_review_request" => "post_stay_review_request"
+      }.freeze
 
       def initialize(delivery:)
         @delivery = delivery
       end
 
       def call
-        WebhookBroadcastJob.perform_now(EVENT_NAME, @delivery.payload)
+        WebhookBroadcastJob.perform_now(event_name, @delivery.payload)
+      end
+
+      private
+
+      def event_name
+        EVENT_NAMES.fetch(@delivery.notification_type)
       end
     end
   end
