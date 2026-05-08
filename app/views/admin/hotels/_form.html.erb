@@ -112,7 +112,7 @@
 
           <div>
             <label for="preferred_channel_manager" class="mb-2 block text-sm font-medium text-slate-700">Preferred Channel Manager</label>
-            <%= f.select :preferred_channel_manager, [["None", ""], ["Channex", "channex"]], {}, class: input_classes %>
+            <%= f.select :preferred_channel_manager, [["None", ""], ["Channel Manager", "channex"]], {}, class: input_classes %>
           </div>
 
           <% if hotel.persisted? %>

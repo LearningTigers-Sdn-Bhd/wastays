@@ -361,12 +361,23 @@ class Hotel < ApplicationRecord
       "Not Configured"
     end
   end
-
   def should_generate_new_friendly_id?
-    slug.blank?
+    name_changed? || slug.blank?
   end
 
+  after_commit :sync_with_channel_manager, on: :update, if: :saved_changes_to_synced_attributes?
+
   private
+
+  def saved_changes_to_synced_attributes?
+    (saved_changes.keys & %w[name city country default_currency]).any?
+  end
+
+  def sync_with_channel_manager
+    return if preferred_channel_manager.blank? || channel_mapping.blank?
+
+    ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
+  end
 
   def amenities_must_be_from_list
     return if amenities.blank?

@@ -21,6 +21,8 @@ RSpec.describe "Public::ChannelManagerWebhooks", type: :request do
     end
 
     it "enqueues an IngestRevisionJob" do
+      allow(AppConfig).to receive(:get).with("channex_webhook_token").and_return(nil)
+
       expect {
         post "/webhooks/channex", params: payload.to_json, headers: { "CONTENT_TYPE" => "application/json" }
       }.to have_enqueued_job(ChannelManagers::IngestRevisionJob).with(hotel.id, "rev_123")
@@ -29,9 +31,35 @@ RSpec.describe "Public::ChannelManagerWebhooks", type: :request do
     end
 
     it "returns 404 if hotel mapping is not found" do
+      allow(AppConfig).to receive(:get).with("channex_webhook_token").and_return(nil)
+
       bad_payload = payload.deep_merge(payload: { property_id: "unknown" })
       post "/webhooks/channex", params: bad_payload.to_json, headers: { "CONTENT_TYPE" => "application/json" }
       expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 401 when webhook token does not match" do
+      allow(AppConfig).to receive(:get).with("channex_webhook_token").and_return("expected-token")
+
+      post "/webhooks/channex", params: payload.to_json, headers: {
+        "CONTENT_TYPE" => "application/json",
+        "X-Channex-Webhook-Token" => "wrong-token"
+      }
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "accepts webhook when token matches" do
+      allow(AppConfig).to receive(:get).with("channex_webhook_token").and_return("expected-token")
+
+      expect {
+        post "/webhooks/channex", params: payload.to_json, headers: {
+          "CONTENT_TYPE" => "application/json",
+          "X-Channex-Webhook-Token" => "expected-token"
+        }
+      }.to have_enqueued_job(ChannelManagers::IngestRevisionJob).with(hotel.id, "rev_123")
+
+      expect(response).to have_http_status(:ok)
     end
   end
 end

@@ -111,7 +111,7 @@
         <div class="space-y-4">
           <div class="flex items-center justify-between gap-4">
             <div>
-              <p class="text-sm font-semibold text-slate-900">Channex Connectivity</p>
+              <p class="text-sm font-semibold text-slate-900">Channel Manager Connectivity</p>
               <% if @hotel.channel_mapping&.external_id.present? %>
                 <p class="mt-0.5 text-xs font-medium text-emerald-600">Connected (ID: <%= @hotel.channel_mapping.external_id %>)</p>
               <% else %>
@@ -133,11 +133,11 @@
                 </div>
               </div>
             </div>
-            <%= button_to "Onboard / Sync to Channex", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 shadow-sm" %>
-            <%= button_to "Disconnect Channex", disconnect_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50", data: { turbo_confirm: "Are you sure? This will remove all mapping IDs for this hotel and its rooms." } %>
+            <%= button_to "Onboard / Sync to Channel Manager", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 shadow-sm" %>
+            <%= button_to "Disconnect Channel Manager", disconnect_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50", data: { turbo_confirm: "Are you sure? This will remove all mapping IDs for this hotel and its rooms." } %>
           <% else %>
-            <p class="text-xs text-slate-500 leading-relaxed italic">Provision this property, its room types and default rate plans directly into Channex via API.</p>
-            <%= button_to "Connect to Channex", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 shadow-lg" %>
+            <p class="text-xs text-slate-500 leading-relaxed italic">Provision this property, its room types and default rate plans directly into Channel Manager via API.</p>
+            <%= button_to "Connect to Channel Manager", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 shadow-lg" %>
           <% end %>
         </div>
       </section>
