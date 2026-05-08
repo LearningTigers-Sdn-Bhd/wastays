@@ -31,6 +31,7 @@ module Bookings
     def check_in
       if @booking.update(status: "checked_in", checked_in_at: @timestamp)
         Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
+        Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
         success
       else
         failure(@booking.errors.full_messages.to_sentence)
@@ -44,6 +45,7 @@ module Bookings
       end
 
       Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
+      Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
 
       success
     rescue ActiveRecord::RecordInvalid => e

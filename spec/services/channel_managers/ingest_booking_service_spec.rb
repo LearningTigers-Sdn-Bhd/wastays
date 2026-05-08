@@ -24,6 +24,9 @@ RSpec.describe ChannelManagers::IngestBookingService do
   end
 
   it "creates a booking from valid data" do
+    dispatcher = instance_double(Notifications::Dispatcher, call: [])
+    allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+
     service = described_class.new(booking_data: booking_data)
     result = service.call
 
@@ -31,5 +34,23 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(result.booking.persisted?).to be(true)
     expect(result.booking.guest_name).to eq("John Doe")
     expect(result.booking.hotel).to eq(hotel)
+    expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: result.booking)
+  end
+
+  it "dispatches booking_updated when existing stay dates change" do
+    existing = create(:booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: Date.current + 5.days,
+      check_out: Date.current + 7.days)
+    data = booking_data.merge(check_in: Date.current + 6.days, check_out: Date.current + 8.days, revision_number: 2)
+    dispatcher = instance_double(Notifications::Dispatcher, call: [])
+    allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+
+    result = described_class.new(booking_data: data).call
+
+    expect(result.success?).to be(true)
+    expect(existing.reload.check_in).to eq(Date.current + 6.days)
+    expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_updated, booking: existing)
   end
 end

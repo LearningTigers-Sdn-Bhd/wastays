@@ -91,6 +91,7 @@ module BookingEngine
 
           # 5. Trigger Webhooks
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
+          Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
 
           # 6. TODO: Trigger notifications (Phase 5 checklist)
           # Notifications::BookingConfirmedJob.perform_later(booking.id)

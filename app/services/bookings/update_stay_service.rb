@@ -55,8 +55,10 @@ module Bookings
         old_dates = { check_in: @booking.check_in, check_out: @booking.check_out }
 
         if @booking.update(@params)
+          dates_changed = old_dates[:check_in] != @booking.check_in || old_dates[:check_out] != @booking.check_out
+
           # 4. If dates changed or room type changed, sync inventory
-          if old_dates[:check_in] != @booking.check_in || old_dates[:check_out] != @booking.check_out || @room_type_id.present?
+          if dates_changed || @room_type_id.present?
             # If only dates changed but not room type, we still need to release and re-deduct
             # Note: if room type changed, we already released old ones above.
             # But release_by_dates is safer if only dates changed.
@@ -85,6 +87,7 @@ module Bookings
           end
 
           sync_guest(@booking)
+          Notifications::Dispatcher.new(event: :booking_updated, booking: @booking).call if dates_changed
           OpenStruct.new(success?: true, booking: @booking)
         else
           OpenStruct.new(success?: false, errors: @booking.errors.full_messages)
