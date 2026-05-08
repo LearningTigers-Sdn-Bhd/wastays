@@ -48,4 +48,16 @@ RSpec.describe Notifications::Channels::WhatsappWebhook do
 
     described_class.new(delivery: delivery).call
   end
+
+  it "uses in-stay event type for in-stay guest messaging" do
+    delivery = create(:notification_delivery,
+      channel: "whatsapp",
+      notification_type: "in_stay_guest_messaging",
+      trigger_event: "booking_confirmed",
+      payload: { rule_key: "mid_stay", guest_name: "Aisha" })
+
+    expect(WebhookBroadcastJob).to receive(:perform_now).with("in_stay_guest_messaging", hash_including("rule_key" => "mid_stay"))
+
+    described_class.new(delivery: delivery).call
+  end
 end

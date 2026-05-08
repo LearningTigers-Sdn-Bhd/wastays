@@ -75,6 +75,21 @@ module HotelPortal
         @check_out_receipt_notification_config.enabled = false if @check_out_receipt_notification_config.new_record?
         @check_out_receipt_notification_config.channels = [ "whatsapp", "email" ] if @check_out_receipt_notification_config.channels.blank?
 
+        @in_stay_guest_notification_config = NotificationConfig.find_or_initialize_by(
+          hotel: @hotel,
+          notification_type: "in_stay_guest_messaging"
+        )
+        @in_stay_guest_notification_config.enabled = false if @in_stay_guest_notification_config.new_record?
+        @in_stay_guest_notification_config.channels = [ "whatsapp", "email" ] if @in_stay_guest_notification_config.channels.blank?
+        @in_stay_guest_notification_config.settings = @in_stay_guest_notification_config.settings.to_h.reverse_merge(
+          "rules" => {
+            "mid_stay" => { "enabled" => true, "time" => "12:00" },
+            "upsell" => { "enabled" => true, "time" => "17:00" },
+            "activity" => { "enabled" => true, "time" => "10:00" }
+          },
+          "quiet_hours" => { "enabled" => true, "start" => "22:00", "end" => "08:00" }
+        )
+
         @settings = {
           hotel_status: @hotel.status.humanize,
           onboarding_stage: onboarding_stage(@hotel),
@@ -216,9 +231,53 @@ module HotelPortal
         {
           "stages" => stages
         }
+      when "in_stay_guest_messaging"
+        raw_settings = params.require(:notification_config).permit(
+          settings: {
+            rules: {
+              mid_stay: [ :enabled, :time ],
+              upsell: [ :enabled, :time ],
+              activity: [ :enabled, :time ]
+            },
+            quiet_hours: [ :enabled, :start, :end ]
+          }
+        ).fetch(:settings, {})
+
+        rules = %w[mid_stay upsell activity].index_with do |rule_key|
+          rule = raw_settings.fetch(:rules, {}).fetch(rule_key.to_sym, {})
+          {
+            "enabled" => ActiveModel::Type::Boolean.new.cast(rule[:enabled]),
+            "time" => normalize_hhmm(rule[:time], default_time_for(rule_key))
+          }
+        end
+        quiet = raw_settings.fetch(:quiet_hours, {})
+
+        {
+          "rules" => rules,
+          "quiet_hours" => {
+            "enabled" => ActiveModel::Type::Boolean.new.cast(quiet[:enabled]),
+            "start" => normalize_hhmm(quiet[:start], "22:00"),
+            "end" => normalize_hhmm(quiet[:end], "08:00")
+          }
+        }
       else
         {}
       end
+    end
+
+    def normalize_hhmm(raw, fallback)
+      value = raw.to_s.strip
+      return fallback unless /\A([01]\d|2[0-3]):[0-5]\d\z/.match?(value)
+
+      value
+    end
+
+    def default_time_for(rule_key)
+      {
+        "mid_stay" => "12:00",
+        "upsell" => "17:00",
+        "activity" => "10:00"
+      }.fetch(rule_key)
     end
 
     def settings_policy

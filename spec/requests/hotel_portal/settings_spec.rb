@@ -124,6 +124,38 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(config.channels).to match_array(%w[whatsapp email])
     end
 
+    it "updates in-stay guest messaging settings with rules and quiet hours" do
+      patch hotel_settings_path(hotel), params: {
+        form_id: "notification_settings",
+        notification_config: {
+          notification_type: "in_stay_guest_messaging",
+          enabled: "1",
+          channels: [ "whatsapp", "email" ],
+          settings: {
+            rules: {
+              mid_stay: { enabled: "1", time: "12:00" },
+              upsell: { enabled: "1", time: "17:00" },
+              activity: { enabled: "0", time: "10:00" }
+            },
+            quiet_hours: {
+              enabled: "1",
+              start: "22:00",
+              end: "08:00"
+            }
+          }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_settings_path(hotel))
+      config = NotificationConfig.find_by!(hotel: hotel, notification_type: "in_stay_guest_messaging")
+      expect(config.enabled).to be(true)
+      expect(config.channels).to match_array(%w[whatsapp email])
+      expect(config.settings.dig("rules", "mid_stay", "enabled")).to be(true)
+      expect(config.settings.dig("rules", "activity", "enabled")).to be(false)
+      expect(config.settings.dig("quiet_hours", "start")).to eq("22:00")
+      expect(config.settings.dig("quiet_hours", "end")).to eq("08:00")
+    end
+
     it 'ignores tampered status params and updates allowed banking details' do
       patch hotel_settings_path(hotel), params: {
         account: {

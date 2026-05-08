@@ -149,4 +149,33 @@ RSpec.describe NotificationMailer, type: :mailer do
     expect(checkout_mail.body.encoded).to include("Receipt note")
     expect(checkout_mail.body.encoded).to include("50.00")
   end
+
+  it "builds in-stay messaging email with rule label" do
+    in_stay_delivery = NotificationDelivery.create!(
+      hotel: delivery.hotel,
+      booking: delivery.booking,
+      notification_type: "in_stay_guest_messaging",
+      channel: "email",
+      trigger_event: "booking_confirmed",
+      status: "pending",
+      idempotency_key: "#{delivery.hotel_id}:#{delivery.booking_id}:in_stay_guest_messaging:email:mid_stay",
+      payload: {
+        guest_name: delivery.booking.guest_name,
+        hotel_name: delivery.hotel.name,
+        confirmation_token: delivery.booking.confirmation_token,
+        check_in: "2026-05-10",
+        check_out: "2026-05-12",
+        rule_key: "mid_stay",
+        rule_label: "Mid-stay check-in",
+        scheduled_for: Time.current.iso8601
+      }
+    )
+
+    in_stay_mail = described_class.in_stay_guest_messaging(in_stay_delivery)
+
+    expect(in_stay_mail.to).to eq([ delivery.booking.guest_email ])
+    expect(in_stay_mail.subject).to include("stay")
+    expect(in_stay_mail.body.encoded).to include("Mid-stay check-in")
+    expect(in_stay_mail.body.encoded).to include(delivery.booking.confirmation_token)
+  end
 end

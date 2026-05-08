@@ -77,4 +77,25 @@ RSpec.describe Notifications::Channels::Email do
       described_class.new(delivery: delivery).call
     }.to change { ActionMailer::Base.deliveries.count }.by(1)
   end
+
+  it "sends in-stay guest messaging email" do
+    delivery = create(:notification_delivery,
+      channel: "email",
+      notification_type: "in_stay_guest_messaging",
+      trigger_event: "booking_confirmed",
+      payload: {
+        guest_name: "Aisha",
+        hotel_name: "Cedar Stay",
+        confirmation_token: "WS-TEST123",
+        check_in: "2026-05-10",
+        check_out: "2026-05-12",
+        rule_key: "mid_stay",
+        rule_label: "Mid-stay check-in",
+        scheduled_for: "2026-05-11T12:00:00+08:00"
+      })
+
+    expect {
+      described_class.new(delivery: delivery).call
+    }.to change { ActionMailer::Base.deliveries.count }.by(1)
+  end
 end

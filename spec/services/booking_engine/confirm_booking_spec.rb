@@ -36,6 +36,9 @@ RSpec.describe BookingEngine::ConfirmBooking do
 
   describe '#call' do
     it 'creates booking, rooms, guest link, pre-checkin, and converts quote' do
+      dispatcher = instance_double(Notifications::Dispatcher, call: [])
+      allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+
       expect {
         described_class.new(quote_token: quote.token, payment_details: payment_details).call
       }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything)
@@ -63,6 +66,7 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(booking.booking_guests.first.is_primary).to be(true)
 
       expect(quote.reload.status).to eq('converted')
+      expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: booking)
     end
 
     it 'returns existing booking when quote is already converted' do

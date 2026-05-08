@@ -42,6 +42,24 @@ class NotificationMailer < ApplicationMailer
     )
   end
 
+  def in_stay_guest_messaging(delivery)
+    assign_delivery(delivery)
+
+    rule_subject = case @payload[:rule_key].to_s
+    when "mid_stay"
+      "How is your stay going at #{@payload[:hotel_name]}?"
+    when "upsell"
+      "Make your stay even better at #{@payload[:hotel_name]}"
+    else
+      "Things to do before checkout at #{@payload[:hotel_name]}"
+    end
+
+    mail(
+      to: @booking.guest_email,
+      subject: rule_subject
+    )
+  end
+
   private
 
   def load_delivery_context

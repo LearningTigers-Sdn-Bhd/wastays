@@ -3,10 +3,10 @@
 module Notifications
   class Dispatcher
     EVENT_TO_NOTIFICATION_TYPE = {
-      booking_confirmed: "pre_arrival_notification",
+      booking_confirmed: %w[pre_arrival_notification in_stay_guest_messaging],
       booking_checked_in: "check_in_confirmation",
       booking_completed: %w[post_stay_review_request check_out_receipt_message],
-      booking_updated: "pre_arrival_notification"
+      booking_updated: %w[pre_arrival_notification in_stay_guest_messaging]
     }.freeze
 
     def initialize(event:, booking:)
@@ -16,9 +16,7 @@ module Notifications
 
     def call
       notification_types = Array(EVENT_TO_NOTIFICATION_TYPE.fetch(@event))
-      if notification_types == [ "pre_arrival_notification" ]
-        return dispatch_pre_arrival(@event)
-      end
+      return dispatch_scheduled_notifications(notification_types) if scheduled_only_events?
 
       notification_types.flat_map do |notification_type|
         config = NotificationConfig.find_by(hotel: @booking.hotel, notification_type: notification_type)
@@ -46,6 +44,24 @@ module Notifications
       scheduler.schedule!(trigger_event: event.to_s)
     end
 
+    def dispatch_in_stay(event)
+      scheduler = Notifications::InStayScheduler.new(booking: @booking)
+      return scheduler.reschedule_pending!(trigger_event: event.to_s) if event == :booking_updated
+
+      scheduler.schedule!(trigger_event: event.to_s)
+    end
+
+    def dispatch_scheduled_notifications(notification_types)
+      deliveries = []
+      deliveries.concat(Array(dispatch_pre_arrival(@event))) if notification_types.include?("pre_arrival_notification")
+      deliveries.concat(Array(dispatch_in_stay(@event))) if notification_types.include?("in_stay_guest_messaging")
+      deliveries
+    end
+
+    def scheduled_only_events?
+      @event.in?([ :booking_confirmed, :booking_updated ])
+    end
+
     def payload_for(notification_type, config)
       case notification_type
       when "check_in_confirmation"
@@ -57,6 +73,8 @@ module Notifications
         ).call
       when "check_out_receipt_message"
         Notifications::PayloadBuilders::CheckOutReceiptMessage.new(booking: @booking).call
+      when "in_stay_guest_messaging"
+        raise ArgumentError, "In-stay messaging is handled by scheduler"
       else
         raise ArgumentError, "Unsupported notification type: #{notification_type}"
       end

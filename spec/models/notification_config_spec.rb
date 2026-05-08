@@ -61,6 +61,25 @@ RSpec.describe NotificationConfig, type: :model do
     expect(config).to be_valid
   end
 
+  it "accepts in-stay guest messaging with rules and quiet hours" do
+    config = described_class.new(
+      hotel: create(:hotel),
+      notification_type: "in_stay_guest_messaging",
+      enabled: true,
+      channels: [ "whatsapp", "email" ],
+      settings: {
+        "rules" => {
+          "mid_stay" => { "enabled" => true, "time" => "12:00" },
+          "upsell" => { "enabled" => true, "time" => "17:00" },
+          "activity" => { "enabled" => true, "time" => "10:00" }
+        },
+        "quiet_hours" => { "enabled" => true, "start" => "22:00", "end" => "08:00" }
+      }
+    )
+
+    expect(config).to be_valid
+  end
+
   it "rejects unsupported pre-arrival stages" do
     config = described_class.new(
       hotel: create(:hotel),
@@ -85,5 +104,24 @@ RSpec.describe NotificationConfig, type: :model do
 
     expect(config).not_to be_valid
     expect(config.errors[:channels]).to include("contains unsupported values")
+  end
+
+  it "rejects invalid in-stay rule keys and time format" do
+    config = described_class.new(
+      hotel: create(:hotel),
+      notification_type: "in_stay_guest_messaging",
+      enabled: true,
+      channels: [ "whatsapp" ],
+      settings: {
+        "rules" => {
+          "invalid_rule" => { "enabled" => true, "time" => "12:00" },
+          "mid_stay" => { "enabled" => true, "time" => "25:00" }
+        }
+      }
+    )
+
+    expect(config).not_to be_valid
+    expect(config.errors[:settings]).to include("contains unsupported in-stay rules")
+    expect(config.errors[:settings]).to include("contains invalid time format for mid_stay")
   end
 end

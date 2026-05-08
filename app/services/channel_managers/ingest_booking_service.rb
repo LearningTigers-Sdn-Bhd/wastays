@@ -12,6 +12,9 @@ module ChannelManagers
     def call
       Booking.transaction do
         booking = find_or_initialize_booking
+        is_existing_booking = booking.persisted?
+        previous_check_in = booking.check_in
+        previous_check_out = booking.check_out
 
         # If it's a modification, check revision number
         if booking.persisted? && booking.revision_number.to_i >= @data[:revision_number].to_i
@@ -53,6 +56,10 @@ module ChannelManagers
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
           Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
 
+          if is_existing_booking && stay_dates_changed?(previous_check_in, previous_check_out, booking)
+            Notifications::Dispatcher.new(event: :booking_updated, booking: booking).call
+          end
+
           OpenStruct.new(success?: true, booking: booking)
         else
           OpenStruct.new(success?: false, message: booking.errors.full_messages.to_sentence)
@@ -60,6 +67,10 @@ module ChannelManagers
       end
     rescue => e
       OpenStruct.new(success?: false, message: "Ingestion failed: #{e.message}")
+    end
+
+    def stay_dates_changed?(previous_check_in, previous_check_out, booking)
+      previous_check_in != booking.check_in || previous_check_out != booking.check_out
     end
 
     private

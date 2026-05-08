@@ -21,6 +21,9 @@ RSpec.describe Bookings::CreateManualBooking do
   subject { described_class.new(hotel: hotel, params: params) }
 
   it "creates a booking and deducts inventory" do
+    dispatcher = instance_double(Notifications::Dispatcher, call: [])
+    allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+
     expect {
       result = subject.call
       expect(result.success?).to be true
@@ -30,6 +33,7 @@ RSpec.describe Bookings::CreateManualBooking do
 
     inventory = room_type.room_inventories.find_by(date: Date.current)
     expect(inventory.quantity).to eq(4)
+    expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: kind_of(Booking))
   end
 
   it "returns errors when booking fails" do
