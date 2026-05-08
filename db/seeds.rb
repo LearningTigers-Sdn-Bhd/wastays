@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-if Rails.env.demo?
-  require_relative "demo_seeds"
-  DemoSeeds.run
-else
+require_relative "demo_seeds"
+require_relative "amenities"
 
 SEED_PASSWORD = '12345678'.freeze
 
@@ -115,6 +113,12 @@ module SeedData
     booking
   end
 end
+
+AmenitiesSeeder.run
+
+if Rails.env.demo?
+  DemoSeeds.run
+else
 
 SeedLog.section('Seeding WAStays data')
 
