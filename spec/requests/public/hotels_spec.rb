@@ -24,8 +24,9 @@ RSpec.describe "Public::Hotels", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("See Options")
       expect(response.body).to include(%(href="/hotels/#{hotel.slug}?))
-      expect(response.body).to include("check_in=#{Date.current}")
-      expect(response.body).to include("check_out=#{Date.tomorrow}")
+      today = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
+      expect(response.body).to include("check_in=#{today}")
+      expect(response.body).to include("check_out=#{today + 1.day}")
     end
   end
 

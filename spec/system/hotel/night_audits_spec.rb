@@ -25,7 +25,7 @@ RSpec.describe "Hotel night audits", type: :system do
   end
 
   it "renders the page and lets front desk run a completed audit" do
-    business_date = Date.current - 1.day
+    business_date = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current - 1.day }
 
     create(:booking,
       hotel: hotel,
@@ -55,20 +55,21 @@ RSpec.describe "Hotel night audits", type: :system do
   end
 
   it "shows blockers on the result page" do
+    today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
     create(:booking,
       hotel: hotel,
       status: "checked_in",
       payment_status: "captured",
       guest_name: "Aisha Tan",
       confirmation_token: "WS-BLOCK-001",
-      check_in: Date.current - 1.day,
-      check_out: Date.current,
+      check_in: today_kl - 1.day,
+      check_out: today_kl,
       checked_in_at: 1.day.ago)
 
     visit hotel_night_audits_path(hotel)
 
     within("[data-testid='manual-night-audit-form']") do
-      fill_in "Business Date", with: Date.current.to_s
+      fill_in "Business Date", with: today_kl.to_s
       click_button "Run Audit"
     end
 

@@ -36,17 +36,25 @@ RSpec.describe Bookings::AvailableRoomNumbers do
     expect(subject.call).to match_array([ "101", "103" ])
   end
 
-  it "excludes room numbers locked by other users" do
+  it "excludes room numbers locked by other users for the same room type" do
     other_user = create(:user)
-    create(:room_lock, hotel: hotel, user: other_user, room_number: "102", expires_at: 10.minutes.from_now)
+    create(:room_lock, hotel: hotel, room_type: room_type, user: other_user, room_number: "102", expires_at: 10.minutes.from_now)
 
     expect(subject.call).to match_array([ "101", "103" ])
+  end
+
+  it "includes room numbers locked for different room types" do
+    other_room_type = create(:room_type, hotel: hotel, room_numbers: [ "102" ])
+    other_user = create(:user)
+    create(:room_lock, hotel: hotel, room_type: other_room_type, user: other_user, room_number: "102", expires_at: 10.minutes.from_now)
+
+    expect(subject.call).to match_array([ "101", "102", "103" ])
   end
 
   it "includes room numbers locked by the current user" do
     user = create(:user)
     Current.user_id = user.id
-    create(:room_lock, hotel: hotel, user: user, room_number: "102", expires_at: 10.minutes.from_now)
+    create(:room_lock, hotel: hotel, room_type: room_type, user: user, room_number: "102", expires_at: 10.minutes.from_now)
 
     expect(subject.call).to match_array([ "101", "102", "103" ])
   ensure

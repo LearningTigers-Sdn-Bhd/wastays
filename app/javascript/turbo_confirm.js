@@ -14,7 +14,7 @@ class TurboConfirm {
   }
 
   setup() {
-    Turbo.setConfirmMethod((message, element) => {
+    Turbo.config.forms.confirm = (message, element) => {
       let title = element.dataset.turboConfirmTitle || "Confirm Action"
       this.confirmTitle.textContent = title
       this.confirmMessage.textContent = message
@@ -57,7 +57,7 @@ class TurboConfirm {
         }
         window.addEventListener("keydown", onEsc)
       })
-    })
+    }
   }
 
   hide() {

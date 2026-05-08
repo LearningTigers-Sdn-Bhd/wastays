@@ -44,16 +44,16 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
         find("#booking_room_number").find(:option, "206").select_option
         execute_script("document.getElementById('booking_room_number').dispatchEvent(new Event('change', { bubbles: true }))")
       end
-    end
 
-    max_retries = 10
-    retries = 0
-    while retries < max_retries && !RoomLock.where(hotel: hotel, room_number: "206", user: user1).exists?
-      sleep 0.5
-      retries += 1
-    end
+      # Wait for lock to be persisted in DB
+      max_wait = 10
+      start_time = Time.current
+      until RoomLock.where(hotel: hotel, room_type: room_type, room_number: "206", user: user1).exists? || (Time.current - start_time) > max_wait
+        sleep 0.5
+      end
 
-    expect(RoomLock.where(hotel: hotel, room_number: "206", user: user1).exists?).to be true
+      expect(RoomLock.where(hotel: hotel, room_type: room_type, room_number: "206", user: user1).exists?).to be true
+    end
 
     # Admin Two tries to lock Room 206
     using_session("Admin Two") do
@@ -75,15 +75,22 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
       expect(page).to have_css("#check-in-modal-show-#{booking.id}[open]", visible: :all)
 
       within("#check-in-modal-show-#{booking.id}") do
+        # We need to set the room_type_id for the controller to work
+        container = find("div[data-controller='room-lock']", match: :first)
+        execute_script("arguments[0].dataset.roomLockRoomTypeIdValue = '#{room_type.id}'", container)
+
         find("input[name*='room_number']").set "206"
         # Trigger change
         execute_script("document.querySelector('#check-in-modal-show-#{booking.id} [name*=\"room_number\"]').dispatchEvent(new Event('change', { bubbles: true }))")
       end
 
-      sleep 2
+      # Wait for the alert modal to be opened
+      expect(page).to have_css("#room-lock-alert-modal[open]", visible: :all, wait: 5)
 
-      expect(page).to have_content("Room Already Occupied")
-      expect(page).to have_content("Admin One")
+      within("#room-lock-alert-modal", visible: :all) do
+        expect(page).to have_content("Room Already Occupied")
+        expect(page).to have_content("Admin One")
+      end
 
       find("#room-lock-alert-close").click
       expect(page).not_to have_css("#room-lock-alert-modal[open]", visible: :all)

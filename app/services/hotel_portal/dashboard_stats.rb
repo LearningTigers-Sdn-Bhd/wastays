@@ -7,7 +7,7 @@ module HotelPortal
     end
 
     def today_arrivals
-      @hotel.bookings.active.where(check_in: Date.today)
+      @hotel.bookings.active.where(check_in: Date.current)
     end
 
     def tomorrow_arrivals
@@ -15,7 +15,7 @@ module HotelPortal
     end
 
     def today_checkouts
-      @hotel.bookings.active.where(check_out: Date.today)
+      @hotel.bookings.active.where(check_out: Date.current)
     end
 
     def bookings_this_month_count
@@ -27,7 +27,7 @@ module HotelPortal
     end
 
     def pending_actions_count
-      arrival_window = Date.today..(Date.today + 1.day)
+      arrival_window = Date.current..(Date.current + 1.day)
       @hotel.bookings.active
         .joins(:pre_checkin)
         .where(pre_checkins: { status: "pending" })
@@ -36,7 +36,7 @@ module HotelPortal
     end
 
     def occupancy_snapshot(days: 7)
-      (Date.today..(Date.today + (days - 1).days)).map do |date|
+      (Date.current..(Date.current + (days - 1).days)).map do |date|
         # Correctly sum the quantity column from room_inventories
         total_inventory = @hotel.room_types.joins(:room_inventories)
                                 .where(room_inventories: { date: date })

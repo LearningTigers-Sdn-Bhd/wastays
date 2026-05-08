@@ -6,6 +6,10 @@ class HotelPortal::CheckedOutGuestsController < HotelPortal::BaseController
                               .completed
                               .where(checked_out_at: Date.current.all_day)
 
+    Rails.logger.debug "DEBUG: Date.current=#{Date.current}"
+    Rails.logger.debug "DEBUG: Date.current.all_day=#{Date.current.all_day}"
+    Rails.logger.debug "DEBUG: All completed bookings checked out today: #{current_hotel.bookings.completed.pluck(:id, :guest_name, :checked_out_at)}"
+
     @checked_out_count = base_scope.count
 
     checked_out_scope = base_scope.includes(:booking_rooms, :guests, :booking_guests)
