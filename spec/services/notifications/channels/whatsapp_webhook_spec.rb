@@ -36,4 +36,16 @@ RSpec.describe Notifications::Channels::WhatsappWebhook do
 
     described_class.new(delivery: delivery).call
   end
+
+  it "uses check-out receipt event type for checkout receipts" do
+    delivery = create(:notification_delivery,
+      channel: "whatsapp",
+      notification_type: "check_out_receipt_message",
+      trigger_event: "booking_completed",
+      payload: { booking_total: 320.0, invoice_url: "https://example.com/invoice.pdf" })
+
+    expect(WebhookBroadcastJob).to receive(:perform_now).with("check_out_receipt_message", hash_including("booking_total" => 320.0))
+
+    described_class.new(delivery: delivery).call
+  end
 end

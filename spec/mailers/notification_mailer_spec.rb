@@ -77,4 +77,76 @@ RSpec.describe NotificationMailer, type: :mailer do
     expect(pre_arrival_mail.subject).to include("D1 reminder")
     expect(pre_arrival_mail.body.encoded).to include(delivery.booking.confirmation_token)
   end
+
+  it "builds check-out receipt email with folio summary and invoice link" do
+    checkout_delivery = NotificationDelivery.create!(
+      hotel: delivery.hotel,
+      booking: delivery.booking,
+      notification_type: "check_out_receipt_message",
+      channel: "email",
+      trigger_event: "booking_completed",
+      status: "pending",
+      idempotency_key: "#{delivery.hotel_id}:#{delivery.booking_id}:check_out_receipt_message:email:booking_completed",
+      payload: {
+        guest_name: delivery.booking.guest_name,
+        hotel_name: delivery.hotel.name,
+        confirmation_token: delivery.booking.confirmation_token,
+        check_in: "2026-05-08",
+        check_out: "2026-05-09",
+        currency: "MYR",
+        line_items: [ { description: "Executive King", quantity: 1, amount: 240.0, room_number: "101" } ],
+        tax_items: [ { description: "Tourism Tax", amount: 10.0 } ],
+        line_items_total: 240.0,
+        tax_total: 10.0,
+        derived_grand_total: 250.0,
+        booking_total: 250.0,
+        totals_mismatch: false,
+        totals_mismatch_amount: 0.0,
+        invoice_url: "https://example.com/invoices/#{delivery.booking.confirmation_token}"
+      }
+    )
+
+    checkout_mail = described_class.check_out_receipt_message(checkout_delivery)
+
+    expect(checkout_mail.to).to eq([ delivery.booking.guest_email ])
+    expect(checkout_mail.subject).to include("checkout receipt")
+    expect(checkout_mail.body.encoded).to include("Folio Summary")
+    expect(checkout_mail.body.encoded).to include("Tourism Tax")
+    expect(checkout_mail.body.encoded).to include("View Invoice")
+    expect(checkout_mail.body.encoded).to include(checkout_delivery.payload["invoice_url"])
+  end
+
+  it "includes mismatch note when totals_mismatch is true" do
+    checkout_delivery = NotificationDelivery.create!(
+      hotel: delivery.hotel,
+      booking: delivery.booking,
+      notification_type: "check_out_receipt_message",
+      channel: "email",
+      trigger_event: "booking_completed",
+      status: "pending",
+      idempotency_key: "#{delivery.hotel_id}:#{delivery.booking_id}:check_out_receipt_message:email:booking_completed:mismatch",
+      payload: {
+        guest_name: delivery.booking.guest_name,
+        hotel_name: delivery.hotel.name,
+        confirmation_token: delivery.booking.confirmation_token,
+        check_in: "2026-05-08",
+        check_out: "2026-05-09",
+        currency: "MYR",
+        line_items: [ { description: "Executive King", quantity: 1, amount: 200.0 } ],
+        tax_items: [],
+        line_items_total: 200.0,
+        tax_total: 0.0,
+        derived_grand_total: 200.0,
+        booking_total: 250.0,
+        totals_mismatch: true,
+        totals_mismatch_amount: 50.0,
+        invoice_url: "https://example.com/invoices/#{delivery.booking.confirmation_token}"
+      }
+    )
+
+    checkout_mail = described_class.check_out_receipt_message(checkout_delivery)
+
+    expect(checkout_mail.body.encoded).to include("Receipt note")
+    expect(checkout_mail.body.encoded).to include("50.00")
+  end
 end

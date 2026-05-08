@@ -307,6 +307,44 @@
               <%= f.submit "Save Pre-Arrival Settings", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
             </div>
           <% end %>
+
+          <%= form_with model: @check_out_receipt_notification_config, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6 rounded-xl border border-slate-200 p-4" do |f| %>
+            <%= hidden_field_tag :form_id, "notification_settings" %>
+            <%= hidden_field_tag "notification_config[notification_type]", "check_out_receipt_message" %>
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-700">Check-Out Receipt Message</h3>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4">
+                  <span class="text-sm text-slate-600">Enable automation</span>
+                  <span class="relative inline-flex items-center">
+                    <%= hidden_field_tag "notification_config[enabled]", "0" %>
+                    <%= check_box_tag "notification_config[enabled]", "1", @check_out_receipt_notification_config.enabled, class: "sr-only peer" %>
+                    <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
+                  </span>
+                </label>
+              </div>
+
+              <div>
+                <span class="mb-2 block text-sm font-medium text-slate-900">Channels</span>
+                <div class="space-y-2 rounded-xl border border-slate-200 p-4">
+                  <%= hidden_field_tag "notification_config[channels][]", "" %>
+                  <label class="flex items-center gap-2 text-sm text-slate-700">
+                    <%= check_box_tag "notification_config[channels][]", "whatsapp", @check_out_receipt_notification_config.channels.include?("whatsapp"), class: "h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-300" %>
+                    WhatsApp
+                  </label>
+                  <label class="flex items-center gap-2 text-sm text-slate-700">
+                    <%= check_box_tag "notification_config[channels][]", "email", @check_out_receipt_notification_config.channels.include?("email"), class: "h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-300" %>
+                    Email
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end border-t border-slate-200 pt-4">
+              <%= f.submit "Save Check-Out Receipt Settings", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
+            </div>
+          <% end %>
         </div>
       </section>
 

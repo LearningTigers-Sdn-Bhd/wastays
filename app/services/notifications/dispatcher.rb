@@ -5,7 +5,7 @@ module Notifications
     EVENT_TO_NOTIFICATION_TYPE = {
       booking_confirmed: "pre_arrival_notification",
       booking_checked_in: "check_in_confirmation",
-      booking_completed: "post_stay_review_request",
+      booking_completed: %w[post_stay_review_request check_out_receipt_message],
       booking_updated: "pre_arrival_notification"
     }.freeze
 
@@ -15,24 +15,26 @@ module Notifications
     end
 
     def call
-      notification_type = EVENT_TO_NOTIFICATION_TYPE.fetch(@event)
-      if notification_type == "pre_arrival_notification"
+      notification_types = Array(EVENT_TO_NOTIFICATION_TYPE.fetch(@event))
+      if notification_types == [ "pre_arrival_notification" ]
         return dispatch_pre_arrival(@event)
       end
 
-      config = NotificationConfig.find_by(hotel: @booking.hotel, notification_type: notification_type)
-      return [] unless config&.enabled?
+      notification_types.flat_map do |notification_type|
+        config = NotificationConfig.find_by(hotel: @booking.hotel, notification_type: notification_type)
+        next [] unless config&.enabled?
 
-      payload, payload_error = payload_with_error(notification_type, config)
-      Array(config.channels).map do |channel|
-        create_delivery(
-          notification_type:,
-          channel: channel.to_s,
-          payload: payload,
-          config:,
-          payload_error:
-        )
-      end.compact
+        payload, payload_error = payload_with_error(notification_type, config)
+        Array(config.channels).map do |channel|
+          create_delivery(
+            notification_type:,
+            channel: channel.to_s,
+            payload: payload,
+            config:,
+            payload_error:
+          )
+        end.compact
+      end
     end
 
     private
@@ -53,6 +55,8 @@ module Notifications
           booking: @booking,
           review_link: config.settings.to_h["review_link"]
         ).call
+      when "check_out_receipt_message"
+        Notifications::PayloadBuilders::CheckOutReceiptMessage.new(booking: @booking).call
       else
         raise ArgumentError, "Unsupported notification type: #{notification_type}"
       end

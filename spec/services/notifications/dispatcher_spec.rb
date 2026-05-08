@@ -33,12 +33,19 @@ RSpec.describe Notifications::Dispatcher do
       channels: %w[whatsapp],
       settings: { "review_link" => "https://g.page/r/example/review", "send_delay_hours" => 2 }
     )
+    NotificationConfig.create!(
+      hotel: hotel,
+      notification_type: "check_out_receipt_message",
+      enabled: true,
+      channels: %w[email],
+      settings: {}
+    )
     booking.update!(status: "completed", checked_out_at: Time.zone.local(2026, 5, 8, 16, 0))
 
     expect {
       described_class.new(event: :booking_completed, booking: booking).call
-    }.to change(NotificationDelivery, :count).by(1)
-      .and have_enqueued_job(Notifications::DeliverJob).exactly(1).times
+    }.to change(NotificationDelivery, :count).by(2)
+      .and have_enqueued_job(Notifications::DeliverJob).exactly(2).times
   end
 
   it "schedules pre-arrival deliveries for d2 and d1 across both channels" do

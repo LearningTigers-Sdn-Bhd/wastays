@@ -5,6 +5,7 @@ class NotificationConfig < ApplicationRecord
     check_in_confirmation
     post_stay_review_request
     pre_arrival_notification
+    check_out_receipt_message
   ].freeze
   CHANNELS = %w[email whatsapp].freeze
   PRE_ARRIVAL_STAGES = %w[d2 d1].freeze

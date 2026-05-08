@@ -108,6 +108,22 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(config.settings["stages"]).to eq(%w[d2 d1])
     end
 
+    it "updates check-out receipt message settings with both channels" do
+      patch hotel_settings_path(hotel), params: {
+        form_id: "notification_settings",
+        notification_config: {
+          notification_type: "check_out_receipt_message",
+          enabled: "1",
+          channels: [ "whatsapp", "email" ]
+        }
+      }
+
+      expect(response).to redirect_to(hotel_settings_path(hotel))
+      config = NotificationConfig.find_by!(hotel: hotel, notification_type: "check_out_receipt_message")
+      expect(config.enabled).to be(true)
+      expect(config.channels).to match_array(%w[whatsapp email])
+    end
+
     it 'ignores tampered status params and updates allowed banking details' do
       patch hotel_settings_path(hotel), params: {
         account: {

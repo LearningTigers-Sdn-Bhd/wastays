@@ -68,6 +68,13 @@ module HotelPortal
           "stages" => %w[d2 d1]
         )
 
+        @check_out_receipt_notification_config = NotificationConfig.find_or_initialize_by(
+          hotel: @hotel,
+          notification_type: "check_out_receipt_message"
+        )
+        @check_out_receipt_notification_config.enabled = false if @check_out_receipt_notification_config.new_record?
+        @check_out_receipt_notification_config.channels = [ "whatsapp", "email" ] if @check_out_receipt_notification_config.channels.blank?
+
         @settings = {
           hotel_status: @hotel.status.humanize,
           onboarding_stage: onboarding_stage(@hotel),

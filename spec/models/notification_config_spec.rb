@@ -37,6 +37,18 @@ RSpec.describe NotificationConfig, type: :model do
     expect(config).to be_valid
   end
 
+  it "accepts check-out receipt message type" do
+    config = described_class.new(
+      hotel: create(:hotel),
+      notification_type: "check_out_receipt_message",
+      enabled: true,
+      channels: [ "whatsapp", "email" ],
+      settings: {}
+    )
+
+    expect(config).to be_valid
+  end
+
   it "accepts pre-arrival notification with d2 and d1 stages" do
     config = described_class.new(
       hotel: create(:hotel),

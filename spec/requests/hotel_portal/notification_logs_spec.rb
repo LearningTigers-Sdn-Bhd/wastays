@@ -105,6 +105,24 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
       expect(response.body).to include("d2")
     end
 
+    it "filters check-out receipt message type" do
+      booking = create(:booking, hotel: hotel, status: "completed")
+      create(:notification_delivery,
+        hotel: hotel,
+        booking: booking,
+        notification_type: "check_out_receipt_message",
+        channel: "email",
+        status: "sent",
+        trigger_event: "booking_completed",
+        payload: { guest_name: booking.guest_name })
+
+      get hotel_notification_logs_path(hotel), params: { notification_type: "check_out_receipt_message" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Check out receipt message")
+      expect(response.body).to include(booking.confirmation_token)
+    end
+
     it "denies access without permission" do
       role_permission = RolePermission.find_by(role: role, permission: Permission.find_by!(slug: "view_audit_logs"))
       role_permission.destroy!

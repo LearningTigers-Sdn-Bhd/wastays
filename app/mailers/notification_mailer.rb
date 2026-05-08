@@ -33,6 +33,15 @@ class NotificationMailer < ApplicationMailer
     )
   end
 
+  def check_out_receipt_message(delivery)
+    assign_delivery(delivery)
+
+    mail(
+      to: @booking.guest_email,
+      subject: "Your checkout receipt from #{@payload[:hotel_name]}"
+    )
+  end
+
   private
 
   def load_delivery_context
