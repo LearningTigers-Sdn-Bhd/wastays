@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body style="margin:0;padding:0;background-color:#f5f4f0;font-family:'Inter',Arial,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f4f0;padding:40px 0;">
+      <tr>
+        <td align="center">
+          <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #e8e5df;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+            <tr>
+              <td style="background-color:#0f4a43;padding:40px;text-align:center;">
+                <img src="<%= attachments['long-logo.png'].url %>" alt="WAStays" style="height:44px;width:auto;display:inline-block;">
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:48px 40px;">
+                <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0f4a43;text-transform:uppercase;letter-spacing:0.1em;">Check-In Confirmed</p>
+                <p style="margin:0 0 24px;font-size:26px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Welcome, <%= @guest_first_name %>!</p>
+                <p style="margin:0 0 32px;font-size:15px;color:#475569;line-height:1.7;">
+                  We are so glad to have you with us at <strong style="color:#0f172a;"><%= @payload[:hotel_name] %></strong>. Your check-in is confirmed and your stay is now underway.
+                </p>
+
+                <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:16px;margin-bottom:32px;">
+                  <tr>
+                    <td style="padding:24px 24px 16px;">
+                      <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Booking Reference</p>
+                      <p style="margin:6px 0 0;font-size:20px;font-weight:800;color:#0f172a;font-family:monospace;letter-spacing:0.05em;"><%= @payload[:confirmation_token] %></p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:16px 24px;border-top:1px solid #e2e8f0;">
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="width:50%;vertical-align:top;padding-right:12px;">
+                            <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Check-in</p>
+                            <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0f172a;"><%= Date.parse(@payload[:check_in]).strftime("%d %b %Y") rescue @payload[:check_in] %></p>
+                          </td>
+                          <td style="width:50%;vertical-align:top;">
+                            <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Check-out</p>
+                            <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0f172a;"><%= Date.parse(@payload[:check_out]).strftime("%d %b %Y") rescue @payload[:check_out] %></p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:16px 24px 24px;border-top:1px solid #e2e8f0;">
+                      <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Checked in at</p>
+                      <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0f172a;"><%= Time.zone.parse(@payload[:checked_in_at]).strftime("%d %b %Y, %I:%M %p") rescue @payload[:checked_in_at] %></p>
+                    </td>
+                  </tr>
+                </table>
+
+                <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-radius:12px;margin-bottom:32px;border:1px solid #bbf7d0;">
+                  <tr>
+                    <td style="padding:16px 20px;">
+                      <p style="margin:0;font-size:14px;color:#166534;line-height:1.6;">
+                        <strong>Have a wonderful stay.</strong> We are so happy to be part of your journey and hope your time with us is comfortable, restful, and memorable.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.6;text-align:center;">
+                  Thank you for choosing WAStays.
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="background-color:#faf9f6;padding:24px 40px;text-align:center;border-top:1px solid #f1f5f9;">
+                <p style="margin:0;font-size:12px;color:#94a3b8;">&copy; <%= Date.current.year %> WAStays. All rights reserved.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
