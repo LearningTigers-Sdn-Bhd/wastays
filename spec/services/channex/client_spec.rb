@@ -33,7 +33,7 @@ RSpec.describe Channex::Client do
         .to_return(status: 401, body: { errors: 'Unauthorized' }.to_json)
 
       response = client.get('/properties')
-      expect(response[:error]).to eq('Channex API error: 401')
+      expect(response[:error]).to eq('Channel Manager API error: 401')
       expect(response[:details]).to eq('Unauthorized')
     end
   end

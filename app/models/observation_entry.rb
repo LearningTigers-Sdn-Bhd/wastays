@@ -17,7 +17,7 @@ class ObservationEntry < ApplicationRecord
       "Database: #{path}"
     when "api"
       if path.include?("channex")
-        "Channel Manager Update (Channex)"
+        "Channel Manager Update (Channel Manager)"
       elsif path.include?("razorpay")
         "Payment Gateway Action (Razorpay)"
       else
