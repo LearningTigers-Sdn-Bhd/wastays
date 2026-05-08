@@ -25,6 +25,47 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   end
 
   describe 'PATCH /hotel/settings' do
+    it 'updates check-in notification settings and channels' do
+      patch hotel_settings_path(hotel), params: {
+        form_id: 'notification_settings',
+        notification_config: {
+          enabled: '1',
+          channels: [ 'whatsapp', 'email' ]
+        }
+      }
+
+      expect(response).to redirect_to(hotel_settings_path(hotel))
+      follow_redirect!
+      expect(response.body).to include('Settings updated successfully.')
+
+      config = NotificationConfig.find_by!(hotel: hotel, notification_type: 'check_in_confirmation')
+      expect(config.enabled).to be(true)
+      expect(config.channels).to match_array(%w[whatsapp email])
+    end
+
+    it 'allows disabling check-in notification while keeping selected channels' do
+      NotificationConfig.create!(
+        hotel: hotel,
+        notification_type: 'check_in_confirmation',
+        enabled: true,
+        channels: %w[whatsapp],
+        settings: {}
+      )
+
+      patch hotel_settings_path(hotel), params: {
+        form_id: 'notification_settings',
+        notification_config: {
+          enabled: '0',
+          channels: [ 'email' ]
+        }
+      }
+
+      expect(response).to redirect_to(hotel_settings_path(hotel))
+      config = NotificationConfig.find_by!(hotel: hotel, notification_type: 'check_in_confirmation')
+      expect(config.enabled).to be(false)
+      expect(config.channels).to eq([ 'email' ])
+    end
+
     it 'ignores tampered status params and updates allowed banking details' do
       patch hotel_settings_path(hotel), params: {
         account: {

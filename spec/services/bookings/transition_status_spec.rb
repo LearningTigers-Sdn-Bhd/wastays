@@ -11,10 +11,13 @@ RSpec.describe Bookings::TransitionStatus do
       subject { described_class.new(booking: booking, status: "checked_in", timestamp: timestamp) }
 
       it "updates status and checked_in_at" do
+        NotificationConfig.create!(hotel: booking.hotel, notification_type: "check_in_confirmation", enabled: true, channels: %w[whatsapp email], settings: {})
+
         expect {
           result = subject.call
           expect(result.success?).to be true
         }.to have_enqueued_job(WebhookBroadcastJob).with('booking_checked_in', anything)
+          .and have_enqueued_job(Notifications::DeliverJob).exactly(2).times
 
         expect(booking.reload.status).to eq("checked_in")
         expect(booking.checked_in_at).to be_within(1.second).of(timestamp)

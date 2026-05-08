@@ -266,6 +266,7 @@ Rails.application.routes.draw do
     resources :arrivals, only: [ :index ]
     resources :checked_out_guests, only: [ :index ]
     resources :audit_logs, only: [ :index ]
+    resources :notification_logs, only: [ :index ]
     resources :reports, only: [ :index ] do
       collection do
         get :payouts

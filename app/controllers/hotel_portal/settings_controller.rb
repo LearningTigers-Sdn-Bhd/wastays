@@ -16,7 +16,9 @@ module HotelPortal
       load_settings
       @account.build_banking_detail unless @account.banking_detail
 
-      if settings_update_request?
+      if notification_update_request?
+        update_notification_settings
+      elsif settings_update_request?
         update_settings
       elsif params[:payment_setting].present?
         redirect_to hotel_settings_path(@hotel), alert: "Payment gateway credentials are managed by superadmin."
@@ -38,6 +40,13 @@ module HotelPortal
 
     def load_settings
       if @hotel
+        @notification_config = NotificationConfig.find_or_initialize_by(
+          hotel: @hotel,
+          notification_type: "check_in_confirmation"
+        )
+        @notification_config.enabled = true if @notification_config.new_record?
+        @notification_config.channels = [ "whatsapp" ] if @notification_config.channels.blank?
+
         @settings = {
           hotel_status: @hotel.status.humanize,
           onboarding_stage: onboarding_stage(@hotel),
@@ -55,6 +64,10 @@ module HotelPortal
 
     def settings_update_request?
       params[:hotel].present?
+    end
+
+    def notification_update_request?
+      params[:notification_config].present?
     end
 
     def update_settings
@@ -83,6 +96,24 @@ module HotelPortal
         redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
       else
         load_settings
+        render :index, status: :unprocessable_entity
+      end
+    end
+
+    def update_notification_settings
+      authorize_settings_update!
+
+      channels = Array(params.dig(:notification_config, :channels)).reject(&:blank?)
+      @notification_config = NotificationConfig.find_or_initialize_by(
+        hotel: @hotel,
+        notification_type: "check_in_confirmation"
+      )
+
+      if @notification_config.update(notification_config_params.merge(channels: channels))
+        redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
+      else
+        load_settings
+        @account.build_banking_detail unless @account.banking_detail
         render :index, status: :unprocessable_entity
       end
     end
@@ -125,6 +156,10 @@ module HotelPortal
           :check_out_time
         ]
       ).fetch(:property_policy_attributes)
+    end
+
+    def notification_config_params
+      params.require(:notification_config).permit(:enabled)
     end
 
     def settings_policy
