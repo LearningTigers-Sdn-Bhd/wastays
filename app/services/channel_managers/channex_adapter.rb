@@ -9,21 +9,21 @@ module ChannelManagers
 
       # 1. Create Property
       property_id = ensure_property(client)
-      return failure("Failed to create Channex property. Check logs for details.") unless property_id
+      return failure("Failed to create Channel Manager property. Check logs for details.") unless property_id
 
       # 2. Create Room Types
       @hotel.room_types.each do |room_type|
         rt_id = sync_room_type(room_type)
-        return failure("Failed to create Channex room type: #{room_type.name}") unless rt_id
+        return failure("Failed to create Channel Manager room type: #{room_type.name}") unless rt_id
       end
 
       # 3. Create Rate Plans (for each room type)
       @hotel.room_types.each do |room_type|
         result = ensure_rate_plans(client, room_type)
-        return failure("Failed to create Channex rate plans for: #{room_type.name}") unless result
+        return failure("Failed to create Channel Manager rate plans for: #{room_type.name}") unless result
       end
 
-      success("Hotel onboarded to Channex")
+      success("Hotel onboarded to Channel Manager")
     rescue StandardError => e
       failure("Onboarding error: #{e.message}")
     end
@@ -60,7 +60,7 @@ module ChannelManagers
         mapping.update!(external_id: response["data"]["id"])
         response["data"]["id"]
       else
-        Rails.logger.error "Channex Room Type Sync Failed (#{room_type.name}): #{response}"
+        Rails.logger.error "Channel Manager Room Type Sync Failed (#{room_type.name}): #{response}"
         nil
       end
     end
@@ -92,7 +92,7 @@ module ChannelManagers
         mapping.update!(external_id: response["data"]["id"])
         response["data"]["id"]
       else
-        Rails.logger.error "Channex Rate Plan Sync Failed (#{rate_plan.name}): #{response}"
+        Rails.logger.error "Channel Manager Rate Plan Sync Failed (#{rate_plan.name}): #{response}"
         nil
       end
     end
@@ -119,7 +119,7 @@ module ChannelManagers
       restrictions_result = push_restrictions(client, property_id, date_range)
       return failure(restrictions_result[:message]) unless restrictions_result[:ok]
 
-      success("ARI pushed to Channex")
+      success("ARI pushed to Channel Manager")
     end
 
     def ingest_booking(payload:)
@@ -237,7 +237,7 @@ module ChannelManagers
         property: {
           title: @hotel.name,
           city: @hotel.city || "Unknown City",
-          country: "MY", # Channex expects ISO 2-letter country code
+          country: "MY", # Channel Manager expects ISO 2-letter country code
           currency: @hotel.default_currency || "MYR",
           timezone: "Asia/Kuala_Lumpur"
         }
@@ -253,7 +253,7 @@ module ChannelManagers
         mapping.update!(external_id: response["data"]["id"])
         response["data"]["id"]
       else
-        Rails.logger.error "Channex Property Sync Failed: #{response}"
+        Rails.logger.error "Channel Manager Property Sync Failed: #{response}"
         nil
       end
     end

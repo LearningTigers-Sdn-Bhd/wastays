@@ -72,9 +72,9 @@ module Channex
 
       parse_response(response)
     rescue JSON::ParserError => e
-      { error: "Invalid JSON response from Channex API", details: e.message }
+      { error: "Invalid JSON response from Channel Manager API", details: e.message }
     rescue StandardError => e
-      { error: "Channex API connection failed", details: e.message, retryable: true }
+      { error: "Channel Manager API connection failed", details: e.message, retryable: true }
     end
 
     def parse_response(response)
@@ -85,7 +85,7 @@ module Channex
       else
         status_code = response.code.to_i
         {
-          error: "Channex API error: #{response.code}",
+          error: "Channel Manager API error: #{response.code}",
           status: response.code,
           details: body["errors"] || body["error"] || response.body,
           retryable: retryable_status?(status_code)

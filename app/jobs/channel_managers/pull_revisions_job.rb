@@ -12,7 +12,7 @@ module ChannelManagers
           raise Channex::Client::RetryableRequestError, "Pull revisions retryable failure: #{response[:details] || response['details'] || response}"
         end
 
-        Rails.logger.error("Channex Pull Revisions Failed: #{response}")
+        Rails.logger.error("Channel Manager Pull Revisions Failed: #{response}")
         return
       end
 
@@ -27,7 +27,7 @@ module ChannelManagers
         # Reuse IngestRevisionJob but we already have data?
         # Actually IngestRevisionJob pulls full data which is safer.
         # But for efficiency we could pass data if feed has it all.
-        # Channex feed usually has partial data, so pulling full revision is better.
+        # Channel Manager feed usually has partial data, so pulling full revision is better.
         ChannelManagers::IngestRevisionJob.perform_later(mapping.mappable_id, revision["id"])
       end
     end

@@ -8,7 +8,7 @@ module Public
     def channex
       return head :unauthorized unless webhook_authorized?
 
-      # Channex sends a POST request
+      # Channel Manager sends a POST request
       # Payload: { "id": "...", "event": "booking.created", "payload": { "revision_id": "...", "property_id": "..." } }
 
       payload = JSON.parse(request.body.read)
@@ -33,7 +33,7 @@ module Public
         head :ok
       end
     rescue => e
-      Rails.logger.error "Channex Webhook Error: #{e.message}"
+      Rails.logger.error "Channel Manager Webhook Error: #{e.message}"
       head :internal_server_error
     end
 

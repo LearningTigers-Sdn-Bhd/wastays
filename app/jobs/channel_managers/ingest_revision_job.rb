@@ -14,7 +14,7 @@ module ChannelManagers
           raise Channex::Client::RetryableRequestError, "Ingest revision retryable failure: #{response[:details] || response['details'] || response}"
         end
 
-        Rails.logger.error("Channex Revision Fetch Failed: #{response}")
+        Rails.logger.error("Channel Manager Revision Fetch Failed: #{response}")
         return
       end
 
@@ -33,10 +33,10 @@ module ChannelManagers
             raise Channex::Client::RetryableRequestError, "Ack retryable failure: #{ack_response[:details] || ack_response['details'] || ack_response}"
           end
 
-          Rails.logger.error("Channex Ack Failed: #{ack_response}")
+          Rails.logger.error("Channel Manager Ack Failed: #{ack_response}")
         end
       else
-        Rails.logger.error "Channex Ingestion Failed: #{result.message}"
+        Rails.logger.error "Channel Manager Ingestion Failed: #{result.message}"
       end
     end
   end

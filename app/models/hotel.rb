@@ -373,7 +373,7 @@ class Hotel < ApplicationRecord
     end
   end
   def should_generate_new_friendly_id?
-    slug.blank?
+    name_changed? || slug.blank?
   end
 
   after_commit :sync_with_channel_manager, on: :update, if: :saved_changes_to_synced_attributes?
