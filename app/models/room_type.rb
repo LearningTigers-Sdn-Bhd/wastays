@@ -14,6 +14,9 @@ class RoomType < ApplicationRecord
 
   before_validation :set_default_room_number_mode, on: :create
 
+  after_commit :sync_with_channel_manager, on: [ :create, :update ]
+  after_destroy_commit :delete_from_channel_manager, if: :synced_with_channel_manager?
+
   validates :name, presence: true
   validates :quantity, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :max_adults, presence: true, numericality: { greater_than: 0 }
@@ -54,5 +57,19 @@ class RoomType < ApplicationRecord
 
   def set_default_room_number_mode
     self.room_number_mode = room_number_mode.presence || "range"
+  end
+
+  def sync_with_channel_manager
+    return if hotel.preferred_channel_manager.blank?
+
+    ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
+  end
+
+  def delete_from_channel_manager
+    ChannelManagers::SyncStructureJob.perform_later(self.class.name, nil, "delete", hotel_id: hotel_id, external_id: channel_mapping.external_id)
+  end
+
+  def synced_with_channel_manager?
+    hotel.preferred_channel_manager.present? && channel_mapping.present? && channel_mapping.external_id != "pending"
   end
 end

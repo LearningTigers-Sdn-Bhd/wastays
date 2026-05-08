@@ -9,23 +9,102 @@ module ChannelManagers
 
       # 1. Create Property
       property_id = ensure_property(client)
-      return failure("Failed to create Channex property. Check logs for details.") unless property_id
+      return failure("Failed to create Channel Manager property. Check logs for details.") unless property_id
 
       # 2. Create Room Types
       @hotel.room_types.each do |room_type|
-        rt_id = ensure_room_type(client, room_type, property_id)
-        return failure("Failed to create Channex room type: #{room_type.name}") unless rt_id
+        rt_id = sync_room_type(room_type)
+        return failure("Failed to create Channel Manager room type: #{room_type.name}") unless rt_id
       end
 
       # 3. Create Rate Plans (for each room type)
       @hotel.room_types.each do |room_type|
         result = ensure_rate_plans(client, room_type)
-        return failure("Failed to create Channex rate plans for: #{room_type.name}") unless result
+        return failure("Failed to create Channel Manager rate plans for: #{room_type.name}") unless result
       end
 
-      success("Hotel onboarded to Channex")
+      success("Hotel onboarded to Channel Manager")
     rescue StandardError => e
       failure("Onboarding error: #{e.message}")
+    end
+
+    def sync_hotel
+      client = Channex::Client.new
+      ensure_property(client)
+    end
+
+    def sync_room_type(room_type)
+      client = Channex::Client.new
+      property_id = mapping_for(@hotel).external_id
+      mapping = mapping_for(room_type)
+
+      payload = {
+        room_type: {
+          property_id: property_id,
+          title: room_type.name,
+          count_of_rooms: room_type.quantity,
+          occ_adults: room_type.max_adults,
+          occ_children: room_type.max_children || 0,
+          occ_infants: 0,
+          default_occupancy: room_type.max_adults
+        }
+      }
+
+      response = if mapping.external_id == "pending"
+                   client.post("/room_types", payload)
+      else
+                   client.put("/room_types/#{mapping.external_id}", payload)
+      end
+
+      if response["data"] && response["data"]["id"]
+        mapping.update!(external_id: response["data"]["id"])
+        response["data"]["id"]
+      else
+        Rails.logger.error "Channel Manager Room Type Sync Failed (#{room_type.name}): #{response}"
+        nil
+      end
+    end
+
+    def sync_rate_plan(rate_plan)
+      client = Channex::Client.new
+      property_id = mapping_for(@hotel).external_id
+      room_type_id = mapping_for(rate_plan.room_type).external_id
+      mapping = mapping_for(rate_plan)
+
+      payload = {
+        rate_plan: {
+          property_id: property_id,
+          room_type_id: room_type_id,
+          title: rate_plan.name,
+          currency: rate_plan.currency,
+          sell_mode: rate_plan.sell_mode,
+          options: default_rate_plan_options(rate_plan)
+        }
+      }
+
+      response = if mapping.external_id == "pending"
+                   client.post("/rate_plans", payload)
+      else
+                   client.put("/rate_plans/#{mapping.external_id}", payload)
+      end
+
+      if response["data"] && response["data"]["id"]
+        mapping.update!(external_id: response["data"]["id"])
+        response["data"]["id"]
+      else
+        Rails.logger.error "Channel Manager Rate Plan Sync Failed (#{rate_plan.name}): #{response}"
+        nil
+      end
+    end
+
+    def delete_room_type(external_id)
+      client = Channex::Client.new
+      client.delete("/room_types/#{external_id}")
+    end
+
+    def delete_rate_plan(external_id)
+      client = Channex::Client.new
+      client.delete("/rate_plans/#{external_id}")
     end
 
     def push_ari(date_range:)
@@ -33,12 +112,14 @@ module ChannelManagers
       property_id = mapping_for(@hotel).external_id
 
       # 1. Push Availability (Room Type level)
-      push_availability(client, property_id, date_range)
+      availability_result = push_availability(client, property_id, date_range)
+      return failure(availability_result[:message]) unless availability_result[:ok]
 
       # 2. Push Restrictions/Rates (Rate Plan level)
-      push_restrictions(client, property_id, date_range)
+      restrictions_result = push_restrictions(client, property_id, date_range)
+      return failure(restrictions_result[:message]) unless restrictions_result[:ok]
 
-      success("ARI pushed to Channex")
+      success("ARI pushed to Channel Manager")
     end
 
     def ingest_booking(payload:)
@@ -106,7 +187,16 @@ module ChannelManagers
         end
       end
 
-      client.post("/availability", { values: values }) if values.any?
+      return { ok: true } if values.empty?
+
+      response = client.post("/availability", { values: values })
+      return { ok: true } unless response[:error] || response["error"]
+
+      if response[:retryable] || response["retryable"]
+        raise Channex::Client::RetryableRequestError, "Availability sync retryable failure: #{response[:details] || response['details'] || response}"
+      end
+
+      { ok: false, message: "Availability sync failed: #{response[:details] || response['details'] || response}" }
     end
 
     def push_restrictions(client, property_id, date_range)
@@ -128,55 +218,42 @@ module ChannelManagers
         end
       end
 
-      client.post("/restrictions", { values: values }) if values.any?
+      return { ok: true } if values.empty?
+
+      response = client.post("/restrictions", { values: values })
+      return { ok: true } unless response[:error] || response["error"]
+
+      if response[:retryable] || response["retryable"]
+        raise Channex::Client::RetryableRequestError, "Restrictions sync retryable failure: #{response[:details] || response['details'] || response}"
+      end
+
+      { ok: false, message: "Restrictions sync failed: #{response[:details] || response['details'] || response}" }
     end
 
     def ensure_property(client)
       mapping = @hotel.channel_mapping || @hotel.create_channel_mapping(provider: provider_name, external_id: "pending")
-      return mapping.external_id if mapping.external_id != "pending"
 
       payload = {
         property: {
           title: @hotel.name,
           city: @hotel.city || "Unknown City",
-          country: "MY", # Channex expects ISO 2-letter country code
+          country: "MY", # Channel Manager expects ISO 2-letter country code
           currency: @hotel.default_currency || "MYR",
           timezone: "Asia/Kuala_Lumpur"
         }
       }
 
-      response = client.post("/properties", payload)
-      if response["data"] && response["data"]["id"]
-        mapping.update!(external_id: response["data"]["id"])
-        response["data"]["id"]
+      response = if mapping.external_id == "pending"
+                   client.post("/properties", payload)
       else
-        Rails.logger.error "Channex Property Creation Failed: #{response}"
-        nil
+                   client.put("/properties/#{mapping.external_id}", payload)
       end
-    end
 
-    def ensure_room_type(client, room_type, property_id)
-      mapping = room_type.channel_mapping || room_type.create_channel_mapping(provider: provider_name, external_id: "pending")
-      return mapping.external_id if mapping.external_id != "pending"
-
-      payload = {
-        room_type: {
-          property_id: property_id,
-          title: room_type.name,
-          count_of_rooms: room_type.quantity,
-          occ_adults: room_type.max_adults,
-          occ_children: room_type.max_children || 0,
-          occ_infants: 0,
-          default_occupancy: room_type.max_adults
-        }
-      }
-
-      response = client.post("/room_types", payload)
       if response["data"] && response["data"]["id"]
         mapping.update!(external_id: response["data"]["id"])
         response["data"]["id"]
       else
-        Rails.logger.error "Channex Room Type Creation Failed (#{room_type.name}): #{response}"
+        Rails.logger.error "Channel Manager Property Sync Failed: #{response}"
         nil
       end
     end
@@ -188,31 +265,21 @@ module ChannelManagers
       end
 
       room_type.rate_plans.all? do |rate_plan|
-        ensure_rate_plan(client, rate_plan, room_type.channel_mapping.external_id).present?
+        sync_rate_plan(rate_plan).present?
       end
     end
 
-    def ensure_rate_plan(client, rate_plan, room_type_id)
-      mapping = rate_plan.channel_mapping || rate_plan.create_channel_mapping(provider: provider_name, external_id: "pending")
-      return mapping.external_id if mapping.external_id != "pending"
+    def default_rate_plan_options(rate_plan)
+      occupancy = rate_plan.room_type.max_adults.to_i
+      occupancy = 1 if occupancy <= 0
 
-      payload = {
-        rate_plan: {
-          room_type_id: room_type_id,
-          title: rate_plan.name,
-          currency: rate_plan.currency,
-          sell_mode: rate_plan.sell_mode
+      [
+        {
+          occupancy: occupancy,
+          is_primary: true,
+          rate: 0
         }
-      }
-
-      response = client.post("/rate_plans", payload)
-      if response["data"] && response["data"]["id"]
-        mapping.update!(external_id: response["data"]["id"])
-        response["data"]["id"]
-      else
-        Rails.logger.error "Channex Rate Plan Creation Failed (#{rate_plan.name}): #{response}"
-        nil
-      end
+      ]
     end
 
     def success(message)
