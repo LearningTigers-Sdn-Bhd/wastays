@@ -68,32 +68,39 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
         expect(page).to have_select("Room Number", with_options: [ "206 (Locked by another staff)" ])
         expect(page).to have_select("Room Number", with_options: [ "207" ])
         click_button "Cancel"
-        end
-# Simulating a race condition via the Check-In modal (which uses text fields)
-click_button "Check In Guest"
-expect(page).to have_css("#check-in-modal-show-#{booking.id}[open]", visible: :all)
+      end
 
-within("#check-in-modal-show-#{booking.id}") do
-  find("input[name*='room_number']").set "206"
-  # Trigger change
-  execute_script("document.querySelector('#check-in-modal-show-#{booking.id} [name*=\"room_number\"]').dispatchEvent(new Event('change', { bubbles: true }))")
-end
+      # Simulating a race condition via the Check-In modal (which uses text fields)
+      click_button "Check In Guest"
+      expect(page).to have_css("#check-in-modal-show-#{booking.id}[open]", visible: :all)
 
-sleep 2
+      within("#check-in-modal-show-#{booking.id}") do
+        find("input[name*='room_number']").set "206"
+        # Trigger change
+        execute_script("document.querySelector('#check-in-modal-show-#{booking.id} [name*=\"room_number\"]').dispatchEvent(new Event('change', { bubbles: true }))")
+      end
 
-expect(page).to have_content("Room Already Occupied")
-expect(page).to have_content("Admin One")
+      sleep 2
 
-find("#room-lock-alert-close").click
-expect(page).not_to have_css("#room-lock-alert-modal[open]", visible: :all)
-end
+      expect(page).to have_content("Room Already Occupied")
+      expect(page).to have_content("Admin One")
 
+      find("#room-lock-alert-close").click
+      expect(page).not_to have_css("#room-lock-alert-modal[open]", visible: :all)
+    end
 
     # Now Admin One releases the lock (closes modal)
     using_session("Admin One") do
       within("#edit-stay-details-modal") do
         click_button "Cancel"
       end
+    end
+
+    max_retries = 10
+    retries = 0
+    while retries < max_retries && RoomLock.count > 0
+      sleep 0.5
+      retries += 1
     end
 
     expect(RoomLock.count).to eq(0)
