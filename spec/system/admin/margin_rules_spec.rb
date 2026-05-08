@@ -2,16 +2,9 @@ require 'rails_helper'
 require 'securerandom'
 
 RSpec.describe 'Admin margin settings', type: :system do
-  self.use_transactional_tests = false
-
   let(:token) { SecureRandom.hex(6) }
   let!(:account) { create(:account, name: "Margin Settings #{token}") }
   let!(:superadmin) { create(:user, :superadmin, account: account, email: "margin-admin-#{token}@example.com") }
-
-  after do
-    User.where(id: superadmin.id).delete_all
-    Account.where(id: account.id).delete_all
-  end
 
   before do
     driven_by(:cuprite)

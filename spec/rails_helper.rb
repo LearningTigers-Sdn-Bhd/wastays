@@ -91,12 +91,28 @@ def chrome_available?
   File.executable?("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 end
 
+def chrome_binary_path
+  return "google-chrome" if system("google-chrome --version > /dev/null 2>&1")
+  return "google-chrome-stable" if system("google-chrome-stable --version > /dev/null 2>&1")
+
+  mac_chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+  return mac_chrome if File.executable?(mac_chrome)
+
+  nil
+end
+
+Capybara.default_max_wait_time = 10
+
 Capybara.register_driver :cuprite do |app|
+  browser_path = chrome_binary_path
+
   Capybara::Cuprite::Driver.new(
     app,
+    browser_path: browser_path,
     browser_options: { "no-sandbox" => nil, "disable-dev-shm-usage" => nil },
     headless: true,
-    timeout: 10
+    timeout: 30,
+    process_timeout: 60
   )
 end
 

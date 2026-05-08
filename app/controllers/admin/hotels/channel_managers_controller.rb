@@ -5,7 +5,7 @@ class Admin::Hotels::ChannelManagersController < Admin::BaseController
     result = Admin::Hotels::OnboardChannexService.new(hotel: @hotel).call
 
     if result.success?
-      redirect_to admin_hotel_path(@hotel), notice: "Hotel successfully onboarded to Channex."
+      redirect_to admin_hotel_path(@hotel), notice: "Hotel successfully onboarded to Channel Manager."
     else
       redirect_to admin_hotel_path(@hotel), alert: "Onboarding failed: #{result.message}"
     end
@@ -15,7 +15,7 @@ class Admin::Hotels::ChannelManagersController < Admin::BaseController
     result = ChannelManagers::DisconnectService.new(hotel: @hotel).call
 
     if result.success?
-      redirect_to admin_hotel_path(@hotel), notice: "Disconnected from Channex. Channel mappings removed."
+      redirect_to admin_hotel_path(@hotel), notice: "Disconnected from Channel Manager. Channel mappings removed."
     else
       redirect_to admin_hotel_path(@hotel), alert: "Failed to disconnect: #{result.error}"
     end
