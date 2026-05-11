@@ -32,7 +32,7 @@
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Status</label>
-            <%= f.select :status, [["Pending", "pending"], ["Sent", "sent"], ["Failed", "failed"]], { include_blank: "All Statuses", selected: params[:status] }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
+            <%= f.select :status, [["Pending", "pending"], ["Sent", "sent"], ["Failed", "failed"], ["Skipped", "skipped"]], { include_blank: "All Statuses", selected: params[:status] }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
           </div>
         </div>
         <div class="flex items-center gap-2 lg:mb-0.5">
@@ -92,6 +92,7 @@
                     <% status_class = case log.status
                                       when "sent" then "border-emerald-200 bg-emerald-50 text-emerald-700"
                                       when "failed" then "border-red-200 bg-red-50 text-red-700"
+                                      when "skipped" then "border-slate-300 bg-slate-100 text-slate-700"
                                       else "border-amber-200 bg-amber-50 text-amber-700"
                                       end %>
                     <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider <%= status_class %>"><%= log.status %></span>
@@ -100,7 +101,7 @@
                     <span class="text-sm text-slate-600"><%= log.error_message.presence || "-" %></span>
                   </td>
                   <td class="px-6 py-4 sm:px-8">
-                    <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && log.status.in?(%w[sent failed]) %>
+                    <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && log.status.in?(%w[sent failed skipped]) %>
                       <button type="button" onclick="document.getElementById('resend-modal-<%= log.id %>').showModal()" class="inline-flex items-center rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
                         Resend
                       </button>

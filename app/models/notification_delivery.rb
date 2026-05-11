@@ -3,7 +3,7 @@
 class NotificationDelivery < ApplicationRecord
   NOTIFICATION_TYPES = NotificationConfig::NOTIFICATION_TYPES
   CHANNELS = NotificationConfig::CHANNELS
-  STATUSES = %w[pending sent failed].freeze
+  STATUSES = %w[pending sent failed skipped].freeze
 
   belongs_to :hotel
   belongs_to :booking
