@@ -6,8 +6,8 @@ FactoryBot.define do
     status { "confirmed" }
     total_amount { 200.0 }
     currency { "MYR" }
-    check_in { Date.today }
-    check_out { Date.today + 1.day }
+    check_in { Date.current }
+    check_out { Date.current + 1.day }
     adults { 2 }
     guest_name { Faker::Name.name }
     guest_email { Faker::Internet.email }

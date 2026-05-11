@@ -21,6 +21,14 @@ export default class extends Controller {
       return
     }
 
+    // Update the room-lock controller's room type if it exists in the same container
+    if (this.hasRoomNumberContainerTarget) {
+      const lockController = this.application.getControllerForElementAndIdentifier(this.roomNumberContainerTarget, "room-lock")
+      if (lockController) {
+        lockController.roomTypeIdValue = roomTypeId
+      }
+    }
+
     // Show container and loading state
     if (this.hasRoomNumberContainerTarget) this.roomNumberContainerTarget.classList.remove("hidden")
     this.roomNumberSelectTarget.required = true

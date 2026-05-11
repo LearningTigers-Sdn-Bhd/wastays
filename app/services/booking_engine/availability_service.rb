@@ -3,7 +3,7 @@ module BookingEngine
     def initialize(params)
       @params = params
       @city = params[:city]
-      @check_in = parse_date(params[:check_in]) || Date.today
+      @check_in = parse_date(params[:check_in]) || Date.current
       @check_out = parse_date(params[:check_out]) || Date.tomorrow
       @adults = (params[:adults] || 2).to_i
       @children = (params[:children] || 0).to_i

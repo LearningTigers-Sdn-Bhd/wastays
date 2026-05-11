@@ -6,6 +6,7 @@ module HotelPortal
 
     def update
       room_status = current_hotel.room_statuses.find(params[:id])
+      board_params = params.permit(:start_date, :days, :layout).to_h
       result = Rooms::SetStatus.new(
         room_status: room_status,
         status: room_status_params[:status],
@@ -14,9 +15,9 @@ module HotelPortal
       ).call
 
       if result.success?
-        redirect_to hotel_room_status_board_path(current_hotel, start_date: params[:start_date]), notice: "Room status updated."
+        redirect_to hotel_room_status_board_path(current_hotel, board_params), notice: "Room status updated."
       else
-        redirect_to hotel_room_status_board_path(current_hotel, start_date: params[:start_date]), alert: result.error
+        redirect_to hotel_room_status_board_path(current_hotel, board_params), alert: result.error
       end
     end
 

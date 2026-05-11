@@ -3,10 +3,11 @@
 class RoomLock < ApplicationRecord
   belongs_to :hotel
   belongs_to :user
+  belongs_to :room_type
 
   validates :room_number, presence: true
   validates :expires_at, presence: true
-  validates :room_number, uniqueness: { scope: :hotel_id, message: "is currently being assigned by another staff member" }
+  validates :room_number, uniqueness: { scope: [ :hotel_id, :room_type_id ], message: "is currently being assigned by another staff member" }
 
   before_create :log_creation
 

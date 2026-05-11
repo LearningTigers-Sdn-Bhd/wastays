@@ -47,8 +47,11 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   end
 
   def destroy
-    @room_type.destroy
-    redirect_to hotel_room_types_path(@hotel), notice: "Room type deleted successfully."
+    if @room_type.destroy
+      redirect_to hotel_room_types_path(@hotel), notice: "Room type deleted successfully."
+    else
+      redirect_to hotel_room_types_path(@hotel), alert: "Cannot delete room type: #{@room_type.errors.full_messages.to_sentence}"
+    end
   end
 
   def destroy_photo
@@ -92,6 +95,6 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   end
 
   def room_type_params
-    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, :room_number_mode, photos: [], room_numbers: [], amenities: [])
+    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, :room_number_mode, :smoking_allowed, :pets_allowed, photos: [], room_numbers: [], amenities: [])
   end
 end

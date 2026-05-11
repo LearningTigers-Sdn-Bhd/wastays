@@ -4,16 +4,26 @@ export default class extends Controller {
   static targets = ["input"]
   static values = { 
     url: String,
-    currentRoom: String
+    currentRoom: String,
+    roomTypeId: String
   }
 
   connect() {
     this.heartbeatInterval = null
     this.lastLockedRoom = null
     this.isLocking = false
+    this.handleClose = this.release.bind(this)
+
+    this.dialog = this.element.closest('dialog')
+    if (this.dialog) {
+      this.dialog.addEventListener('close', this.handleClose)
+    }
   }
 
   disconnect() {
+    if (this.dialog) {
+      this.dialog.removeEventListener('close', this.handleClose)
+    }
     this.release()
   }
 
@@ -61,7 +71,10 @@ export default class extends Controller {
       const response = await fetch(this.urlValue, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ room_number: roomNumber })
+        body: JSON.stringify({ 
+          room_number: roomNumber,
+          room_type_id: this.roomTypeIdValue
+        })
       })
 
       const data = await response.json()
@@ -118,6 +131,7 @@ export default class extends Controller {
   async releaseLock(roomNumber) {
     const url = new URL(this.urlValue + "/release", window.location.origin)
     url.searchParams.append('room_number', roomNumber)
+    url.searchParams.append('room_type_id', this.roomTypeIdValue)
 
     const headers = {}
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
@@ -159,7 +173,11 @@ export default class extends Controller {
     await fetch(this.urlValue, {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify({ room_number: roomNumber })
+      body: JSON.stringify({ 
+        room_number: roomNumber,
+        room_type_id: this.roomTypeIdValue
+      })
     })
   }
 }
+

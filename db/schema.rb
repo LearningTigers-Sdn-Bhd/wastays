@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_08_090001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -49,6 +49,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "amenities", force: :cascade do |t|
+    t.string "name"
+    t.string "slug"
+    t.string "icon"
+    t.string "category"
+    t.string "amenity_type"
+    t.string "channex_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["channex_id"], name: "index_amenities_on_channex_id"
+    t.index ["slug"], name: "index_amenities_on_slug"
   end
 
   create_table "api_keys", force: :cascade do |t|
@@ -242,6 +255,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
   end
 
+  create_table "complaints", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "category"
+    t.text "description"
+    t.string "status", default: "open"
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_complaints_on_booking_id"
+  end
+
   create_table "guests", force: :cascade do |t|
     t.string "name"
     t.string "email"
@@ -258,7 +282,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.string "magic_token_digest"
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
-    t.jsonb "chat_history", default: []
     t.bigint "created_by_hotel_id"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
@@ -295,12 +318,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "10.0", null: false
     t.bigint "featured_photo_attachment_id"
     t.string "preferred_channel_manager"
-    t.bigint "salesperson_id"
+    t.integer "salesperson_id"
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
-    t.string "whatsapp_number"
-    t.text "ai_persona"
-    t.string "openai_api_key"
     t.jsonb "amenities", default: [], null: false
     t.string "slug", null: false
     t.boolean "ai_provider_enabled", default: false
@@ -313,7 +333,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
-    t.index ["whatsapp_number"], name: "index_hotels_on_whatsapp_number", unique: true
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
@@ -391,6 +410,37 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.index ["hotel_id"], name: "index_night_audits_on_hotel_id"
     t.index ["performed_by_user_id"], name: "index_night_audits_on_performed_by_user_id"
     t.index ["status"], name: "index_night_audits_on_status"
+  end
+
+  create_table "notification_configs", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "notification_type", null: false
+    t.boolean "enabled", default: true, null: false
+    t.jsonb "channels", default: [], null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "notification_type"], name: "index_notification_configs_on_hotel_id_and_notification_type", unique: true
+    t.index ["hotel_id"], name: "index_notification_configs_on_hotel_id"
+  end
+
+  create_table "notification_deliveries", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "booking_id", null: false
+    t.string "notification_type", null: false
+    t.string "channel", null: false
+    t.string "trigger_event", null: false
+    t.string "status", default: "pending", null: false
+    t.string "idempotency_key", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.datetime "sent_at"
+    t.datetime "failed_at"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_notification_deliveries_on_booking_id"
+    t.index ["hotel_id"], name: "index_notification_deliveries_on_hotel_id"
+    t.index ["idempotency_key"], name: "index_notification_deliveries_on_idempotency_key", unique: true
   end
 
   create_table "observation_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -590,6 +640,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.index ["booking_id"], name: "index_refund_requests_on_booking_id", unique: true
   end
 
+  create_table "request_notes", force: :cascade do |t|
+    t.string "noteable_type", null: false
+    t.bigint "noteable_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["noteable_type", "noteable_id", "created_at"], name: "index_request_notes_on_noteable_and_created_at"
+    t.index ["noteable_type", "noteable_id"], name: "index_request_notes_on_noteable"
+  end
+
   create_table "role_permissions", force: :cascade do |t|
     t.bigint "role_id", null: false
     t.bigint "permission_id", null: false
@@ -629,9 +689,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.datetime "expires_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "room_type_id", null: false
     t.index ["expires_at"], name: "index_room_locks_on_expires_at"
-    t.index ["hotel_id", "room_number"], name: "index_room_locks_on_hotel_id_and_room_number", unique: true
+    t.index ["hotel_id", "room_type_id", "room_number"], name: "idx_room_locks_on_hotel_room_type_number", unique: true
     t.index ["hotel_id"], name: "index_room_locks_on_hotel_id"
+    t.index ["room_type_id"], name: "index_room_locks_on_room_type_id"
     t.index ["user_id"], name: "index_room_locks_on_user_id"
   end
 
@@ -680,7 +742,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["hotel_id", "room_number"], name: "index_room_statuses_on_hotel_id_and_room_number", unique: true
+    t.index ["hotel_id", "room_type_id", "room_number"], name: "idx_room_statuses_on_hotel_room_type_number", unique: true
     t.index ["hotel_id", "status"], name: "index_room_statuses_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_room_statuses_on_hotel_id"
     t.index ["last_changed_by_id"], name: "index_room_statuses_on_last_changed_by_id"
@@ -698,9 +760,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "room_numbers"
-    t.string "room_number_mode", default: "range", null: false
+    t.string "room_number_mode"
     t.jsonb "amenities", default: [], null: false
+    t.boolean "smoking_allowed", default: false, null: false
+    t.boolean "pets_allowed", default: false, null: false
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
+  end
+
+  create_table "salespeople", force: :cascade do |t|
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "salesperson_hotels", force: :cascade do |t|
+    t.bigint "salesperson_id", null: false
+    t.bigint "hotel_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_salesperson_hotels_on_hotel_id"
+    t.index ["salesperson_id", "hotel_id"], name: "index_salesperson_hotels_on_salesperson_and_hotel", unique: true
+    t.index ["salesperson_id"], name: "index_salesperson_hotels_on_salesperson_id"
   end
 
   create_table "setup_fee_rules", force: :cascade do |t|
@@ -776,7 +856,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
   create_table "webhook_endpoints", force: :cascade do |t|
     t.string "name"
     t.string "url"
-    t.string "event_types"
     t.boolean "enabled"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -818,6 +897,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
   add_foreign_key "nearby_attractions", "hotels"
   add_foreign_key "night_audits", "hotels"
   add_foreign_key "night_audits", "users", column: "performed_by_user_id"
+  add_foreign_key "notification_configs", "hotels"
+  add_foreign_key "notification_deliveries", "bookings"
+  add_foreign_key "notification_deliveries", "hotels"
   add_foreign_key "onboarding_sessions", "hotels"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
@@ -835,6 +917,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
   add_foreign_key "roles", "accounts"
   add_foreign_key "room_inventories", "room_types"
   add_foreign_key "room_locks", "hotels"
+  add_foreign_key "room_locks", "room_types"
   add_foreign_key "room_locks", "users"
   add_foreign_key "room_operational_audit_logs", "bookings"
   add_foreign_key "room_operational_audit_logs", "hotels"
@@ -846,6 +929,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_07_090001) do
   add_foreign_key "room_statuses", "room_types"
   add_foreign_key "room_statuses", "users", column: "last_changed_by_id"
   add_foreign_key "room_types", "hotels"
+  add_foreign_key "salesperson_hotels", "salespeople"
   add_foreign_key "staff_invitations", "accounts"
   add_foreign_key "staff_invitations", "hotels"
   add_foreign_key "staff_invitations", "roles"

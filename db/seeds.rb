@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-if Rails.env.demo?
-  require_relative "demo_seeds"
-  DemoSeeds.run
-else
+require_relative "demo_seeds"
+require_relative "amenities"
 
 SEED_PASSWORD = '12345678'.freeze
 
@@ -115,6 +113,12 @@ module SeedData
     booking
   end
 end
+
+AmenitiesSeeder.run
+
+if Rails.env.demo?
+  DemoSeeds.run
+else
 
 SeedLog.section('Seeding WAStays data')
 
@@ -312,6 +316,7 @@ if Rails.env.development?
           room.max_children = room_attrs[:children]
           room.quantity = room_attrs[:quantity]
           room.base_price = room_attrs[:base_price]
+          room.room_number_mode = 'range'
         end
 
         room_type.update!(
@@ -319,7 +324,8 @@ if Rails.env.development?
           max_adults: room_attrs[:adults],
           max_children: room_attrs[:children],
           quantity: room_attrs[:quantity],
-          base_price: room_attrs[:base_price]
+          base_price: room_attrs[:base_price],
+          room_number_mode: 'range'
         )
 
         SeedData.ensure_room_calendar(room_type, start_date: Date.current - 10.days, end_date: Date.current + 45.days)
@@ -473,4 +479,12 @@ if Rails.env.development?
 end
 
 SeedLog.section('Seeding complete')
+end
+
+Hotel.find_each do |hotel|
+  NotificationConfig.find_or_create_by!(hotel: hotel, notification_type: "check_in_confirmation") do |config|
+    config.enabled = true
+    config.channels = [ "whatsapp" ]
+    config.settings = {}
+  end
 end

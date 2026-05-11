@@ -11,10 +11,13 @@ RSpec.describe Bookings::TransitionStatus do
       subject { described_class.new(booking: booking, status: "checked_in", timestamp: timestamp) }
 
       it "updates status and checked_in_at" do
+        NotificationConfig.create!(hotel: booking.hotel, notification_type: "check_in_confirmation", enabled: true, channels: %w[whatsapp email], settings: {})
+
         expect {
           result = subject.call
           expect(result.success?).to be true
         }.to have_enqueued_job(WebhookBroadcastJob).with('booking_checked_in', anything)
+          .and have_enqueued_job(Notifications::DeliverJob).exactly(2).times
 
         expect(booking.reload.status).to eq("checked_in")
         expect(booking.checked_in_at).to be_within(1.second).of(timestamp)
@@ -26,10 +29,26 @@ RSpec.describe Bookings::TransitionStatus do
       subject { described_class.new(booking: booking, status: "completed", timestamp: timestamp) }
 
       it "updates status and checked_out_at" do
+        NotificationConfig.create!(
+          hotel: booking.hotel,
+          notification_type: "post_stay_review_request",
+          enabled: true,
+          channels: %w[whatsapp],
+          settings: { "review_link" => "https://g.page/r/example/review", "send_delay_hours" => 2 }
+        )
+        NotificationConfig.create!(
+          hotel: booking.hotel,
+          notification_type: "check_out_receipt_message",
+          enabled: true,
+          channels: %w[email whatsapp],
+          settings: {}
+        )
+
         expect {
           result = subject.call
           expect(result.success?).to be true
         }.to have_enqueued_job(WebhookBroadcastJob).with('booking_completed', anything)
+          .and have_enqueued_job(Notifications::DeliverJob).exactly(3).times
 
         expect(booking.reload.status).to eq("completed")
         expect(booking.checked_out_at).to be_within(1.second).of(timestamp)

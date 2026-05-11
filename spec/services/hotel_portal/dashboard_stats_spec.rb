@@ -21,13 +21,13 @@ RSpec.describe HotelPortal::DashboardStats, type: :service do
     it "returns a 7-day occupancy snapshot" do
       room_type = create(:room_type, hotel: hotel)
       # The quantity is on the inventory record itself
-      create(:room_inventory, room_type: room_type, date: Date.today, quantity: 10, status: "open")
+      create(:room_inventory, room_type: room_type, date: Date.current, quantity: 10, status: "open")
 
       # Booking for today
-      create(:booking, hotel: hotel, status: "confirmed", check_in: Date.today, check_out: Date.tomorrow)
+      create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current, check_out: Date.tomorrow)
       snapshot = stats.occupancy_snapshot
       expect(snapshot.length).to eq(7)
-      expect(snapshot.first[:date]).to eq(Date.today)
+      expect(snapshot.first[:date]).to eq(Date.current)
       expect(snapshot.first[:total]).to eq(10)
       expect(snapshot.first[:sold]).to eq(1)
       expect(snapshot.first[:percent]).to eq(10)

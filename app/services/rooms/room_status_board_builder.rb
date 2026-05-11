@@ -9,13 +9,27 @@ module Rooms
     end
 
     def call
+      groups = room_groups
       {
         dates: dates,
-        room_groups: room_groups
+        room_groups: groups,
+        status_counts: calculate_status_counts(groups)
       }
     end
 
     private
+
+    def calculate_status_counts(groups)
+      counts = Hash.new(0)
+      groups.each do |group|
+        group[:rooms].each do |room|
+          status = room.dig(:status, :status).to_s
+          counts[status] += 1
+          counts["all"] += 1
+        end
+      end
+      counts
+    end
 
     def dates
       @dates ||= (@start_date...(@start_date + @days.days)).to_a
@@ -34,13 +48,13 @@ module Rooms
       {
         room_type: room_type,
         room_number: room_number,
-        status: status_for(room_number),
-        blocks: booking_blocks_for(room_number)
+        status: status_for(room_type, room_number),
+        blocks: booking_blocks_for(room_type, room_number)
       }
     end
 
-    def status_for(room_number)
-      resolved = Rooms::StatusResolver.new(hotel: @hotel, room_number: room_number, date: Date.current).call
+    def status_for(room_type, room_number)
+      resolved = Rooms::StatusResolver.new(hotel: @hotel, room_type: room_type, room_number: room_number, date: Date.current).call
       {
         status: resolved.status,
         assignable: resolved.assignable,
@@ -48,8 +62,8 @@ module Rooms
       }
     end
 
-    def booking_blocks_for(room_number)
-      bookings_for(room_number).map do |booking|
+    def booking_blocks_for(room_type, room_number)
+      bookings_for(room_type, room_number).map do |booking|
         {
           id: booking.id,
           guest_name: booking.guest_name,
@@ -62,12 +76,12 @@ module Rooms
       end
     end
 
-    def bookings_for(room_number)
+    def bookings_for(room_type, room_number)
       @hotel.bookings
         .where(status: %w[confirmed checked_in completed])
         .joins(:booking_rooms)
         .where("bookings.check_in < ? AND bookings.check_out > ?", dates.last + 1.day, @start_date)
-        .where(booking_rooms: { room_number: room_number })
+        .where(booking_rooms: { room_type_id: room_type.id, room_number: room_number })
         .distinct
         .order(:check_in, :id)
     end

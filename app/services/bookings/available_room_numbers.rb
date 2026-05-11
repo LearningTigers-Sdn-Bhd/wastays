@@ -58,13 +58,17 @@ module Bookings
 
       occupied_numbers = occupied.where("check_in < ? AND check_out > ?", @check_out, @check_in)
                                  .joins(:booking_rooms)
+                                 .where(booking_rooms: { room_type_id: @room_type.id })
                                  .pluck("booking_rooms.room_number")
                                  .compact
                                  .map(&:to_s)
                                  .uniq
 
       # 3. Find rooms currently locked by other staff members
-      locked_numbers = @hotel.room_locks.active.where.not(user_id: Current.user_id).pluck(:room_number)
+      locked_numbers = @hotel.room_locks.active
+                             .where(room_type_id: @room_type.id)
+                             .where.not(user_id: Current.user_id)
+                             .pluck(:room_number)
 
       # 4. Filter them out
       candidate_rooms = (allowed_rooms - occupied_numbers - locked_numbers).reject(&:blank?).map(&:to_s)
@@ -80,7 +84,7 @@ module Bookings
     end
 
     def room_status_label(room_number)
-      room_status = RoomStatus.find_by(hotel: @hotel, room_number: room_number.to_s)
+      room_status = RoomStatus.find_by(hotel: @hotel, room_type: @room_type, room_number: room_number.to_s)
       room_status&.status.presence || "ready"
     end
 

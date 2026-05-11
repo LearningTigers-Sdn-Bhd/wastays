@@ -16,7 +16,9 @@ module HotelPortal
       load_settings
       @account.build_banking_detail unless @account.banking_detail
 
-      if settings_update_request?
+      if notification_update_request?
+        update_notification_settings
+      elsif settings_update_request?
         update_settings
       elsif params[:payment_setting].present?
         redirect_to hotel_settings_path(@hotel), alert: "Payment gateway credentials are managed by superadmin."
@@ -38,6 +40,56 @@ module HotelPortal
 
     def load_settings
       if @hotel
+        @check_in_notification_config = NotificationConfig.find_or_initialize_by(
+          hotel: @hotel,
+          notification_type: "check_in_confirmation"
+        )
+        @check_in_notification_config.enabled = true if @check_in_notification_config.new_record?
+        @check_in_notification_config.channels = [ "whatsapp" ] if @check_in_notification_config.channels.blank?
+
+        @post_stay_review_notification_config = NotificationConfig.find_or_initialize_by(
+          hotel: @hotel,
+          notification_type: "post_stay_review_request"
+        )
+        @post_stay_review_notification_config.enabled = false if @post_stay_review_notification_config.new_record?
+        @post_stay_review_notification_config.channels = [ "whatsapp", "email" ] if @post_stay_review_notification_config.channels.blank?
+        @post_stay_review_notification_config.settings = @post_stay_review_notification_config.settings.to_h.reverse_merge(
+          "review_link" => "",
+          "send_delay_hours" => 2
+        )
+
+        @pre_arrival_notification_config = NotificationConfig.find_or_initialize_by(
+          hotel: @hotel,
+          notification_type: "pre_arrival_notification"
+        )
+        @pre_arrival_notification_config.enabled = false if @pre_arrival_notification_config.new_record?
+        @pre_arrival_notification_config.channels = [ "whatsapp", "email" ] if @pre_arrival_notification_config.channels.blank?
+        @pre_arrival_notification_config.settings = @pre_arrival_notification_config.settings.to_h.reverse_merge(
+          "stages" => %w[d2 d1]
+        )
+
+        @check_out_receipt_notification_config = NotificationConfig.find_or_initialize_by(
+          hotel: @hotel,
+          notification_type: "check_out_receipt_message"
+        )
+        @check_out_receipt_notification_config.enabled = false if @check_out_receipt_notification_config.new_record?
+        @check_out_receipt_notification_config.channels = [ "whatsapp", "email" ] if @check_out_receipt_notification_config.channels.blank?
+
+        @in_stay_guest_notification_config = NotificationConfig.find_or_initialize_by(
+          hotel: @hotel,
+          notification_type: "in_stay_guest_messaging"
+        )
+        @in_stay_guest_notification_config.enabled = false if @in_stay_guest_notification_config.new_record?
+        @in_stay_guest_notification_config.channels = [ "whatsapp", "email" ] if @in_stay_guest_notification_config.channels.blank?
+        @in_stay_guest_notification_config.settings = @in_stay_guest_notification_config.settings.to_h.reverse_merge(
+          "rules" => {
+            "mid_stay" => { "enabled" => true, "time" => "12:00" },
+            "upsell" => { "enabled" => true, "time" => "17:00" },
+            "activity" => { "enabled" => true, "time" => "10:00" }
+          },
+          "quiet_hours" => { "enabled" => true, "start" => "22:00", "end" => "08:00" }
+        )
+
         @settings = {
           hotel_status: @hotel.status.humanize,
           onboarding_stage: onboarding_stage(@hotel),
@@ -55,6 +107,10 @@ module HotelPortal
 
     def settings_update_request?
       params[:hotel].present?
+    end
+
+    def notification_update_request?
+      params[:notification_config].present?
     end
 
     def update_settings
@@ -83,6 +139,26 @@ module HotelPortal
         redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
       else
         load_settings
+        render :index, status: :unprocessable_entity
+      end
+    end
+
+    def update_notification_settings
+      authorize_settings_update!
+
+      channels = Array(params.dig(:notification_config, :channels)).reject(&:blank?)
+      notification_type = params.dig(:notification_config, :notification_type).presence || "check_in_confirmation"
+      @notification_config = NotificationConfig.find_or_initialize_by(
+        hotel: @hotel,
+        notification_type: notification_type
+      )
+      settings = build_notification_settings(@notification_config.notification_type)
+
+      if @notification_config.update(notification_config_params.merge(channels: channels, settings: settings))
+        redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
+      else
+        load_settings
+        @account.build_banking_detail unless @account.banking_detail
         render :index, status: :unprocessable_entity
       end
     end
@@ -125,6 +201,83 @@ module HotelPortal
           :check_out_time
         ]
       ).fetch(:property_policy_attributes)
+    end
+
+    def notification_config_params
+      params.require(:notification_config).permit(:enabled)
+    end
+
+    def build_notification_settings(notification_type)
+      case notification_type
+      when "post_stay_review_request"
+        raw_settings = params.require(:notification_config).permit(settings: [ :review_link, :send_delay_hours ]).fetch(:settings, {})
+        send_delay_hours_input = raw_settings[:send_delay_hours].to_s.strip
+        send_delay_hours = if send_delay_hours_input.blank?
+          2
+        else
+          parsed_delay = send_delay_hours_input.to_i
+          parsed_delay.negative? ? 2 : parsed_delay
+        end
+
+        {
+          "review_link" => raw_settings[:review_link].to_s.strip,
+          "send_delay_hours" => send_delay_hours
+        }
+      when "pre_arrival_notification"
+        raw_settings = params.require(:notification_config).permit(settings: { stages: [] }).fetch(:settings, {})
+        stages = Array(raw_settings[:stages]).map(&:to_s).select { |stage| stage.in?(%w[d2 d1]) }.uniq
+        stages = %w[d2 d1] if stages.empty?
+
+        {
+          "stages" => stages
+        }
+      when "in_stay_guest_messaging"
+        raw_settings = params.require(:notification_config).permit(
+          settings: {
+            rules: {
+              mid_stay: [ :enabled, :time ],
+              upsell: [ :enabled, :time ],
+              activity: [ :enabled, :time ]
+            },
+            quiet_hours: [ :enabled, :start, :end ]
+          }
+        ).fetch(:settings, {})
+
+        rules = %w[mid_stay upsell activity].index_with do |rule_key|
+          rule = raw_settings.fetch(:rules, {}).fetch(rule_key.to_sym, {})
+          {
+            "enabled" => ActiveModel::Type::Boolean.new.cast(rule[:enabled]),
+            "time" => normalize_hhmm(rule[:time], default_time_for(rule_key))
+          }
+        end
+        quiet = raw_settings.fetch(:quiet_hours, {})
+
+        {
+          "rules" => rules,
+          "quiet_hours" => {
+            "enabled" => ActiveModel::Type::Boolean.new.cast(quiet[:enabled]),
+            "start" => normalize_hhmm(quiet[:start], "22:00"),
+            "end" => normalize_hhmm(quiet[:end], "08:00")
+          }
+        }
+      else
+        {}
+      end
+    end
+
+    def normalize_hhmm(raw, fallback)
+      value = raw.to_s.strip
+      return fallback unless /\A([01]\d|2[0-3]):[0-5]\d\z/.match?(value)
+
+      value
+    end
+
+    def default_time_for(rule_key)
+      {
+        "mid_stay" => "12:00",
+        "upsell" => "17:00",
+        "activity" => "10:00"
+      }.fetch(rule_key)
     end
 
     def settings_policy
