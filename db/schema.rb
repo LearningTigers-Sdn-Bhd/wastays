@@ -293,6 +293,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
     t.string "magic_token_digest"
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
+    t.jsonb "chat_history", default: []
     t.bigint "created_by_hotel_id"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
@@ -354,6 +355,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
     t.bigint "salesperson_id"
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
+    t.string "whatsapp_number"
+    t.text "ai_persona"
+    t.string "openai_api_key"
     t.boolean "ai_provider_enabled", default: false
     t.string "ai_provider_name"
     t.text "ai_provider_key"
@@ -369,6 +373,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
+    t.index ["whatsapp_number"], name: "index_hotels_on_whatsapp_number", unique: true
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
@@ -884,6 +889,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
   create_table "webhook_endpoints", force: :cascade do |t|
     t.string "name"
     t.string "url"
+    t.string "event_types"
     t.boolean "enabled"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

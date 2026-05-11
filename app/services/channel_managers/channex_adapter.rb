@@ -46,7 +46,8 @@ module ChannelManagers
           occ_adults: room_type.max_adults,
           occ_children: room_type.max_children || 0,
           occ_infants: 0,
-          default_occupancy: room_type.max_adults
+          default_occupancy: room_type.max_adults,
+          facilities: map_amenities_to_channex_ids(room_type.amenities, :room)
         }
       }
 
@@ -172,7 +173,53 @@ module ChannelManagers
     end
 
     def push_availability(client, property_id, date_range)
+      values = push_availability_values(date_range)
+      return { ok: true } if values.empty?
+
+      response = client.post("/availability", { values: values })
+      
+      if response[:error] || response["error"]
+        if response[:retryable] || response["retryable"]
+          raise Channex::Client::RetryableRequestError, "Availability sync retryable failure: #{response[:details] || response['details'] || response}"
+        end
+        return { ok: false, message: "Availability sync failed: #{response[:details] || response['details'] || response}" }
+      end
+
+      # For Stage 2 Certification: Task IDs are in response["data"][0]["id"] (Array) 
+      # or response["data"]["id"] (Hash)
+      data = response["data"]
+      task_id = data.is_a?(Array) ? data.dig(0, "id") : data&.fetch("id", nil)
+      
+      Rails.logger.info "Channex Availability Task ID: #{task_id}" if task_id
+
+      { ok: true, task_id: task_id }
+    end
+
+    def push_restrictions(client, property_id, date_range)
+      values = push_restrictions_values(date_range)
+      return { ok: true } if values.empty?
+
+      response = client.post("/restrictions", { values: values })
+      
+      if response[:error] || response["error"]
+        if response[:retryable] || response["retryable"]
+          raise Channex::Client::RetryableRequestError, "Restrictions sync retryable failure: #{response[:details] || response['details'] || response}"
+        end
+        return { ok: false, message: "Restrictions sync failed: #{response[:details] || response['details'] || response}" }
+      end
+
+      # For Stage 2 Certification: Task IDs are in response["data"][0]["id"]
+      data = response["data"]
+      task_id = data.is_a?(Array) ? data.dig(0, "id") : data&.fetch("id", nil)
+
+      Rails.logger.info "Channex Restrictions Task ID: #{task_id}" if task_id
+
+      { ok: true, task_id: task_id }
+    end
+
+    def push_availability_values(date_range)
       values = []
+      property_id = mapping_for(@hotel).external_id
       @hotel.room_types.each do |room_type|
         ext_rt_id = mapping_for(room_type).external_id
         next if ext_rt_id == "pending"
@@ -186,22 +233,16 @@ module ChannelManagers
           }
         end
       end
-
-      return { ok: true } if values.empty?
-
-      response = client.post("/availability", { values: values })
-      return { ok: true } unless response[:error] || response["error"]
-
-      if response[:retryable] || response["retryable"]
-        raise Channex::Client::RetryableRequestError, "Availability sync retryable failure: #{response[:details] || response['details'] || response}"
-      end
-
-      { ok: false, message: "Availability sync failed: #{response[:details] || response['details'] || response}" }
+      values
     end
 
-    def push_restrictions(client, property_id, date_range)
+    def push_restrictions_values(date_range)
       values = []
+      property_id = mapping_for(@hotel).external_id
       @hotel.room_types.each do |room_type|
+        occupancy = room_type.max_adults.to_i
+        occupancy = 1 if occupancy <= 0
+
         room_type.rate_plans.each do |rate_plan|
           ext_rp_id = mapping_for(rate_plan).external_id
           next if ext_rp_id == "pending"
@@ -211,23 +252,14 @@ module ChannelManagers
               property_id: property_id,
               rate_plan_id: ext_rp_id,
               date: rate.date.to_s,
-              rate: rate.price.to_f,
-              currency: rate.currency
+              rate: format("%.2f", rate.price.to_f),
+              currency: rate.currency,
+              occupancy: occupancy
             }
           end
         end
       end
-
-      return { ok: true } if values.empty?
-
-      response = client.post("/restrictions", { values: values })
-      return { ok: true } unless response[:error] || response["error"]
-
-      if response[:retryable] || response["retryable"]
-        raise Channex::Client::RetryableRequestError, "Restrictions sync retryable failure: #{response[:details] || response['details'] || response}"
-      end
-
-      { ok: false, message: "Restrictions sync failed: #{response[:details] || response['details'] || response}" }
+      values
     end
 
     def ensure_property(client)
@@ -239,7 +271,8 @@ module ChannelManagers
           city: @hotel.city || "Unknown City",
           country: "MY", # Channel Manager expects ISO 2-letter country code
           currency: @hotel.default_currency || "MYR",
-          timezone: "Asia/Kuala_Lumpur"
+          timezone: "Asia/Kuala_Lumpur",
+          facilities: map_amenities_to_channex_ids(@hotel.amenities, :hotel)
         }
       }
 
@@ -280,6 +313,13 @@ module ChannelManagers
           rate: 0
         }
       ]
+    end
+
+    def map_amenities_to_channex_ids(amenity_slugs, type)
+      return [] if amenity_slugs.blank?
+
+      map = Amenity.lookup_map(type)
+      amenity_slugs.map { |slug| map[slug]&.fetch(:channex_id, nil) }.compact
     end
 
     def success(message)

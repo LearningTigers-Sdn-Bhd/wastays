@@ -411,7 +411,7 @@ class Hotel < ApplicationRecord
   end
 
   def saved_changes_to_synced_attributes?
-    (saved_changes.keys & %w[name city country default_currency]).any?
+    (saved_changes.keys & %w[name city country default_currency amenities]).any?
   end
 
   def sync_with_channel_manager
