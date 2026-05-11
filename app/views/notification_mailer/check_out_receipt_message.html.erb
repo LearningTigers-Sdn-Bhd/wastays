@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body style="margin:0;padding:0;background-color:#f5f4f0;font-family:'Inter',Arial,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f4f0;padding:40px 0;">
+      <tr>
+        <td align="center">
+          <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #e8e5df;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+            <tr>
+              <td style="background-color:#0f4a43;padding:40px;text-align:center;">
+                <img src="<%= attachments['long-logo.png'].url %>" alt="WAStays" style="height:44px;width:auto;display:inline-block;">
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:48px 40px;">
+                <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0f4a43;text-transform:uppercase;letter-spacing:0.1em;">Check-Out Receipt</p>
+                <p style="margin:0 0 24px;font-size:26px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Thank you, <%= @guest_first_name %>.</p>
+                <p style="margin:0 0 28px;font-size:15px;color:#475569;line-height:1.7;">
+                  Your stay at <strong style="color:#0f172a;"><%= @payload[:hotel_name] %></strong> has been checked out. Here is your receipt summary.
+                </p>
+
+                <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:16px;margin-bottom:22px;">
+                  <tr>
+                    <td style="padding:24px 24px 16px;">
+                      <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Booking Reference</p>
+                      <p style="margin:6px 0 0;font-size:20px;font-weight:800;color:#0f172a;font-family:monospace;letter-spacing:0.05em;"><%= @payload[:confirmation_token] %></p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:16px 24px;border-top:1px solid #e2e8f0;">
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="width:50%;vertical-align:top;padding-right:12px;">
+                            <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Check-in</p>
+                            <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0f172a;"><%= Date.parse(@payload[:check_in].to_s).strftime("%d %b %Y") rescue @payload[:check_in] %></p>
+                          </td>
+                          <td style="width:50%;vertical-align:top;">
+                            <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Check-out</p>
+                            <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0f172a;"><%= Date.parse(@payload[:check_out].to_s).strftime("%d %b %Y") rescue @payload[:check_out] %></p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;margin-bottom:22px;">
+                  <tr>
+                    <td style="padding:12px 16px;background:#f8fafc;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;">Folio Summary</td>
+                  </tr>
+                  <% Array(@payload[:line_items]).each do |item| %>
+                    <tr>
+                      <td style="padding:12px 16px;border-top:1px solid #e2e8f0;">
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="font-size:14px;color:#0f172a;font-weight:600;">
+                              <%= item["description"].presence || item[:description].presence || "Room Charge" %>
+                              <% room_number = item["room_number"].presence || item[:room_number].presence %>
+                              <% if room_number.present? %>
+                                <span style="color:#64748b;font-weight:500;">(Room <%= room_number %>)</span>
+                              <% end %>
+                            </td>
+                            <td align="right" style="font-size:14px;color:#0f172a;font-weight:700;">
+                              <%= @payload[:currency] %> <%= format("%.2f", (item["amount"] || item[:amount] || 0).to_f) %>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td colspan="2" style="padding-top:3px;font-size:12px;color:#64748b;">Qty: <%= item["quantity"] || item[:quantity] || 1 %></td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  <% end %>
+
+                  <% Array(@payload[:tax_items]).each do |tax_item| %>
+                    <tr>
+                      <td style="padding:12px 16px;border-top:1px solid #e2e8f0;">
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="font-size:14px;color:#334155;font-weight:600;">
+                              <%= tax_item["description"].presence || tax_item[:description].presence || "Tax" %>
+                            </td>
+                            <td align="right" style="font-size:14px;color:#334155;font-weight:700;">
+                              <%= @payload[:currency] %> <%= format("%.2f", (tax_item["amount"] || tax_item[:amount] || 0).to_f) %>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  <% end %>
+
+                  <tr>
+                    <td style="padding:14px 16px;border-top:1px solid #cbd5e1;background:#f8fafc;">
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="font-size:13px;color:#475569;font-weight:700;">Derived Total</td>
+                          <td align="right" style="font-size:13px;color:#475569;font-weight:700;"><%= @payload[:currency] %> <%= format("%.2f", @payload[:derived_grand_total].to_f) %></td>
+                        </tr>
+                        <tr>
+                          <td style="padding-top:6px;font-size:15px;color:#0f172a;font-weight:800;">Receipt Total</td>
+                          <td align="right" style="padding-top:6px;font-size:15px;color:#0f172a;font-weight:800;"><%= @payload[:currency] %> <%= format("%.2f", @payload[:booking_total].to_f) %></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <% if @payload[:totals_mismatch] %>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff7ed;border-radius:12px;margin-bottom:22px;border:1px solid #fed7aa;">
+                    <tr>
+                      <td style="padding:14px 16px;">
+                        <p style="margin:0;font-size:13px;color:#9a3412;line-height:1.6;">
+                          Receipt note: line-item derived total differs by
+                          <strong><%= @payload[:currency] %> <%= format("%.2f", @payload[:totals_mismatch_amount].to_f) %></strong>
+                          from booking total.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                <% end %>
+
+                <% if @payload[:invoice_url].present? %>
+                  <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+                    <tr>
+                      <td align="center" style="border-radius:10px;background:#0f4a43;">
+                        <a href="<%= @payload[:invoice_url] %>" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;">
+                          View Invoice
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                <% end %>
+
+                <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.6;text-align:center;">
+                  Thank you for choosing WAStays.
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="background-color:#faf9f6;padding:24px 40px;text-align:center;border-top:1px solid #f1f5f9;">
+                <p style="margin:0;font-size:12px;color:#94a3b8;">&copy; <%= Date.current.year %> WAStays. All rights reserved.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

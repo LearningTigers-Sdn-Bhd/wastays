@@ -23,6 +23,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
     { title: "Weekly Settlements", subtitle: "Payout reports", route: :payouts_hotel_reports_path, keywords: "payouts settlements weekly" },
     { title: "Daily Performance Breakdown", subtitle: "Detailed financial breakdown", route: :breakdown_hotel_reports_path, keywords: "daily performance breakdown financial reports" },
     { title: "Operation Audit Logs", subtitle: "Operational changes history", route: :hotel_audit_logs_path, keywords: "audit logs operations" },
+    { title: "Notification Logs", subtitle: "Notification delivery attempts and failures", route: :hotel_notification_logs_path, keywords: "notification logs whatsapp email delivery failed sent pending" },
     { title: "Inventory Audit Logs", subtitle: "Inventory and rate change history", route: :hotel_inventory_audit_logs_path, keywords: "inventory audit logs rates changes history" },
     { title: "Settings", subtitle: "Hotel and account settings", route: :hotel_settings_path, keywords: "settings preferences banking account" },
     { title: "Homepage", subtitle: "Public marketing site", route: :root_path, keywords: "homepage website home" },

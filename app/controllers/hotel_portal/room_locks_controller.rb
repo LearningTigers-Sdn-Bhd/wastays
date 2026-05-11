@@ -6,7 +6,7 @@ class HotelPortal::RoomLocksController < HotelPortal::BaseController
     RoomLock.cleanup_expired!
 
     # Try to find an existing lock for this room
-    lock = RoomLock.find_by(hotel: current_hotel, room_number: params[:room_number])
+    lock = RoomLock.find_by(hotel: current_hotel, room_type_id: params[:room_type_id], room_number: params[:room_number])
 
     if lock
       if lock.user == current_user
@@ -25,6 +25,7 @@ class HotelPortal::RoomLocksController < HotelPortal::BaseController
       lock = RoomLock.new(
         hotel: current_hotel,
         user: current_user,
+        room_type_id: params[:room_type_id],
         room_number: params[:room_number],
         expires_at: Time.current + 10.minutes
       )
@@ -38,7 +39,7 @@ class HotelPortal::RoomLocksController < HotelPortal::BaseController
   end
 
   def release
-    lock = RoomLock.find_by(hotel: current_hotel, room_number: params[:room_number], user: current_user)
+    lock = RoomLock.find_by(hotel: current_hotel, room_type_id: params[:room_type_id], room_number: params[:room_number], user: current_user)
 
     if lock&.destroy
       render json: { status: "success", message: "Lock released" }

@@ -23,7 +23,8 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
 
   it "allows front desk to create a night audit" do
     sign_in(user)
-    business_date = Date.current - 1.day
+    today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
+    business_date = today_kl - 1.day
 
     post hotel_night_audits_path(hotel), params: {
       night_audit: {
@@ -43,7 +44,8 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
 
     post hotel_night_audits_path(hotel), params: { night_audit: { notes: "Default run" } }
 
-    expect(NightAudit.last.business_date).to eq(Date.current - 1.day)
+    yesterday_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current - 1.day }
+    expect(NightAudit.last.business_date).to eq(yesterday_kl)
     expect(NightAudit.last.trigger_mode).to eq("manual")
   end
 
@@ -51,9 +53,10 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     role.permissions.delete(permission)
     sign_in(user)
 
+    today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
     post hotel_night_audits_path(hotel), params: {
       night_audit: {
-        business_date: Date.current.to_s
+        business_date: today_kl.to_s
       }
     }
 
@@ -64,17 +67,19 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
 
   it "returns an alert redirect for a blocked audit" do
     sign_in(user)
+    today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
     create(:booking,
       hotel: hotel,
       status: "checked_in",
       payment_status: "captured",
-      check_in: Date.current - 1.day,
-      check_out: Date.current,
+      check_in: today_kl - 1.day,
+      check_out: today_kl,
       checked_in_at: 1.day.ago)
 
+    today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
     post hotel_night_audits_path(hotel), params: {
       night_audit: {
-        business_date: Date.current.to_s
+        business_date: today_kl.to_s
       }
     }
 

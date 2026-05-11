@@ -1575,3 +1575,11 @@ module DemoSeeds
     model_class.new
   end
 end
+
+Hotel.find_each do |hotel|
+  NotificationConfig.find_or_create_by!(hotel: hotel, notification_type: "check_in_confirmation") do |config|
+    config.enabled = true
+    config.channels = [ "whatsapp" ]
+    config.settings = {}
+  end
+end

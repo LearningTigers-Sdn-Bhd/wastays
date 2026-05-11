@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe "HotelPortal::RoomLocks", type: :request do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user) }
+  let(:room_type) { create(:room_type, hotel: hotel) }
 
   before do
     create(:user_hotel_access, user: user, hotel: hotel)
@@ -14,7 +15,7 @@ RSpec.describe "HotelPortal::RoomLocks", type: :request do
   describe "POST /create" do
     it "creates a new lock" do
       expect {
-        post hotel_room_locks_path(hotel), params: { room_number: "206" }
+        post hotel_room_locks_path(hotel), params: { room_number: "206", room_type_id: room_type.id }
       }.to change(RoomLock, :count).by(1)
 
       expect(response).to have_http_status(:created)
@@ -22,9 +23,9 @@ RSpec.describe "HotelPortal::RoomLocks", type: :request do
     end
 
     it "refreshes an existing lock by the same user" do
-      lock = create(:room_lock, hotel: hotel, user: user, room_number: "206", expires_at: 1.minute.from_now)
+      lock = create(:room_lock, hotel: hotel, user: user, room_type: room_type, room_number: "206", expires_at: 1.minute.from_now)
 
-      post hotel_room_locks_path(hotel), params: { room_number: "206" }
+      post hotel_room_locks_path(hotel), params: { room_number: "206", room_type_id: room_type.id }
 
       expect(response).to have_http_status(:ok)
       expect(lock.reload.expires_at).to be > 5.minutes.from_now
@@ -32,9 +33,9 @@ RSpec.describe "HotelPortal::RoomLocks", type: :request do
 
     it "returns conflict if locked by someone else" do
       other_user = create(:user, name: "Other Admin")
-      create(:room_lock, hotel: hotel, user: other_user, room_number: "206")
+      create(:room_lock, hotel: hotel, user: other_user, room_type: room_type, room_number: "206")
 
-      post hotel_room_locks_path(hotel), params: { room_number: "206" }
+      post hotel_room_locks_path(hotel), params: { room_number: "206", room_type_id: room_type.id }
 
       expect(response).to have_http_status(:conflict)
       expect(JSON.parse(response.body)["message"]).to include("Other Admin")
@@ -43,10 +44,10 @@ RSpec.describe "HotelPortal::RoomLocks", type: :request do
 
   describe "DELETE /release" do
     it "releases the lock" do
-      create(:room_lock, hotel: hotel, user: user, room_number: "206")
+      create(:room_lock, hotel: hotel, user: user, room_type: room_type, room_number: "206")
 
       expect {
-        delete release_hotel_room_locks_path(hotel), params: { room_number: "206" }
+        delete release_hotel_room_locks_path(hotel), params: { room_number: "206", room_type_id: room_type.id }
       }.to change(RoomLock, :count).by(-1)
 
       expect(response).to have_http_status(:ok)
