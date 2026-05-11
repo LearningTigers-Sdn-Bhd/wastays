@@ -100,10 +100,9 @@
                   </button>
                   
                   <div class="hidden bg-white" data-category-content>
-                    <% cat[:items].each do |amenity_id| %>
-                      <% amenity = Hotel::HOTEL_AMENITIES.find { |a| (a[:id] || a[:slug]) == amenity_id } %>
-                      <% next unless amenity %>
-                      <label class="w-full flex items-center px-6 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer"
+                   <% cat[:items].each do |amenity| %>
+                     <label class="w-full flex items-center px-6 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer"
+
                              data-multi-select-dropdown-target="option"
                              data-name="<%= amenity[:name] %>"
                              data-id="<%= amenity[:id] %>">

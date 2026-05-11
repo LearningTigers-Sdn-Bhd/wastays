@@ -16,9 +16,14 @@ class Amenity < ApplicationRecord
       .map do |category, items|
         {
           category: category,
-          items: items.map(&:slug)
+          items: items.map(&:to_h)
         }
       end
+  end
+
+  def self.lookup_map(type)
+    @lookup_maps ||= {}
+    @lookup_maps[type] ||= where(amenity_type: type).ordered.map(&:to_h).index_by { |a| a[:id] }
   end
 
   def to_h

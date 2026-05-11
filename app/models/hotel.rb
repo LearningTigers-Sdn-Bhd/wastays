@@ -72,6 +72,10 @@ class Hotel < ApplicationRecord
       Amenity.room.ordered.map(&:to_h)
     when :CATEGORIZED_ROOM_AMENITIES
       Amenity.categorized(:room)
+    when :HOTEL_AMENITIES_MAP
+      Amenity.lookup_map(:hotel)
+    when :ROOM_AMENITIES_MAP
+      Amenity.lookup_map(:room)
     when :AMENITIES
       (HOTEL_AMENITIES + ROOM_AMENITIES).uniq { |a| a[:id] }
     else

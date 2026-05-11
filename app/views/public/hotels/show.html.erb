@@ -466,16 +466,17 @@
                          max_adults: room_type.max_adults,
                          max_children: room_type.max_children,
                          photos: room_type.photos.map { |p| url_for(p) },
-                         room_amenities: room_type.amenities.map { |id| 
-                           amenity = Hotel::ROOM_AMENITIES.find { |a| a[:id] == id }
+                         room_amenities: room_type.amenities.map { |id|
+                           amenity = Hotel::ROOM_AMENITIES_MAP[id]
                            next nil unless amenity
                            amenity.merge(category_icon: category_icon(amenity[:category]))
                          }.compact,
-                         hotel_amenities: @hotel.amenities.map { |id| 
-                           amenity = Hotel::HOTEL_AMENITIES.find { |a| a[:id] == id }
+                         hotel_amenities: @hotel.amenities.map { |id|
+                           amenity = Hotel::HOTEL_AMENITIES_MAP[id]
                            next nil unless amenity
                            amenity.merge(category_icon: category_icon(amenity[:category]))
                          }.compact
+
                        }.to_json %>">
 
                     <% if room_type.photos.attached? %>
