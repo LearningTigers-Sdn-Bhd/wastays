@@ -131,6 +131,7 @@ Rails.application.routes.draw do
         post :approve, to: "hotels/status#approve"
         post :suspend, to: "hotels/status#suspend"
         post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
+        post :full_refresh, to: "hotels/channel_managers#full_refresh"
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
       end
       resources :onboarding_sessions, module: :hotels do
