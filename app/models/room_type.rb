@@ -6,6 +6,9 @@ class RoomType < ApplicationRecord
   has_many :room_rates, dependent: :destroy
   has_many :room_inventories, dependent: :destroy
   has_many :rate_plans, dependent: :destroy
+  has_many :inventory_audit_logs, dependent: :nullify
+  has_many :booking_rooms, dependent: :restrict_with_error
+  has_many :booking_quote_items, dependent: :restrict_with_error
   has_many :room_statuses, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
   has_many_attached :photos
@@ -47,7 +50,7 @@ class RoomType < ApplicationRecord
   def amenities_must_be_from_list
     return if amenities.blank?
 
-    allowed_ids = Hotel::ROOM_AMENITIES.map { |a| a[:id] }
+    allowed_ids = Amenity.room.pluck(:slug)
     invalid_amenities = amenities - allowed_ids
 
     if invalid_amenities.any?
