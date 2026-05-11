@@ -31,8 +31,8 @@ class HotelPortal::NotificationLogsController < HotelPortal::BaseController
       return
     end
 
-    unless original.status.in?(%w[sent failed])
-      redirect_to hotel_notification_logs_path(current_hotel), alert: "Only sent or failed notifications can be resent."
+    unless original.status.in?(%w[sent failed skipped])
+      redirect_to hotel_notification_logs_path(current_hotel), alert: "Only sent, failed, or skipped notifications can be resent."
       return
     end
 
