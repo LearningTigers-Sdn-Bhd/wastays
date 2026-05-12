@@ -50,7 +50,7 @@ module BookingEngine
           total_amount: total_amount,
           currency: @room_type.room_rates.first&.currency || "MYR",
           expires_at: 15.minutes.from_now,
-          hotel_snapshot: @hotel.as_json,
+          hotel_snapshot: @hotel.booking_snapshot,
           cancellation_policy_snapshot: @hotel.property_policy&.cancellation_policy,
           guest_name: @guest_name,
           guest_email: @guest_email,

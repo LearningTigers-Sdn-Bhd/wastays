@@ -39,16 +39,45 @@ module Bookings
           end
         end
 
-        # 2. Update room number in snapshot
-        if assigned_room_number.present?
-          # Check for locks by others
-          lock = @hotel.room_locks.active.find_by(room_number: assigned_room_number)
-          if lock && lock.user_id != Current.user_id
-            raise "Room #{assigned_room_number} is currently being assigned by another staff member"
+        # 2. Check for occupancy overlap if room is assigned or dates are changing
+        check_in = @params[:check_in].presence ? Date.parse(@params[:check_in].to_s) : @booking.check_in
+        check_out = @params[:check_out].presence ? Date.parse(@params[:check_out].to_s) : @booking.check_out
+        dates_changing = check_in != @booking.check_in || check_out != @booking.check_out
+        target_room_number = assigned_room_number.presence || @booking.hotel_snapshot&.dig("room_number")
+
+        if target_room_number.present? && (assigned_room_number.present? || dates_changing)
+          # Check for locks by others if assigning a NEW room
+          if assigned_room_number.present?
+            lock = @hotel.room_locks.active.find_by(room_number: assigned_room_number)
+            if lock && lock.user_id != @user&.id
+              raise "Room #{assigned_room_number} is currently being assigned by another staff member"
+            end
           end
 
-          @booking.hotel_snapshot ||= {}
-          @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => assigned_room_number)
+          room_type_id = @room_type_id.presence || @booking.booking_rooms.first&.room_type_id
+
+          if room_type_id.present?
+            room_type = @hotel.room_types.find(room_type_id)
+            available_service = Bookings::AvailableRoomNumbers.new(
+              hotel: @hotel,
+              room_type: room_type,
+              check_in: check_in,
+              check_out: check_out,
+              exclude_booking_id: @booking.id
+            )
+
+            unless available_service.call.include?(target_room_number.to_s)
+              options = available_service.options
+              option = options.find { |o| o[:room_number].to_s == target_room_number.to_s }
+              reason = option ? option[:label].split("(").last.gsub(")", "") : "Occupied"
+              raise "Room #{target_room_number} is not available for these dates: #{reason}"
+            end
+          end
+
+          if assigned_room_number.present?
+            @booking.hotel_snapshot ||= {}
+            @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => assigned_room_number)
+          end
         end
 
         # 3. Save main booking details

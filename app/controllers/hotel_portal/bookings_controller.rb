@@ -90,11 +90,38 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
     if result.success?
       release_room_locks(@booking)
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking updated successfully."
+      respond_to do |format|
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking updated successfully." }
+        format.json { render json: { success: true, booking: @booking } }
+      end
     else
-      @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-      @booking.errors.add(:base, result.errors.to_sentence)
-      render :show, status: :unprocessable_content
+      respond_to do |format|
+        format.html do
+          @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+          @booking.errors.add(:base, result.errors.to_sentence)
+          render :show, status: :unprocessable_content
+        end
+        format.json { render json: { success: false, errors: result.errors }, status: :unprocessable_content }
+      end
+    end
+  end
+
+  def move
+    @booking = current_hotel.bookings.find(params[:id])
+    # For move, we only expect check_in, check_out, room_type_id, and room_number
+    # We allow children and adults to stay the same if not provided
+    move_params = params.permit(:check_in, :check_out, :room_type_id, :room_number)
+
+    result = Bookings::UpdateStayService.new(
+      booking: @booking,
+      params: move_params,
+      user: current_user
+    ).call
+
+    if result.success?
+      render json: { success: true, booking: @booking.as_json(only: %i[id check_in check_out status]) }
+    else
+      render json: { success: false, errors: result.errors }, status: :unprocessable_entity
     end
   end
 
@@ -123,6 +150,10 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def transition_status(status, timestamp, success_notice)
     @booking = current_hotel.bookings.find(params[:id])
+
+    # Apply nested attributes (like room assignment) if provided in the form
+    @booking.assign_attributes(booking_params) if params[:booking].present?
+
     result = Bookings::TransitionStatus.new(
       booking: @booking,
       status: status,
@@ -132,11 +163,35 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
     if result.success?
       release_room_locks(@booking) if status == "checked_in"
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice
+
+      respond_to do |format|
+        format.turbo_stream do
+          if request.referer&.include?("reservation-board")
+            render turbo_stream: turbo_stream.action(:reload, "reservation_board")
+          else
+            # Fallback for other pages that might use turbo streams but expect a redirect
+            redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice, status: :see_other
+          end
+        end
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice }
+      end
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-      flash.now[:alert] = result.error
-      render :show, status: :unprocessable_content
+
+      respond_to do |format|
+        format.turbo_stream do
+          if request.referer&.include?("reservation-board")
+            # Append an alert toast to the board instead of rendering show
+            render turbo_stream: turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
+          else
+            render :show, status: :unprocessable_content
+          end
+        end
+        format.html do
+          flash.now[:alert] = result.error
+          render :show, status: :unprocessable_content
+        end
+      end
     end
   end
 
