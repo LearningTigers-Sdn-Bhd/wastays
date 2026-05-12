@@ -1,6 +1,6 @@
 module HotelOps
   class BulkUpdateRates
-    def initialize(hotel:, rate_plan:, start_date:, end_date:, price:, currency: "MYR", user:, min_stay: nil, max_stay: nil, closed_to_arrival: nil, closed_to_departure: nil)
+    def initialize(hotel:, rate_plan:, start_date:, end_date:, price:, currency: "MYR", user:, min_stay: nil, max_stay: nil, closed_to_arrival: nil, closed_to_departure: nil, stop_sell: nil)
       @hotel = hotel
       @rate_plan = rate_plan
       @room_type = rate_plan.room_type
@@ -13,6 +13,7 @@ module HotelOps
       @max_stay = max_stay
       @closed_to_arrival = closed_to_arrival
       @closed_to_departure = closed_to_departure
+      @stop_sell = stop_sell
     end
 
     def call
@@ -29,6 +30,7 @@ module HotelOps
           rate.max_stay = @max_stay if @max_stay.present?
           rate.closed_to_arrival = @closed_to_arrival if !@closed_to_arrival.nil?
           rate.closed_to_departure = @closed_to_departure if !@closed_to_departure.nil?
+          rate.stop_sell = @stop_sell if !@stop_sell.nil?
           rate.save!
 
           # Log change if price actually changed or new record

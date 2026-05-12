@@ -261,6 +261,7 @@ module ChannelManagers
             val[:max_stay_arrival] = rate.max_stay if rate.max_stay.present?
             val[:closed_to_arrival] = rate.closed_to_arrival ? 1 : 0 if !rate.closed_to_arrival.nil?
             val[:closed_to_departure] = rate.closed_to_departure ? 1 : 0 if !rate.closed_to_departure.nil?
+            val[:stop_sell] = rate.stop_sell ? 1 : 0 if !rate.stop_sell.nil?
 
             values << val
           end

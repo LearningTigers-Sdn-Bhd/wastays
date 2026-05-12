@@ -6,6 +6,7 @@ class HotelPortal::RatesController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days # Show 2 weeks by default
+    @display_currency = params[:display_currency] || current_hotel.default_currency || "MYR"
     @room_types = current_hotel.room_types.order(:id)
     @rate_plans = @room_type.rate_plans.order(:id)
 
@@ -26,6 +27,7 @@ class HotelPortal::RatesController < HotelPortal::BaseController
       max_stay: rate_params[:max_stay],
       closed_to_arrival: rate_params[:closed_to_arrival],
       closed_to_departure: rate_params[:closed_to_departure],
+      stop_sell: rate_params[:stop_sell],
       user: current_user
     ).call
 
@@ -34,7 +36,8 @@ class HotelPortal::RatesController < HotelPortal::BaseController
         current_hotel,
         @room_type,
         start_date: rate_params[:start_date],
-        rate_plan_id: @rate_plan.id
+        rate_plan_id: @rate_plan.id,
+        display_currency: rate_params[:currency]
       ), notice: "Rates updated successfully."
     else
       redirect_to hotel_room_type_rates_path(
@@ -62,6 +65,6 @@ class HotelPortal::RatesController < HotelPortal::BaseController
   end
 
   def rate_params
-    params.require(:rate).permit(:start_date, :end_date, :price, :currency, :min_stay, :max_stay, :closed_to_arrival, :closed_to_departure)
+    params.require(:rate).permit(:start_date, :end_date, :price, :currency, :min_stay, :max_stay, :closed_to_arrival, :closed_to_departure, :stop_sell)
   end
 end
