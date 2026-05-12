@@ -109,7 +109,7 @@ RSpec.describe NotificationMailer, type: :mailer do
     checkout_mail = described_class.check_out_receipt_message(checkout_delivery)
 
     expect(checkout_mail.to).to eq([ delivery.booking.guest_email ])
-    expect(checkout_mail.subject).to include("checkout receipt")
+    expect(checkout_mail.subject).to include("checkout invoice")
     expect(checkout_mail.body.encoded).to include("Folio Summary")
     expect(checkout_mail.body.encoded).to include("Tourism Tax")
     expect(checkout_mail.body.encoded).to include("View Invoice")
@@ -146,7 +146,7 @@ RSpec.describe NotificationMailer, type: :mailer do
 
     checkout_mail = described_class.check_out_receipt_message(checkout_delivery)
 
-    expect(checkout_mail.body.encoded).to include("Receipt note")
+    expect(checkout_mail.body.encoded).to include("Invoice note")
     expect(checkout_mail.body.encoded).to include("50.00")
   end
 

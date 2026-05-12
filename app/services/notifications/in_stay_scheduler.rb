@@ -91,9 +91,9 @@ module Notifications
         return delivery
       end
 
-      scheduled_for = normalized_schedule_time(rule_key: rule_key, time_hhmm: rule_settings.to_h["time"], quiet: quiet_hours(config_for_booking))
-      payload = payload(rule_key: rule_key, scheduled_for: scheduled_for)
-      status = scheduled_for <= Time.current ? "failed" : "pending"
+      scheduled_for = next_valid_schedule_time(rule_key: rule_key, time_hhmm: rule_settings.to_h["time"], quiet: quiet_hours(config_for_booking))
+      payload = payload(rule_key: rule_key, scheduled_for: scheduled_for || Time.current)
+      status = scheduled_for.present? ? "pending" : "skipped"
 
       delivery.assign_attributes(
         hotel: @booking.hotel,
@@ -103,8 +103,8 @@ module Notifications
         trigger_event: trigger_event,
         status: status,
         payload: payload,
-        failed_at: (Time.current if status == "failed"),
-        error_message: (schedule_past_error(rule_key) if status == "failed")
+        failed_at: nil,
+        error_message: (no_future_slot_error(rule_key) if status == "skipped")
       )
       delivery.save!
       enqueue_delivery(delivery, scheduled_for) if status == "pending"
@@ -112,15 +112,15 @@ module Notifications
     end
 
     def schedule_rule_delivery!(delivery:, rule_key:, rule_settings:, trigger_event:)
-      scheduled_for = normalized_schedule_time(rule_key: rule_key, time_hhmm: rule_settings.to_h["time"], quiet: quiet_hours(config_for_booking))
-      payload = payload(rule_key: rule_key, scheduled_for: scheduled_for)
+      scheduled_for = next_valid_schedule_time(rule_key: rule_key, time_hhmm: rule_settings.to_h["time"], quiet: quiet_hours(config_for_booking))
+      payload = payload(rule_key: rule_key, scheduled_for: scheduled_for || Time.current)
 
-      if scheduled_for <= Time.current
+      if scheduled_for.blank?
         delivery.update!(
           trigger_event: trigger_event,
-          status: "failed",
-          failed_at: Time.current,
-          error_message: schedule_past_error(rule_key),
+          status: "skipped",
+          failed_at: nil,
+          error_message: no_future_slot_error(rule_key),
           payload: payload
         )
         return
@@ -161,6 +161,18 @@ module Notifications
       hh, mm = normalized_time(time_hhmm)
       scheduled_for = Time.zone.local(base_date.year, base_date.month, base_date.day, hh, mm, 0)
       quiet_hours_adjusted_time(scheduled_for, quiet)
+    end
+
+    def next_valid_schedule_time(rule_key:, time_hhmm:, quiet:)
+      scheduled_for = normalized_schedule_time(rule_key: rule_key, time_hhmm: time_hhmm, quiet: quiet)
+
+      while scheduled_for <= Time.current
+        scheduled_for = quiet_hours_adjusted_time(scheduled_for + 1.day, quiet)
+      end
+
+      return nil if scheduled_for.to_date >= @booking.check_out.to_date
+
+      scheduled_for
     end
 
     def mid_stay_date
@@ -204,8 +216,8 @@ module Notifications
       end
     end
 
-    def schedule_past_error(rule_key)
-      "In-stay #{rule_key} schedule is in the past"
+    def no_future_slot_error(rule_key)
+      "In-stay #{rule_key} has no future schedule before check-out"
     end
   end
 end

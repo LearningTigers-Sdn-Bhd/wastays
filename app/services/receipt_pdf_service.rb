@@ -3,7 +3,7 @@ require "prawn/table"
 
 Prawn::Fonts::AFM.hide_m17n_warning = true
 
-class InvoicePdfService
+class ReceiptPdfService
   DARK_GREEN   = "0a2e29"
   GOLD         = "d9c5a0"
   WHITE        = "ffffff"
@@ -25,7 +25,7 @@ class InvoicePdfService
     pdf = Prawn::Document.new(
       page_size: "A4",
       margin: [ 40, 40, 40, 40 ],
-      info: { Title: "Invoice - #{@booking.confirmation_token}", Author: "WAStays", Creator: "WAStays", CreationDate: Time.now }
+      info: { Title: "Receipt - #{@booking.confirmation_token}", Author: "WAStays", Creator: "WAStays", CreationDate: Time.now }
     )
 
     draw_header(pdf)
@@ -48,7 +48,7 @@ class InvoicePdfService
     File.exist?(logo_path) ? pdf.image(logo_path, height: 32) : (pdf.fill_color DARK_GREEN; pdf.text "WAStays", size: 22, style: :bold)
     pdf.move_up 32
     pdf.fill_color DARK_GREEN
-    pdf.text "INVOICE", size: 22, style: :bold, align: :right
+    pdf.text "RECEIPT", size: 22, style: :bold, align: :right
     pdf.move_down 12
     pdf.stroke_color DARK_GREEN
     pdf.line_width 0.5
@@ -57,14 +57,22 @@ class InvoicePdfService
   end
 
   def draw_meta(pdf)
-    issue_date = (@booking.checked_out_at || @booking.check_out).strftime("%d %B %Y")
+    is_paid     = @booking.payment_status == "captured"
+    status_text = is_paid ? "PAID" : @booking.payment_status.upcase.tr("_", " ")
+    status_color = is_paid ? SUCCESS : WARNING
 
+    pdf.fill_color status_color
+    pdf.fill_rectangle [ 0, pdf.cursor ], 50, 16
+    pdf.fill_color WHITE
+    pdf.text_box status_text, at: [ 0, pdf.cursor ], width: 50, height: 16, align: :center, valign: :center, size: 8, style: :bold
+    pdf.move_down 26
     pdf.fill_color TEXT_PRIMARY
+
     pdf.table([
-      [ { content: "INVOICE NUMBER", font_style: :bold, text_color: GOLD, size: 8, borders: [] },
+      [ { content: "RECEIPT NUMBER", font_style: :bold, text_color: GOLD, size: 8, borders: [] },
         { content: "ISSUE DATE", font_style: :bold, text_color: GOLD, size: 8, borders: [], align: :right } ],
       [ { content: @booking.confirmation_token, font_style: :bold, size: 14, text_color: TEXT_PRIMARY, borders: [] },
-        { content: issue_date, size: 11, text_color: TEXT_PRIMARY, borders: [], align: :right } ]
+        { content: @booking.created_at.strftime("%d %B %Y"), size: 11, text_color: TEXT_PRIMARY, borders: [], align: :right } ]
     ], width: pdf.bounds.width)
   end
 
@@ -122,7 +130,7 @@ class InvoicePdfService
     pdf.fill_color DARK_GREEN
     pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, band_h
     pdf.fill_color WHITE
-    pdf.draw_text "TOTAL AMOUNT", at: [ 18, pdf.cursor - 32 ], size: 10, style: :bold
+    pdf.draw_text "TOTAL PAID", at: [ 18, pdf.cursor - 32 ], size: 10, style: :bold
     pdf.text_box "MYR #{fmt(@booking.total_amount)}", at: [ 0, pdf.cursor ], width: pdf.bounds.width - 18, height: band_h, align: :right, valign: :center, size: 20, style: :bold
     pdf.move_down band_h + 40
     pdf.fill_color TEXT_PRIMARY
@@ -133,9 +141,9 @@ class InvoicePdfService
     pdf.stroke_horizontal_rule
     pdf.move_down 20
     pdf.fill_color TEXT_MUTED
-    pdf.text "Thank you for staying with us. We hope to welcome you again soon!", size: 9, align: :center, style: :italic
+    pdf.text "Thank you for choosing WAStays. We hope you have a pleasant stay!", size: 9, align: :center, style: :italic
     pdf.move_down 12
-    pdf.text "This is a system-generated invoice. No signature required.", size: 8, align: :center
+    pdf.text "This is a system-generated receipt. No signature required.", size: 8, align: :center
     pdf.text "WAStays · hello@wastays.com · www.wastays.com", size: 8, align: :center
   end
 

@@ -641,6 +641,7 @@ DEPENDENCIES
   kamal
   kaminari (~> 1.2)
   letter_opener_web
+  nokogiri (>= 1.19.3)
   openssl (~> 3.1.2)
   parallel_tests
   pg (~> 1.1)

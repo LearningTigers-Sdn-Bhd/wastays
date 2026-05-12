@@ -38,7 +38,7 @@ class NotificationMailer < ApplicationMailer
 
     mail(
       to: @booking.guest_email,
-      subject: "Your checkout receipt from #{@payload[:hotel_name]}"
+      subject: "Your checkout invoice from #{@payload[:hotel_name]}"
     )
   end
 

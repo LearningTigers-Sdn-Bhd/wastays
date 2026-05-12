@@ -1,0 +1,3898 @@
+[
+  {
+    "name": "24-hour front desk",
+    "slug": "24_hour_front_desk",
+    "icon": "24_hour_front_desk",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "864d91a6-3a40-4098-a880-84b841e11adb"
+  },
+  {
+    "name": "ADA Accessible",
+    "slug": "ada_accessible",
+    "icon": "ada_accessible",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "dbd55138-eafb-4c3b-a959-a5d813115558"
+  },
+  {
+    "name": "Adult only",
+    "slug": "adult_only",
+    "icon": "adult_only",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "a6a4fe55-7f60-4e67-aa91-cd4323279ed2"
+  },
+  {
+    "name": "Air conditioning",
+    "slug": "air_conditioning",
+    "icon": "air_conditioning",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "cc402cc0-696b-4bd6-a5d7-4adb060bc056"
+  },
+  {
+    "name": "All Spaces Non-Smoking (public and private)",
+    "slug": "all_spaces_non_smoking_public_and_private",
+    "icon": "all_spaces_non_smoking_public_and_private",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "9ebac99b-40f1-4e9d-ba36-d186868165e1"
+  },
+  {
+    "name": "ATM on site",
+    "slug": "atm_on_site",
+    "icon": "atm_on_site",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "be00a2c1-58bc-4e71-a788-08853f892fb9"
+  },
+  {
+    "name": "Bridal Suite",
+    "slug": "bridal_suite",
+    "icon": "bridal_suite",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "e84752fc-ba2f-406d-93be-6d9fe65dc867"
+  },
+  {
+    "name": "Cable Hookups",
+    "slug": "cable_hookups",
+    "icon": "cable_hookups",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "79dd0213-2910-40ee-a2bc-fe9fa1843cbc"
+  },
+  {
+    "name": "Chapel/shrine",
+    "slug": "chapel_shrine",
+    "icon": "chapel_shrine",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "73c55dbd-0cb9-4dde-9dee-ffa41f0f5f87"
+  },
+  {
+    "name": "Designated smoking area",
+    "slug": "designated_smoking_area",
+    "icon": "designated_smoking_area",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "c219b022-7123-4305-82bc-cd37d0127be1"
+  },
+  {
+    "name": "Dirt Roads",
+    "slug": "dirt_roads",
+    "icon": "dirt_roads",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "1b2922aa-83fb-4236-b4e5-1b4ae7138026"
+  },
+  {
+    "name": "Elevators",
+    "slug": "elevators",
+    "icon": "elevators",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "62c62700-89fb-4493-9069-ce79cc8c7ada"
+  },
+  {
+    "name": "Family Rooms",
+    "slug": "family_rooms",
+    "icon": "family_rooms",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "fb53bfdd-7b16-4985-94a1-37325a023ec7"
+  },
+  {
+    "name": "Gasoline Nearby",
+    "slug": "gasoline_nearby",
+    "icon": "gasoline_nearby",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "ed1f91d7-e2f1-4349-ae3c-4031a3768613"
+  },
+  {
+    "name": "General Store",
+    "slug": "general_store",
+    "icon": "general_store",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "efdbb9cd-9d48-4004-ad09-04ed24e52446"
+  },
+  {
+    "name": "Gravel Roads",
+    "slug": "gravel_roads",
+    "icon": "gravel_roads",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "a9a580f1-63fc-4e2c-903a-ef144eedc5cb"
+  },
+  {
+    "name": "Heating",
+    "slug": "heating",
+    "icon": "heating",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "47f8720e-1211-4f41-b47f-aca6166c6371"
+  },
+  {
+    "name": "Hypoallergenic room available",
+    "slug": "hypoallergenic_room_available",
+    "icon": "hypoallergenic_room_available",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "3bf22217-b491-416b-9efd-bc85a4ec6cd1"
+  },
+  {
+    "name": "Invoices Provided",
+    "slug": "invoices_provided",
+    "icon": "invoices_provided",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "47d95097-ac74-42ca-8555-d1df32ed85bf"
+  },
+  {
+    "name": "Back-in RV Sites",
+    "slug": "back_in_rv_sites",
+    "icon": "back_in_rv_sites",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "258f3e0c-b386-4538-a2a1-fbfba935b2f1"
+  },
+  {
+    "name": "Beachfront",
+    "slug": "beachfront",
+    "icon": "beachfront",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "6e01a0aa-ad6d-4e16-be08-72b8dad77a34"
+  },
+  {
+    "name": "Beauty Services",
+    "slug": "beauty_services",
+    "icon": "beauty_services",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "a692efdc-3e1e-49a6-89eb-04e681410fa2"
+  },
+  {
+    "name": "Board games/puzzles",
+    "slug": "board_games_puzzles",
+    "icon": "board_games_puzzles",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "362f98ee-fd43-4031-8fc3-1c4ab5adeeec"
+  },
+  {
+    "name": "Book/DVD/Music library for children",
+    "slug": "book_dvd_music_library_for_children",
+    "icon": "book_dvd_music_library_for_children",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "7f772ed8-c00e-4b48-a9df-e51a20e56044"
+  },
+  {
+    "name": "Children television networks",
+    "slug": "children_television_networks",
+    "icon": "children_television_networks",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "2e8a5930-2e3e-48b6-bb96-d36cfe6a94be"
+  },
+  {
+    "name": "Breakfast takeaway containers",
+    "slug": "breakfast_takeaway_containers",
+    "icon": "breakfast_takeaway_containers",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "53bbd5c3-27b8-49f0-a141-ff87f7b6eecc"
+  },
+  {
+    "name": "Clubhouse",
+    "slug": "clubhouse",
+    "icon": "clubhouse",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "305dc741-7d04-4286-a2d5-6185d60d75d4"
+  },
+  {
+    "name": "Community Fire Pit",
+    "slug": "community_fire_pit",
+    "icon": "community_fire_pit",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "ba5331f3-b26e-4050-a7b9-d87a996efd97"
+  },
+  {
+    "name": "Community Restrooms",
+    "slug": "community_restrooms",
+    "icon": "community_restrooms",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "62a9722e-24c4-4dee-8a9e-1f9bf08ecc5d"
+  },
+  {
+    "name": "Community Showers",
+    "slug": "community_showers",
+    "icon": "community_showers",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "27cd577f-02d2-4584-a840-654cc5de3969"
+  },
+  {
+    "name": "Community Water Fountain",
+    "slug": "community_water_fountain",
+    "icon": "community_water_fountain",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "544d41da-13f6-45b6-9c6d-d4e18e9804e0"
+  },
+  {
+    "name": "Entertainment Staff",
+    "slug": "entertainment_staff",
+    "icon": "entertainment_staff",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "8152e3ba-166e-421e-bdf7-07b1fb21cb60"
+  },
+  {
+    "name": "Dinner",
+    "slug": "dinner",
+    "icon": "dinner",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "17600689-ac7c-42d9-939b-0d6b591d5799"
+  },
+  {
+    "name": "Fire Pit",
+    "slug": "fire_pit",
+    "icon": "fire_pit",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "ab6c6ea3-997e-48b3-a1d7-86a030191b8f"
+  },
+  {
+    "name": "Fitness",
+    "slug": "fitness",
+    "icon": "fitness",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "b2a61929-2c97-4a71-8292-8e4f5d2d75cf"
+  },
+  {
+    "name": "Foot bath",
+    "slug": "foot_bath",
+    "icon": "foot_bath",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "6e35c78c-8c18-49ee-89ef-68923caf05f4"
+  },
+  {
+    "name": "Hair dresser-beautician",
+    "slug": "hair_dresser_beautician",
+    "icon": "hair_dresser_beautician",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "2dbc9241-2793-489d-9a14-5333d6828efa"
+  },
+  {
+    "name": "Heated pool",
+    "slug": "heated_pool",
+    "icon": "heated_pool",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "7b4c4429-29f4-4888-9437-f63dfbf85eb1"
+  },
+  {
+    "name": "Hike / Bike Campsites",
+    "slug": "hike_bike_campsites",
+    "icon": "hike_bike_campsites",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "5f833c11-9ed9-480b-bc87-f6979e631b89"
+  },
+  {
+    "name": "Hot Spring Bath",
+    "slug": "hot_spring_bath",
+    "icon": "hot_spring_bath",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "5681847a-35f2-4dca-b4c5-8f3006290285"
+  },
+  {
+    "name": "Housekeeping - daily",
+    "slug": "housekeeping_daily",
+    "icon": "housekeeping_daily",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "ac513017-ac8d-4adb-8d91-b77ac5288d4f"
+  },
+  {
+    "name": "Indoor play area",
+    "slug": "indoor_play_area",
+    "icon": "indoor_play_area",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "5b73951a-2cd2-4434-a604-cc6f26619f7f"
+  },
+  {
+    "name": "Kid meals",
+    "slug": "kid_meals",
+    "icon": "kid_meals",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "21b2426b-1a0e-4871-9796-e357ed74a850"
+  },
+  {
+    "name": "Jacuzzi (Hot Tub)",
+    "slug": "jacuzzi_hot_tub",
+    "icon": "jacuzzi_hot_tub",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "fb27532a-cad5-410e-aee8-f0cb05a39480"
+  },
+  {
+    "name": "Indoor pool",
+    "slug": "indoor_pool",
+    "icon": "indoor_pool",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "b4ccd0d3-587f-4e50-8416-9448f70ebcca"
+  },
+  {
+    "name": "Kid-friendly buffet",
+    "slug": "kid_friendly_buffet",
+    "icon": "kid_friendly_buffet",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "d2dc4c64-2b3a-4c6c-9aa6-21d140a98b75"
+  },
+  {
+    "name": "Kids' club",
+    "slug": "kids_club",
+    "icon": "kids_club",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "ccb09f00-f18a-4526-b2c0-691b303a38e3"
+  },
+  {
+    "name": "Kids pool",
+    "slug": "kids_pool",
+    "icon": "kids_pool",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "a7962d26-df3f-45eb-a425-d2e9f4e15702"
+  },
+  {
+    "name": "Laundry Facilities",
+    "slug": "laundry_facilities",
+    "icon": "laundry_facilities",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "6e1c2582-1520-429e-9ae5-45871418b229"
+  },
+  {
+    "name": "Minimarket on site",
+    "slug": "minimarket_on_site",
+    "icon": "minimarket_on_site",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "b0b2967c-ea72-4db7-9921-68dd2b35b753"
+  },
+  {
+    "name": "Non-smoking rooms",
+    "slug": "non_smoking_rooms",
+    "icon": "non_smoking_rooms",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "bf382902-2be1-486c-a2b5-44d09efb7def"
+  },
+  {
+    "name": "Paved Roads",
+    "slug": "paved_roads",
+    "icon": "paved_roads",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "52a50d2d-c76d-45bf-8d84-c8b12a4ba2b5"
+  },
+  {
+    "name": "Property is wheel chair accessible",
+    "slug": "property_is_wheel_chair_accessible",
+    "icon": "property_is_wheel_chair_accessible",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "d7ab0d30-1658-4355-b1f3-063cb67fc94b"
+  },
+  {
+    "name": "Rooms/Facilities for Disabled",
+    "slug": "rooms_facilities_for_disabled",
+    "icon": "rooms_facilities_for_disabled",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "3592d041-7012-4364-843c-aab04783a13e"
+  },
+  {
+    "name": "Shower",
+    "slug": "shower",
+    "icon": "shower",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "fc5a8f7b-ec67-4003-b9ee-e70bbb73e51f"
+  },
+  {
+    "name": "Soundproof-rooms",
+    "slug": "soundproof_rooms",
+    "icon": "soundproof_rooms",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "23754ca4-d8c9-4a29-9782-aa33a7cd65fc"
+  },
+  {
+    "name": "Toilet",
+    "slug": "toilet",
+    "icon": "toilet",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "b2a5d032-538b-4326-be39-94ef81c1b585"
+  },
+  {
+    "name": "Trek-in > 1.5m",
+    "slug": "trek_in_1_5m",
+    "icon": "trek_in_1_5m",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "b08e316f-4ebd-483d-a142-77055e2ad84e"
+  },
+  {
+    "name": "Viproom facilities",
+    "slug": "viproom_facilities",
+    "icon": "viproom_facilities",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "c3a740ab-095f-4974-a6e7-c582be134d66"
+  },
+  {
+    "name": "WiFi",
+    "slug": "wifi",
+    "icon": "wifi",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "ed553333-7f1f-434a-8c43-eb8fe96c5f54"
+  },
+  {
+    "name": "24-hour security",
+    "slug": "24_hour_security",
+    "icon": "24_hour_security",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "5647179f-f62d-4560-a36c-1a44b6c36927"
+  },
+  {
+    "name": "Auditory Guidance",
+    "slug": "auditory_guidance",
+    "icon": "auditory_guidance",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "cd2fe4e5-7423-4db3-bf6c-d2ab648211f2"
+  },
+  {
+    "name": "Bathroom emergency pull cord",
+    "slug": "bathroom_emergency_pull_cord",
+    "icon": "bathroom_emergency_pull_cord",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "43fff034-61ff-4743-95c7-75a8b7a9a24d"
+  },
+  {
+    "name": "Carbon monoxide detector",
+    "slug": "carbon_monoxide_detector",
+    "icon": "carbon_monoxide_detector",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "f7556d30-de6d-4d85-b3e3-0d998bbb852b"
+  },
+  {
+    "name": "Lunch",
+    "slug": "lunch",
+    "icon": "lunch",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "a63807ff-8d87-4380-8b27-cef0b227969a"
+  },
+  {
+    "name": "Massage chair",
+    "slug": "massage_chair",
+    "icon": "massage_chair",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "e9d4a356-36fd-47c1-9829-be3c08d0ea66"
+  },
+  {
+    "name": "Newspaper",
+    "slug": "newspaper",
+    "icon": "newspaper",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "b1ec5953-e419-49af-a265-625055da168d"
+  },
+  {
+    "name": "Open-air bath",
+    "slug": "open_air_bath",
+    "icon": "open_air_bath",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "98f05e20-1fc5-4322-8e6d-da49332821ac"
+  },
+  {
+    "name": "Packed Lunches",
+    "slug": "packed_lunches",
+    "icon": "packed_lunches",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "0bf47f4d-630c-4a96-bbbe-a6d81d4f90e9"
+  },
+  {
+    "name": "Pool towels",
+    "slug": "pool_towels",
+    "icon": "pool_towels",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "234fe568-94b3-4341-b9f4-2eaeadd5633b"
+  },
+  {
+    "name": "Propane Refilling Station",
+    "slug": "propane_refilling_station",
+    "icon": "propane_refilling_station",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "4c20fa86-b539-4901-964f-e75ceb60df48"
+  },
+  {
+    "name": "Public bath",
+    "slug": "public_bath",
+    "icon": "public_bath",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "b18ebf6a-861e-4a2f-8461-95926d02611f"
+  },
+  {
+    "name": "RV Hookup",
+    "slug": "rv_hookup",
+    "icon": "rv_hookup",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "b6db75c9-d22b-4bcf-9b8c-5a857baffda6"
+  },
+  {
+    "name": "RV Sanitation",
+    "slug": "rv_sanitation",
+    "icon": "rv_sanitation",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "56d9ecd1-23d4-4d5a-aee8-fefa3ba6d1e1"
+  },
+  {
+    "name": "Shared lounge/TV area",
+    "slug": "shared_lounge_tv_area",
+    "icon": "shared_lounge_tv_area",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "f8c33a08-b531-45e7-9b67-d6fc52b6ba57"
+  },
+  {
+    "name": "Ski-to-door access",
+    "slug": "ski_to_door_access",
+    "icon": "ski_to_door_access",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "f5b8ecd5-f007-4283-8e85-f1a0edda356f"
+  },
+  {
+    "name": "Souvenir/Gift Shop",
+    "slug": "souvenir_gift_shop",
+    "icon": "souvenir_gift_shop",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "ee38c28d-64d2-4982-b7d3-912d39c7de85"
+  },
+  {
+    "name": "Spa Facilities",
+    "slug": "spa_facilities",
+    "icon": "spa_facilities",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "d0d645ee-a795-468f-aad1-cdfe3dd4be5d"
+  },
+  {
+    "name": "Spa lounge/relaxation area",
+    "slug": "spa_lounge_relaxation_area",
+    "icon": "spa_lounge_relaxation_area",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "af9726b5-537b-42c3-8020-65a9926d4727"
+  },
+  {
+    "name": "Spa & Wellness Centre",
+    "slug": "spa_wellness_centre",
+    "icon": "spa_wellness_centre",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "8190b8f8-54ac-429b-9d9b-f0d62718c2d3"
+  },
+  {
+    "name": "Spa/wellness packages",
+    "slug": "spa_wellness_packages",
+    "icon": "spa_wellness_packages",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "a41901a1-bbd4-4ca6-9a4a-79fe0e22e750"
+  },
+  {
+    "name": "Special Diet Menus (on request)",
+    "slug": "special_diet_menus_on_request",
+    "icon": "special_diet_menus_on_request",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "839922b5-51f4-42c3-9b3b-524d93c4916b"
+  },
+  {
+    "name": "Steam room",
+    "slug": "steam_room",
+    "icon": "steam_room",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "bacc0836-b06d-4937-9f2a-ec28984f8d7e"
+  },
+  {
+    "name": "Strollers",
+    "slug": "strollers",
+    "icon": "strollers",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "6838326a-9df2-4ad6-9219-799679196940"
+  },
+  {
+    "name": "Sun loungers or beach chairs",
+    "slug": "sun_loungers_or_beach_chairs",
+    "icon": "sun_loungers_or_beach_chairs",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "9e384fab-7727-4ae7-9a8e-e11324b94886"
+  },
+  {
+    "name": "Sun umbrellas",
+    "slug": "sun_umbrellas",
+    "icon": "sun_umbrellas",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "d8ad7782-9ee2-456e-bcf5-b61621848f7f"
+  },
+  {
+    "name": "Swimming pool toys",
+    "slug": "swimming_pool_toys",
+    "icon": "swimming_pool_toys",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "0bdab171-55e0-496e-a7fc-f7acdac29f8e"
+  },
+  {
+    "name": "Vending Machine (drinks)",
+    "slug": "vending_machine_drinks",
+    "icon": "vending_machine_drinks",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "cc1064c8-e0e5-48ee-9720-11cdb271d1c0"
+  },
+  {
+    "name": "Vending Machine(snacks)",
+    "slug": "vending_machine_snacks",
+    "icon": "vending_machine_snacks",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "ddbb1d11-eb11-4527-9617-6f9798943b30"
+  },
+  {
+    "name": "Waterfront",
+    "slug": "waterfront",
+    "icon": "waterfront",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "71a3bbe2-529a-48e2-8c0a-8fbdb50e18f5"
+  },
+  {
+    "name": "Water slide",
+    "slug": "water_slide",
+    "icon": "water_slide",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "674c3fae-5267-4798-8395-6574d7fb6ca0"
+  },
+  {
+    "name": "Access to health care professionals",
+    "slug": "access_to_health_care_professionals",
+    "icon": "access_to_health_care_professionals",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "69172f92-de58-4820-967d-043c4975cf60"
+  },
+  {
+    "name": "Baby safety gates",
+    "slug": "baby_safety_gates",
+    "icon": "baby_safety_gates",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "e127e93c-8956-4608-bc35-753a0c652d7a"
+  },
+  {
+    "name": "Shuttle Service",
+    "slug": "shuttle_service",
+    "icon": "shuttle_service",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "d5b2c8a1-088f-469b-9098-df916bb31f6d"
+  },
+  {
+    "name": "Ticket service",
+    "slug": "ticket_service",
+    "icon": "ticket_service",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "b52834ee-7405-4e56-af7c-8abcde5da8c5"
+  },
+  {
+    "name": "Carbon monoxide source",
+    "slug": "carbon_monoxide_source",
+    "icon": "carbon_monoxide_source",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "07b4689e-ca6f-45e5-812b-eb6761724090"
+  },
+  {
+    "name": "CCTV in common areas",
+    "slug": "cctv_in_common_areas",
+    "icon": "cctv_in_common_areas",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "985fb017-efcb-4677-b635-40304d21e43a"
+  },
+  {
+    "name": "CCTV outside property",
+    "slug": "cctv_outside_property",
+    "icon": "cctv_outside_property",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "f63da231-cb79-4389-a415-8abab6e5781f"
+  },
+  {
+    "name": "Fire extinguishers",
+    "slug": "fire_extinguishers",
+    "icon": "fire_extinguishers",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "182d38d2-38bf-41de-a258-e5219a9c4bbb"
+  },
+  {
+    "name": "First aid kit available",
+    "slug": "first_aid_kit_available",
+    "icon": "first_aid_kit_available",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "124edccf-939d-4b91-a96f-9dcac12abe2b"
+  },
+  {
+    "name": "Key access",
+    "slug": "key_access",
+    "icon": "key_access",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "448c5ba3-091a-428c-b9eb-338fdb53f17c"
+  },
+  {
+    "name": "Key card access",
+    "slug": "key_card_access",
+    "icon": "key_card_access",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "41c21c55-57b4-43a4-a642-19f1b4d2df76"
+  },
+  {
+    "name": "Lockers",
+    "slug": "lockers",
+    "icon": "lockers",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "1e2526ff-bd9e-4025-823f-9a72e097a61c"
+  },
+  {
+    "name": "Safe",
+    "slug": "safe",
+    "icon": "safe",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "9b03de01-6f46-4e97-b87a-2342ed28c4b3"
+  },
+  {
+    "name": "Security alarm",
+    "slug": "security_alarm",
+    "icon": "security_alarm",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "d9ce4d37-687a-425f-b547-f77eacbcf745"
+  },
+  {
+    "name": "Smoke alarms",
+    "slug": "smoke_alarms",
+    "icon": "smoke_alarms",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "aff1fa7c-46f5-4c42-9fa6-8cc584cc0611"
+  },
+  {
+    "name": "Toilet with grab rails",
+    "slug": "toilet_with_grab_rails",
+    "icon": "toilet_with_grab_rails",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "ebff1d20-222e-4364-a0fd-6863c7cbc7a3"
+  },
+  {
+    "name": "20 Amps",
+    "slug": "20_amps",
+    "icon": "20_amps",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "bd554c55-65b8-4276-acc7-47ca59cebe51"
+  },
+  {
+    "name": "Contactless check-in/out",
+    "slug": "contactless_check_in_out",
+    "icon": "contactless_check_in_out",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "c9c3078a-60c9-444d-bca6-bb40aae7b998"
+  },
+  {
+    "name": "Delivered food is securely covered",
+    "slug": "delivered_food_is_securely_covered",
+    "icon": "delivered_food_is_securely_covered",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "7e4d5375-6dc6-41c3-934b-5f334270a6f4"
+  },
+  {
+    "name": "Face masks for guests available",
+    "slug": "face_masks_for_guests_available",
+    "icon": "face_masks_for_guests_available",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "6835bb86-56dc-48cb-9cff-6e8794ca8a24"
+  },
+  {
+    "name": "Fence around pool",
+    "slug": "fence_around_pool",
+    "icon": "fence_around_pool",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "416265d0-cfa3-4084-a861-3fdc013bac35"
+  },
+  {
+    "name": "Guest accommodation sealed after cleaning",
+    "slug": "guest_accommodation_sealed_after_cleaning",
+    "icon": "guest_accommodation_sealed_after_cleaning",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "161b2ab9-dda5-46f0-b79c-72f28715822c"
+  },
+  {
+    "name": "Guest accomodation cleaning can be avoided on request",
+    "slug": "guest_accomodation_cleaning_can_be_avoided_on_request",
+    "icon": "guest_accomodation_cleaning_can_be_avoided_on_request",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "fac58081-6e83-44c9-a8b8-a54c32dcc1bf"
+  },
+  {
+    "name": "Hand sanitiser in guest accommodation and key areas",
+    "slug": "hand_sanitiser_in_guest_accommodation_and_key_areas",
+    "icon": "hand_sanitiser_in_guest_accommodation_and_key_areas",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "adb51d29-3c84-4076-9bbd-70b40995bf16"
+  },
+  {
+    "name": "Higher level toilet",
+    "slug": "higher_level_toilet",
+    "icon": "higher_level_toilet",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "58dd91ef-8b96-4d5c-b588-3379f5ac8206"
+  },
+  {
+    "name": "In-room dining options available",
+    "slug": "in_room_dining_options_available",
+    "icon": "in_room_dining_options_available",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "32ac9394-33a6-4a1b-9b6a-378a72850a3d"
+  },
+  {
+    "name": "Linens, towels and laundry washed in accordance with local authorities guidelines",
+    "slug": "linens_towels_and_laundry_washed_in_accordance_with_local_authorities_guidelines",
+    "icon": "linens_towels_and_laundry_washed_in_accordance_with_local_authorities_guidelines",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "dc7e7c20-683b-49ef-a065-e447c26e7939"
+  },
+  {
+    "name": "Low bathroom sink",
+    "slug": "low_bathroom_sink",
+    "icon": "low_bathroom_sink",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "c648e247-5fb5-4c7d-bb37-e7ded5acb7a2"
+  },
+  {
+    "name": "Mobile app for room service",
+    "slug": "mobile_app_for_room_service",
+    "icon": "mobile_app_for_room_service",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "dd904ffb-6da4-4808-a5fc-4fa69a1c004c"
+  },
+  {
+    "name": "Physical distancing following guidelines from local authorities",
+    "slug": "physical_distancing_following_guidelines_from_local_authorities",
+    "icon": "physical_distancing_following_guidelines_from_local_authorities",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "1d9d45de-c019-43a4-a1f1-041ac1419754"
+  },
+  {
+    "name": "Physical distancing in dining areas",
+    "slug": "physical_distancing_in_dining_areas",
+    "icon": "physical_distancing_in_dining_areas",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "dd7c4d90-1141-4888-8eec-4799f16e6e6d"
+  },
+  {
+    "name": "Pool cover",
+    "slug": "pool_cover",
+    "icon": "pool_cover",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "0f5688fa-82cb-4892-8ebe-56c803417a02"
+  },
+  {
+    "name": "Process in place to check health of guests",
+    "slug": "process_in_place_to_check_health_of_guests",
+    "icon": "process_in_place_to_check_health_of_guests",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "bc229e64-9f22-46e2-9aa4-882a260aa15c"
+  },
+  {
+    "name": "Property is cleaned by professional cleaning companies",
+    "slug": "property_is_cleaned_by_professional_cleaning_companies",
+    "icon": "property_is_cleaned_by_professional_cleaning_companies",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "338883aa-b3e1-4b80-87d3-8b8595f9d4d2"
+  },
+  {
+    "name": "Screens or physical barriers placed between staff and guests in appropriate areas",
+    "slug": "screens_or_physical_barriers_placed_between_staff_and_guests_in_appropriate_areas",
+    "icon": "screens_or_physical_barriers_placed_between_staff_and_guests_in_appropriate_areas",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "40568025-26eb-4b37-ac75-d5159692c2c2"
+  },
+  {
+    "name": "Shared stationery such as printed menus, magazines, pens, and paper removed",
+    "slug": "shared_stationery_such_as_printed_menus_magazines_pens_and_paper_removed",
+    "icon": "shared_stationery_such_as_printed_menus_magazines_pens_and_paper_removed",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "b849d072-fc10-4e7b-a53a-7b7e7bd568cd"
+  },
+  {
+    "name": "Staff follow all safety protocols as directed by local authorities",
+    "slug": "staff_follow_all_safety_protocols_as_directed_by_local_authorities",
+    "icon": "staff_follow_all_safety_protocols_as_directed_by_local_authorities",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "baaf91f4-de29-4c6f-a4e7-3d1ff10cbd86"
+  },
+  {
+    "name": "Thermometers for guests provided by property",
+    "slug": "thermometers_for_guests_provided_by_property",
+    "icon": "thermometers_for_guests_provided_by_property",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "f4a8e426-17a0-44bc-90fb-8e9fe09583cf"
+  },
+  {
+    "name": "Use of cleaning chemicals that are effective against Coronavirus",
+    "slug": "use_of_cleaning_chemicals_that_are_effective_against_coronavirus",
+    "icon": "use_of_cleaning_chemicals_that_are_effective_against_coronavirus",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "e418c2e0-a582-4e86-aa86-bf7286a589b2"
+  },
+  {
+    "name": "Bar",
+    "slug": "bar",
+    "icon": "bar",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "f47cd66c-6074-440b-8a70-bc97e7178512"
+  },
+  {
+    "name": "Bottle of water",
+    "slug": "bottle_of_water",
+    "icon": "bottle_of_water",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "151ccdd3-e7f9-4874-9bca-8a02ba871c32"
+  },
+  {
+    "name": "Breakfast",
+    "slug": "breakfast",
+    "icon": "breakfast",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "3835ea28-7544-46b7-bbce-53b9d0e2fa3e"
+  },
+  {
+    "name": "Breakfast in the room",
+    "slug": "breakfast_in_the_room",
+    "icon": "breakfast_in_the_room",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "0af3c819-1652-4b4b-a1ce-2d0a6d54e0fe"
+  },
+  {
+    "name": "Chocolate/Cookies",
+    "slug": "chocolate_cookies",
+    "icon": "chocolate_cookies",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "e1c547ca-3dee-430b-a80e-d18861ae2f51"
+  },
+  {
+    "name": "Drinking Water",
+    "slug": "drinking_water",
+    "icon": "drinking_water",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "028eeb7a-9db5-4b54-94af-1a012a1838a1"
+  },
+  {
+    "name": "Fruits",
+    "slug": "fruits",
+    "icon": "fruits",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "05ae5e8c-3ac6-4ae3-9996-941b928d5f67"
+  },
+  {
+    "name": "On-site coffee house",
+    "slug": "on_site_coffee_house",
+    "icon": "on_site_coffee_house",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "d9f0eb5f-2b97-4561-b836-402c99f27d85"
+  },
+  {
+    "name": "Restaurant",
+    "slug": "restaurant",
+    "icon": "restaurant",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "893cae56-0348-4e27-844f-df092b47c2e5"
+  },
+  {
+    "name": "Shared Kitchen",
+    "slug": "shared_kitchen",
+    "icon": "shared_kitchen",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "f53cf9a8-9e6c-4d40-a7f9-34b8c383d4c9"
+  },
+  {
+    "name": "Snack bar",
+    "slug": "snack_bar",
+    "icon": "snack_bar",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "841951f1-f4e8-4543-8efa-6e31c845efaa"
+  },
+  {
+    "name": "Wine/Champagne",
+    "slug": "wine_champagne",
+    "icon": "wine_champagne",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "e4325b9f-b6c1-4b97-8ac7-800ab4324f7a"
+  },
+  {
+    "name": "Aerobics",
+    "slug": "aerobics",
+    "icon": "aerobics",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "bacd5c8b-e9a9-46dd-ab2b-deb3c98fe870"
+  },
+  {
+    "name": "Archery",
+    "slug": "archery",
+    "icon": "archery",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "d7f359de-1d8e-465d-9113-ff2fb411e962"
+  },
+  {
+    "name": "Badminton equipment",
+    "slug": "badminton_equipment",
+    "icon": "badminton_equipment",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "55918185-c477-48b1-af9d-40847b13ade0"
+  },
+  {
+    "name": "Beach",
+    "slug": "beach",
+    "icon": "beach",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "c08ecda3-44e0-4ff7-8a71-2b7ee900d18f"
+  },
+  {
+    "name": "Bicycle rentals",
+    "slug": "bicycle_rentals",
+    "icon": "bicycle_rentals",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "a03977d0-efef-4e1e-ae93-3476819e4a33"
+  },
+  {
+    "name": "Bike tours",
+    "slug": "bike_tours",
+    "icon": "bike_tours",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "dbfe2a79-3c83-4d38-9faf-0364ea1412b3"
+  },
+  {
+    "name": "Billiard",
+    "slug": "billiard",
+    "icon": "billiard",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "1e68dbd1-17f0-4047-821a-2899221f9e67"
+  },
+  {
+    "name": "Bingo",
+    "slug": "bingo",
+    "icon": "bingo",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "f31300fb-d6db-442a-943e-ff8129eefdb1"
+  },
+  {
+    "name": "Bowling",
+    "slug": "bowling",
+    "icon": "bowling",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "8ed39a68-564c-4fc0-8861-0cbe74bea562"
+  },
+  {
+    "name": "Canoeing",
+    "slug": "canoeing",
+    "icon": "canoeing",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "66706e71-f403-404e-834a-d9bf1b5ce8bf"
+  },
+  {
+    "name": "Casino",
+    "slug": "casino",
+    "icon": "casino",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "120b9045-79b0-4fe1-ad59-12b690fff1bf"
+  },
+  {
+    "name": "Cooking class",
+    "slug": "cooking_class",
+    "icon": "cooking_class",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "8c1cc8ab-e4ee-45d4-b1ad-0369fa1ccd1b"
+  },
+  {
+    "name": "Cycling",
+    "slug": "cycling",
+    "icon": "cycling",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "7c699972-5ea9-4ad2-987d-f4d86ccf9c0c"
+  },
+  {
+    "name": "Darts",
+    "slug": "darts",
+    "icon": "darts",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "73d27967-0f00-402b-b66d-255d84839949"
+  },
+  {
+    "name": "Diving",
+    "slug": "diving",
+    "icon": "diving",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "7b9bb814-a9e1-46cc-b82b-2b72ba0115d8"
+  },
+  {
+    "name": "Evening Entertainment",
+    "slug": "evening_entertainment",
+    "icon": "evening_entertainment",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "91b67db9-574a-4ad0-8996-9244c38f75de"
+  },
+  {
+    "name": "Fishing",
+    "slug": "fishing",
+    "icon": "fishing",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "85802ed4-5153-4932-b729-793754ec4cf1"
+  },
+  {
+    "name": "Fitness classes",
+    "slug": "fitness_classes",
+    "icon": "fitness_classes",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "3d0d70f2-e312-42fb-b3cc-9712b040b190"
+  },
+  {
+    "name": "Game room",
+    "slug": "game_room",
+    "icon": "game_room",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "d703d8b3-612d-407c-aead-86a6de6923f7"
+  },
+  {
+    "name": "Golf Course (within 2 miles)",
+    "slug": "golf_course_within_2_miles",
+    "icon": "golf_course_within_2_miles",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "319ba06a-9593-4b79-ab0e-be48cf251986"
+  },
+  {
+    "name": "Hiking",
+    "slug": "hiking",
+    "icon": "hiking",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "9d6004e4-d627-4cc1-bebb-a3c5a1f6b95b"
+  },
+  {
+    "name": "Horseback riding",
+    "slug": "horseback_riding",
+    "icon": "horseback_riding",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "72706ee2-a985-420a-af67-af390a7db518"
+  },
+  {
+    "name": "Karaoke",
+    "slug": "karaoke",
+    "icon": "karaoke",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "8d9cd946-dd47-4ac8-bfe1-e65f4b7c99d3"
+  },
+  {
+    "name": "Live music/performance",
+    "slug": "live_music_performance",
+    "icon": "live_music_performance",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "1498643e-9c2f-4f77-9df9-ac8e70d51176"
+  },
+  {
+    "name": "Live sports events (broadcast)",
+    "slug": "live_sports_events_broadcast",
+    "icon": "live_sports_events_broadcast",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "52a2d9a7-ff39-4168-9537-06dc58fda420"
+  },
+  {
+    "name": "Minigolf",
+    "slug": "minigolf",
+    "icon": "minigolf",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "18fae0f6-abbf-4716-a9f8-d14b4713d16a"
+  },
+  {
+    "name": "Movie nights",
+    "slug": "movie_nights",
+    "icon": "movie_nights",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "ad49eeb4-da0d-4386-a036-2a431fb2c761"
+  },
+  {
+    "name": "Visual aids: Tactile Signs",
+    "slug": "visual_aids_tactile_signs",
+    "icon": "visual_aids_tactile_signs",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "5e257d0a-8114-480c-8834-028bb23cf395"
+  },
+  {
+    "name": "Accessible parking",
+    "slug": "accessible_parking",
+    "icon": "accessible_parking",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "cfd17530-e04f-423a-9851-2981a225ab14"
+  },
+  {
+    "name": "Community BBQ/Grill",
+    "slug": "community_bbq_grill",
+    "icon": "community_bbq_grill",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "3b891bc0-527d-4127-bba9-5562273a40f1"
+  },
+  {
+    "name": "Fire Ring / Grill",
+    "slug": "fire_ring_grill",
+    "icon": "fire_ring_grill",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "d7773502-6270-40b0-8274-94eb9d2f1e5e"
+  },
+  {
+    "name": "Picnic area",
+    "slug": "picnic_area",
+    "icon": "picnic_area",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "1111bcc4-d5c3-4892-af31-476648501fe9"
+  },
+  {
+    "name": "Picnic Table",
+    "slug": "picnic_table",
+    "icon": "picnic_table",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "dcdddfab-73ec-46c7-9b95-0a96bfd4abec"
+  },
+  {
+    "name": "Room service",
+    "slug": "room_service",
+    "icon": "room_service",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "ce1977fd-d323-48f9-a89d-74de2f27f37f"
+  },
+  {
+    "name": "Happy hour",
+    "slug": "happy_hour",
+    "icon": "happy_hour",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "bbbe2c8b-15cc-40b0-8207-794aa82f0cbd"
+  },
+  {
+    "name": "Indoor Swimming Pool (all year)",
+    "slug": "indoor_swimming_pool_all_year",
+    "icon": "indoor_swimming_pool_all_year",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "f6211fdb-325f-4e27-ab8b-fa92cdee895e"
+  },
+  {
+    "name": "Indoor Swimming Pool (seasonal)",
+    "slug": "indoor_swimming_pool_seasonal",
+    "icon": "indoor_swimming_pool_seasonal",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "1548b756-8acb-4b64-bd8b-0546754fd22e"
+  },
+  {
+    "name": "Outdoor Swimming Pool (all year)",
+    "slug": "outdoor_swimming_pool_all_year",
+    "icon": "outdoor_swimming_pool_all_year",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "2ff175ae-4245-43ef-b43b-159bc163b302"
+  },
+  {
+    "name": "Outdoor Swimming Pool (seasonal)",
+    "slug": "outdoor_swimming_pool_seasonal",
+    "icon": "outdoor_swimming_pool_seasonal",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "b7843a89-c410-45c3-ac36-ebd1c93b9e24"
+  },
+  {
+    "name": "Pub crawls",
+    "slug": "pub_crawls",
+    "icon": "pub_crawls",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "cefd9064-5b1f-4a2f-b355-b480722c712b"
+  },
+  {
+    "name": "Ski equipment hire (on site)",
+    "slug": "ski_equipment_hire_on_site",
+    "icon": "ski_equipment_hire_on_site",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "ec4b179c-750d-44be-ae87-8328c31afd4f"
+  },
+  {
+    "name": "Skiing",
+    "slug": "skiing",
+    "icon": "skiing",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "5adcd003-740e-49ca-b1c2-d21eb1ae931f"
+  },
+  {
+    "name": "Ski pass vendor",
+    "slug": "ski_pass_vendor",
+    "icon": "ski_pass_vendor",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "613b7322-552f-43d1-8070-44547adebbf5"
+  },
+  {
+    "name": "Ski school",
+    "slug": "ski_school",
+    "icon": "ski_school",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "3c0d5568-0942-42d3-8ad1-2daffa4b50a8"
+  },
+  {
+    "name": "Ski storage",
+    "slug": "ski_storage",
+    "icon": "ski_storage",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "8f2d5f12-0a6a-4519-a405-44bc47938726"
+  },
+  {
+    "name": "Snorkeling",
+    "slug": "snorkeling",
+    "icon": "snorkeling",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "5020e261-2416-4e58-8a4b-a37cf8a57938"
+  },
+  {
+    "name": "Squash",
+    "slug": "squash",
+    "icon": "squash",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "557b84da-41bb-4b6f-ae48-ae76434fc067"
+  },
+  {
+    "name": "Stand-up comedy",
+    "slug": "stand_up_comedy",
+    "icon": "stand_up_comedy",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "754e5e48-ca8e-4ce0-b108-af054043ef06"
+  },
+  {
+    "name": "Table tennis",
+    "slug": "table_tennis",
+    "icon": "table_tennis",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "5bb52b3e-e24e-456c-b304-4f153f06c3c5"
+  },
+  {
+    "name": "Temporary art galleries",
+    "slug": "temporary_art_galleries",
+    "icon": "temporary_art_galleries",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "8ed316a2-8014-4a43-8456-70fe7dbc3301"
+  },
+  {
+    "name": "Tennis court",
+    "slug": "tennis_court",
+    "icon": "tennis_court",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "e03595b8-17ea-4071-aac1-204656cb5866"
+  },
+  {
+    "name": "Tennis equipment",
+    "slug": "tennis_equipment",
+    "icon": "tennis_equipment",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "e499ec0e-7384-4960-884f-045012c7eded"
+  },
+  {
+    "name": "Themed dinner nights",
+    "slug": "themed_dinner_nights",
+    "icon": "themed_dinner_nights",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "25873176-8040-4b30-87cc-8cfb53c5648c"
+  },
+  {
+    "name": "Tour or class about local culture",
+    "slug": "tour_or_class_about_local_culture",
+    "icon": "tour_or_class_about_local_culture",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "811a4c12-9f7d-4a05-bbaa-c989fcf65ffd"
+  },
+  {
+    "name": "Walking tours",
+    "slug": "walking_tours",
+    "icon": "walking_tours",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "b7fa7330-bb7f-46f7-a5a1-3bc08dff27f6"
+  },
+  {
+    "name": "Water park",
+    "slug": "water_park",
+    "icon": "water_park",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "594afede-f63b-4c32-ab0a-053efa6cd5a0"
+  },
+  {
+    "name": "Water Sport Facilities (on site)",
+    "slug": "water_sport_facilities_on_site",
+    "icon": "water_sport_facilities_on_site",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "dba61c2d-53e2-40c6-9ac6-ce21f887f783"
+  },
+  {
+    "name": "Windsurfing",
+    "slug": "windsurfing",
+    "icon": "windsurfing",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "eb556bb8-f603-462f-add3-2491d6596e78"
+  },
+  {
+    "name": "Yoga classes",
+    "slug": "yoga_classes",
+    "icon": "yoga_classes",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "8caeeb52-9feb-4730-9d33-272ddb219b87"
+  },
+  {
+    "name": "Airport shuttle (free)",
+    "slug": "airport_shuttle_free",
+    "icon": "airport_shuttle_free",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "2713845c-2ec3-4674-846b-a45103134919"
+  },
+  {
+    "name": "Airport shuttle service (surcharge)",
+    "slug": "airport_shuttle_service_surcharge",
+    "icon": "airport_shuttle_service_surcharge",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "90a86233-88e1-448c-ad63-d705e13b28cb"
+  },
+  {
+    "name": "Baby sitting",
+    "slug": "baby_sitting",
+    "icon": "baby_sitting",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "66b95066-172e-47a5-8ede-21c52d8efcda"
+  },
+  {
+    "name": "Back massage",
+    "slug": "back_massage",
+    "icon": "back_massage",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "c853057c-dd62-4331-88fe-b859006cac1a"
+  },
+  {
+    "name": "Baggage Storage",
+    "slug": "baggage_storage",
+    "icon": "baggage_storage",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "24f98ce0-5717-47e1-bd95-c792bc9f6250"
+  },
+  {
+    "name": "Body scrub",
+    "slug": "body_scrub",
+    "icon": "body_scrub",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "cc957036-aae8-4ba4-8328-ca4ce96ede59"
+  },
+  {
+    "name": "Body Treatments",
+    "slug": "body_treatments",
+    "icon": "body_treatments",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "551e15e8-8a6f-4e79-97fe-befc262345c0"
+  },
+  {
+    "name": "Body wrap",
+    "slug": "body_wrap",
+    "icon": "body_wrap",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "f2e3892e-72d9-4aa3-a557-03719fb8e8e5"
+  },
+  {
+    "name": "Car rental",
+    "slug": "car_rental",
+    "icon": "car_rental",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "50581878-7f63-4c29-8906-ff2b090e7c30"
+  },
+  {
+    "name": "Concierge desk",
+    "slug": "concierge_desk",
+    "icon": "concierge_desk",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "6411173c-9ec6-415b-89f8-46aaf6d4e7e3"
+  },
+  {
+    "name": "Couples massage",
+    "slug": "couples_massage",
+    "icon": "couples_massage",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "789d32a8-fdc8-4993-abae-54e716ad1a49"
+  },
+  {
+    "name": "Currency exchange",
+    "slug": "currency_exchange",
+    "icon": "currency_exchange",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "7b5d53ad-5f2e-4167-be9f-5a1e42907d5e"
+  },
+  {
+    "name": "Dry cleaning",
+    "slug": "dry_cleaning",
+    "icon": "dry_cleaning",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "f42a5ce2-088c-45e4-85df-a6362f3234d9"
+  },
+  {
+    "name": "Events ticket service",
+    "slug": "events_ticket_service",
+    "icon": "events_ticket_service",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "a63d7d45-5e7f-4c78-a9af-823ba0188d44"
+  },
+  {
+    "name": "Express Check-in/Check-out",
+    "slug": "express_check_in_check_out",
+    "icon": "express_check_in_check_out",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "0f9c160c-b3e9-43e1-b097-ecec2eb3ab75"
+  },
+  {
+    "name": "Facial treatments",
+    "slug": "facial_treatments",
+    "icon": "facial_treatments",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "a2ab656a-004f-44f5-b88d-fbb8cb4e599b"
+  },
+  {
+    "name": "Foot massage",
+    "slug": "foot_massage",
+    "icon": "foot_massage",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "a2c80834-b572-4d19-bd8e-433b5cf159df"
+  },
+  {
+    "name": "Full body massage",
+    "slug": "full_body_massage",
+    "icon": "full_body_massage",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "6d8ee35b-2a52-43c2-9d66-f52a5266f17f"
+  },
+  {
+    "name": "Hair colouring",
+    "slug": "hair_colouring",
+    "icon": "hair_colouring",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "45d4bb90-7328-4453-9a68-fd51d62e2afe"
+  },
+  {
+    "name": "Hair cut",
+    "slug": "hair_cut",
+    "icon": "hair_cut",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "3c71779f-5509-49f2-8b29-81902a0a546c"
+  },
+  {
+    "name": "Hair styling",
+    "slug": "hair_styling",
+    "icon": "hair_styling",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "cd8cb776-0128-42c2-87a8-d36de0f4fbc4"
+  },
+  {
+    "name": "Hair treatments",
+    "slug": "hair_treatments",
+    "icon": "hair_treatments",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "02f9c6ca-3c44-4b88-b63a-49c4f8997aab"
+  },
+  {
+    "name": "Hand massage",
+    "slug": "hand_massage",
+    "icon": "hand_massage",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "7e37569f-7ab7-4fc0-8ce9-e6156a80a99f"
+  },
+  {
+    "name": "Head massage",
+    "slug": "head_massage",
+    "icon": "head_massage",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "d8be8cef-7991-46e1-b913-282719d23a45"
+  },
+  {
+    "name": "Private beach area",
+    "slug": "private_beach_area",
+    "icon": "private_beach_area",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "4c1f130a-097d-4dbd-8f68-80ae8afd817f"
+  },
+  {
+    "name": "Ski Shuttle",
+    "slug": "ski_shuttle",
+    "icon": "ski_shuttle",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "af168436-a0d0-4cd9-ba25-9f8d259b410e"
+  },
+  {
+    "name": "Bikes available (free)",
+    "slug": "bikes_available_free",
+    "icon": "bikes_available_free",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "698c0acc-02a1-4b92-bd7a-38b0ae83c5b1"
+  },
+  {
+    "name": "Business center",
+    "slug": "business_center",
+    "icon": "business_center",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "fc1123be-3ad9-4634-a862-cc785197c86a"
+  },
+  {
+    "name": "Fitness Center",
+    "slug": "fitness_center",
+    "icon": "fitness_center",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "9f3ae468-b3e1-4df0-aea8-3f85b7f9e6cf"
+  },
+  {
+    "name": "Grocery shopping service available",
+    "slug": "grocery_shopping_service_available",
+    "icon": "grocery_shopping_service_available",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "a7e8a36e-b147-4bf6-ac86-73b22505bbb7"
+  },
+  {
+    "name": "Ironing service",
+    "slug": "ironing_service",
+    "icon": "ironing_service",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "5fdf9566-6fe0-4377-a469-cd2e4a12a950"
+  },
+  {
+    "name": "Laundry",
+    "slug": "laundry",
+    "icon": "laundry",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "e313e9b9-dc1b-40ac-a100-ac5ea02dacac"
+  },
+  {
+    "name": "Light therapy",
+    "slug": "light_therapy",
+    "icon": "light_therapy",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "f67dbfd7-502c-47f4-a2cc-233c7a09ab9f"
+  },
+  {
+    "name": "Make up services",
+    "slug": "make_up_services",
+    "icon": "make_up_services",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "effcdff1-af36-4570-ae26-4465721fd32f"
+  },
+  {
+    "name": "Manicure",
+    "slug": "manicure",
+    "icon": "manicure",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "4780025d-b817-4899-96db-4b9bca93a728"
+  },
+  {
+    "name": "Massage",
+    "slug": "massage",
+    "icon": "massage",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "cf7a6fc9-4501-4015-9c11-d06b617bcbbc"
+  },
+  {
+    "name": "Meeting/Banquet Facilities",
+    "slug": "meeting_banquet_facilities",
+    "icon": "meeting_banquet_facilities",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "962316cf-544c-4693-9dc8-56e70c15a3ed"
+  },
+  {
+    "name": "Neck massage",
+    "slug": "neck_massage",
+    "icon": "neck_massage",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "de873c64-b2ef-4bf5-a302-5f91abbcef08"
+  },
+  {
+    "name": "Pedicure",
+    "slug": "pedicure",
+    "icon": "pedicure",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "7b238cb7-65d6-404b-a720-d9a2f12001c7"
+  },
+  {
+    "name": "Public transport tickets",
+    "slug": "public_transport_tickets",
+    "icon": "public_transport_tickets",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "860e5be3-96d6-4b26-bb00-e772bc00b60d"
+  },
+  {
+    "name": "Shoeshine",
+    "slug": "shoeshine",
+    "icon": "shoeshine",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "4a47b0de-4b28-452b-9d1f-c951172817ef"
+  },
+  {
+    "name": "Shuttle Service (free)",
+    "slug": "shuttle_service_free",
+    "icon": "shuttle_service_free",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "810832b7-1379-49f9-ba34-20cb12684c8e"
+  },
+  {
+    "name": "Shuttle Service (surcharge)",
+    "slug": "shuttle_service_surcharge",
+    "icon": "shuttle_service_surcharge",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "25aee42c-0dd0-48c6-a711-f4ae03f785be"
+  },
+  {
+    "name": "Tour Desk",
+    "slug": "tour_desk",
+    "icon": "tour_desk",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "a1a43289-ec9d-4409-9fdf-70139779ab4b"
+  },
+  {
+    "name": "Trash Service",
+    "slug": "trash_service",
+    "icon": "trash_service",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "8c1c7436-d449-4bca-b2e6-6950ee04b1e0"
+  },
+  {
+    "name": "Trouser press",
+    "slug": "trouser_press",
+    "icon": "trouser_press",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "38d7822d-9fe7-48c9-9b5e-53e2ed6b10cd"
+  },
+  {
+    "name": "Waxing services",
+    "slug": "waxing_services",
+    "icon": "waxing_services",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "0d0732f7-3d47-47a2-bf52-6fcc1eb56c2a"
+  },
+  {
+    "name": "BBQ/Picnic area",
+    "slug": "bbq_picnic_area",
+    "icon": "bbq_picnic_area",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "3226463a-5468-4886-b16f-3a7738e5679f"
+  },
+  {
+    "name": "Garden",
+    "slug": "garden",
+    "icon": "garden",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "7fda90a7-90fb-4abe-a180-dfc1e9160af3"
+  },
+  {
+    "name": "Infinity pool",
+    "slug": "infinity_pool",
+    "icon": "infinity_pool",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "01679d16-7d5b-478e-98df-fc0024b33917"
+  },
+  {
+    "name": "Kids' outdoor play equipment",
+    "slug": "kids_outdoor_play_equipment",
+    "icon": "kids_outdoor_play_equipment",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "5384a7e3-5829-4d48-910b-456c97fd28b3"
+  },
+  {
+    "name": "Outdoor fireplace",
+    "slug": "outdoor_fireplace",
+    "icon": "outdoor_fireplace",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "90bd3d22-3ee3-460a-b3ea-b733939791a0"
+  },
+  {
+    "name": "Outdoor furniture",
+    "slug": "outdoor_furniture",
+    "icon": "outdoor_furniture",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "a8d8aafd-de58-4450-8f10-a4eac3f097f4"
+  },
+  {
+    "name": "Outdoor pool",
+    "slug": "outdoor_pool",
+    "icon": "outdoor_pool",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "424dd5ab-a53d-4c7e-bf6c-25d0c028a4d1"
+  },
+  {
+    "name": "Playground",
+    "slug": "playground",
+    "icon": "playground",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "2d5d66ab-6183-40a2-8e96-9d1a6cd2a740"
+  },
+  {
+    "name": "Plunge pool",
+    "slug": "plunge_pool",
+    "icon": "plunge_pool",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "cb9448ff-acc0-4c87-a427-a3c3348815dc"
+  },
+  {
+    "name": "Pool bar",
+    "slug": "pool_bar",
+    "icon": "pool_bar",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "bb725505-dc6d-47ec-babf-3439b7ae4180"
+  },
+  {
+    "name": "Pool with view",
+    "slug": "pool_with_view",
+    "icon": "pool_with_view",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "cfe87d7d-b6ef-4dcf-b5c7-57d14a938b39"
+  },
+  {
+    "name": "Rooftop pool",
+    "slug": "rooftop_pool",
+    "icon": "rooftop_pool",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "2a87b7a6-e038-4c06-922e-de87ec967743"
+  },
+  {
+    "name": "Salt-water pool",
+    "slug": "salt_water_pool",
+    "icon": "salt_water_pool",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "5e3ada8d-7961-4636-9c6e-cdb95972bf7f"
+  },
+  {
+    "name": "Shallow end pool",
+    "slug": "shallow_end_pool",
+    "icon": "shallow_end_pool",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "522e9338-3271-4800-be97-8ed25576be7a"
+  },
+  {
+    "name": "Sun terrace",
+    "slug": "sun_terrace",
+    "icon": "sun_terrace",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "8a4109f0-3952-4a33-98fa-4787008f8cfc"
+  },
+  {
+    "name": "Swimming pool",
+    "slug": "swimming_pool",
+    "icon": "swimming_pool",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "b8956092-5d84-472e-8536-4d9c8a48759d"
+  },
+  {
+    "name": "Terrace",
+    "slug": "terrace",
+    "icon": "terrace",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "750dfd2e-b14a-4e9f-9d94-0951f9e83a0f"
+  },
+  {
+    "name": "30 Amps",
+    "slug": "30_amps",
+    "icon": "30_amps",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "ef79dabf-ad63-496b-be2e-3fc9afb04059"
+  },
+  {
+    "name": "Nightclub/DJ",
+    "slug": "nightclub_dj",
+    "icon": "nightclub_dj",
+    "category": "Activities",
+    "amenity_type": "hotel",
+    "channex_id": "74690ab2-5880-40e4-8922-dbc27e015b60"
+  },
+  {
+    "name": "Sauna",
+    "slug": "sauna",
+    "icon": "sauna",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "38e4dac8-0938-4805-9aad-c682fd0b4582"
+  },
+  {
+    "name": "Shops (on site)",
+    "slug": "shops_on_site",
+    "icon": "shops_on_site",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "30a6d4be-c694-465c-84e1-0111108e5db4"
+  },
+  {
+    "name": "Solarium",
+    "slug": "solarium",
+    "icon": "solarium",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "de5c2a44-ab05-4934-ac30-11c826ea6ece"
+  },
+  {
+    "name": "Turkish/ Steam Bath",
+    "slug": "turkish_steam_bath",
+    "icon": "turkish_steam_bath",
+    "category": "Outdoors",
+    "amenity_type": "hotel",
+    "channex_id": "a03436b3-39c7-4509-b7a0-2d9c975ae7f8"
+  },
+  {
+    "name": "Valet parking",
+    "slug": "valet_parking",
+    "icon": "valet_parking",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "d101c76d-1f0e-476b-8a1f-e1152e0757c7"
+  },
+  {
+    "name": "Property removed all, or never offered, plastic cups",
+    "slug": "property_removed_all_or_never_offered_plastic_cups",
+    "icon": "property_removed_all_or_never_offered_plastic_cups",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "0eaae870-a6be-4de5-850b-7cd3504d34ee"
+  },
+  {
+    "name": "Property removed all, or never offered, plastic cutlery and tableware",
+    "slug": "property_removed_all_or_never_offered_plastic_cutlery_and_tableware",
+    "icon": "property_removed_all_or_never_offered_plastic_cutlery_and_tableware",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "3e9f3e63-a861-4470-952a-8797ea1c0651"
+  },
+  {
+    "name": "Bike parking",
+    "slug": "bike_parking",
+    "icon": "bike_parking",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "40c6485b-000a-43b1-aea9-6525eaed2ad4"
+  },
+  {
+    "name": "Electric vehicle charging station",
+    "slug": "electric_vehicle_charging_station",
+    "icon": "electric_vehicle_charging_station",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "9030aa2f-62b1-45b3-a452-41a8982e50bc"
+  },
+  {
+    "name": "Bike rental",
+    "slug": "bike_rental",
+    "icon": "bike_rental",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "be217262-689c-4e67-94b1-a0ebf4cb5dde"
+  },
+  {
+    "name": "Opt-out from daily room cleaning",
+    "slug": "opt_out_from_daily_room_cleaning",
+    "icon": "opt_out_from_daily_room_cleaning",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "ab097c4a-e857-49c2-91f1-ef9dc18d0c93"
+  },
+  {
+    "name": "Indoor parking",
+    "slug": "indoor_parking",
+    "icon": "indoor_parking",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "07bb6fc3-2583-4c08-9ada-eaa8f5d87abd"
+  },
+  {
+    "name": "Pull-Thru RV Sites",
+    "slug": "pull_thru_rv_sites",
+    "icon": "pull_thru_rv_sites",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "4fedc189-d623-4a88-8229-422a7392bc50"
+  },
+  {
+    "name": "Secured parking",
+    "slug": "secured_parking",
+    "icon": "secured_parking",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "65fba6e9-cac9-4e96-aab8-a785c13e503e"
+  },
+  {
+    "name": "Street parking",
+    "slug": "street_parking",
+    "icon": "street_parking",
+    "category": "Parking",
+    "amenity_type": "hotel",
+    "channex_id": "6fe8d0f3-1f34-49e0-ae60-5a7e4cc28fc0"
+  },
+  {
+    "name": "Pet basket",
+    "slug": "pet_basket",
+    "icon": "pet_basket",
+    "category": "Pets",
+    "amenity_type": "hotel",
+    "channex_id": "81d5ee31-c65b-4b82-97df-7e73c80dda6e"
+  },
+  {
+    "name": "Pet bowls",
+    "slug": "pet_bowls",
+    "icon": "pet_bowls",
+    "category": "Pets",
+    "amenity_type": "hotel",
+    "channex_id": "7255858d-470b-479a-b927-76018c1bb3dc"
+  },
+  {
+    "name": "Pet Friendly",
+    "slug": "pet_friendly",
+    "icon": "pet_friendly",
+    "category": "Pets",
+    "amenity_type": "hotel",
+    "channex_id": "4610a953-20ba-4c82-bb0a-2210bbdf8557"
+  },
+  {
+    "name": "Pets Allowed",
+    "slug": "pets_allowed",
+    "icon": "pets_allowed",
+    "category": "Pets",
+    "amenity_type": "hotel",
+    "channex_id": "41083f9e-4538-490d-8fce-1be18c00fcf1"
+  },
+  {
+    "name": "Accessible by Lift",
+    "slug": "accessible_by_lift",
+    "icon": "accessible_by_lift",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "91387c6b-ac21-46f1-ab1b-1147550d8fe1"
+  },
+  {
+    "name": "Adapter",
+    "slug": "adapter",
+    "icon": "adapter",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "8634a6bd-c39a-4605-9086-00f557d00976"
+  },
+  {
+    "name": "Air purifiers available",
+    "slug": "air_purifiers_available",
+    "icon": "air_purifiers_available",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "09233650-f44a-479a-8d8b-ba8efbf1f4bd"
+  },
+  {
+    "name": "Airconditioning",
+    "slug": "airconditioning",
+    "icon": "airconditioning",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "9f5726e2-f979-4b6b-a69e-cbca387bc7ea"
+  },
+  {
+    "name": "Baby safety gates",
+    "slug": "baby_safety_gates",
+    "icon": "baby_safety_gates",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "4d7cc1cd-d79f-407b-9be4-eb0af95e1bd5"
+  },
+  {
+    "name": "Board games/puzzles",
+    "slug": "board_games_puzzles",
+    "icon": "board_games_puzzles",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "60fd8f18-6f70-4f31-9c8a-ea97ef7f1044"
+  },
+  {
+    "name": "Book/DVD/Music library for children",
+    "slug": "book_dvd_music_library_for_children",
+    "icon": "book_dvd_music_library_for_children",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "d93edfee-5982-4383-8894-dba0ce19fa4c"
+  },
+  {
+    "name": "Children crib/cots",
+    "slug": "children_crib_cots",
+    "icon": "children_crib_cots",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "8800f0e8-ab2f-44da-b03e-18f10634094f"
+  },
+  {
+    "name": "Children highchair",
+    "slug": "children_highchair",
+    "icon": "children_highchair",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "22fc45ad-d19f-403a-93d0-4bc8d376c72a"
+  },
+  {
+    "name": "Cleaning products",
+    "slug": "cleaning_products",
+    "icon": "cleaning_products",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "287ad07a-6bcd-43eb-b67a-2e05a12ca565"
+  },
+  {
+    "name": "Detached",
+    "slug": "detached",
+    "icon": "detached",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "1b881f9e-185a-4f8d-a7c1-942bb8e40b4e"
+  },
+  {
+    "name": "Electronic key card access",
+    "slug": "electronic_key_card_access",
+    "icon": "electronic_key_card_access",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "65ba915e-675c-462b-95b3-4fa91640a7a4"
+  },
+  {
+    "name": "Entire property on ground floor",
+    "slug": "entire_property_on_ground_floor",
+    "icon": "entire_property_on_ground_floor",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "a2a0746e-7848-4869-8bc6-cb29cd3e4a65"
+  },
+  {
+    "name": "Entire unit wheelchair accessible",
+    "slug": "entire_unit_wheelchair_accessible",
+    "icon": "entire_unit_wheelchair_accessible",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "1f39462f-0cdd-489f-854a-db06485271c6"
+  },
+  {
+    "name": "Executive Lounge Access",
+    "slug": "executive_lounge_access",
+    "icon": "executive_lounge_access",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "ee5bd5e0-0c4b-45c0-8051-f66e2e5cc849"
+  },
+  {
+    "name": "Fax",
+    "slug": "fax",
+    "icon": "fax",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "5d0f6cd3-05a5-446e-9d29-a10a6767aeb9"
+  },
+  {
+    "name": "Hand sanitiser",
+    "slug": "hand_sanitiser",
+    "icon": "hand_sanitiser",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "049b2bd9-1df1-4a98-bda2-b064b8dacd81"
+  },
+  {
+    "name": "Heating",
+    "slug": "heating",
+    "icon": "heating",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "85dd90ff-d582-45a2-b6f9-b86155709deb"
+  },
+  {
+    "name": "Internet facilities",
+    "slug": "internet_facilities",
+    "icon": "internet_facilities",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "5e359056-5a69-4876-9aef-7a961db18d79"
+  },
+  {
+    "name": "Metal keys access",
+    "slug": "metal_keys_access",
+    "icon": "metal_keys_access",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "a277b76c-d5e4-46d3-ba3e-5aa68a3a2664"
+  },
+  {
+    "name": "Portable Wifi",
+    "slug": "portable_wifi",
+    "icon": "portable_wifi",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "c3bff477-2af5-4c39-b248-ff0f66f931ce"
+  },
+  {
+    "name": "Private Entrance",
+    "slug": "private_entrance",
+    "icon": "private_entrance",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "fbae965b-e7f6-4233-8d06-4281be9b8de6"
+  },
+  {
+    "name": "Private flat in block of flats",
+    "slug": "private_flat_in_block_of_flats",
+    "icon": "private_flat_in_block_of_flats",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "3843e479-7c37-4620-86d1-cba820259d3b"
+  },
+  {
+    "name": "Sauna",
+    "slug": "sauna",
+    "icon": "sauna",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "2a0ccd2b-d60f-4867-9f0c-0efd64458e21"
+  },
+  {
+    "name": "Semi-detached",
+    "slug": "semi_detached",
+    "icon": "semi_detached",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "2bd661ad-3383-4407-b8dd-371c9c8a3d67"
+  },
+  {
+    "name": "Single-room air conditioning for guest accommodation",
+    "slug": "single_room_air_conditioning_for_guest_accommodation",
+    "icon": "single_room_air_conditioning_for_guest_accommodation",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "b8957812-40db-4739-b456-8798464d7f6f"
+  },
+  {
+    "name": "Upper floor reachable by lift",
+    "slug": "upper_floor_reachable_by_lift",
+    "icon": "upper_floor_reachable_by_lift",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "79293955-571f-441c-8f78-3e06de6ca2fe"
+  },
+  {
+    "name": "Upper floor reachable by stairs only",
+    "slug": "upper_floor_reachable_by_stairs_only",
+    "icon": "upper_floor_reachable_by_stairs_only",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "9a52fb40-af99-4446-b7d6-f2c33eb1420a"
+  },
+  {
+    "name": "Wake Up Service",
+    "slug": "wake_up_service",
+    "icon": "wake_up_service",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "a28b42c9-b6af-4b03-a559-017ab0dab443"
+  },
+  {
+    "name": "Wake Up Service/Alarm-clock",
+    "slug": "wake_up_service_alarm_clock",
+    "icon": "wake_up_service_alarm_clock",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "de2300fd-b800-428d-8ca4-82413d0c1e0b"
+  },
+  {
+    "name": "Wireless internet",
+    "slug": "wireless_internet",
+    "icon": "wireless_internet",
+    "category": "General",
+    "amenity_type": "room",
+    "channex_id": "6556b81d-62e2-454b-bdb7-b9b11f6bf57c"
+  },
+  {
+    "name": "100 Amps",
+    "slug": "100_amps",
+    "icon": "100_amps",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "24a71bda-9f95-4615-b1b4-ba168df9d0bb"
+  },
+  {
+    "name": "Property removed all, or never offered, plastic straws",
+    "slug": "property_removed_all_or_never_offered_plastic_straws",
+    "icon": "property_removed_all_or_never_offered_plastic_straws",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "1d144491-425d-4e39-ae01-d454f0a2e1bb"
+  },
+  {
+    "name": "Property removed all, or never offered, plastic water bottles",
+    "slug": "property_removed_all_or_never_offered_plastic_water_bottles",
+    "icon": "property_removed_all_or_never_offered_plastic_water_bottles",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "2933aa56-6129-4dc2-8836-dd67e9e1bcca"
+  },
+  {
+    "name": "Property removed all, or never offered, single-use plastic toiletries",
+    "slug": "property_removed_all_or_never_offered_single_use_plastic_toiletries",
+    "icon": "property_removed_all_or_never_offered_single_use_plastic_toiletries",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "a068d477-051f-44a3-b601-bfde41923188"
+  },
+  {
+    "name": "Refillable water stations",
+    "slug": "refillable_water_stations",
+    "icon": "refillable_water_stations",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "c7cd6bc2-05ef-4b17-bfdd-8a8d398c4d3d"
+  },
+  {
+    "name": "Towels Changed Upon Request",
+    "slug": "towels_changed_upon_request",
+    "icon": "towels_changed_upon_request",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "88899d49-8989-4f86-a4f5-c6d2c77d6368"
+  },
+  {
+    "name": "50 Amps",
+    "slug": "50_amps",
+    "icon": "50_amps",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "52ce6b74-98e3-4921-b4eb-9df84940e1bb"
+  },
+  {
+    "name": "Alarm Clock",
+    "slug": "alarm_clock",
+    "icon": "alarm_clock",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "d178a656-7a19-4746-b4dc-51cee4dc972f"
+  },
+  {
+    "name": "Allergy-Free",
+    "slug": "allergy_free",
+    "icon": "allergy_free",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "8f3a1651-61b8-4a59-b784-d705a82c5942"
+  },
+  {
+    "name": "Blu-ray player",
+    "slug": "blu_ray_player",
+    "icon": "blu_ray_player",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "f051a21f-3502-42fe-8b3e-4cbbe3d4284f"
+  },
+  {
+    "name": "Cable channels",
+    "slug": "cable_channels",
+    "icon": "cable_channels",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "5df87db0-20dd-4b61-aa5d-fc747f1fd131"
+  },
+  {
+    "name": "Carpeted Floor",
+    "slug": "carpeted_floor",
+    "icon": "carpeted_floor",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "76f91345-8533-4229-af7c-e02a16d58326"
+  },
+  {
+    "name": "CD-Player",
+    "slug": "cd_player",
+    "icon": "cd_player",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "fe401975-d69f-492b-9235-05d988591f5a"
+  },
+  {
+    "name": "Clothes drying rack",
+    "slug": "clothes_drying_rack",
+    "icon": "clothes_drying_rack",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "dd5a9eee-10b0-49a0-90b5-60834b2449b8"
+  },
+  {
+    "name": "Clothes Rack",
+    "slug": "clothes_rack",
+    "icon": "clothes_rack",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "68189e53-293b-4451-b5ce-289de9dffd78"
+  },
+  {
+    "name": "Clothing Iron",
+    "slug": "clothing_iron",
+    "icon": "clothing_iron",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "2432ffaa-c4a1-4ef1-a567-551bb506d01a"
+  },
+  {
+    "name": "Computer",
+    "slug": "computer",
+    "icon": "computer",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "57e1258a-811a-4e4f-abf4-8865fb7c1c2c"
+  },
+  {
+    "name": "Desk",
+    "slug": "desk",
+    "icon": "desk",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "3eb5450a-df8b-4d3e-9262-b57fc3e6b8f8"
+  },
+  {
+    "name": "Dressing room",
+    "slug": "dressing_room",
+    "icon": "dressing_room",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "1fb5e30b-60ed-46be-be56-48516b9b9751"
+  },
+  {
+    "name": "DVD-Player",
+    "slug": "dvd_player",
+    "icon": "dvd_player",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "f54eaa9b-e4ce-464d-b11b-8321b12425cd"
+  },
+  {
+    "name": "Earplugs",
+    "slug": "earplugs",
+    "icon": "earplugs",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "edb07472-eb22-4dfe-adc7-989b13567a3b"
+  },
+  {
+    "name": "Electric blankets",
+    "slug": "electric_blankets",
+    "icon": "electric_blankets",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "80ff0812-967b-4d9b-973e-4abeaed1f203"
+  },
+  {
+    "name": "Extra long beds (> 2 meter)",
+    "slug": "extra_long_beds_2_meter",
+    "icon": "extra_long_beds_2_meter",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "32458d03-ae85-4de4-96ee-2578733d7332"
+  },
+  {
+    "name": "Fan",
+    "slug": "fan",
+    "icon": "fan",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "1a5e21d0-6682-44c0-875c-90a5d933e9e8"
+  },
+  {
+    "name": "Feather pillow",
+    "slug": "feather_pillow",
+    "icon": "feather_pillow",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "b3e1b973-e8ee-48b2-b6d4-ffe1c7f40b91"
+  },
+  {
+    "name": "Fireplace",
+    "slug": "fireplace",
+    "icon": "fireplace",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "feffe2ff-67eb-4162-bcd8-01907c5500c6"
+  },
+  {
+    "name": "Flat-screen TV",
+    "slug": "flat_screen_tv",
+    "icon": "flat_screen_tv",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "adcc9a15-1aaf-4e02-836a-829ae41f2585"
+  },
+  {
+    "name": "Game Console",
+    "slug": "game_console",
+    "icon": "game_console",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "2bbd0abf-582f-4bdb-803f-28dff73d4347"
+  },
+  {
+    "name": "Game Console - Nintendo Wii",
+    "slug": "game_console_nintendo_wii",
+    "icon": "game_console_nintendo_wii",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "7c2b3edf-8c84-4650-a4e8-6fa395b4fd80"
+  },
+  {
+    "name": "Game Console - PS2",
+    "slug": "game_console_ps2",
+    "icon": "game_console_ps2",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "33361884-d382-474e-9490-5078955ee840"
+  },
+  {
+    "name": "Game Console - PS3",
+    "slug": "game_console_ps3",
+    "icon": "game_console_ps3",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "cf65a800-96ce-4279-95c7-8a9f69916d12"
+  },
+  {
+    "name": "Game console - PS4",
+    "slug": "game_console_ps4",
+    "icon": "game_console_ps4",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "706025e2-7287-4c6f-b813-9da1ec2b2cd4"
+  },
+  {
+    "name": "Game console - Wii U",
+    "slug": "game_console_wii_u",
+    "icon": "game_console_wii_u",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "2c60d416-4f89-44bd-a130-a2ba37e93f14"
+  },
+  {
+    "name": "Game Console - Xbox 360",
+    "slug": "game_console_xbox_360",
+    "icon": "game_console_xbox_360",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "e87b74f3-0c7e-447e-adaa-37115199c5f5"
+  },
+  {
+    "name": "Game console - Xbox One",
+    "slug": "game_console_xbox_one",
+    "icon": "game_console_xbox_one",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "68defca6-26ea-4bf3-b014-1478eab8ea2c"
+  },
+  {
+    "name": "Hypoallergenic pillow",
+    "slug": "hypoallergenic_pillow",
+    "icon": "hypoallergenic_pillow",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "a461c536-8b45-4495-b0be-3684a962fe19"
+  },
+  {
+    "name": "Interconnecting Room(s) available",
+    "slug": "interconnecting_room_s_available",
+    "icon": "interconnecting_room_s_available",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "149cab67-c1d1-4941-b293-ada358266088"
+  },
+  {
+    "name": "iPad",
+    "slug": "ipad",
+    "icon": "ipad",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "fa1d3fb6-9dc1-487e-aa54-3ff80dd7deb8"
+  },
+  {
+    "name": "iPod Docking Station",
+    "slug": "ipod_docking_station",
+    "icon": "ipod_docking_station",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "da57d6ff-f6e4-4e61-a0e2-2a99c7b7b389"
+  },
+  {
+    "name": "Ironing facilities",
+    "slug": "ironing_facilities",
+    "icon": "ironing_facilities",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "734d5dfe-808e-43ef-82bd-54e7899da670"
+  },
+  {
+    "name": "Laptop",
+    "slug": "laptop",
+    "icon": "laptop",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "59facc8c-3c35-4850-b2b2-09d3486e366e"
+  },
+  {
+    "name": "Linen",
+    "slug": "linen",
+    "icon": "linen",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "0b23cbf0-146c-4946-9010-33461db44b05"
+  },
+  {
+    "name": "Mosquito Net",
+    "slug": "mosquito_net",
+    "icon": "mosquito_net",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "767c0199-ed22-427d-a881-4d47fdb5604e"
+  },
+  {
+    "name": "Non-feather pillow",
+    "slug": "non_feather_pillow",
+    "icon": "non_feather_pillow",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "7580470f-aae3-4b0a-9bb3-69fe5020f2a5"
+  },
+  {
+    "name": "Pajamas",
+    "slug": "pajamas",
+    "icon": "pajamas",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "01780dda-5833-40b5-8525-287a756d2523"
+  },
+  {
+    "name": "Pay-per-view Channels",
+    "slug": "pay_per_view_channels",
+    "icon": "pay_per_view_channels",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "0a2f07c4-e448-4b7e-b9af-aca76ec09b2a"
+  },
+  {
+    "name": "Private curtain",
+    "slug": "private_curtain",
+    "icon": "private_curtain",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "3d2243ce-5482-491a-99fd-d25d2c2c3427"
+  },
+  {
+    "name": "Radio",
+    "slug": "radio",
+    "icon": "radio",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "d7a28169-c126-4c47-81c7-31929cb9200e"
+  },
+  {
+    "name": "Reading light",
+    "slug": "reading_light",
+    "icon": "reading_light",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "896ed74e-6171-4271-a7b8-289345d6b48d"
+  },
+  {
+    "name": "Rollaway bed",
+    "slug": "rollaway_bed",
+    "icon": "rollaway_bed",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "5b9d9717-6c9d-4c2e-84ed-1af3ed2dc583"
+  },
+  {
+    "name": "Satellite Channels",
+    "slug": "satellite_channels",
+    "icon": "satellite_channels",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "35083174-001d-4994-a668-c09e0e4936e1"
+  },
+  {
+    "name": "Seating area",
+    "slug": "seating_area",
+    "icon": "seating_area",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "66be0b40-6e0f-4335-84a8-08073947d52b"
+  },
+  {
+    "name": "Slippers",
+    "slug": "slippers",
+    "icon": "slippers",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "e779da1e-e497-4e41-9c39-0f7590b123b0"
+  },
+  {
+    "name": "Smartphone",
+    "slug": "smartphone",
+    "icon": "smartphone",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "8d30f1a3-4ba7-4535-a4ea-40a8d0d41170"
+  },
+  {
+    "name": "Socket near the bed",
+    "slug": "socket_near_the_bed",
+    "icon": "socket_near_the_bed",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "d5cca542-3e66-4b6a-9495-7724ac4ed2e2"
+  },
+  {
+    "name": "Sofa",
+    "slug": "sofa",
+    "icon": "sofa",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "b57f3bc2-a1c5-4e2c-8b20-07fdd2eab0ed"
+  },
+  {
+    "name": "Sofa bed",
+    "slug": "sofa_bed",
+    "icon": "sofa_bed",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "96be8ba8-d046-4720-91b8-0b4078cb2a30"
+  },
+  {
+    "name": "Soundproofing",
+    "slug": "soundproofing",
+    "icon": "soundproofing",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "5c2db353-cb7b-4f74-82a2-b965dc97b2b0"
+  },
+  {
+    "name": "Streaming service (such as Netflix)",
+    "slug": "streaming_service_such_as_netflix",
+    "icon": "streaming_service_such_as_netflix",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "68102d87-507b-40c8-bdae-a0689c33b3d3"
+  },
+  {
+    "name": "Telephone",
+    "slug": "telephone",
+    "icon": "telephone",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "3a5ef7dd-2915-4be5-b4b0-e13d15574321"
+  },
+  {
+    "name": "Tiled / Marble floor",
+    "slug": "tiled_marble_floor",
+    "icon": "tiled_marble_floor",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "84377e63-ee27-469e-9a2d-c45eeb6bf098"
+  },
+  {
+    "name": "Trouser Press",
+    "slug": "trouser_press",
+    "icon": "trouser_press",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "e238d254-3127-48ae-af9f-3ddc3cee0f95"
+  },
+  {
+    "name": "TV",
+    "slug": "tv",
+    "icon": "tv",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "724b54ce-57d3-4751-9c10-76844a6fa2ed"
+  },
+  {
+    "name": "Video",
+    "slug": "video",
+    "icon": "video",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "aa5ef885-76b5-4a25-a418-48a496178272"
+  },
+  {
+    "name": "Video Games",
+    "slug": "video_games",
+    "icon": "video_games",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "fd7d9a39-c94f-4226-9146-328ad99f833c"
+  },
+  {
+    "name": "Wardrobe/Closet",
+    "slug": "wardrobe_closet",
+    "icon": "wardrobe_closet",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "c8f2272d-412b-455f-b38a-b7c99ddf96c0"
+  },
+  {
+    "name": "Wooden / Parquet floor",
+    "slug": "wooden_parquet_floor",
+    "icon": "wooden_parquet_floor",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "6881538d-f9bf-48b4-9db8-f5ceb13439ec"
+  },
+  {
+    "name": "Yukata",
+    "slug": "yukata",
+    "icon": "yukata",
+    "category": "In Room",
+    "amenity_type": "room",
+    "channex_id": "c3bb9a7c-89a1-4a5a-ba0d-c0b33a339447"
+  },
+  {
+    "name": "Adapted bath",
+    "slug": "adapted_bath",
+    "icon": "adapted_bath",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "4e4d755c-53b4-454f-a7ed-7d3219990a8d"
+  },
+  {
+    "name": "Additional Bathroom",
+    "slug": "additional_bathroom",
+    "icon": "additional_bathroom",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "d6ba30e9-f1af-46c9-8280-26c2713c8887"
+  },
+  {
+    "name": "Additional Toilet",
+    "slug": "additional_toilet",
+    "icon": "additional_toilet",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "2a0b62db-a859-4b8e-9258-f26bb0496368"
+  },
+  {
+    "name": "Bath",
+    "slug": "bath",
+    "icon": "bath",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "b90c4165-fd52-4136-a822-3b7365530272"
+  },
+  {
+    "name": "Bath or Shower",
+    "slug": "bath_or_shower",
+    "icon": "bath_or_shower",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "93d62abc-cafb-4976-9ee0-b825b826fe91"
+  },
+  {
+    "name": "Bath-robe",
+    "slug": "bath_robe",
+    "icon": "bath_robe",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "05ecc6c3-a84b-4f2f-97f0-f91444d6928b"
+  },
+  {
+    "name": "Bathroom emergency pull cord",
+    "slug": "bathroom_emergency_pull_cord",
+    "icon": "bathroom_emergency_pull_cord",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "1c3938ff-69f5-45cd-82ab-73f3f3c415a4"
+  },
+  {
+    "name": "Bidet",
+    "slug": "bidet",
+    "icon": "bidet",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "dced3634-738b-4c97-ba87-97b0c54c788e"
+  },
+  {
+    "name": "Body soap",
+    "slug": "body_soap",
+    "icon": "body_soap",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "015971a8-f7ac-4c49-8830-bc1c2a04235e"
+  },
+  {
+    "name": "Conditioner",
+    "slug": "conditioner",
+    "icon": "conditioner",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "09db5951-b023-44a6-8b39-e6772605b9ab"
+  },
+  {
+    "name": "Free Toiletries",
+    "slug": "free_toiletries",
+    "icon": "free_toiletries",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "dc403823-544e-4f17-8a35-541ddb639b15"
+  },
+  {
+    "name": "Guest toilet",
+    "slug": "guest_toilet",
+    "icon": "guest_toilet",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "a5f3b37f-fa7d-4fc5-8525-ea4f9f775f06"
+  },
+  {
+    "name": "Hair Dryer",
+    "slug": "hair_dryer",
+    "icon": "hair_dryer",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "36a4bcae-e011-4552-9088-7ebb9905ead1"
+  },
+  {
+    "name": "Higher level toilet",
+    "slug": "higher_level_toilet",
+    "icon": "higher_level_toilet",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "000df3c4-9b1f-481f-b9b4-366ae3259020"
+  },
+  {
+    "name": "Hot Tub",
+    "slug": "hot_tub",
+    "icon": "hot_tub",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "2b85eb67-c28a-45a9-a7d6-147f0e2391db"
+  },
+  {
+    "name": "Low bathroom sink",
+    "slug": "low_bathroom_sink",
+    "icon": "low_bathroom_sink",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "0ac1b55e-316f-40d7-88b5-32deece6cd21"
+  },
+  {
+    "name": "Roll in shower",
+    "slug": "roll_in_shower",
+    "icon": "roll_in_shower",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "0a79bbec-98f4-4158-9b5a-4439b627bc8a"
+  },
+  {
+    "name": "Shared Bathroom",
+    "slug": "shared_bathroom",
+    "icon": "shared_bathroom",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "ddeaa4d8-4326-44bb-8bd4-622082167bcb"
+  },
+  {
+    "name": "Shampoo",
+    "slug": "shampoo",
+    "icon": "shampoo",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "bfada419-fc0e-45ca-a165-1e786d8b9827"
+  },
+  {
+    "name": "Shower",
+    "slug": "shower",
+    "icon": "shower",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "179c91be-836f-497f-9329-3acb333c85b1"
+  },
+  {
+    "name": "Shower cap",
+    "slug": "shower_cap",
+    "icon": "shower_cap",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "5a4b53af-7528-4968-8840-e048d65c4156"
+  },
+  {
+    "name": "Shower chair",
+    "slug": "shower_chair",
+    "icon": "shower_chair",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "f31c84b7-9ef5-409e-97c8-1bc24d481a7d"
+  },
+  {
+    "name": "Spa Bath",
+    "slug": "spa_bath",
+    "icon": "spa_bath",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "d3a8da55-c2b8-472d-9837-899c992ed2db"
+  },
+  {
+    "name": "Toilet",
+    "slug": "toilet",
+    "icon": "toilet",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "eaae277c-1319-4f06-8431-d80fccd56d9b"
+  },
+  {
+    "name": "Toilet paper",
+    "slug": "toilet_paper",
+    "icon": "toilet_paper",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "a59ddfed-93eb-4bcf-b52e-efc1c3119298"
+  },
+  {
+    "name": "Toilet with grab rails",
+    "slug": "toilet_with_grab_rails",
+    "icon": "toilet_with_grab_rails",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "06121f37-605b-409d-a532-75f1d8a55837"
+  },
+  {
+    "name": "Toothbrush",
+    "slug": "toothbrush",
+    "icon": "toothbrush",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "89502560-0080-4ca5-8169-ef4dc8e7bd64"
+  },
+  {
+    "name": "Towels",
+    "slug": "towels",
+    "icon": "towels",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "bb81debf-dbe5-43ab-912d-33e20c09e856"
+  },
+  {
+    "name": "Towels/Linens at surcharge",
+    "slug": "towels_linens_at_surcharge",
+    "icon": "towels_linens_at_surcharge",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "5d6bdfaa-ec91-4916-b6fc-6e95ba1349da"
+  },
+  {
+    "name": "Walk in shower",
+    "slug": "walk_in_shower",
+    "icon": "walk_in_shower",
+    "category": "Bathroom",
+    "amenity_type": "room",
+    "channex_id": "f4bdd30f-16ca-4a65-adbb-75ba8eff33c0"
+  },
+  {
+    "name": "Balcony",
+    "slug": "balcony",
+    "icon": "balcony",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "363c2057-2cdf-4cbc-af98-069c2d573952"
+  },
+  {
+    "name": "Barbecue",
+    "slug": "barbecue",
+    "icon": "barbecue",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "2b9c558b-929c-46cc-9fc8-f7ce00fadd74"
+  },
+  {
+    "name": "Big Rig Friendly",
+    "slug": "big_rig_friendly",
+    "icon": "big_rig_friendly",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "fd73b4af-5ab9-496c-b8e2-8c89670753e1"
+  },
+  {
+    "name": "Dump Station",
+    "slug": "dump_station",
+    "icon": "dump_station",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "e1af325c-df9d-46aa-99d8-c50460483017"
+  },
+  {
+    "name": "Heated pool",
+    "slug": "heated_pool",
+    "icon": "heated_pool",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "c8326e3f-a604-4005-9d88-d1ed73d55b51"
+  },
+  {
+    "name": "Infinity pool",
+    "slug": "infinity_pool",
+    "icon": "infinity_pool",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "59a07ade-8295-4986-aed9-77061f98bd86"
+  },
+  {
+    "name": "Outdoor dining area",
+    "slug": "outdoor_dining_area",
+    "icon": "outdoor_dining_area",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "2d6a0bee-c2e2-4218-a1f4-4fc6d0b93e99"
+  },
+  {
+    "name": "Outdoor furniture",
+    "slug": "outdoor_furniture",
+    "icon": "outdoor_furniture",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "7eac1383-5c6b-438f-b478-4bad6740bb3a"
+  },
+  {
+    "name": "Patio",
+    "slug": "patio",
+    "icon": "patio",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "e80dcf2d-c9c5-4619-89da-c628d260e841"
+  },
+  {
+    "name": "Plunge pool",
+    "slug": "plunge_pool",
+    "icon": "plunge_pool",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "68aa269b-e6d6-4c81-984b-a90cf06eed05"
+  },
+  {
+    "name": "Fire extinguishers",
+    "slug": "fire_extinguishers",
+    "icon": "fire_extinguishers",
+    "category": "Security",
+    "amenity_type": "room",
+    "channex_id": "553eb001-7395-4b20-82fa-912ede48fd81"
+  },
+  {
+    "name": "Laptop Safe Box",
+    "slug": "laptop_safe_box",
+    "icon": "laptop_safe_box",
+    "category": "Security",
+    "amenity_type": "room",
+    "channex_id": "a1de83fe-e26c-494c-afb4-5dab9f003d56"
+  },
+  {
+    "name": "Lockers",
+    "slug": "lockers",
+    "icon": "lockers",
+    "category": "Security",
+    "amenity_type": "room",
+    "channex_id": "b7e1e7f9-58e7-462e-8d3a-b037bee370e9"
+  },
+  {
+    "name": "Safe Deposit Box",
+    "slug": "safe_deposit_box",
+    "icon": "safe_deposit_box",
+    "category": "Security",
+    "amenity_type": "room",
+    "channex_id": "6e174877-c6e7-4ee7-a7af-abaaf07d72be"
+  },
+  {
+    "name": "Carbon monoxide source",
+    "slug": "carbon_monoxide_source",
+    "icon": "carbon_monoxide_source",
+    "category": "Security",
+    "amenity_type": "room",
+    "channex_id": "153222e6-8979-4471-85f7-542d9b7e2028"
+  },
+  {
+    "name": "Pool cover",
+    "slug": "pool_cover",
+    "icon": "pool_cover",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "80a22363-42da-444d-9320-99d29f2a435c"
+  },
+  {
+    "name": "Pool towels",
+    "slug": "pool_towels",
+    "icon": "pool_towels",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "77d508fa-b24a-4cc3-b652-fa4db6bcbf4a"
+  },
+  {
+    "name": "Pool with view",
+    "slug": "pool_with_view",
+    "icon": "pool_with_view",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "4be6a43b-a2ec-49d3-8360-dcb35a89503b"
+  },
+  {
+    "name": "Private Pool",
+    "slug": "private_pool",
+    "icon": "private_pool",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "0f209b31-10cf-43cc-84b9-711de0af3de4"
+  },
+  {
+    "name": "Rooftop pool",
+    "slug": "rooftop_pool",
+    "icon": "rooftop_pool",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "42c5fe02-42c7-4010-a1a2-a1b93dc8db5a"
+  },
+  {
+    "name": "Salt-water pool",
+    "slug": "salt_water_pool",
+    "icon": "salt_water_pool",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "a1ad93b4-9bc8-4b29-9d44-159ba5560fa1"
+  },
+  {
+    "name": "Sewer Hookups",
+    "slug": "sewer_hookups",
+    "icon": "sewer_hookups",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "247a0561-f8d6-43b9-a8a1-4744504afbc3"
+  },
+  {
+    "name": "Shallow end",
+    "slug": "shallow_end",
+    "icon": "shallow_end",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "828e1b0d-9332-460c-9ce3-5d36da51667d"
+  },
+  {
+    "name": "Slide Outs",
+    "slug": "slide_outs",
+    "icon": "slide_outs",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "c938c7f9-89a1-4b99-8d1c-b03edad030b4"
+  },
+  {
+    "name": "Terrace",
+    "slug": "terrace",
+    "icon": "terrace",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "692964cb-c34d-40c2-bc9a-57704995cbb2"
+  },
+  {
+    "name": "Trash cans",
+    "slug": "trash_cans",
+    "icon": "trash_cans",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "53c2ee74-3fa4-40e8-9323-7a3323d28c4d"
+  },
+  {
+    "name": "Tumble dryer (machine)",
+    "slug": "tumble_dryer_machine",
+    "icon": "tumble_dryer_machine",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "59243f96-a974-41b0-a9ee-ca474b42b288"
+  },
+  {
+    "name": "Washing machine",
+    "slug": "washing_machine",
+    "icon": "washing_machine",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "e6e819a8-004e-498e-a578-c400a7171702"
+  },
+  {
+    "name": "Water Hookups",
+    "slug": "water_hookups",
+    "icon": "water_hookups",
+    "category": "Outside",
+    "amenity_type": "room",
+    "channex_id": "93ac2f6a-e4ec-4835-9718-f9b148a0c857"
+  },
+  {
+    "name": "Bottle of water",
+    "slug": "bottle_of_water",
+    "icon": "bottle_of_water",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "9f24a2a3-f9ae-4148-86c4-e98d30595bd0"
+  },
+  {
+    "name": "Chocolate/cookies",
+    "slug": "chocolate_cookies",
+    "icon": "chocolate_cookies",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "45f637e0-1603-4d2e-a40a-6bff922d0b67"
+  },
+  {
+    "name": "Coffee Machine",
+    "slug": "coffee_machine",
+    "icon": "coffee_machine",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "25b7cd4a-ce28-4806-a198-8d00e55b3ef8"
+  },
+  {
+    "name": "Coffee/Tea maker",
+    "slug": "coffee_tea_maker",
+    "icon": "coffee_tea_maker",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "1ef9743d-1c68-4655-b09d-22486655d317"
+  },
+  {
+    "name": "Dining Area",
+    "slug": "dining_area",
+    "icon": "dining_area",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "34295a62-f21e-4d10-b68f-1acdc890e1ae"
+  },
+  {
+    "name": "Dining table",
+    "slug": "dining_table",
+    "icon": "dining_table",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "fb5c935f-aeb5-47f7-8a47-6ca6a9482f34"
+  },
+  {
+    "name": "Dishwasher",
+    "slug": "dishwasher",
+    "icon": "dishwasher",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "3efbafc4-8452-4550-a09e-fe11158323e3"
+  },
+  {
+    "name": "Electric Kettle",
+    "slug": "electric_kettle",
+    "icon": "electric_kettle",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "dc2f15c1-2f6a-4985-80a9-6228acd0ae18"
+  },
+  {
+    "name": "Fruits",
+    "slug": "fruits",
+    "icon": "fruits",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "adb7b6f5-d128-4bba-af55-d60c214386e8"
+  },
+  {
+    "name": "Kitchenette",
+    "slug": "kitchenette",
+    "icon": "kitchenette",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "ee13f1e7-3cd6-43a1-91de-d94bad4761fe"
+  },
+  {
+    "name": "Kitchenware",
+    "slug": "kitchenware",
+    "icon": "kitchenware",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "95999f89-538b-487c-b483-bcb4512f7d89"
+  },
+  {
+    "name": "Microwave",
+    "slug": "microwave",
+    "icon": "microwave",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "a78e66d0-627e-4137-b23a-0c5ffcb4bc00"
+  },
+  {
+    "name": "Mini-bar",
+    "slug": "mini_bar",
+    "icon": "mini_bar",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "6d03ddf6-2bed-4a39-bae2-55f5f5a87d1e"
+  },
+  {
+    "name": "Oven",
+    "slug": "oven",
+    "icon": "oven",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "dd69d2c1-4db1-47f1-8972-1ada843cf71f"
+  },
+  {
+    "name": "Refrigerator",
+    "slug": "refrigerator",
+    "icon": "refrigerator",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "ea4cb7eb-44b0-439f-94ff-ddf23ae201c0"
+  },
+  {
+    "name": "Stove",
+    "slug": "stove",
+    "icon": "stove",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "048c0626-42fb-459c-bf3e-4364f516a1c1"
+  },
+  {
+    "name": "Toaster",
+    "slug": "toaster",
+    "icon": "toaster",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "229ee913-a5a4-4a43-a317-18c28943c632"
+  },
+  {
+    "name": "Wine glasses",
+    "slug": "wine_glasses",
+    "icon": "wine_glasses",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "2b2c3104-af84-4c11-bcaf-1d621c1e5735"
+  },
+  {
+    "name": "Wine/champagne",
+    "slug": "wine_champagne",
+    "icon": "wine_champagne",
+    "category": "Kitchen",
+    "amenity_type": "room",
+    "channex_id": "0bb8cfc9-da4e-49df-952c-065e5a3b3637"
+  },
+  {
+    "name": "City View",
+    "slug": "city_view",
+    "icon": "city_view",
+    "category": "View",
+    "amenity_type": "room",
+    "channex_id": "65b3dc4b-2aac-4d42-b58e-1086b858919d"
+  },
+  {
+    "name": "Garden View",
+    "slug": "garden_view",
+    "icon": "garden_view",
+    "category": "View",
+    "amenity_type": "room",
+    "channex_id": "8111bbfc-1894-45bd-bd90-bf5bc9b0b464"
+  },
+  {
+    "name": "Inner courtyard view",
+    "slug": "inner_courtyard_view",
+    "icon": "inner_courtyard_view",
+    "category": "View",
+    "amenity_type": "room",
+    "channex_id": "d55f1956-d789-4808-b0fa-adeeefe018fd"
+  },
+  {
+    "name": "Lake View",
+    "slug": "lake_view",
+    "icon": "lake_view",
+    "category": "View",
+    "amenity_type": "room",
+    "channex_id": "d1aa2806-0228-4ed0-b482-1da9d8c9b5c2"
+  },
+  {
+    "name": "Landmark View",
+    "slug": "landmark_view",
+    "icon": "landmark_view",
+    "category": "View",
+    "amenity_type": "room",
+    "channex_id": "15ed9ede-0c7f-4999-9041-d34ee776b8c5"
+  },
+  {
+    "name": "Mountain View",
+    "slug": "mountain_view",
+    "icon": "mountain_view",
+    "category": "View",
+    "amenity_type": "room",
+    "channex_id": "217a3ec9-9950-4063-9252-af2df78f36d0"
+  },
+  {
+    "name": "Pool View",
+    "slug": "pool_view",
+    "icon": "pool_view",
+    "category": "View",
+    "amenity_type": "room",
+    "channex_id": "be8d5cde-f04a-415d-9183-13f5373c40bb"
+  },
+  {
+    "name": "Quiet street view",
+    "slug": "quiet_street_view",
+    "icon": "quiet_street_view",
+    "category": "View",
+    "amenity_type": "room",
+    "channex_id": "abe5192f-3d79-4c59-84de-9e6909c2e1db"
+  },
+  {
+    "name": "River View",
+    "slug": "river_view",
+    "icon": "river_view",
+    "category": "View",
+    "amenity_type": "room",
+    "channex_id": "36217e86-01c2-424c-8d81-b7573cf192c0"
+  },
+  {
+    "name": "Sea View",
+    "slug": "sea_view",
+    "icon": "sea_view",
+    "category": "View",
+    "amenity_type": "room",
+    "channex_id": "e1d990b0-683c-4d1f-9151-c46c21aa6801"
+  },
+  {
+    "name": "Airport Shuttle (surcharge)",
+    "slug": "airport_shuttle_surcharge",
+    "icon": "airport_shuttle_surcharge",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "0ef03369-5cdd-49aa-b75c-0b353a3b9ea5"
+  },
+  {
+    "name": "Fitness/spa locker rooms",
+    "slug": "fitness_spa_locker_rooms",
+    "icon": "fitness_spa_locker_rooms",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "adf49584-8b6c-4264-909a-ed5b7612666c"
+  },
+  {
+    "name": "Library",
+    "slug": "library",
+    "icon": "library",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "9a419966-4ceb-40b3-9424-3583bc62ca30"
+  },
+  {
+    "name": "Private Check-in/Check-out",
+    "slug": "private_check_in_check_out",
+    "icon": "private_check_in_check_out",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "994657bd-0f3b-4604-8b55-3b2dab39bf98"
+  },
+  {
+    "name": "All plates, cutlery, glasses and other tableware have been sanitised",
+    "slug": "all_plates_cutlery_glasses_and_other_tableware_have_been_sanitised",
+    "icon": "all_plates_cutlery_glasses_and_other_tableware_have_been_sanitised",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "1dcf703e-a5c0-4892-9dde-526441e13b99"
+  },
+  {
+    "name": "Cashless payment available",
+    "slug": "cashless_payment_available",
+    "icon": "cashless_payment_available",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "5e53be27-f699-44ce-9411-887babf2d381"
+  },
+  {
+    "name": "Guest accommodation is disinfected between stays",
+    "slug": "guest_accommodation_is_disinfected_between_stays",
+    "icon": "guest_accommodation_is_disinfected_between_stays",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "1601fd95-b6a1-47df-9602-c9c18071b18a"
+  },
+  {
+    "name": "Keycard for room electricity",
+    "slug": "keycard_for_room_electricity",
+    "icon": "keycard_for_room_electricity",
+    "category": "Safety And Security",
+    "amenity_type": "hotel",
+    "channex_id": "8385dcb6-7c0e-4b47-8946-3e720d59b2cc"
+  },
+  {
+    "name": "Visual aids: Braille",
+    "slug": "visual_aids_braille",
+    "icon": "visual_aids_braille",
+    "category": "General",
+    "amenity_type": "hotel",
+    "channex_id": "f212342c-dac9-4abe-97cc-9df1ad5f27ac"
+  },
+  {
+    "name": "Personal trainer",
+    "slug": "personal_trainer",
+    "icon": "personal_trainer",
+    "category": "Services",
+    "amenity_type": "hotel",
+    "channex_id": "7967551d-2653-4ece-a412-dcd3b7bc7960"
+  },
+  {
+    "name": "Carbon monoxide detector",
+    "slug": "carbon_monoxide_detector",
+    "icon": "carbon_monoxide_detector",
+    "category": "Security",
+    "amenity_type": "room",
+    "channex_id": "cbcc34e6-e55e-4490-a8e3-366d241a622d"
+  },
+  {
+    "name": "Fire alarms or smoke detectors",
+    "slug": "fire_alarms_or_smoke_detectors",
+    "icon": "fire_alarms_or_smoke_detectors",
+    "category": "Security",
+    "amenity_type": "room",
+    "channex_id": "f611ff99-75d8-4f47-8533-9c120f6af02a"
+  },
+  {
+    "name": "Property removed all, or never offered, plastic bottles for non-water drinks",
+    "slug": "property_removed_all_or_never_offered_plastic_bottles_for_non_water_drinks",
+    "icon": "property_removed_all_or_never_offered_plastic_bottles_for_non_water_drinks",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "b54a50e5-fce2-406b-8044-9b3d95e72aac"
+  },
+  {
+    "name": "Property removed all, or never offered, plastic stirrers",
+    "slug": "property_removed_all_or_never_offered_plastic_stirrers",
+    "icon": "property_removed_all_or_never_offered_plastic_stirrers",
+    "category": "Food And Drink",
+    "amenity_type": "hotel",
+    "channex_id": "c355b4b6-5bcc-47d0-98c3-ebf29d97ae10"
+  }
+]

@@ -24,16 +24,18 @@ export default class extends Controller {
 
     // Room Amenities setup
     const roomAmenities = data.room_amenities || data.amenities || []
+    const roomSortOrder = ["General", "In Room", "Bathroom", "Kitchen", "Security", "Outside", "View" ]
     if (roomAmenities.length > 0) {
-      this.renderAmenities(roomAmenities, this.amenitiesListTarget, this.roomAmenitiesToggleTarget)
+      this.renderAmenities(roomAmenities, this.amenitiesListTarget, this.roomAmenitiesToggleTarget, roomSortOrder)
       this.amenitiesSectionTarget.classList.remove("hidden")
     } else {
       this.amenitiesSectionTarget.classList.add("hidden")
     }
 
     // Hotel Amenities setup
+    const hotelSortOrder = ["General", "Services", "Parking", "Safety And Security", "Food And Drink", "Activities", "Outdoors", "Pets"]
     if (data.hotel_amenities && data.hotel_amenities.length > 0) {
-      this.renderAmenities(data.hotel_amenities, this.hotelAmenitiesListTarget, this.hotelAmenitiesToggleTarget)
+      this.renderAmenities(data.hotel_amenities, this.hotelAmenitiesListTarget, this.hotelAmenitiesToggleTarget, hotelSortOrder)
       this.hotelAmenitiesSectionTarget.classList.remove("hidden")
     } else {
       if (this.hasHotelAmenitiesSectionTarget) this.hotelAmenitiesSectionTarget.classList.add("hidden")
@@ -116,36 +118,78 @@ export default class extends Controller {
     })
   }
 
-  renderAmenities(amenities, listTarget, toggleTarget) {
+  renderAmenities(amenities, listTarget, toggleTarget, customOrder = []) {
     listTarget.innerHTML = ""
-    const template = document.getElementById("amenity-item-template")
-    const limit = 9
-    const hasMore = amenities.length > limit
+    if (amenities.length === 0) return
 
-    amenities.forEach((amenity, index) => {
-      const clone = document.importNode(template.content, true)
-      const container = clone.firstElementChild
-      
-      container.querySelector("[data-amenity-name]").textContent = amenity.name
-      
-      const iconContainer = container.querySelector("[data-amenity-icon-container]")
-      const iconSource = document.getElementById(`icon-${amenity.icon}`)
-      
-      if (iconSource) {
-        iconContainer.innerHTML = iconSource.innerHTML
-      }
+    // Group by category
+    const grouped = amenities.reduce((acc, a) => {
+      const cat = a.category || "General"
+      if (!acc[cat]) acc[cat] = []
+      acc[cat].push(a)
+      return acc
+    }, {})
 
-      if (index >= limit) {
-        container.classList.add("hidden", "extra-amenity-item")
-      }
+    const amenityTemplate = document.getElementById("amenity-item-template")
+    const categoryTemplate = document.getElementById("amenity-category-template")
+    
+    const categoryLimit = 1
+    const itemLimit = 10
+    let categoryIndex = 0
+    let totalAmenities = 0
 
-      listTarget.appendChild(container)
+    // Sort categories for consistency
+    const sortedCategories = Object.keys(grouped).sort((a, b) => {
+      const indexA = customOrder.indexOf(a)
+      const indexB = customOrder.indexOf(b)
+      
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB
+      if (indexA !== -1) return -1
+      if (indexB !== -1) return 1
+      return a.localeCompare(b)
     })
+
+    sortedCategories.forEach(categoryName => {
+      const items = grouped[categoryName]
+      const categoryClone = document.importNode(categoryTemplate.content, true)
+      const categoryContainer = categoryClone.querySelector("div")
+      const iconContainer = categoryClone.querySelector("[data-category-icon]")
+      const nameContainer = categoryClone.querySelector("[data-category-name]")
+      const itemsList = categoryClone.querySelector("[data-amenity-list]")
+
+      nameContainer.textContent = categoryName
+      if (items[0] && items[0].category_icon) {
+        iconContainer.innerHTML = items[0].category_icon
+      }
+
+      if (categoryIndex >= categoryLimit) {
+        categoryContainer.classList.add("hidden", "extra-amenity-category")
+      }
+
+      items.forEach((amenity, itemIndex) => {
+        const itemClone = document.importNode(amenityTemplate.content, true)
+        const itemContainer = itemClone.firstElementChild
+        const nameElement = itemContainer.querySelector("[data-amenity-name]") || itemContainer
+        if (nameElement) nameElement.textContent = amenity.name
+
+        const isExtra = (categoryIndex >= categoryLimit) || (itemIndex >= itemLimit)
+        if (isExtra) {
+          itemContainer.classList.add("hidden", "extra-amenity-item")
+        }
+
+        itemsList.appendChild(itemContainer)
+        totalAmenities++
+      })
+
+      listTarget.appendChild(categoryContainer)
+      categoryIndex++
+    })
+
+    const hasMore = totalAmenities > itemLimit || Object.keys(grouped).length > categoryLimit
 
     if (hasMore && toggleTarget) {
       toggleTarget.classList.remove("hidden")
-      this.setToggleLabel(toggleTarget, true, amenities.length)
-      // Reset rotation
+      this.setToggleLabel(toggleTarget, true, totalAmenities)
       const svg = toggleTarget.querySelector("svg")
       if (svg) svg.classList.remove("rotate-180")
     } else if (toggleTarget) {
@@ -162,11 +206,11 @@ export default class extends Controller {
   }
 
   toggleAmenities(listTarget, toggleTarget) {
-    const extras = listTarget.querySelectorAll(".extra-amenity-item")
+    const extras = listTarget.querySelectorAll(".extra-amenity-item, .extra-amenity-category")
     if (extras.length === 0) return
 
     const isShowingMore = extras[0].classList.contains("hidden")
-    const totalCount = listTarget.children.length
+    const totalCount = listTarget.querySelectorAll("[data-amenity-name]").length
 
     extras.forEach(el => el.classList.toggle("hidden"))
     this.setToggleLabel(toggleTarget, !isShowingMore, totalCount)
