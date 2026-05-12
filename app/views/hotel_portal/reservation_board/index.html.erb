@@ -1,0 +1,236 @@
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900">Reservation Board</span>
+  </div>
+<% end %>
+
+<% comfortable_mode = @board_layout == "comfortable" %>
+<% board_dates = @reservation_board[:dates] %>
+<% board_groups = @reservation_board[:room_groups] %>
+<% visible_start_date = board_dates.first %>
+<% visible_end_exclusive = board_dates.last + 1.day %>
+<% board_range_end = @start_date + (@board_days - 1).days %>
+<% nav_step_days = @board_days %>
+<% grid_room_width = comfortable_mode ? 240 : 180 %>
+<% grid_day_width = comfortable_mode ? 84 : 64 %>
+<% grid_template_columns = "#{grid_room_width}px repeat(#{board_dates.size}, minmax(#{grid_day_width}px, 1fr))" %>
+<% page_spacing = comfortable_mode ? "space-y-6" : "space-y-4" %>
+<% container_padding = comfortable_mode ? "px-4 md:px-0" : "px-3 md:px-0" %>
+<% card_padding = comfortable_mode ? "px-4 py-1.5" : "px-3 py-1" %>
+<% title_class = comfortable_mode ? "text-xl sm:text-2xl" : "text-lg sm:text-xl" %>
+<% subtitle_class = comfortable_mode ? "text-sm" : "text-[11px]" %>
+<% summary_padding = comfortable_mode ? "px-4 py-3" : "px-3 py-2" %>
+<% summary_gap = comfortable_mode ? "gap-3" : "gap-2" %>
+<% chip_text_class = comfortable_mode ? "text-[11px]" : "text-[9px]" %>
+<% room_number_class = comfortable_mode ? "text-xl" : "text-base" %>
+<% rate_text_class = comfortable_mode ? "text-[13px]" : "text-[11px]" %>
+<% currency_text_class = comfortable_mode ? "text-[11px]" : "text-[9px]" %>
+<% booking_name_class = comfortable_mode ? "text-sm" : "text-xs" %>
+<% booking_amount_class = comfortable_mode ? "text-[10px]" : "text-[9px]" %>
+<% booking_badge_class = comfortable_mode ? "text-[8px]" : "text-[7.5px]" %>
+<% booking_status_class = comfortable_mode ? "text-[9px]" : "text-[8px]" %>
+<% booking_meta_class = comfortable_mode ? "mt-px space-y-px" : "mt-0.5 flex items-center gap-1.5" %>
+<% row_min_base = comfortable_mode ? 80 : 64 %>
+<% block_step = comfortable_mode ? 48 : 40 %>
+<% block_top = comfortable_mode ? 6 : 4 %>
+<% block_left_pad = comfortable_mode ? 6 : 4 %>
+
+<% booking_styles = {
+  "pending" => "border-amber-200 bg-amber-50 text-amber-700",
+  "confirmed" => "border-blue-200 bg-blue-50 text-blue-700",
+  "checked_in" => "border-violet-200 bg-violet-50 text-violet-700",
+  "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
+  "cancelled" => "border-slate-300 bg-slate-100 text-slate-600",
+  "not_ready" => "border-red-200 bg-red-50 text-red-700"
+} %>
+
+<% status_icons = {
+  "all" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z" /></svg>',
+  "pending" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
+  "confirmed" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>',
+  "checked_in" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>',
+  "completed" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>',
+  "cancelled" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>',
+  "not_ready" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>'
+} %>
+
+<div class="max-w-[1600px] mx-auto pb-20">
+  <%= turbo_frame_tag "reservation_board" do %>
+    <div class="<%= page_spacing %>">
+      <div class="<%= container_padding %> mt-5">
+      <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div class="space-y-3">
+          <div>
+            <h1 class="font-bold tracking-tight text-slate-950 <%= title_class %>">Reservation Board</h1>
+            <p class="mt-1 font-medium text-slate-600 <%= subtitle_class %>"><%= current_hotel.name %> · Centralized reservation management and planning</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+            <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm">
+              Showing <%= @start_date.strftime("%b %-d, %Y") %> → <%= board_range_end.strftime("%b %-d, %Y") %> (<%= @board_days %> days)
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 space-y-2">
+        <%= render HotelPortal::ReservationBoard::ToolbarComponent.new(
+                   board_days: @board_days,
+                   board_layout: @board_layout,
+                   start_date: @start_date,
+                   current_hotel: current_hotel,
+                   comfortable_mode: comfortable_mode,
+                   board_query_params: @board_query_params,
+                   nav_step_days: nav_step_days,
+                   rate_plan_names: @rate_plan_names,
+                   selected_rate_plan_name: @selected_rate_plan_name
+                 ) %>
+
+        <%= render HotelPortal::ReservationBoard::LegendComponent.new(
+                   booking_styles: booking_styles,
+                   status_icons: status_icons,
+                   reservation_board: @reservation_board
+                 ) %>
+      </div>
+    </div>
+
+    <div class="overflow-auto max-h-[calc(100vh-18rem)] rounded-2xl border border-slate-200 bg-white bg-[repeating-linear-gradient(-45deg,transparent,transparent_10px,#f8fafc_10px,#f8fafc_20px)] shadow-sm">
+      <% if board_groups.blank? %>
+        <div class="px-8 py-20 text-center bg-white">
+          <p class="text-sm font-medium text-slate-500">No rooms found for this property.</p>
+        </div>
+      <% else %>
+        <div class="overflow-x-auto">
+          <div class="min-w-[1200px] w-fit" data-controller="reservation-timeline">
+            <%= render HotelPortal::ReservationBoard::TimelineHeaderComponent.new(
+                       grid_template_columns: grid_template_columns,
+                       card_padding: card_padding,
+                       board_dates: board_dates,
+                       summary_padding: summary_padding
+                     ) %>
+
+            <% board_groups.each do |group| %>
+              <details open class="group border-b border-slate-200">
+                <summary class="list-none cursor-pointer bg-slate-100 [&::-webkit-details-marker]:hidden">
+                  <div class="grid" style="grid-template-columns: <%= grid_template_columns %>;">
+                    <div class="sticky left-0 z-20 bg-slate-100 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
+                      <div class="flex items-center justify-between gap-2 opacity-0 <%= summary_padding %> pointer-events-none">
+                        <span class="truncate whitespace-nowrap font-black text-slate-800"><%= group[:room_type].name %></span>
+                        <svg class="size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="m9 6 6 6-6 6"/>
+                        </svg>
+                      </div>
+                      <div class="absolute inset-y-0 left-0 w-max min-w-full flex items-center justify-between gap-4 <%= summary_padding %> pointer-events-auto">
+                        <span class="whitespace-nowrap font-black text-slate-800"><%= group[:room_type].name %></span>
+                        <svg class="size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="m9 6 6 6-6 6"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div style="grid-column: 2 / -1;" class="bg-slate-100 border-r border-slate-200"></div>
+                  </div>
+                </summary>
+
+                <% group[:rooms].each do |room| %>
+                  <%= render HotelPortal::ReservationBoard::RoomRowComponent.new(
+                             room: room,
+                             grid_template_columns: grid_template_columns,
+                             row_min_base: row_min_base,
+                             block_step: block_step,
+                             card_padding: card_padding,
+                             room_number_class: room_number_class,
+                             board_dates: board_dates,
+                             summary_padding: summary_padding,
+                             reservation_board: @reservation_board,
+                             visible_start_date: visible_start_date,
+                             block_left_pad: block_left_pad,
+                             block_top: block_top,
+                             booking_styles: booking_styles,
+                             visible_end_exclusive: visible_end_exclusive,
+                             booking_name_class: booking_name_class,
+                             booking_amount_class: booking_amount_class,
+                             booking_badge_class: booking_badge_class,
+                             booking_status_class: booking_status_class,
+                             booking_meta_class: booking_meta_class,
+                             current_hotel: current_hotel,
+                             rate_text_class: rate_text_class,
+                             currency_text_class: currency_text_class
+                           ) %>
+                <% end %>
+              </details>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+  <%= render HotelPortal::ReservationBoard::ActionModalComponent.new(current_hotel: current_hotel) %>
+
+  <%# Context Menu Template %>
+  <template id="booking-actions-menu-template">
+    <div class="z-[100] w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl animate-in fade-in zoom-in duration-100">
+      <div class="bg-slate-50 px-4 py-3 border-b border-slate-100">
+        <p data-booking-actions-target="statusDisplay" class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1"></p>
+        <p data-booking-actions-target="guestNameDisplay" class="text-sm font-bold text-slate-900 truncate"></p>
+        <div class="flex items-center gap-1.5 mt-1 text-[11px] text-slate-500 font-medium">
+          <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          <span data-booking-actions-target="dateRangeDisplay"></span>
+        </div>
+
+        <div class="flex items-center gap-1.5 mt-2.5">
+          <span data-booking-actions-target="sourceBadge" class="rounded-md px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest"></span>
+          <span data-booking-actions-target="paymentBadge" class="rounded-md px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest"></span>
+        </div>
+      </div>
+      
+      <div class="p-1.5 space-y-0.5">
+        <%# Check In - Visible if confirmed and check_in is today %>
+        <button data-booking-actions-target="checkInBtn"
+                data-action="booking-actions#checkIn"
+                class="hidden w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 transition-colors">
+          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+          Check In
+        </button>
+
+        <%# Check Out - Visible if checked_in %>
+        <button data-booking-actions-target="checkOutBtn"
+                data-action="booking-actions#checkOut"
+                class="hidden w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+          Check Out
+        </button>
+
+        <button data-booking-actions-target="openNotesBtn"
+                data-action="booking-actions#openNotes"
+                class="hidden w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors">
+          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 14h.01M15 18h.01M15 10h.01M11 14h.01M11 18h.01M11 10h.01M7 14h.01M7 18h.01M7 10h.01M3 21h18M3 7h18M3 3h18" /><rect width="18" height="20" x="3" y="2" rx="2"/></svg>
+          Open Notes
+        </button>
+
+        <a data-booking-actions-target="detailsBtn"
+           href="#"
+           class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+           data-turbo="false">
+          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          View Details
+        </a>
+
+        <div class="h-px bg-slate-100 my-1.5"></div>
+
+        <div class="px-3 py-1">
+          <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Extend Stay</p>
+        </div>
+        <div class="px-1.5 pb-1 flex gap-1.5">
+          <button data-action="booking-actions#extend1Day" 
+                  class="flex-1 rounded-lg bg-slate-50 border border-slate-200 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-100 transition-colors">+ 1 Day</button>
+          <button data-action="booking-actions#extend2Days" 
+                  class="flex-1 rounded-lg bg-slate-50 border border-slate-200 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-100 transition-colors">+ 2 Days</button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
