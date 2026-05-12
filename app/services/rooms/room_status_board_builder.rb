@@ -36,6 +36,8 @@ module Rooms
     end
 
     def room_groups
+      @all_bookings = bookings_scope.to_a
+      
       @hotel.room_types.order(:name).map do |room_type|
         {
           room_type: room_type,
@@ -45,25 +47,41 @@ module Rooms
     end
 
     def room_row(room_type, room_number)
+      room_bookings = @all_bookings.select do |b| 
+        b.booking_rooms.any? { |br| br.room_type_id == room_type.id && br.room_number == room_number }
+      end
+
       {
         room_type: room_type,
         room_number: room_number,
-        status: status_for(room_type, room_number),
-        blocks: booking_blocks_for(room_type, room_number)
+        status: status_for(room_type, room_number, Date.current, room_bookings),
+        daily_data: dates.each_with_object({}) do |date, hash|
+          hash[date] = status_for(room_type, room_number, date, room_bookings)
+        end,
+        blocks: booking_blocks_for(room_type, room_number, room_bookings)
       }
     end
 
-    def status_for(room_type, room_number)
-      resolved = Rooms::StatusResolver.new(hotel: @hotel, room_type: room_type, room_number: room_number, date: Date.current).call
+    def status_for(room_type, room_number, date, room_bookings)
+      resolved = Rooms::StatusResolver.new(
+        hotel: @hotel, 
+        room_type: room_type, 
+        room_number: room_number, 
+        date: date,
+        bookings_scope: room_bookings
+      ).call
+
       {
         status: resolved.status,
         assignable: resolved.assignable,
-        room_status_id: resolved.room_status&.id
+        room_status_id: resolved.room_status&.id,
+        booking_state: resolved.booking_state,
+        booking_details: resolved.booking_details
       }
     end
 
-    def booking_blocks_for(room_type, room_number)
-      bookings_for(room_type, room_number).map do |booking|
+    def booking_blocks_for(room_type, room_number, room_bookings)
+      room_bookings.map do |booking|
         {
           id: booking.id,
           guest_name: booking.guest_name,
@@ -76,12 +94,12 @@ module Rooms
       end
     end
 
-    def bookings_for(room_type, room_number)
+    def bookings_scope
       @hotel.bookings
+        .includes(:booking_rooms)
         .where(status: %w[confirmed checked_in completed])
         .joins(:booking_rooms)
         .where("bookings.check_in < ? AND bookings.check_out > ?", dates.last + 1.day, @start_date)
-        .where(booking_rooms: { room_type_id: room_type.id, room_number: room_number })
         .distinct
         .order(:check_in, :id)
     end
