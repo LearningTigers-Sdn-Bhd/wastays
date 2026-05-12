@@ -31,6 +31,7 @@ Rails.application.routes.draw do
     get    "dashboard",           to: "dashboard#index",           as: :dashboard
     resources :bookings, only: [ :index, :show ] do
       member do
+        get :receipt
         get :invoice
       end
       resources :refund_requests, only: [ :new, :create ]
@@ -74,6 +75,7 @@ Rails.application.routes.draw do
     end
     resources :bookings, only: [ :show ] do
       member do
+        get :receipt
         get :invoice
         get :voucher
       end
@@ -134,6 +136,7 @@ Rails.application.routes.draw do
     end
     resources :bookings, only: [ :index, :show ] do
       member do
+        get :receipt
         get :invoice
       end
     end

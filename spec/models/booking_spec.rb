@@ -70,23 +70,23 @@ RSpec.describe Booking, type: :model do
     end
 
     context "when created with confirmed status" do
-      it "enqueues SendInvoiceEmailJob" do
+      it "enqueues SendReceiptEmailJob" do
         expect {
           booking_with_room(status: "confirmed")
-        }.to have_enqueued_job(SendInvoiceEmailJob)
+        }.to have_enqueued_job(SendReceiptEmailJob)
       end
     end
 
     context "when created with pending status" do
-      it "does not enqueue SendInvoiceEmailJob" do
+      it "does not enqueue SendReceiptEmailJob" do
         expect {
           booking_with_room(status: "pending")
-        }.not_to have_enqueued_job(SendInvoiceEmailJob)
+        }.not_to have_enqueued_job(SendReceiptEmailJob)
       end
     end
   end
 
-  describe "after_create_commit - WhatsApp invoice" do
+  describe "after_create_commit - WhatsApp receipt" do
     let(:hotel)     { create(:hotel) }
     let(:room_type) { create(:room_type, hotel: hotel) }
 
@@ -98,16 +98,16 @@ RSpec.describe Booking, type: :model do
       booking
     end
 
-    it "enqueues SendWhatsappInvoiceJob when status is confirmed" do
+    it "enqueues SendWhatsappReceiptJob when status is confirmed" do
       expect {
         booking_with_room(status: "confirmed")
-      }.to have_enqueued_job(SendWhatsappInvoiceJob)
+      }.to have_enqueued_job(SendWhatsappReceiptJob)
     end
 
-    it "does not enqueue SendWhatsappInvoiceJob when status is pending" do
+    it "does not enqueue SendWhatsappReceiptJob when status is pending" do
       expect {
         booking_with_room(status: "pending")
-      }.not_to have_enqueued_job(SendWhatsappInvoiceJob)
+      }.not_to have_enqueued_job(SendWhatsappReceiptJob)
     end
   end
 end
