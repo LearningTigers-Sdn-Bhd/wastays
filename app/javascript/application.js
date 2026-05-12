@@ -20,3 +20,8 @@ async function initializePreline() {
 
 document.addEventListener("turbo:load", initializePreline)
 document.addEventListener("turbo:frame-render", initializePreline)
+
+// Custom Turbo Stream Actions
+Turbo.StreamActions.reload = function() {
+  Turbo.visit(window.location.href, { action: "replace" })
+}
