@@ -146,6 +146,22 @@
                         <% if rate&.stop_sell? %>
                           <span class="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 uppercase tracking-wider">Stop Sell</span>
                         <% end %>
+
+                        <% if rate&.closed_to_arrival? %>
+                          <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase tracking-wider">CTA</span>
+                        <% end %>
+
+                        <% if rate&.closed_to_departure? %>
+                          <span class="inline-flex items-center rounded-md bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-700 uppercase tracking-wider">CTD</span>
+                        <% end %>
+
+                        <% if rate&.max_stay.present? %>
+                          <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-wider">Max <%= rate.max_stay %></span>
+                        <% end %>
+
+                        <% if rate&.min_stay.present? %>
+                          <span class="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Min <%= rate.min_stay %></span>
+                        <% end %>
                       </div>
                     </div>
                   </td>
@@ -201,14 +217,27 @@
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Min Stay</label>
-                <%= f.number_field :min_stay, placeholder: "Optional", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                <%= f.number_field :min_stay, placeholder: "Min", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
               </div>
-              <div class="flex items-end pb-2">
-                <label class="flex items-center gap-2 cursor-pointer group">
-                  <%= f.check_box :stop_sell, class: "size-5 rounded-md border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer" %>
-                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-600 transition-colors">Stop Sell</span>
-                </label>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Max Stay</label>
+                <%= f.number_field :max_stay, placeholder: "Max", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
               </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 py-1">
+              <label class="flex items-center gap-1.5 cursor-pointer group">
+                <%= f.check_box :stop_sell, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer" %>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight group-hover:text-slate-600 transition-colors">Stop Sell</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer group">
+                <%= f.check_box :closed_to_arrival, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer" %>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight group-hover:text-slate-600 transition-colors">CTA</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer group">
+                <%= f.check_box :closed_to_departure, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer" %>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight group-hover:text-slate-600 transition-colors">CTD</span>
+              </label>
             </div>
 
             <div class="pt-1">
@@ -276,12 +305,25 @@
               <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Min Stay</label>
               <%= f.number_field :min_stay, value: rate&.min_stay, placeholder: "None", class: "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-lg font-bold text-slate-900 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 focus:outline-none shadow-sm transition-all" %>
             </div>
-            <div class="flex items-end pb-3">
-              <label class="flex items-center gap-2 cursor-pointer group">
-                <%= f.check_box :stop_sell, checked: rate&.stop_sell?, class: "size-6 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" %>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-600 transition-colors">Stop Sell</span>
-              </label>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Max Stay</label>
+              <%= f.number_field :max_stay, value: rate&.max_stay, placeholder: "None", class: "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-lg font-bold text-slate-900 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 focus:outline-none shadow-sm transition-all" %>
             </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 py-2">
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <%= f.check_box :stop_sell, checked: rate&.stop_sell?, class: "size-6 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" %>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-600 transition-colors">Stop Sell</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <%= f.check_box :closed_to_arrival, checked: rate&.closed_to_arrival?, class: "size-6 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" %>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-600 transition-colors">CTA</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <%= f.check_box :closed_to_departure, checked: rate&.closed_to_departure?, class: "size-6 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" %>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-600 transition-colors">CTD</span>
+            </label>
           </div>
 
           <div class="flex flex-col gap-2 pt-2">
