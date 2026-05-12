@@ -265,6 +265,16 @@ ActiveSupport::Notifications.subscribe("request.faraday") do |*args|
     end
   end
 
+  # Parse request body if possible
+  parsed_request_body = nil
+  if payload[:request_body].present?
+    begin
+      parsed_request_body = JSON.parse(payload[:request_body])
+    rescue JSON::ParserError
+      parsed_request_body = payload[:request_body]
+    end
+  end
+
   capture_observation_entry({
     entry_type: "api",
     request_id: Current.request_id || "none",
@@ -273,6 +283,7 @@ ActiveSupport::Notifications.subscribe("request.faraday") do |*args|
     path: "#{payload[:method].to_s.upcase} #{payload[:url]}",
     payload: OBSERVATION_SCRUBBER.filter({
       request_headers: payload[:request_headers],
+      request_body: parsed_request_body,
       response_headers: payload[:response_headers],
       body: parsed_body
     }),

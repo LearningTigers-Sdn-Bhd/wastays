@@ -6,6 +6,7 @@ class HotelPortal::RatesController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days # Show 2 weeks by default
+    @room_types = current_hotel.room_types.order(:id)
     @rate_plans = @room_type.rate_plans.order(:id)
 
     @rates = @rate_plan.room_rates.where(date: @start_date..@end_date).index_by(&:date)
