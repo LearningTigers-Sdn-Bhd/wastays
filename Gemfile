@@ -96,3 +96,5 @@ end
 
 gem "openssl", "~> 3.1.2"
 gem "aws-sdk-s3", "~> 1.220"
+
+gem "view_component", "~> 4.10"

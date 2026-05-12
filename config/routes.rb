@@ -240,6 +240,7 @@ Rails.application.routes.draw do
         get :stay_price
       end
       member do
+        patch :move
         post :check_in
         post :check_out
         post :cancel
@@ -297,6 +298,14 @@ Rails.application.routes.draw do
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board
+    resources :reservation_board, only: [ :index ], path: "reservation-board"
+    namespace :reservation_board, path: "reservation-board" do
+      resources :bookings, only: [ :new, :create, :show ] do
+        member do
+          patch :transition
+        end
+      end
+    end
     resources :room_statuses, only: [ :update ]
   end
 end
