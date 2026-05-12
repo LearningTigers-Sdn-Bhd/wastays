@@ -40,6 +40,23 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
       expect(room_status.reload.status).to eq("preparing")
     end
 
+    it "saves inspection failed notes" do
+      grant_manage_room_status
+      room_status = room_status_for
+      room_status.update!(status: "awaiting_inspection")
+
+      patch hotel_room_status_path(hotel, room_status), params: {
+        room_status: { status: "inspection_failed", notes: "Need to reclean the bathroom." },
+        start_date: Date.new(2026, 5, 7).to_s,
+        days: 21,
+        layout: "compact"
+      }
+
+      expect(response).to redirect_to(hotel_room_status_board_path(hotel, start_date: "2026-05-07", days: "21", layout: "compact"))
+      expect(room_status.reload.status).to eq("inspection_failed")
+      expect(room_status.reload.notes).to eq("Need to reclean the bathroom.")
+    end
+
     it "blocks users without manage_room_status permission" do
       room_status = room_status_for
 

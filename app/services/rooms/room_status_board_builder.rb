@@ -75,6 +75,7 @@ module Rooms
         status: resolved.status,
         assignable: resolved.assignable,
         room_status_id: resolved.room_status&.id,
+        notes: resolved.room_status&.notes,
         booking_state: resolved.booking_state,
         booking_details: resolved.booking_details
       }

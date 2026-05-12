@@ -7,7 +7,8 @@ module Rooms
     ALLOWED_TRANSITIONS = {
       "ready" => %w[pending_cleaning out_of_service],
       "pending_cleaning" => %w[preparing ready],
-      "preparing" => %w[ready inspection_failed],
+      "preparing" => %w[awaiting_inspection ready inspection_failed],
+      "awaiting_inspection" => %w[ready inspection_failed preparing],
       "inspection_failed" => %w[preparing],
       "out_of_service" => %w[ready]
     }.freeze
@@ -30,11 +31,13 @@ module Rooms
       old_status = @room_status.status
 
       RoomStatus.transaction do
+        new_notes = @status.in?(%w[ready preparing]) ? nil : (@reason.presence || @room_status.notes)
+
         @room_status.update!(
           status: @status,
           last_changed_by: @user,
           last_changed_at: Time.current,
-          notes: @reason.presence || @room_status.notes
+          notes: new_notes
         )
 
         RoomOperationalAuditLog.create!(
