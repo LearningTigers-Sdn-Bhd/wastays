@@ -22,6 +22,10 @@ class HotelPortal::RatesController < HotelPortal::BaseController
       end_date: rate_params[:end_date],
       price: rate_params[:price],
       currency: rate_params[:currency],
+      min_stay: rate_params[:min_stay],
+      max_stay: rate_params[:max_stay],
+      closed_to_arrival: rate_params[:closed_to_arrival],
+      closed_to_departure: rate_params[:closed_to_departure],
       user: current_user
     ).call
 
@@ -58,6 +62,6 @@ class HotelPortal::RatesController < HotelPortal::BaseController
   end
 
   def rate_params
-    params.require(:rate).permit(:start_date, :end_date, :price, :currency)
+    params.require(:rate).permit(:start_date, :end_date, :price, :currency, :min_stay, :max_stay, :closed_to_arrival, :closed_to_departure)
   end
 end

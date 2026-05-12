@@ -776,6 +776,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "rate_plan_id"
+    t.integer "min_stay"
+    t.integer "max_stay"
+    t.boolean "closed_to_arrival"
+    t.boolean "closed_to_departure"
     t.index ["rate_plan_id"], name: "index_room_rates_on_rate_plan_id"
     t.index ["room_type_id", "date"], name: "index_room_rates_on_room_type_id_and_date", unique: true
     t.index ["room_type_id"], name: "index_room_rates_on_room_type_id"

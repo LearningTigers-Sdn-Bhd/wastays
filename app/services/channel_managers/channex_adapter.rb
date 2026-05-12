@@ -248,7 +248,7 @@ module ChannelManagers
           next if ext_rp_id == "pending"
 
           rate_plan.room_rates.where(date: date_range).each do |rate|
-            values << {
+            val = {
               property_id: property_id,
               rate_plan_id: ext_rp_id,
               date: rate.date.to_s,
@@ -256,6 +256,13 @@ module ChannelManagers
               currency: rate.currency,
               occupancy: occupancy
             }
+
+            val[:min_stay_arrival] = rate.min_stay if rate.min_stay.present?
+            val[:max_stay_arrival] = rate.max_stay if rate.max_stay.present?
+            val[:closed_to_arrival] = rate.closed_to_arrival ? 1 : 0 if !rate.closed_to_arrival.nil?
+            val[:closed_to_departure] = rate.closed_to_departure ? 1 : 0 if !rate.closed_to_departure.nil?
+
+            values << val
           end
         end
       end

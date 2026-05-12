@@ -1,6 +1,6 @@
 module HotelOps
   class BulkUpdateRates
-    def initialize(hotel:, rate_plan:, start_date:, end_date:, price:, currency: "MYR", user:)
+    def initialize(hotel:, rate_plan:, start_date:, end_date:, price:, currency: "MYR", user:, min_stay: nil, max_stay: nil, closed_to_arrival: nil, closed_to_departure: nil)
       @hotel = hotel
       @rate_plan = rate_plan
       @room_type = rate_plan.room_type
@@ -9,9 +9,14 @@ module HotelOps
       @price = price
       @currency = currency
       @user = user
+      @min_stay = min_stay
+      @max_stay = max_stay
+      @closed_to_arrival = closed_to_arrival
+      @closed_to_departure = closed_to_departure
     end
 
     def call
+      Thread.current[:skip_ari_sync] = true
       ActiveRecord::Base.transaction do
         (@start_date..@end_date).each do |date|
           # Always find or create the Standard Rate record for this date
@@ -20,6 +25,10 @@ module HotelOps
           old_price = rate.price
           rate.price = @price
           rate.currency = @currency
+          rate.min_stay = @min_stay if @min_stay.present?
+          rate.max_stay = @max_stay if @max_stay.present?
+          rate.closed_to_arrival = @closed_to_arrival if !@closed_to_arrival.nil?
+          rate.closed_to_departure = @closed_to_departure if !@closed_to_departure.nil?
           rate.save!
 
           # Log change if price actually changed or new record
@@ -38,19 +47,14 @@ module HotelOps
         # Trigger ARI Sync if CM is connected
         if @hotel.preferred_channel_manager.present?
           ChannelManagers::SyncJob.perform_later(@hotel.id, @start_date, @end_date)
-          
-          # Clear the sync buffer to prevent redundant calls from RoomRate after_commit hooks
-          # which usually wait 30 seconds to flush.
-          window_key = "channex:ari:window:#{@hotel.id}"
-          scheduled_key = "channex:ari:scheduled:#{@hotel.id}"
-          Rails.cache.delete(window_key)
-          Rails.cache.delete(scheduled_key)
         end
 
         { success: true }
       end
     rescue => e
       { success: false, error: e.message }
+    ensure
+      Thread.current[:skip_ari_sync] = nil
     end
   end
 end

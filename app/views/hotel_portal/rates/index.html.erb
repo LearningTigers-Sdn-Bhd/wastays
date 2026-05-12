@@ -108,44 +108,6 @@
                         <% end %>
                       </div>
                     </div>
-
-                    <!-- Single Day Update Modal -->
-                    <dialog id="rate-modal-<%= date %>" class="fixed inset-0 m-auto rounded-3xl p-0 w-[min(92vw,24rem)] shadow-2xl backdrop:bg-slate-900/60 transition-all border-none overflow-hidden" onclick="if(event.target===this){this.close()}">
-                      <div class="bg-white">
-                        <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center justify-between">
-                          <div>
-                            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Update Rate</h3>
-                            <p class="text-[10px] font-medium text-slate-500"><%= date.strftime("%A, %B %d, %Y") %></p>
-                          </div>
-                          <button type="button" class="size-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400 transition" onclick="this.closest('dialog').close()">
-                            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-                          </button>
-                        </div>
-
-                        <div class="p-6">
-                          <%= form_with scope: :rate, url: hotel_room_type_rates_path(current_hotel, @room_type, rate_plan_id: @rate_plan.id), local: true, class: "space-y-5" do |f| %>
-                            <%= f.hidden_field :start_date, value: date %>
-                            <%= f.hidden_field :end_date, value: date %>
-                            <%= f.hidden_field :currency, value: 'MYR' %>
-
-                            <div>
-                              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">New Rate for this day</label>
-                              <div class="relative">
-                                <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
-                                  <span class="text-sm font-bold text-slate-400">RM</span>
-                                </div>
-                                <%= f.number_field :price, step: 0.01, value: (rate&.price || @room_type.base_price), class: "w-full rounded-2xl border border-slate-200 bg-white ps-11 pe-4 py-3 text-lg font-black text-slate-900 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 focus:outline-none shadow-sm transition-all", required: true, autofocus: true %>
-                              </div>
-                            </div>
-
-                            <div class="flex flex-col gap-2 pt-2">
-                              <%= f.submit "Update Rate", class: "w-full inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-200 transition hover:bg-slate-800 active:scale-[0.98]" %>
-                              <button type="button" class="w-full py-2.5 text-xs font-bold text-slate-500 hover:text-slate-700 transition" onclick="this.closest('dialog').close()">Cancel</button>
-                            </div>
-                          <% end %>
-                        </div>
-                      </div>
-                    </dialog>
                   </td>
                 <% end %>
               </tr>
@@ -176,13 +138,19 @@
               </div>
             </div>
 
-            <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">New Rate (RM)</label>
-              <div class="relative">
-                <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                  <span class="text-xs font-bold text-slate-400">RM</span>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">New Rate (RM)</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                    <span class="text-xs font-bold text-slate-400">RM</span>
+                  </div>
+                  <%= f.number_field :price, step: 0.01, value: @room_type.base_price, class: "w-full rounded-xl border border-slate-200 bg-white ps-10 pe-3 py-2 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", required: true %>
                 </div>
-                <%= f.number_field :price, step: 0.01, value: @room_type.base_price, class: "w-full rounded-xl border border-slate-200 bg-white ps-10 pe-3 py-2 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", required: true %>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Min Stay</label>
+                <%= f.number_field :min_stay, placeholder: "Optional", class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
               </div>
             </div>
 
@@ -207,3 +175,50 @@
     </div>
   </div>
 </div>
+
+<!-- Single Day Update Modals -->
+<% (@start_date..@end_date).each do |date| %>
+  <% rate = @rates[date] %>
+  <dialog id="rate-modal-<%= date %>" class="fixed inset-0 m-auto rounded-3xl p-0 w-[min(92vw,24rem)] shadow-2xl backdrop:bg-slate-900/60 transition-all border-none overflow-hidden" onclick="if(event.target===this){this.close()}">
+    <div class="bg-white" onclick="event.stopPropagation()">
+      <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Update Rate</h3>
+          <p class="text-[10px] font-medium text-slate-500"><%= date.strftime("%A, %B %d, %Y") %></p>
+        </div>
+        <button type="button" class="size-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400 transition" onclick="this.closest('dialog').close()">
+          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="p-6">
+        <%= form_with scope: :rate, url: hotel_room_type_rates_path(current_hotel, @room_type, rate_plan_id: @rate_plan.id), local: true, class: "space-y-5" do |f| %>
+          <%= f.hidden_field :start_date, value: date %>
+          <%= f.hidden_field :end_date, value: date %>
+          <%= f.hidden_field :currency, value: 'MYR' %>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">New Rate</label>
+              <div class="relative">
+                <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
+                  <span class="text-sm font-bold text-slate-400">RM</span>
+                </div>
+                <%= f.number_field :price, step: 0.01, value: (rate&.price || @room_type.base_price), class: "w-full rounded-2xl border border-slate-200 bg-white ps-11 pe-4 py-3 text-lg font-black text-slate-900 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 focus:outline-none shadow-sm transition-all", required: true, autofocus: true %>
+              </div>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Min Stay</label>
+              <%= f.number_field :min_stay, value: rate&.min_stay, placeholder: "None", class: "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-lg font-bold text-slate-900 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 focus:outline-none shadow-sm transition-all" %>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2 pt-2">
+            <%= f.submit "Update Rate", class: "w-full inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-200 transition hover:bg-slate-800 active:scale-[0.98]" %>
+            <button type="button" class="w-full py-2.5 text-xs font-bold text-slate-500 hover:text-slate-700 transition" onclick="this.closest('dialog').close()">Cancel</button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </dialog>
+<% end %>
