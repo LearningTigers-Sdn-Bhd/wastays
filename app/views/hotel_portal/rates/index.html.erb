@@ -19,12 +19,12 @@
       <div class="flex items-center gap-2">
         <div class="flex items-center gap-2">
           <!-- Calendar Date Picker -->
-          <%= form_with url: hotel_room_type_rates_path(current_hotel, @room_type), method: :get, local: true, class: "flex items-center gap-2" do |f| %>
+          <%= form_with url: hotel_room_type_rates_path(current_hotel, @room_type), method: :get, local: true, class: "flex items-center gap-1" do |f| %>
             <%= f.hidden_field :rate_plan_id, value: @rate_plan.id %>
             <%= f.hidden_field :display_currency, value: @display_currency %>
             <%= f.date_field :start_date, value: @start_date, 
                              class: "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0",
-                             onchange: "this.form.submit()" %>
+                             onblur: "this.form.submit()" %>
           <% end %>
 
           <!-- Currency Toggle -->
