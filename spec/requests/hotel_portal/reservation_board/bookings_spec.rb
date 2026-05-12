@@ -33,7 +33,7 @@ RSpec.describe "HotelPortal::ReservationBoard::Bookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include(check_in.to_s)
       expect(response.body).to include("101")
-      expect(response.body).to include("Back to Reservation Board")
+      expect(response.body).to include("New Booking")
     end
   end
 
@@ -63,13 +63,13 @@ RSpec.describe "HotelPortal::ReservationBoard::Bookings", type: :request do
   describe "GET /hotel/:hotel_id/reservation-board/bookings/:id" do
     let(:booking) { create(:booking, hotel: hotel) }
 
-    it "responds successfully with board-specific breadcrumbs" do
+    it "responds successfully with board-specific modal content" do
       sign_in_with_permissions("manage_bookings")
 
       get hotel_reservation_board_booking_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Reservation Board")
+      expect(response.body).to include("Booking")
       expect(response.body).to include(booking.confirmation_token)
     end
   end

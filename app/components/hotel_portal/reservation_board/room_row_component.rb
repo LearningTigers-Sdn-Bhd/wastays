@@ -60,8 +60,8 @@ module HotelPortal
                   :booking_meta_class, :current_hotel, :rate_text_class, :currency_text_class
 
       def row_min_height
-        max_blocks_same_start = room[:blocks].group_by { |block| [block[:check_in], visible_start_date].max }.values.map(&:size).max || 1
-        [row_min_base, 24 + (max_blocks_same_start * block_step)].max
+        max_blocks_same_start = room[:blocks].group_by { |block| [ block[:check_in], visible_start_date ].max }.values.map(&:size).max || 1
+        [ row_min_base, 24 + (max_blocks_same_start * block_step) ].max
       end
 
       def room_type
@@ -69,7 +69,7 @@ module HotelPortal
       end
 
       def rate_for(date)
-        reservation_board[:rates][[room_type.id, date]]
+        reservation_board[:rates][[ room_type.id, date ]]
       end
 
       def occupied_on?(date)
@@ -77,7 +77,7 @@ module HotelPortal
       end
 
       def blocks_starting_on(date)
-        room[:blocks].select { |block| [block[:check_in], visible_start_date].max == date }
+        room[:blocks].select { |block| [ block[:check_in], visible_start_date ].max == date }
       end
     end
   end

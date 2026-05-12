@@ -13,7 +13,7 @@ module HotelPortal
       attr_reader :booking_styles, :status_icons, :reservation_board
 
       def status_list
-        ["all", "not_ready"] + %w[confirmed checked_in pending]
+        [ "all", "not_ready" ] + %w[confirmed checked_in pending]
       end
 
       def count_for(status)
@@ -21,7 +21,7 @@ module HotelPortal
       end
 
       def style_for(status)
-        booking_styles.fetch(status, 'border-slate-200 bg-slate-50 text-slate-600')
+        booking_styles.fetch(status, "border-slate-200 bg-slate-50 text-slate-600")
       end
 
       def icon_for(status)

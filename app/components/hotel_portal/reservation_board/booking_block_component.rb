@@ -66,15 +66,15 @@ module HotelPortal
       end
 
       def block_style_class
-        booking_styles.fetch(block[:status].to_s, 'border-sky-200 bg-sky-50 text-sky-700')
+        booking_styles.fetch(block[:status].to_s, "border-sky-200 bg-sky-50 text-sky-700")
       end
 
       def source_badge_class
-        block[:source] == 'internal' ? 'bg-slate-200/60 text-slate-600' : 'bg-blue-100 text-blue-700'
+        block[:source] == "internal" ? "bg-slate-200/60 text-slate-600" : "bg-blue-100 text-blue-700"
       end
 
       def payment_badge_class
-        block[:payment_status] == 'captured' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+        block[:payment_status] == "captured" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
       end
     end
   end
