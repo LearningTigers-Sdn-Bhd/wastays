@@ -66,6 +66,12 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
     if payload[:params].present?
       booking_id = payload[:params]["booking_id"] || payload[:params]["id"] if payload[:params]["controller"]&.include?("bookings")
       tags << "booking:#{booking_id}" if booking_id.present?
+
+      # Extract Channex Webhook IDs
+      if path.include?("webhooks/channex")
+        channex_id = payload[:params]["id"] || payload[:params].dig("payload", "revision_id")
+        tags << "channex_id:#{channex_id}" if channex_id.present?
+      end
     end
 
     # Use raw parameters from the request object to bypass Rails' automatic pre-filtering
@@ -231,6 +237,34 @@ ActiveSupport::Notifications.subscribe("request.faraday") do |*args|
   event = ActiveSupport::Notifications::Event.new(*args)
   payload = event.payload
 
+  tags = [ payload[:url].include?("channex") ? "channex" : "api" ]
+
+  # Parse body if possible for better viewing and ID extraction
+  parsed_body = nil
+  if payload[:body].present?
+    begin
+      parsed_body = JSON.parse(payload[:body])
+    rescue JSON::ParserError
+      parsed_body = payload[:body]
+    end
+  end
+
+  # Extract Channex ID (Task ID, Revision ID, etc) for integration tests
+  if payload[:url].include?("channex")
+    # Body might be a raw JSON string (from background jobs) or already parsed (from request watcher)
+    data_payload = parsed_body.is_a?(Hash) ? parsed_body : (JSON.parse(payload[:body]) rescue nil)
+    
+    if data_payload.is_a?(Hash)
+      data = data_payload["data"]
+      channex_id = if data.is_a?(Hash)
+        data["id"]
+      elsif data.is_a?(Array)
+        data.first["id"] if data.first.is_a?(Hash)
+      end
+      tags << "channex_id:#{channex_id}" if channex_id.present?
+    end
+  end
+
   capture_observation_entry({
     entry_type: "api",
     request_id: Current.request_id || "none",
@@ -240,9 +274,9 @@ ActiveSupport::Notifications.subscribe("request.faraday") do |*args|
     payload: OBSERVATION_SCRUBBER.filter({
       request_headers: payload[:request_headers],
       response_headers: payload[:response_headers],
-      body: payload[:body]
+      body: parsed_body
     }),
-    tags: [ payload[:url].include?("channex") ? "channex" : "api" ]
+    tags: tags.uniq
   })
 end
 
@@ -254,14 +288,27 @@ def capture_api_call(provider, method, url, payload = {})
 
   status, body = result
 
+  tags = [ provider.downcase ]
+  parsed_body = (JSON.parse(body) rescue nil) if body.is_a?(String)
+
+  if provider.downcase == "channex" && (parsed_body || body).is_a?(Hash)
+    data = (parsed_body || body)["data"]
+    channex_id = if data.is_a?(Hash)
+      data["id"]
+    elsif data.is_a?(Array)
+      data.first["id"] if data.first.is_a?(Hash)
+    end
+    tags << "channex_id:#{channex_id}" if channex_id.present?
+  end
+
   capture_observation_entry({
     entry_type: "api",
     request_id: Current.request_id || "none",
     status: status,
     duration: duration,
     path: "#{method.to_s.upcase} [#{provider}] #{url}",
-    payload: OBSERVATION_SCRUBBER.filter(payload.merge(response_body: body)),
-    tags: [ provider.downcase ]
+    payload: OBSERVATION_SCRUBBER.filter(payload.merge(response_body: parsed_body || body)),
+    tags: tags.uniq
   })
 
   result

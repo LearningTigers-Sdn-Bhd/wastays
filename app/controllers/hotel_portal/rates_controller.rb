@@ -6,6 +6,7 @@ class HotelPortal::RatesController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days # Show 2 weeks by default
+    @rate_plans = @room_type.rate_plans.order(:id)
 
     @rates = @rate_plan.room_rates.where(date: @start_date..@end_date).index_by(&:date)
   end
@@ -24,9 +25,18 @@ class HotelPortal::RatesController < HotelPortal::BaseController
     ).call
 
     if result[:success]
-      redirect_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: rate_params[:start_date]), notice: "Rates updated successfully."
+      redirect_to hotel_room_type_rates_path(
+        current_hotel,
+        @room_type,
+        start_date: rate_params[:start_date],
+        rate_plan_id: @rate_plan.id
+      ), notice: "Rates updated successfully."
     else
-      redirect_to hotel_room_type_rates_path(current_hotel, @room_type), alert: "Error updating rates: #{result[:error]}"
+      redirect_to hotel_room_type_rates_path(
+        current_hotel,
+        @room_type,
+        rate_plan_id: @rate_plan.id
+      ), alert: "Error updating rates: #{result[:error]}"
     end
   end
 
@@ -37,9 +47,13 @@ class HotelPortal::RatesController < HotelPortal::BaseController
   end
 
   def set_rate_plan
-    # Default to the first rate plan for now.
-    # In the future, this can be passed in params[:rate_plan_id]
-    @rate_plan = @room_type.rate_plans.first || @room_type.rate_plans.create!(name: "Standard Rate", currency: @room_type.hotel.default_currency || "MYR")
+    default_rate_plan = @room_type.rate_plans.first ||
+      @room_type.rate_plans.create!(name: "Standard Rate", sell_mode: "per_room", currency: @room_type.hotel.default_currency || "MYR")
+    @rate_plan = if params[:rate_plan_id].present?
+      @room_type.rate_plans.find_by(id: params[:rate_plan_id]) || default_rate_plan
+    else
+      default_rate_plan
+    end
   end
 
   def rate_params

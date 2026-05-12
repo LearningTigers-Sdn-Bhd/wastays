@@ -17,15 +17,27 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <%= form_with url: hotel_room_type_rates_path(current_hotel, @room_type), method: :get, local: true, class: "min-w-[220px]" do |f| %>
+          <%= f.hidden_field :start_date, value: @start_date %>
+          <%= f.select :rate_plan_id,
+                       options_from_collection_for_select(@rate_plans, :id, :name, @rate_plan.id),
+                       {},
+                       {
+                         class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0",
+                         onchange: "this.form.submit()",
+                         aria: { label: "Select rate plan" }
+                       } %>
+        <% end %>
+
         <div class="inline-flex bg-slate-100 rounded-xl p-1 shadow-sm border border-slate-200">
-          <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date - 14.days), 
+          <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date - 14.days, rate_plan_id: @rate_plan.id), 
               class: "p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition text-slate-500 hover:text-slate-900" do %>
             <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           <% end %>
           <span class="px-4 flex items-center text-xs font-bold text-slate-700 uppercase tracking-wider">
             <%= @start_date.strftime("%b %d") %> - <%= @end_date.strftime("%b %d") %>
           </span>
-          <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date + 14.days), 
+          <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date + 14.days, rate_plan_id: @rate_plan.id), 
               class: "p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition text-slate-500 hover:text-slate-900" do %>
             <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           <% end %>
@@ -92,7 +104,7 @@
         </div>
         
         <div class="p-6 sm:p-8">
-          <%= form_with scope: :rate, url: hotel_room_type_rates_path(current_hotel, @room_type), local: true, class: "space-y-6" do |f| %>
+          <%= form_with scope: :rate, url: hotel_room_type_rates_path(current_hotel, @room_type, rate_plan_id: @rate_plan.id), local: true, class: "space-y-6" do |f| %>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Start Date</label>
