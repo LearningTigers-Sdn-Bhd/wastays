@@ -44,7 +44,7 @@ module Bookings
 
       booking.status = "confirmed"
       booking.payment_status = "captured"
-      booking.hotel_snapshot = @hotel.as_json.merge("room_number" => @room_number)
+      booking.hotel_snapshot = @hotel.booking_snapshot.merge("room_number" => @room_number)
 
       result = ActiveRecord::Base.transaction do
         if booking.save
