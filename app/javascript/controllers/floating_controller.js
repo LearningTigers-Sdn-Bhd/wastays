@@ -81,11 +81,18 @@ export default class extends Controller {
 
     if (this.triggerValue === "click") {
       this.clickOutsideHandler = (event) => {
-        if (!this.element.contains(event.target) && !this.floatingElement.contains(event.target)) {
+        // If we are in the middle of a hide, don't do anything
+        if (!this.openValue) return
+
+        const isOutside = !this.element.contains(event.target) && !this.floatingElement.contains(event.target)
+        const isCloseButton = this.floatingElement.contains(event.target) && event.target.closest('[data-floating-close]')
+
+        if (isOutside || isCloseButton) {
           this.hide()
         }
       }
-      document.addEventListener("click", this.clickOutsideHandler)
+      // Use capture: true to ensure we catch the click before Turbo or other listeners stop it
+      document.addEventListener("click", this.clickOutsideHandler, true)
     }
   }
 
@@ -103,7 +110,7 @@ export default class extends Controller {
     }
 
     if (this.clickOutsideHandler) {
-      document.removeEventListener("click", this.clickOutsideHandler)
+      document.removeEventListener("click", this.clickOutsideHandler, true)
       this.clickOutsideHandler = null
     }
   }

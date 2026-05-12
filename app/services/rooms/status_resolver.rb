@@ -4,12 +4,13 @@ require "ostruct"
 
 module Rooms
   class StatusResolver
-    def initialize(hotel:, room_type:, room_number:, date:, bookings_scope: nil)
+    def initialize(hotel:, room_type:, room_number:, date:, bookings_scope: nil, blocks_scope: nil)
       @hotel = hotel
       @room_type = room_type
       @room_number = room_number.to_s
       @date = date
       @provided_bookings = bookings_scope
+      @provided_blocks = blocks_scope
     end
 
     def call
@@ -27,8 +28,13 @@ module Rooms
     private
 
     def physical_status
+      return "out_of_service" if blocked?
       return "occupied" if occupied_stay?
       persisted_status&.status || "ready"
+    end
+
+    def blocked?
+      blocks.any? { |b| @date >= b.start_date && @date <= b.end_date }
     end
 
     def resolve_booking_info
@@ -77,6 +83,17 @@ module Rooms
             .joins(:booking_rooms)
             .where(booking_rooms: { room_type_id: @room_type.id, room_number: @room_number })
             .distinct
+        end
+      end
+    end
+
+    def blocks
+      @blocks ||= begin
+        if @provided_blocks
+          @provided_blocks
+        else
+          @hotel.room_blocks
+            .where(room_type_id: @room_type.id, room_number: @room_number)
         end
       end
     end

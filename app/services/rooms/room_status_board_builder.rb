@@ -37,6 +37,7 @@ module Rooms
 
     def room_groups
       @all_bookings = bookings_scope.to_a
+      @all_blocks = blocks_scope.to_a
       
       @hotel.room_types.order(:name).map do |room_type|
         {
@@ -51,24 +52,30 @@ module Rooms
         b.booking_rooms.any? { |br| br.room_type_id == room_type.id && br.room_number == room_number }
       end
 
+      room_blocks = @all_blocks.select do |b|
+        b.room_type_id == room_type.id && b.room_number == room_number
+      end
+
       {
         room_type: room_type,
         room_number: room_number,
-        status: status_for(room_type, room_number, Date.current, room_bookings),
+        status: status_for(room_type, room_number, Date.current, room_bookings, room_blocks),
         daily_data: dates.each_with_object({}) do |date, hash|
-          hash[date] = status_for(room_type, room_number, date, room_bookings)
+          hash[date] = status_for(room_type, room_number, date, room_bookings, room_blocks)
         end,
-        blocks: booking_blocks_for(room_type, room_number, room_bookings)
+        blocks: booking_blocks_for(room_type, room_number, room_bookings),
+        maintenance_blocks: maintenance_blocks_for(room_type, room_number, room_blocks)
       }
     end
 
-    def status_for(room_type, room_number, date, room_bookings)
+    def status_for(room_type, room_number, date, room_bookings, room_blocks = [])
       resolved = Rooms::StatusResolver.new(
         hotel: @hotel, 
         room_type: room_type, 
         room_number: room_number, 
         date: date,
-        bookings_scope: room_bookings
+        bookings_scope: room_bookings,
+        blocks_scope: room_blocks
       ).call
 
       {
@@ -93,6 +100,25 @@ module Rooms
           span: [ ([ booking.check_out + 1.day, dates.last + 1.day ].min - [ booking.check_in, @start_date ].max).to_i, 1 ].max
         }
       end
+    end
+
+    def maintenance_blocks_for(room_type, room_number, room_blocks)
+      room_blocks.map do |block|
+        {
+          id: block.id,
+          reason: block.reason,
+          block_type: block.block_type,
+          start_date: block.start_date,
+          end_date: block.end_date,
+          start_offset: [ (block.start_date - @start_date).to_i, 0 ].max,
+          span: [ ([ block.end_date + 1.day, dates.last + 1.day ].min - [ block.start_date, @start_date ].max).to_i, 1 ].max
+        }
+      end
+    end
+
+    def blocks_scope
+      @hotel.room_blocks
+        .for_date_range(@start_date, dates.last)
     end
 
     def bookings_scope

@@ -16,7 +16,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="h-full">
+  <body class="h-full" data-controller="<%= yield :body_controllers %>" <%= yield :body_attributes %>>
     <!-- Preline CMS-style layout: flex column (header + body row) -->
     <div class="flex flex-col h-screen bg-layer-alt">
 
