@@ -302,6 +302,8 @@ Rails.application.routes.draw do
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board
     resources :room_statuses, only: [ :update ]
-    resources :room_blocks, only: [ :create, :update, :destroy ]
+    resources :room_blocks, only: [ :create, :update, :destroy ] do
+      post :finish, on: :member
+    end
   end
 end

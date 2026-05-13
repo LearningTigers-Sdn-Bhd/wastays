@@ -294,18 +294,14 @@
                     <% if can_manage && room_status_id.present? && has_actions %>
                       <div class="mt-2 flex flex-wrap gap-1.5">
                         <div data-controller="floating" data-floating-placement-value="bottom-end" class="relative z-[1000] isolate inline-flex overflow-visible">
-                          <button data-floating-target="reference" data-action="click->floating#toggle" id="room-actions-<%= room_status_id %>" type="button" class="inline-flex items-center gap-x-1 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 shadow-sm hover:bg-slate-50 focus:outline-none focus:bg-slate-50 transition-[background-color,border-color,color,box-shadow]">
+                          <button data-floating-target="reference" data-action="click->floating#toggle" id="room-actions-<%= room_status_id %>" type="button" 
+                            title="<%= (status == 'inspection_failed' && failure_note.present?) ? "Failure Reason: #{failure_note}" : '' %>"
+                            class="inline-flex items-center gap-x-1 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 shadow-sm hover:bg-slate-50 focus:outline-none focus:bg-slate-50 transition-[background-color,border-color,color,box-shadow]">
                             Actions
                             <svg class="size-3 text-slate-400 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                           </button>
 
                           <div data-controller="room-status-action" data-floating-target="floating" class="hidden z-[5000] min-w-48 overflow-visible bg-white shadow-xl rounded-xl p-1 border border-slate-100" aria-labelledby="room-actions-<%= room_status_id %>">
-                            <% if status == "inspection_failed" && failure_note.present? %>
-                              <div class="px-3 py-2 border-b border-slate-50 mb-1 bg-slate-50/50 rounded-t-lg">
-                                <p class="text-[9px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-1">Failure Reason</p>
-                                <p class="text-[11px] font-semibold text-slate-700 leading-tight italic">"<%= failure_note %>"</p>
-                              </div>
-                            <% end %>
                             <% if ["pending_cleaning", "inspection_failed", "awaiting_inspection"].include?(status) %>
                               <div class="p-1 border-b border-slate-50 mb-1">
                                 <%= form_with url: hotel_room_status_path(current_hotel, room_status_id), method: :patch, local: true do |f| %>
@@ -518,17 +514,17 @@
                           class="absolute z-10 overflow-hidden rounded-xl border border-slate-300 bg-slate-100 text-slate-600 px-3 py-2 shadow-sm <%= clip_corner_class %>"
                           style="top: <%= block_top + ((block_index + booking_count_at_this_start) * block_step) %>px; left: <%= left_offset %>px; width: <%= width_calc %>; min-width: 88px;"
                           data-floating-target="reference"
+                          title="<%= block[:reason] %>"
                         >
                           <div class="flex items-center gap-1.5 overflow-hidden">
                             <svg class="size-3 shrink-0 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.423 3.007a.75.75 0 0 1 .577 0l8.5 3.333a.75.75 0 0 1 0 1.411l-8.5 3.333a.75.75 0 0 1-.577 0l-8.5-3.333a.75.75 0 0 1 0-1.411l8.5-3.333Z" /><path d="M4.318 10.387 11.423 13.173a.75.75 0 0 0 .577 0l7.105-2.786a.75.75 0 0 1 .536 1.398l-7.382 2.895a2.25 2.25 0 0 1-1.722 0l-7.382-2.895a.75.75 0 0 1 .536-1.398Z" /><path d="M4.318 14.887 11.423 17.673a.75.75 0 0 0 .577 0l7.105-2.786a.75.75 0 0 1 .536 1.398l-7.382 2.895a2.25 2.25 0 0 1-1.722 0l-7.382-2.895a.75.75 0 0 1 .536-1.398Z" /></svg>
                             <p class="truncate text-[11px] font-black uppercase tracking-wider"><%= block[:block_type].humanize %></p>
                           </div>
-                          <p class="truncate text-[10px] font-medium opacity-80 mt-0.5"><%= block[:reason] %></p>
 
                           <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-white border border-slate-200 rounded-xl shadow-xl">
                             <div class="flex items-center gap-2 mb-2">
                               <div class="size-2 rounded-full bg-slate-400"></div>
-                              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Maintenance Block</span>
+                              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Room Block</span>
                             </div>
                             <p class="text-sm font-bold text-slate-900"><%= block[:block_type].humanize.titleize %></p>
                             <p class="mt-1 text-xs text-slate-600 leading-relaxed italic">"<%= block[:reason] %>"</p>
@@ -555,6 +551,15 @@
                                     class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-colors">
                                   Edit Block
                                 </button>
+                                <%= button_to finish_hotel_room_block_path(current_hotel, block[:id], start_date: @start_date, days: @board_days, layout: @board_layout), 
+                                    method: :post,
+                                    data: { 
+                                      turbo_confirm: "Mark this maintenance block as finished?",
+                                      floating_close: true
+                                    },
+                                    class: "flex-1 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 transition-colors pointer-events-auto" do %>
+                                  Finish
+                                <% end %>
                                 <%= button_to hotel_room_block_path(current_hotel, block[:id], start_date: @start_date, days: @board_days, layout: @board_layout), 
                                     method: :delete,
                                     data: { 
@@ -584,7 +589,7 @@
         <div class="border-b border-slate-100 bg-slate-50/50 px-8 py-6">
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-xl font-black text-slate-900" data-room-block-modal-target="title">Schedule Maintenance</h3>
+              <h3 class="text-xl font-black text-slate-900" data-room-block-modal-target="title">Room Block</h3>
               <p class="mt-1 text-xs font-medium text-slate-500">Block <span data-room-block-modal-target="roomDisplay" class="font-bold text-slate-900">Room 101</span> for operational holds</p>
             </div>
             <button type="button" onclick="this.closest('dialog').close()" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors">

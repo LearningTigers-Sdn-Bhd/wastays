@@ -34,7 +34,7 @@ module Rooms
     end
 
     def blocked?
-      blocks.any? { |b| @date >= b.start_date && @date <= b.end_date }
+      blocks.any? { |b| b.completed_at.nil? && @date >= b.start_date && @date <= b.end_date }
     end
 
     def resolve_booking_info

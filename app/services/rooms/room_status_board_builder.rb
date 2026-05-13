@@ -118,6 +118,7 @@ module Rooms
 
     def blocks_scope
       @hotel.room_blocks
+        .where(completed_at: nil)
         .for_date_range(@start_date, dates.last)
     end
 

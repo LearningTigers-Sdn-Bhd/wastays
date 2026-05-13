@@ -7,7 +7,7 @@ export default class extends Controller {
     const { date, roomNumber, roomTypeId, roomTypeName } = event.params
     
     // Reset form to create mode
-    this.titleTarget.textContent = "Schedule Maintenance"
+    this.titleTarget.textContent = "Room Block"
     this.submitTarget.value = "Schedule Block"
     this.formTarget.action = this.formTarget.dataset.createUrl
     this.formTarget.querySelector('input[name="_method"]')?.remove()
@@ -31,7 +31,7 @@ export default class extends Controller {
     const { id, roomNumber, roomTypeId, roomTypeName, startDate, endDate, blockType, reason, updateUrl } = event.params
     
     // Set form to edit mode
-    this.titleTarget.textContent = "Edit Maintenance Block"
+    this.titleTarget.textContent = "Edit Room Block"
     this.submitTarget.value = "Update Block"
     this.formTarget.action = updateUrl
     

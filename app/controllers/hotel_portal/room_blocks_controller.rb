@@ -49,6 +49,21 @@ module HotelPortal
       end
     end
 
+    def finish
+      block = current_hotel.room_blocks.find(params[:id])
+      result = Rooms::ManageBlock.new(
+        hotel: current_hotel,
+        user: current_user,
+        block: block
+      ).finish
+
+      if result.success?
+        redirect_to hotel_room_status_board_path(current_hotel, board_params), notice: "Maintenance block finished."
+      else
+        redirect_to hotel_room_status_board_path(current_hotel, board_params), alert: result.error
+      end
+    end
+
     private
 
     def authorize_room_block_management!

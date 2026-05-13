@@ -52,7 +52,23 @@ module Rooms
       was_active_today = @block.active_on?(Date.current)
 
       if @block.destroy
-        sync_room_status_on_removal(room_type, room_number) if was_active_today
+        sync_room_status_on_removal(room_type, room_number, target_status: "ready") if was_active_today
+        success(@block)
+      else
+        failure(@block.errors.full_messages.to_sentence)
+      end
+    end
+
+    def finish
+      return failure("Block not found") unless @block
+
+      was_active_today = @block.active_on?(Date.current)
+
+      # Record completion time
+      @block.completed_at = Time.current
+
+      if @block.save
+        sync_room_status_on_removal(@block.room_type, @block.room_number, target_status: "pending_cleaning") if was_active_today
         success(@block)
       else
         failure(@block.errors.full_messages.to_sentence)
@@ -76,10 +92,11 @@ module Rooms
       ).call
     end
 
-    def sync_room_status_on_removal(room_type, room_number)
-      # Check if there are other active blocks for this room today
+    def sync_room_status_on_removal(room_type, room_number, target_status: "ready")
+      # Check if there are other active blocks for this room today (excluding the one we just finished/removed)
       other_blocks = @hotel.room_blocks.active_on(Date.current)
                            .where(room_type: room_type, room_number: room_number)
+                           .where.not(id: @block&.id)
       
       return if other_blocks.any?
 
@@ -92,7 +109,7 @@ module Rooms
 
       Rooms::SetStatus.new(
         room_status: room_status,
-        status: "pending_cleaning",
+        status: target_status,
         user: @user,
         reason: "Block removed/expired",
         event_type: "room_block_removed_auto_status"

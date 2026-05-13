@@ -16,11 +16,11 @@ class RoomBlock < ApplicationRecord
   validate :end_date_after_start_date
   validate :no_overlapping_blocks
 
-  scope :active_on, ->(date) { where("start_date <= ? AND end_date >= ?", date, date) }
+  scope :active_on, ->(date) { where("start_date <= ? AND end_date >= ?", date, date).where(completed_at: nil) }
   scope :for_date_range, ->(start_date, end_date) { where("start_date <= ? AND end_date >= ?", end_date, start_date) }
 
   def active_on?(date)
-    return false if start_date.blank? || end_date.blank?
+    return false if start_date.blank? || end_date.blank? || completed_at.present?
 
     (start_date..end_date).include?(date)
   end
@@ -40,6 +40,7 @@ class RoomBlock < ApplicationRecord
 
     overlapping = RoomBlock.where(hotel_id: hotel_id, room_type_id: room_type_id, room_number: room_number)
                           .where.not(id: id)
+                          .where(completed_at: nil)
                           .where("start_date <= ? AND end_date >= ?", end_date, start_date)
 
     if overlapping.any?
