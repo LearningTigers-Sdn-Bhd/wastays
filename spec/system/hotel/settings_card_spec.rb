@@ -34,16 +34,17 @@ RSpec.describe 'Hotel Settings Card', type: :system do
       expect(page).to have_field('Onboarding Stage', type: 'text', disabled: true, with: 'Building profile')
       expect(page).to have_field('Default Currency', disabled: true, with: 'MYR')
       expect(page).to have_field('USD Conversion Rate')
-      expect(page).to have_checked_field('hotel_tourism_tax_enabled')
-      expect(page).to have_field('Tourism Tax Amount')
       expect(page).to have_button('Save Settings')
+    end
+
+    within('section', text: 'Tax Configuration') do
+      expect(page).to have_checked_field('hotel_tourism_tax_enabled')
+      expect(page).to have_field('Tourism Tax Amount (RM)')
     end
 
     fill_in 'Standard Check-in Time', with: '15:00'
     fill_in 'Standard Check-out Time', with: '11:00'
     fill_in 'USD Conversion Rate', with: '4.25'
-    check 'hotel_tourism_tax_enabled'
-    fill_in 'Tourism Tax Amount', with: '10.00'
 
     click_button 'Save Settings'
 
@@ -52,7 +53,6 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     expect(hotel.reload.property_policy.check_out_time).to eq('11:00')
     expect(hotel.reload.default_currency).to eq('MYR')
     expect(hotel.reload.usd_conversion_rate).to eq(4.25)
-    expect(hotel.reload.tourism_tax_enabled?).to be(true)
   end
 
   it 'shows hotel status and onboarding stage as disabled text inputs' do
@@ -69,9 +69,9 @@ RSpec.describe 'Hotel Settings Card', type: :system do
 
     visit hotel_settings_path(hotel)
 
-    within('section', text: 'Hotel Settings') do
+    within('section', text: 'Tax Configuration') do
       expect(page).to have_unchecked_field('hotel_tourism_tax_enabled')
-      expect(page).to have_field('Tourism Tax Amount', disabled: true)
+      expect(page).to have_field('Tourism Tax Amount (RM)', disabled: true)
     end
   end
 

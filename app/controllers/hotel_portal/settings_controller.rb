@@ -98,7 +98,8 @@ module HotelPortal
           default_currency: @hotel.default_currency,
           usd_conversion_rate: @hotel.usd_conversion_rate,
           tourism_tax_enabled: @hotel.tourism_tax_enabled?,
-          tourism_tax_amount: @hotel.tourism_tax_amount
+          tourism_tax_amount: @hotel.tourism_tax_amount,
+          sst_enabled: @hotel.sst_enabled?
         }
       else
         @settings = {}
@@ -187,6 +188,7 @@ module HotelPortal
         :usd_conversion_rate,
         :tourism_tax_enabled,
         :tourism_tax_amount,
+        :sst_enabled,
         :ai_provider_enabled,
         :ai_concierge_tone,
         :ai_provider_name,

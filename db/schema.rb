@@ -223,6 +223,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
     t.string "external_reference"
     t.string "channel_manager_reference"
     t.integer "revision_number", default: 0
+    t.jsonb "tax_lines", default: [], null: false
+    t.integer "reservation_number"
+    t.integer "folio_number"
+    t.integer "receipt_number"
+    t.integer "guest_registration_number"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
@@ -293,6 +298,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
   end
 
+  create_table "hotel_counters", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "counter_type", null: false
+    t.integer "last_value", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "counter_type"], name: "index_hotel_counters_on_hotel_id_and_counter_type", unique: true
+    t.index ["hotel_id"], name: "index_hotel_counters_on_hotel_id"
+  end
+
   create_table "hotel_pricing_rules", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.string "rule_type", null: false
@@ -306,6 +321,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
     t.index ["hotel_id", "rule_type"], name: "index_hotel_pricing_rules_on_hotel_and_type"
     t.index ["hotel_id", "start_date", "end_date"], name: "index_hotel_pricing_rules_on_hotel_and_dates"
     t.index ["hotel_id"], name: "index_hotel_pricing_rules_on_hotel_id"
+  end
+
+  create_table "hotel_taxes", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "name", null: false
+    t.string "rate_type", default: "flat", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.boolean "enabled", default: true, null: false
+    t.boolean "foreign_guests_only", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_hotel_taxes_on_hotel_id"
   end
 
   create_table "hotels", force: :cascade do |t|
@@ -335,8 +362,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
     t.string "ai_concierge_tone", default: "basic", null: false
     t.jsonb "faq", default: [], null: false
     t.jsonb "policy", default: [], null: false
+    t.boolean "sst_enabled", default: false, null: false
+    t.string "hotel_prefix"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
+    t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
   end
@@ -870,7 +900,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
   add_foreign_key "bookings", "hotels"
   add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
+  add_foreign_key "hotel_counters", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"
+  add_foreign_key "hotel_taxes", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "users", column: "salesperson_id"
   add_foreign_key "housekeeping_requests", "bookings"

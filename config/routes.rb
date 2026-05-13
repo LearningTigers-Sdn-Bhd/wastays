@@ -247,6 +247,8 @@ Rails.application.routes.draw do
         post :check_in
         post :check_out
         post :cancel
+        post :add_guest
+        delete "guests/:guest_id", action: :remove_guest, as: :remove_guest
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings#complete_housekeeping_request", as: :complete_housekeeping_request
         patch "complaint_requests/:complaint_request_id", to: "bookings#update_complaint_request", as: :update_complaint_request
         post "complaint_requests/:complaint_request_id/resolve", to: "bookings#resolve_complaint_request", as: :resolve_complaint_request
@@ -298,6 +300,7 @@ Rails.application.routes.draw do
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"
+    resources :hotel_taxes, only: %i[index create update destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board

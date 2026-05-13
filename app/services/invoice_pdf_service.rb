@@ -64,7 +64,9 @@ class InvoicePdfService
       [ { content: "INVOICE NUMBER", font_style: :bold, text_color: GOLD, size: 8, borders: [] },
         { content: "ISSUE DATE", font_style: :bold, text_color: GOLD, size: 8, borders: [], align: :right } ],
       [ { content: @booking.confirmation_token, font_style: :bold, size: 14, text_color: TEXT_PRIMARY, borders: [] },
-        { content: issue_date, size: 11, text_color: TEXT_PRIMARY, borders: [], align: :right } ]
+        { content: issue_date, size: 11, text_color: TEXT_PRIMARY, borders: [], align: :right } ],
+      [ { content: @booking.folio_number ? "Folio No. #{@booking.formatted_folio_number}  ·  Guest Reg. No. #{@booking.formatted_guest_registration_number}" : "", size: 9, text_color: TEXT_MUTED, borders: [] },
+        { content: "", borders: [], align: :right } ]
     ], width: pdf.bounds.width)
   end
 
@@ -107,11 +109,16 @@ class InvoicePdfService
         { content: "MYR #{fmt(room.subtotal)}", size: 10, text_color: TEXT_PRIMARY, align: :right } ]
     end
 
+    tax_rows = Array(@booking.tax_lines).map do |tax|
+      [ { content: tax["name"].to_s, size: 10, text_color: TEXT_MUTED, colspan: 3 },
+        { content: "MYR #{fmt(tax["amount"])}", size: 10, text_color: TEXT_MUTED, align: :right } ]
+    end
+
     pdf.table(
       [ [ { content: "DESCRIPTION", font_style: :bold, size: 8, text_color: TEXT_MUTED },
           { content: "QTY",      font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :center },
           { content: "NIGHTS",   font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :center },
-          { content: "SUBTOTAL", font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :right } ] ] + rows,
+          { content: "SUBTOTAL", font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :right } ] ] + rows + tax_rows,
       width: pdf.bounds.width,
       column_widths: [ desc_w, qty_w, nights_w, amt_w ],
       cell_style: { borders: [ :bottom ], padding: [ 12, 6, 12, 6 ], border_color: BORDER_GRAY }

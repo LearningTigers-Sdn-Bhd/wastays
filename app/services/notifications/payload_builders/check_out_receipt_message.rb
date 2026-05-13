@@ -10,7 +10,7 @@ module Notifications
       def call
         line_items = build_line_items
         line_items_total = line_items.sum { |item| item[:amount].to_f }.round(2)
-        tax_total = tourism_tax_total
+        tax_total = @booking.tax_total
         derived_grand_total = (line_items_total + tax_total).round(2)
         booking_total = @booking.total_amount.to_f.round(2)
         mismatch_amount = (booking_total - derived_grand_total).round(2)
@@ -59,19 +59,14 @@ module Notifications
       end
 
       def tourism_tax_total
-        return 0.0 unless @booking.tourism_tax?
-
-        @booking.tourism_tax_amount.to_f.round(2)
+        @booking.tax_lines_for("ttx").sum { |t| t["amount"].to_f }.round(2)
       end
 
       def build_tax_line
-        return nil unless @booking.tourism_tax?
+        lines = Array(@booking.tax_lines)
+        return nil if lines.empty?
 
-        {
-          description: "Tourism tax",
-          quantity: 1,
-          amount: tourism_tax_total
-        }
+        lines.map { |t| { description: t["name"], quantity: 1, amount: t["amount"].to_f } }
       end
 
       def invoice_url_for(booking)
