@@ -30,6 +30,12 @@ module Admin
       ActiveRecord::Base.transaction do
         @refund_request.update!(status: "completed")
         @refund_request.booking.update!(payment_status: "refunded")
+        Bookings::RecordAuditLog.call(
+          auditable: @refund_request.booking,
+          user: current_user,
+          action_type: "refund_completed",
+          metadata: { "refund_request_id" => @refund_request.id }
+        )
       end
       RefundMailer.completed(@refund_request).deliver_later
       redirect_to admin_refund_request_path(@refund_request), notice: "Refund marked as completed. Guest has been notified."

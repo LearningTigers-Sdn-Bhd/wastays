@@ -1,0 +1,109 @@
+namespace :hotel_ops do
+  desc "Clean state for a specific hotel (delete bookings, reset rates to base, recalibrate statuses)"
+  task :clean_state, [ :hotel_name ] => :environment do |_, args|
+    hotel_name = args[:hotel_name]
+    if hotel_name.blank?
+      puts "Error: Please provide a hotel name. Usage: bin/rake hotel_ops:clean_state['Hotel Name']"
+      exit 1
+    end
+
+    hotel = Hotel.where("name ILIKE ?", hotel_name).first
+
+    if hotel.nil?
+      puts "Error: Hotel '#{hotel_name}' not found."
+      exit 1
+    end
+
+    puts "!!! WARNING: This will PERMANENTLY DELETE all bookings and reset rates/statuses for '#{hotel.name}' !!!"
+    puts "Starting in 5 seconds... (Press Ctrl+C to abort)"
+    5.times do |i|
+      print "#{5 - i}... "
+      sleep 1
+    end
+    puts "\nProceeding..."
+
+    ActiveRecord::Base.transaction do
+      # 1. Clean Bookings
+      booking_count = hotel.bookings.count
+      puts "Destroying #{booking_count} bookings..."
+      hotel.bookings.destroy_all
+
+      # 2. Clean and Recalibrate Rates
+      start_date = Date.current
+      end_date = Date.new(Date.current.year, 12, 31)
+
+      puts "Recalibrating rates from #{start_date} to #{end_date}..."
+      hotel.room_types.each do |room_type|
+        # Ensure a Standard Rate plan exists if none are present
+        if room_type.rate_plans.empty?
+          puts "  -> Creating 'Standard Rate' plan for #{room_type.name}..."
+          room_type.rate_plans.create!(
+            name: "Standard Rate",
+            sell_mode: "per_room",
+            currency: hotel.default_currency || "MYR"
+          )
+          room_type.reload
+        end
+
+        base_price = room_type.base_price
+
+        room_type.rate_plans.each do |rate_plan|
+          puts "  -> Resetting rates for #{room_type.name} (#{rate_plan.name}) to #{base_price} #{rate_plan.currency}..."
+
+          # Remove existing rates in the range
+          rate_plan.room_rates.where(date: start_date..end_date).delete_all
+
+          # Create new rates
+          rates_to_insert = (start_date..end_date).map do |date|
+            {
+              room_type_id: room_type.id,
+              rate_plan_id: rate_plan.id,
+              date: date,
+              price: base_price,
+              currency: rate_plan.currency,
+              created_at: Time.current,
+              updated_at: Time.current
+            }
+          end
+
+          RoomRate.insert_all(rates_to_insert) if rates_to_insert.any?
+        end
+      end
+
+      # 3. Recalibrate Room Statuses
+      puts "Recalibrating room statuses..."
+      hotel.room_types.each do |room_type|
+        expected_room_numbers = room_type.room_numbers.map(&:to_s)
+        existing_statuses = room_type.room_statuses.pluck(:room_number)
+
+        # Create missing
+        missing_numbers = expected_room_numbers - existing_statuses
+        if missing_numbers.any?
+          puts "  -> #{room_type.name}: Adding statuses for #{missing_numbers.join(', ')}"
+          missing_numbers.each do |num|
+            room_type.room_statuses.create!(
+              hotel: hotel,
+              room_number: num,
+              status: "ready"
+            )
+          end
+        end
+
+        # Remove orphans
+        orphan_numbers = existing_statuses - expected_room_numbers
+        if orphan_numbers.any?
+          puts "  -> #{room_type.name}: Removing orphaned statuses for #{orphan_numbers.join(', ')}"
+          room_type.room_statuses.where(room_number: orphan_numbers).destroy_all
+        end
+      end
+
+      # 4. Trigger Sync if needed
+      if hotel.preferred_channel_manager.present?
+        puts "Triggering Channel Manager Sync..."
+        ChannelManagers::SyncJob.perform_later(hotel.id, start_date, end_date)
+      end
+    end
+
+    puts "\nSUCCESS: '#{hotel.name}' has been recalibrated to a clean state."
+  end
+end

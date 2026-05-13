@@ -68,6 +68,12 @@ module BookingEngine
             occupancy_snapshot: { max_adults: @room_type.max_adults, max_children: @room_type.max_children }
           )
 
+          # Record Audit Log
+          Bookings::RecordAuditLog.call(
+            auditable: quote,
+            action_type: "create"
+          )
+
           # 5. Place Inventory Hold
           hold_service = BookingEngine::HoldInventory.new(quote)
           if hold_service.call
