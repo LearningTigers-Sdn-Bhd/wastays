@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "HotelPortal::ReservationBoard::Bookings", type: :request do
+RSpec.describe "HotelPortal::ReservationBoard::BoardBookings", type: :request do
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101" ]) }
 
@@ -24,7 +24,7 @@ RSpec.describe "HotelPortal::ReservationBoard::Bookings", type: :request do
       sign_in_with_permissions("manage_bookings")
       check_in = Date.current + 5.days
 
-      get new_hotel_reservation_board_booking_path(hotel), params: {
+      get new_hotel_reservation_board_board_booking_path(hotel), params: {
         check_in: check_in.to_s,
         room_type_id: room_type.id,
         room_number: "101"
@@ -53,7 +53,7 @@ RSpec.describe "HotelPortal::ReservationBoard::Bookings", type: :request do
         total_amount: 100
       }
 
-      post hotel_reservation_board_bookings_path(hotel), params: { booking: booking_params }
+      post hotel_reservation_board_board_bookings_path(hotel), params: { booking: booking_params }
 
       expect(response).to redirect_to(hotel_reservation_board_index_path(hotel))
       expect(hotel.bookings.last.guest_name).to eq("Board Guest")
@@ -66,7 +66,7 @@ RSpec.describe "HotelPortal::ReservationBoard::Bookings", type: :request do
     it "responds successfully with board-specific modal content" do
       sign_in_with_permissions("manage_bookings")
 
-      get hotel_reservation_board_booking_path(hotel, booking)
+      get hotel_reservation_board_board_booking_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Booking")
@@ -106,7 +106,7 @@ RSpec.describe "HotelPortal::ReservationBoard::Bookings", type: :request do
     it "transitions booking to checked_in and returns turbo stream" do
       sign_in_with_permissions("manage_bookings", "manage_guest_arrival", "manage_room_status")
 
-      patch transition_hotel_reservation_board_booking_path(hotel, booking),
+      patch transition_hotel_reservation_board_board_booking_path(hotel, booking),
             params: { status: "checked_in" },
             headers: { "Accept" => "text/vnd.turbo-stream.html" }
 

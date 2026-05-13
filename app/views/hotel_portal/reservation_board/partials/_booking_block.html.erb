@@ -1,4 +1,13 @@
-<%# app/components/hotel_portal/reservation_board/booking_block_component.html.erb %>
+<%# app/views/hotel_portal/reservation_board/partials/_booking_block.html.erb %>
+<%
+  clipped_left = block[:check_in] < visible_start_date
+  clipped_right = block[:check_out] > visible_end_exclusive
+  left_offset = clipped_left ? 0 : block_left_pad
+  right_trim = clipped_right ? 0 : block_left_pad
+  width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)"
+  top_offset = block_top + (block_index * block_step)
+%>
+
 <div
   draggable="true"
   data-id="<%= block[:id] %>"
@@ -13,11 +22,11 @@
   data-booking-actions-source-value="<%= block[:source] %>"
   data-booking-actions-payment-status-value="<%= block[:payment_status] %>"
   data-booking-actions-notes-value="<%= block[:notes] %>"
-  class="absolute z-10 overflow-hidden rounded-sm border py-1.5 pr-5 pl-6 shadow-sm <%= block_style_class %> <%= clip_corner_class %> transition-transform hover:scale-[1.01]"
+  class="absolute z-10 overflow-hidden rounded-sm border py-1 pr-4 pl-5 shadow-sm <%= booking_block_status_classes(block, booking_styles) %> <%= booking_block_clip_corner_class(block, visible_start_date, visible_end_exclusive) %> transition-transform hover:scale-[1.01]"
   style="top: <%= top_offset %>px; left: <%= left_offset %>px; width: <%= width_calc %>; min-width: 100px;"
 >
   <%# Drag Handle (Left) %>
-  <% unless clipped_left? %>
+  <% unless clipped_left %>
     <div class="absolute inset-y-0 left-0 w-5 cursor-grab bg-black/5 hover:bg-black/10 transition-colors flex flex-col items-center justify-center gap-0.5"
          data-action="mousedown->reservation-timeline#onDragHandleMouseDown"
          data-reservation-timeline-target="dragHandle">
@@ -34,10 +43,14 @@
 
     <% if block[:has_notes] %>
       <div class="group relative">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-amber-600"><path d="M15 14h.01"/><path d="M15 18h.01"/><path d="M15 10h.01"/><path d="M11 14h.01"/><path d="M11 18h.01"/><path d="M11 10h.01"/><path d="M7 14h.01"/><path d="M7 18h.01"/><path d="M7 10h.01"/><rect width="18" height="20" x="3" y="2" rx="2"/></svg>
+        <button type="button" 
+                data-action="click->booking-actions#openNotes"
+                class="shrink-0 text-amber-600 hover:text-amber-700 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14h.01"/><path d="M15 18h.01"/><path d="M15 10h.01"/><path d="M11 14h.01"/><path d="M11 18h.01"/><path d="M11 10h.01"/><path d="M7 14h.01"/><path d="M7 18h.01"/><path d="M7 10h.01"/><rect width="18" height="20" x="3" y="2" rx="2"/></svg>
+        </button>
         <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
           <div class="bg-slate-900 text-white text-[10px] font-bold py-1 px-2 rounded whitespace-nowrap shadow-lg">
-            Has Guest Notes
+            View Guest Notes
           </div>
         </div>
       </div>
@@ -45,7 +58,7 @@
   </div>
   
   <%# Resize Handle %>
-  <% unless clipped_right? %>
+  <% unless clipped_right %>
     <div class="absolute inset-y-0 right-0 w-4 cursor-ew-resize bg-black/5 hover:bg-black/10 transition-colors"
          data-action="mousedown->reservation-timeline#onResizeStart"
          data-reservation-timeline-target="resizeHandle"></div>
@@ -55,8 +68,8 @@
     <span class="<%= booking_amount_class %> font-black tracking-tight truncate shrink-0"><%= block[:currency] == "MYR" ? "RM" : block[:currency] %> <%= number_with_precision(block[:total_amount], precision: 2) %></span>
     
     <div class="flex items-center gap-1 overflow-hidden">
-      <span class="rounded-md <%= source_badge_class %> px-1.5 py-0.5 <%= booking_badge_class %> font-bold uppercase tracking-widest whitespace-nowrap"><%= block[:source].presence || "Direct" %></span>
-      <span class="rounded-md <%= payment_badge_class %> px-1.5 py-0.5 <%= booking_badge_class %> font-bold uppercase tracking-widest whitespace-nowrap">
+      <span class="rounded-md <%= booking_block_source_badge_class(block) %> px-1.5 py-0.5 <%= booking_badge_class %> font-bold uppercase tracking-widest whitespace-nowrap"><%= block[:source].presence || "Direct" %></span>
+      <span class="rounded-md <%= booking_block_payment_badge_class(block) %> px-1.5 py-0.5 <%= booking_badge_class %> font-bold uppercase tracking-widest whitespace-nowrap">
         <%= block[:payment_status].humanize %>
       </span>
     </div>

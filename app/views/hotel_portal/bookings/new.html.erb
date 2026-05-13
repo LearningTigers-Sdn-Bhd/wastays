@@ -1,6 +1,6 @@
 <% is_reservation_board = params[:controller].include?("reservation_board") %>
 <% back_path = is_reservation_board ? hotel_reservation_board_index_path(current_hotel) : hotel_bookings_path(current_hotel) %>
-<% form_url = is_reservation_board ? hotel_reservation_board_bookings_path(current_hotel) : hotel_bookings_path(current_hotel) %>
+<% form_url = is_reservation_board ? hotel_reservation_board_board_bookings_path(current_hotel) : hotel_bookings_path(current_hotel) %>
 
 <% content_for :breadcrumbs do %>
   <div class="flex items-center gap-x-2">
@@ -125,7 +125,7 @@
         <div class="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-200">
           <div>
             <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Calculated Total</p>
-            <p class="text-2xl font-black text-slate-900 mt-1">MYR <span data-booking-calc-target="displayTotal">0.00</span></p>
+            <p class="text-2xl font-black text-slate-900 mt-1">MYR <span data-booking-calc-target="displayTotal"><%= number_with_precision(@booking.total_amount || 0, precision: 2) %></span></p>
           </div>
           <div class="w-1/3">
              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-right">Adjust Price (Optional)</label>

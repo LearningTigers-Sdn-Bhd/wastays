@@ -301,10 +301,14 @@ Rails.application.routes.draw do
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board
-    resources :reservation_board, only: [ :index ], path: "reservation-board"
     namespace :reservation_board, path: "reservation-board" do
-      resources :bookings, only: [ :new, :create, :show ] do
+      get "/", to: "boards#index", as: :index
+      resources :board_bookings, path: "bookings", only: [ :new, :create, :show, :update ] do
         member do
+          get :check_in
+          get :check_out
+          get :edit_stay
+          get :notes
           patch :transition
         end
       end

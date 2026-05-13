@@ -1,0 +1,29 @@
+<%= turbo_frame_tag "reservation_board_check_out_content" do %>
+  <div class="flex flex-col h-full">
+    <%= form_with url: check_out_hotel_booking_path(current_hotel, @booking), method: :post,
+        class: "flex flex-col h-full" do |f| %>
+      <%= hidden_field_tag :source, "reservation_board" %>
+
+      <%# Modal Header %>
+      <%= render "hotel_portal/reservation_board/partials/content_header",
+                 title: "Confirm Check-Out",
+                 subtitle: "Set check-out time for #{@booking.guest_name}.",
+                 icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>' %>
+
+      <%# Modal Content %>
+      <div class="flex-1 p-6 space-y-6">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-out Date & Time</label>
+          <%= f.datetime_local_field :checked_out_at,
+              value: Time.current.strftime("%Y-%m-%dT%H:%M"),
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      </div>
+
+      <%# Modal Footer %>
+      <%= render "hotel_portal/reservation_board/partials/content_footer",
+                 show_full_page_link: false,
+                 submit_button: f.submit("Confirm Check-Out", class: "px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors shadow-sm") %>
+    <% end %>
+  </div>
+<% end %>

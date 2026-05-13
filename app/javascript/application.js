@@ -3,6 +3,8 @@ import "@hotwired/turbo-rails"
 import "controllers"
 import "turbo_confirm"
 
+console.log("Wastays Application JS loaded")
+
 async function initializePreline() {
   const enabled = document.body?.dataset?.prelineEnabled !== "false"
   if (!enabled) return

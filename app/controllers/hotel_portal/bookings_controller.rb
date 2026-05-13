@@ -18,6 +18,16 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       check_out: params[:check_out].presence || Date.current + 1.day,
       adults: 2
     )
+
+    if params[:room_type_id].present?
+      room_type = current_hotel.room_types.find(params[:room_type_id])
+      @booking.total_amount = Bookings::CalculateStayPrice.new(
+        room_type: room_type,
+        check_in: @booking.check_in,
+        check_out: @booking.check_out
+      ).call
+    end
+
     @room_types = current_hotel.room_types.order(:name)
   end
 
@@ -76,6 +86,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def show
     @booking = current_hotel.bookings.find(params[:id])
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+    set_audit_logs
   end
 
   def update
@@ -98,6 +109,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       respond_to do |format|
         format.html do
           @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+          set_audit_logs
           @booking.errors.add(:base, result.errors.to_sentence)
           render :show, status: :unprocessable_content
         end
@@ -139,6 +151,21 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   private
 
+  def set_audit_logs
+    # Fetch audit logs for this booking and its related entities
+    base_query = BookingAuditLog.where(hotel: current_hotel)
+
+    @audit_logs = base_query.where(auditable: @booking)
+
+    if @booking.booking_quote_id.present?
+      @audit_logs = @audit_logs.or(base_query.where(auditable_type: "BookingQuote", auditable_id: @booking.booking_quote_id))
+    end
+
+    @audit_logs = @audit_logs.or(base_query.where(auditable_type: "BookingRoom", auditable_id: @booking.booking_rooms.select(:id)))
+                            .includes(:user, :auditable)
+                            .order(created_at: :desc)
+  end
+
   def release_room_locks(booking)
     # Release locks for all rooms assigned to this booking
     # Assuming the admin might have locked multiple rooms if they changed their mind
@@ -166,7 +193,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
       respond_to do |format|
         format.turbo_stream do
-          if request.referer&.include?("reservation-board")
+          if reservation_board_request?
             render turbo_stream: turbo_stream.action(:reload, "reservation_board")
           else
             # Fallback for other pages that might use turbo streams but expect a redirect
@@ -180,7 +207,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
       respond_to do |format|
         format.turbo_stream do
-          if request.referer&.include?("reservation-board")
+          if reservation_board_request?
             # Append an alert toast to the board instead of rendering show
             render turbo_stream: turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
           else
@@ -201,6 +228,10 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
       booking_rooms_attributes: [ :id, :room_number ]
     )
+  end
+
+  def reservation_board_request?
+    params[:source] == "reservation_board" || request.referer&.include?("reservation-board")
   end
 
   def authorize_view_bookings!

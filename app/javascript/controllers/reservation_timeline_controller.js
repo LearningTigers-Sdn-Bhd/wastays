@@ -12,11 +12,9 @@ export default class extends Controller {
   openNewBookingModal(event) {
     event.preventDefault()
     const url = event.currentTarget.href
-    const container = document.getElementById("reservation-board-action-modal-container")
-    if (container) {
-      const modalEvent = new CustomEvent("reservation-board:open-modal", { detail: { url } })
-      container.dispatchEvent(modalEvent)
-    }
+    const frameId = event.currentTarget.dataset.turboFrame || "reservation_board_booking_sheet_content"
+    const modalEvent = new CustomEvent("reservation-board:open-modal", { detail: { url, frameId } })
+    window.dispatchEvent(modalEvent)
   }
 
   onDragHandleMouseDown(event) {
@@ -77,22 +75,33 @@ export default class extends Controller {
       const newCheckOutStr = newCheckOut.toISOString().split('T')[0]
       const bookingId = this.draggedElement.dataset.id
       
-      if (confirm(`Extend stay to checkout on ${newCheckOutStr}?`)) {
-        try {
-          const response = await this.resizeBooking(bookingId, newCheckOutStr)
-          if (response.success) {
-            Turbo.visit(window.location.href, { action: "replace" })
-          } else {
-            alert(`Failed to extend stay: ${response.errors.join(", ")}`)
-            this.draggedElement.style.width = this.originalWidthStyle
+      const currentCheckOut = this.draggedElement.dataset.bookingActionsCheckOutValue
+      const guestName = this.draggedElement.dataset.bookingActionsGuestNameValue
+      const resizedElement = this.draggedElement
+      const originalWidthStyle = this.originalWidthStyle
+
+      window.dispatchEvent(new CustomEvent("reservation-board:confirm-extend", {
+        detail: {
+          guestName,
+          currentCheckOut,
+          newCheckOut: newCheckOutStr,
+          onConfirm: () => this.resizeBooking(bookingId, newCheckOutStr),
+          onSuccess: (response) => {
+            if (response.success) {
+              Turbo.visit(window.location.href, { action: "replace" })
+            } else {
+              alert(`Failed to extend stay: ${response.errors.join(", ")}`)
+              resizedElement.style.width = originalWidthStyle
+            }
+          },
+          onError: () => {
+            resizedElement.style.width = originalWidthStyle
+          },
+          onCancel: () => {
+            resizedElement.style.width = originalWidthStyle
           }
-        } catch (error) {
-          console.error("Error extending stay:", error)
-          this.draggedElement.style.width = this.originalWidthStyle
         }
-      } else {
-        this.draggedElement.style.width = this.originalWidthStyle
-      }
+      }))
     } else {
       this.draggedElement.style.width = this.originalWidthStyle
     }

@@ -1,4 +1,9 @@
-<%# app/components/hotel_portal/reservation_board/room_row_component.html.erb %>
+<%# app/views/hotel_portal/reservation_board/partials/_room_row.html.erb %>
+<%
+  row_min_height = reservation_board_row_height(room, row_min_base, block_step, visible_start_date)
+  room_type = room[:room_type]
+%>
+
 <div class="grid border-b border-slate-100" style="grid-template-columns: <%= grid_template_columns %>; min-height: <%= row_min_height %>px;">
   <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= card_padding %> flex items-center justify-between gap-4">
     <p class="font-black leading-none text-slate-950 <%= room_number_class %>"><%= room[:room_number] %></p>
@@ -43,13 +48,16 @@
          data-room-type-id="<%= room_type.id %>"
          data-action="dragover->reservation-timeline#onDragOver dragleave->reservation-timeline#onDragLeave drop->reservation-timeline#onDrop">
       <%# Quick Creation Link & Rate Display %>
-      <% is_occupied = occupied_on?(date) %>
-      <% rate = rate_for(date) %>
+      <% is_occupied = room[:blocks].any? { |b| b[:check_in] <= date && b[:check_out] > date } %>
+      <% rate = reservation_board_rate_for(reservation_board, room_type.id, date) %>
 
       <% if !is_occupied %>
-        <%= link_to new_hotel_reservation_board_booking_path(current_hotel, check_in: date, room_type_id: room_type.id, room_number: room[:room_number]),
+        <%= link_to new_hotel_reservation_board_board_booking_path(current_hotel, check_in: date, room_type_id: room_type.id, room_number: room[:room_number]),
                     class: "absolute inset-0 z-0 flex flex-col justify-between p-1 hover:bg-slate-50/80 transition-colors",
-                    data: { action: "click->reservation-timeline#openNewBookingModal" } do %>
+                    data: { 
+                      action: "click->reservation-timeline#openNewBookingModal",
+                      turbo_frame: "reservation_board_booking_sheet_content"
+                    } do %>
           <div class="flex justify-center items-center h-4">
             <% if rate %>
               <div class="flex items-center gap-0.5 <%= rate_text_class %> font-bold text-slate-400/60 tracking-tight transition-opacity">
@@ -65,9 +73,9 @@
         <% end %>
       <% end %>
 
-      <% blocks_starting_on(date).each_with_index do |block, block_index| %>
+      <% room[:blocks].select { |block| [ block[:check_in], visible_start_date ].max == date }.each_with_index do |block, block_index| %>
         <% if block[:type] == "room_status" %>
-          <%= render HotelPortal::ReservationBoard::RoomStatusBlockComponent.new(
+          <%= render "hotel_portal/reservation_board/partials/room_status_block",
                 block: block,
                 block_index: block_index,
                 visible_start_date: visible_start_date,
@@ -76,10 +84,9 @@
                 block_top: block_top,
                 block_step: block_step,
                 booking_amount_class: booking_amount_class,
-                booking_status_class: booking_status_class
-              ) %>
+                booking_status_class: booking_status_class %>
         <% else %>
-          <%= render HotelPortal::ReservationBoard::BookingBlockComponent.new(
+          <%= render "hotel_portal/reservation_board/partials/booking_block",
                 block: block,
                 block_index: block_index,
                 visible_start_date: visible_start_date,
@@ -91,8 +98,7 @@
                 booking_name_class: booking_name_class,
                 booking_meta_class: booking_meta_class,
                 booking_amount_class: booking_amount_class,
-                booking_badge_class: booking_badge_class
-              ) %>
+                booking_badge_class: booking_badge_class %>
         <% end %>
       <% end %>
     </div>

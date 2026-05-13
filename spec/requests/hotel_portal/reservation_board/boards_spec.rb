@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "HotelPortal::ReservationBoard", type: :request do
+RSpec.describe "HotelPortal::ReservationBoard::Boards", type: :request do
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101" ]) }
 
@@ -26,14 +26,14 @@ RSpec.describe "HotelPortal::ReservationBoard", type: :request do
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
     end
 
-    it "responds successfully and includes the centralized action modal" do
+    it "responds successfully and includes the required modal structures" do
       sign_in_with_permissions("manage_bookings")
 
       get hotel_reservation_board_index_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("id=\"reservation-board-action-modal\"")
-      expect(response.body).to include("id=\"reservation_board_modal_content\"")
+      expect(response.body).to include("id=\"reservation-board-booking-sheet\"")
+      expect(response.body).to include("id=\"reservation_board_booking_sheet_content\"")
     end
 
     it "displays rates in empty cells when a rate plan is present" do

@@ -53,58 +53,31 @@ export default class extends Controller {
     if (this.notesValue && this.notesValue !== "undefined" && this.notesValue !== "" && this.notesValue !== "[]") {
       const openNotesBtn = menu.querySelector('[data-booking-actions-target="openNotesBtn"]')
       openNotesBtn.classList.remove("hidden")
-      openNotesBtn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        this.removeExistingMenu()
-        const modal = document.getElementById("reservation-board-notes-modal")
-        const listContainer = document.getElementById("reservation-board-notes-list")
-        if (modal && listContainer) {
-          listContainer.innerHTML = ""
-          try {
-            const notes = JSON.parse(this.notesValue)
-            notes.forEach(note => {
-              const item = document.createElement("div")
-              item.className = "p-4 bg-slate-50 rounded-xl border border-slate-100"
-              item.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                  <span class="text-xs font-bold text-slate-900">${note.author}</span>
-                  <span class="text-[10px] text-slate-500 font-medium">${note.date}</span>
-                </div>
-                <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed italic">${note.body}</p>
-              `
-              listContainer.appendChild(item)
-            })
-          } catch (err) {
-            console.error("Error parsing notes:", err)
-            listContainer.innerHTML = `<p class="text-sm text-slate-500 italic">${this.notesValue}</p>`
-          }
-          modal.showModal()
-        }
-      })
+      openNotesBtn.addEventListener("click", (e) => this.openNotes(e))
     }
 
-    // Set details link
     const hotelId = window.location.pathname.split('/')[2]
     const detailsUrl = `/hotel/${hotelId}/reservation-board/bookings/${this.idValue}`
+    const checkInUrl = `/hotel/${hotelId}/reservation-board/bookings/${this.idValue}/check_in`
+    const checkOutUrl = `/hotel/${hotelId}/reservation-board/bookings/${this.idValue}/check_out`
     
     // Configure buttons based on state
-    const today = new Date().toISOString().split('T')[0]
-    const isCheckInDay = this.checkInValue <= today && this.statusValue === "confirmed"
+    const isConfirmed = this.statusValue === "confirmed"
     const isCheckedIn = this.statusValue === "checked_in"
     
     const checkInBtn = menu.querySelector('[data-booking-actions-target="checkInBtn"]')
-    if (isCheckInDay || isCheckedIn) {
+    if (isConfirmed || isCheckedIn) {
       checkInBtn.classList.remove("hidden")
       if (isCheckedIn) {
         checkInBtn.innerHTML = `
-          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487 1.65-1.65a2.25 2.25 0 1 1 3.182 3.182l-1.65 1.65M18 5 7.5 15.5 3 21l5.5-4.5L19 6z" /></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
           Edit Check-In
         `
       }
       checkInBtn.addEventListener("click", (e) => {
         e.stopPropagation()
         this.removeExistingMenu()
-        this.openCentralModal(detailsUrl)
+        this.openBoardOverlay("reservation-board:open-check-in", checkInUrl)
       })
     }
     
@@ -114,7 +87,7 @@ export default class extends Controller {
       checkOutBtn.addEventListener("click", (e) => {
         e.stopPropagation()
         this.removeExistingMenu()
-        this.openCentralModal(detailsUrl)
+        this.openBoardOverlay("reservation-board:open-check-out", checkOutUrl)
       })
     }
 
@@ -122,8 +95,7 @@ export default class extends Controller {
     detailsBtn.addEventListener("click", (e) => {
       e.preventDefault()
       e.stopPropagation()
-      this.removeExistingMenu()
-      this.openCentralModal(detailsUrl)
+      this.showDetails()
     })
 
     const extend1Btn = menu.querySelector('[data-action="booking-actions#extend1Day"]')
@@ -152,12 +124,48 @@ export default class extends Controller {
     })
   }
 
+  openNotes(event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    this.removeExistingMenu()
+
+    const hotelId = window.location.pathname.split('/')[2]
+    const url = `/hotel/${hotelId}/reservation-board/bookings/${this.idValue}/notes`
+    this.openBoardOverlay("reservation-board:open-notes", url, "reservation_board_notes_content")
+  }
+
+  showDetails() {
+    this.removeExistingMenu()
+    const hotelId = window.location.pathname.split('/')[2]
+    const detailsUrl = `/hotel/${hotelId}/reservation-board/bookings/${this.idValue}`
+    this.openBoardOverlay("reservation-board:open-booking-sheet", detailsUrl, "reservation_board_booking_sheet_content")
+  }
+
+  openCheckIn(event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    const url = event?.currentTarget?.dataset.bookingActionsUrlValue || `/hotel/${window.location.pathname.split('/')[2]}/reservation-board/bookings/${this.idValue}/check_in`
+    this.openBoardOverlay("reservation-board:open-check-in", url, "reservation_board_check_in_content")
+  }
+
+  openCheckOut(event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    const url = event?.currentTarget?.dataset.bookingActionsUrlValue || `/hotel/${window.location.pathname.split('/')[2]}/reservation-board/bookings/${this.idValue}/check_out`
+    this.openBoardOverlay("reservation-board:open-check-out", url, "reservation_board_check_out_content")
+  }
+
+  openEditStay(event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    const hotelId = window.location.pathname.split('/')[2]
+    const url = `/hotel/${hotelId}/reservation-board/bookings/${this.idValue}/edit_stay`
+    this.openBoardOverlay("reservation-board:open-edit-stay", url, "reservation_board_edit_stay_content")
+  }
+
   openCentralModal(url) {
-    const container = document.getElementById("reservation-board-action-modal-container")
-    if (container) {
-      const event = new CustomEvent("reservation-board:open-modal", { detail: { url } })
-      container.dispatchEvent(event)
-    }
+    this.openBoardOverlay("reservation-board:open-modal", url, "reservation_board_booking_sheet_content")
+  }
+
+  openBoardOverlay(eventName, url, frameId = null) {
+    const event = new CustomEvent(eventName, { detail: { url, frameId } })
+    window.dispatchEvent(event)
   }
 
   checkIn() {
@@ -184,11 +192,15 @@ export default class extends Controller {
     const newCheckOut = new Date(currentCheckOut.getTime() + days * 24 * 60 * 60 * 1000)
     const newCheckOutStr = newCheckOut.toISOString().split('T')[0]
 
-    if (confirm(`Extend stay to checkout on ${newCheckOutStr}?`)) {
-      const hotelId = window.location.pathname.split('/')[2]
-      const url = `/hotel/${hotelId}/bookings/${this.idValue}`
-      
-      fetch(url, {
+    const hotelId = window.location.pathname.split('/')[2]
+    const url = `/hotel/${hotelId}/bookings/${this.idValue}`
+
+    window.dispatchEvent(new CustomEvent("reservation-board:confirm-extend", {
+      detail: {
+        guestName: this.guestNameValue,
+        currentCheckOut: this.checkOutValue,
+        newCheckOut: newCheckOutStr,
+        onConfirm: () => fetch(url, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -198,18 +210,19 @@ export default class extends Controller {
         body: JSON.stringify({
           booking: { check_out: newCheckOutStr }
         })
-      }).then(response => response.json()).then(data => {
-        if (data.success) {
-          Turbo.visit(window.location.href, { action: "replace" })
-        } else {
-          alert(`Failed to extend stay: ${data.errors.join(", ")}`)
-        }
-        this.removeExistingMenu()
-      }).catch(error => {
-        console.error("Error extending stay:", error)
-        this.removeExistingMenu()
-      })
-    }
+        }).then(response => response.json()),
+        onSuccess: (data) => {
+          if (data.success) {
+            Turbo.visit(window.location.href, { action: "replace" })
+          } else {
+            alert(`Failed to extend stay: ${data.errors.join(", ")}`)
+          }
+          this.removeExistingMenu()
+        },
+        onError: () => this.removeExistingMenu(),
+        onCancel: () => this.removeExistingMenu()
+      }
+    }))
   }
 
   transitionStatus(status) {

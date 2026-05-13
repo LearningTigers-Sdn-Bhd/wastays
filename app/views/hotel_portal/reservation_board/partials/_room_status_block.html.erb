@@ -1,4 +1,14 @@
-<%# app/components/hotel_portal/reservation_board/room_status_block_component.html.erb %>
+<%# app/views/hotel_portal/reservation_board/partials/_room_status_block.html.erb %>
+<%
+  clipped_left = block[:check_in] < visible_start_date
+  clipped_right = block[:check_out] > visible_end_exclusive
+  left_offset = clipped_left ? 0 : block_left_pad
+  right_trim = clipped_right ? 0 : block_left_pad
+  width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)"
+  top_offset = block_top + (block_index * block_step)
+  clip_corner_class = [ ("rounded-l-none" if clipped_left), ("rounded-r-none" if clipped_right) ].compact.join(" ")
+%>
+
 <div
   data-controller="floating"
   data-floating-trigger-value="hover"
