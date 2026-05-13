@@ -137,11 +137,11 @@
       <div class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm overflow-x-auto whitespace-nowrap scrollbar-hide">
         <div class="flex flex-col gap-3">
           <div class="flex items-center gap-3">
-            <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[100px]">Inventory Status</span>
+            <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[90px]">Inventory Status</span>
             <div class="flex items-center gap-2">
               <% (["all", "occupied"] + RoomStatus::STATUSES).each do |status| %>
                 <% count = @room_status_board[:status_counts][status] %>
-                <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide <%= status_styles.fetch(status, 'border-slate-200 bg-slate-50 text-slate-600') %> transition-all hover:shadow-sm">
+                <span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide <%= status_styles.fetch(status, 'border-slate-200 bg-slate-50 text-slate-600') %> transition-all hover:shadow-sm">
                   <%= status_icons[status]&.html_safe %>
                   <%= status.humanize.titleize %>
                   <% if count > 0 %>
@@ -155,13 +155,13 @@
           <div class="h-px bg-slate-100 w-full"></div>
 
           <div class="flex items-center gap-3">
-            <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[100px]">Daily Occupancy</span>
+            <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[90px]">Daily Occupancy</span>
             <div class="flex items-center gap-2">
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">Available</span>
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-700">Completed Booking</span>
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">Arriving</span>
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-rose-700">Occupied</span>
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-700">Blocked / Maintenance</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">Available</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-700">Completed Booking</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">Arriving</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-rose-700">Occupied</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-700">Blocked / Maintenance</span>
             </div>
           </div>
         </div>
