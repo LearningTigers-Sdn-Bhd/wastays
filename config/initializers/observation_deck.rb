@@ -253,7 +253,7 @@ ActiveSupport::Notifications.subscribe("request.faraday") do |*args|
   if payload[:url].include?("channex")
     # Body might be a raw JSON string (from background jobs) or already parsed (from request watcher)
     data_payload = parsed_body.is_a?(Hash) ? parsed_body : (JSON.parse(payload[:body]) rescue nil)
-    
+
     if data_payload.is_a?(Hash)
       data = data_payload["data"]
       channex_id = if data.is_a?(Hash)

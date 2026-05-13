@@ -167,7 +167,7 @@ module HotelOps
             # we always apply the input price (unless the input was in a specific different currency).
             should_apply_price = apply_rates? && (target_currency == currency || target_currency == rate_plan.currency)
             rate.price = price if should_apply_price
-            
+
             if apply_restrictions?
               rate.min_stay = restriction_values[:min_stay]
               rate.max_stay = restriction_values[:max_stay]

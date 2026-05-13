@@ -20,7 +20,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
         selection: {
           start_date: start_date,
           end_date: end_date,
-          room_type_ids: [deluxe.id, twin.id],
+          room_type_ids: [ deluxe.id, twin.id ],
           apply_inventory: "1",
           quantity: "2",
           status: "open"
@@ -43,8 +43,8 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
         selection: {
           start_date: start_date,
           end_date: start_date,
-          room_type_ids: [room_type.id],
-          rate_plan_ids: [best_available.id, member_rate.id],
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ best_available.id, member_rate.id ],
           apply_rates: "1",
           price: "333.00",
           currency: "MYR"
@@ -66,8 +66,8 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
         selection: {
           start_date: start_date,
           end_date: start_date,
-          room_type_ids: [room_type.id],
-          rate_plan_ids: [rate_plan.id],
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
           apply_restrictions: "1",
           min_stay: "2",
           max_stay: "5",
@@ -101,8 +101,8 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
         selection: {
           start_date: start_date,
           end_date: start_date,
-          room_type_ids: [room_type.id],
-          rate_plan_ids: [rate_plan.id],
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
           apply_restrictions: "1",
           min_stay: "1",
           max_stay: "3",
@@ -119,7 +119,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       myr_rate = rate_plan.room_rates.find_by(date: start_date, currency: "MYR")
       usd_rate = rate_plan.room_rates.find_by(date: start_date, currency: "USD")
 
-      [myr_rate, usd_rate].each do |rate|
+      [ myr_rate, usd_rate ].each do |rate|
         expect(rate.min_stay).to eq(1)
         expect(rate.max_stay).to eq(3)
         expect(rate.closed_to_arrival).to be(true)
@@ -136,7 +136,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
         selection: {
           start_date: start_date,
           end_date: start_date,
-          room_type_ids: [room_type.id],
+          room_type_ids: [ room_type.id ],
           apply_inventory: "1",
           status: "open",
           available_room_numbers: %w[101 103]
@@ -158,7 +158,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
         selection: {
           start_date: start_date,
           end_date: end_date,
-          room_type_ids: [room_type.id],
+          room_type_ids: [ room_type.id ],
           apply_inventory: "1",
           quantity: "1",
           status: "closed"

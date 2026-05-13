@@ -10,7 +10,7 @@ module ChannelManagers
 
     def call
       return OpenStruct.new(success?: false, message: "Channel manager not selected") if @hotel.preferred_channel_manager.blank?
-      
+
       # We use 500 days as per Channex Certification requirements
       start_date = Date.current
       end_date = start_date + 499.days

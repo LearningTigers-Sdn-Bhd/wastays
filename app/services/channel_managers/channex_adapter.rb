@@ -177,7 +177,7 @@ module ChannelManagers
       return { ok: true } if values.empty?
 
       response = client.post("/availability", { values: values })
-      
+
       if response[:error] || response["error"]
         if response[:retryable] || response["retryable"]
           raise Channex::Client::RetryableRequestError, "Availability sync retryable failure: #{response[:details] || response['details'] || response}"
@@ -185,11 +185,11 @@ module ChannelManagers
         return { ok: false, message: "Availability sync failed: #{response[:details] || response['details'] || response}" }
       end
 
-      # For Stage 2 Certification: Task IDs are in response["data"][0]["id"] (Array) 
+      # For Stage 2 Certification: Task IDs are in response["data"][0]["id"] (Array)
       # or response["data"]["id"] (Hash)
       data = response["data"]
       task_id = data.is_a?(Array) ? data.dig(0, "id") : data&.fetch("id", nil)
-      
+
       Rails.logger.info "Channex Availability Task ID: #{task_id}" if task_id
 
       { ok: true, task_id: task_id }
@@ -200,7 +200,7 @@ module ChannelManagers
       return { ok: true } if values.empty?
 
       response = client.post("/restrictions", { values: values })
-      
+
       if response[:error] || response["error"]
         if response[:retryable] || response["retryable"]
           raise Channex::Client::RetryableRequestError, "Restrictions sync retryable failure: #{response[:details] || response['details'] || response}"
@@ -220,7 +220,7 @@ module ChannelManagers
     def push_availability_values(date_range)
       values = []
       property_id = mapping_for(@hotel).external_id
-      
+
       @hotel.room_types.each do |room_type|
         ext_rt_id = mapping_for(room_type).external_id
         next if ext_rt_id == "pending"
@@ -243,7 +243,7 @@ module ChannelManagers
             current_range = val_data.merge(date_from: inventory.date.to_s, date_to: inventory.date.to_s)
           end
         end
-        
+
         values << current_range if current_range.present?
       end
       values
@@ -252,7 +252,7 @@ module ChannelManagers
     def push_restrictions_values(date_range)
       values = []
       property_id = mapping_for(@hotel).external_id
-      
+
       @hotel.room_types.each do |room_type|
         occupancy = room_type.max_adults.to_i
         occupancy = 1 if occupancy <= 0
@@ -288,11 +288,11 @@ module ChannelManagers
               current_range = val_data.merge(date_from: rate.date.to_s, date_to: rate.date.to_s)
             end
           end
-          
+
           values << current_range if current_range.present?
         end
       end
-      
+
       values
     end
 

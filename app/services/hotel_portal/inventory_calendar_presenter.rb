@@ -35,7 +35,7 @@ module HotelPortal
           Row.new(key: "room-#{room_type.id}-rate-#{rate_plan.id}", kind: :rate, room_type: room_type, rate_plan: rate_plan)
         end
 
-        [inventory_row] + rate_rows
+        [ inventory_row ] + rate_rows
       end
     end
 
@@ -46,7 +46,7 @@ module HotelPortal
     def rate_plan_options
       @rate_plan_options ||= hotel.room_types.includes(:rate_plans).order(:id).flat_map do |room_type|
         room_type.rate_plans.order(:id).map do |rate_plan|
-          ["#{room_type.name} - #{rate_plan.name}", rate_plan.id]
+          [ "#{room_type.name} - #{rate_plan.name}", rate_plan.id ]
         end
       end
     end
@@ -147,7 +147,7 @@ module HotelPortal
     def rate_cell(room_type, rate_plan, date)
       rate = rates_by_rate_plan.dig(rate_plan.id, date)
       price = rate&.price || (display_currency == "MYR" ? room_type.base_price : nil)
-      
+
       # Determine if price is modified compared to base
       is_modified = false
       if display_currency == "MYR" && price.present?
