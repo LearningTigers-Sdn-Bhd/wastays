@@ -1,0 +1,212 @@
+<% 
+  status = room.dig(:status, :status).to_s
+  room_status_id = room.dig(:status, :room_status_id)
+  failure_note = room.dig(:status, :notes).to_s.strip
+  can_manage = current_user.has_permission?("manage_room_status", hotel: current_hotel)
+  has_actions = ["pending_cleaning", "preparing", "inspection_failed", "awaiting_inspection"].include?(status)
+  room_type = room[:room_type]
+%>
+<div class="grid border-b border-slate-100" style="grid-template-columns: <%= presenter.grid_template_columns %>; min-height: <%= presenter.row_min_height(room) %>px;">
+  <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= presenter.card_padding %> flex flex-col justify-center">
+    <div class="flex items-center justify-between gap-2">
+      <p class="font-black leading-none text-slate-950 <%= presenter.room_number_class %>"><%= room[:room_number] %></p>
+      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+        <span data-floating-target="reference" class="inline-flex items-center justify-center rounded-full border size-6 <%= presenter.status_style(status) %> cursor-help">
+          <%= presenter.status_icon(status) %>
+        </span>
+        
+        <div data-floating-target="floating" class="hidden z-[100] <%= (status == "inspection_failed" && failure_note.present?) ? 'px-4 py-3 rounded-2xl w-64' : 'px-3 py-1.5 rounded-full' %> bg-white border border-slate-200 shadow-xl pointer-events-none">
+          <div class="flex items-center gap-2 <%= 'mb-2' if status == "inspection_failed" && failure_note.present? %>">
+            <div class="p-1 rounded-full <%= presenter.status_style(status, fallback: 'border-slate-400').split(' ').first.gsub('border-', 'bg-') %> text-white">
+              <%= presenter.status_icon(status) %>
+            </div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700"><%= status.present? ? status.humanize.titleize : "Unknown Status" %></span>
+          </div>
+
+          <% if status == "inspection_failed" && failure_note.present? %>
+            <div class="mt-2 border-t border-slate-50 pt-2">
+              <p class="text-[11px] font-medium text-rose-600 leading-relaxed italic"><%= failure_note %></p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-2 flex items-center gap-2">
+      <% smoking_label = room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking" %>
+      <% smoking_color = room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400" %>
+      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+        <div data-floating-target="reference" class="<%= smoking_color %> cursor-help">
+          <% if room_type.smoking_allowed %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h14" /><path d="M18 8c0-2.5-2-2.5-2-5" /><path d="M21 16a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /><path d="M22 8c0-2.5-2-2.5-2-5" /><path d="M7 12v4" /></svg>
+          <% else %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h13" /><path d="M18 8c0-2.5-2-2.5-2-5" /><path d="m2 2 20 20" /><path d="M21 12a1 1 0 0 1 1 1v2a1 1 0 0 1-.5.866" /><path d="M22 8c0-2.5-2-2.5-2-5" /><path d="M7 12v4" /></svg>
+          <% end %>
+        </div>
+        <div data-floating-target="floating" class="hidden z-[100] px-2.5 py-1 bg-white border border-slate-200 rounded-full shadow-xl pointer-events-none">
+          <span class="text-[9px] font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap"><%= smoking_label %></span>
+        </div>
+      </div>
+
+      <% pets_label = room_type.pets_allowed ? "Pets Allowed" : "No Pets" %>
+      <% pets_color = room_type.pets_allowed ? "text-emerald-500" : "text-slate-400" %>
+      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+        <div data-floating-target="reference" class="<%= pets_color %> cursor-help">
+          <% if room_type.pets_allowed %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /></svg>
+          <% else %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /><path d="m2 2 20 20" /></svg>
+          <% end %>
+        </div>
+        <div data-floating-target="floating" class="hidden z-[100] px-2.5 py-1 bg-white border border-slate-200 rounded-full shadow-xl pointer-events-none">
+          <span class="text-[9px] font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap"><%= pets_label %></span>
+        </div>
+      </div>
+    </div>
+
+    <% if can_manage && room_status_id.present? && has_actions %>
+      <%= render "hotel_portal/room_status_board/room_actions", room_status_id: room_status_id, status: status, failure_note: failure_note, presenter: presenter %>
+    <% end %>
+  </div>
+
+  <% presenter.board_dates.each_with_index do |date, index| %>
+    <% 
+      day_data = room[:daily_data][date]
+      booking_state = day_data[:booking_state]
+      physical_status = day_data[:status]
+      
+      bg_class = presenter.cell_color(booking_state)
+      bg_class = presenter.cell_color(:out_of_service) if physical_status == "out_of_service"
+      
+      is_interactable = (booking_state == :none || booking_state == :completed) && physical_status != "out_of_service"
+    %>
+    <div
+      class="relative border-l <%= 'border-r' if index == presenter.board_dates.size - 1 %> border-slate-100 <%= presenter.summary_padding %> <%= bg_class %> <%= is_interactable ? 'cursor-pointer hover:bg-slate-50/50' : 'cursor-default' %> transition-colors"
+      <% if is_interactable %>
+        data-action="dblclick->room-block-modal#open"
+        data-room-block-modal-date-param="<%= date.to_s %>"
+        data-room-block-modal-room-number-param="<%= room[:room_number] %>"
+        data-room-block-modal-room-type-id-param="<%= room_type.id %>"
+        data-room-block-modal-room-type-name-param="<%= room_type.name %>"
+      <% end %>
+    >
+      <%# Render Real Bookings %>
+      <% room[:blocks].select { |block| [block[:check_in], presenter.visible_start_date].max == date }.each_with_index do |block, block_index| %>
+        <% 
+          block_class = presenter.booking_style(block[:status])
+          clipped_left = block[:check_in] < presenter.visible_start_date
+          clipped_right = block[:check_out] > presenter.visible_end_exclusive
+          left_offset = clipped_left ? 0 : presenter.block_left_pad
+          right_trim = clipped_right ? 0 : presenter.block_left_pad
+          width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)"
+          clip_corner_class = [ ("rounded-l-none" if clipped_left), ("rounded-r-none" if clipped_right) ].compact.join(" ") 
+        %>
+        <div
+          data-controller="floating"
+          data-floating-trigger-value="hover"
+          data-floating-placement-value="bottom"
+          class="absolute z-10 overflow-hidden rounded-xl border px-3 py-2 shadow-sm <%= block_class %> <%= clip_corner_class %>"
+          style="top: <%= presenter.block_top + (block_index * presenter.block_step) %>px; left: <%= left_offset %>px; width: <%= width_calc %>; min-width: 88px;"
+          data-floating-target="reference"
+        >
+          <p class="truncate text-sm font-bold"><%= block[:guest_name] %></p>
+          <p class="truncate text-xs font-semibold uppercase tracking-wide"><%= block[:status].to_s.humanize.titleize %></p>
+
+          <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-white border border-slate-200 rounded-xl shadow-xl pointer-events-none">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="size-2 rounded-full <%= block_class.split(' ').first %>"></div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= block[:status].to_s.humanize %></span>
+            </div>
+            <p class="text-sm font-bold text-slate-900"><%= block[:guest_name] %></p>
+            <div class="mt-2 space-y-1">
+              <div class="flex items-center gap-2 text-[11px] text-slate-600">
+                <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <span><%= block[:check_in].strftime("%b %-d") %> — <%= block[:check_out].strftime("%b %-d, %Y") %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <%# Render Maintenance Blocks %>
+      <% room[:maintenance_blocks].select { |block| [block[:start_date], presenter.visible_start_date].max == date }.each_with_index do |block, block_index| %>
+        <% 
+          booking_count_at_this_start = room[:blocks].select { |b| [b[:check_in], presenter.visible_start_date].max == date }.size 
+          clipped_left = block[:start_date] < presenter.visible_start_date
+          clipped_right = block[:end_date] > presenter.visible_end_exclusive
+          left_offset = clipped_left ? 0 : presenter.block_left_pad
+          right_trim = clipped_right ? 0 : presenter.block_left_pad
+          width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)"
+          clip_corner_class = [ ("rounded-l-none" if clipped_left), ("rounded-r-none" if clipped_right) ].compact.join(" ") 
+        %>
+        <div
+          data-controller="floating"
+          data-floating-trigger-value="click"
+          data-floating-placement-value="bottom"
+          data-action="click->floating#toggle:stop"
+          class="absolute z-10 overflow-hidden rounded-xl border border-slate-300 bg-slate-100 text-slate-600 px-3 py-2 shadow-sm <%= clip_corner_class %>"
+          style="top: <%= presenter.block_top + ((block_index + booking_count_at_this_start) * presenter.block_step) %>px; left: <%= left_offset %>px; width: <%= width_calc %>; min-width: 88px;"
+          data-floating-target="reference"
+          title="<%= block[:reason] %>"
+        >
+          <div class="flex items-center gap-1.5 overflow-hidden">
+            <svg class="size-3 shrink-0 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.423 3.007a.75.75 0 0 1 .577 0l8.5 3.333a.75.75 0 0 1 0 1.411l-8.5 3.333a.75.75 0 0 1-.577 0l-8.5-3.333a.75.75 0 0 1 0-1.411l8.5-3.333Z" /><path d="M4.318 10.387 11.423 13.173a.75.75 0 0 0 .577 0l7.105-2.786a.75.75 0 0 1 .536 1.398l-7.382 2.895a2.25 2.25 0 0 1-1.722 0l-7.382-2.895a.75.75 0 0 1 .536-1.398Z" /><path d="M4.318 14.887 11.423 17.673a.75.75 0 0 0 .577 0l7.105-2.786a.75.75 0 0 1 .536 1.398l-7.382 2.895a2.25 2.25 0 0 1-1.722 0l-7.382-2.895a.75.75 0 0 1 .536-1.398Z" /></svg>
+            <p class="truncate text-[11px] font-black uppercase tracking-wider"><%= block[:block_type].humanize %></p>
+          </div>
+
+          <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-white border border-slate-200 rounded-xl shadow-xl">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="size-2 rounded-full bg-slate-400"></div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Room Block</span>
+            </div>
+            <p class="text-sm font-bold text-slate-900"><%= block[:block_type].humanize.titleize %></p>
+            <p class="mt-1 text-xs text-slate-600 leading-relaxed italic">"<%= block[:reason] %>"</p>
+            <div class="mt-3 space-y-1">
+              <div class="flex items-center gap-2 text-[11px] text-slate-600">
+                <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <span><%= block[:start_date].strftime("%b %-d") %> — <%= block[:end_date].strftime("%b %-d, %Y") %></span>
+              </div>
+            </div>
+
+            <% if can_manage %>
+              <div class="mt-4 border-t border-slate-50 pt-3 flex gap-2">
+                <button type="button"
+                    data-action="click->room-block-modal#edit click->floating#hide"
+                    data-room-block-modal-id-param="<%= block[:id] %>"
+                    data-room-block-modal-room-number-param="<%= room[:room_number] %>"
+                    data-room-block-modal-room-type-id-param="<%= room_type.id %>"
+                    data-room-block-modal-room-type-name-param="<%= room_type.name %>"
+                    data-room-block-modal-start-date-param="<%= block[:start_date].to_s %>"
+                    data-room-block-modal-end-date-param="<%= block[:end_date].to_s %>"
+                    data-room-block-modal-block-type-param="<%= block[:block_type] %>"
+                    data-room-block-modal-reason-param="<%= block[:reason] %>"
+                    data-room-block-modal-update-url-param="<%= hotel_room_block_path(current_hotel, block[:id], start_date: presenter.start_date, days: presenter.board_days, layout: presenter.board_layout) %>"
+                    class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-colors">
+                  Edit Room Block
+                </button>
+                <%= button_to finish_hotel_room_block_path(current_hotel, block[:id], start_date: presenter.start_date, days: presenter.board_days, layout: presenter.board_layout), 
+                    method: :post,
+                    data: { 
+                      turbo_confirm: "Mark this maintenance block as finished?",
+                      floating_close: true
+                    },
+                    class: "flex-1 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 transition-colors pointer-events-auto" do %>
+                  Finish
+                <% end %>
+                <%= button_to hotel_room_block_path(current_hotel, block[:id], start_date: presenter.start_date, days: presenter.board_days, layout: presenter.board_layout), 
+                    method: :delete,
+                    data: { 
+                      turbo_confirm: "Are you sure you want to remove this maintenance block?",
+                      floating_close: true
+                    },
+                    class: "flex-1 rounded-xl bg-rose-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-100 transition-colors pointer-events-auto" do %>
+                  Remove
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
