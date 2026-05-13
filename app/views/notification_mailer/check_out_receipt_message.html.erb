@@ -17,10 +17,10 @@
 
             <tr>
               <td style="padding:48px 40px;">
-                <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0f4a43;text-transform:uppercase;letter-spacing:0.1em;">Check-Out Receipt</p>
+                <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0f4a43;text-transform:uppercase;letter-spacing:0.1em;">Check-Out Invoice</p>
                 <p style="margin:0 0 24px;font-size:26px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Thank you, <%= @guest_first_name %>.</p>
                 <p style="margin:0 0 28px;font-size:15px;color:#475569;line-height:1.7;">
-                  Your stay at <strong style="color:#0f172a;"><%= @payload[:hotel_name] %></strong> has been checked out. Here is your receipt summary.
+                  Your stay at <strong style="color:#0f172a;"><%= @payload[:hotel_name] %></strong> has been checked out. Here is your invoice summary.
                 </p>
 
                 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:16px;margin-bottom:22px;">
@@ -101,7 +101,7 @@
                           <td align="right" style="font-size:13px;color:#475569;font-weight:700;"><%= @payload[:currency] %> <%= format("%.2f", @payload[:derived_grand_total].to_f) %></td>
                         </tr>
                         <tr>
-                          <td style="padding-top:6px;font-size:15px;color:#0f172a;font-weight:800;">Receipt Total</td>
+                          <td style="padding-top:6px;font-size:15px;color:#0f172a;font-weight:800;">Invoice Total</td>
                           <td align="right" style="padding-top:6px;font-size:15px;color:#0f172a;font-weight:800;"><%= @payload[:currency] %> <%= format("%.2f", @payload[:booking_total].to_f) %></td>
                         </tr>
                       </table>
@@ -114,7 +114,7 @@
                     <tr>
                       <td style="padding:14px 16px;">
                         <p style="margin:0;font-size:13px;color:#9a3412;line-height:1.6;">
-                          Receipt note: line-item derived total differs by
+                          Invoice note: line-item derived total differs by
                           <strong><%= @payload[:currency] %> <%= format("%.2f", @payload[:totals_mismatch_amount].to_f) %></strong>
                           from booking total.
                         </p>

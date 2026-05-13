@@ -139,8 +139,9 @@ class Booking < ApplicationRecord
   end
 
   before_save :set_payout_status, if: :status_changed?
-  after_create_commit :enqueue_invoice_email, if: -> { status == "confirmed" }
-  after_create_commit :enqueue_whatsapp_invoice, if: -> { status == "confirmed" }
+  after_create_commit :enqueue_receipt_email, if: -> { status == "confirmed" }
+  after_create_commit :enqueue_whatsapp_receipt, if: -> { status == "confirmed" }
+  after_update_commit :enqueue_invoice_email, if: -> { saved_change_to_status?(from: "checked_in", to: "completed") }
 
   def pre_checkin_display_status
     metadata = pre_checkin&.metadata || {}
@@ -164,6 +165,30 @@ class Booking < ApplicationRecord
     tourism_tax_applied && tourism_tax_amount.positive?
   end
 
+  def tax_total
+    Array(tax_lines).sum { |t| t["amount"].to_f }.round(2)
+  end
+
+  def tax_lines_for(type)
+    Array(tax_lines).select { |t| t["type"] == type.to_s }
+  end
+
+  def formatted_reservation_number
+    format_number(reservation_number)
+  end
+
+  def formatted_receipt_number
+    format_number(receipt_number)
+  end
+
+  def formatted_folio_number
+    format_number(folio_number)
+  end
+
+  def formatted_guest_registration_number
+    format_number(guest_registration_number)
+  end
+
   def room_numbers
     booking_rooms.pluck(:room_number).compact.join(", ")
   end
@@ -177,16 +202,26 @@ class Booking < ApplicationRecord
 
   private
 
+  def format_number(number)
+    return nil unless number
+    prefix = hotel&.hotel_prefix.presence || "WS"
+    "#{prefix}-#{number}"
+  end
+
   def set_payout_status
     self.payout_status = "pending" if status == "completed" && payout_status.blank?
   end
 
-  def enqueue_invoice_email
-    SendInvoiceEmailJob.perform_later(id)
+  def enqueue_receipt_email
+    SendReceiptEmailJob.perform_later(id)
   end
 
-  def enqueue_whatsapp_invoice
-    SendWhatsappInvoiceJob.perform_later(id)
+  def enqueue_whatsapp_receipt
+    SendWhatsappReceiptJob.perform_later(id)
+  end
+
+  def enqueue_invoice_email
+    SendInvoiceEmailJob.perform_later(id)
   end
 
   def generate_confirmation_token

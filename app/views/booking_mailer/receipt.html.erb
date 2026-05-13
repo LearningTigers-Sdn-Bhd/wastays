@@ -20,10 +20,10 @@
             <!-- Body -->
             <tr>
               <td style="padding:48px 40px;">
-                <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0f4a43;text-transform:uppercase;letter-spacing:0.1em;">Checkout Invoice</p>
-                <p style="margin:0 0 24px;font-size:26px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Thank you for your stay, <%= @booking.guest_name.split.first %>!</p>
+                <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0f4a43;text-transform:uppercase;letter-spacing:0.1em;">Booking Confirmed</p>
+                <p style="margin:0 0 24px;font-size:26px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">You're all set, <%= @booking.guest_name.split.first %>!</p>
                 <p style="margin:0 0 32px;font-size:15px;color:#475569;line-height:1.7;">
-                  We hope you enjoyed your stay at <strong style="color:#0f172a;"><%= @hotel.name %></strong>. Your invoice is attached to this email for your records.
+                  Thank you for choosing WAStays. Your booking at <strong style="color:#0f172a;"><%= @hotel.name %></strong> is confirmed. Your receipt is attached to this email for your records.
                 </p>
 
                 <!-- Booking Summary Card -->
@@ -59,7 +59,7 @@
                             <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0f172a;"><%= @nights %> <%= @nights == 1 ? "Night" : "Nights" %></p>
                           </td>
                           <td style="width:50%;vertical-align:top;">
-                            <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Total Amount</p>
+                            <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Total Paid</p>
                             <p style="margin:4px 0 0;font-size:20px;font-weight:800;color:#0f4a43;"><%= number_to_currency(@booking.total_amount, unit: @booking.currency + " ") %></p>
                           </td>
                         </tr>
@@ -73,8 +73,38 @@
                   <tr>
                     <td style="padding:16px 20px;">
                       <p style="margin:0;font-size:14px;color:#166534;line-height:1.6;">
-                        <strong>Invoice attached</strong> — Your PDF invoice is attached to this email. Keep it for expense records or tax submissions.
+                      <strong>Receipt attached</strong> — Your PDF receipt is attached to this email. Keep it for expense records or tax submissions.
                       </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- CTA Buttons -->
+                <table cellpadding="0" cellspacing="0" style="margin:0 auto 40px;width:100%;">
+                  <tr>
+                    <td style="padding-bottom:12px;">
+                      <table cellpadding="0" cellspacing="0" style="width:100%;">
+                        <tr>
+                          <td style="background-color:#0f4a43;border-radius:14px;text-align:center;">
+                            <a href="<%= booking_url(@booking.confirmation_token) %>" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;display:block;padding:16px 32px;letter-spacing:0.01em;">
+                              View Booking Details
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <table cellpadding="0" cellspacing="0" style="width:100%;">
+                        <tr>
+                          <td style="background-color:#ffffff;border:2px solid #0f4a43;border-radius:14px;text-align:center;">
+                            <a href="<%= receipt_booking_url(@booking.confirmation_token) %>" style="color:#0f4a43;font-size:15px;font-weight:700;text-decoration:none;display:block;padding:16px 32px;letter-spacing:0.01em;">
+                              View Receipt
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
                     </td>
                   </tr>
                 </table>

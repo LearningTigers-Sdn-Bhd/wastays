@@ -88,6 +88,9 @@
                   <td class="px-8 py-5">
                     <div class="flex flex-col gap-2">
                       <span class="text-sm font-mono font-semibold text-slate-900"><%= booking.confirmation_token %></span>
+                      <% if booking.reservation_number %>
+                        <span class="text-xs text-slate-400">Res. No. <span class="font-semibold text-slate-600"><%= booking.formatted_reservation_number %></span></span>
+                      <% end %>
                       <%
                         status_class = case booking.status
                         when "confirmed" then "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -147,6 +150,9 @@
                 <div>
                   <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Reference</p>
                   <p class="mt-1 text-sm font-mono font-semibold text-slate-900"><%= booking.confirmation_token %></p>
+                  <% if booking.reservation_number %>
+                    <p class="text-xs text-slate-400 mt-0.5">Res. No. <span class="font-semibold text-slate-600"><%= booking.formatted_reservation_number %></span></p>
+                  <% end %>
                 </div>
                 <%
                   status_class = case booking.status
