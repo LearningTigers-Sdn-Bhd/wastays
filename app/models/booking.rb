@@ -143,7 +143,6 @@ class Booking < ApplicationRecord
   before_save :set_payout_status, if: :status_changed?
   after_create_commit :enqueue_receipt_email, if: -> { status == "confirmed" }
   after_create_commit :enqueue_whatsapp_receipt, if: -> { status == "confirmed" }
-  after_update_commit :enqueue_invoice_email, if: -> { saved_change_to_status?(from: "checked_in", to: "completed") }
 
   def pre_checkin_display_status
     metadata = pre_checkin&.metadata || {}
@@ -165,6 +164,13 @@ class Booking < ApplicationRecord
 
   def tourism_tax?
     tourism_tax_applied && tourism_tax_amount.positive?
+  end
+
+  def folio_outstanding_balance
+    # total_amount = room charges pre-paid at booking (tax tracked separately but also pre-paid)
+    # Outstanding balance = only unpaid extra charges (F&B, room service, etc.)
+    # Will be non-zero once Single Itemised Folio (extra charges) is built.
+    0.0
   end
 
   def tax_total

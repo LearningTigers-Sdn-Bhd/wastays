@@ -14,6 +14,8 @@ module Notifications
         derived_grand_total = (line_items_total + tax_total).round(2)
         booking_total = @booking.total_amount.to_f.round(2)
         mismatch_amount = (booking_total - derived_grand_total).round(2)
+        has_outstanding = @booking.folio_outstanding_balance > 0
+        document_type = has_outstanding ? "invoice" : "receipt"
 
         {
           notification_type: "check_out_receipt_message",
@@ -36,7 +38,8 @@ module Notifications
           booking_total: booking_total,
           totals_mismatch: !mismatch_amount.zero?,
           totals_mismatch_amount: mismatch_amount,
-          invoice_url: invoice_url_for(@booking)
+          document_type: document_type,
+          invoice_url: document_url_for(@booking, document_type)
         }
       end
 
@@ -69,10 +72,12 @@ module Notifications
         lines.map { |t| { description: t["name"], quantity: 1, amount: t["amount"].to_f } }
       end
 
-      def invoice_url_for(booking)
+      def document_url_for(booking, document_type)
         host_options = Rails.application.config.action_mailer.default_url_options || {}
+        route = document_type == "invoice" ? :invoice_booking_url : :receipt_booking_url
 
-        Rails.application.routes.url_helpers.invoice_booking_url(
+        Rails.application.routes.url_helpers.public_send(
+          route,
           booking.confirmation_token,
           host: host_options[:host],
           protocol: host_options[:protocol] || "https"

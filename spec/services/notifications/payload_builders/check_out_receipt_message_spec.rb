@@ -33,7 +33,7 @@ RSpec.describe Notifications::PayloadBuilders::CheckOutReceiptMessage do
       .and_return({ host: "example.com", protocol: "https" })
   end
 
-  it "builds folio-style checkout receipt payload with totals and invoice link" do
+  it "builds folio-style checkout payload with receipt link when folio balance is zero" do
     payload = described_class.new(booking: booking).call
 
     expect(payload[:notification_type]).to eq("check_out_receipt_message")
@@ -55,7 +55,8 @@ RSpec.describe Notifications::PayloadBuilders::CheckOutReceiptMessage do
     expect(payload[:booking_total]).to eq(330.0)
     expect(payload[:totals_mismatch]).to be(false)
     expect(payload[:totals_mismatch_amount]).to eq(0.0)
-    expect(payload[:invoice_url]).to eq("https://example.com/bookings/#{booking.confirmation_token}/invoice")
+    expect(payload[:document_type]).to eq("receipt")
+    expect(payload[:invoice_url]).to eq("https://example.com/bookings/#{booking.confirmation_token}/receipt")
   end
 
   it "flags totals mismatch when booking total differs from derived totals" do
