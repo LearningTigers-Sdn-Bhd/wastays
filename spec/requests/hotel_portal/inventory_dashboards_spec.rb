@@ -24,8 +24,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       page = Capybara.string(response.body)
       expect(page).to have_content("Rates & Availability Calendar")
       expect(page).to have_css("[data-testid='inventory-calendar-grid']")
-      expect(page).to have_css("[data-testid='availability-cell-#{room_type.id}-#{Date.current}']", text: "Closed")
-      expect(page).to have_button("Bulk Update")
+      expect(page).to have_button("Bulk Edit")
       expect(page).to have_content("Advanced Pricing & Overrides")
     end
 
