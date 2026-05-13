@@ -20,12 +20,11 @@ module HotelOps
       Thread.current[:skip_ari_sync] = true
       ActiveRecord::Base.transaction do
         (@start_date..@end_date).each do |date|
-          # Always find or create the Standard Rate record for this date
-          rate = @room_type.room_rates.find_or_initialize_by(date: date)
-          rate.rate_plan = @rate_plan
+          # Find or create record for this specific date, plan and currency
+          rate = @rate_plan.room_rates.find_or_initialize_by(date: date, currency: @currency)
+          rate.room_type = @room_type
           old_price = rate.price
           rate.price = @price
-          rate.currency = @currency
           rate.min_stay = @min_stay if @min_stay.present?
           rate.max_stay = @max_stay if @max_stay.present?
           rate.closed_to_arrival = @closed_to_arrival if !@closed_to_arrival.nil?

@@ -16,8 +16,100 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days # Show 14 days by default
-    load_dashboard_data
+    @view_mode = "combined"
+    @display_currency = params[:display_currency] || current_hotel.default_currency || "MYR"
+    @room_types = current_hotel.room_types.order(:id)
+    @calendar = build_calendar
     @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules
+  end
+
+  def bulk_save_ari
+    authorize current_hotel, :update?, policy_class: HotelPolicy
+
+    begin
+      ActiveRecord::Base.transaction do
+        Thread.current[:skip_ari_sync] = true
+
+        result = HotelOps::ApplyInventoryDashboardSelection.new(
+          hotel: current_hotel,
+          selection: selection_update_params.to_h.symbolize_keys,
+          user: current_user,
+          skip_sync: true
+        ).call
+
+        if result[:success]
+          # Trigger a single sync job
+          if current_hotel.preferred_channel_manager.present?
+            s_date = selection_update_params[:start_date]&.to_date
+            e_date = selection_update_params[:end_date]&.to_date
+            ChannelManagers::SyncJob.perform_later(current_hotel.id, s_date, e_date) if s_date && e_date
+          end
+
+          redirect_to hotel_inventory_index_path(current_hotel, redirect_query_params), notice: "Calendar updated successfully."
+        else
+          redirect_to hotel_inventory_index_path(current_hotel, redirect_query_params), alert: "Error saving changes: #{result[:error]}"
+        end
+      end
+    ensure
+      Thread.current[:skip_ari_sync] = nil
+    end
+  end
+
+  def batch_save_ari
+    authorize current_hotel, :update?, policy_class: HotelPolicy
+
+    # We permit the array of objects coming from the staged frontend state
+    staged_updates = params.require(:updates).map do |u|
+      u.permit(
+        :start_date, :end_date, :apply_inventory, :apply_rates, :apply_restrictions,
+        :quantity, :status, :price, :currency, :min_stay, :max_stay,
+        :closed_to_arrival, :closed_to_departure, :stop_sell,
+        room_type_ids: [], rate_plan_ids: []
+      ).to_h.symbolize_keys
+    end
+
+    errors = []
+    min_date = nil
+    max_date = nil
+
+    begin
+      ActiveRecord::Base.transaction do
+        Thread.current[:skip_ari_sync] = true
+
+        staged_updates.each do |selection|
+          # Track the overall date range for a single final sync
+          s_date = selection[:start_date]&.to_date
+          e_date = selection[:end_date]&.to_date
+          min_date = [ min_date, s_date ].compact.min
+          max_date = [ max_date, e_date ].compact.max
+
+          result = HotelOps::ApplyInventoryDashboardSelection.new(
+            hotel: current_hotel,
+            selection: selection,
+            user: current_user,
+            skip_sync: true
+          ).call
+
+          unless result[:success]
+            errors << result[:error]
+            raise ActiveRecord::Rollback
+          end
+        end
+
+        # Trigger a single sync job covering the entire updated range
+        if current_hotel.preferred_channel_manager.present? && min_date && max_date
+          ChannelManagers::SyncJob.perform_later(current_hotel.id, min_date, max_date)
+        end
+      end
+    ensure
+      Thread.current[:skip_ari_sync] = nil
+    end
+
+    if errors.empty?
+      render json: { success: true, message: "All changes synced successfully." }
+    else
+      render json: { success: false, error: errors.join(", ") }, status: :unprocessable_entity
+    end
   end
 
   def apply_pricing_rules
@@ -41,7 +133,10 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     unless sync_result[:success]
       @start_date = Date.today
       @end_date = @start_date + 13.days
-      load_dashboard_data
+      @view_mode = "combined"
+      @room_types = current_hotel.room_types.order(:id)
+      @display_currency = params[:display_currency] || current_hotel.default_currency || "MYR"
+      @calendar = build_calendar
       @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_params(pricing_params)
       @pricing_form.errors = sync_result[:errors] || {}
       flash.now[:alert] = sync_result[:error] || "Error saving pricing rules."
@@ -136,26 +231,20 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
   private
 
-  def load_dashboard_data
-    @room_types = current_hotel.room_types.includes(:room_inventories, rate_plans: :room_rates)
-    @inventory_matrix = {}
-    @rates_matrix = {}
-
-    @room_types.each do |rt|
-      @inventory_matrix[rt.id] = rt.room_inventories.where(date: @start_date..@end_date).index_by(&:date)
-
-      standard_plan = rt.rate_plans.first
-      if standard_plan
-        @rates_matrix[rt.id] = standard_plan.room_rates.where(date: @start_date..@end_date).index_by(&:date)
-      else
-        @rates_matrix[rt.id] = {}
-      end
-    end
-
+  def build_calendar
+    presenter = HotelPortal::InventoryCalendarPresenter.new(
+      hotel: current_hotel,
+      start_date: @start_date,
+      end_date: @end_date,
+      display_currency: @display_currency,
+      room_type_id: selected_room_type_id,
+      rate_plan_id: selected_rate_plan_id
+    )
     @last_pricing_applied_at = current_hotel.inventory_audit_logs
       .where(action_type: "rate_update")
       .where("metadata ->> 'source' = ?", "pricing_rules")
       .maximum(:created_at)
+    presenter
   end
 
   def pricing_params
@@ -184,5 +273,47 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       room_type_ids: [],
       room_numbers: []
     )
+  end
+
+  def selection_update_params
+    params.require(:selection_update).permit(
+      :start_date,
+      :end_date,
+      :apply_inventory,
+      :apply_rates,
+      :apply_restrictions,
+      :quantity,
+      :status,
+      :price,
+      :currency,
+      :min_stay,
+      :max_stay,
+      :closed_to_arrival,
+      :closed_to_departure,
+      :stop_sell,
+      :mode,
+      room_type_ids: [],
+      rate_plan_ids: [],
+      available_room_numbers: []
+    )
+  end
+
+  def redirect_query_params
+    permitted_selection = selection_update_params
+
+    {
+      start_date: params[:start_date] || permitted_selection[:start_date],
+      display_currency: params[:display_currency] || permitted_selection[:currency] || current_hotel.default_currency || "MYR",
+      room_type_id: Array(permitted_selection[:room_type_ids]).reject(&:blank?).first || params[:room_type_id],
+      rate_plan_id: Array(permitted_selection[:rate_plan_ids]).reject(&:blank?).first || params[:rate_plan_id]
+    }
+  end
+
+  def selected_room_type_id
+    params[:room_type_id].presence || Array(params[:room_type_ids]).reject(&:blank?).first
+  end
+
+  def selected_rate_plan_id
+    params[:rate_plan_id].presence || Array(params[:rate_plan_ids]).reject(&:blank?).first
   end
 end

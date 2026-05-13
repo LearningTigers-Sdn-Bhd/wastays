@@ -111,12 +111,11 @@
               <tr>
                 <% (@start_date..@end_date).each do |date| %>
                   <% rate = @rates[date] %>
-                  <% # Only show price if the saved currency matches current display currency, OR if its base price (and we are showing MYR) %>
                   <% 
-                    is_matching_currency = rate&.currency == @display_currency
-                    price_to_display = if is_matching_currency
+                    # Use fallback price only for MYR if no custom record exists
+                    price_to_display = if rate
                       rate.price
-                    elsif !rate && @display_currency == "MYR"
+                    elsif @display_currency == "MYR"
                       @room_type.base_price
                     else
                       nil
@@ -135,9 +134,9 @@
                       </span>
                       
                       <div class="mt-2 flex flex-wrap justify-center gap-1">
-                        <% if is_matching_currency %>
+                        <% if rate %>
                           <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Custom</span>
-                        <% elsif !rate && @display_currency == "MYR" %>
+                        <% elsif @display_currency == "MYR" %>
                           <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Base</span>
                         <% else %>
                           <span class="inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-300 uppercase tracking-wider">N/A</span>
@@ -199,7 +198,7 @@
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">New Rate</label>
                 <div class="relative">
                   <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                    <span class="text-xs font-bold text-slate-400" id="bulk-currency-symbol">RM</span>
+                    <span class="text-xs font-bold text-slate-400" id="bulk-currency-symbol"><%= @display_currency == 'USD' ? '$' : 'RM' %></span>
                   </div>
                   <%= f.number_field :price, step: 0.01, value: @room_type.base_price, class: "w-full rounded-xl border border-slate-200 bg-white ps-10 pe-3 py-2 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", required: true %>
                 </div>
@@ -285,9 +284,9 @@
               <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">New Rate</label>
               <div class="relative">
                 <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
-                  <span class="text-sm font-bold text-slate-400" id="currency-symbol-<%= date %>"><%= (rate&.currency || 'MYR') == 'USD' ? '$' : 'RM' %></span>
+                  <span class="text-sm font-bold text-slate-400" id="currency-symbol-<%= date %>"><%= (rate&.currency || @display_currency) == 'USD' ? '$' : 'RM' %></span>
                 </div>
-                <%= f.number_field :price, step: 0.01, value: (rate&.price || @room_type.base_price), class: "w-full rounded-2xl border border-slate-200 bg-white ps-11 pe-4 py-3 text-lg font-black text-slate-900 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 focus:outline-none shadow-sm transition-all", required: true, autofocus: true %>
+                <%= f.number_field :price, step: 0.01, value: (rate&.price || ( @display_currency == "MYR" ? @room_type.base_price : nil )), class: "w-full rounded-2xl border border-slate-200 bg-white ps-11 pe-4 py-3 text-lg font-black text-slate-900 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 focus:outline-none shadow-sm transition-all", required: true, autofocus: true %>
               </div>
             </div>
             <div>

@@ -10,7 +10,7 @@ class HotelPortal::RatesController < HotelPortal::BaseController
     @room_types = current_hotel.room_types.order(:id)
     @rate_plans = @room_type.rate_plans.order(:id)
 
-    @rates = @rate_plan.room_rates.where(date: @start_date..@end_date).index_by(&:date)
+    @rates = @rate_plan.room_rates.where(date: @start_date..@end_date, currency: @display_currency).index_by(&:date)
   end
 
   def create

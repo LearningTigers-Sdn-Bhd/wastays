@@ -5,7 +5,7 @@ class RoomRate < ApplicationRecord
   validates :date, presence: true
   validates :price, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :currency, presence: true
-  validates :date, uniqueness: { scope: [ :room_type_id, :rate_plan_id ] }
+  validates :date, uniqueness: { scope: [ :room_type_id, :rate_plan_id, :currency ] }
   validates :min_stay, numericality: { only_integer: true, greater_than: 0, allow_nil: true }
   validates :max_stay, numericality: { only_integer: true, greater_than: 0, allow_nil: true }
 

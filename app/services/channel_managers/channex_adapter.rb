@@ -220,18 +220,31 @@ module ChannelManagers
     def push_availability_values(date_range)
       values = []
       property_id = mapping_for(@hotel).external_id
+      
       @hotel.room_types.each do |room_type|
         ext_rt_id = mapping_for(room_type).external_id
         next if ext_rt_id == "pending"
 
-        room_type.room_inventories.where(date: date_range).each do |inventory|
-          values << {
+        current_range = nil
+
+        room_type.room_inventories.where(date: date_range).order(:date).each do |inventory|
+          val_data = {
             property_id: property_id,
             room_type_id: ext_rt_id,
-            date: inventory.date.to_s,
             availability: inventory.quantity
           }
+
+          if current_range.nil?
+            current_range = val_data.merge(date_from: inventory.date.to_s, date_to: inventory.date.to_s)
+          elsif current_range.except(:date_from, :date_to) == val_data && Date.parse(current_range[:date_to]) + 1.day == inventory.date
+            current_range[:date_to] = inventory.date.to_s
+          else
+            values << current_range
+            current_range = val_data.merge(date_from: inventory.date.to_s, date_to: inventory.date.to_s)
+          end
         end
+        
+        values << current_range if current_range.present?
       end
       values
     end
@@ -239,6 +252,7 @@ module ChannelManagers
     def push_restrictions_values(date_range)
       values = []
       property_id = mapping_for(@hotel).external_id
+      
       @hotel.room_types.each do |room_type|
         occupancy = room_type.max_adults.to_i
         occupancy = 1 if occupancy <= 0
@@ -247,26 +261,38 @@ module ChannelManagers
           ext_rp_id = mapping_for(rate_plan).external_id
           next if ext_rp_id == "pending"
 
-          rate_plan.room_rates.where(date: date_range).each do |rate|
-            val = {
+          current_range = nil
+
+          # Only push rates that match the rate plan's currency to avoid conflicting payloads
+          rate_plan.room_rates.where(date: date_range, currency: rate_plan.currency).order(:date).each do |rate|
+            val_data = {
               property_id: property_id,
               rate_plan_id: ext_rp_id,
-              date: rate.date.to_s,
               rate: format("%.2f", rate.price.to_f),
               currency: rate.currency,
               occupancy: occupancy
             }
 
-            val[:min_stay_arrival] = rate.min_stay if rate.min_stay.present?
-            val[:max_stay_arrival] = rate.max_stay if rate.max_stay.present?
-            val[:closed_to_arrival] = rate.closed_to_arrival ? 1 : 0 if !rate.closed_to_arrival.nil?
-            val[:closed_to_departure] = rate.closed_to_departure ? 1 : 0 if !rate.closed_to_departure.nil?
-            val[:stop_sell] = rate.stop_sell ? 1 : 0 if !rate.stop_sell.nil?
+            val_data[:min_stay_arrival] = rate.min_stay if rate.min_stay.present?
+            val_data[:max_stay_arrival] = rate.max_stay if rate.max_stay.present?
+            val_data[:closed_to_arrival] = rate.closed_to_arrival ? 1 : 0 if !rate.closed_to_arrival.nil?
+            val_data[:closed_to_departure] = rate.closed_to_departure ? 1 : 0 if !rate.closed_to_departure.nil?
+            val_data[:stop_sell] = rate.stop_sell ? 1 : 0 if !rate.stop_sell.nil?
 
-            values << val
+            if current_range.nil?
+              current_range = val_data.merge(date_from: rate.date.to_s, date_to: rate.date.to_s)
+            elsif current_range.except(:date_from, :date_to) == val_data && Date.parse(current_range[:date_to]) + 1.day == rate.date
+              current_range[:date_to] = rate.date.to_s
+            else
+              values << current_range
+              current_range = val_data.merge(date_from: rate.date.to_s, date_to: rate.date.to_s)
+            end
           end
+          
+          values << current_range if current_range.present?
         end
       end
+      
       values
     end
 
