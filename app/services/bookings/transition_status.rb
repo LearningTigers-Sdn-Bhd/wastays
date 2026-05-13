@@ -29,7 +29,9 @@ module Bookings
     private
 
     def check_in
-      if @booking.update(status: "checked_in", checked_in_at: @timestamp)
+      folio    = HotelCounter.increment!(hotel: @booking.hotel, type: "folio")
+      guest_reg = HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
+      if @booking.update(status: "checked_in", checked_in_at: @timestamp, folio_number: folio, guest_registration_number: guest_reg)
         Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
         Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
         success

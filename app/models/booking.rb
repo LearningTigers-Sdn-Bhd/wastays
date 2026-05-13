@@ -173,6 +173,22 @@ class Booking < ApplicationRecord
     Array(tax_lines).select { |t| t["type"] == type.to_s }
   end
 
+  def formatted_reservation_number
+    format_number(reservation_number)
+  end
+
+  def formatted_receipt_number
+    format_number(receipt_number)
+  end
+
+  def formatted_folio_number
+    format_number(folio_number)
+  end
+
+  def formatted_guest_registration_number
+    format_number(guest_registration_number)
+  end
+
   def room_numbers
     booking_rooms.pluck(:room_number).compact.join(", ")
   end
@@ -185,6 +201,12 @@ class Booking < ApplicationRecord
   end
 
   private
+
+  def format_number(number)
+    return nil unless number
+    prefix = hotel&.hotel_prefix.presence || "WS"
+    "#{prefix}-#{number}"
+  end
 
   def set_payout_status
     self.payout_status = "pending" if status == "completed" && payout_status.blank?

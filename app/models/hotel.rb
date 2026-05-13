@@ -42,6 +42,7 @@ class Hotel < ApplicationRecord
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
   has_many :hotel_taxes, dependent: :destroy
+  has_many :hotel_counters, dependent: :destroy
   has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy
   has_many :booking_quotes, dependent: :destroy
@@ -55,6 +56,9 @@ class Hotel < ApplicationRecord
   has_many :notification_deliveries, dependent: :destroy
 
   validates :name, presence: true
+  validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true
+
+  before_create :assign_hotel_prefix
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
   validates :city, presence: true
@@ -375,6 +379,23 @@ class Hotel < ApplicationRecord
   after_commit :sync_with_channel_manager, on: :update, if: :saved_changes_to_synced_attributes?
 
   private
+
+  def assign_hotel_prefix
+    return if hotel_prefix.present?
+    self.hotel_prefix = generate_unique_prefix
+  end
+
+  def generate_unique_prefix
+    # Build base from initials of each word
+    base = name.to_s.scan(/\b\w/).join.upcase.first(4).presence || name.to_s.upcase.first(2)
+    candidate = base
+    counter = 2
+    while Hotel.exists?(hotel_prefix: candidate)
+      candidate = "#{base}#{counter}"
+      counter += 1
+    end
+    candidate
+  end
 
   def saved_changes_to_synced_attributes?
     (saved_changes.keys & %w[name city country default_currency]).any?

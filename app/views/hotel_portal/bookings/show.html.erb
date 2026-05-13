@@ -20,6 +20,20 @@
           </span>
         </div>
         <p class="text-sm font-medium text-slate-600">Created on <%= @booking.created_at.strftime("%d %b %Y at %H:%M") %></p>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+          <% if @booking.reservation_number %>
+            <span class="text-xs text-slate-500">Reservation No. <span class="font-semibold text-slate-700"><%= @booking.formatted_reservation_number %></span></span>
+          <% end %>
+          <% if @booking.receipt_number %>
+            <span class="text-xs text-slate-500">Receipt No. <span class="font-semibold text-slate-700"><%= @booking.formatted_receipt_number %></span></span>
+          <% end %>
+          <% if @booking.folio_number %>
+            <span class="text-xs text-slate-500">Folio No. <span class="font-semibold text-slate-700"><%= @booking.formatted_folio_number %></span></span>
+          <% end %>
+          <% if @booking.guest_registration_number %>
+            <span class="text-xs text-slate-500">Guest Reg. No. <span class="font-semibold text-slate-700"><%= @booking.formatted_guest_registration_number %></span></span>
+          <% end %>
+        </div>
       </div>
 
       <div class="flex flex-wrap items-center gap-3">
@@ -157,6 +171,106 @@
                 <div class="sm:col-span-2 pt-4 flex justify-end">
                   <%= f.submit "Save Changes", class: "inline-flex items-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
                 </div>
+              <% end %>
+            </div>
+          </div>
+
+          <!-- Additional Guests -->
+          <% additional_guests = @booking.booking_guests.where(is_primary: false).includes(:guest) %>
+          <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 flex items-center justify-between">
+              <div>
+                <h2 class="text-lg font-bold tracking-tight text-slate-950">Additional Guests</h2>
+                <p class="mt-1 text-sm font-medium text-slate-600">
+                  All guests share Guest Reg. No. <span class="font-semibold text-slate-900"><%= @booking.guest_registration_number || "—" %></span>
+                </p>
+              </div>
+            </div>
+            <div class="p-6 sm:p-8 space-y-6">
+              <% if additional_guests.any? %>
+                <div class="space-y-3">
+                  <% additional_guests.each do |bg| %>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50/50 px-5 py-4 flex items-start justify-between gap-4">
+                      <div class="grid sm:grid-cols-3 gap-x-6 gap-y-3 flex-1">
+                        <div>
+                          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Name</p>
+                          <p class="text-sm font-semibold text-slate-900"><%= bg.guest.name %></p>
+                        </div>
+                        <div>
+                          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Phone</p>
+                          <p class="text-sm text-slate-700"><%= bg.guest.phone.presence || "—" %></p>
+                        </div>
+                        <div>
+                          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Email</p>
+                          <p class="text-sm text-slate-700"><%= bg.guest.email.presence || "—" %></p>
+                        </div>
+                        <div>
+                          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Country</p>
+                          <p class="text-sm text-slate-700"><%= bg.guest.country.presence || "—" %></p>
+                        </div>
+                        <div>
+                          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Gender</p>
+                          <p class="text-sm text-slate-700"><%= bg.guest.gender&.capitalize || "—" %></p>
+                        </div>
+                        <div>
+                          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5"><%= bg.guest.document_type&.upcase || "IC/Passport" %></p>
+                          <p class="text-sm text-slate-700"><%= bg.guest.government_id.presence || "—" %></p>
+                        </div>
+                      </div>
+                      <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+                        <%= button_to remove_guest_hotel_booking_path(current_hotel, @booking, guest_id: bg.id), method: :delete,
+                            data: { turbo_confirm: "Remove this guest?" },
+                            class: "shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border border-red-100 text-red-600 hover:bg-red-50" do %>
+                          Remove
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              <% else %>
+                <p class="text-sm text-slate-400">No additional guests added.</p>
+              <% end %>
+
+              <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && %w[checked_in confirmed].include?(@booking.status) %>
+                <%= form_with url: add_guest_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "space-y-3 pt-4 border-t border-slate-100" do |f| %>
+                  <div class="grid sm:grid-cols-3 gap-3">
+                    <div>
+                      <%= label_tag :name, "Full Name *", class: "block text-xs font-medium text-slate-700 mb-1" %>
+                      <%= text_field_tag :name, nil, placeholder: "e.g. Ahmad bin Ali", required: true, class: "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-slate-300" %>
+                    </div>
+                    <div>
+                      <%= label_tag :phone, "Phone", class: "block text-xs font-medium text-slate-700 mb-1" %>
+                      <%= text_field_tag :phone, nil, placeholder: "e.g. 0123456789", class: "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-slate-300" %>
+                    </div>
+                    <div>
+                      <%= label_tag :email, "Email", class: "block text-xs font-medium text-slate-700 mb-1" %>
+                      <%= email_field_tag :email, nil, placeholder: "e.g. guest@email.com", class: "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-slate-300" %>
+                    </div>
+                  </div>
+                  <div class="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <%= label_tag :country, "Country *", class: "block text-xs font-medium text-slate-700 mb-1" %>
+                      <%= select_tag :country, options_for_select(COUNTRY_OPTIONS, "Malaysia"), required: true, class: "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-slate-300" %>
+                    </div>
+                    <div>
+                      <%= label_tag :gender, "Gender", class: "block text-xs font-medium text-slate-700 mb-1" %>
+                      <%= select_tag :gender, options_for_select([["— Select —", ""], ["Male", "male"], ["Female", "female"], ["Other", "other"]]), class: "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-slate-300" %>
+                    </div>
+                  </div>
+                  <div class="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <%= label_tag :document_type, "Document Type", class: "block text-xs font-medium text-slate-700 mb-1" %>
+                      <%= select_tag :document_type, options_for_select([["IC", "ic"], ["Passport", "passport"]], "ic"), class: "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-slate-300" %>
+                    </div>
+                    <div>
+                      <%= label_tag :government_id, "IC / Passport No.", class: "block text-xs font-medium text-slate-700 mb-1" %>
+                      <%= text_field_tag :government_id, nil, placeholder: "e.g. 900101-01-1234", class: "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-slate-300" %>
+                    </div>
+                  </div>
+                  <div class="flex justify-end">
+                    <%= submit_tag "Add Guest", class: "inline-flex items-center rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 transition cursor-pointer" %>
+                  </div>
+                <% end %>
               <% end %>
             </div>
           </div>

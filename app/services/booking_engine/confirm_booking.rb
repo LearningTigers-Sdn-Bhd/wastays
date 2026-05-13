@@ -10,6 +10,10 @@ module BookingEngine
     def call
       return OpenStruct.new(success?: true, booking: existing_booking) if existing_booking
 
+      # Pre-assign sequential numbers outside the transaction to avoid nested lock conflicts
+      reservation_num = HotelCounter.increment!(hotel: @quote.hotel, type: "reservation")
+      receipt_num     = HotelCounter.increment!(hotel: @quote.hotel, type: "receipt")
+
       Booking.transaction do
         # 1. Double check quote haven't expired (though it should have been held)
         if @quote.status == "expired"
@@ -70,7 +74,9 @@ module BookingEngine
           guest_document_type: document_type,
           tourism_tax_amount: tourism_tax_amount,
           tourism_tax_applied: tourism_tax_amount.positive?,
-          tax_lines: tax_lines
+          tax_lines: tax_lines,
+          reservation_number: reservation_num,
+          receipt_number: receipt_num
         )
 
 
