@@ -15,10 +15,16 @@ RSpec.describe Bookings::AssignRoom do
   it "assigns a ready room" do
     create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
 
-    result = described_class.new(booking: booking, room_number: "101", user: user).call
+    expect {
+      result = described_class.new(booking: booking, room_number: "101", user: user).call
+      expect(result).to be_success
+    }.to change(BookingAuditLog, :count).by(1)
 
-    expect(result).to be_success
     expect(booking.booking_rooms.first.reload.room_number).to eq("101")
+
+    log = BookingAuditLog.last
+    expect(log.action_type).to eq("room_assignment")
+    expect(log.auditable).to eq(booking.booking_rooms.first)
   end
 
   it "blocks pending_cleaning rooms for normal users" do

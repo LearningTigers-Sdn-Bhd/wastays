@@ -30,6 +30,7 @@ module Bookings
 
     def check_in
       if @booking.update(status: "checked_in", checked_in_at: @timestamp)
+        Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "check_in")
         Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
         Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
         success
@@ -41,6 +42,7 @@ module Bookings
     def check_out
       Booking.transaction do
         @booking.update!(status: "completed", checked_out_at: @timestamp)
+        Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "check_out")
         mark_assigned_rooms_pending_cleaning
       end
 
@@ -55,6 +57,7 @@ module Bookings
     def cancel
       Booking.transaction do
         if @booking.update(status: "cancelled")
+          Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "cancel")
           InventoryManager.new(@booking).release
           Bookings::WebhookTriggerService.new(@booking).trigger(:booking_cancelled)
           success

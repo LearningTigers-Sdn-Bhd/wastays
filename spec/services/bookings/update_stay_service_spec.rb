@@ -51,4 +51,21 @@ RSpec.describe Bookings::UpdateStayService do
     expect(room_type.room_inventories.find_by(date: Date.current).quantity).to eq(10)
     expect(new_room_type.room_inventories.find_by(date: Date.current).quantity).to eq(4)
   end
+
+  it "creates a BookingAuditLog on update" do
+    user = create(:user, account: hotel.account)
+    old_name = booking.guest_name
+    params = { guest_name: "New Guest Name" }
+
+    expect {
+      described_class.new(booking: booking, params: params, user: user).call
+    }.to change(BookingAuditLog, :count).by(1)
+
+    log = BookingAuditLog.last
+    expect(log.auditable).to eq(booking)
+    expect(log.user).to eq(user)
+    expect(log.action_type).to eq("update")
+    expect(log.old_value["guest_name"]).to eq(old_name)
+    expect(log.new_value["guest_name"]).to eq("New Guest Name")
+  end
 end

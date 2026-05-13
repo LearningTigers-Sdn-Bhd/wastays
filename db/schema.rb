@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_08_090001) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -93,6 +93,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_090001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_banking_details_on_account_id", unique: true
+  end
+
+  create_table "booking_audit_logs", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "auditable_type", null: false
+    t.bigint "auditable_id", null: false
+    t.bigint "user_id"
+    t.string "action_type", null: false
+    t.jsonb "old_value", default: {}, null: false
+    t.jsonb "new_value", default: {}, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["auditable_type", "auditable_id"], name: "index_booking_audit_logs_on_auditable"
+    t.index ["hotel_id"], name: "index_booking_audit_logs_on_hotel_id"
+    t.index ["user_id"], name: "index_booking_audit_logs_on_user_id"
   end
 
   create_table "booking_guests", force: :cascade do |t|
@@ -839,6 +855,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_090001) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "banking_details", "accounts"
+  add_foreign_key "booking_audit_logs", "hotels"
+  add_foreign_key "booking_audit_logs", "users"
   add_foreign_key "booking_guests", "bookings"
   add_foreign_key "booking_guests", "guests"
   add_foreign_key "booking_notes", "bookings"

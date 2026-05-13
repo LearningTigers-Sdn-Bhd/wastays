@@ -115,6 +115,13 @@ module Bookings
             end
           end
 
+          # Record Audit Log
+          Bookings::RecordAuditLog.call(
+            auditable: @booking,
+            user: @user,
+            action_type: "update"
+          )
+
           sync_guest(@booking)
           Notifications::Dispatcher.new(event: :booking_updated, booking: @booking).call if dates_changed
           OpenStruct.new(success?: true, booking: @booking)

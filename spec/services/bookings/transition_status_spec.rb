@@ -16,11 +16,16 @@ RSpec.describe Bookings::TransitionStatus do
         expect {
           result = subject.call
           expect(result.success?).to be true
-        }.to have_enqueued_job(WebhookBroadcastJob).with('booking_checked_in', anything)
+        }.to change(BookingAuditLog, :count).by(1)
+          .and have_enqueued_job(WebhookBroadcastJob).with('booking_checked_in', anything)
           .and have_enqueued_job(Notifications::DeliverJob).exactly(2).times
 
         expect(booking.reload.status).to eq("checked_in")
         expect(booking.checked_in_at).to be_within(1.second).of(timestamp)
+
+        log = BookingAuditLog.last
+        expect(log.action_type).to eq("check_in")
+        expect(log.auditable).to eq(booking)
       end
     end
 
@@ -47,11 +52,15 @@ RSpec.describe Bookings::TransitionStatus do
         expect {
           result = subject.call
           expect(result.success?).to be true
-        }.to have_enqueued_job(WebhookBroadcastJob).with('booking_completed', anything)
+        }.to change(BookingAuditLog, :count).by(1)
+          .and have_enqueued_job(WebhookBroadcastJob).with('booking_completed', anything)
           .and have_enqueued_job(Notifications::DeliverJob).exactly(3).times
 
         expect(booking.reload.status).to eq("completed")
         expect(booking.checked_out_at).to be_within(1.second).of(timestamp)
+
+        log = BookingAuditLog.last
+        expect(log.action_type).to eq("check_out")
       end
     end
 
@@ -66,9 +75,13 @@ RSpec.describe Bookings::TransitionStatus do
         expect {
           result = subject.call
           expect(result.success?).to be true
-        }.to have_enqueued_job(WebhookBroadcastJob).with('booking_cancelled', anything)
+        }.to change(BookingAuditLog, :count).by(1)
+          .and have_enqueued_job(WebhookBroadcastJob).with('booking_cancelled', anything)
 
         expect(booking.reload.status).to eq("cancelled")
+
+        log = BookingAuditLog.last
+        expect(log.action_type).to eq("cancel")
       end
     end
 

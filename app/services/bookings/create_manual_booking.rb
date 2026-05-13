@@ -69,6 +69,13 @@ module Bookings
           InventoryManager.new(booking).deduct
           sync_guest(booking)
 
+          # Record Audit Log
+          Bookings::RecordAuditLog.call(
+            auditable: booking,
+            user: @user,
+            action_type: "create"
+          )
+
           # Trigger Webhooks
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
           Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
