@@ -12,7 +12,8 @@ RSpec.describe Notifications::PayloadBuilders::CheckOutReceiptMessage do
       checked_out_at: Time.zone.local(2026, 5, 8, 11, 0),
       total_amount: 330.0,
       tourism_tax_applied: true,
-      tourism_tax_amount: 10.0
+      tourism_tax_amount: 10.0,
+      tax_lines: [ { "name" => "Tourism Tax (TTx)", "amount" => 10.0, "type" => "ttx" } ]
     )
   end
 
@@ -45,7 +46,9 @@ RSpec.describe Notifications::PayloadBuilders::CheckOutReceiptMessage do
         room_number: "104"
       }
     )
-    expect(payload[:tax_line]).to eq({ description: "Tourism tax", quantity: 1, amount: 10.0 })
+    expect(payload[:tax_line]).to contain_exactly(
+      { description: "Tourism Tax (TTx)", quantity: 1, amount: 10.0 }
+    )
     expect(payload[:line_items_total]).to eq(320.0)
     expect(payload[:tax_total]).to eq(10.0)
     expect(payload[:derived_grand_total]).to eq(330.0)

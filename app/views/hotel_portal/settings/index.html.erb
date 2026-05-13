@@ -19,7 +19,7 @@
       <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Hotel Settings</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Control check-in/out timings, currency, and tourism tax.</p>
+          <p class="mt-1 text-sm font-medium text-slate-600">Control check-in/out timings and currency.</p>
         </div>
 
         <div class="px-6 py-5 sm:px-8">
@@ -63,24 +63,6 @@
               <% end %>
             </div>
 
-            <div class="grid items-start gap-4 md:grid-cols-2" data-controller="tourism-tax">
-              <div>
-                <span class="mb-2 block text-sm font-medium text-slate-900">Tourism Tax</span>
-                <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4">
-                  <span class="text-sm text-slate-600">Enable tax</span>
-                  <span class="relative inline-flex items-center">
-                    <%= f.check_box :tourism_tax_enabled, class: "sr-only peer", data: { action: "change->tourism-tax#toggle", tourism_tax_target: "enabled" } %>
-                    <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
-                  </span>
-                </label>
-              </div>
-
-              <div>
-                <%= f.label :tourism_tax_amount, "Tourism Tax Amount", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.number_field :tourism_tax_amount, step: 0.01, disabled: !@hotel.tourism_tax_enabled?, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 disabled:bg-slate-50 disabled:text-slate-500", data: { tourism_tax_target: "amountInput" } %>
-              </div>
-            </div>
-
             <div class="grid gap-4 md:grid-cols-2">
               <div>
                 <%= f.label :default_currency, "Default Currency", class: "mb-2 block text-sm font-medium text-slate-900" %>
@@ -95,6 +77,66 @@
 
             <div class="flex justify-end border-t border-slate-200 pt-4">
               <%= f.submit "Save Settings", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
+            </div>
+          <% end %>
+        </div>
+      </section>
+
+      <!-- Tax Configuration Card -->
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Tax Configuration</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Configure taxes applied to bookings. These appear as separate line items on invoices and receipts.</p>
+        </div>
+
+        <div class="px-6 py-5 sm:px-8">
+          <%= form_with model: @hotel, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
+            <%= hidden_field_tag :form_id, "tax_settings" %>
+
+            <div class="grid items-start gap-4 md:grid-cols-2" data-controller="tourism-tax">
+              <div>
+                <span class="mb-2 block text-sm font-medium text-slate-900">Tourism Tax (TTx)</span>
+                <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4">
+                  <span class="text-sm text-slate-600">Enable Tourism Tax</span>
+                  <span class="relative inline-flex items-center">
+                    <%= f.check_box :tourism_tax_enabled, class: "sr-only peer", data: { action: "change->tourism-tax#toggle", tourism_tax_target: "enabled" } %>
+                    <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
+                  </span>
+                </label>
+                <p class="mt-1 text-xs text-slate-400">RM 10/room/night. Foreign guests only.</p>
+              </div>
+
+              <div>
+                <%= f.label :tourism_tax_amount, "Tourism Tax Amount (RM)", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <%= f.number_field :tourism_tax_amount, step: 0.01, disabled: !@hotel.tourism_tax_enabled?, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 disabled:bg-slate-50 disabled:text-slate-500", data: { tourism_tax_target: "amountInput" } %>
+              </div>
+            </div>
+
+            <div class="grid items-start gap-4 md:grid-cols-2">
+              <div>
+                <span class="mb-2 block text-sm font-medium text-slate-900">Service Tax (SST)</span>
+                <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4">
+                  <span class="text-sm text-slate-600">Enable SST (8%)</span>
+                  <span class="relative inline-flex items-center">
+                    <%= f.check_box :sst_enabled, class: "sr-only peer" %>
+                    <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
+                  </span>
+                </label>
+                <p class="mt-1 text-xs text-slate-400">8% of room subtotal. Applies to all guests.</p>
+              </div>
+
+              <div>
+                <span class="mb-2 block text-sm font-medium text-slate-900">Custom Taxes</span>
+                <%= link_to hotel_hotel_taxes_path(@hotel), class: "flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 hover:bg-slate-50 transition" do %>
+                  <span class="text-sm text-slate-600">Manage invoice & receipt taxes</span>
+                  <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <% end %>
+                <p class="mt-1 text-xs text-slate-400">State levies, heritage fees, and other custom taxes.</p>
+              </div>
+            </div>
+
+            <div class="flex justify-end border-t border-slate-200 pt-4">
+              <%= f.submit "Save Tax Settings", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
             </div>
           <% end %>
         </div>

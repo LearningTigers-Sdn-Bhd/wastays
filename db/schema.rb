@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_08_090001) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_12_081703) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -207,6 +207,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_090001) do
     t.string "external_reference"
     t.string "channel_manager_reference"
     t.integer "revision_number", default: 0
+    t.jsonb "tax_lines", default: [], null: false
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
@@ -302,6 +303,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_090001) do
     t.index ["hotel_id"], name: "index_hotel_pricing_rules_on_hotel_id"
   end
 
+  create_table "hotel_taxes", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "name", null: false
+    t.string "rate_type", default: "flat", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.boolean "enabled", default: true, null: false
+    t.boolean "foreign_guests_only", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_hotel_taxes_on_hotel_id"
+  end
+
   create_table "hotels", force: :cascade do |t|
     t.string "name"
     t.string "address"
@@ -329,6 +342,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_090001) do
     t.string "ai_concierge_tone", default: "basic", null: false
     t.jsonb "faq", default: [], null: false
     t.jsonb "policy", default: [], null: false
+    t.boolean "sst_enabled", default: false, null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
@@ -888,6 +902,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_090001) do
   add_foreign_key "bookings", "hotels"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "hotel_pricing_rules", "hotels"
+  add_foreign_key "hotel_taxes", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "users", column: "salesperson_id"
   add_foreign_key "housekeeping_requests", "bookings"

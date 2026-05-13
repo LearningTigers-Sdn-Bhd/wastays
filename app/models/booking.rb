@@ -165,6 +165,14 @@ class Booking < ApplicationRecord
     tourism_tax_applied && tourism_tax_amount.positive?
   end
 
+  def tax_total
+    Array(tax_lines).sum { |t| t["amount"].to_f }.round(2)
+  end
+
+  def tax_lines_for(type)
+    Array(tax_lines).select { |t| t["type"] == type.to_s }
+  end
+
   def room_numbers
     booking_rooms.pluck(:room_number).compact.join(", ")
   end

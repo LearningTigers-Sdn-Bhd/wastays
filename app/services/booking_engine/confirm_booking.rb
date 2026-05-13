@@ -24,7 +24,27 @@ module BookingEngine
         guest_country = normalize_country(@payment_details[:country])
         gender = @payment_details[:gender]&.downcase&.strip
         document_type = @payment_details[:document_type]&.downcase&.strip
-        tourism_tax_amount = @quote.hotel.tourism_tax_amount_for(guest_country)
+
+        rooms_subtotal = @quote.booking_quote_items.sum(&:subtotal).to_f
+
+        # Build tax lines from hotel's custom taxes
+        tax_lines = @quote.hotel.hotel_taxes.enabled.filter_map do |tax|
+          next unless tax.applicable_for?(guest_country)
+          tax.to_tax_line(rooms_subtotal: rooms_subtotal)
+        end
+
+        # Add SST if enabled (8% of room subtotal, all guests)
+        if @quote.hotel.sst_enabled?
+          tax_lines << {
+            "name"   => "Service Tax (SST 8%)",
+            "amount" => (rooms_subtotal * 0.08).round(2),
+            "type"   => "sst"
+          }
+        end
+
+        # Backward-compat: keep tourism_tax_amount/applied
+        ttx = tax_lines.find { |t| t["name"].to_s.downcase.include?("tourism") }
+        tourism_tax_amount = ttx ? ttx["amount"].to_f : @quote.hotel.tourism_tax_amount_for(guest_country)
 
         booking = Booking.new(
           booking_quote: @quote,
@@ -49,7 +69,8 @@ module BookingEngine
           guest_country: guest_country,
           guest_document_type: document_type,
           tourism_tax_amount: tourism_tax_amount,
-          tourism_tax_applied: tourism_tax_amount.positive?
+          tourism_tax_applied: tourism_tax_amount.positive?,
+          tax_lines: tax_lines
         )
 
 
