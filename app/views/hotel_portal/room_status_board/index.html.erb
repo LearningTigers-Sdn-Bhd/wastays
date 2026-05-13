@@ -453,7 +453,7 @@
                     <div
                       class="relative border-l <%= 'border-r' if index == board_dates.size - 1 %> border-slate-100 <%= summary_padding %> <%= bg_class %> <%= is_interactable ? 'cursor-pointer hover:bg-slate-50/50' : 'cursor-default' %> transition-colors"
                       <% if is_interactable %>
-                        data-action="click->room-block-modal#open"
+                        data-action="dblclick->room-block-modal#open"
                         data-room-block-modal-date-param="<%= date.to_s %>"
                         data-room-block-modal-room-number-param="<%= room[:room_number] %>"
                         data-room-block-modal-room-type-id-param="<%= room_type.id %>"
@@ -549,7 +549,7 @@
                                     data-room-block-modal-reason-param="<%= block[:reason] %>"
                                     data-room-block-modal-update-url-param="<%= hotel_room_block_path(current_hotel, block[:id], start_date: @start_date, days: @board_days, layout: @board_layout) %>"
                                     class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-colors">
-                                  Edit Block
+                                  Edit Room Block
                                 </button>
                                 <%= button_to finish_hotel_room_block_path(current_hotel, block[:id], start_date: @start_date, days: @board_days, layout: @board_layout), 
                                     method: :post,
@@ -644,9 +644,9 @@
             </div>
           </div>
 
-          <div class="border-t border-slate-100 bg-slate-50/50 px-8 py-6 flex items-center justify-end gap-3">
+          <div class="border-t border-slate-100 bg-slate-50/50 px-8 py-6 flex items-center justify-between gap-3">
             <button type="button" onclick="this.closest('dialog').close()" class="rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Cancel</button>
-            <%= f.submit "Schedule Block", 
+            <%= f.submit "Block Room", 
                 data: { room_block_modal_target: "submit" },
                 class: "rounded-2xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 hover:bg-slate-800 transition-all active:scale-95" %>
           </div>
