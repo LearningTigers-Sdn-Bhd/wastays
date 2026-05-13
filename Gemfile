@@ -94,6 +94,6 @@ group :development do
   gem "bundler-audit", require: false
 end
 
-gem "openssl", "~> 3.1.2"
+gem "openssl", "~> 4.0.2"
 gem "aws-sdk-s3", "~> 1.220"
 gem "nokogiri", ">= 1.19.3"
