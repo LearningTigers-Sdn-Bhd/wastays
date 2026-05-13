@@ -15,7 +15,7 @@ module Rooms
 
     def call
       booking_info = resolve_booking_info
-      
+
       OpenStruct.new(
         status: physical_status,
         assignable: physical_status == "ready",
@@ -39,7 +39,7 @@ module Rooms
 
     def resolve_booking_info
       bks = bookings
-      
+
       # Filter bookings that cover this date
       # Standard hotel logic: The room is occupied from check_in date up to (but not including) check_out date.
       covering_bks = bks.select { |b| @date >= b.check_in && @date < b.check_out }

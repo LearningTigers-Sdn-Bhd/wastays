@@ -54,7 +54,7 @@ namespace :room_statuses do
                                     .active_on(Date.current)
                                     .where(room_type: room_status.room_type, room_number: room_status.room_number)
                                     .any?
-      
+
       next if has_active_block
 
       Rooms::SetStatus.new(

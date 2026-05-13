@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "HotelPortal::RoomBlocks", type: :request do
   let(:hotel) { create(:hotel) }
-  let(:room_type) { create(:room_type, hotel: hotel, room_numbers: ["101"]) }
+  let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101" ]) }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
 
@@ -118,9 +118,9 @@ RSpec.describe "HotelPortal::RoomBlocks", type: :request do
       # Set initial status to out_of_service
       room_status = RoomStatus.find_or_create_by!(hotel: hotel, room_type: room_type, room_number: "101")
       room_status.update!(status: "out_of_service")
-      
+
       delete hotel_room_block_path(hotel, room_block)
-      
+
       expect(room_status.reload.status).to eq("ready")
     end
   end
@@ -155,9 +155,9 @@ RSpec.describe "HotelPortal::RoomBlocks", type: :request do
       # Set initial status to out_of_service
       room_status = RoomStatus.find_or_create_by!(hotel: hotel, room_type: room_type, room_number: "101")
       room_status.update!(status: "out_of_service")
-      
+
       post finish_hotel_room_block_path(hotel, room_block)
-      
+
       expect(room_status.reload.status).to eq("pending_cleaning")
     end
   end

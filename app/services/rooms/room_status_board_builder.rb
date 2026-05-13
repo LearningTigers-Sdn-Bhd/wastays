@@ -38,7 +38,7 @@ module Rooms
     def room_groups
       @all_bookings = bookings_scope.to_a
       @all_blocks = blocks_scope.to_a
-      
+
       @hotel.room_types.order(:name).map do |room_type|
         {
           room_type: room_type,
@@ -48,7 +48,7 @@ module Rooms
     end
 
     def room_row(room_type, room_number)
-      room_bookings = @all_bookings.select do |b| 
+      room_bookings = @all_bookings.select do |b|
         b.booking_rooms.any? { |br| br.room_type_id == room_type.id && br.room_number == room_number }
       end
 
@@ -70,9 +70,9 @@ module Rooms
 
     def status_for(room_type, room_number, date, room_bookings, room_blocks = [])
       resolved = Rooms::StatusResolver.new(
-        hotel: @hotel, 
-        room_type: room_type, 
-        room_number: room_number, 
+        hotel: @hotel,
+        room_type: room_type,
+        room_number: room_number,
         date: date,
         bookings_scope: room_bookings,
         blocks_scope: room_blocks
