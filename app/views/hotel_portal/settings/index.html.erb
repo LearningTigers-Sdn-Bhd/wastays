@@ -16,6 +16,26 @@
 
   <% if @settings.present? %>
     <div class="space-y-6 px-4 md:px-0">
+      <% tabs = [
+        { key: "general", label: "General" },
+        { key: "tax", label: "Tax" },
+        { key: "ai", label: "AI Concierge" },
+        { key: "notifications", label: "Notifications" }
+      ] %>
+      <% tabs << { key: "banking", label: "Banking" } if current_user.has_permission?("manage_account") %>
+
+      <nav class="sticky top-2 z-20 overflow-x-auto rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
+        <ul class="flex min-w-max items-center gap-2">
+          <% tabs.each do |tab| %>
+            <% active = @active_settings_tab == tab[:key] %>
+            <li>
+              <%= link_to tab[:label], hotel_settings_path(current_hotel, tab: tab[:key]), class: "inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition #{active ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}" %>
+            </li>
+          <% end %>
+        </ul>
+      </nav>
+
+      <% if @active_settings_tab == "general" %>
       <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Hotel Settings</h2>
@@ -23,7 +43,7 @@
         </div>
 
         <div class="px-6 py-5 sm:px-8">
-          <%= form_with model: @hotel, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
+          <%= form_with model: @hotel, url: hotel_settings_path(@hotel, tab: "general"), method: :patch, local: true, class: "space-y-6" do |f| %>
             <%= hidden_field_tag :form_id, "hotel_settings" %>
             <% settings_errors = @hotel.errors.full_messages + @property_policy.errors.full_messages %>
             <% if settings_errors.any? && params[:form_id] == "hotel_settings" %>
@@ -165,7 +185,9 @@
           <% end %>
         </div>
       </section>
+      <% end %>
 
+      <% if @active_settings_tab == "tax" %>
       <!-- Tax Configuration Card -->
       <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
@@ -174,7 +196,7 @@
         </div>
 
         <div class="px-6 py-5 sm:px-8">
-          <%= form_with model: @hotel, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
+          <%= form_with model: @hotel, url: hotel_settings_path(@hotel, tab: "tax"), method: :patch, local: true, class: "space-y-6" do |f| %>
             <%= hidden_field_tag :form_id, "tax_settings" %>
 
             <div class="grid items-start gap-4 md:grid-cols-2" data-controller="tourism-tax">
@@ -225,7 +247,9 @@
           <% end %>
         </div>
       </section>
+      <% end %>
 
+      <% if @active_settings_tab == "ai" %>
       <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">AI Concierge Configuration</h2>
@@ -233,7 +257,7 @@
         </div>
 
         <div class="px-6 py-5 sm:px-8">
-          <%= form_with model: @hotel, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
+          <%= form_with model: @hotel, url: hotel_settings_path(@hotel, tab: "ai"), method: :patch, local: true, class: "space-y-6" do |f| %>
             <%= hidden_field_tag :form_id, "ai_configuration" %>
             <% if @hotel.errors.any? && params[:form_id] == "ai_configuration" %>
               <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -284,17 +308,19 @@
           <% end %>
         </div>
       </section>
+      <% end %>
 
+      <% if @active_settings_tab == "notifications" %>
       <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Communication & Notifications</h2>
           <p class="mt-1 text-sm font-medium text-slate-600">Configure guest notification automations and channels.</p>
         </div>
 
-        <div class="px-6 py-8 sm:px-8 bg-slate-50/20">
+        <div class="px-4 py-5 sm:px-6 bg-slate-50/20">
           <%# Error handling for notification settings %>
           <% if params[:form_id] == "notification_settings" && (@notification_config&.errors&.any? || @hotel.errors.any?) %>
-            <div class="mb-8 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
               <p class="font-bold flex items-center gap-2">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 Some settings could not be saved:
@@ -310,7 +336,7 @@
             </div>
           <% end %>
 
-          <div class="grid gap-8 lg:grid-cols-2">
+          <div class="grid gap-4 lg:grid-cols-3">
             <%# 1. Check-In Confirmation %>
             <%= render "notification_module", 
                        config: @check_in_notification_config, 
@@ -332,14 +358,14 @@
                        icon: capture { %>
                          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
                        <% } do |f| %>
-              <div class="grid gap-4 sm:grid-cols-2">
+              <div class="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-slate-400">Review Link</label>
-                  <%= text_field_tag "notification_config[settings][review_link]", @post_stay_review_notification_config.settings.to_h["review_link"], placeholder: "Google/Tripadvisor link...", class: "w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-700 focus:border-slate-900 focus:outline-none focus:ring-0" %>
+                  <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Review Link</label>
+                  <%= text_field_tag "notification_config[settings][review_link]", @post_stay_review_notification_config.settings.to_h["review_link"], placeholder: "Google/Tripadvisor link...", class: "w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:outline-none focus:ring-0" %>
                 </div>
                 <div>
-                  <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-slate-400">Delay (Hours)</label>
-                  <%= number_field_tag "notification_config[settings][send_delay_hours]", @post_stay_review_notification_config.settings.to_h["send_delay_hours"], min: 0, step: 1, class: "w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-700 focus:border-slate-900 focus:outline-none focus:ring-0" %>
+                  <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Delay (Hours)</label>
+                  <%= number_field_tag "notification_config[settings][send_delay_hours]", @post_stay_review_notification_config.settings.to_h["send_delay_hours"], min: 0, step: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:outline-none focus:ring-0" %>
                 </div>
               </div>
             <% end %>
@@ -355,13 +381,13 @@
                          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                        <% } do |f| %>
               <div>
-                <span class="mb-3 block text-[11px] font-bold uppercase tracking-widest text-slate-400">Send Stages</span>
-                <div class="flex gap-3">
+                <span class="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Send Stages</span>
+                <div class="flex gap-2">
                   <% stages = @pre_arrival_notification_config.settings.to_h["stages"] || [] %>
                   <%= hidden_field_tag "notification_config[settings][stages][]", "" %>
                   <% [["d2", "D-2"], ["d1", "D-1"]].each do |val, label| %>
-                    <label class="flex flex-1 cursor-pointer items-center justify-between rounded-xl border border-slate-200 p-3 transition-all hover:bg-slate-50 has-[:checked]:border-slate-900 has-[:checked]:bg-slate-50/50">
-                      <span class="text-sm font-bold text-slate-700"><%= label %></span>
+                    <label class="flex flex-1 cursor-pointer items-center justify-between rounded-lg border border-slate-200 p-2 transition-all hover:bg-slate-50 has-[:checked]:border-slate-900 has-[:checked]:bg-slate-50/50">
+                      <span class="text-xs font-bold text-slate-700"><%= label %></span>
                       <%= check_box_tag "notification_config[settings][stages][]", val, stages.include?(val), class: "h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900" %>
                     </label>
                   <% end %>
@@ -381,7 +407,7 @@
                        <% } %>
 
             <%# 5. In-Stay Guest Messaging %>
-            <div class="lg:col-span-2">
+            <div class="lg:col-span-3">
               <%= render "notification_module", 
                          config: @in_stay_guest_notification_config, 
                          notification_type: "in_stay_guest_messaging",
@@ -391,17 +417,17 @@
                          icon: capture { %>
                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                          <% } do |f| %>
-                <div class="space-y-8">
+                <div class="space-y-5">
                   <div class="grid gap-4 md:grid-cols-3">
                     <% in_stay_rules = @in_stay_guest_notification_config.settings.to_h.fetch("rules", {}) %>
                     <% [["mid_stay", "Mid-stay Check", "Satisfaction survey"], 
                         ["upsell", "Upsell Prompt", "F&B or Spa offers"], 
                         ["activity", "Activity Suggestion", "Local attractions"]].each do |rule_key, label, sub| %>
                       <% rule = in_stay_rules.fetch(rule_key, {}) %>
-                      <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-sm">
-                        <div class="flex items-center justify-between mb-4">
+                      <div class="rounded-lg border border-slate-200 bg-slate-50/50 p-3 transition-all hover:bg-white hover:shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
                           <div>
-                            <span class="text-sm font-bold text-slate-900 block"><%= label %></span>
+                            <span class="text-xs font-bold text-slate-900 block"><%= label %></span>
                             <span class="text-[10px] text-slate-500 uppercase tracking-wider"><%= sub %></span>
                           </div>
                           <label class="relative inline-flex items-center cursor-pointer">
@@ -411,19 +437,19 @@
                           </label>
                         </div>
                         <div>
-                          <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Send Time</label>
-                          <%= time_field_tag "notification_config[settings][rules][#{rule_key}][time]", rule.fetch("time", "12:00"), class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-900 focus:ring-0" %>
+                          <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Send Time</label>
+                          <%= time_field_tag "notification_config[settings][rules][#{rule_key}][time]", rule.fetch("time", "12:00"), class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:ring-0" %>
                         </div>
                       </div>
                     <% end %>
                   </div>
 
-                  <div class="rounded-xl border border-slate-200 bg-slate-50/30 p-5">
+                  <div class="rounded-lg border border-slate-200 bg-slate-50/30 p-4">
                     <% quiet_hours = @in_stay_guest_notification_config.settings.to_h.fetch("quiet_hours", {}) %>
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center justify-between mb-3">
                       <div class="flex items-center gap-2 text-slate-700">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-                        <span class="text-sm font-bold">Do Not Disturb (Quiet Hours)</span>
+                        <span class="text-xs font-bold">Do Not Disturb (Quiet Hours)</span>
                       </div>
                       <label class="relative inline-flex items-center cursor-pointer">
                         <%= hidden_field_tag "notification_config[settings][quiet_hours][enabled]", "0" %>
@@ -433,12 +459,12 @@
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Start (No messages after)</label>
-                        <%= time_field_tag "notification_config[settings][quiet_hours][start]", quiet_hours.fetch("start", "22:00"), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 focus:border-slate-900 focus:ring-0" %>
+                        <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Start (No messages after)</label>
+                        <%= time_field_tag "notification_config[settings][quiet_hours][start]", quiet_hours.fetch("start", "22:00"), class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:ring-0" %>
                       </div>
                       <div>
-                        <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">End (Resume at)</label>
-                        <%= time_field_tag "notification_config[settings][quiet_hours][end]", quiet_hours.fetch("end", "08:00"), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 focus:border-slate-900 focus:ring-0" %>
+                        <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">End (Resume at)</label>
+                        <%= time_field_tag "notification_config[settings][quiet_hours][end]", quiet_hours.fetch("end", "08:00"), class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:ring-0" %>
                       </div>
                     </div>
                   </div>
@@ -448,8 +474,9 @@
           </div>
         </div>
       </section>
+      <% end %>
 
-      <% if current_user.has_permission?("manage_account") %>
+      <% if @active_settings_tab == "banking" && current_user.has_permission?("manage_account") %>
         <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
             <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Banking Details</h2>
@@ -457,7 +484,7 @@
           </div>
 
           <div class="px-6 py-5 sm:px-8">
-            <%= form_with model: @account, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
+            <%= form_with model: @account, url: hotel_settings_path(@hotel, tab: "banking"), method: :patch, local: true, class: "space-y-6" do |f| %>
               <% if @account.errors.any? %>
                 <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                   <p class="font-semibold"><%= pluralize(@account.errors.count, "error") %> prohibited these settings from being saved:</p>

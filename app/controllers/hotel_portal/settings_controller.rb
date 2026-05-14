@@ -1,5 +1,7 @@
 module HotelPortal
   class SettingsController < HotelPortal::BaseController
+    SETTINGS_TABS = %w[general tax ai notifications banking].freeze
+
     before_action :set_account
     before_action :set_hotel
 
@@ -21,7 +23,7 @@ module HotelPortal
       elsif settings_update_request?
         update_settings
       elsif params[:payment_setting].present?
-        redirect_to hotel_settings_path(@hotel), alert: "Payment gateway credentials are managed by superadmin."
+        redirect_to hotel_settings_path(@hotel, tab: @active_settings_tab), alert: "Payment gateway credentials are managed by superadmin."
       else
         update_banking_details
       end
@@ -40,6 +42,8 @@ module HotelPortal
     end
 
     def load_settings
+      @active_settings_tab = active_settings_tab
+
       if @hotel
         @property_policy ||= @hotel.property_policy || @hotel.build_property_policy
 
@@ -121,7 +125,7 @@ module HotelPortal
 
       if ai_configuration_form?
         update_ai_configuration!
-        return redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
+        return redirect_to hotel_settings_path(@hotel, tab: "ai"), notice: "Settings updated successfully."
       end
 
       ActiveRecord::Base.transaction do
@@ -135,7 +139,7 @@ module HotelPortal
         end
       end
 
-      redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
+      redirect_to hotel_settings_path(@hotel, tab: settings_tab_for_form), notice: "Settings updated successfully."
     rescue ActiveRecord::RecordInvalid, FrozenError
       load_settings
       @account.build_banking_detail unless @account.banking_detail
@@ -146,7 +150,7 @@ module HotelPortal
       authorize_banking_details_update!
 
       if @account.update(account_params)
-        redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
+        redirect_to hotel_settings_path(@hotel, tab: "banking"), notice: "Settings updated successfully."
       else
         load_settings
         render :index, status: :unprocessable_entity
@@ -165,7 +169,7 @@ module HotelPortal
       settings = build_notification_settings(@notification_config.notification_type)
 
       if @notification_config.update(notification_config_params.merge(channels: channels, settings: settings))
-        redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
+        redirect_to hotel_settings_path(@hotel, tab: "notifications"), notice: "Settings updated successfully."
       else
         load_settings
         @account.build_banking_detail unless @account.banking_detail
@@ -332,6 +336,28 @@ module HotelPortal
 
     def settings_policy
       current_hotel.property_policy || current_hotel.build_property_policy
+    end
+
+    def active_settings_tab
+      requested_tab = params[:tab].to_s
+      return requested_tab if SETTINGS_TABS.include?(requested_tab)
+
+      settings_tab_for_form
+    end
+
+    def settings_tab_for_form
+      case params[:form_id].to_s
+      when "hotel_settings"
+        "general"
+      when "tax_settings"
+        "tax"
+      when "ai_configuration"
+        "ai"
+      when "notification_settings"
+        "notifications"
+      else
+        "general"
+      end
     end
 
     def onboarding_stage(hotel)

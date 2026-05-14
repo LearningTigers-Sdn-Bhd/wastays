@@ -57,7 +57,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(member_rate.room_rates.find_by(date: start_date, currency: "MYR").price.to_f).to eq(333.0)
     end
 
-    it "writes rate updates in each rate plan native currency" do
+    it "writes rate updates in the requested currency and updates the rate plan currency" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
       jpy_plan = create(:rate_plan, room_type: room_type, currency: "JPY")
 
@@ -76,8 +76,8 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       ).call
 
       expect(result[:success]).to be(true)
-      expect(jpy_plan.room_rates.find_by(date: start_date, currency: "JPY").price.to_f).to eq(12000.0)
-      expect(jpy_plan.room_rates.find_by(date: start_date, currency: "USD")).to be_nil
+      expect(jpy_plan.reload.currency).to eq("USD")
+      expect(jpy_plan.room_rates.find_by(date: start_date, currency: "USD").price.to_f).to eq(12000.0)
     end
 
     it "applies restrictions without requiring a rate override" do

@@ -47,7 +47,8 @@ export default class extends Controller {
     defaultMode: String,
     defaultStart: String,
     defaultEnd: String,
-    defaultCurrency: String
+    defaultCurrency: String,
+    baseCurrency: String
   }
 
   initialize() {
@@ -144,15 +145,8 @@ export default class extends Controller {
       this.currentStatusHintTarget.textContent = ""
       this.priceFieldTarget.value = data.price || ""
       
-      const currency = data.currency || this.defaultCurrencyValue || "MYR"
-      this.currencyFieldTarget.value = currency
-      
-      const searchableSelect = this.currencyFieldTarget.closest('[data-controller="searchable-select"]')
-      if (searchableSelect) {
-        const input = searchableSelect.querySelector('[data-searchable-select-target="input"]')
-        const option = searchableSelect.querySelector(`[data-value="${currency}"]`)
-        if (input && option) input.value = option.dataset.label
-      }
+      const currency = data.currency || this.baseCurrencyValue || this.defaultCurrencyValue || "MYR"
+      this.syncCurrencySelect(currency)
 
       this.minStayFieldTarget.value = data.minStay || ""
       this.maxStayFieldTarget.value = data.maxStay || ""
@@ -330,7 +324,13 @@ export default class extends Controller {
           cell.dataset.price = data.price
           const priceSpan = cell.querySelector(".tabular-nums")
           if (priceSpan) {
-            const symbol = data.currency === "USD" ? "$" : "RM"
+            let symbol = data.currency
+            if (data.currency === "USD") symbol = "$"
+            else if (data.currency === "MYR") symbol = "RM"
+            else if (data.currency === "GBP") symbol = "£"
+            else if (data.currency === "EUR") symbol = "€"
+            else if (data.currency === "JPY") symbol = "¥"
+
             const formatted = parseFloat(data.price).toLocaleString(undefined, {
               minimumFractionDigits: 0,
               maximumFractionDigits: 2
@@ -576,14 +576,8 @@ export default class extends Controller {
     this.priceFieldTarget.value = ""
     
     // Reset searchable currency select
-    const currency = this.defaultCurrencyValue || "MYR"
-    this.currencyFieldTarget.value = currency
-    const searchableSelect = this.currencyFieldTarget.closest('[data-controller="searchable-select"]')
-    if (searchableSelect) {
-      const input = searchableSelect.querySelector('[data-searchable-select-target="input"]')
-      const option = searchableSelect.querySelector(`[data-value="${currency}"]`)
-      if (input && option) input.value = option.dataset.label
-    }
+    const currency = this.baseCurrencyValue || this.defaultCurrencyValue || "MYR"
+    this.syncCurrencySelect(currency)
 
     this.minStayFieldTarget.value = ""
     this.maxStayFieldTarget.value = ""
@@ -594,6 +588,21 @@ export default class extends Controller {
     this.applyRatesTarget.checked = false
     this.applyRestrictionsTarget.checked = false
     this.toggleSections()
+  }
+
+  syncCurrencySelect(currency) {
+    if (!this.hasCurrencyFieldTarget) return
+
+    this.currencyFieldTarget.value = currency
+    
+    const searchableSelect = this.currencyFieldTarget.closest('[data-controller="searchable-select"]')
+    if (searchableSelect) {
+      const input = searchableSelect.querySelector('[data-searchable-select-target="input"]')
+      const option = searchableSelect.querySelector(`[data-value="${currency}"]`)
+      if (input) {
+        input.value = option ? option.dataset.label : currency
+      }
+    }
   }
 
   openDialog() {

@@ -19,6 +19,11 @@ module HotelOps
     def call
       Thread.current[:skip_ari_sync] = true
       ActiveRecord::Base.transaction do
+        # Sync rate plan currency with the update currency if they differ
+        if @rate_plan.currency != @currency
+          @rate_plan.update!(currency: @currency)
+        end
+
         (@start_date..@end_date).each do |date|
           # Find or create record for this specific date, plan and currency
           rate = @rate_plan.room_rates.find_or_initialize_by(date: date, currency: @currency)

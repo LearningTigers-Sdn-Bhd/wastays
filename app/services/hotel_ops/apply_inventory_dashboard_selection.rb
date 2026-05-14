@@ -151,6 +151,11 @@ module HotelOps
 
     def apply_rates_to(room_type)
       rate_plans_for(room_type).find_each do |rate_plan|
+        # Ensure rate plan currency follows the requested currency when applying rates
+        if apply_rates? && rate_plan.currency != currency
+          rate_plan.update!(currency: currency)
+        end
+
         (start_date..end_date).each do |date|
           target_currencies_for(rate_plan, date).each do |target_currency|
             rate = rate_plan.room_rates.find_or_initialize_by(date: date, currency: target_currency)
@@ -164,9 +169,8 @@ module HotelOps
               stop_sell: rate.stop_sell
             }
 
-            # Apply price update. If the current target currency matches the rate plan's native currency,
-            # we always apply the input price (unless the input was in a specific different currency).
-            should_apply_price = apply_rates? && (target_currency == currency || target_currency == rate_plan.currency)
+            # Apply price update.
+            should_apply_price = apply_rates? && target_currency == currency
             rate.price = price if should_apply_price
 
             if apply_restrictions?
@@ -206,13 +210,13 @@ module HotelOps
     end
 
     def target_currencies_for(rate_plan, date)
-      return [ rate_plan.currency ] if apply_rates?
+      return [ currency ] if apply_rates?
       return [ currency ] unless apply_restrictions?
 
       # If we are applying restrictions, we must apply them to ALL currencies
       # that this hotel has ever used to avoid discrepancies between currency views.
       existing_currencies = rate_plan.room_rates.where(date: date).distinct.pluck(:currency)
-      (existing_currencies + [ rate_plan.currency ]).compact.uniq
+      (existing_currencies + [ currency, rate_plan.currency ]).compact.uniq
     end
 
     def room_numbers_for(room_type)

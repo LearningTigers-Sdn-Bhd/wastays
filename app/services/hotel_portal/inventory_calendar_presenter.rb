@@ -117,7 +117,7 @@ module HotelPortal
     def rates_by_rate_plan
       @rates_by_rate_plan ||= visible_room_types.each_with_object({}) do |room_type, memo|
         rate_plans_for(room_type).each do |rate_plan|
-          memo[rate_plan.id] = rate_plan.room_rates.where(date: start_date..end_date, currency: rate_plan.currency).index_by(&:date)
+          memo[rate_plan.id] = rate_plan.room_rates.where(date: start_date..end_date, currency: default_currency).index_by(&:date)
         end
       end
     end
@@ -145,7 +145,7 @@ module HotelPortal
 
     def rate_cell(room_type, rate_plan, date)
       rate = rates_by_rate_plan.dig(rate_plan.id, date)
-      native_currency = rate_plan.currency.presence || default_currency
+      native_currency = default_currency
       price = rate&.price || (native_currency == default_currency ? room_type.base_price : nil)
       
       display_conversion = display_conversion_for(price, from: native_currency)
@@ -216,8 +216,9 @@ module HotelPortal
       CurrencyConverter.convert(price, from: from, to: display_currency, hotel: hotel)
     end
 
-    def format_price(price, currency)
+    def format_price(price, currency = nil)
       return "-" if price.blank?
+      currency ||= display_currency
 
       CurrencyFormatter.format(price, currency: currency)
     end

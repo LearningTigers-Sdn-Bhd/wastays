@@ -6,8 +6,8 @@ class HotelPortal::RatesController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days # Show 2 weeks by default
-    @display_currency = normalized_currency(params[:display_currency], fallback: @rate_plan.currency)
-    @native_currency = @rate_plan.currency.presence || current_hotel.default_currency || "MYR"
+    @native_currency = current_hotel.default_currency || "MYR"
+    @display_currency = normalized_currency(params[:display_currency], fallback: @native_currency)
     @room_types = current_hotel.room_types.order(:id)
     @rate_plans = @room_type.rate_plans.order(:id)
 
@@ -23,7 +23,7 @@ class HotelPortal::RatesController < HotelPortal::BaseController
       start_date: rate_params[:start_date],
       end_date: rate_params[:end_date],
       price: rate_params[:price],
-      currency: @rate_plan.currency,
+      currency: rate_params[:currency].presence || current_hotel.default_currency || "MYR",
       min_stay: rate_params[:min_stay],
       max_stay: rate_params[:max_stay],
       closed_to_arrival: rate_params[:closed_to_arrival],

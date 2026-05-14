@@ -10,7 +10,8 @@
      data-inventory-calendar-default-mode-value="<%= @view_mode %>" 
      data-inventory-calendar-default-start-value="<%= @start_date %>" 
      data-inventory-calendar-default-end-value="<%= @end_date %>" 
-     data-inventory-calendar-default-currency-value="<%= @display_currency %>">
+     data-inventory-calendar-default-currency-value="<%= @display_currency %>"
+     data-inventory-calendar-base-currency-value="<%= @hotel_base_currency %>">
   
   <% if @missing_rates.any? %>
     <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 mb-4">
