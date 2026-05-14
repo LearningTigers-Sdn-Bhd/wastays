@@ -185,13 +185,19 @@ module HotelPortal
     def hotel_params
       params.require(:hotel).permit(
         :default_currency,
+        :time_zone,
         :tourism_tax_enabled,
         :tourism_tax_amount,
         :sst_enabled,
         :ai_provider_enabled,
         :ai_concierge_tone,
         :ai_provider_name,
-        :ai_provider_key
+        :ai_provider_key,
+        property_policy_attributes: [
+          :id,
+          :check_in_time,
+          :check_out_time
+        ]
       )
     end
 

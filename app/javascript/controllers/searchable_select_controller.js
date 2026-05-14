@@ -2,9 +2,24 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["input", "hiddenInput", "options", "option", "placeholder"]
+  static values = { nextFieldSelector: String }
 
   connect() {
     this.close()
+    this.setInitialLabel()
+  }
+
+  setInitialLabel() {
+    const value = this.hiddenInputTarget.value
+    if (value) {
+      const option = this.optionTargets.find(opt => opt.dataset.value === value)
+      if (option) {
+        this.inputTarget.value = option.dataset.label
+      } else {
+        // For time fields, if not in presets, keep as is
+        this.inputTarget.value = value
+      }
+    }
   }
 
   toggle() {
@@ -74,6 +89,18 @@ export default class extends Controller {
     this.hiddenInputTarget.dispatchEvent(new Event("change", { bubbles: true }))
 
     this.close()
+
+    // Auto-advance logic
+    if (this.hasNextFieldSelectorValue) {
+      setTimeout(() => {
+        const nextElement = document.querySelector(this.hasNextFieldSelectorValue)
+        if (nextElement) {
+          const nextInput = nextElement.querySelector('input') || nextElement
+          nextInput.focus()
+          nextInput.click()
+        }
+      }, 150)
+    }
   }
 
   positionDropdown() {

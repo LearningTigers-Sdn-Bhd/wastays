@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_14_090001) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -387,6 +387,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090001) do
     t.jsonb "policy", default: [], null: false
     t.boolean "sst_enabled", default: false, null: false
     t.string "hotel_prefix"
+    t.string "time_zone"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
