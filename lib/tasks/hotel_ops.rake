@@ -73,6 +73,9 @@ namespace :hotel_ops do
       # 3. Recalibrate Room Statuses
       puts "Recalibrating room statuses..."
       hotel.room_types.each do |room_type|
+        # Reset all existing statuses to 'ready'
+        room_type.room_statuses.update_all(status: "ready", last_changed_at: Time.current, updated_at: Time.current)
+
         expected_room_numbers = room_type.room_numbers.map(&:to_s)
         existing_statuses = room_type.room_statuses.pluck(:room_number)
 

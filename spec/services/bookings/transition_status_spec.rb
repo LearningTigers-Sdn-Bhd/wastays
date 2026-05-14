@@ -22,6 +22,8 @@ RSpec.describe Bookings::TransitionStatus do
 
         expect(booking.reload.status).to eq("checked_in")
         expect(booking.checked_in_at).to be_within(1.second).of(timestamp)
+        expect(booking.booking_folio).to be_present
+        expect(booking.booking_folio.folio_number).to be_present
 
         log = BookingAuditLog.last
         expect(log.action_type).to eq("check_in")
@@ -93,7 +95,7 @@ RSpec.describe Bookings::TransitionStatus do
     end
 
     it "handles update failures" do
-      allow(booking).to receive(:update).and_return(false)
+      allow(booking).to receive(:update!).and_raise(ActiveRecord::RecordInvalid.new(booking))
       allow(booking.errors).to receive(:full_messages).and_return([ "Error" ])
 
       subject = described_class.new(booking: booking, status: "checked_in")

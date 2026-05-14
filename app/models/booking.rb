@@ -11,6 +11,7 @@ class Booking < ApplicationRecord
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
   has_one :refund_request, dependent: :destroy
+  has_one :booking_folio, dependent: :destroy
   has_many :housekeeping_requests, dependent: :destroy
   has_many :complaint_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
@@ -162,15 +163,14 @@ class Booking < ApplicationRecord
     pre_checkin_status.presence || pre_checkin&.status.presence || "not_started"
   end
 
-  def tourism_tax?
-    tourism_tax_applied && tourism_tax_amount.positive?
-  end
+  delegate :folio_number, to: :booking_folio, allow_nil: true
 
   def folio_outstanding_balance
-    # total_amount = room charges pre-paid at booking (tax tracked separately but also pre-paid)
-    # Outstanding balance = only unpaid extra charges (F&B, room service, etc.)
-    # Will be non-zero once Single Itemised Folio (extra charges) is built.
-    0.0
+    booking_folio&.outstanding_balance || 0.0
+  end
+
+  def tourism_tax?
+    tourism_tax_applied && tourism_tax_amount.positive?
   end
 
   def tax_total

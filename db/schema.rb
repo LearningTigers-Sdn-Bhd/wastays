@@ -111,6 +111,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.index ["user_id"], name: "index_booking_audit_logs_on_user_id"
   end
 
+  create_table "booking_folios", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.integer "folio_number"
+    t.string "status", default: "open"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_booking_folios_on_booking_id", unique: true
+    t.index ["folio_number"], name: "index_booking_folios_on_folio_number"
+  end
+
   create_table "booking_guests", force: :cascade do |t|
     t.bigint "booking_id", null: false
     t.bigint "guest_id", null: false
@@ -222,14 +232,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.string "payout_status"
     t.datetime "payout_at"
     t.string "payout_reference"
-    t.string "payout_batch_id"
+    t.bigint "payout_batch_id"
     t.string "source", default: "internal"
     t.string "external_reference"
     t.string "channel_manager_reference"
     t.integer "revision_number", default: 0
     t.jsonb "tax_lines", default: [], null: false
     t.integer "reservation_number"
-    t.integer "folio_number"
     t.integer "receipt_number"
     t.integer "guest_registration_number"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
@@ -238,6 +247,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
+    t.index ["payout_batch_id"], name: "index_bookings_on_payout_batch_id"
     t.index ["source"], name: "index_bookings_on_source"
     t.index ["status"], name: "index_bookings_on_status"
   end
@@ -311,7 +321,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.string "magic_token_digest"
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
-    t.jsonb "chat_history", default: []
     t.bigint "created_by_hotel_id"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
@@ -373,14 +382,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.bigint "salesperson_id"
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
-    t.string "whatsapp_number"
-    t.text "ai_persona"
-    t.string "openai_api_key"
-    t.jsonb "amenities", default: [], null: false
-    t.string "slug", null: false
     t.boolean "ai_provider_enabled", default: false
     t.string "ai_provider_name"
     t.text "ai_provider_key"
+    t.jsonb "amenities", default: [], null: false
+    t.string "slug", null: false
     t.string "ai_concierge_tone", default: "basic", null: false
     t.jsonb "faq", default: [], null: false
     t.jsonb "policy", default: [], null: false
@@ -392,7 +398,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
-    t.index ["whatsapp_number"], name: "index_hotels_on_whatsapp_number", unique: true
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
@@ -913,7 +918,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
   create_table "webhook_endpoints", force: :cascade do |t|
     t.string "name"
     t.string "url"
-    t.string "event_types"
     t.boolean "enabled"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -935,6 +939,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
   add_foreign_key "banking_details", "accounts"
   add_foreign_key "booking_audit_logs", "hotels"
   add_foreign_key "booking_audit_logs", "users"
+  add_foreign_key "booking_folios", "bookings"
   add_foreign_key "booking_guests", "bookings"
   add_foreign_key "booking_guests", "guests"
   add_foreign_key "booking_notes", "bookings"
@@ -946,6 +951,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
   add_foreign_key "booking_rooms", "room_types"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
+  add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
   add_foreign_key "hotel_counters", "hotels"

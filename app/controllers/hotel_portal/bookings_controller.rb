@@ -5,7 +5,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   before_action :authorize_manage_bookings!, only: %i[new create update check_in check_out cancel add_guest remove_guest]
 
   def index
-    @all_bookings = current_hotel.bookings.recent_first
+    @all_bookings = current_hotel.bookings.recent_first.includes(:booking_folio)
     @all_bookings = @all_bookings.search(params[:query]) if params[:query].present?
     @all_bookings = @all_bookings.where(status: params[:status]) if params[:status].present?
 
@@ -84,7 +84,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   end
 
   def show
-    @booking = current_hotel.bookings.find(params[:id])
+    @booking = current_hotel.bookings.includes(:booking_folio).find(params[:id])
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
     set_audit_logs
   end
