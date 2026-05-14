@@ -35,11 +35,14 @@ module HotelPortal
 
     def set_hotel
       @hotel = current_hotel
-      @property_policy = @hotel&.property_policy || @hotel&.build_property_policy
+      @property_policy = @hotel&.property_policy
+      @property_policy ||= @hotel&.build_property_policy if action_name.in?(%w[index edit])
     end
 
     def load_settings
       if @hotel
+        @property_policy ||= @hotel.property_policy || @hotel.build_property_policy
+
         @check_in_notification_config = NotificationConfig.find_or_initialize_by(
           hotel: @hotel,
           notification_type: "check_in_confirmation"
@@ -116,17 +119,24 @@ module HotelPortal
     def update_settings
       authorize_settings_update!
 
+      if ai_configuration_form?
+        update_ai_configuration!
+        return redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
+      end
+
       ActiveRecord::Base.transaction do
         @hotel.update!(hotel_params)
 
-        if params.dig(:hotel, :property_policy_attributes).present?
-          @property_policy ||= @hotel.property_policy || @hotel.build_property_policy
-          @property_policy.update!(property_policy_params)
+        if should_update_property_policy?
+          # In some update flows Rails can leave the previously memoized association frozen.
+          # Always write through a fresh mutable instance.
+          policy = fresh_property_policy
+          policy.update!(property_policy_params)
         end
       end
 
       redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
-    rescue ActiveRecord::RecordInvalid
+    rescue ActiveRecord::RecordInvalid, FrozenError
       load_settings
       @account.build_banking_detail unless @account.banking_detail
       render :index, status: :unprocessable_entity
@@ -212,6 +222,39 @@ module HotelPortal
 
     def notification_config_params
       params.require(:notification_config).permit(:enabled)
+    end
+
+    def ai_configuration_form?
+      params[:form_id].to_s == "ai_configuration"
+    end
+
+    def update_ai_configuration!
+      attrs = hotel_params.slice(:ai_provider_enabled, :ai_concierge_tone, :ai_provider_name, :ai_provider_key)
+      enabled = ActiveModel::Type::Boolean.new.cast(attrs[:ai_provider_enabled])
+
+      @hotel.assign_attributes(attrs)
+      @hotel.errors.add(:ai_provider_name, "can't be blank") if enabled && @hotel.ai_provider_name.blank?
+      @hotel.errors.add(:ai_provider_key, "can't be blank") if enabled && @hotel.ai_provider_key.blank?
+      raise ActiveRecord::RecordInvalid, @hotel if @hotel.errors.any?
+
+      # Avoid unrelated autosave association validation (property_policy) on AI-only updates.
+      @hotel.save!(validate: false)
+    end
+
+    def should_update_property_policy?
+      return false unless params[:form_id].to_s == "hotel_settings"
+
+      attrs = params.dig(:hotel, :property_policy_attributes)
+      return false if attrs.blank?
+
+      attrs[:check_in_time].present? || attrs[:check_out_time].present?
+    end
+
+    def fresh_property_policy
+      policy = @hotel.property_policy
+      return @hotel.build_property_policy if policy.blank?
+
+      policy.frozen? ? PropertyPolicy.find(policy.id) : policy
     end
 
     def build_notification_settings(notification_type)

@@ -147,16 +147,21 @@ module HotelPortal
       rate = rates_by_rate_plan.dig(rate_plan.id, date)
       native_currency = rate_plan.currency.presence || default_currency
       price = rate&.price || (native_currency == default_currency ? room_type.base_price : nil)
+      
       display_conversion = display_conversion_for(price, from: native_currency)
+      
+      # If conversion is requested but fails due to missing exchange rate
+      conversion_missing = price.present? && display_currency != native_currency && display_conversion.nil?
+      
       display_price = display_conversion&.amount || price
-      formatted_currency = display_conversion.present? ? display_currency : native_currency
+      formatted_currency = (display_conversion.present? || conversion_missing) ? display_currency : native_currency
 
       # Determine if price is modified compared to base
       is_modified = false
       if native_currency == default_currency && price.present?
         is_modified = (price.to_f != room_type.base_price.to_f)
       elsif price.present? && rate.present?
-        is_modified = true # For non-MYR, if a rate object exists, we consider it modified/custom
+        is_modified = true
       end
 
       {
@@ -166,6 +171,7 @@ module HotelPortal
         currency: native_currency,
         display_currency: formatted_currency,
         estimated: display_conversion.present? && native_currency != formatted_currency,
+        conversion_missing: conversion_missing,
         is_modified: is_modified,
         min_stay: rate&.min_stay,
         max_stay: rate&.max_stay,

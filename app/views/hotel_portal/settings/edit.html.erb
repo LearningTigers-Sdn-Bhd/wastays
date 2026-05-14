@@ -157,12 +157,45 @@
               <p class="mt-2 text-[11px] font-medium text-slate-400 italic">This affects how your calendar and automated messages are triggered.</p>
             </div>
 
-            <div>
+            <div data-controller="searchable-select">
+              <% can_edit_currency = current_user.has_permission?("manage_hotel_profile") %>
               <%= f.label :default_currency, "Accounting Currency", class: "block text-sm mb-2 font-semibold text-slate-700" %>
-              <div class="py-3 px-4 block w-full border border-slate-100 rounded-xl text-sm font-bold text-slate-900 bg-slate-50 shadow-inner">
-                <%= @hotel.default_currency %>
-              </div>
-              <p class="mt-2 text-[11px] font-medium text-slate-400 italic text-rose-500">Contact admin to change base accounting currency.</p>
+              
+              <% if can_edit_currency %>
+                <div class="relative group">
+                  <input type="text" 
+                         data-searchable-select-target="input"
+                         data-action="input->searchable-select#filter click->searchable-select#open"
+                         class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 transition-all focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-50"
+                         placeholder="Search currency..."
+                         autocomplete="off"
+                         value="<%= @hotel.default_currency %>">
+                  
+                  <%= f.hidden_field :default_currency, data: { searchable_select_target: "hiddenInput" } %>
+
+                  <div data-searchable-select-target="options" 
+                       class="absolute z-[100] hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 mt-2">
+                    <div class="max-height-[300px] overflow-y-auto p-1 custom-scrollbar" style="max-height: 300px;">
+                      <% CurrencyCatalog.options.each do |label, value| %>
+                        <button type="button"
+                                data-searchable-select-target="option"
+                                data-action="click->searchable-select#select"
+                                data-value="<%= value %>"
+                                data-label="<%= label %>"
+                                class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                          <span class="truncate"><%= label %></span>
+                        </button>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+                <p class="mt-2 text-[11px] font-medium text-slate-400 italic">Changing this will affect how rates are stored and synced.</p>
+              <% else %>
+                <div class="py-3 px-4 block w-full border border-slate-100 rounded-xl text-sm font-bold text-slate-900 bg-slate-50 shadow-inner">
+                  <%= @hotel.default_currency %>
+                </div>
+                <p class="mt-2 text-[11px] font-medium text-slate-400 italic text-rose-500">Contact admin to change base accounting currency.</p>
+              <% end %>
             </div>
           </div>
         </div>

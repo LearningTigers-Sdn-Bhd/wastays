@@ -2,10 +2,10 @@
 
 module HotelPortal
   module InventoryDashboardsHelper
-    def inventory_calendar_base_params(start_date:, display_currency:, selected_room_type_id:)
+    def inventory_calendar_base_params(start_date:, view_currencies:, selected_room_type_id:)
       {
         start_date: start_date,
-        display_currency: display_currency,
+        view_currencies: view_currencies,
         room_type_id: selected_room_type_id
       }.compact
     end

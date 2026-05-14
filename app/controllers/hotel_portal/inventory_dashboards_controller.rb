@@ -5,9 +5,23 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
     @start_date = (params[:start_date] || Date.today).to_date
-    @end_date = @start_date + 13.days # Show 14 days by default
+    @end_date = @start_date + 13.days
     @view_mode = "combined"
-    @display_currency = normalized_currency(params[:display_currency], fallback: current_hotel.default_currency || "MYR")
+    
+    # Handle multiple view currencies
+    @hotel_base_currency = current_hotel.default_currency || "MYR"
+    requested_currencies = Array(params[:view_currencies]).reject(&:blank?)
+    requested_currencies << @hotel_base_currency if requested_currencies.empty?
+    @view_currencies = requested_currencies.uniq.select { |c| CurrencyCatalog.valid?(c) }
+    
+    # Primary display currency is the first one in the list
+    @display_currency = @view_currencies.first
+    
+    # Check if exchange rates are set for all view currencies (relative to base)
+    @missing_rates = @view_currencies.reject do |currency|
+      currency == @hotel_base_currency || ExchangeRate.rate_for(@hotel_base_currency, currency).present?
+    end
+
     @room_types = current_hotel.room_types.order(:id)
     @calendar = build_calendar
     @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules
@@ -284,6 +298,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :mode,
       room_type_ids: [],
       rate_plan_ids: [],
+      view_currencies: [],
       available_room_numbers: []
     )
   end
@@ -293,7 +308,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
     {
       start_date: params[:start_date] || permitted_selection[:start_date],
-      display_currency: normalized_currency(params[:display_currency] || permitted_selection[:currency], fallback: current_hotel.default_currency || "MYR"),
+      view_currencies: params[:view_currencies] || permitted_selection[:view_currencies],
       room_type_id: Array(permitted_selection[:room_type_ids]).reject(&:blank?).first || params[:room_type_id],
       rate_plan_id: Array(permitted_selection[:rate_plan_ids]).reject(&:blank?).first || params[:rate_plan_id]
     }

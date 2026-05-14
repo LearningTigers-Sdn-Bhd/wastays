@@ -144,9 +144,18 @@
               </div>
 
               <div>
+                <% can_edit_currency = current_user.has_permission?("manage_hotel_profile") %>
                 <%= f.label :default_currency, "Default Currency", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.select :default_currency, options_for_select(CurrencyCatalog.options, @settings[:default_currency] || "MYR"), {}, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-900 bg-slate-50 cursor-not-allowed", disabled: true %>
-                <p class="mt-1 text-[10px] font-medium text-rose-500 italic">Contact admin to change base accounting currency.</p>
+                <%= f.select :default_currency, 
+                             options_for_select(CurrencyCatalog.options, @settings[:default_currency] || "MYR"), 
+                             {}, 
+                             class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-900 #{can_edit_currency ? 'bg-white focus:border-slate-300 focus:outline-none focus:ring-0' : 'bg-slate-50 cursor-not-allowed'}", 
+                             disabled: !can_edit_currency %>
+                <% if can_edit_currency %>
+                  <p class="mt-1 text-[10px] font-medium text-slate-400 italic">Changing this will affect how rates are stored and synced.</p>
+                <% else %>
+                  <p class="mt-1 text-[10px] font-medium text-rose-500 italic">Contact admin to change base accounting currency.</p>
+                <% end %>
               </div>
             </div>
 

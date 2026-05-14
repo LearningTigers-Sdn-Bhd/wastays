@@ -90,6 +90,8 @@ class CurrencyCatalog
 
       if currency_name.present?
         "#{normalized} - #{currency_name}"
+      elsif (country_name = first_country_name_for(normalized)).present?
+        "#{normalized} - #{country_name} Currency"
       else
         normalized
       end
@@ -97,13 +99,12 @@ class CurrencyCatalog
 
     private
 
-    # Keeping this for potential future internal use, but removing from labels
-    def country_names_for(code)
-      @country_names_cache ||= {}
-      @country_names_cache[code] ||= ISO3166::Country.all
-                                     .select { |c| c.currency_code == code }
-                                     .map(&:common_name)
-                                     .uniq
-                                     .first(3)
-    end  end
+    def first_country_name_for(code)
+      @first_country_name_cache ||= {}
+      @first_country_name_cache[code] ||= ISO3166::Country.all
+                                                     .find { |country| country.currency_code == code }
+                                                     &.common_name
+    end
+
+  end
 end
