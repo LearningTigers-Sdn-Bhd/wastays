@@ -1,23 +1,13 @@
 # frozen_string_literal: true
 
 class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
-  WEEKDAY_OPTIONS = [
-    [ "Mon", 1 ],
-    [ "Tue", 2 ],
-    [ "Wed", 3 ],
-    [ "Thu", 4 ],
-    [ "Fri", 5 ],
-    [ "Sat", 6 ],
-    [ "Sun", 0 ]
-  ].freeze
-
   def index
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days # Show 14 days by default
     @view_mode = "combined"
-    @display_currency = params[:display_currency] || current_hotel.default_currency || "MYR"
+    @display_currency = normalized_currency(params[:display_currency], fallback: current_hotel.default_currency || "MYR")
     @room_types = current_hotel.room_types.order(:id)
     @calendar = build_calendar
     @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules
@@ -135,7 +125,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @end_date = @start_date + 13.days
       @view_mode = "combined"
       @room_types = current_hotel.room_types.order(:id)
-      @display_currency = params[:display_currency] || current_hotel.default_currency || "MYR"
+      @display_currency = normalized_currency(params[:display_currency], fallback: current_hotel.default_currency || "MYR")
       @calendar = build_calendar
       @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_params(pricing_params)
       @pricing_form.errors = sync_result[:errors] || {}
@@ -303,7 +293,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
     {
       start_date: params[:start_date] || permitted_selection[:start_date],
-      display_currency: params[:display_currency] || permitted_selection[:currency] || current_hotel.default_currency || "MYR",
+      display_currency: normalized_currency(params[:display_currency] || permitted_selection[:currency], fallback: current_hotel.default_currency || "MYR"),
       room_type_id: Array(permitted_selection[:room_type_ids]).reject(&:blank?).first || params[:room_type_id],
       rate_plan_id: Array(permitted_selection[:rate_plan_ids]).reject(&:blank?).first || params[:rate_plan_id]
     }
@@ -315,5 +305,10 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
   def selected_rate_plan_id
     params[:rate_plan_id].presence || Array(params[:rate_plan_ids]).reject(&:blank?).first
+  end
+
+  def normalized_currency(value, fallback:)
+    normalized = CurrencyCatalog.normalize(value, fallback: fallback)
+    CurrencyCatalog.valid?(normalized) ? normalized : fallback
   end
 end

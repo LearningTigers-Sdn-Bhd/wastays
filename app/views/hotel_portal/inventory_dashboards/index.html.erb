@@ -1,8 +1,8 @@
-<% base_calendar_params = {
+<% base_calendar_params = inventory_calendar_base_params(
   start_date: @start_date,
   display_currency: @display_currency,
-  room_type_id: @calendar.selected_room_type_id
-}.compact %>
+  selected_room_type_id: @calendar.selected_room_type_id
+) %>
 
 <div class="mx-auto max-w-none space-y-3 pb-0" 
      data-controller="inventory-calendar inventory-row inventory-highlight" 
@@ -51,7 +51,7 @@
         <% end %>
 
         <div class="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-sm">
-          <% HotelPortal::InventoryCalendarPresenter::CURRENCIES.each do |currency| %>
+          <% inventory_calendar_currencies.each do |currency| %>
             <%= link_to currency,
                         hotel_inventory_index_path(current_hotel, { start_date: @start_date, display_currency: currency, room_type_id: @calendar.selected_room_type_id }.compact),
                         class: "rounded-md px-3 py-2 text-xs font-bold transition #{@display_currency == currency ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-900'}" %>
@@ -99,15 +99,14 @@
         <tbody class="bg-white">
           <% if @calendar.rows.any? %>
             <% @calendar.rows.each do |row| %>
-              <% parent_row = row.inventory_row? %>
-              <tr class="<%= parent_row ? 'bg-slate-50/40' : 'bg-white hover:bg-slate-50/70 transition-colors' %>"
+              <tr class="<%= inventory_parent_row?(row) ? 'bg-slate-50/40' : 'bg-white hover:bg-slate-50/70 transition-colors' %>"
                   data-inventory-row-target="row"
-                  data-parent-room-type-id="<%= row.room_type_id unless parent_row %>">
+                  data-parent-room-type-id="<%= inventory_parent_room_type_id_for(row) %>">
                 <td class="sticky left-0 z-40 border-b border-r border-slate-200 bg-white px-3 py-0.5 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]"
                     data-inventory-highlight-target="rowHeader">
                   <div class="space-y-0.5">
                     <div>
-                      <% if parent_row %>
+                      <% if inventory_parent_row?(row) %>
                         <div class="flex items-center justify-between gap-2">
                           <div class="flex items-center gap-1.5">
                             <button type="button" 
@@ -133,7 +132,7 @@
                 </td>
 
                 <% @calendar.dates.each do |date| %>
-                  <% cell = @calendar.cell_for(row, date) %>
+                  <% cell = inventory_calendar_cell(@calendar, row, date) %>
                   <td class="border-b border-r border-slate-100 p-0 last:border-r-0">
                     <% if row.inventory_row? %>
                       <button type="button"
@@ -292,9 +291,48 @@
               <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Price</label>
               <%= f.number_field :price, step: 0.01, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "priceField" } %>
             </div>
-            <div>
+            <div data-controller="searchable-select" class="relative">
               <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Currency</label>
-              <%= f.select :currency, [["MYR", "MYR"], ["USD", "USD"]], { selected: @display_currency }, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "currencyField" } %>
+              <div class="relative group">
+                <input type="text" 
+                       data-searchable-select-target="input"
+                       data-action="input->searchable-select#filter click->searchable-select#open"
+                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition-all placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-0"
+                       placeholder="Search currency..."
+                       autocomplete="off">
+                
+                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 group-focus-within:text-slate-600">
+                  <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </div>
+
+                <%= f.hidden_field :currency, 
+                    data: { 
+                      searchable_select_target: "hiddenInput",
+                      inventory_calendar_target: "currencyField"
+                    } %>
+
+                <!-- Dropdown Options -->
+                <div data-searchable-select-target="options" 
+                     class="absolute z-[100] hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5">
+                  <div class="max-height-[240px] overflow-y-auto p-1 custom-scrollbar" style="max-height: 240px;">
+                    <% inventory_currency_options.each do |label, value| %>
+                      <button type="button"
+                              data-searchable-select-target="option"
+                              data-action="click->searchable-select#select"
+                              data-value="<%= value %>"
+                              data-label="<%= label %>"
+                              class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950">
+                        <span class="flex size-6 shrink-0 items-center justify-center rounded bg-slate-100 text-[10px] font-bold text-slate-600 group-hover:bg-white">
+                          <%= value %>
+                        </span>
+                        <span class="truncate"><%= label %></span>
+                      </button>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

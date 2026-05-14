@@ -143,7 +143,17 @@ export default class extends Controller {
     } else {
       this.currentStatusHintTarget.textContent = ""
       this.priceFieldTarget.value = data.price || ""
-      this.currencyFieldTarget.value = data.currency || this.defaultCurrencyValue || "MYR"
+      
+      const currency = data.currency || this.defaultCurrencyValue || "MYR"
+      this.currencyFieldTarget.value = currency
+      
+      const searchableSelect = this.currencyFieldTarget.closest('[data-controller="searchable-select"]')
+      if (searchableSelect) {
+        const input = searchableSelect.querySelector('[data-searchable-select-target="input"]')
+        const option = searchableSelect.querySelector(`[data-value="${currency}"]`)
+        if (input && option) input.value = option.dataset.label
+      }
+
       this.minStayFieldTarget.value = data.minStay || ""
       this.maxStayFieldTarget.value = data.maxStay || ""
       this.ctaFieldTarget.checked = data.closedToArrival === "true"
@@ -564,7 +574,17 @@ export default class extends Controller {
     this.quantityFieldTarget.value = ""
     this.statusFieldTarget.value = ""
     this.priceFieldTarget.value = ""
-    this.currencyFieldTarget.value = this.defaultCurrencyValue || "MYR"
+    
+    // Reset searchable currency select
+    const currency = this.defaultCurrencyValue || "MYR"
+    this.currencyFieldTarget.value = currency
+    const searchableSelect = this.currencyFieldTarget.closest('[data-controller="searchable-select"]')
+    if (searchableSelect) {
+      const input = searchableSelect.querySelector('[data-searchable-select-target="input"]')
+      const option = searchableSelect.querySelector(`[data-value="${currency}"]`)
+      if (input && option) input.value = option.dataset.label
+    }
+
     this.minStayFieldTarget.value = ""
     this.maxStayFieldTarget.value = ""
     this.ctaFieldTarget.checked = false

@@ -1,9 +1,8 @@
 # frozen_string_literal: true
+require "ostruct"
 
 module HotelPortal
   class InventoryCalendarPresenter
-    CURRENCIES = %w[MYR USD].freeze
-
     Row = Struct.new(:key, :kind, :room_type, :rate_plan, keyword_init: true) do
       def room_type_id = room_type.id
       def rate_plan_id = rate_plan&.id
@@ -19,7 +18,7 @@ module HotelPortal
       @hotel = hotel
       @start_date = start_date.to_date
       @end_date = end_date.to_date
-      @display_currency = CURRENCIES.include?(display_currency.to_s) ? display_currency.to_s : default_currency
+      @display_currency = CurrencyCatalog.valid?(display_currency) ? CurrencyCatalog.normalize(display_currency) : default_currency
       @selected_room_type_id = room_type_id.presence&.to_i
       @selected_rate_plan_id = rate_plan_id.presence&.to_i
     end
@@ -118,7 +117,7 @@ module HotelPortal
     def rates_by_rate_plan
       @rates_by_rate_plan ||= visible_room_types.each_with_object({}) do |room_type, memo|
         rate_plans_for(room_type).each do |rate_plan|
-          memo[rate_plan.id] = rate_plan.room_rates.where(date: start_date..end_date, currency: display_currency).index_by(&:date)
+          memo[rate_plan.id] = rate_plan.room_rates.where(date: start_date..end_date, currency: rate_plan.currency).index_by(&:date)
         end
       end
     end
@@ -146,11 +145,15 @@ module HotelPortal
 
     def rate_cell(room_type, rate_plan, date)
       rate = rates_by_rate_plan.dig(rate_plan.id, date)
-      price = rate&.price || (display_currency == "MYR" ? room_type.base_price : nil)
+      native_currency = rate_plan.currency.presence || default_currency
+      price = rate&.price || (native_currency == default_currency ? room_type.base_price : nil)
+      display_conversion = display_conversion_for(price, from: native_currency)
+      display_price = display_conversion&.amount || price
+      formatted_currency = display_conversion.present? ? display_currency : native_currency
 
       # Determine if price is modified compared to base
       is_modified = false
-      if display_currency == "MYR" && price.present?
+      if native_currency == default_currency && price.present?
         is_modified = (price.to_f != room_type.base_price.to_f)
       elsif price.present? && rate.present?
         is_modified = true # For non-MYR, if a rate object exists, we consider it modified/custom
@@ -159,8 +162,10 @@ module HotelPortal
       {
         date: date,
         price: price,
-        formatted_price: format_price(price),
-        currency: display_currency,
+        formatted_price: format_price(display_price, formatted_currency),
+        currency: native_currency,
+        display_currency: formatted_currency,
+        estimated: display_conversion.present? && native_currency != formatted_currency,
         is_modified: is_modified,
         min_stay: rate&.min_stay,
         max_stay: rate&.max_stay,
@@ -198,11 +203,17 @@ module HotelPortal
       codes.join(" ")
     end
 
-    def format_price(price)
+    def display_conversion_for(price, from:)
+      return nil if price.blank?
+      return CurrencyConverter::Conversion.new(amount: price, rate: 1.to_d, source: "same_currency") if from == display_currency
+
+      CurrencyConverter.convert(price, from: from, to: display_currency, hotel: hotel)
+    end
+
+    def format_price(price, currency)
       return "-" if price.blank?
 
-      symbol = display_currency == "USD" ? "$" : "RM"
-      "#{symbol}#{ActiveSupport::NumberHelper.number_to_rounded(price, precision: 2, delimiter: ',', strip_insignificant_zeros: true)}"
+      CurrencyFormatter.format(price, currency: currency)
     end
   end
 end

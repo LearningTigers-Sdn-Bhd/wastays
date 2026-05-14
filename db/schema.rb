@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_14_090001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -164,6 +164,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
     t.string "guest_name"
     t.string "guest_email"
     t.string "guest_phone"
+    t.string "display_currency"
+    t.decimal "display_total_amount", precision: 10, scale: 2
+    t.decimal "display_exchange_rate", precision: 18, scale: 8
+    t.string "display_rate_source"
     t.index ["hotel_id"], name: "index_booking_quotes_on_hotel_id"
     t.index ["token"], name: "index_booking_quotes_on_token", unique: true
   end
@@ -275,6 +279,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
     t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
     t.index ["booking_id"], name: "index_complaint_requests_on_booking_id"
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
+  end
+
+  create_table "exchange_rates", force: :cascade do |t|
+    t.string "currency_code", null: false
+    t.decimal "rate", precision: 18, scale: 8, null: false
+    t.datetime "effective_at", null: false
+    t.boolean "active", default: true, null: false
+    t.string "source", default: "manual", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "base_currency", default: "MYR", null: false
+    t.index ["base_currency", "currency_code"], name: "index_exchange_rates_on_base_currency_and_currency_code", unique: true
+    t.index ["created_by_id"], name: "index_exchange_rates_on_created_by_id"
+    t.check_constraint "rate > 0::numeric", name: "exchange_rates_rate_positive"
   end
 
   create_table "guests", force: :cascade do |t|
@@ -929,6 +948,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_060017) do
   add_foreign_key "bookings", "hotels"
   add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
+  add_foreign_key "exchange_rates", "users", column: "created_by_id"
   add_foreign_key "hotel_counters", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotel_taxes", "hotels"

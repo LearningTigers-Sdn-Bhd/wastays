@@ -14,6 +14,7 @@ module BookingEngine
       @guest_name = params[:guest_name]
       @guest_email = params[:guest_email]
       @guest_phone = params[:guest_phone]
+      @display_currency = CurrencyCatalog.normalize(params[:display_currency], fallback: nil)
     end
 
     def call
@@ -35,10 +36,14 @@ module BookingEngine
           return OpenStruct.new(success?: false, message: "Room is no longer available for these dates.")
         end
 
-        # 2. Calculate total amount and nightly rates
-        stay_dates = (@check_in...@check_out).to_a
-        nightly_rates = @room_type.room_rates.where(date: stay_dates).index_by(&:date)
-        total_amount = availability_service.calculate_total_price(@room_type)
+        # 2. Calculate total amount from the lowest available native rate-plan currency.
+        pricing_summary = availability_service.pricing_summary_for(@room_type)
+        return OpenStruct.new(success?: false, message: "No valid rate is available for these dates.") if pricing_summary.blank?
+
+        nightly_rates = pricing_summary[:nightly_rates]
+        total_amount = pricing_summary[:total_price]
+        quote_currency = pricing_summary[:currency]
+        display_snapshot = display_snapshot_for(total_amount, quote_currency)
 
         # 3. Create Quote with snapshots
         quote = BookingQuote.new(
@@ -48,7 +53,11 @@ module BookingEngine
           adults: @adults,
           children: @children,
           total_amount: total_amount,
-          currency: @room_type.room_rates.first&.currency || "MYR",
+          currency: quote_currency,
+          display_currency: display_snapshot[:currency],
+          display_total_amount: display_snapshot[:amount],
+          display_exchange_rate: display_snapshot[:rate],
+          display_rate_source: display_snapshot[:source],
           expires_at: 15.minutes.from_now,
           hotel_snapshot: @hotel.booking_snapshot,
           cancellation_policy_snapshot: @hotel.property_policy&.cancellation_policy,
@@ -105,6 +114,19 @@ module BookingEngine
       return "Check-out date must be after check-in date." if @check_out <= @check_in
 
       nil
+    end
+
+    def display_snapshot_for(total_amount, quote_currency)
+      display_currency = @display_currency.presence || quote_currency
+      conversion = CurrencyConverter.convert(total_amount, from: quote_currency, to: display_currency, hotel: @hotel)
+      return { currency: quote_currency, amount: total_amount, rate: 1.to_d, source: "charge_currency" } if conversion.blank?
+
+      {
+        currency: display_currency,
+        amount: conversion.amount,
+        rate: conversion.rate,
+        source: conversion.source
+      }
     end
   end
 end
