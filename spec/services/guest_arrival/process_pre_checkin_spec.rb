@@ -22,7 +22,11 @@ RSpec.describe GuestArrival::ProcessPreCheckin do
   end
 
   it "completes pre-checkin and links primary guest" do
-    result = described_class.new(booking: booking, pre_checkin: pre_checkin, params: params).call
+    id_front = fixture_file_upload("sample_image.jpg", "image/jpeg")
+    id_back = fixture_file_upload("sample_image.jpg", "image/jpeg")
+    params_with_doc = params.merge("id_front" => id_front, "id_back" => id_back)
+    
+    result = described_class.new(booking: booking, pre_checkin: pre_checkin, params: params_with_doc).call
 
     expect(result.success?).to be(true)
     expect(pre_checkin.reload.status).to eq("completed")
@@ -31,6 +35,8 @@ RSpec.describe GuestArrival::ProcessPreCheckin do
     expect(pre_checkin.metadata["guest_government_id"]).to eq("B7654321")
     expect(booking.reload.pre_checkin_status).to eq("completed")
     expect(booking.booking_guests.find_by(is_primary: true)).to be_present
+    expect(booking.id_front).to be_attached
+    expect(booking.id_back).to be_attached
   end
 
   it "returns failure when already completed" do
