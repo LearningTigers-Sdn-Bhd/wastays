@@ -8,18 +8,37 @@ export default class extends Controller {
     this.stream = null
   }
 
+  disconnect() {
+    this.stopCamera()
+    document.documentElement.classList.remove("scanner-active")
+  }
+
   open(event) {
-    event.preventDefault()
+    if (event) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    if (window.innerWidth < 768 && event.currentTarget.dataset.confirm && !confirm(event.currentTarget.dataset.confirm)) {
+      return
+    }
+    
     this.currentInputId = event.currentTarget.dataset.inputId
     this.modalTarget.classList.remove("hidden")
     this.modalTarget.classList.add("flex")
+    document.documentElement.classList.add("scanner-active")
+    
+    // Reset any previous state
+    this.resetUI()
     this.startCamera()
   }
 
-  close() {
+  close(event) {
+    if (event) event.preventDefault()
     this.stopCamera()
     this.modalTarget.classList.add("hidden")
     this.modalTarget.classList.remove("flex")
+    document.documentElement.classList.remove("scanner-active")
     this.resetUI()
   }
 
@@ -29,10 +48,12 @@ export default class extends Controller {
         video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
       })
       this.videoTarget.srcObject = this.stream
-      this.videoTarget.play()
+      this.videoTarget.onloadedmetadata = () => {
+        this.videoTarget.play()
+      }
     } catch (err) {
       console.error("Error accessing camera:", err)
-      alert("Could not access camera. Please ensure you have granted permission.")
+      alert("Could not access camera. Please ensure you have granted permission and are using HTTPS.")
       this.close()
     }
   }
@@ -44,7 +65,14 @@ export default class extends Controller {
     }
   }
 
-  capture() {
+  capture(event) {
+    if (event) event.preventDefault()
+    
+    if (!this.videoTarget.videoWidth) {
+      console.warn("Video not ready for capture")
+      return
+    }
+
     const context = this.canvasTarget.getContext("2d")
     this.canvasTarget.width = this.videoTarget.videoWidth
     this.canvasTarget.height = this.videoTarget.videoHeight
@@ -58,22 +86,30 @@ export default class extends Controller {
     this.useButtonTarget.classList.remove("hidden")
   }
 
-  retake() {
+  retake(event) {
+    if (event) event.preventDefault()
     this.resetUI()
-    this.videoTarget.play()
+    if (this.videoTarget.srcObject) {
+      this.videoTarget.play()
+    } else {
+      this.startCamera()
+    }
   }
 
-  use() {
+  use(event) {
+    if (event) event.preventDefault()
+    
     this.canvasTarget.toBlob((blob) => {
       const file = new File([blob], `scan_${Date.now()}.jpg`, { type: "image/jpeg" })
       const dataTransfer = new DataTransfer()
       dataTransfer.items.add(file)
       
       const input = document.getElementById(this.currentInputId)
-      input.files = dataTransfer.files
-      
-      // Trigger the preview in the main upload controller
-      input.dispatchEvent(new Event('change', { bubbles: true }))
+      if (input) {
+        input.files = dataTransfer.files
+        // Trigger the preview in the main upload controller
+        input.dispatchEvent(new Event('change', { bubbles: true }))
+      }
       
       this.close()
     }, "image/jpeg", 0.9)

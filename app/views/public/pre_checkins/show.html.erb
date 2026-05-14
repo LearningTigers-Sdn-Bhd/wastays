@@ -109,7 +109,7 @@
                           <div class="w-8 h-0.5 bg-current mx-auto mt-1 rounded-full opacity-50"></div>
                         </div>
                         <p class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Front Side</p>
-                        <p class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest">Click to upload from gallery</p>
+                        <p class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest">Click to upload</p>
                       </div>
 
                       <!-- Mobile Scanner Button Overlay -->
@@ -125,12 +125,54 @@
                     <div data-id-upload-target="previewContainer" class="hidden absolute inset-0 w-full h-full rounded-2xl overflow-hidden shadow-sm ring-1 ring-slate-200">
                       <img data-id-upload-target="preview" class="w-full h-full object-cover" />
                       <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                        <button type="button" data-action="click->id-upload#openGallery" class="px-4 py-2 bg-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl hover:bg-slate-200 transition">
+                        <!-- Desktop Buttons -->
+                        <button type="button" data-action="click->id-upload#openGallery" class="hidden md:inline-flex px-4 py-2 bg-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl hover:bg-slate-200 transition">
                           Change Photo
                         </button>
-                        <button type="button" data-action="click->scanner#open" data-input-id="booking_id_front" class="md:hidden px-4 py-2 bg-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-xl hover:bg-slate-800 transition">
-                          Rescan
+                        
+                        <!-- Mobile Button (Triggers Choice Menu) -->
+                        <button type="button" data-action="click->id-upload#openChoiceMenu" class="md:hidden px-6 py-3 bg-white rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-900 shadow-xl active:scale-95 transition">
+                          Retake Photo
                         </button>
+                      </div>
+                    </div>
+
+                    <!-- Choice Menu Action Sheet (Mobile Only) -->
+                    <div data-id-upload-target="choiceMenu" class="hidden fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm transition-opacity" data-action="click->id-upload#closeChoiceMenu">
+                      <div class="absolute bottom-0 inset-x-0 p-4 transform transition-transform translate-y-full bg-white rounded-t-[2.5rem] shadow-2xl" onclick="event.stopPropagation()">
+                        <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+                        <h4 class="text-center text-sm font-black uppercase tracking-widest text-slate-900 mb-6">Retake ID Photo</h4>
+                        
+                        <div class="space-y-3 pb-8">
+                          <button type="button" data-action="click->id-upload#closeChoiceMenu click->scanner#open" data-input-id="booking_id_front" class="w-full flex items-center gap-4 p-5 bg-slate-50 rounded-3xl hover:bg-slate-100 transition group">
+                            <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg group-active:scale-90 transition">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                              </svg>
+                            </div>
+                            <div class="text-left">
+                              <p class="text-sm font-black text-slate-900 uppercase tracking-wider">Open Scanner</p>
+                              <p class="text-[11px] text-slate-500 font-medium">Use your camera to scan ID</p>
+                            </div>
+                          </button>
+
+                          <button type="button" data-action="click->id-upload#_openGallery" class="w-full flex items-center gap-4 p-5 bg-slate-50 rounded-3xl hover:bg-slate-100 transition group">
+                            <div class="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg group-active:scale-90 transition">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                              </svg>
+                            </div>
+                            <div class="text-left">
+                              <p class="text-sm font-black text-slate-900 uppercase tracking-wider">Choose from Gallery</p>
+                              <p class="text-[11px] text-slate-500 font-medium">Upload an existing photo</p>
+                            </div>
+                          </button>
+
+                          <button type="button" data-action="click->id-upload#closeChoiceMenu" class="w-full p-5 text-sm font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition">
+                            Cancel
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -139,7 +181,7 @@
                 </div>
 
                 <div class="space-y-3" data-controller="id-upload">
-                  <label class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Back ID</label>
+                  <label class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Back ID / Passport</label>
                   <div class="relative group h-44 w-full">
                     <!-- Upload Placeholder -->
                     <div data-action="click->id-upload#openGallery" data-id-upload-target="placeholder" class="flex flex-col items-center justify-center w-full h-full border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-slate-50 transition bg-white overflow-hidden">
@@ -150,7 +192,7 @@
                           </svg>
                         </div>
                         <p class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Back Side</p>
-                        <p class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest">Click to upload from gallery</p>
+                        <p class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest">Click to upload</p>
                       </div>
 
                       <!-- Mobile Scanner Button Overlay -->
@@ -166,12 +208,54 @@
                     <div data-id-upload-target="previewContainer" class="hidden absolute inset-0 w-full h-full rounded-2xl overflow-hidden shadow-sm ring-1 ring-slate-200">
                       <img data-id-upload-target="preview" class="w-full h-full object-cover" />
                       <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                        <button type="button" data-action="click->id-upload#openGallery" class="px-4 py-2 bg-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl hover:bg-slate-200 transition">
+                        <!-- Desktop Buttons -->
+                        <button type="button" data-action="click->id-upload#openGallery" class="hidden md:inline-flex px-4 py-2 bg-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl hover:bg-slate-200 transition">
                           Change Photo
                         </button>
-                        <button type="button" data-action="click->scanner#open" data-input-id="booking_id_back" class="md:hidden px-4 py-2 bg-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-xl hover:bg-emerald-400 transition">
-                          Rescan
+                        
+                        <!-- Mobile Button (Triggers Choice Menu) -->
+                        <button type="button" data-action="click->id-upload#openChoiceMenu" class="md:hidden px-6 py-3 bg-white rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-900 shadow-xl active:scale-95 transition">
+                          Retake Photo
                         </button>
+                      </div>
+                    </div>
+
+                    <!-- Choice Menu Action Sheet (Mobile Only) -->
+                    <div data-id-upload-target="choiceMenu" class="hidden fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm transition-opacity" data-action="click->id-upload#closeChoiceMenu">
+                      <div class="absolute bottom-0 inset-x-0 p-4 transform transition-transform translate-y-full bg-white rounded-t-[2.5rem] shadow-2xl" onclick="event.stopPropagation()">
+                        <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+                        <h4 class="text-center text-sm font-black uppercase tracking-widest text-slate-900 mb-6">Retake ID Photo</h4>
+                        
+                        <div class="space-y-3 pb-8">
+                          <button type="button" data-action="click->id-upload#closeChoiceMenu click->scanner#open" data-input-id="booking_id_back" class="w-full flex items-center gap-4 p-5 bg-slate-50 rounded-3xl hover:bg-slate-100 transition group">
+                            <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg group-active:scale-90 transition">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                              </svg>
+                            </div>
+                            <div class="text-left">
+                              <p class="text-sm font-black text-slate-900 uppercase tracking-wider">Open Scanner</p>
+                              <p class="text-[11px] text-slate-500 font-medium">Use your camera to scan ID</p>
+                            </div>
+                          </button>
+
+                          <button type="button" data-action="click->id-upload#_openGallery" class="w-full flex items-center gap-4 p-5 bg-slate-50 rounded-3xl hover:bg-slate-100 transition group">
+                            <div class="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg group-active:scale-90 transition">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                              </svg>
+                            </div>
+                            <div class="text-left">
+                              <p class="text-sm font-black text-slate-900 uppercase tracking-wider">Choose from Gallery</p>
+                              <p class="text-[11px] text-slate-500 font-medium">Upload an existing photo</p>
+                            </div>
+                          </button>
+
+                          <button type="button" data-action="click->id-upload#closeChoiceMenu" class="w-full p-5 text-sm font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition">
+                            Cancel
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -265,11 +349,10 @@
               </label>
             </div>
 
-            <div class="flex items-center justify-end gap-3 mt-8">
-              <%= button_tag "Cancel", type: "submit", formaction: cancel_pre_checkin_path(@pre_checkin.token), formmethod: :post, formnovalidate: true, class: "rounded-lg border border-neutral-border bg-gray-200 px-6 py-3 text-sm font-black uppercase tracking-widest text-neutral-text-secondary hover:bg-neutral-bg" %>
-              <%= f.submit "Complete Pre Check-In", class: "btn btn-primary px-6 py-3 text-sm font-black uppercase tracking-widest" %>
-            </div>
-          <% end %>
+            <div class="flex flex-col-reverse md:flex-row items-stretch md:items-center justify-end gap-3 mt-8">
+              <%= button_tag "Cancel", type: "submit", formaction: cancel_pre_checkin_path(@pre_checkin.token), formmethod: :post, formnovalidate: true, class: "rounded-lg border border-neutral-border bg-gray-200 px-6 py-3 text-sm font-black uppercase tracking-widest text-neutral-text-secondary hover:bg-neutral-bg w-full md:w-auto" %>
+              <%= f.submit "Complete Pre Check-In", class: "btn btn-primary px-6 py-3 text-sm font-black uppercase tracking-widest w-full md:w-auto" %>
+            </div>          <% end %>
         <% end %>
 
         <!-- Scanner Modal -->
@@ -279,17 +362,16 @@
             <canvas data-scanner-target="canvas" class="hidden w-full h-full object-cover"></canvas>
             
             <!-- Viewfinder Overlay -->
-            <div class="absolute inset-0 pointer-events-none flex items-center justify-center p-8">
-              <div class="w-full max-w-lg aspect-[1.6/1] border-2 border-white/30 rounded-3xl relative shadow-[0_0_0_100vw_rgba(0,0,0,0.7)]">
+            <div class="absolute inset-0 pointer-events-none flex items-start justify-center p-8 pt-16">
+              <div class="w-full max-w-[280px] aspect-[1/1.6] border-2 border-white/30 rounded-3xl relative shadow-[0_0_0_100vw_rgba(0,0,0,0.7)]">
                 <!-- Corners -->
                 <div class="absolute -top-1 -left-1 w-10 h-10 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl"></div>
                 <div class="absolute -top-1 -right-1 w-10 h-10 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl"></div>
                 <div class="absolute -bottom-1 -left-1 w-10 h-10 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl"></div>
                 <div class="absolute -bottom-1 -right-1 w-10 h-10 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl"></div>
                 
-                <div class="absolute inset-x-0 -top-16 text-center">
-                  <p class="text-white text-base font-black uppercase tracking-[0.2em] drop-shadow-lg">Align ID Card</p>
-                  <p class="text-white/70 text-[10px] mt-2 uppercase tracking-widest">Hold steady for scanning</p>
+                <div class="absolute inset-x-0 -top-12 text-center">
+                  <p class="text-white text-base font-black uppercase tracking-[0.2em] drop-shadow-lg">Scan ID Card</p>
                 </div>
               </div>
             </div>
