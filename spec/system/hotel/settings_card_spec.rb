@@ -28,31 +28,31 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     visit hotel_settings_path(hotel)
 
     within('section', text: 'Hotel Settings') do
-      expect(page).to have_field('Standard Check-in Time', type: 'time')
-      expect(page).to have_field('Standard Check-out Time', type: 'time')
       expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Registered')
       expect(page).to have_field('Onboarding Stage', type: 'text', disabled: true, with: 'Building profile')
-      expect(page).to have_field('Default Currency', disabled: true, with: 'MYR')
-      expect(page).to have_field('USD Conversion Rate')
+      expect(page).to have_select('Default Currency', selected: 'MYR - Malaysian Ringgit')
       expect(page).to have_button('Save Settings')
     end
+
+    click_link 'Tax'
 
     within('section', text: 'Tax Configuration') do
       expect(page).to have_checked_field('hotel_tourism_tax_enabled')
       expect(page).to have_field('Tourism Tax Amount (RM)')
     end
 
-    fill_in 'Standard Check-in Time', with: '15:00'
-    fill_in 'Standard Check-out Time', with: '11:00'
-    fill_in 'USD Conversion Rate', with: '4.25'
+    click_link 'General'
+
+    find('#hotel_property_policy_attributes_check_in_time', visible: false).set('15:00')
+    find('#hotel_property_policy_attributes_check_out_time', visible: false).set('11:00')
+    select 'USD - US Dollar', from: 'Default Currency'
 
     click_button 'Save Settings'
 
     expect(page).to have_content('Settings updated successfully.')
     expect(hotel.reload.property_policy.check_in_time).to eq('15:00')
     expect(hotel.reload.property_policy.check_out_time).to eq('11:00')
-    expect(hotel.reload.default_currency).to eq('MYR')
-    expect(hotel.reload.usd_conversion_rate).to eq(4.25)
+    expect(hotel.reload.default_currency).to eq('USD')
   end
 
   it 'shows hotel status and onboarding stage as disabled text inputs' do
@@ -68,6 +68,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     hotel.update!(tourism_tax_enabled: false, tourism_tax_amount: 10.0)
 
     visit hotel_settings_path(hotel)
+    click_link 'Tax'
 
     within('section', text: 'Tax Configuration') do
       expect(page).to have_unchecked_field('hotel_tourism_tax_enabled')
@@ -78,16 +79,16 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   it 'shows validation errors when the settings card submission is invalid' do
     visit hotel_settings_path(hotel)
 
-    fill_in 'Standard Check-in Time', with: '15:00'
-    fill_in 'Standard Check-out Time', with: ''
+    find('#hotel_property_policy_attributes_check_in_time', visible: false).set('15:00')
+    find('#hotel_property_policy_attributes_check_out_time', visible: false).set('')
 
     click_button 'Save Settings'
 
     within('section', text: 'Hotel Settings') do
       expect(page).to have_content('prohibited these settings from being saved')
       expect(page).to have_content("Check out time can't be blank")
-      expect(find_field('Standard Check-in Time').value).to eq('15:00')
-      expect(find_field('Standard Check-out Time').value).to eq('')
+      expect(find('#hotel_property_policy_attributes_check_in_time', visible: false).value).to eq('15:00')
+      expect(find('#hotel_property_policy_attributes_check_out_time', visible: false).value).to eq('')
     end
 
     expect(page).to have_no_content('Settings updated successfully.')
@@ -95,6 +96,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
 
   it 'shows the AI concierge fields and saves the selected tone' do
     visit hotel_settings_path(hotel)
+    click_link 'AI Concierge'
 
     within('section', text: 'AI Concierge Configuration') do
       expect(page).to have_select('Tone', selected: 'Basic')
@@ -125,9 +127,9 @@ RSpec.describe 'Hotel Settings Card', type: :system do
 
     visit hotel_settings_path(hotel)
 
-    fill_in 'Standard Check-in Time', with: '15:00'
-    fill_in 'Standard Check-out Time', with: '11:00'
-    fill_in 'USD Conversion Rate', with: '4.40'
+    find('#hotel_property_policy_attributes_check_in_time', visible: false).set('15:00')
+    find('#hotel_property_policy_attributes_check_out_time', visible: false).set('11:00')
+    select 'GBP - Pound Sterling', from: 'Default Currency'
     click_button 'Save Settings'
 
     expect(page).to have_current_path(hotel_settings_path(hotel), ignore_query: true)

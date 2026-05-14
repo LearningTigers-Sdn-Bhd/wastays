@@ -4,6 +4,7 @@ class Public::HotelsController < ApplicationController
   def index
     @availability_service = BookingEngine::AvailabilityService.new(params)
     @hotels = @availability_service.find_available_hotels
+    @display_currency = display_currency_for_request
   end
 
   def show
@@ -21,6 +22,7 @@ class Public::HotelsController < ApplicationController
     @adults = (params[:adults].presence || 2).to_i
     @children = (params[:children].presence || 0).to_i
     @room_count = (params[:room_count].presence || params[:rooms].presence || 1).to_i
+    @display_currency = display_currency_for_request
 
     @search_ready = @check_in.present? && @check_out.present? && @check_out > @check_in
 
@@ -86,5 +88,9 @@ class Public::HotelsController < ApplicationController
     Date.parse(value.to_s)
   rescue ArgumentError
     nil
+  end
+
+  def display_currency_for_request
+    DisplayCurrencyResolver.new(params: params, cookies: cookies, request: request).call
   end
 end

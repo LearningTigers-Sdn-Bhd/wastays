@@ -1,5 +1,7 @@
 module HotelPortal
   class SettingsController < HotelPortal::BaseController
+    SETTINGS_TABS = %w[general tax ai notifications banking].freeze
+
     before_action :set_account
     before_action :set_hotel
 
@@ -21,7 +23,7 @@ module HotelPortal
       elsif settings_update_request?
         update_settings
       elsif params[:payment_setting].present?
-        redirect_to hotel_settings_path(@hotel), alert: "Payment gateway credentials are managed by superadmin."
+        redirect_to hotel_settings_path(@hotel, tab: @active_settings_tab), alert: "Payment gateway credentials are managed by superadmin."
       else
         update_banking_details
       end
@@ -35,11 +37,16 @@ module HotelPortal
 
     def set_hotel
       @hotel = current_hotel
-      @property_policy = @hotel&.property_policy || @hotel&.build_property_policy
+      @property_policy = @hotel&.property_policy
+      @property_policy ||= @hotel&.build_property_policy if action_name.in?(%w[index edit])
     end
 
     def load_settings
+      @active_settings_tab = active_settings_tab
+
       if @hotel
+        @property_policy ||= @hotel.property_policy || @hotel.build_property_policy
+
         @check_in_notification_config = NotificationConfig.find_or_initialize_by(
           hotel: @hotel,
           notification_type: "check_in_confirmation"
@@ -96,7 +103,6 @@ module HotelPortal
           check_in: @property_policy&.check_in_time,
           check_out: @property_policy&.check_out_time,
           default_currency: @hotel.default_currency,
-          usd_conversion_rate: @hotel.usd_conversion_rate,
           tourism_tax_enabled: @hotel.tourism_tax_enabled?,
           tourism_tax_amount: @hotel.tourism_tax_amount,
           sst_enabled: @hotel.sst_enabled?
@@ -117,17 +123,24 @@ module HotelPortal
     def update_settings
       authorize_settings_update!
 
+      if ai_configuration_form?
+        update_ai_configuration!
+        return redirect_to hotel_settings_path(@hotel, tab: "ai"), notice: "Settings updated successfully."
+      end
+
       ActiveRecord::Base.transaction do
         @hotel.update!(hotel_params)
 
-        if params.dig(:hotel, :property_policy_attributes).present?
-          @property_policy ||= @hotel.property_policy || @hotel.build_property_policy
-          @property_policy.update!(property_policy_params)
+        if should_update_property_policy?
+          # In some update flows Rails can leave the previously memoized association frozen.
+          # Always write through a fresh mutable instance.
+          policy = fresh_property_policy
+          policy.update!(property_policy_params)
         end
       end
 
-      redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
-    rescue ActiveRecord::RecordInvalid
+      redirect_to hotel_settings_path(@hotel, tab: settings_tab_for_form), notice: "Settings updated successfully."
+    rescue ActiveRecord::RecordInvalid, FrozenError
       load_settings
       @account.build_banking_detail unless @account.banking_detail
       render :index, status: :unprocessable_entity
@@ -137,7 +150,7 @@ module HotelPortal
       authorize_banking_details_update!
 
       if @account.update(account_params)
-        redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
+        redirect_to hotel_settings_path(@hotel, tab: "banking"), notice: "Settings updated successfully."
       else
         load_settings
         render :index, status: :unprocessable_entity
@@ -156,7 +169,7 @@ module HotelPortal
       settings = build_notification_settings(@notification_config.notification_type)
 
       if @notification_config.update(notification_config_params.merge(channels: channels, settings: settings))
-        redirect_to hotel_settings_path(@hotel), notice: "Settings updated successfully."
+        redirect_to hotel_settings_path(@hotel, tab: "notifications"), notice: "Settings updated successfully."
       else
         load_settings
         @account.build_banking_detail unless @account.banking_detail
@@ -185,14 +198,20 @@ module HotelPortal
 
     def hotel_params
       params.require(:hotel).permit(
-        :usd_conversion_rate,
+        :default_currency,
+        :time_zone,
         :tourism_tax_enabled,
         :tourism_tax_amount,
         :sst_enabled,
         :ai_provider_enabled,
         :ai_concierge_tone,
         :ai_provider_name,
-        :ai_provider_key
+        :ai_provider_key,
+        property_policy_attributes: [
+          :id,
+          :check_in_time,
+          :check_out_time
+        ]
       )
     end
 
@@ -207,6 +226,39 @@ module HotelPortal
 
     def notification_config_params
       params.require(:notification_config).permit(:enabled)
+    end
+
+    def ai_configuration_form?
+      params[:form_id].to_s == "ai_configuration"
+    end
+
+    def update_ai_configuration!
+      attrs = hotel_params.slice(:ai_provider_enabled, :ai_concierge_tone, :ai_provider_name, :ai_provider_key)
+      enabled = ActiveModel::Type::Boolean.new.cast(attrs[:ai_provider_enabled])
+
+      @hotel.assign_attributes(attrs)
+      @hotel.errors.add(:ai_provider_name, "can't be blank") if enabled && @hotel.ai_provider_name.blank?
+      @hotel.errors.add(:ai_provider_key, "can't be blank") if enabled && @hotel.ai_provider_key.blank?
+      raise ActiveRecord::RecordInvalid, @hotel if @hotel.errors.any?
+
+      # Avoid unrelated autosave association validation (property_policy) on AI-only updates.
+      @hotel.save!(validate: false)
+    end
+
+    def should_update_property_policy?
+      return false unless params[:form_id].to_s == "hotel_settings"
+
+      attrs = params.dig(:hotel, :property_policy_attributes)
+      return false if attrs.blank?
+
+      attrs[:check_in_time].present? || attrs[:check_out_time].present?
+    end
+
+    def fresh_property_policy
+      policy = @hotel.property_policy
+      return @hotel.build_property_policy if policy.blank?
+
+      policy.frozen? ? PropertyPolicy.find(policy.id) : policy
     end
 
     def build_notification_settings(notification_type)
@@ -284,6 +336,28 @@ module HotelPortal
 
     def settings_policy
       current_hotel.property_policy || current_hotel.build_property_policy
+    end
+
+    def active_settings_tab
+      requested_tab = params[:tab].to_s
+      return requested_tab if SETTINGS_TABS.include?(requested_tab)
+
+      settings_tab_for_form
+    end
+
+    def settings_tab_for_form
+      case params[:form_id].to_s
+      when "hotel_settings"
+        "general"
+      when "tax_settings"
+        "tax"
+      when "ai_configuration"
+        "ai"
+      when "notification_settings"
+        "notifications"
+      else
+        "general"
+      end
     end
 
     def onboarding_stage(hotel)

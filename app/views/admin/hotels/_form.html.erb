@@ -121,6 +121,12 @@
             <%= f.select :preferred_channel_manager, [["None", ""], ["Channel Manager", "channex"]], {}, class: input_classes %>
           </div>
 
+          <div>
+            <label for="hotel_default_currency" class="mb-2 block text-sm font-medium text-slate-700">Default Currency</label>
+            <%= f.select :default_currency, CurrencyCatalog.options, {}, class: input_classes %>
+            <p class="mt-1 text-xs text-slate-400">The primary accounting and sell currency for this property.</p>
+          </div>
+
           <% if hotel.persisted? %>
             <div class="sm:col-span-2">
               <div class="grid gap-5 sm:grid-cols-2">

@@ -34,11 +34,12 @@ module HotelOps
 
     def apply_for_room_type(room_type)
       standard_plan = room_type.rate_plans.first
+      target_currency = standard_plan&.currency || @hotel.default_currency || "MYR"
 
       (@start_date..@end_date).each do |date|
         winner = winning_rule_for(date)
 
-        rate = room_type.room_rates.find_or_initialize_by(date: date)
+        rate = room_type.room_rates.find_or_initialize_by(date: date, currency: target_currency)
         if winner.blank?
           rate.destroy! if rate.persisted?
           next
@@ -48,7 +49,7 @@ module HotelOps
         old_currency = rate.currency
 
         rate.price = winner[:price]
-        rate.currency = "MYR"
+        rate.currency = target_currency
         rate.rate_plan = standard_plan if standard_plan
         rate.save!
 

@@ -6,8 +6,12 @@ class HotelPortal::RatesController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days # Show 2 weeks by default
+    @native_currency = current_hotel.default_currency || "MYR"
+    @display_currency = normalized_currency(params[:display_currency], fallback: @native_currency)
+    @room_types = current_hotel.room_types.order(:id)
+    @rate_plans = @room_type.rate_plans.order(:id)
 
-    @rates = @rate_plan.room_rates.where(date: @start_date..@end_date).index_by(&:date)
+    @rates = @rate_plan.room_rates.where(date: @start_date..@end_date, currency: @native_currency).index_by(&:date)
   end
 
   def create
@@ -19,14 +23,29 @@ class HotelPortal::RatesController < HotelPortal::BaseController
       start_date: rate_params[:start_date],
       end_date: rate_params[:end_date],
       price: rate_params[:price],
-      currency: rate_params[:currency],
+      currency: rate_params[:currency].presence || current_hotel.default_currency || "MYR",
+      min_stay: rate_params[:min_stay],
+      max_stay: rate_params[:max_stay],
+      closed_to_arrival: rate_params[:closed_to_arrival],
+      closed_to_departure: rate_params[:closed_to_departure],
+      stop_sell: rate_params[:stop_sell],
       user: current_user
     ).call
 
     if result[:success]
-      redirect_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: rate_params[:start_date]), notice: "Rates updated successfully."
+      redirect_to hotel_room_type_rates_path(
+        current_hotel,
+        @room_type,
+        start_date: rate_params[:start_date],
+        rate_plan_id: @rate_plan.id,
+        display_currency: params[:display_currency] || @rate_plan.currency
+      ), notice: "Rates updated successfully."
     else
-      redirect_to hotel_room_type_rates_path(current_hotel, @room_type), alert: "Error updating rates: #{result[:error]}"
+      redirect_to hotel_room_type_rates_path(
+        current_hotel,
+        @room_type,
+        rate_plan_id: @rate_plan.id
+      ), alert: "Error updating rates: #{result[:error]}"
     end
   end
 
@@ -37,12 +56,21 @@ class HotelPortal::RatesController < HotelPortal::BaseController
   end
 
   def set_rate_plan
-    # Default to the first rate plan for now.
-    # In the future, this can be passed in params[:rate_plan_id]
-    @rate_plan = @room_type.rate_plans.first || @room_type.rate_plans.create!(name: "Standard Rate", currency: @room_type.hotel.default_currency || "MYR")
+    default_rate_plan = @room_type.rate_plans.first ||
+      @room_type.rate_plans.create!(name: "Standard Rate", sell_mode: "per_room", currency: @room_type.hotel.default_currency || "MYR")
+    @rate_plan = if params[:rate_plan_id].present?
+      @room_type.rate_plans.find_by(id: params[:rate_plan_id]) || default_rate_plan
+    else
+      default_rate_plan
+    end
+  end
+
+  def normalized_currency(value, fallback:)
+    normalized = CurrencyCatalog.normalize(value, fallback: fallback)
+    CurrencyCatalog.valid?(normalized) ? normalized : fallback
   end
 
   def rate_params
-    params.require(:rate).permit(:start_date, :end_date, :price, :currency)
+    params.require(:rate).permit(:start_date, :end_date, :price, :currency, :min_stay, :max_stay, :closed_to_arrival, :closed_to_departure, :stop_sell)
   end
 end
