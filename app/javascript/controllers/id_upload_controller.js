@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["input", "preview", "placeholder"]
+  static targets = ["input", "preview", "placeholder", "previewContainer"]
 
   openGallery(event) {
     event.preventDefault()
@@ -21,10 +21,17 @@ export default class extends Controller {
       const reader = new FileReader()
       reader.onload = (e) => {
         this.previewTarget.src = e.target.result
-        this.previewTarget.classList.remove("hidden")
+        this.previewContainerTarget.classList.remove("hidden")
         this.placeholderTarget.classList.add("hidden")
       }
       reader.readAsDataURL(file)
     }
+  }
+
+  reset(event) {
+    if (event) event.preventDefault()
+    this.inputTarget.value = ""
+    this.previewContainerTarget.classList.add("hidden")
+    this.placeholderTarget.classList.remove("hidden")
   }
 }

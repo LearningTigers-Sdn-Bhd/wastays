@@ -25,7 +25,7 @@ RSpec.describe GuestArrival::ProcessPreCheckin do
     id_front = fixture_file_upload("sample_image.jpg", "image/jpeg")
     id_back = fixture_file_upload("sample_image.jpg", "image/jpeg")
     params_with_doc = params.merge("id_front" => id_front, "id_back" => id_back)
-    
+
     result = described_class.new(booking: booking, pre_checkin: pre_checkin, params: params_with_doc).call
 
     expect(result.success?).to be(true)

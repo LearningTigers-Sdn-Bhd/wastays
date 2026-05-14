@@ -4,7 +4,7 @@
       <p class="text-xs font-black uppercase tracking-widest text-brand-primary">Pre Check-In</p>
       <h1 class="mt-2 text-3xl font-black text-neutral-text-primary">Complete your arrival details</h1>
       <p class="mt-2 text-sm text-neutral-text-secondary">
-        Review your booking details and fill in the missing information before you arrive at <%= @hotel.name %>.
+        Review your booking details and fill in the missing information before you arrive at <%= @presenter.hotel_name %>.
       </p>
     </div>
 
@@ -21,7 +21,7 @@
           <div>
             <label class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Reference</label>
             <div class="rounded-lg border border-neutral-border bg-neutral-bg px-4 py-3 min-h-[72px] flex items-center">
-              <p class="font-mono font-semibold text-neutral-text-primary break-all"><%= @booking.confirmation_token %></p>
+              <p class="font-mono font-semibold text-neutral-text-primary break-all"><%= @presenter.confirmation_token %></p>
             </div>
           </div>
 
@@ -29,8 +29,8 @@
             <label class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Hotel</label>
             <div class="rounded-lg border border-neutral-border bg-neutral-bg px-4 py-3 min-h-[72px] flex items-center">
               <div>
-                <p class="font-semibold text-neutral-text-primary"><%= @hotel.name %></p>
-                <p class="text-xs text-neutral-text-secondary"><%= @hotel.city %>, <%= @hotel.country %></p>
+                <p class="font-semibold text-neutral-text-primary"><%= @presenter.hotel_name %></p>
+                <p class="text-xs text-neutral-text-secondary"><%= @presenter.hotel_location %></p>
               </div>
             </div>
           </div>
@@ -38,21 +38,21 @@
           <div>
             <label class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Stay</label>
             <div class="rounded-lg border border-neutral-border bg-neutral-bg px-4 py-3 min-h-[72px] flex items-center">
-              <p class="font-semibold text-neutral-text-primary"><%= @booking.check_in.strftime("%d %b %Y") %> - <%= @booking.check_out.strftime("%d %b %Y") %></p>
+              <p class="font-semibold text-neutral-text-primary"><%= @presenter.stay_dates %></p>
             </div>
           </div>
 
           <div>
             <label class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Rooms</label>
             <div class="rounded-lg border border-neutral-border bg-neutral-bg px-4 py-3 min-h-[72px] flex items-center">
-              <p class="font-semibold text-neutral-text-primary"><%= @booking.booking_rooms.sum(&:quantity) %> room(s)</p>
+              <p class="font-semibold text-neutral-text-primary"><%= @presenter.rooms_count_label %></p>
             </div>
           </div>
         </div>
       </div>
 
       <div class="card p-6 md:p-8" data-controller="scanner">
-        <% if @pre_checkin.completed? %>
+        <% if @presenter.completed? %>
           <div class="rounded-2xl border border-green-200 bg-green-50 p-6">
             <h2 class="text-xl font-black text-neutral-text-primary">Pre check-in completed</h2>
             <p class="mt-2 text-sm text-neutral-text-secondary">
@@ -61,11 +61,11 @@
           </div>
         <% else %>
           <%= form_with model: @booking, url: pre_checkin_path(@pre_checkin.token), method: :patch, local: true, autocomplete: "off", class: "space-y-8" do |f| %>
-            <% if @booking.errors.any? || @pre_checkin.errors.any? %>
+            <% if @presenter.any_errors? %>
               <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                 <p class="font-black uppercase tracking-widest text-xs">Please fix the following</p>
                 <ul class="mt-2 list-disc space-y-1 ps-5">
-                  <% (@booking.errors.full_messages + @pre_checkin.errors.full_messages).uniq.each do |message| %>
+                  <% @presenter.errors.each do |message| %>
                     <li><%= message %></li>
                   <% end %>
                 </ul>
@@ -98,8 +98,9 @@
               <div class="grid gap-6 md:grid-cols-2 mt-4">
                 <div class="space-y-3" data-controller="id-upload">
                   <label class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Front ID / Passport</label>
-                  <div class="relative group">
-                    <div data-action="click->id-upload#openGallery" data-id-upload-target="placeholder" class="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-slate-50 transition bg-white overflow-hidden">
+                  <div class="relative group h-44 w-full">
+                    <!-- Upload Placeholder -->
+                    <div data-action="click->id-upload#openGallery" data-id-upload-target="placeholder" class="flex flex-col items-center justify-center w-full h-full border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-slate-50 transition bg-white overflow-hidden">
                       <div class="flex flex-col items-center justify-center">
                         <div class="mb-2 text-slate-400 group-hover:text-slate-500 transition-colors">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
@@ -110,24 +111,38 @@
                         <p class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Front Side</p>
                         <p class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest">Click to upload from gallery</p>
                       </div>
+
+                      <!-- Mobile Scanner Button Overlay -->
+                      <button type="button" data-action="click->scanner#open" data-input-id="booking_id_front" class="absolute bottom-3 right-3 w-10 h-10 bg-slate-900 rounded-xl flex md:hidden items-center justify-center text-white shadow-lg hover:bg-slate-800 transition z-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                        </svg>
+                      </button>
                     </div>
                     
-                    <img data-id-upload-target="preview" data-action="click->id-upload#openGallery" class="hidden absolute inset-0 w-full h-full object-cover rounded-2xl cursor-pointer" />
+                    <!-- Image Preview Container -->
+                    <div data-id-upload-target="previewContainer" class="hidden absolute inset-0 w-full h-full rounded-2xl overflow-hidden shadow-sm ring-1 ring-slate-200">
+                      <img data-id-upload-target="preview" class="w-full h-full object-cover" />
+                      <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                        <button type="button" data-action="click->id-upload#openGallery" class="px-4 py-2 bg-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl hover:bg-slate-200 transition">
+                          Change Photo
+                        </button>
+                        <button type="button" data-action="click->scanner#open" data-input-id="booking_id_front" class="md:hidden px-4 py-2 bg-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-xl hover:bg-slate-800 transition">
+                          Rescan
+                        </button>
+                      </div>
+                    </div>
 
-                    <button type="button" data-action="click->scanner#open" data-input-id="booking_id_front" class="absolute bottom-3 right-3 w-10 h-10 bg-slate-900 rounded-xl flex md:hidden items-center justify-center text-white shadow-lg hover:bg-slate-800 transition z-10">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                      </svg>
-                    </button>
                     <%= f.file_field :id_front, class: "hidden", accept: "image/*", required: true, data: { id_upload_target: "input", action: "change->id-upload#updatePreview" } %>
                   </div>
                 </div>
 
                 <div class="space-y-3" data-controller="id-upload">
                   <label class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Back ID</label>
-                  <div class="relative group">
-                    <div data-action="click->id-upload#openGallery" data-id-upload-target="placeholder" class="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-slate-50 transition bg-white overflow-hidden">
+                  <div class="relative group h-44 w-full">
+                    <!-- Upload Placeholder -->
+                    <div data-action="click->id-upload#openGallery" data-id-upload-target="placeholder" class="flex flex-col items-center justify-center w-full h-full border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-slate-50 transition bg-white overflow-hidden">
                       <div class="flex flex-col items-center justify-center">
                         <div class="mb-2 text-slate-400 group-hover:text-slate-500 transition-colors">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
@@ -137,16 +152,29 @@
                         <p class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Back Side</p>
                         <p class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest">Click to upload from gallery</p>
                       </div>
+
+                      <!-- Mobile Scanner Button Overlay -->
+                      <button type="button" data-action="click->scanner#open" data-input-id="booking_id_back" class="absolute bottom-3 right-3 w-10 h-10 bg-slate-900 rounded-xl flex md:hidden items-center justify-center text-white shadow-lg hover:bg-slate-800 transition z-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                        </svg>
+                      </button>
                     </div>
 
-                    <img data-id-upload-target="preview" data-action="click->id-upload#openGallery" class="hidden absolute inset-0 w-full h-full object-cover rounded-2xl cursor-pointer" />
+                    <!-- Image Preview Container -->
+                    <div data-id-upload-target="previewContainer" class="hidden absolute inset-0 w-full h-full rounded-2xl overflow-hidden shadow-sm ring-1 ring-slate-200">
+                      <img data-id-upload-target="preview" class="w-full h-full object-cover" />
+                      <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                        <button type="button" data-action="click->id-upload#openGallery" class="px-4 py-2 bg-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl hover:bg-slate-200 transition">
+                          Change Photo
+                        </button>
+                        <button type="button" data-action="click->scanner#open" data-input-id="booking_id_back" class="md:hidden px-4 py-2 bg-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-xl hover:bg-emerald-400 transition">
+                          Rescan
+                        </button>
+                      </div>
+                    </div>
 
-                    <button type="button" data-action="click->scanner#open" data-input-id="booking_id_back" class="absolute bottom-3 right-3 w-10 h-10 bg-slate-900 rounded-xl flex md:hidden items-center justify-center text-white shadow-lg hover:bg-slate-800 transition z-10">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                      </svg>
-                    </button>
                     <%= f.file_field :id_back, class: "hidden", accept: "image/*", required: true, data: { id_upload_target: "input", action: "change->id-upload#updatePreview" } %>
                   </div>
                 </div>
@@ -174,9 +202,58 @@
                   <%= f.text_field :guest_country, class: "form-input py-3 px-5 border border-neutral-border", required: true, placeholder: "e.g. Malaysia" %>
                 </div>
 
-                <div>
+                <div data-controller="time-picker">
                   <%= f.label :estimated_arrival_time, "Estimated Arrival Time", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
-                  <%= f.time_field :estimated_arrival_time, class: "form-input py-3 px-5 border border-neutral-border", required: true %>
+                  <div class="relative">
+                    <button type="button" data-action="click->time-picker#toggle" class="form-input py-3 px-5 border border-neutral-border w-full flex items-center justify-between bg-white cursor-pointer transition sm:text-sm">
+                      <span data-time-picker-target="display" class="text-neutral-text-secondary">Select Time</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-neutral-text-secondary">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    </button>
+                    
+                    <div data-time-picker-target="popover" class="hidden absolute left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[110] p-4">
+                      <div class="grid grid-cols-3 gap-4">
+                        <!-- Hours -->
+                        <div class="space-y-1">
+                          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mb-2">Hour</p>
+                          <div class="h-48 overflow-y-auto custom-scrollbar space-y-1 pr-1">
+                            <% (1..12).each do |h| %>
+                              <button type="button" data-time-picker-target="hour" data-value="<%= h %>" data-action="click->time-picker#selectHour" class="w-full py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-blue-50 transition"><%= h %></button>
+                            <% end %>
+                          </div>
+                        </div>
+                        
+                        <!-- Minutes -->
+                        <div class="space-y-1">
+                          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mb-2">Min</p>
+                          <div class="h-48 overflow-y-auto custom-scrollbar space-y-1 pr-1">
+                            <% (0..59).each do |m| %>
+                              <% formatted_m = m.to_s.rjust(2, '0') %>
+                              <button type="button" data-time-picker-target="minute" data-value="<%= formatted_m %>" data-action="click->time-picker#selectMinute" class="w-full py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-blue-50 transition"><%= formatted_m %></button>
+                            <% end %>
+                          </div>
+                        </div>
+
+                        <!-- AM/PM -->
+                        <div class="space-y-1">
+                          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mb-2">AM/PM</p>
+                          <div class="space-y-1">
+                            <button type="button" data-time-picker-target="period" data-value="AM" data-action="click->time-picker#selectPeriod" class="w-full py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-blue-50 transition">AM</button>
+                            <button type="button" data-time-picker-target="period" data-value="PM" data-action="click->time-picker#selectPeriod" class="w-full py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-blue-50 transition">PM</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="mt-4 pt-4 border-t border-slate-100">
+                        <button type="button" data-action="click->time-picker#confirm" class="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition shadow-lg">
+                          Set Time
+                        </button>
+                      </div>
+                    </div>
+
+                    <%= f.hidden_field :estimated_arrival_time, data: { time_picker_target: "input" }, required: true %>
+                  </div>
                 </div>
               </div>
             </section>
