@@ -88,13 +88,8 @@ class CurrencyCatalog
       normalized = normalize(code)
       currency_name = NAMES[normalized]
 
-      countries = country_names_for(normalized)
-      suffix = countries.present? ? " (#{countries.join(', ')})" : ""
-
       if currency_name.present?
-        "#{normalized} - #{currency_name}#{suffix}"
-      elsif countries.present?
-        "#{normalized} - #{countries.first} Currency"
+        "#{normalized} - #{currency_name}"
       else
         normalized
       end
@@ -102,13 +97,13 @@ class CurrencyCatalog
 
     private
 
+    # Keeping this for potential future internal use, but removing from labels
     def country_names_for(code)
       @country_names_cache ||= {}
       @country_names_cache[code] ||= ISO3166::Country.all
                                      .select { |c| c.currency_code == code }
                                      .map(&:common_name)
                                      .uniq
-                                     .first(3) # Limit to avoid overly long labels
-    end
-  end
+                                     .first(3)
+    end  end
 end
