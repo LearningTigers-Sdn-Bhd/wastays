@@ -6,11 +6,12 @@ class HotelPortal::RatesController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days # Show 2 weeks by default
-    @display_currency = params[:display_currency] || current_hotel.default_currency || "MYR"
+    @display_currency = normalized_currency(params[:display_currency], fallback: @rate_plan.currency)
+    @native_currency = @rate_plan.currency.presence || current_hotel.default_currency || "MYR"
     @room_types = current_hotel.room_types.order(:id)
     @rate_plans = @room_type.rate_plans.order(:id)
 
-    @rates = @rate_plan.room_rates.where(date: @start_date..@end_date, currency: @display_currency).index_by(&:date)
+    @rates = @rate_plan.room_rates.where(date: @start_date..@end_date, currency: @native_currency).index_by(&:date)
   end
 
   def create
@@ -22,7 +23,7 @@ class HotelPortal::RatesController < HotelPortal::BaseController
       start_date: rate_params[:start_date],
       end_date: rate_params[:end_date],
       price: rate_params[:price],
-      currency: rate_params[:currency],
+      currency: @rate_plan.currency,
       min_stay: rate_params[:min_stay],
       max_stay: rate_params[:max_stay],
       closed_to_arrival: rate_params[:closed_to_arrival],
@@ -37,7 +38,7 @@ class HotelPortal::RatesController < HotelPortal::BaseController
         @room_type,
         start_date: rate_params[:start_date],
         rate_plan_id: @rate_plan.id,
-        display_currency: rate_params[:currency]
+        display_currency: params[:display_currency] || @rate_plan.currency
       ), notice: "Rates updated successfully."
     else
       redirect_to hotel_room_type_rates_path(
@@ -62,6 +63,11 @@ class HotelPortal::RatesController < HotelPortal::BaseController
     else
       default_rate_plan
     end
+  end
+
+  def normalized_currency(value, fallback:)
+    normalized = CurrencyCatalog.normalize(value, fallback: fallback)
+    CurrencyCatalog.valid?(normalized) ? normalized : fallback
   end
 
   def rate_params

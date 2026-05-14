@@ -27,11 +27,12 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <%= f.label :currency, "Currency", class: "block text-sm mb-2 font-medium" %>
-            <%= f.select :currency, options_for_select([["MYR", "MYR"], ["USD", "USD"]], @property_policy.currency.presence || "MYR"), {}, class: "py-3 px-4 block w-full border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" %>
+            <%= f.select :currency, options_for_select(CurrencyCatalog.options, @property_policy.currency.presence || "MYR"), {}, class: "py-3 px-4 block w-full border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" %>
           </div>
           <div>
-            <%= f.label :usd_rate, "USD Rate", class: "block text-sm mb-2 font-medium" %>
-            <%= f.number_field :usd_rate, step: 0.0001, value: (@property_policy.usd_rate || 0.21), class: "py-3 px-4 block w-full border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true %>
+            <label class="block text-sm mb-2 font-medium">Display FX Rates</label>
+            <div class="py-3 px-4 block w-full border rounded-lg text-sm text-slate-600 bg-slate-50">Managed by admins in exchange rates.</div>
+            <%= f.hidden_field :usd_rate, value: (@property_policy.usd_rate || 0.21) %>
           </div>
         </div>
 

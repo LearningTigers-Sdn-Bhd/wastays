@@ -27,15 +27,12 @@
                              onblur: "this.form.submit()" %>
           <% end %>
 
-          <!-- Currency Toggle -->
+          <!-- Display Currency Toggle -->
           <div class="inline-flex bg-slate-100 rounded-xl p-1 shadow-sm border border-slate-200">
-            <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date, rate_plan_id: @rate_plan.id, display_currency: "MYR"), 
-                class: "px-3 py-1.5 text-xs font-bold rounded-lg transition #{@display_currency == 'MYR' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" do %>
-              MYR
-            <% end %>
-            <%= link_to hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date, rate_plan_id: @rate_plan.id, display_currency: "USD"), 
-                class: "px-3 py-1.5 text-xs font-bold rounded-lg transition #{@display_currency == 'USD' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" do %>
-              USD
+            <% CurrencyCatalog::COMMON_CODES.each do |currency| %>
+              <%= link_to currency,
+                  hotel_room_type_rates_path(current_hotel, @room_type, start_date: @start_date, rate_plan_id: @rate_plan.id, display_currency: currency),
+                  class: "px-3 py-1.5 text-xs font-bold rounded-lg transition #{@display_currency == currency ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" %>
             <% end %>
           </div>
 
@@ -91,8 +88,8 @@
     <div class="lg:col-span-9">
       <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-4 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Rate Calendar (<%= @display_currency %>)</h2>
-          <p class="mt-0.5 text-sm font-medium text-slate-600">Daily pricing overview for this room type.</p>
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Rate Calendar (<%= @rate_plan.name %>)</h2>
+          <p class="mt-0.5 text-sm font-medium text-slate-600">Edits save in <%= @native_currency %>. Display estimate: <%= @display_currency %>.</p>
         </div>
 
         <div class="overflow-x-auto">
@@ -112,22 +109,18 @@
                 <% (@start_date..@end_date).each do |date| %>
                   <% rate = @rates[date] %>
                   <% 
-                    # Use fallback price only for MYR if no custom record exists
-                    price_to_display = if rate
-                      rate.price
-                    elsif @display_currency == "MYR"
-                      @room_type.base_price
-                    else
-                      nil
-                    end
+                    native_price = rate&.price || (@native_currency == current_hotel.default_currency ? @room_type.base_price : nil)
+                    conversion = native_price.present? ? CurrencyConverter.convert(native_price, from: @native_currency, to: @display_currency) : nil
+                    price_to_display = conversion&.amount || native_price
+                    display_currency = conversion.present? ? @display_currency : @native_currency
                   %>
                   <td class="px-4 py-8 text-center border-e border-slate-200 last:border-e-0 transition-colors hover:bg-slate-50 cursor-pointer group/cell"
                       onclick="document.getElementById('rate-modal-<%= date %>').showModal()">
                     <div class="flex flex-col items-center">
-                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1"><%= @display_currency == 'USD' ? '$' : 'RM' %></span>
+                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1"><%= display_currency %></span>
                       <span class="text-xl font-bold text-slate-900 group-hover/cell:text-indigo-600 transition-colors">
                         <% if price_to_display %>
-                          <%= number_with_precision(price_to_display, precision: 0) %>
+                          <%= number_with_precision(price_to_display, precision: CurrencyCatalog.precision_for(display_currency)) %>
                         <% else %>
                           <span class="text-slate-300">-</span>
                         <% end %>
@@ -136,7 +129,7 @@
                       <div class="mt-2 flex flex-wrap justify-center gap-1">
                         <% if rate %>
                           <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Custom</span>
-                        <% elsif @display_currency == "MYR" %>
+                        <% elsif @native_currency == current_hotel.default_currency %>
                           <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Base</span>
                         <% else %>
                           <span class="inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-300 uppercase tracking-wider">N/A</span>
@@ -198,18 +191,15 @@
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">New Rate</label>
                 <div class="relative">
                   <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                    <span class="text-xs font-bold text-slate-400" id="bulk-currency-symbol"><%= @display_currency == 'USD' ? '$' : 'RM' %></span>
+                    <span class="text-xs font-bold text-slate-400" id="bulk-currency-symbol"><%= CurrencyCatalog.symbol_for(@native_currency) %></span>
                   </div>
                   <%= f.number_field :price, step: 0.01, value: @room_type.base_price, class: "w-full rounded-xl border border-slate-200 bg-white ps-10 pe-3 py-2 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", required: true %>
                 </div>
               </div>
               <div>
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Currency</label>
-                <%= f.select :currency, [['MYR (RM)', 'MYR'], ['USD ($)', 'USD']], { selected: @display_currency }, 
-                            { 
-                              class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
-                              onchange: "document.getElementById('bulk-currency-symbol').textContent = this.value === 'USD' ? '$' : 'RM'"
-                            } %>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Sell Currency</label>
+                <%= f.hidden_field :currency, value: @native_currency %>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700 shadow-sm"><%= @native_currency %></div>
               </div>
             </div>
 
@@ -278,24 +268,21 @@
         <%= form_with scope: :rate, url: hotel_room_type_rates_path(current_hotel, @room_type, rate_plan_id: @rate_plan.id), local: true, class: "space-y-5" do |f| %>
           <%= f.hidden_field :start_date, value: date %>
           <%= f.hidden_field :end_date, value: date %>
+          <%= f.hidden_field :currency, value: @native_currency %>
 
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">New Rate</label>
               <div class="relative">
                 <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
-                  <span class="text-sm font-bold text-slate-400" id="currency-symbol-<%= date %>"><%= (rate&.currency || @display_currency) == 'USD' ? '$' : 'RM' %></span>
+                  <span class="text-sm font-bold text-slate-400" id="currency-symbol-<%= date %>"><%= CurrencyCatalog.symbol_for(@native_currency) %></span>
                 </div>
-                <%= f.number_field :price, step: 0.01, value: (rate&.price || ( @display_currency == "MYR" ? @room_type.base_price : nil )), class: "w-full rounded-2xl border border-slate-200 bg-white ps-11 pe-4 py-3 text-lg font-black text-slate-900 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 focus:outline-none shadow-sm transition-all", required: true, autofocus: true %>
+                <%= f.number_field :price, step: 0.01, value: (rate&.price || (@native_currency == current_hotel.default_currency ? @room_type.base_price : nil)), class: "w-full rounded-2xl border border-slate-200 bg-white ps-11 pe-4 py-3 text-lg font-black text-slate-900 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 focus:outline-none shadow-sm transition-all", required: true, autofocus: true %>
               </div>
             </div>
             <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Currency</label>
-              <%= f.select :currency, [['MYR (RM)', 'MYR'], ['USD ($)', 'USD']], { selected: (rate&.currency || @display_currency) }, 
-                          { 
-                            class: "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-lg font-bold text-slate-900 focus:border-indigo-300 focus:outline-none shadow-sm",
-                            onchange: "document.getElementById('currency-symbol-#{date}').textContent = this.value === 'USD' ? '$' : 'RM'"
-                          } %>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Sell Currency</label>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-lg font-bold text-slate-900 shadow-sm"><%= @native_currency %></div>
             </div>
           </div>
 

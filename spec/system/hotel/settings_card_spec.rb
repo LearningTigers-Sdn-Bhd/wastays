@@ -32,8 +32,8 @@ RSpec.describe 'Hotel Settings Card', type: :system do
       expect(page).to have_field('Standard Check-out Time', type: 'time')
       expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Registered')
       expect(page).to have_field('Onboarding Stage', type: 'text', disabled: true, with: 'Building profile')
-      expect(page).to have_field('Default Currency', disabled: true, with: 'MYR')
-      expect(page).to have_field('USD Conversion Rate')
+      expect(page).to have_select('Default Currency', selected: 'MYR - Malaysian Ringgit')
+      expect(page).to have_content('Managed by admins in exchange rates.')
       expect(page).to have_button('Save Settings')
     end
 
@@ -44,15 +44,14 @@ RSpec.describe 'Hotel Settings Card', type: :system do
 
     fill_in 'Standard Check-in Time', with: '15:00'
     fill_in 'Standard Check-out Time', with: '11:00'
-    fill_in 'USD Conversion Rate', with: '4.25'
+    select 'USD - US Dollar', from: 'Default Currency'
 
     click_button 'Save Settings'
 
     expect(page).to have_content('Settings updated successfully.')
     expect(hotel.reload.property_policy.check_in_time).to eq('15:00')
     expect(hotel.reload.property_policy.check_out_time).to eq('11:00')
-    expect(hotel.reload.default_currency).to eq('MYR')
-    expect(hotel.reload.usd_conversion_rate).to eq(4.25)
+    expect(hotel.reload.default_currency).to eq('USD')
   end
 
   it 'shows hotel status and onboarding stage as disabled text inputs' do
@@ -127,7 +126,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
 
     fill_in 'Standard Check-in Time', with: '15:00'
     fill_in 'Standard Check-out Time', with: '11:00'
-    fill_in 'USD Conversion Rate', with: '4.40'
+    select 'GBP - Pound Sterling', from: 'Default Currency'
     click_button 'Save Settings'
 
     expect(page).to have_current_path(hotel_settings_path(hotel), ignore_query: true)

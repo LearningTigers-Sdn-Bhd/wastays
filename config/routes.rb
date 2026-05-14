@@ -172,6 +172,7 @@ Rails.application.routes.draw do
     resources :global_search, only: [ :index ]
     resources :margin_rules, only: [ :index, :create, :destroy ]
     resources :setup_fee_rules, only: [ :index, :create, :destroy ]
+    resources :exchange_rates, only: [ :index, :create, :update, :destroy ]
     resources :audit_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection

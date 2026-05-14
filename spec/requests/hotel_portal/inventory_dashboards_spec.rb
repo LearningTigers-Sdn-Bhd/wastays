@@ -45,7 +45,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(response).to have_http_status(:success)
 
       page = Capybara.string(response.body)
-      expect(page).to have_css("[data-testid='rate-cell-#{deluxe.id}-#{deluxe_plan.id}-#{Date.current}']", text: "RM320")
+      expect(page).to have_css("[data-testid='rate-cell-#{deluxe.id}-#{deluxe_plan.id}-#{Date.current}']", text: "RM 320")
       expect(page).not_to have_css("[data-testid^='rate-cell-#{twin.id}-']")
       expect(page).to have_select("room_type_id", selected: "Deluxe Room")
       expect(page).not_to have_select("rate_plan_id")

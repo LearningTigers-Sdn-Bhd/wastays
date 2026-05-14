@@ -96,7 +96,6 @@ module HotelPortal
           check_in: @property_policy&.check_in_time,
           check_out: @property_policy&.check_out_time,
           default_currency: @hotel.default_currency,
-          usd_conversion_rate: @hotel.usd_conversion_rate,
           tourism_tax_enabled: @hotel.tourism_tax_enabled?,
           tourism_tax_amount: @hotel.tourism_tax_amount,
           sst_enabled: @hotel.sst_enabled?
@@ -185,7 +184,7 @@ module HotelPortal
 
     def hotel_params
       params.require(:hotel).permit(
-        :usd_conversion_rate,
+        :default_currency,
         :tourism_tax_enabled,
         :tourism_tax_amount,
         :sst_enabled,

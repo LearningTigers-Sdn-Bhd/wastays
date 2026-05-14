@@ -94,7 +94,7 @@
                 <%= f.number_field :wk_price, value: @pricing_form.pricing_data[:wk_price], step: 0.01, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
               </div>
               <div class="mt-4 grid grid-cols-4 gap-2">
-                <% HotelPortal::InventoryDashboardsController::WEEKDAY_OPTIONS.each do |label, value| %>
+                <% inventory_weekday_options.each do |label, value| %>
                   <% input_id = "weekend_day_#{value}" %>
                   <label for="<%= input_id %>" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-2 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
                     <%= check_box_tag "pricing_rule[weekend_days][]", value, @pricing_form.weekend_days.include?(value), id: input_id, class: "me-1.5 size-3.5 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0" %>

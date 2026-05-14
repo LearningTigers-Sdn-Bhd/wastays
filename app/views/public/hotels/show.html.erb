@@ -24,6 +24,58 @@
   </div>
 </div>
 
+  <% if @show_stay_modal %>
+    <div class="fixed inset-0 z-[200] bg-black/55 backdrop-blur-sm px-4 sm:px-6 flex items-center justify-center overflow-y-auto" role="dialog" aria-modal="true" onclick="if (event.target === this) { this.classList.add('hidden') }">
+      <div class="w-full max-w-xl my-6 rounded-2xl bg-white shadow-2xl border border-neutral-border p-6 sm:p-8" onclick="event.stopPropagation()">
+        <h2 class="text-2xl font-extrabold text-neutral-text-primary mb-2">Select Your Stay Dates</h2>
+        <p class="text-sm text-neutral-text-secondary mb-6">Choose your check-in and check-out dates to see accurate room availability and price.</p>
+
+        <%= form_with url: hotel_path(@hotel),
+                      method: :get,
+                      local: true,
+                      class: "space-y-4",
+                      html: {
+                        onsubmit: "var params=new URLSearchParams(new FormData(this));window.location.replace(this.action+'?'+params.toString());return false;"
+                      } do |f| %>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <%= f.label :check_in, "Check-in", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+              <%= f.date_field :check_in, value: (@check_in || Date.current).to_s, required: true, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            </div>
+            <div>
+              <%= f.label :check_out, "Check-out", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+              <%= f.date_field :check_out, value: (@check_out || Date.tomorrow).to_s, required: true, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <%= f.label :adults, "Adults", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+              <%= f.select :adults, options_for_select((1..8).map { |n| [n, n] }, @adults), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            </div>
+            <div>
+              <%= f.label :children, "Children", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+              <%= f.select :children, options_for_select((0..6).map { |n| [n, n] }, @children), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            </div>
+            <div>
+              <%= f.label :room_count, "Rooms", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+              <%= f.select :room_count, options_for_select((1..5).map { |n| [n, n] }, @room_count), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            </div>
+          </div>
+
+          <div>
+            <%= f.label :display_currency, "Display Currency", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
+            <%= f.select :display_currency, options_for_select(CurrencyCatalog.options, @display_currency), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            <p class="mt-1 text-[11px] text-neutral-text-secondary">Prices are estimates when display currency differs from the charged hotel currency.</p>
+          </div>
+
+          <div class="pt-2">
+            <%= f.submit "Check Availability", class: "btn btn-primary w-full py-3 text-sm font-bold uppercase tracking-widest" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
 
   <!-- Gallery Section -->
   <div id="hotel-gallery-top" class="max-w-[85rem] mx-auto px-4 py-6 sm:px-6 lg:px-8">
@@ -402,7 +454,20 @@
         <div class="space-y-6 pt-4" id="rooms-section">
           <div class="flex justify-between items-end">
             <h2 class="text-2xl font-extrabold text-neutral-text-primary">Select your room</h2>
-            <p class="text-sm text-brand-secondary font-bold">Recommended for <%= @adults %> guests</p>
+            <div class="flex items-center gap-3">
+              <p class="text-sm text-brand-secondary font-bold">Recommended for <%= @adults %> guests</p>
+              <%= form_with url: hotel_path(@hotel), method: :get, local: true, class: "hidden sm:block" do |f| %>
+                <% request.query_parameters.except("display_currency").each do |key, value| %>
+                  <%= hidden_field_tag key, value %>
+                <% end %>
+                <%= f.select :display_currency,
+                             options_for_select(CurrencyCatalog::COMMON_CODES.map { |code| [ code, code ] }, @display_currency),
+                             {},
+                             class: "rounded-lg border border-neutral-border bg-white px-3 py-2 text-xs font-bold text-neutral-text-primary",
+                             onchange: "this.form.submit()",
+                             aria: { label: "Display currency" } %>
+              <% end %>
+            </div>
           </div>
 
           <div class="space-y-6">
@@ -469,10 +534,13 @@
                       <div>
                         <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest">Total for Stay</p>
                         <% if @search_ready %>
+                          <% pricing_summary = @availability_service.pricing_summary_for(room_type) %>
                           <p class="text-2xl font-black text-neutral-text-primary">
-                            RM <%= number_with_precision(@availability_service.calculate_total_price(room_type), precision: 2) %>
+                            <%= display_amount(pricing_summary[:total_price], quote_currency: pricing_summary[:currency], display_currency: @display_currency, hotel: @hotel) %>
                           </p>
-                          <p class="text-[10px] text-neutral-text-secondary italic">Inclusive of all taxes</p>
+                          <p class="text-[10px] text-neutral-text-secondary italic">
+                            <%= pricing_summary[:rate_plan_name].presence || "Best available rate" %> · charged in <%= pricing_summary[:currency] %><%= @display_currency != pricing_summary[:currency] ? " · estimate" : "" %>
+                          </p>
                         <% else %>
                           <p class="text-sm font-bold text-neutral-text-secondary">Select dates to see price</p>
                         <% end %>
@@ -486,6 +554,7 @@
                         <%= f.hidden_field :adults, value: @adults %>
                         <%= f.hidden_field :children, value: @children %>
                         <%= f.hidden_field :room_count, value: @room_count %>
+                        <%= f.hidden_field :display_currency, value: @display_currency %>
                         
                         <%= f.submit "Reserve Now",
                                      disabled: !@search_ready,

@@ -60,11 +60,13 @@ class Hotel < ApplicationRecord
   validates :name, presence: true
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true
 
+  before_validation :normalize_default_currency
   before_create :assign_hotel_prefix
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
   validates :city, presence: true
   validates :country, presence: true
+  validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
@@ -88,6 +90,10 @@ class Hotel < ApplicationRecord
     else
       super
     end
+  end
+
+  def normalize_default_currency
+    self.default_currency = CurrencyCatalog.normalize(default_currency)
   end
 
   scope :search, ->(query) {

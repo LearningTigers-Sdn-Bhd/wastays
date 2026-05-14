@@ -7,7 +7,7 @@ module HotelOps
       @start_date = start_date.to_date
       @end_date = end_date.to_date
       @price = price
-      @currency = currency
+      @currency = CurrencyCatalog.valid?(currency) ? CurrencyCatalog.normalize(currency) : rate_plan.currency
       @user = user
       @min_stay = min_stay
       @max_stay = max_stay

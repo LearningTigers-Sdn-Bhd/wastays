@@ -5,7 +5,9 @@ class RatePlan < ApplicationRecord
 
   validates :name, presence: true
   validates :sell_mode, presence: true, inclusion: { in: %w[per_room per_person] }
-  validates :currency, presence: true
+  validates :currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
+
+  before_validation :normalize_currency
 
   after_commit :sync_with_channel_manager, on: [ :create, :update ]
   after_destroy_commit :delete_from_channel_manager, if: :synced_with_channel_manager?
@@ -15,6 +17,10 @@ class RatePlan < ApplicationRecord
   end
 
   private
+
+  def normalize_currency
+    self.currency = CurrencyCatalog.normalize(currency)
+  end
 
   def sync_with_channel_manager
     return if room_type.hotel.preferred_channel_manager.blank?

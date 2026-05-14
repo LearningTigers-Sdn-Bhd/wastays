@@ -10,7 +10,7 @@
   <div class="px-4 md:px-0">
     <div class="mt-5">
       <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Settings</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Update hotel policy, taxes, conversion rate, and banking details.</p>
+      <p class="mt-1 text-sm font-medium text-slate-600">Update hotel policy, taxes, sell currency, and banking details.</p>
     </div>
   </div>
 
@@ -66,12 +66,15 @@
             <div class="grid gap-4 md:grid-cols-2">
               <div>
                 <%= f.label :default_currency, "Default Currency", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.text_field :default_currency, value: @settings[:default_currency] || "MYR", disabled: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500" %>
+                <%= f.select :default_currency, options_for_select(CurrencyCatalog.options, @settings[:default_currency] || "MYR"), {}, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                <p class="mt-1 text-xs text-slate-400">Used as the hotel sell currency and Channex property currency.</p>
               </div>
 
               <div>
-                <%= f.label :usd_conversion_rate, "USD Conversion Rate", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.number_field :usd_conversion_rate, step: 0.0001, value: @settings[:usd_conversion_rate], class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                <label class="mb-2 block text-sm font-medium text-slate-900">Guest Display FX</label>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600">
+                  Managed by admins in exchange rates.
+                </div>
               </div>
             </div>
 

@@ -179,13 +179,12 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it 'rolls back hotel settings when property policy validation fails' do
-      hotel.update!(default_currency: 'MYR', usd_conversion_rate: 4.5, tourism_tax_enabled: false, tourism_tax_amount: 10.0)
+      hotel.update!(default_currency: 'MYR', tourism_tax_enabled: false, tourism_tax_amount: 10.0)
       create(:property_policy, hotel: hotel, check_in_time: '2:00 PM', check_out_time: '11:00 AM')
 
       patch hotel_settings_path(hotel), params: {
         hotel: {
           default_currency: 'USD',
-          usd_conversion_rate: '4.25',
           tourism_tax_enabled: '1',
           tourism_tax_amount: '12.0',
           property_policy_attributes: {
@@ -199,7 +198,6 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       hotel.reload
       expect(hotel.default_currency).to eq('MYR')
-      expect(hotel.usd_conversion_rate).to eq(4.5)
       expect(hotel.tourism_tax_enabled?).to be(false)
       expect(hotel.tourism_tax_amount).to eq(10.0)
 

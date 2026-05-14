@@ -93,7 +93,8 @@ module HotelOps
     end
 
     def currency
-      selection[:currency].presence || hotel.default_currency || "MYR"
+      requested_currency = selection[:currency].presence || hotel.default_currency || "MYR"
+      CurrencyCatalog.valid?(requested_currency) ? CurrencyCatalog.normalize(requested_currency) : hotel.default_currency
     end
 
     def restriction_values
@@ -175,7 +176,8 @@ module HotelOps
               rate.closed_to_departure = restriction_values[:closed_to_departure]
               rate.stop_sell = restriction_values[:stop_sell]
             end
-            rate.price ||= room_type.base_price
+            rate.price ||= room_type.base_price if target_currency == hotel.default_currency
+            next if rate.price.blank?
             rate.save!
 
             next unless changed_rate?(old_values, rate)
@@ -204,12 +206,13 @@ module HotelOps
     end
 
     def target_currencies_for(rate_plan, date)
+      return [ rate_plan.currency ] if apply_rates?
       return [ currency ] unless apply_restrictions?
 
       # If we are applying restrictions, we must apply them to ALL currencies
       # that this hotel has ever used to avoid discrepancies between currency views.
-      hotel_currencies = hotel.room_rates.distinct.pluck(:currency)
-      (hotel_currencies + [ currency, "MYR", "USD" ]).compact.uniq
+      existing_currencies = rate_plan.room_rates.where(date: date).distinct.pluck(:currency)
+      (existing_currencies + [ rate_plan.currency ]).compact.uniq
     end
 
     def room_numbers_for(room_type)
