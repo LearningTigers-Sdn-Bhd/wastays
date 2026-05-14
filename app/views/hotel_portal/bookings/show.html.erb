@@ -61,7 +61,7 @@
     <div class="p-6 bg-white" onclick="event.stopPropagation()">
       <h3 class="text-lg font-bold text-slate-900"><%= @booking.checked_in? ? "Edit Check-In" : "Confirm Check-In" %></h3>
       <p class="text-sm text-slate-500 mt-1">Set check-in time and assign rooms for <%= @booking.guest_name %>.</p>
-      <%= form_with model: @booking, url: check_in_hotel_booking_path(current_hotel, @booking), method: :post, local: true, 
+      <%= form_with model: @booking, url: check_in_hotel_booking_path(current_hotel, @booking), method: :post, local: true,
           class: "mt-6 space-y-4" do |f| %>
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
@@ -73,14 +73,14 @@
         <div class="space-y-3">
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Room Assignments</label>
           <%= f.fields_for :booking_rooms do |rf| %>
-            <div class="flex items-center gap-3" 
+            <div class="flex items-center gap-3"
                  data-controller="room-lock"
                  data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
                  data-room-lock-room-type-id-value="<%= rf.object.room_type_id %>"
                  data-room-lock-current-room-value="<%= rf.object.room_number %>">
               <div class="flex-1">
                 <p class="text-[10px] font-medium text-slate-400 uppercase mb-1"><%= rf.object.room_type.name %></p>
-                <%= rf.text_field :room_number, 
+                <%= rf.text_field :room_number,
                     placeholder: "Room No.",
                     class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
                     data: { action: "change->room-lock#lock" } %>
@@ -88,6 +88,7 @@
             </div>
           <% end %>
         </div>
+
         <div class="flex items-center justify-end gap-x-3 pt-2">
           <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
           <%= f.submit (@booking.checked_in? ? "Save Changes" : "Confirm Check In"), class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
@@ -121,7 +122,8 @@
     <!-- Main Column -->
     <div class="lg:col-span-9 space-y-8">
       <div data-controller="booking-tabs" class="space-y-6">
-        <!-- Preline Style Underlined Tabs -->
+
+        <!-- Tabs Nav -->
         <nav class="relative z-0 flex border border-slate-200 rounded-xl overflow-hidden" aria-label="Tabs" role="tablist">
           <button type="button"
                   data-booking-tabs-target="tab"
@@ -146,8 +148,18 @@
               </span>
             <% end %>
           </button>
+          <button type="button"
+                  data-booking-tabs-target="tab"
+                  data-tab-name="history"
+                  data-action="click->booking-tabs#switch"
+                  class="relative min-w-0 flex-1 bg-white first:border-s-0 border-s border-b-2 border-slate-200 py-4 px-4 text-slate-500 hover:text-slate-900 text-sm font-bold text-center overflow-hidden transition-all
+                         data-[active=true]:border-b-blue-600 data-[active=true]:text-slate-950 data-[active=true]:bg-slate-50/50"
+                  role="tab">
+            History
+          </button>
         </nav>
 
+        <!-- Tab Panel: Booking Details -->
         <div data-booking-tabs-target="panel" data-tab-panel="booking-details" class="space-y-8 animate-in fade-in duration-300">
           <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
@@ -314,16 +326,16 @@
                 </div>
               </div>
 
-              <dialog id="edit-stay-details-modal" 
+              <dialog id="edit-stay-details-modal"
                       class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,32rem)] max-w-lg shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
                 <div class="p-6 bg-white" onclick="event.stopPropagation()">
                   <h3 class="text-lg font-bold text-slate-900">Edit Stay & Room Details</h3>
                   <p class="text-sm text-slate-500 mt-1">Update booking dates and room assignment.</p>
 
-                  <%= form_with model: @booking, url: hotel_booking_path(current_hotel, @booking), method: :patch, local: true, 
+                  <%= form_with model: @booking, url: hotel_booking_path(current_hotel, @booking), method: :patch, local: true,
                       class: "mt-6 space-y-4",
-                      data: { 
-                        controller: "booking-calc", 
+                      data: {
+                        controller: "booking-calc",
                         booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
                         booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel),
                         booking_calc_booking_id_value: @booking.id
@@ -342,32 +354,32 @@
                     <div>
                       <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Category</label>
                       <% current_room_type_id = @booking.booking_rooms.first&.room_type_id %>
-                      <%= f.collection_select :room_type_id, @presenter.room_types, :id, :name, { selected: current_room_type_id }, 
-                          { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
-                            data: { 
-                              booking_calc_target: "roomType", 
+                      <%= f.collection_select :room_type_id, @presenter.room_types, :id, :name, { selected: current_room_type_id },
+                          { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                            data: {
+                              booking_calc_target: "roomType",
                               action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate",
                               prices: @presenter.room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
                               room_numbers: @presenter.room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
-                            } 
+                            }
                           } %>
                     </div>
 
-                    <div data-controller="room-lock" 
+                    <div data-controller="room-lock"
                          data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
                          data-room-lock-room-type-id-value="<%= current_room_type_id %>"
                          data-room-lock-current-room-value="<%= @booking.hotel_snapshot.is_a?(Hash) ? (@booking.hotel_snapshot['room_number'] || @booking.hotel_snapshot.dig('assignment', 'room_number')) : nil %>"
                          data-booking-calc-target="roomNumberContainer">
                       <label for="booking_room_number" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
                       <% current_room_number = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
-                      <%= f.select :room_number, [[current_room_number, current_room_number]], { selected: current_room_number }, 
+                      <%= f.select :room_number, [[current_room_number, current_room_number]], { selected: current_room_number },
                           { id: "booking_room_number",
                             required: true,
-                            class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
-                            data: { 
+                            class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                            data: {
                               booking_calc_target: "roomNumberSelect",
                               action: "change->room-lock#lock"
-                            } 
+                            }
                           } %>
                       <p class="text-[10px] text-slate-400 mt-1.5 italic">Only available rooms for the selected dates are shown.</p>
                     </div>
@@ -379,8 +391,8 @@
                   <% end %>
                 </div>
               </dialog>
-              <div class="p-6 sm:p-8 space-y-8">
 
+              <div class="p-6 sm:p-8 space-y-8">
                 <div class="grid grid-cols-2 gap-6">
                   <div>
                     <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Check-in</dt>
@@ -426,7 +438,9 @@
             </div>
           </div>
         </div>
+        <!-- END Tab Panel: Booking Details -->
 
+        <!-- Tab Panel: Requests -->
         <div data-booking-tabs-target="panel" data-tab-panel="requests" class="space-y-8 hidden animate-in fade-in duration-300">
           <div class="grid lg:grid-cols-2 gap-8">
             <!-- Housekeeping -->
@@ -461,7 +475,7 @@
                       </div>
                       <% unless request.completed? || request.cancelled? %>
                         <div class="flex justify-end gap-2 pt-2">
-                           <%= button_to "Complete Request", complete_housekeeping_request_hotel_booking_path(current_hotel, @booking, housekeeping_request_id: request.id), method: :post, class: "inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+                          <%= button_to "Complete Request", complete_housekeeping_request_hotel_booking_path(current_hotel, @booking, housekeeping_request_id: request.id), method: :post, class: "inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-700" %>
                         </div>
                       <% end %>
                     </div>
@@ -506,7 +520,7 @@
                       </div>
                       <% unless request.resolved? || request.cancelled? %>
                         <div class="flex justify-end gap-2 pt-2">
-                           <%= button_to "Resolve Complaint", resolve_complaint_request_hotel_booking_path(current_hotel, @booking, complaint_request_id: request.id), method: :post, class: "inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+                          <%= button_to "Resolve Complaint", resolve_complaint_request_hotel_booking_path(current_hotel, @booking, complaint_request_id: request.id), method: :post, class: "inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-700" %>
                         </div>
                       <% end %>
                     </div>
@@ -520,8 +534,18 @@
             </div>
           </div>
         </div>
+        <!-- END Tab Panel: Requests -->
+
+        <!-- Tab Panel: History -->
+        <div data-booking-tabs-target="panel" data-tab-panel="history" class="space-y-8 hidden animate-in fade-in duration-300">
+          <%= render "hotel_portal/bookings/audit_history", audit_logs: @audit_logs %>
+        </div>
+        <!-- END Tab Panel: History -->
+
       </div>
+      <!-- END booking-tabs controller -->
     </div>
+    <!-- END Main Column -->
 
     <!-- Sidebar Column -->
     <div class="lg:col-span-3 space-y-8">
@@ -587,5 +611,9 @@
         </div>
       </div>
     </div>
+    <!-- END Sidebar Column -->
+
   </div>
+  <!-- END grid -->
+
 </div>

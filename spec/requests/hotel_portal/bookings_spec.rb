@@ -79,6 +79,15 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.reload.checked_in_at).to be_present
     end
+
+    it "returns turbo stream reload when requested from reservation board" do
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
+           params: { checked_in_at: Time.current.to_s },
+           headers: { "Accept" => "text/vnd.turbo-stream.html", "Referer" => hotel_reservation_board_index_url(hotel) }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="reload"')
+    end
   end
 
   describe "POST /check_out" do

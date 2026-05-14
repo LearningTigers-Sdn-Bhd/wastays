@@ -1,0 +1,106 @@
+<%# app/views/hotel_portal/reservation_board/partials/_room_row.html.erb %>
+<%
+  row_min_height = reservation_board_row_height(room, row_min_base, block_step, visible_start_date)
+  room_type = room[:room_type]
+%>
+
+<div class="grid border-b border-slate-100" style="grid-template-columns: <%= grid_template_columns %>; min-height: <%= row_min_height %>px;">
+  <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= card_padding %> flex items-center justify-between gap-4">
+    <p class="font-black leading-none text-slate-950 <%= room_number_class %>"><%= room[:room_number] %></p>
+
+    <div class="flex items-center gap-2">
+      <% smoking_label = room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking" %>
+      <% smoking_color = room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400" %>
+      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+        <div data-floating-target="reference" class="<%= smoking_color %> cursor-help">
+          <% if room_type.smoking_allowed %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h14" /><path d="M18 8c0-2.5-2-2.5-2-5" /><path d="M21 16a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /><path d="M22 8c0-2.5-2-2.5-2-5" /><path d="M7 12v4" /></svg>
+          <% else %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h14"/><path d="M18 8c0-2.5-2-2.5-2-5"/><path d="M21 16a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M22 8c0-2.5-2-2.5-2-5"/><path d="M7 12v4"/><line x1="3" y1="3" x2="21" y2="21" /></svg>
+          <% end %>
+        </div>
+        <div data-floating-target="floating" class="hidden z-[100] px-3 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white">
+          <span class="text-[10px] font-bold uppercase tracking-wider"><%= smoking_label %></span>
+        </div>
+      </div>
+
+      <% pets_label = room_type.pets_allowed ? "Pets Allowed" : "No Pets" %>
+      <% pets_color = room_type.pets_allowed ? "text-emerald-500" : "text-slate-400" %>
+      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+        <div data-floating-target="reference" class="<%= pets_color %> cursor-help">
+          <% if room_type.pets_allowed %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11.5" cy="11.5" r="2.5"/><path d="M10.74 5.3a2.5 2.5 0 0 1 4.5 1.7M16.63 7.82a2.5 2.5 0 1 1 2.37 3.86M10.26 15.7A2.5 2.5 0 0 1 5.5 14M7.48 9.5a2.5 2.5 0 1 1-1.63-4.14"/><path d="M12 21a2.6 2.6 0 0 0 3-3c0-3.3-3.2-6-5-6S5 14.7 5 18a2.6 2.6 0 0 0 3 3z"/></svg>
+          <% else %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11.5" cy="11.5" r="2.5"/><path d="M10.74 5.3a2.5 2.5 0 0 1 4.5 1.7M16.63 7.82a2.5 2.5 0 1 1 2.37 3.86M10.26 15.7A2.5 2.5 0 0 1 5.5 14M7.48 9.5a2.5 2.5 0 1 1-1.63-4.14"/><path d="M12 21a2.6 2.6 0 0 0 3-3c0-3.3-3.2-6-5-6S5 14.7 5 18a2.6 2.6 0 0 0 3 3z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+          <% end %>
+        </div>
+        <div data-floating-target="floating" class="hidden z-[100] px-3 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white">
+          <span class="text-[10px] font-bold uppercase tracking-wider"><%= pets_label %></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% board_dates.each_with_index do |date, index| %>
+    <div class="relative border-l <%= 'border-r' if index == board_dates.size - 1 %> border-slate-100 <%= summary_padding %> <%= date == Date.current ? 'bg-slate-50/50' : 'bg-white' %> group/cell"
+         data-reservation-timeline-target="cell"
+         data-date="<%= date %>"
+         data-room-number="<%= room[:room_number] %>"
+         data-room-type-id="<%= room_type.id %>"
+         data-action="dragover->reservation-timeline#onDragOver dragleave->reservation-timeline#onDragLeave drop->reservation-timeline#onDrop">
+      <%# Quick Creation Link & Rate Display %>
+      <% is_occupied = room[:blocks].any? { |b| b[:check_in] <= date && b[:check_out] > date } %>
+      <% rate = reservation_board_rate_for(reservation_board, room_type.id, date) %>
+
+      <% if !is_occupied %>
+        <%= link_to new_hotel_reservation_board_board_booking_path(current_hotel, check_in: date, room_type_id: room_type.id, room_number: room[:room_number]),
+                    class: "absolute inset-0 z-0 flex flex-col justify-between p-1 hover:bg-slate-50/80 transition-colors",
+                    data: { 
+                      action: "click->reservation-timeline#openNewBookingModal",
+                      turbo_frame: "reservation_board_booking_sheet_content"
+                    } do %>
+          <div class="flex justify-center items-center h-4">
+            <% if rate %>
+              <div class="flex items-center gap-0.5 <%= rate_text_class %> font-bold text-slate-400/60 tracking-tight transition-opacity">
+                <span class="<%= currency_text_class %> uppercase"><%= rate[:currency] == "MYR" ? "RM" : rate[:currency] %></span>
+                <span><%= number_with_precision(rate[:price], precision: 0) %></span>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="flex-1 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity pb-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          </div>
+        <% end %>
+      <% end %>
+
+      <% room[:blocks].select { |block| [ block[:check_in], visible_start_date ].max == date }.each_with_index do |block, block_index| %>
+        <% if block[:type] == "room_status" %>
+          <%= render "hotel_portal/reservation_board/partials/room_status_block",
+                block: block,
+                block_index: block_index,
+                visible_start_date: visible_start_date,
+                visible_end_exclusive: visible_end_exclusive,
+                block_left_pad: block_left_pad,
+                block_top: block_top,
+                block_step: block_step,
+                booking_amount_class: booking_amount_class,
+                booking_status_class: booking_status_class %>
+        <% else %>
+          <%= render "hotel_portal/reservation_board/partials/booking_block",
+                block: block,
+                block_index: block_index,
+                visible_start_date: visible_start_date,
+                visible_end_exclusive: visible_end_exclusive,
+                block_left_pad: block_left_pad,
+                block_top: block_top,
+                block_step: block_step,
+                booking_styles: booking_styles,
+                booking_name_class: booking_name_class,
+                booking_meta_class: booking_meta_class,
+                booking_amount_class: booking_amount_class,
+                booking_badge_class: booking_badge_class %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

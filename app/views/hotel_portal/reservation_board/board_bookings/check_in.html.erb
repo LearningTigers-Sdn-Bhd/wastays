@@ -1,0 +1,48 @@
+<%= turbo_frame_tag "reservation_board_check_in_content" do %>
+  <div class="flex flex-col h-full">
+    <%= form_with model: @booking, url: check_in_hotel_booking_path(current_hotel, @booking), method: :post,
+        class: "flex flex-col h-full" do |f| %>
+      <%= hidden_field_tag :source, "reservation_board" %>
+
+      <%# Modal Header %>
+      <%= render "hotel_portal/reservation_board/partials/content_header",
+                 title: (@booking.checked_in? ? "Edit Check-In" : "Confirm Check-In"),
+                 subtitle: "Set check-in time and assign rooms for #{@booking.guest_name}.",
+                 icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>' %>
+
+      <%# Modal Content %>
+      <div class="flex-1 p-6 space-y-6">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
+          <%= f.datetime_local_field :checked_in_at,
+              value: (@booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"),
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div class="space-y-3">
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Room Assignments</label>
+          <%= f.fields_for :booking_rooms do |rf| %>
+            <div class="flex items-center gap-3"
+                 data-controller="room-lock"
+                 data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
+                 data-room-lock-room-type-id-value="<%= rf.object.room_type_id %>"
+                 data-room-lock-current-room-value="<%= rf.object.room_number %>">
+              <div class="flex-1">
+                <p class="text-[10px] font-medium text-slate-400 uppercase mb-1"><%= rf.object.room_type.name %></p>
+                <%= rf.text_field :room_number,
+                    placeholder: "Room No.",
+                    class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                    data: { action: "change->room-lock#lock" } %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Modal Footer %>
+      <%= render "hotel_portal/reservation_board/partials/content_footer",
+                 show_full_page_link: false,
+                 submit_button: f.submit((@booking.checked_in? ? "Save Changes" : "Confirm Check In"), class: "px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors shadow-sm") %>
+    <% end %>
+  </div>
+<% end %>

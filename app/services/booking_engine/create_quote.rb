@@ -50,7 +50,7 @@ module BookingEngine
           total_amount: total_amount,
           currency: @room_type.room_rates.first&.currency || "MYR",
           expires_at: 15.minutes.from_now,
-          hotel_snapshot: @hotel.as_json,
+          hotel_snapshot: @hotel.booking_snapshot,
           cancellation_policy_snapshot: @hotel.property_policy&.cancellation_policy,
           guest_name: @guest_name,
           guest_email: @guest_email,
@@ -66,6 +66,12 @@ module BookingEngine
             room_type_snapshot: @room_type.as_json,
             nightly_rate_snapshot: nightly_rates.transform_values(&:as_json),
             occupancy_snapshot: { max_adults: @room_type.max_adults, max_children: @room_type.max_children }
+          )
+
+          # Record Audit Log
+          Bookings::RecordAuditLog.call(
+            auditable: quote,
+            action_type: "create"
           )
 
           # 5. Place Inventory Hold

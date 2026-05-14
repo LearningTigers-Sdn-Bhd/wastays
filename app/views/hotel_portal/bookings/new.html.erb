@@ -1,8 +1,12 @@
+<% is_reservation_board = params[:controller].include?("reservation_board") %>
+<% back_path = is_reservation_board ? hotel_reservation_board_index_path(current_hotel) : hotel_bookings_path(current_hotel) %>
+<% form_url = is_reservation_board ? hotel_reservation_board_board_bookings_path(current_hotel) : hotel_bookings_path(current_hotel) %>
+
 <% content_for :breadcrumbs do %>
   <div class="flex items-center gap-x-2">
     <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
     <span class="text-sm text-slate-400">/</span>
-    <%= link_to "Bookings", hotel_bookings_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <%= link_to is_reservation_board ? "Reservation Board" : "Bookings", back_path, class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
     <span class="text-sm text-slate-400">/</span>
     <span class="text-sm font-semibold text-slate-900">New Booking</span>
   </div>
@@ -10,13 +14,13 @@
 
 <div class="max-w-4xl mx-auto pb-20">
   <div class="mt-5 mb-5">
-    <%= link_to hotel_bookings_path(current_hotel), class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600" do %>
+    <%= link_to back_path, class: "inline-flex items-center gap-x-1.5 text-sm text-gray-600 hover:text-blue-600" do %>
       <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Back to Bookings
+      Back to <%= is_reservation_board ? "Reservation Board" : "Bookings" %>
     <% end %>
   </div>
 
-  <%= form_with model: @booking, url: hotel_bookings_path(current_hotel), local: true, class: "space-y-8", 
+  <%= form_with model: @booking, url: form_url, local: true, class: "space-y-8", 
       data: { 
         controller: "booking-calc room-lock", 
         room_lock_url_value: hotel_room_locks_path(current_hotel),
@@ -85,7 +89,7 @@
         <div class="grid sm:grid-cols-2 gap-6">
           <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Category</label>
-            <%= f.collection_select :room_type_id, @room_types, :id, :name, { prompt: "Select a category" }, 
+            <%= f.collection_select :room_type_id, @room_types, :id, :name, { selected: @room_type_id, prompt: "Select a category" }, 
                 { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
                   data: { 
                     booking_calc_target: "roomType", 
@@ -95,9 +99,9 @@
                   } 
                 } %>
           </div>
-          <div class="hidden" data-booking-calc-target="roomNumberContainer">
+          <div class="<%= @room_number.present? ? '' : 'hidden' %>" data-booking-calc-target="roomNumberContainer">
             <label for="booking_room_number" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
-            <%= f.select :room_number, [], { prompt: "Select a room" }, 
+            <%= f.select :room_number, (@room_number.present? ? [[@room_number, @room_number]] : []), { selected: @room_number, prompt: "Select a room" }, 
                 { id: "booking_room_number",
                   required: true,
                   class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
@@ -121,7 +125,7 @@
         <div class="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-200">
           <div>
             <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Calculated Total</p>
-            <p class="text-2xl font-black text-slate-900 mt-1">MYR <span data-booking-calc-target="displayTotal">0.00</span></p>
+            <p class="text-2xl font-black text-slate-900 mt-1">MYR <span data-booking-calc-target="displayTotal"><%= number_with_precision(@booking.total_amount || 0, precision: 2) %></span></p>
           </div>
           <div class="w-1/3">
              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-right">Adjust Price (Optional)</label>

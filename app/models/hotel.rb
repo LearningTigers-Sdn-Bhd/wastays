@@ -373,6 +373,18 @@ class Hotel < ApplicationRecord
       "Not Configured"
     end
   end
+
+  def booking_snapshot
+    as_json(except: %i[
+      ai_provider_enabled
+      ai_provider_name
+      ai_provider_key
+      ai_concierge_tone
+      faq
+      policy
+    ])
+  end
+
   def should_generate_new_friendly_id?
     name_changed? || slug.blank?
   end

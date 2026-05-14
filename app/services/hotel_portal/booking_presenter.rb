@@ -46,5 +46,15 @@ module HotelPortal
     def pending_requests_count
       pending_housekeeping_requests_count + pending_complaint_requests_count
     end
+
+    def notes_json
+      booking.booking_notes.includes(:user).map { |n|
+        {
+          body: n.body,
+          author: n.user.name,
+          date: n.created_at.strftime("%b %d, %Y %H:%M")
+        }
+      }.to_json
+    end
   end
 end

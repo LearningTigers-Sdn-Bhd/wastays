@@ -3,6 +3,8 @@ import "@hotwired/turbo-rails"
 import "controllers"
 import "turbo_confirm"
 
+console.log("Wastays Application JS loaded")
+
 async function initializePreline() {
   const enabled = document.body?.dataset?.prelineEnabled !== "false"
   if (!enabled) return
@@ -20,3 +22,8 @@ async function initializePreline() {
 
 document.addEventListener("turbo:load", initializePreline)
 document.addEventListener("turbo:frame-render", initializePreline)
+
+// Custom Turbo Stream Actions
+Turbo.StreamActions.reload = function() {
+  Turbo.visit(window.location.href, { action: "replace" })
+}

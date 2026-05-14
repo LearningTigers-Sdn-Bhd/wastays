@@ -116,6 +116,10 @@ module BookingEngine
           # 4. Finalize Quote status
           @quote.update!(status: "converted")
 
+          # Record Audit Logs
+          Bookings::RecordAuditLog.call(auditable: @quote, action_type: "convert")
+          Bookings::RecordAuditLog.call(auditable: booking, action_type: "create")
+
           # 5. Trigger Webhooks
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
           Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
