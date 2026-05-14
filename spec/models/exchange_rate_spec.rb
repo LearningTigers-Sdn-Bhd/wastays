@@ -12,7 +12,7 @@ RSpec.describe ExchangeRate, type: :model do
   it 'validates uniqueness of currency_code scoped to base_currency' do
     create(:exchange_rate, base_currency: 'MYR', currency_code: 'USD')
     duplicate = build(:exchange_rate, base_currency: 'MYR', currency_code: 'USD')
-    
+
     expect(duplicate).not_to be_valid
   end
 

@@ -67,7 +67,7 @@ class CurrencyCatalog
       codes.include?(normalize(code))
     end
 
-    def normalize(code, fallback: "MYR")
+    def normalize(code, fallback: nil)
       normalized = code.to_s.upcase.strip
       normalized.presence || fallback
     end
@@ -105,6 +105,5 @@ class CurrencyCatalog
                                                      .find { |country| country.currency_code == code }
                                                      &.common_name
     end
-
   end
 end

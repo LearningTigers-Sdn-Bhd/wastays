@@ -34,9 +34,9 @@ RSpec.describe "Hotel inventory calendar", type: :system do
     create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 333, currency: "MYR", min_stay: 2, stop_sell: true)
 
     visit hotel_inventory_index_path(hotel, start_date: Date.current)
-    expect(page).to have_content("Rates & Availability Calendar")
+    expect(page).to have_content("Rates & Availability")
     expect(page).to have_css("[data-testid='availability-cell-#{room_type.id}-#{Date.current}']", text: "2")
-    expect(page).to have_css("[data-testid='rate-cell-#{room_type.id}-#{rate_plan.id}-#{Date.current}']", text: "RM333")
+    expect(page).to have_css("[data-testid='rate-cell-#{room_type.id}-#{rate_plan.id}-#{Date.current}']", text: "RM 333.00")
     expect(page).to have_css("[data-testid='rate-cell-#{room_type.id}-#{rate_plan.id}-#{Date.current}']", text: "MIN2")
     expect(page).to have_css("[data-testid='rate-cell-#{room_type.id}-#{rate_plan.id}-#{Date.current}']", text: "STOP")
   end

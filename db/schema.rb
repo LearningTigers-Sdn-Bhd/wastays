@@ -222,7 +222,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.string "payout_status"
     t.datetime "payout_at"
     t.string "payout_reference"
-    t.bigint "payout_batch_id"
+    t.string "payout_batch_id"
     t.string "source", default: "internal"
     t.string "external_reference"
     t.string "channel_manager_reference"
@@ -238,7 +238,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
-    t.index ["payout_batch_id"], name: "index_bookings_on_payout_batch_id"
     t.index ["source"], name: "index_bookings_on_source"
     t.index ["status"], name: "index_bookings_on_status"
   end
@@ -377,11 +376,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.string "whatsapp_number"
     t.text "ai_persona"
     t.string "openai_api_key"
+    t.jsonb "amenities", default: [], null: false
+    t.string "slug", null: false
     t.boolean "ai_provider_enabled", default: false
     t.string "ai_provider_name"
     t.text "ai_provider_key"
-    t.jsonb "amenities", default: [], null: false
-    t.string "slug", null: false
     t.string "ai_concierge_tone", default: "basic", null: false
     t.jsonb "faq", default: [], null: false
     t.jsonb "policy", default: [], null: false
@@ -947,7 +946,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
   add_foreign_key "booking_rooms", "room_types"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
-  add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
   add_foreign_key "hotel_counters", "hotels"

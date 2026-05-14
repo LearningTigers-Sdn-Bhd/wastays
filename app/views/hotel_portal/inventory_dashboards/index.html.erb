@@ -59,7 +59,7 @@
 
       <div class="flex flex-wrap items-center gap-3">
         <!-- Room Filter -->
-        <select class="h-9 rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs font-bold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-0"
+        <select id="room_type_id" name="room_type_id" class="h-9 rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs font-bold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-0"
                 onchange="window.location.href = '<%= hotel_inventory_index_path(current_hotel) %>?start_date=<%= @start_date %>&<%= @view_currencies.map { |c| "view_currencies[]=" + c }.join("&") %>&room_type_id=' + this.value">
           <option value="">All room types</option>
           <%= options_from_collection_for_select(@calendar.room_type_options, :id, :name, @calendar.selected_room_type_id) %>

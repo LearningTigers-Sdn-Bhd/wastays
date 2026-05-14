@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require "ostruct"
 
 module HotelPortal
@@ -147,12 +148,12 @@ module HotelPortal
       rate = rates_by_rate_plan.dig(rate_plan.id, date)
       native_currency = default_currency
       price = rate&.price || (native_currency == default_currency ? room_type.base_price : nil)
-      
+
       display_conversion = display_conversion_for(price, from: native_currency)
-      
+
       # If conversion is requested but fails due to missing exchange rate
       conversion_missing = price.present? && display_currency != native_currency && display_conversion.nil?
-      
+
       display_price = display_conversion&.amount || price
       formatted_currency = (display_conversion.present? || conversion_missing) ? display_currency : native_currency
 

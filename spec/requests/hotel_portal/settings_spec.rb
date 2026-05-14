@@ -34,7 +34,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel))
+      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
       follow_redirect!
       expect(response.body).to include('Settings updated successfully.')
 
@@ -60,7 +60,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel))
+      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
       config = NotificationConfig.find_by!(hotel: hotel, notification_type: 'check_in_confirmation')
       expect(config.enabled).to be(false)
       expect(config.channels).to eq([ 'email' ])
@@ -80,7 +80,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel))
+      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
       config = NotificationConfig.find_by!(hotel: hotel, notification_type: 'post_stay_review_request')
       expect(config.enabled).to be(true)
       expect(config.channels).to match_array(%w[whatsapp email])
@@ -101,7 +101,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel))
+      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
       config = NotificationConfig.find_by!(hotel: hotel, notification_type: "pre_arrival_notification")
       expect(config.enabled).to be(true)
       expect(config.channels).to match_array(%w[whatsapp email])
@@ -118,7 +118,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel))
+      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
       config = NotificationConfig.find_by!(hotel: hotel, notification_type: "check_out_receipt_message")
       expect(config.enabled).to be(true)
       expect(config.channels).to match_array(%w[whatsapp email])
@@ -146,7 +146,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel))
+      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
       config = NotificationConfig.find_by!(hotel: hotel, notification_type: "in_stay_guest_messaging")
       expect(config.enabled).to be(true)
       expect(config.channels).to match_array(%w[whatsapp email])
@@ -168,7 +168,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel))
+      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "banking"))
       follow_redirect!
       expect(response.body).to include('Settings updated successfully.')
       expect(hotel.reload.status).to eq('registered')
@@ -217,7 +217,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel))
+      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "general"))
       follow_redirect!
       expect(response.body).to include('Payment gateway credentials are managed by superadmin.')
       expect(hotel.payment_settings.find_by(gateway: 'razorpay')).to be_nil
@@ -234,7 +234,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel))
+      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "ai"))
       follow_redirect!
       expect(response.body).to include('Settings updated successfully.')
 

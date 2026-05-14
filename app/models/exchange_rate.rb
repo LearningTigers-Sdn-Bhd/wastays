@@ -17,7 +17,7 @@ class ExchangeRate < ApplicationRecord
 
   def self.rate_for(from, to)
     return 1.to_d if from == to
-    
+
     # Try direct rate first
     direct_rate = active.find_by(base_currency: from, currency_code: to)
     return direct_rate.rate if direct_rate

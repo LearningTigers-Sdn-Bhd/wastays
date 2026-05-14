@@ -5,7 +5,7 @@ RSpec.describe DisplayCurrencyResolver do
   let(:cookies) { {} }
 
   before do
-    create(:exchange_rate, currency_code: 'USD', rate_to_myr: 4.0)
+    create(:exchange_rate, base_currency: 'MYR', currency_code: 'USD', rate: 0.25)
     allow_any_instance_of(described_class).to receive(:country_code_from_ip).and_return(nil)
   end
 

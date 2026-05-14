@@ -22,7 +22,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(response).to have_http_status(:success)
 
       page = Capybara.string(response.body)
-      expect(page).to have_content("Rates & Availability Calendar")
+      expect(page).to have_content("Rates & Availability")
       expect(page).to have_css("[data-testid='inventory-calendar-grid']")
       expect(page).to have_button("Bulk Edit")
       expect(page).to have_content("Advanced Pricing & Overrides")
@@ -99,7 +99,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: Date.current.to_s, display_currency: "MYR", room_type_id: room_type.id.to_s, rate_plan_id: rate_plan.id.to_s))
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: Date.current.to_s, room_type_id: room_type.id.to_s, rate_plan_id: rate_plan.id.to_s))
       expect(rate_plan.room_rates.find_by(date: Date.current, currency: "MYR").price.to_f).to eq(333.0)
     end
   end

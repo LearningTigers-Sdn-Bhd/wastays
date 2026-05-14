@@ -8,9 +8,9 @@ RSpec.describe CurrencyConverter do
     hotel = create(:hotel, default_currency: 'USD')
     # 1 USD = 4 MYR, 1 USD = 0.8 EUR (inverse of 1 EUR = 1.25 USD)
     create(:exchange_rate, base_currency: 'USD', currency_code: 'EUR', rate: 0.8)
-    
+
     conversion = CurrencyConverter.convert(100, from: 'MYR', to: 'EUR', hotel: hotel)
-    
+
     # 100 MYR -> 25 USD -> 20 EUR
     expect(conversion.amount).to eq(20.0)
     expect(conversion.rate).to eq(0.2)

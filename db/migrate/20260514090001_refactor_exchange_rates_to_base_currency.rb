@@ -8,7 +8,7 @@ class RefactorExchangeRatesToBaseCurrency < ActiveRecord::Migration[8.0]
 
     # 3. Update the index to include base_currency
     remove_index :exchange_rates, :currency_code
-    add_index :exchange_rates, [:base_currency, :currency_code], unique: true
+    add_index :exchange_rates, [ :base_currency, :currency_code ], unique: true
 
     # 4. Remove the check constraint and add a new one
     execute "ALTER TABLE exchange_rates DROP CONSTRAINT exchange_rates_rate_to_myr_positive"
@@ -19,7 +19,7 @@ class RefactorExchangeRatesToBaseCurrency < ActiveRecord::Migration[8.0]
     remove_check_constraint :exchange_rates, name: "exchange_rates_rate_positive"
     execute "ALTER TABLE exchange_rates ADD CONSTRAINT exchange_rates_rate_to_myr_positive CHECK (rate > 0)"
 
-    remove_index :exchange_rates, [:base_currency, :currency_code]
+    remove_index :exchange_rates, [ :base_currency, :currency_code ]
     add_index :exchange_rates, :currency_code, unique: true
 
     rename_column :exchange_rates, :rate, :rate_to_myr

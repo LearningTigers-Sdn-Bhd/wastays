@@ -34,7 +34,7 @@ RSpec.describe BookingEngine::CreateQuote do
     end
 
     it "stores display currency snapshot separately from charge currency" do
-      create(:exchange_rate, currency_code: "USD", rate_to_myr: 4.0)
+      create(:exchange_rate, base_currency: "MYR", currency_code: "USD", rate: 0.25)
       service = described_class.new(params.merge(display_currency: "USD"))
       result = service.call
 

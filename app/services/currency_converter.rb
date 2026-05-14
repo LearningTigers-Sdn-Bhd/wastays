@@ -20,12 +20,12 @@ class CurrencyConverter
 
     # 1. Try direct or inverse rate from global table
     rate = ExchangeRate.rate_for(source_currency, target_currency)
-    
+
     # 2. If not found, try triangulation through MYR (legacy/fallback)
     if rate.nil?
       source_to_myr = ExchangeRate.rate_for(source_currency, "MYR")
       target_to_myr = ExchangeRate.rate_for(target_currency, "MYR")
-      
+
       if source_to_myr && target_to_myr
         rate = source_to_myr / target_to_myr
       end
@@ -36,7 +36,7 @@ class CurrencyConverter
       base = @hotel.default_currency
       source_to_base = ExchangeRate.rate_for(base, source_currency) # Often 1 Base = X Source
       target_to_base = ExchangeRate.rate_for(base, target_currency)
-      
+
       if source_to_base && target_to_base
         # If 1 Base = S source and 1 Base = T target
         # Then S source = T target => 1 source = T/S target

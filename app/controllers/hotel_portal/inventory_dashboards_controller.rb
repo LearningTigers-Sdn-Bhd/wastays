@@ -7,16 +7,16 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     @start_date = (params[:start_date] || Date.today).to_date
     @end_date = @start_date + 13.days
     @view_mode = "combined"
-    
+
     # Handle multiple view currencies
     @hotel_base_currency = current_hotel.default_currency || "MYR"
     requested_currencies = Array(params[:view_currencies]).reject(&:blank?)
     requested_currencies << @hotel_base_currency if requested_currencies.empty?
     @view_currencies = requested_currencies.uniq.select { |c| CurrencyCatalog.valid?(c) }
-    
+
     # Primary display currency is the first one in the list
     @display_currency = @view_currencies.first
-    
+
     # Check if exchange rates are set for all view currencies (relative to base)
     @missing_rates = @view_currencies.reject do |currency|
       currency == @hotel_base_currency || ExchangeRate.rate_for(@hotel_base_currency, currency).present?
@@ -139,7 +139,16 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @end_date = @start_date + 13.days
       @view_mode = "combined"
       @room_types = current_hotel.room_types.order(:id)
-      @display_currency = normalized_currency(params[:display_currency], fallback: current_hotel.default_currency || "MYR")
+
+      @hotel_base_currency = current_hotel.default_currency || "MYR"
+      requested_currencies = Array(params[:view_currencies]).reject(&:blank?)
+      requested_currencies << @hotel_base_currency if requested_currencies.empty?
+      @view_currencies = requested_currencies.uniq.select { |c| CurrencyCatalog.valid?(c) }
+      @display_currency = @view_currencies.first
+      @missing_rates = @view_currencies.reject do |currency|
+        currency == @hotel_base_currency || ExchangeRate.rate_for(@hotel_base_currency, currency).present?
+      end
+
       @calendar = build_calendar
       @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_params(pricing_params)
       @pricing_form.errors = sync_result[:errors] || {}
