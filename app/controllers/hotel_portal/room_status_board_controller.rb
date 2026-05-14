@@ -10,6 +10,13 @@ module HotelPortal
       @board_layout = parse_board_layout
       @board_query_params = { days: @board_days, layout: @board_layout }
       @room_status_board = Rooms::RoomStatusBoardBuilder.new(hotel: current_hotel, start_date: @start_date, days: @board_days).call
+
+      @presenter = RoomStatusBoardPresenter.new(
+        room_status_board: @room_status_board,
+        start_date: @start_date,
+        board_days: @board_days,
+        board_layout: @board_layout
+      )
     end
 
     private

@@ -700,6 +700,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_032536) do
     t.index ["slug"], name: "index_roles_on_slug"
   end
 
+  create_table "room_blocks", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "room_type_id", null: false
+    t.string "room_number"
+    t.date "start_date"
+    t.date "end_date"
+    t.string "block_type"
+    t.text "reason"
+    t.text "notes"
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "completed_at"
+    t.index ["hotel_id"], name: "index_room_blocks_on_hotel_id"
+    t.index ["room_type_id"], name: "index_room_blocks_on_room_type_id"
+    t.index ["user_id"], name: "index_room_blocks_on_user_id"
+  end
+
   create_table "room_inventories", force: :cascade do |t|
     t.bigint "room_type_id", null: false
     t.date "date", null: false
@@ -947,6 +965,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_032536) do
   add_foreign_key "role_permissions", "permissions"
   add_foreign_key "role_permissions", "roles"
   add_foreign_key "roles", "accounts"
+  add_foreign_key "room_blocks", "hotels"
+  add_foreign_key "room_blocks", "room_types"
+  add_foreign_key "room_blocks", "users"
   add_foreign_key "room_inventories", "room_types"
   add_foreign_key "room_locks", "hotels"
   add_foreign_key "room_locks", "room_types"

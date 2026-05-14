@@ -1,6 +1,10 @@
 require_relative "../app/constraints/superadmin_constraint"
 
 Rails.application.routes.draw do
+  namespace :hotel_portal do
+    get "room_blocks/create"
+    get "room_blocks/destroy"
+  end
   if Rails.env.development?
     require "letter_opener_web"
     mount LetterOpenerWeb::Engine, at: "/letter_opener"
@@ -304,5 +308,8 @@ Rails.application.routes.draw do
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board
     resources :room_statuses, only: [ :update ]
+    resources :room_blocks, only: [ :create, :update, :destroy ] do
+      post :finish, on: :member
+    end
   end
 end

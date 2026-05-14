@@ -111,5 +111,41 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
       expect(response.body).to include('id="start_date"')
       expect(response.body).to include('id="days"')
     end
+
+    it "renders correctly with awaiting_inspection status and shows action dropdown" do
+      sign_in_with_permissions("view_room_readiness", "manage_room_status")
+      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "awaiting_inspection")
+
+      get hotel_room_status_board_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Awaiting Inspection")
+      expect(response.body).to include("Actions")
+      expect(response.body).to include("Send back to cleaning")
+      expect(response.body).to include("Ready")
+    end
+
+    it "renders status notes in the tooltip when present" do
+      sign_in_with_permissions("view_room_readiness")
+      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "inspection_failed", notes: "Dust on headboard")
+
+      get hotel_room_status_board_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Dust on headboard")
+    end
+
+    it "renders correctly with an unknown status using fallback styles" do
+      sign_in_with_permissions("view_room_readiness")
+      # Bypass validation to create a room status with an unknown status
+      rs = build(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "unknown_status")
+      rs.save!(validate: false)
+
+      get hotel_room_status_board_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Unknown Status")
+      expect(response.body).to include("bg-slate-400")
+    end
   end
 end

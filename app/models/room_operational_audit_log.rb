@@ -1,7 +1,13 @@
 # frozen_string_literal: true
 
 class RoomOperationalAuditLog < ApplicationRecord
-  EVENT_TYPES = %w[room_status_changed checkout_marked_pending_cleaning assignment_override].freeze
+  EVENT_TYPES = %w[
+    room_status_changed
+    checkout_marked_pending_cleaning
+    assignment_override
+    room_blocked_auto_status
+    room_block_removed_auto_status
+  ].freeze
 
   belongs_to :hotel
   belongs_to :room_type, optional: true
