@@ -36,7 +36,7 @@ RSpec.describe "Public::Hotels", type: :request do
       expect(response).to have_http_status(:success)
     end
 
-    it "shows the search popup only when edit search is requested" do
+    it "shows the search bar header with date pill" do
       get "/hotels/#{hotel.id}", params: {
         check_in: Date.current.to_s,
         check_out: Date.tomorrow.to_s,
@@ -46,19 +46,8 @@ RSpec.describe "Public::Hotels", type: :request do
       }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).not_to include("Select Your Stay Dates")
-
-      get "/hotels/#{hotel.id}", params: {
-        check_in: Date.current.to_s,
-        check_out: Date.tomorrow.to_s,
-        adults: 2,
-        children: 0,
-        room_count: 1,
-        edit_search: 1
-      }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Select Your Stay Dates")
+      expect(response.body).to include("Check-In / Out")
+      expect(response.body).to include("rate-calendar")
     end
   end
 end

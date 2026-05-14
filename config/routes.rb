@@ -71,7 +71,9 @@ Rails.application.routes.draw do
 
   # Public Booking Engine
   scope module: :public do
-    resources :hotels, only: [ :index, :show ]
+    resources :hotels, only: [ :index, :show ] do
+      get :rate_calendar, on: :member
+    end
     resources :quotes, only: [ :create, :show ] do
       member do
         get :guest_lookup

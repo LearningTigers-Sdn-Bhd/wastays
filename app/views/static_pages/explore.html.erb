@@ -1,7 +1,7 @@
 <div id="top" class="relative overflow-x-hidden bg-landing-bg" data-controller="scroll-reveal">
 
   <!-- ─── HERO ─── -->
-  <div class="relative flex min-h-[100svh] flex-col overflow-visible lg:h-[100dvh] lg:overflow-hidden">
+  <div class="relative flex min-h-[100svh] flex-col overflow-visible lg:h-[100dvh]">
     <!-- Background image -->
     <div class="absolute inset-0">
       <img
@@ -18,7 +18,7 @@
     <!-- Subtle top vignette -->
     <div class="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-black/60 to-transparent z-10"></div>
 
-    <div class="relative z-20 flex-1 flex flex-col items-center justify-center max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <div class="relative z-40 flex-1 flex flex-col items-center justify-center max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
 
       <!-- Eyebrow -->
       <div class="inline-flex items-center gap-x-4 mb-6 sm:mb-8 animate-hero-badge">
@@ -38,57 +38,11 @@
 
       <!-- Search form -->
       <div id="search-hotels" class="max-w-6xl w-full mx-auto scroll-mt-24 animate-hero-buttons">
-        <%= form_with url: hotels_path, method: :get, class: "bg-white/95 backdrop-blur-2xl rounded-[2rem] sm:rounded-full shadow-2xl shadow-black/60 p-2 sm:p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-1" do |f| %>
-
-          <!-- Destination -->
-          <div class="flex flex-[1.2] items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-neutral-bg/90 transition-all duration-300 group">
-            <svg class="w-5 h-5 sm:w-6 h-6 text-brand-primary/60 flex-none group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-            <div class="flex-1 min-w-0 text-left">
-              <p class="text-[10px] sm:text-[11px] font-bold text-neutral-text-secondary uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Destination</p>
-              <%= f.text_field :city,
-                  placeholder: "Where are you going?",
-                  class: "w-full bg-transparent text-sm sm:text-base font-bold text-neutral-text-primary placeholder-neutral-text-secondary/40 focus:outline-none",
-                  value: params[:city] %>
-            </div>
-          </div>
-
-          <div class="hidden sm:block w-px h-10 bg-neutral-border/40"></div>
-
-          <!-- Check-in / Check-out combined -->
-          <div class="flex flex-[1.8] items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-neutral-bg/90 transition-all duration-300 group">
-            <svg class="w-5 h-5 sm:w-6 h-6 text-brand-primary/60 flex-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
-            <div class="flex-1 min-w-0 text-left">
-              <p class="text-[10px] sm:text-[11px] font-bold text-neutral-text-secondary uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Check-in / Check-out</p>
-              <div class="flex items-center gap-x-2">
-                <%= f.date_field :check_in,
-                    class: "bg-transparent text-sm sm:text-base font-bold text-neutral-text-primary focus:outline-none cursor-pointer w-full sm:w-[145px]",
-                    value: params[:check_in] || Date.today.to_s %>
-                <span class="text-neutral-text-secondary/30 font-light">|</span>
-                <%= f.date_field :check_out,
-                    class: "bg-transparent text-sm sm:text-base font-bold text-neutral-text-primary focus:outline-none cursor-pointer w-full sm:w-[145px]",
-                    value: params[:check_out] || Date.tomorrow.to_s %>
-              </div>
-            </div>
-          </div>
-
-          <div class="hidden sm:block w-px h-10 bg-neutral-border/40"></div>
-
-          <!-- Rooms -->
-          <div class="flex flex-1 items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-neutral-bg/90 transition-all duration-300 group">
-            <svg class="w-5 h-5 sm:w-6 h-6 text-brand-primary/60 flex-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75"/></svg>
-            <div class="flex-1 min-w-0 text-left">
-              <p class="text-[10px] sm:text-[11px] font-bold text-neutral-text-secondary uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Rooms</p>
-              <%= f.select :rooms,
-                  options_for_select([[1,1],[2,2],[3,3],[4,4],[5,5]], params[:rooms] || 1),
-                  {},
-                  class: "w-full bg-transparent text-sm sm:text-base font-bold text-neutral-text-primary focus:outline-none cursor-pointer" %>
-            </div>
-          </div>
-
-          <%= f.submit "Find Stays",
-              class: "btn btn-primary px-10 sm:px-12 py-4 sm:py-5 rounded-full font-bold text-base sm:text-lg cursor-pointer flex-none hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 sm:ml-2" %>
-
-        <% end %>
+        <%= render "explore_search_bar",
+            city: params[:city],
+            check_in: params[:check_in],
+            check_out: params[:check_out],
+            rooms: params[:rooms] %>
       </div>
 
     </div>
