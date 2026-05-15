@@ -4,11 +4,12 @@ require "ostruct"
 
 module Bookings
   class TransitionStatus
-    def initialize(booking:, status:, timestamp: nil, user: nil)
+    def initialize(booking:, status:, timestamp: nil, user: nil, options: {})
       @booking = booking
       @status = status.to_s
       @timestamp = timestamp || Time.current
       @user = user
+      @options = options
     end
 
     def call
@@ -29,6 +30,15 @@ module Bookings
     private
 
     def check_in
+      business_date = @timestamp.to_date
+      is_retroactive = NightAudit.closed_for_date?(@booking.hotel_id, business_date)
+
+      if is_retroactive
+        unless @options[:override_night_audit] && @options[:reason].present?
+          return failure("The business date #{business_date} is already closed by a night audit. Please provide an override flag and reason for retroactive check-in.")
+        end
+      end
+
       folio_number = HotelCounter.increment!(hotel: @booking.hotel, type: "folio")
       guest_reg    = HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
 
@@ -38,10 +48,20 @@ module Bookings
           checked_in_at: @timestamp,
           guest_registration_number: guest_reg
         )
-        @booking.create_booking_folio!(folio_number: folio_number)
+        folio = @booking.create_booking_folio!(folio_number: folio_number)
+
+        # Initialize folio with charges and existing payments
+        Folios::PostInitialCharges.call(folio: folio, user: @user, options: @options)
+        Folios::SyncExistingPayments.call(folio: folio, user: @user, options: @options)
       end
 
-      Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "check_in")
+      metadata = {}
+      if is_retroactive
+        metadata[:retroactive_checkin] = true
+        metadata[:retroactive_reason] = @options[:reason]
+      end
+
+      Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "check_in", metadata: metadata)
       Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
       Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
       success

@@ -207,11 +207,18 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     # Apply nested attributes (like room assignment) if provided in the form
     @booking.assign_attributes(booking_params) if params[:booking].present?
 
+    options = {}
+    if params[:override_night_audit] == "1"
+      options[:override_night_audit] = true
+      options[:reason] = params[:retroactive_reason]
+    end
+
     result = Bookings::TransitionStatus.new(
       booking: @booking,
       status: status,
       timestamp: timestamp,
-      user: current_user
+      user: current_user,
+      options: options
     ).call
 
     if result.success?

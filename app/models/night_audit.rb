@@ -1,6 +1,7 @@
 class NightAudit < ApplicationRecord
   belongs_to :hotel
   belongs_to :performed_by_user, class_name: "User", optional: true
+  has_many :night_audit_logs, dependent: :destroy
 
   STATUSES = %w[pending running completed blocked failed].freeze
   TRIGGER_MODES = %w[manual scheduled].freeze
@@ -11,6 +12,10 @@ class NightAudit < ApplicationRecord
   validates :hotel_id, uniqueness: { scope: :business_date }
 
   scope :recent_first, -> { order(business_date: :desc, created_at: :desc) }
+
+  def self.closed_for_date?(hotel_id, date)
+    exists?(hotel_id: hotel_id, business_date: date, status: "completed")
+  end
 
   def completed?
     status == "completed"

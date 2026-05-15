@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_15_093100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -305,6 +305,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.check_constraint "rate > 0::numeric", name: "exchange_rates_rate_positive"
   end
 
+  create_table "folio_transactions", force: :cascade do |t|
+    t.bigint "booking_folio_id", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "transaction_type", null: false
+    t.string "category", null: false
+    t.date "posting_date", null: false
+    t.string "description"
+    t.bigint "user_id"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "booking_folio_id, ((metadata ->> 'payment_transaction_id'::text))", name: "index_folio_transactions_on_gateway_payment", unique: true, where: "(metadata ? 'payment_transaction_id'::text)"
+    t.index ["booking_folio_id"], name: "index_folio_transactions_on_booking_folio_id"
+    t.index ["category"], name: "index_folio_transactions_on_category"
+    t.index ["posting_date"], name: "index_folio_transactions_on_posting_date"
+    t.index ["transaction_type"], name: "index_folio_transactions_on_transaction_type"
+    t.index ["user_id"], name: "index_folio_transactions_on_user_id"
+  end
+
   create_table "guests", force: :cascade do |t|
     t.string "name"
     t.string "email"
@@ -454,6 +473,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_nearby_attractions_on_hotel_id"
+  end
+
+  create_table "night_audit_logs", force: :cascade do |t|
+    t.bigint "night_audit_id", null: false
+    t.bigint "hotel_id", null: false
+    t.bigint "user_id"
+    t.string "action_type", null: false
+    t.text "message"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["action_type"], name: "index_night_audit_logs_on_action_type"
+    t.index ["hotel_id"], name: "index_night_audit_logs_on_hotel_id"
+    t.index ["night_audit_id"], name: "index_night_audit_logs_on_night_audit_id"
+    t.index ["user_id"], name: "index_night_audit_logs_on_user_id"
   end
 
   create_table "night_audits", force: :cascade do |t|
@@ -954,6 +988,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
   add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
+  add_foreign_key "folio_transactions", "booking_folios"
+  add_foreign_key "folio_transactions", "users"
   add_foreign_key "hotel_counters", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotel_taxes", "hotels"
@@ -964,6 +1000,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_090002) do
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
   add_foreign_key "nearby_attractions", "hotels"
+  add_foreign_key "night_audit_logs", "hotels"
+  add_foreign_key "night_audit_logs", "night_audits"
+  add_foreign_key "night_audit_logs", "users"
   add_foreign_key "night_audits", "hotels"
   add_foreign_key "night_audits", "users", column: "performed_by_user_id"
   add_foreign_key "notification_configs", "hotels"

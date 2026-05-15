@@ -65,6 +65,11 @@ module Payments
       transaction = find_existing(attrs) || PaymentTransaction.new
       transaction.assign_attributes(attrs.compact)
       transaction.save!
+
+      if transaction.captured_at.present? && transaction.booking.present? && transaction.booking.booking_folio.present?
+        Folios::RecordPaymentFromGateway.call(transaction)
+      end
+
       transaction
     end
     private_class_method :upsert

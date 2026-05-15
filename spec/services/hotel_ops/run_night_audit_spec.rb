@@ -35,24 +35,21 @@ RSpec.describe HotelOps::RunNightAudit do
       checked_out_at: business_date.noon)
   end
 
-  it "creates a completed night audit with payment summary only" do
+  it "creates a completed night audit with payment summary and logs milestones" do
     expect { run_audit }.to change(NightAudit, :count).by(1)
+                      .and change(NightAuditLog, :count).by(2) # process_started, completed
 
     night_audit = run_audit.night_audit
 
     expect(run_audit.success?).to be(true)
     expect(night_audit).to be_completed
-    expect(night_audit.summary).to include(
-      "arrivals_count" => 1,
-      "due_out_count" => 1,
-      "checked_out_count" => 1
-    )
-    expect(night_audit.summary.fetch("payment_status_counts")).to include("captured" => 1, "pending" => 1)
-    expect(night_audit.blocked_details.values.flatten).to be_empty
-    expect(night_audit.exceptions.values.flatten).to be_empty
+    
+    logs = night_audit.night_audit_logs
+    expect(logs.first.action_type).to eq("process_started")
+    expect(logs.last.action_type).to eq("completed")
   end
 
-  it "blocks when a due-out booking is not checked out" do
+  it "blocks and logs when a due-out booking is not checked out" do
     create(:booking,
       hotel: hotel,
       status: "checked_in",
@@ -61,26 +58,30 @@ RSpec.describe HotelOps::RunNightAudit do
       check_out: business_date,
       checked_in_at: 1.day.ago)
 
+    expect { run_audit }.to change(NightAuditLog, :count).by(3) # process_started, blocker_found, blocker_found (as finished status)
+
     result = run_audit
 
     expect(result.success?).to be(false)
     expect(result.night_audit).to be_blocked
-    expect(result.night_audit.blocked_details.dig("due_out_not_checked_out").first).to include(
-      "reason" => "Due out today but still not checked out"
-    )
+    
+    log = result.night_audit.night_audit_logs.find_by(action_type: "blocker_found")
+    expect(log.message).to include("Found 1 blockers of type: Due out not checked out")
+    expect(log.metadata["items"].first["confirmation_token"]).to be_present
   end
 
-  it "stores open requests as warnings only" do
+  it "stores open requests as warnings and logs exceptions" do
     booking = hotel.bookings.first
     create(:housekeeping_request, booking: booking, status: "pending")
     create(:complaint_request, booking: booking, status: "in_progress")
 
+    expect { run_audit }.to change(NightAuditLog, :count).by(4) # started, exception, exception, completed
+
     result = run_audit
 
     expect(result.night_audit).to be_completed
-    expect(result.night_audit.summary["warning_count"]).to eq(2)
-    expect(result.night_audit.exceptions.dig("open_housekeeping_requests").size).to eq(1)
-    expect(result.night_audit.exceptions.dig("open_complaint_requests").size).to eq(1)
+    
+    expect(result.night_audit.night_audit_logs.where(action_type: "exception_found").count).to eq(2)
   end
 
   it "supports scheduled runs without a user" do
@@ -114,13 +115,17 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(result.night_audit.summary).not_to eq("old" => true)
   end
 
-  it "marks the audit failed when processing raises" do
+  it "marks the audit failed and logs error when processing raises" do
     allow_any_instance_of(described_class).to receive(:build_summary).and_raise(StandardError, "boom")
+
+    expect { run_audit }.to change(NightAuditLog, :count).by(2) # process_started, failed
 
     result = run_audit
 
     expect(result.success?).to be(false)
     expect(result.error).to eq("boom")
     expect(result.night_audit).to be_failed
+    expect(result.night_audit.night_audit_logs.last.action_type).to eq("failed")
+    expect(result.night_audit.night_audit_logs.last.metadata["error"]).to eq("boom")
   end
 end

@@ -29,6 +29,21 @@ RSpec.describe Bookings::TransitionStatus do
         expect(log.action_type).to eq("check_in")
         expect(log.auditable).to eq(booking)
       end
+
+      it "rolls back the folio when initial charge posting fails" do
+        create(:booking_room, booking: booking, subtotal: 100.0)
+
+        failed_result = OpenStruct.new(success?: false, error: "posting blocked")
+        insert_service = instance_double(Folios::InsertTransaction, call: failed_result)
+        allow(Folios::InsertTransaction).to receive(:new).and_return(insert_service)
+
+        result = subject.call
+
+        expect(result.success?).to be false
+        expect(result.error).to include("posting blocked")
+        expect(booking.reload.status).to eq("confirmed")
+        expect(booking.booking_folio).to be_nil
+      end
     end
 
     context "when status is completed" do
