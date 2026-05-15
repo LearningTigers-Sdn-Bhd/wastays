@@ -26,6 +26,7 @@ export default class extends Controller {
     "ratePlanFields",
     "quantityField",
     "statusField",
+    "currentQuantityHint",
     "currentStatusHint",
     "priceField",
     "currencyField",
@@ -39,11 +40,16 @@ export default class extends Controller {
     "syncCounter",
     "reviewDialog",
     "reviewList",
-    "finalSyncButton"
+    "finalSyncButton",
+    "navStartDate",
+    "navRoomType",
+    "successDialog",
+    "info"
   ]
 
   static values = {
     hotelId: String,
+    batchUrl: String,
     defaultMode: String,
     defaultStart: String,
     defaultEnd: String,
@@ -53,6 +59,8 @@ export default class extends Controller {
 
   initialize() {
     this.stagedChanges = []
+    this.initialValues = {}
+    this.touchedFields = new Set()
   }
 
   connect() {
@@ -64,6 +72,22 @@ export default class extends Controller {
     this.toggleSections()
     this.loadStagedChanges()
     this.updateSyncButton()
+
+    // Re-apply highlights when Turbo Frame reloads
+    const frame = document.getElementById("inventory_calendar_frame")
+    if (frame) {
+      this.reapplyHighlightsHandler = () => {
+        this.stagedChanges.forEach(change => this.highlightStagedCells(change))
+      }
+      frame.addEventListener("turbo:frame-load", this.reapplyHighlightsHandler)
+    }
+  }
+
+  disconnect() {
+    const frame = document.getElementById("inventory_calendar_frame")
+    if (frame && this.reapplyHighlightsHandler) {
+      frame.removeEventListener("turbo:frame-load", this.reapplyHighlightsHandler)
+    }
   }
 
   loadStagedChanges() {
@@ -106,10 +130,19 @@ export default class extends Controller {
   openBulk(event) {
     if (event) event.preventDefault()
     this.resetForm()
+    this.touchedFields.clear()
     this.titleTarget.textContent = "Bulk Edit"
-    this.subtitleTarget.textContent = "Stage updates across a date range and multiple categories."
+    this.subtitleTarget.textContent = "Updates will be detected automatically as you change fields."
     this.submitButtonTarget.value = "Stage Changes"
     this.currentStatusHintTarget.textContent = ""
+    
+    // In bulk mode, we treat all fields as 'empty' initially
+    this.initialValues = {
+      quantity: "", status: "", price: "", 
+      min_stay: "", max_stay: "", 
+      closed_to_arrival: false, closed_to_departure: false, stop_sell: false
+    }
+
     this.openDialog()
   }
 
@@ -117,7 +150,13 @@ export default class extends Controller {
     const data = event.currentTarget.dataset
 
     this.resetForm()
-    this.setMode(data.mode || this.currentMode())
+    this.touchedFields.clear()
+    
+    // When clicking a rate cell, we show both Rates and Restrictions by default
+    // so the user can see current values and decide what to change.
+    const mode = data.mode === "rates" ? "combined" : data.mode
+    this.setMode(mode || this.currentMode())
+    
     this.startDateTarget.value = data.date
     this.endDateTarget.value = data.date
     
@@ -141,8 +180,10 @@ export default class extends Controller {
       
       const current = data.status || "open"
       this.currentStatusHintTarget.textContent = `Currently: ${current.toUpperCase()}`
+      this.currentQuantityHintTarget.textContent = `Current: ${data.quantity || 0}`
     } else {
       this.currentStatusHintTarget.textContent = ""
+      this.currentQuantityHintTarget.textContent = ""
       this.priceFieldTarget.value = data.price || ""
       
       const currency = data.currency || this.baseCurrencyValue || this.defaultCurrencyValue || "MYR"
@@ -158,7 +199,33 @@ export default class extends Controller {
     this.titleTarget.textContent = this.titleForMode(data.mode || this.currentMode())
     this.subtitleTarget.textContent = `Staging update for ${data.date}`
     this.submitButtonTarget.value = "Stage Update"
+
+    // Capture initial values for automatic change detection
+    this.initialValues = this.getFormValues()
+
     this.openDialog()
+  }
+
+  getFormValues() {
+    return {
+      quantity: this.quantityFieldTarget.value,
+      status: this.statusFieldTarget.value,
+      price: this.priceFieldTarget.value,
+      min_stay: this.minStayFieldTarget.value,
+      max_stay: this.maxStayFieldTarget.value,
+      closed_to_arrival: this.ctaFieldTarget.checked,
+      closed_to_departure: this.ctdFieldTarget.checked,
+      stop_sell: this.stopSellFieldTarget.checked
+    }
+  }
+
+  toggleInfo(event) {
+    if (event) event.preventDefault()
+    const infoId = event.currentTarget.dataset.infoId
+    const infoBox = this.infoTargets.find(el => el.dataset.infoId === infoId)
+    if (infoBox) {
+      infoBox.classList.toggle("hidden")
+    }
   }
 
   close(event) {
@@ -183,25 +250,63 @@ export default class extends Controller {
       .filter(cb => cb.checked)
       .map(cb => ({ id: cb.value, name: cb.closest("label").querySelector("span").textContent.trim() }))
     
+    const currentValues = this.getFormValues()
+    const modifiedFields = []
+    
+    // Automatic field change detection + Touched detection
+    Object.keys(currentValues).forEach(key => {
+      const current = currentValues[key]
+      const initial = this.initialValues[key]
+      
+      // If user touched/clicked/typed in the field, count it!
+      if (this.touchedFields.has(key)) {
+        modifiedFields.push(key)
+        return
+      }
+
+      // For bulk mode, if field is not empty, it's considered a change
+      const isBulk = this.titleTarget.textContent === "Bulk Edit"
+      
+      if (isBulk) {
+        if (current !== "" && current !== false) modifiedFields.push(key)
+      } else {
+        // Single cell: check for actual diff
+        // We use string conversion for numbers to be safe
+        if (current.toString() !== initial.toString()) {
+          modifiedFields.push(key)
+        }
+      }
+    })
+
+    if (modifiedFields.length === 0) {
+      alert("No changes detected. Please update at least one field.")
+      return
+    }
+
+    const applyInventory = modifiedFields.some(f => ["quantity", "status"].includes(f))
+    const applyRates = modifiedFields.includes("price")
+    const applyRestrictions = modifiedFields.some(f => ["min_stay", "max_stay", "closed_to_arrival", "closed_to_departure", "stop_sell"].includes(f))
+
     const change = {
       id: Math.random().toString(36).substr(2, 9),
       start_date: this.startDateTarget.value,
       end_date: this.endDateTarget.value,
       room_type_ids: selectedRoomTypes.map(rt => rt.id),
       rate_plan_ids: selectedRatePlans.map(rp => rp.id),
-      apply_inventory: this.applyInventoryTarget.checked,
-      apply_rates: this.applyRatesTarget.checked,
-      apply_restrictions: this.applyRestrictionsTarget.checked,
-      quantity: this.quantityFieldTarget.value,
-      status: this.statusFieldTarget.value,
-      price: this.priceFieldTarget.value,
-      currency: this.currencyFieldTarget.value,
-      min_stay: this.minStayFieldTarget.value,
-      max_stay: this.maxStayFieldTarget.value,
-      closed_to_arrival: this.ctaFieldTarget.checked,
-      closed_to_departure: this.ctdFieldTarget.checked,
-      stop_sell: this.stopSellFieldTarget.checked,
-      summary: this.buildSummary(selectedRoomTypes, selectedRatePlans)
+      apply_inventory: applyInventory,
+      apply_rates: applyRates,
+      apply_restrictions: applyRestrictions,
+      modified_fields: modifiedFields,
+      quantity: currentValues.quantity,
+      status: currentValues.status,
+      price: currentValues.price,
+      currency: this.baseCurrencyValue || this.defaultCurrencyValue || "MYR",
+      min_stay: currentValues.min_stay,
+      max_stay: currentValues.max_stay,
+      closed_to_arrival: currentValues.closed_to_arrival,
+      closed_to_departure: currentValues.closed_to_departure,
+      stop_sell: currentValues.stop_sell,
+      summary: this.buildSummary(selectedRoomTypes, selectedRatePlans, modifiedFields, currentValues)
     }
 
     this.stagedChanges.push(change)
@@ -210,32 +315,35 @@ export default class extends Controller {
     this.highlightStagedCells(change)
   }
 
-  buildSummary(selectedRoomTypes, selectedRatePlans) {
+  buildSummary(selectedRoomTypes, selectedRatePlans, modifiedFields, values) {
     const actions = []
     const details = []
     
-    if (this.applyInventoryTarget.checked) {
+    if (modifiedFields.some(f => ["quantity", "status"].includes(f))) {
       actions.push("Inventory")
       const invParts = []
-      if (this.quantityFieldTarget.value !== "") invParts.push(`Qty: ${this.quantityFieldTarget.value}`)
-      if (this.statusFieldTarget.value !== "") invParts.push(`Status: ${this.statusFieldTarget.value}`)
+      if (modifiedFields.includes("quantity") && values.quantity !== "") invParts.push(`Qty: ${values.quantity}`)
+      if (modifiedFields.includes("status") && values.status !== "") invParts.push(`Status: ${values.status}`)
       if (invParts.length > 0) details.push(invParts.join(", "))
     }
     
-    if (this.applyRatesTarget.checked) {
+    if (modifiedFields.includes("price")) {
       actions.push("Rates")
-      details.push(`Price: ${this.currencyFieldTarget.value} ${this.priceFieldTarget.value}`)
+      details.push(`Price: ${this.baseCurrencyValue || "MYR"} ${values.price}`)
     }
     
-    if (this.applyRestrictionsTarget.checked) {
-      actions.push("Restrictions")
+    if (modifiedFields.some(f => ["min_stay", "max_stay", "closed_to_arrival", "closed_to_departure", "stop_sell"].includes(f))) {
       const restr = []
-      if (this.minStayFieldTarget.value) restr.push(`Min Stay: ${this.minStayFieldTarget.value}`)
-      if (this.maxStayFieldTarget.value) restr.push(`Max Stay: ${this.maxStayFieldTarget.value}`)
-      if (this.ctaFieldTarget.checked) restr.push("CTA")
-      if (this.ctdFieldTarget.checked) restr.push("CTD")
-      if (this.stopSellFieldTarget.checked) restr.push("Stop Sell")
-      if (restr.length > 0) details.push(restr.join(", "))
+      if (modifiedFields.includes("min_stay") && values.min_stay) restr.push(`Min Stay: ${values.min_stay}`)
+      if (modifiedFields.includes("max_stay") && values.max_stay) restr.push(`Max Stay: ${values.max_stay}`)
+      if (modifiedFields.includes("closed_to_arrival")) restr.push(values.closed_to_arrival ? "CTA: ON" : "CTA: OFF")
+      if (modifiedFields.includes("closed_to_departure")) restr.push(values.closed_to_departure ? "CTD: ON" : "CTD: OFF")
+      if (modifiedFields.includes("stop_sell")) restr.push(values.stop_sell ? "Stop Sell: ON" : "Stop Sell: OFF")
+      
+      if (restr.length > 0) {
+        actions.push("Restrictions")
+        details.push(restr.join(", "))
+      }
     }
     
     const start = this.formatDate(this.startDateTarget.value)
@@ -422,10 +530,14 @@ export default class extends Controller {
     const id = event.currentTarget.dataset.changeId
     this.stagedChanges = this.stagedChanges.filter(c => c.id !== id)
     this.saveStagedChanges()
+    
+    // Re-render all highlights to reflect the current staged state
+    this.clearAllHighlights()
+    this.stagedChanges.forEach(change => this.highlightStagedCells(change))
+    
     this.renderReviewList()
     this.updateSyncButton()
     if (this.stagedChanges.length === 0) {
-      this.clearAllHighlights()
       this.clearStorage()
       this.closeReview()
     }
@@ -438,7 +550,7 @@ export default class extends Controller {
     this.finalSyncButtonTarget.textContent = "Syncing..."
 
     try {
-      const response = await fetch(`${window.location.pathname}/batch_save_ari`, {
+      const response = await fetch(this.batchUrlValue, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -447,19 +559,44 @@ export default class extends Controller {
         body: JSON.stringify({ updates: this.stagedChanges })
       })
 
+      if (!response.ok && response.status !== 422) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`)
+      }
+
       const result = await response.json()
 
       if (result.success) {
+        // 1. Clear everything locally for immediate real-time feedback
         this.stagedChanges = []
         this.clearStorage()
-        window.location.reload()
+        this.updateSyncButton() // Immediately reset counter to 0
+        this.clearAllHighlights() // Immediately remove dirty marks from cells
+        this.closeReview() // Close the review modal
+        
+        // 2. Reset the final sync button state (it's outside the frame)
+        this.finalSyncButtonTarget.disabled = false
+        this.finalSyncButtonTarget.textContent = this.finalSyncButtonTarget.dataset.syncText || "Confirm & Sync"
+
+        // 3. Reload the calendar table from the server
+        const frame = document.getElementById("inventory_calendar_frame")
+        if (frame) {
+          frame.reload()
+        } else {
+          window.location.reload()
+        }
+
+        // 4. Show success modal
+        if (this.hasSuccessDialogTarget) {
+          this.successDialogTarget.showModal()
+        }
       } else {
         alert(`Error: ${result.error}`)
         this.finalSyncButtonTarget.disabled = false
         this.finalSyncButtonTarget.textContent = "Confirm & Sync"
       }
     } catch (error) {
-      alert("An unexpected error occurred during sync.")
+      console.error("Sync Error:", error)
+      alert(`An unexpected error occurred during sync: ${error.message}`)
       this.finalSyncButtonTarget.disabled = false
       this.finalSyncButtonTarget.textContent = "Confirm & Sync"
     }
@@ -484,12 +621,27 @@ export default class extends Controller {
   }
 
   setMode(mode) {
-    const normalizedMode = ["availability", "rates", "restrictions"].includes(mode) ? mode : "availability"
+    const normalizedMode = ["availability", "rates", "restrictions", "combined"].includes(mode) ? mode : "availability"
     if (this.hasModeTarget) this.modeTarget.value = normalizedMode
     
-    this.applyInventoryTarget.checked = normalizedMode === "availability"
-    this.applyRatesTarget.checked = normalizedMode === "rates"
-    this.applyRestrictionsTarget.checked = normalizedMode === "restrictions"
+    if (normalizedMode === "availability") {
+      this.applyInventoryTarget.value = "1"
+      this.applyRatesTarget.value = "0"
+      this.applyRestrictionsTarget.value = "0"
+    } else if (normalizedMode === "rates") {
+      this.applyInventoryTarget.value = "0"
+      this.applyRatesTarget.value = "1"
+      this.applyRestrictionsTarget.value = "0"
+    } else if (normalizedMode === "restrictions") {
+      this.applyInventoryTarget.value = "0"
+      this.applyRatesTarget.value = "0"
+      this.applyRestrictionsTarget.value = "1"
+    } else if (normalizedMode === "combined") {
+      this.applyInventoryTarget.value = "0"
+      this.applyRatesTarget.value = "1"
+      this.applyRestrictionsTarget.value = "1"
+    }
+
     this.toggleSections()
   }
 
@@ -498,14 +650,25 @@ export default class extends Controller {
   }
 
   toggleSections() {
-    const inventoryEnabled = this.applyInventoryTarget.checked
-    const ratesEnabled = this.applyRatesTarget.checked
-    const restrictionsEnabled = this.applyRestrictionsTarget.checked
-
-    this.inventoryFieldsTarget.classList.toggle("hidden", !inventoryEnabled)
-    this.rateFieldsTarget.classList.toggle("hidden", !ratesEnabled)
-    this.restrictionFieldsTarget.classList.toggle("hidden", !restrictionsEnabled)
-    this.ratePlanFieldsTarget.classList.toggle("hidden", !(ratesEnabled || restrictionsEnabled))
+    const mode = this.currentMode()
+    
+    // In Combined or Rates mode, we show everything except Inventory
+    // In Availability mode, we show only Inventory
+    if (this.hasInventoryFieldsTarget) {
+      this.inventoryFieldsTarget.classList.toggle("hidden", mode !== "availability")
+    }
+    
+    if (this.hasRateFieldsTarget) {
+      this.rateFieldsTarget.classList.toggle("hidden", mode === "availability")
+    }
+    
+    if (this.hasRestrictionFieldsTarget) {
+      this.restrictionFieldsTarget.classList.toggle("hidden", mode === "availability")
+    }
+    
+    if (this.hasRatePlanFieldsTarget) {
+      this.ratePlanFieldsTarget.classList.toggle("hidden", mode === "availability")
+    }
   }
 
   filterRoomTypes() {
@@ -574,19 +737,20 @@ export default class extends Controller {
     this.quantityFieldTarget.value = ""
     this.statusFieldTarget.value = ""
     this.priceFieldTarget.value = ""
+    this.currentStatusHintTarget.textContent = ""
+    this.currentQuantityHintTarget.textContent = ""
     
-    // Reset searchable currency select
-    const currency = this.baseCurrencyValue || this.defaultCurrencyValue || "MYR"
-    this.syncCurrencySelect(currency)
+    // Reset hidden fields
+    if (this.hasCurrencyFieldTarget) {
+      this.currencyFieldTarget.value = this.baseCurrencyValue || "MYR"
+    }
 
     this.minStayFieldTarget.value = ""
     this.maxStayFieldTarget.value = ""
     this.ctaFieldTarget.checked = false
     this.ctdFieldTarget.checked = false
     this.stopSellFieldTarget.checked = false
-    this.applyInventoryTarget.checked = false
-    this.applyRatesTarget.checked = false
-    this.applyRestrictionsTarget.checked = false
+    
     this.toggleSections()
   }
 
@@ -617,5 +781,38 @@ export default class extends Controller {
     if (mode === "rates") return "Update Rates"
     if (mode === "restrictions") return "Update Restrictions"
     return "Update Availability"
+  }
+
+  navigate(event) {
+    if (event) event.preventDefault()
+
+    const startDate = this.navStartDateTarget.value
+    const roomTypeId = this.navRoomTypeTarget.value
+    
+    const url = new URL(window.location.href)
+    url.searchParams.set("start_date", startDate)
+    if (roomTypeId) {
+      url.searchParams.set("room_type_id", roomTypeId)
+    } else {
+      url.searchParams.delete("room_type_id")
+    }
+
+    const frame = document.getElementById("inventory_calendar_frame")
+    if (frame) {
+      frame.src = url.toString()
+    } else {
+      window.location.href = url.toString()
+    }
+  }
+
+  closeSuccess(event) {
+    if (event) event.preventDefault()
+    this.successDialogTarget.close()
+  }
+
+  markTouched(event) {
+    const target = event.currentTarget
+    const fieldName = target.name.split("[").pop().replace("]", "")
+    this.touchedFields.add(fieldName)
   }
 }

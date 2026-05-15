@@ -15,7 +15,16 @@ module ChannelManagers
       start_date = Date.current
       end_date = start_date + 499.days
 
-      ChannelManagers::SyncJob.perform_later(@hotel.id, start_date, end_date)
+      ChannelManagers::SyncJob.perform_later(
+        @hotel.id,
+        start_date,
+        end_date,
+        sync_availability: true,
+        sync_rates: true,
+        sync_restrictions: true,
+        room_type_ids: nil,
+        rate_plan_ids: nil
+      )
 
       OpenStruct.new(success?: true, message: "Full refresh queued for 500 days of data.")
     end

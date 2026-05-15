@@ -73,9 +73,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
             rate_plan_id: "ch_rp_123",
             date_from: start_date.to_s,
             date_to: end_date.to_s,
-            rate: "200.00",
-            currency: "MYR",
-            occupancy: 2
+            rate: "200.00"
           }
         ]
       }).and_return({ "data" => { "id" => "task_2" } })

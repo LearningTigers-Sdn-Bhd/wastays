@@ -46,7 +46,37 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
           if current_hotel.preferred_channel_manager.present?
             s_date = selection_update_params[:start_date]&.to_date
             e_date = selection_update_params[:end_date]&.to_date
-            ChannelManagers::SyncJob.perform_later(current_hotel.id, s_date, e_date) if s_date && e_date
+
+            sync_availability = cast_boolean(selection_update_params[:apply_inventory])
+            sync_rates = cast_boolean(selection_update_params[:apply_rates])
+            sync_restrictions = cast_boolean(selection_update_params[:apply_restrictions])
+
+            # Prepare granular ID-to-window mappings for truly surgical sync
+            rt_ids = selection_update_params[:room_type_ids]&.map(&:to_i) || []
+            rp_ids = selection_update_params[:rate_plan_ids]&.map(&:to_i) || []
+
+            room_type_ids = {}
+            rt_ids.each { |id| room_type_ids[id.to_s] = { "min" => s_date.to_s, "max" => e_date.to_s } }
+
+            rate_plan_ids = {}
+            rp_ids.each { |id| rate_plan_ids[id.to_s] = { "min" => s_date.to_s, "max" => e_date.to_s } }
+            
+            # Map modified fields to all involved rate plans for this single selection
+            modified_fields = Array(selection_update_params[:modified_fields]).reject(&:blank?)
+            rate_plan_fields = {}
+            rp_ids.each { |id| rate_plan_fields[id.to_s] = modified_fields }
+
+            ChannelManagers::SyncJob.perform_later(
+              current_hotel.id,
+              s_date,
+              e_date,
+              sync_availability: sync_availability,
+              sync_rates: sync_rates,
+              sync_restrictions: sync_restrictions,
+              room_type_ids: room_type_ids,
+              rate_plan_ids: rate_plan_ids,
+              rate_plan_fields: rate_plan_fields
+            ) if s_date && e_date
           end
 
           redirect_to hotel_inventory_index_path(current_hotel, redirect_query_params), notice: "Calendar updated successfully."
@@ -68,24 +98,56 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
         :start_date, :end_date, :apply_inventory, :apply_rates, :apply_restrictions,
         :quantity, :status, :price, :currency, :min_stay, :max_stay,
         :closed_to_arrival, :closed_to_departure, :stop_sell,
-        room_type_ids: [], rate_plan_ids: []
+        room_type_ids: [], rate_plan_ids: [], modified_fields: []
       ).to_h.symbolize_keys
     end
 
     errors = []
     min_date = nil
     max_date = nil
+    sync_availability = false
+    sync_rates = false
+    sync_restrictions = false
+    room_type_windows = {}
+    rate_plan_windows = {}
+    rate_plan_fields = {}
 
     begin
       ActiveRecord::Base.transaction do
         Thread.current[:skip_ari_sync] = true
 
         staged_updates.each do |selection|
-          # Track the overall date range for a single final sync
+          # Track the overall date range and sync types for a single final sync
           s_date = selection[:start_date]&.to_date
           e_date = selection[:end_date]&.to_date
+          
+          # Guard against missing dates
+          next unless s_date && e_date
+
           min_date = [ min_date, s_date ].compact.min
           max_date = [ max_date, e_date ].compact.max
+
+          sync_availability ||= cast_boolean(selection[:apply_inventory])
+          sync_rates ||= cast_boolean(selection[:apply_rates])
+          sync_restrictions ||= cast_boolean(selection[:apply_restrictions])
+
+          Array(selection[:room_type_ids]).each do |id|
+            win = room_type_windows[id.to_s] || { "min" => s_date.to_s, "max" => e_date.to_s }
+            win["min"] = [ win["min"].to_date, s_date ].min.to_s
+            win["max"] = [ win["max"].to_date, e_date ].max.to_s
+            room_type_windows[id.to_s] = win
+          end
+
+          Array(selection[:rate_plan_ids]).each do |id|
+            win = rate_plan_windows[id.to_s] || { "min" => s_date.to_s, "max" => e_date.to_s }
+            win["min"] = [ win["min"].to_date, s_date ].min.to_s
+            win["max"] = [ win["max"].to_date, e_date ].max.to_s
+            rate_plan_windows[id.to_s] = win
+
+            # Track which fields were modified for this rate plan
+            rate_plan_fields[id.to_s] ||= Set.new
+            rate_plan_fields[id.to_s].merge(Array(selection[:modified_fields]))
+          end
 
           result = HotelOps::ApplyInventoryDashboardSelection.new(
             hotel: current_hotel,
@@ -100,11 +162,24 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
           end
         end
 
-        # Trigger a single sync job covering the entire updated range
+        # Trigger a single sync job covering the entire updated range with granular ID windows
         if current_hotel.preferred_channel_manager.present? && min_date && max_date
-          ChannelManagers::SyncJob.perform_later(current_hotel.id, min_date, max_date)
+          ChannelManagers::SyncJob.perform_later(
+            current_hotel.id,
+            min_date,
+            max_date,
+            sync_availability: sync_availability,
+            sync_rates: sync_rates,
+            sync_restrictions: sync_restrictions,
+            room_type_ids: room_type_windows,
+            rate_plan_ids: rate_plan_windows,
+            rate_plan_fields: rate_plan_fields.transform_values(&:to_a)
+          )
         end
       end
+    rescue => e
+      Rails.logger.error "Batch ARI Sync Failed: #{e.message}\n#{e.backtrace.first(10).join("\n")}"
+      errors << "Unexpected error: #{e.message}"
     ensure
       Thread.current[:skip_ari_sync] = nil
     end
@@ -334,5 +409,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   def normalized_currency(value, fallback:)
     normalized = CurrencyCatalog.normalize(value, fallback: fallback)
     CurrencyCatalog.valid?(normalized) ? normalized : fallback
+  end
+
+  def cast_boolean(value)
+    ActiveModel::Type::Boolean.new.cast(value)
   end
 end

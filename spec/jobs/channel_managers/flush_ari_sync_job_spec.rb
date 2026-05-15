@@ -9,11 +9,30 @@ RSpec.describe ChannelManagers::FlushAriSyncJob, type: :job do
     Rails.cache.clear
   end
 
-  it "flushes buffered window via sync job and clears cache keys" do
-    Rails.cache.write("channex:ari:window:#{hotel.id}", { "min_date" => "2026-05-10", "max_date" => "2026-05-12" })
+  it 'flushes buffered window via sync job and clears cache keys' do
+    Rails.cache.write("channex:ari:window:#{hotel.id}", {
+      'min_date' => '2026-05-10',
+      'max_date' => '2026-05-12',
+      'sync_availability' => true,
+      'sync_rates' => true,
+      'sync_restrictions' => true,
+      'room_type_windows' => {},
+      'rate_plan_windows' => {},
+      'rate_plan_fields' => {}
+    })
     Rails.cache.write("channex:ari:scheduled:#{hotel.id}", true)
 
-    expect(ChannelManagers::SyncJob).to receive(:perform_now).with(hotel.id, Date.new(2026, 5, 10), Date.new(2026, 5, 12))
+    expect(ChannelManagers::SyncJob).to receive(:perform_now).with(
+      hotel.id,
+      Date.new(2026, 5, 10),
+      Date.new(2026, 5, 12),
+      sync_availability: true,
+      sync_rates: true,
+      sync_restrictions: true,
+      room_type_ids: {},
+      rate_plan_ids: {},
+      rate_plan_fields: {}
+    )
 
     described_class.perform_now(hotel.id)
 

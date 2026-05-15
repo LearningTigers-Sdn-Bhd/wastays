@@ -183,13 +183,22 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
           end_date: end_date,
           room_type_ids: [ room_type.id ],
           apply_inventory: "1",
+          apply_rates: "0",
+          apply_restrictions: "0",
           quantity: "1",
           status: "closed"
         },
         user: user
       ).call
 
-      expect(ChannelManagers::SyncJob).to have_received(:perform_later).once.with(hotel.id, start_date, end_date)
+      expect(ChannelManagers::SyncJob).to have_received(:perform_later).once.with(
+        hotel.id,
+        start_date,
+        end_date,
+        sync_availability: true,
+        sync_rates: false,
+        sync_restrictions: false
+      )
     end
   end
 end
