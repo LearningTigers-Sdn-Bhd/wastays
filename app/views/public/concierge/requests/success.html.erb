@@ -1,0 +1,32 @@
+<% content_for :title, "Request Submitted | #{@hotel.name}" %>
+<%= render layout: "public/concierge/shared/page_shell" do %>
+  <%= render "public/concierge/shared/page_header",
+             back_path: concierge_home_path(@hotel.slug),
+             back_label: "Back to Concierge",
+             eyebrow: "Request Submitted",
+             title_prefix: "We're on",
+             title_accent: "it!",
+             subtitle: "Our team has been notified and will attend to your request shortly." %>
+
+  <div class="text-center">
+    <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+      <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    </div>
+  </div>
+
+  <%= render "public/concierge/shared/success_booking_card", booking: @booking %>
+
+  <% if flash[:concierge_request_kind].present? || flash[:concierge_request_details].present? %>
+    <div class="rounded-2xl border border-neutral-border bg-white p-4 text-left shadow-sm sm:p-5">
+      <p class="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Submitted Request</p>
+      <% if flash[:concierge_request_kind].present? %>
+        <p class="text-xs text-neutral-text-secondary">Type</p>
+        <p class="mb-3 font-semibold text-neutral-text-primary"><%= flash[:concierge_request_kind].to_s.titleize %></p>
+      <% end %>
+      <% if flash[:concierge_request_details].present? %>
+        <p class="text-xs text-neutral-text-secondary">Details</p>
+        <p class="whitespace-pre-wrap text-sm text-neutral-text-primary"><%= flash[:concierge_request_details] %></p>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

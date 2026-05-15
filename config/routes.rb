@@ -69,6 +69,24 @@ Rails.application.routes.draw do
     end
   end
 
+  # Public Concierge (front-desk QR)
+  scope "/concierge/:hotel_slug", module: "public/concierge", as: :concierge do
+    get  "/",                      to: "home#show",            as: :home
+    get  "check-in",               to: "check_ins#new",        as: :check_in
+    post "check-in/lookup",        to: "check_ins#lookup",     as: :check_in_lookup
+    get  "check-in/now",           to: "check_ins#check_in_now",     as: :check_in_now
+    post "check-in/now",           to: "check_ins#submit_check_in",  as: :submit_check_in
+    get  "check-in/success",       to: "check_ins#check_in_success", as: :check_in_success
+    get  "check-out",              to: "check_outs#new",       as: :check_out
+    post "check-out",              to: "check_outs#create",    as: :create_check_out
+    get  "check-out/success",      to: "check_outs#success",   as: :check_out_success
+    get  "book",                   to: "home#book",            as: :book
+    get  "requests/new",           to: "requests#new",         as: :new_request
+    post "requests",               to: "requests#create",      as: :requests
+    get  "requests/success",       to: "requests#success",     as: :request_success
+    get  "contact",                to: "contact#show",         as: :contact
+  end
+
   # Public Booking Engine
   scope module: :public do
     resources :hotels, only: [ :index, :show ] do
@@ -306,6 +324,7 @@ Rails.application.routes.draw do
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"
+    resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
     resources :hotel_taxes, only: %i[index create update destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]

@@ -1,0 +1,59 @@
+<% content_for :title, "Check In Now | #{@hotel.name}" %>
+<%= render layout: "public/concierge/shared/page_shell" do %>
+  <%= render "public/concierge/shared/page_header",
+             back_path: concierge_check_in_path(@hotel.slug),
+             back_label: "Back to Check In",
+             eyebrow: "Check In",
+             title_prefix: "Ready to",
+             title_accent: "check in?",
+             subtitle: "Your pre-check-in is complete. Confirm below to check in and get your room assigned.",
+             divider_suffix: "/60" %>
+  <%= render "public/concierge/shared/error_alert", message: @error %>
+
+  <div class="mb-5 rounded-2xl border border-neutral-border bg-white p-5 shadow-sm">
+    <div class="mb-4 flex items-center gap-3">
+      <div class="flex-none rounded-xl bg-green-50 text-green-600">
+        <svg class="h-10 w-10 p-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <div>
+        <p class="text-xs font-bold uppercase tracking-widest text-green-600">Pre-check-in Complete</p>
+        <p class="text-xs text-neutral-text-secondary">Your details have been verified</p>
+      </div>
+    </div>
+
+    <div class="space-y-1 border-t border-neutral-border pt-4">
+      <p class="font-black text-neutral-text-primary"><%= @booking.guest_name %></p>
+      <p class="text-xs font-mono text-neutral-text-secondary"><%= @booking.confirmation_token %></p>
+      <p class="text-xs text-neutral-text-secondary">
+        <%= concierge_booking_date_range(@booking) %>
+        · <%= concierge_booking_nights(@booking) %>
+      </p>
+      <% @booking.booking_rooms.each do |booking_room| %>
+        <p class="text-xs text-neutral-text-secondary"><%= booking_room.quantity %>x <%= booking_room.room_type_snapshot["name"] %></p>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @error_code == :wrong_date %>
+    <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-700">
+      Your check-in date is <%= @booking.check_in.strftime("%d %b %Y") %>.
+      You can check in on that day<%= @hotel.property_policy&.check_in_time.present? ? " from #{@hotel.property_policy.check_in_time}" : "" %>.
+    </div>
+  <% elsif @error_code == :too_early %>
+    <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-700">
+      Check-in opens at <%= @hotel.property_policy.check_in_time %>. Please come back later or see the front desk.
+    </div>
+  <% elsif @error_code == :no_room_available %>
+    <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-700">
+      No rooms are ready right now. Please proceed to the front desk and our staff will check you in shortly.
+    </div>
+  <% elsif @error_code.present? %>
+    <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
+      Something went wrong. Please try again or see the front desk.
+    </div>
+  <% end %>
+
+  <%= form_with url: concierge_submit_check_in_path(@hotel.slug), method: :post do %>
+    <%= submit_tag "Confirm Check In →", class: "btn btn-primary w-full cursor-pointer py-3 text-sm font-black uppercase tracking-widest" %>
+  <% end %>
+<% end %>

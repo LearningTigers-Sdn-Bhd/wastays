@@ -13,6 +13,7 @@ class Booking < ApplicationRecord
   has_one :refund_request, dependent: :destroy
   has_many :housekeeping_requests, dependent: :destroy
   has_many :complaint_requests, dependent: :destroy
+  has_many :check_out_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :nullify
