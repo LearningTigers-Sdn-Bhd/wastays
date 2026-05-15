@@ -34,15 +34,24 @@ module Folios
           options: merged_options
         ).call
 
-        return failure(result.error) unless result.success?
+        unless result.success?
+          existing_transaction = existing_refund_transaction(force_reload: true)
+          return success(existing_transaction) if existing_transaction
+
+          return failure(result.error)
+        end
 
         success(result.transaction)
       end
+    rescue ActiveRecord::RecordNotUnique
+      existing_transaction = existing_refund_transaction(force_reload: true)
+      existing_transaction ? success(existing_transaction) : failure("Refund was already recorded but could not be loaded")
     end
 
     private
 
-    def existing_refund_transaction
+    def existing_refund_transaction(force_reload: false)
+      @existing_refund_transaction = nil if force_reload
       @existing_refund_transaction ||= @folio.folio_transactions.payment
         .where("metadata->>'refund_request_id' = ?", @refund_request.id.to_s)
         .first

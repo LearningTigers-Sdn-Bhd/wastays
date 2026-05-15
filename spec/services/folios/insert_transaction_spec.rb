@@ -53,6 +53,7 @@ RSpec.describe Folios::InsertTransaction do
           transaction_type: :charge,
           category: "other",
           user: user,
+          description: "Late charge",
           posting_date: closed_date
         ).call
 
@@ -67,6 +68,7 @@ RSpec.describe Folios::InsertTransaction do
           transaction_type: :charge,
           category: "other",
           user: user,
+          description: "Late charge",
           posting_date: closed_date,
           options: { override_night_audit: true }
         ).call

@@ -37,6 +37,31 @@ RSpec.describe Folios::RecordPaymentFromGateway do
     }.not_to change { folio.folio_transactions.payment.count }
   end
 
+  it "returns the existing payment when a duplicate insert loses the race" do
+    existing = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: :payment,
+      category: "gateway_payment",
+      amount: 123.45,
+      metadata: { payment_transaction_id: payment_transaction.id }
+    )
+
+    result = described_class.call(payment_transaction)
+
+    expect(result.success?).to be true
+    expect(result.transaction).to eq(existing)
+  end
+
+  it "fails when a duplicate insert cannot load the conflicting payment" do
+    allow(Folios::InsertTransaction).to receive(:new).and_raise(ActiveRecord::RecordNotUnique)
+
+    result = described_class.call(payment_transaction)
+
+    expect(result.success?).to be false
+    expect(result.error).to eq("Gateway payment was already recorded but could not be loaded")
+  end
+
   it "does not record uncaptured payments" do
     payment_transaction.update!(status: "pending", captured_at: nil)
 

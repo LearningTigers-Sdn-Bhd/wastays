@@ -50,5 +50,16 @@ RSpec.describe BookingFolio, type: :model do
       folio = BookingFolio.new
       expect(folio.outstanding_balance).to eq(0.0)
     end
+
+    it "calculates charges minus payments plus adjustments, including refunds as negative payments" do
+      folio = create(:booking_folio)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 200.0)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "tax", amount: 20.0)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "gateway_payment", amount: 200.0)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "refund", amount: -40.0)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :adjustment, category: "discount", amount: -10.0)
+
+      expect(folio.outstanding_balance).to eq(50.0)
+    end
   end
 end

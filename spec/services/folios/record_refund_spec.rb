@@ -50,6 +50,40 @@ RSpec.describe Folios::RecordRefund do
     }.not_to change(FolioTransaction, :count)
   end
 
+  it "returns the existing refund when insert fails after another process records it" do
+    folio = create(:booking_folio, booking: booking)
+    failed_result = OpenStruct.new(success?: false, error: "duplicate key")
+    insert_service = instance_double(Folios::InsertTransaction, call: failed_result)
+    existing = nil
+    allow(insert_service).to receive(:call) do
+      existing = create(
+        :folio_transaction,
+        booking_folio: folio,
+        transaction_type: :payment,
+        category: "refund",
+        amount: -160.0,
+        metadata: { refund_request_id: refund_request.id }
+      )
+      failed_result
+    end
+    allow(Folios::InsertTransaction).to receive(:new).and_return(insert_service)
+
+    result = described_class.call(refund_request: refund_request, user: user)
+
+    expect(result.success?).to be true
+    expect(result.transaction).to eq(existing)
+  end
+
+  it "fails when a duplicate insert cannot load the conflicting refund" do
+    create(:booking_folio, booking: booking)
+    allow(Folios::InsertTransaction).to receive(:new).and_raise(ActiveRecord::RecordNotUnique)
+
+    result = described_class.call(refund_request: refund_request, user: user)
+
+    expect(result.success?).to be false
+    expect(result.error).to eq("Refund was already recorded but could not be loaded")
+  end
+
   it "fails when the folio transaction cannot be inserted" do
     create(:booking_folio, booking: booking)
     failed_result = OpenStruct.new(success?: false, error: "posting blocked")
