@@ -41,10 +41,6 @@ module ApplicationHelper
     end
   end
 
-  def housekeeping_status_badge_class(status)
-    housekeeping_status_class(status).gsub("bg-", "border-").gsub("text-", "text-")
-  end
-
   def complaint_status_class(status)
     case status
     when "resolved", "completed" then "bg-green-50 text-green-700 border border-green-100"
@@ -54,8 +50,8 @@ module ApplicationHelper
     end
   end
 
-  def complaint_status_badge_class(status)
-    complaint_status_class(status).gsub("bg-", "border-").gsub("text-", "text-")
+  def status_badge_class(status_class)
+    status_class.gsub("bg-", "border-")
   end
 
   def display_housekeeping_date(value)

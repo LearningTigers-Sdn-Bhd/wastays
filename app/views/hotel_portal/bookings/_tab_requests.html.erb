@@ -26,7 +26,7 @@
                     <dd class="text-sm text-slate-700 leading-relaxed"><%= request.request_details %></dd>
                   </div>
                 </div>
-                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= housekeeping_status_badge_class(request.status) %> bg-opacity-10">
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= status_badge_class(housekeeping_status_class(request.status)) %> bg-opacity-10">
                   <%= request.status %>
                 </span>
               </div>
@@ -71,7 +71,7 @@
                     <dd class="text-sm text-slate-700 leading-relaxed"><%= request.complaint_details %></dd>
                   </div>
                 </div>
-                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= complaint_status_badge_class(request.status) %> bg-opacity-10">
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= status_badge_class(complaint_status_class(request.status)) %> bg-opacity-10">
                   <%= request.status %>
                 </span>
               </div>
