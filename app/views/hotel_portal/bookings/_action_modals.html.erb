@@ -1,6 +1,6 @@
 <!-- Check-In / Edit Check-In Modal -->
 <dialog id="check-in-modal-show-<%= booking.id %>"
-        class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,28rem)] max-w-md shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
+        class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,42rem)] max-w-2xl shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
   <div class="p-6 bg-white" onclick="event.stopPropagation()">
     <h3 class="text-lg font-bold text-slate-900"><%= booking.checked_in? ? "Edit Check-In" : "Confirm Check-In" %></h3>
     <p class="text-sm text-slate-500 mt-1">Set check-in time and assign rooms for <%= booking.guest_name %>.</p>
@@ -31,6 +31,15 @@
           </div>
         <% end %>
       </div>
+
+      <div class="mt-4 pt-4 border-t border-slate-100">
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-4">Identity Verification</label>
+        <div class="grid grid-cols-2 gap-4">
+          <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: "Front / Passport" %>
+          <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back (Optional)" %>
+        </div>
+      </div>
+
       <div class="flex items-center justify-end gap-x-3 pt-2">
         <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
         <%= f.submit (booking.checked_in? ? "Save Changes" : "Confirm Check In"), class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
@@ -60,3 +69,4 @@
     <% end %>
   </div>
 </dialog>
+<%= render "shared/scanner_modal" %>

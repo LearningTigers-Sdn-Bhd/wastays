@@ -252,6 +252,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     params.fetch(:booking, {}).permit(
       :guest_name, :guest_email, :guest_phone, :status, :checked_in_at, :checked_out_at,
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
+      :id_front, :id_back,
       booking_rooms_attributes: [ :id, :room_number ]
     )
   end
