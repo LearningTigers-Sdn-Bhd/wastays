@@ -15,6 +15,8 @@ class Booking < ApplicationRecord
   has_one_attached :id_back
   has_many :housekeeping_requests, dependent: :destroy
   has_many :complaint_requests, dependent: :destroy
+  has_many :notification_deliveries, dependent: :destroy
+  has_many :payment_transactions, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time
   attr_accessor :guest_government_id

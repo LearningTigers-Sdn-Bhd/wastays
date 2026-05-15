@@ -44,7 +44,7 @@ module Bookings
 
       booking.status = "confirmed"
       booking.payment_status = "captured"
-      booking.hotel_snapshot = @hotel.as_json.merge("room_number" => @room_number)
+      booking.hotel_snapshot = @hotel.booking_snapshot.merge("room_number" => @room_number)
 
       result = ActiveRecord::Base.transaction do
         if booking.save
@@ -68,6 +68,13 @@ module Bookings
 
           InventoryManager.new(booking).deduct
           sync_guest(booking)
+
+          # Record Audit Log
+          Bookings::RecordAuditLog.call(
+            auditable: booking,
+            user: @user,
+            action_type: "create"
+          )
 
           # Trigger Webhooks
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)

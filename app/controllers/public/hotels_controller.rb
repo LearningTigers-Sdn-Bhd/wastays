@@ -4,6 +4,7 @@ class Public::HotelsController < ApplicationController
   def index
     @availability_service = BookingEngine::AvailabilityService.new(params)
     @hotels = @availability_service.find_available_hotels
+    @display_currency = display_currency_for_request
   end
 
   def show
@@ -21,12 +22,9 @@ class Public::HotelsController < ApplicationController
     @adults = (params[:adults].presence || 2).to_i
     @children = (params[:children].presence || 0).to_i
     @room_count = (params[:room_count].presence || params[:rooms].presence || 1).to_i
+    @display_currency = display_currency_for_request
 
     @search_ready = @check_in.present? && @check_out.present? && @check_out > @check_in
-
-    # Only show modal if specifically requested (edit_search)
-    # OR if the dates are invalid (which today/tomorrow won't be)
-    @show_stay_modal = params[:edit_search].present?
 
     if @search_ready
       @availability_service = BookingEngine::AvailabilityService.new(
@@ -52,6 +50,35 @@ class Public::HotelsController < ApplicationController
                                     }
   end
 
+  def rate_calendar
+    @hotel = Hotel.friendly.find(params[:id])
+    return head :not_found unless @hotel.active?
+
+    start_date = parse_date(params[:start_date]) || Date.current
+    end_date   = parse_date(params[:end_date])   || (start_date + 90)
+    room_count = (params[:room_count].presence || 1).to_i
+
+    result = BookingEngine::RateCalendarService.new(
+      hotel: @hotel,
+      start_date: start_date,
+      end_date: end_date,
+      room_count: room_count
+    ).call
+
+    expires_in 5.minutes, public: true
+    render json: {
+      hotel_id: @hotel.slug,
+      currency: result[:currency],
+      start_date: start_date.iso8601,
+      end_date: end_date.iso8601,
+      days: result[:days].map { |d|
+        { date: d.date.iso8601, min_price: d.min_price, available: d.available, rooms_left: d.rooms_left }
+      }
+    }
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_content
+  end
+
   private
 
   def parse_date(value)
@@ -61,5 +88,9 @@ class Public::HotelsController < ApplicationController
     Date.parse(value.to_s)
   rescue ArgumentError
     nil
+  end
+
+  def display_currency_for_request
+    DisplayCurrencyResolver.new(params: params, cookies: cookies, request: request).call
   end
 end

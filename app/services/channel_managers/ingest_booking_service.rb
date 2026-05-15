@@ -52,6 +52,14 @@ module ChannelManagers
           # Handle Rooms
           sync_rooms(booking)
 
+          # Record Audit Log
+          action = is_existing_booking ? "external_modification" : "external_creation"
+          Bookings::RecordAuditLog.call(
+            auditable: booking,
+            action_type: action,
+            metadata: { "source" => booking.source, "external_reference" => booking.external_reference }
+          )
+
           # Trigger Webhooks
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
           Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call

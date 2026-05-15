@@ -1,0 +1,118 @@
+<%# app/views/hotel_portal/reservation_board/bookings/_form_sections.html.erb %>
+<div class="max-w-[1000px] mx-auto space-y-8">
+  <% if booking.errors.any? %>
+    <div class="p-4 rounded-xl bg-red-50 border border-red-100 mb-6">
+      <h4 class="text-xs font-bold text-red-800 mb-1">Please fix the following:</h4>
+      <ul class="text-[11px] text-red-700 list-disc list-inside">
+        <% booking.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <!-- Guest Information -->
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+      <h2 class="text-lg font-bold tracking-tight text-slate-950">Guest Information</h2>
+      <p class="mt-1 text-sm font-medium text-slate-600">Contact details and identity information.</p>
+    </div>
+    <div class="p-6 sm:p-8 space-y-6">
+      <div>
+        <%= f.label :guest_name, "Full Name", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.text_field :guest_name, required: true, placeholder: "John Doe", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div>
+          <%= f.label :guest_email, "Email Address", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.email_field :guest_email, required: true, placeholder: "john@example.com", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+        <div>
+          <%= f.label :guest_phone, "Phone Number", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.telephone_field :guest_phone, required: true, placeholder: "+60 12-345 6789", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stay Details -->
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+      <h2 class="text-lg font-bold tracking-tight text-slate-950">Stay & Room Details</h2>
+      <p class="mt-1 text-sm font-medium text-slate-600">Select dates and room category.</p>
+    </div>
+    <div class="p-6 sm:p-8 space-y-6">
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div>
+          <%= f.label :check_in, "Check-in Date", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.date_field :check_in, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
+        </div>
+        <div>
+          <%= f.label :check_out, "Check-out Date", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.date_field :check_out, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div>
+          <%= f.label :adults, class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.number_field :adults, required: true, min: 1, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+        <div>
+          <%= f.label :children, class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.number_field :children, required: true, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Category</label>
+          <%= f.collection_select :room_type_id, room_types, :id, :name, { selected: room_type_id, prompt: "Select a category" }, 
+              { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
+                data: { 
+                  booking_calc_target: "roomType", 
+                  action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate", 
+                  prices: room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
+                  room_numbers: room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
+                } 
+              } %>
+        </div>
+        <div class="<%= room_number.present? ? '' : 'hidden' %>" data-booking-calc-target="roomNumberContainer">
+          <label for="booking_room_number" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
+          <%= f.select :room_number, (room_number.present? ? [[room_number, room_number]] : []), { selected: room_number, prompt: "Select a room" }, 
+              { id: "booking_room_number",
+                required: true,
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
+                data: { 
+                  booking_calc_target: "roomNumberSelect",
+                  action: "change->room-lock#lock"
+                } 
+              } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pricing Summary -->
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+      <h2 class="text-lg font-bold tracking-tight text-slate-950">Payment Summary</h2>
+      <p class="mt-1 text-sm font-medium text-slate-600">Total amount for this stay.</p>
+    </div>
+    <div class="p-6 sm:p-8">
+      <div class="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-200">
+        <div>
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Calculated Total</p>
+          <p class="text-2xl font-black text-slate-900 mt-1">MYR <span data-booking-calc-target="displayTotal"><%= number_with_precision(booking.total_amount || 0, precision: 2) %></span></p>
+        </div>
+        <div class="w-1/3">
+           <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-right">Adjust Price (Optional)</label>
+           <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-sm font-bold">MYR</span>
+              <%= f.number_field :total_amount, step: 0.01, class: "w-full rounded-xl border border-slate-200 bg-white py-2 pl-12 pr-4 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm text-right", data: { booking_calc_target: "totalInput" } %>
+           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

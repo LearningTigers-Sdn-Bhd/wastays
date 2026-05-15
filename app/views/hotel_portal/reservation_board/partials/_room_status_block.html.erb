@@ -1,0 +1,43 @@
+<%# app/views/hotel_portal/reservation_board/partials/_room_status_block.html.erb %>
+<%
+  clipped_left = block[:check_in] < visible_start_date
+  clipped_right = block[:check_out] > visible_end_exclusive
+  left_offset = clipped_left ? 0 : block_left_pad
+  right_trim = clipped_right ? 0 : block_left_pad
+  width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)"
+  top_offset = block_top + (block_index * block_step)
+  clip_corner_class = [ ("rounded-l-none" if clipped_left), ("rounded-r-none" if clipped_right) ].compact.join(" ")
+%>
+
+<div
+  data-controller="floating"
+  data-floating-trigger-value="hover"
+  data-floating-placement-value="bottom"
+  class="absolute z-10 overflow-hidden rounded-sm border py-1.5 pr-2.5 pl-2.5 shadow-sm border-red-200 bg-red-50 text-red-700 cursor-help <%= clip_corner_class %>"
+  style="top: <%= top_offset %>px; left: <%= left_offset %>px; width: <%= width_calc %>; min-width: 60px;"
+  data-floating-target="reference"
+>
+  <div class="flex items-center gap-1.5">
+    <div class="size-1.5 rounded-full bg-red-500 animate-pulse"></div>
+    <p class="<%= booking_amount_class %> font-black uppercase tracking-tight">Not Ready</p>
+  </div>
+  <p class="mt-0.5 <%= booking_status_class %> font-bold opacity-80 truncate"><%= block[:status_name] %></p>
+
+  <%# Hover Card %>
+  <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-white border border-slate-200 rounded-xl shadow-xl pointer-events-none text-left">
+    <div class="flex items-center gap-2 mb-2">
+      <div class="size-2 rounded-full bg-red-500 animate-pulse"></div>
+      <span class="text-[10px] font-bold uppercase tracking-wider text-red-600">Room Not Ready</span>
+    </div>
+    <div class="mt-2 space-y-2">
+      <div class="flex items-start gap-2 text-[11px] text-slate-600">
+        <svg class="size-3.5 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+        <div>
+          <p class="font-black text-slate-900 uppercase tracking-tight">Current Status</p>
+          <p><%= block[:status_name] %></p>
+        </div>
+      </div>
+      <p class="text-[10px] text-slate-500 italic leading-relaxed">This room cannot be assigned to new guests until it is marked as Ready by Housekeeping.</p>
+    </div>
+  </div>
+</div>

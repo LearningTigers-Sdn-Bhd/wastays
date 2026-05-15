@@ -133,8 +133,17 @@
                 </div>
               </div>
             </div>
-            <%= button_to "Onboard / Sync to Channel Manager", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 shadow-sm" %>
-            <%= button_to "Disconnect Channel Manager", disconnect_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50", data: { turbo_confirm: "Are you sure? This will remove all mapping IDs for this hotel and its rooms." } %>
+            <%= button_to "Onboard / Sync structure to Channel Manager", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-slate-800 shadow-sm" %>
+            
+            <div class="pt-2 border-t border-slate-200 mt-2">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Sync Operations</p>
+              <p class="text-[10px] text-slate-500 mb-3 leading-relaxed">Required for certification or after long downtime. Sends 500 days of ARI data. Max once per 24h recommended.</p>
+              <%= button_to "Full Refresh (500 Days)", full_refresh_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 shadow-sm", data: { turbo_confirm: "This will push 500 days of availability, rates and restrictions. Continue?" } %>
+            </div>
+
+            <div class="pt-4 mt-2">
+              <%= button_to "Disconnect Channel Manager", disconnect_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50", data: { turbo_confirm: "Are you sure? This will remove all mapping IDs for this hotel and its rooms." } %>
+            </div>
           <% else %>
             <p class="text-xs text-slate-500 leading-relaxed italic">Provision this property, its room types and default rate plans directly into Channel Manager via API.</p>
             <%= button_to "Connect to Channel Manager", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 shadow-lg" %>

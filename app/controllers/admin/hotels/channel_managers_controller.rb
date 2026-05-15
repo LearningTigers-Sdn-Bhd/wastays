@@ -11,6 +11,16 @@ class Admin::Hotels::ChannelManagersController < Admin::BaseController
     end
   end
 
+  def full_refresh
+    result = ChannelManagers::FullRefreshService.new(hotel: @hotel).call
+
+    if result.success?
+      redirect_to admin_hotel_path(@hotel), notice: result.message
+    else
+      redirect_to admin_hotel_path(@hotel), alert: "Full refresh failed: #{result.message}"
+    end
+  end
+
   def disconnect_channex
     result = ChannelManagers::DisconnectService.new(hotel: @hotel).call
 

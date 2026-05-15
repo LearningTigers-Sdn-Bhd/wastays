@@ -71,7 +71,9 @@ Rails.application.routes.draw do
 
   # Public Booking Engine
   scope module: :public do
-    resources :hotels, only: [ :index, :show ]
+    resources :hotels, only: [ :index, :show ] do
+      get :rate_calendar, on: :member
+    end
     resources :quotes, only: [ :create, :show ] do
       member do
         get :guest_lookup
@@ -129,6 +131,7 @@ Rails.application.routes.draw do
         post :approve, to: "hotels/status#approve"
         post :suspend, to: "hotels/status#suspend"
         post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
+        post :full_refresh, to: "hotels/channel_managers#full_refresh"
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
       end
       resources :onboarding_sessions, module: :hotels do
@@ -169,6 +172,7 @@ Rails.application.routes.draw do
     resources :global_search, only: [ :index ]
     resources :margin_rules, only: [ :index, :create, :destroy ]
     resources :setup_fee_rules, only: [ :index, :create, :destroy ]
+    resources :exchange_rates, only: [ :index, :create, :update, :destroy ]
     resources :audit_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
@@ -247,6 +251,7 @@ Rails.application.routes.draw do
         get :stay_price
       end
       member do
+        patch :move
         post :check_in
         post :check_out
         post :cancel
@@ -293,6 +298,8 @@ Rails.application.routes.draw do
       collection do
         post :apply_pricing_rules
         post :apply_availability_override
+        post :bulk_save_ari
+        post :batch_save_ari
         delete "pricing_tiers/:rule_type", action: :destroy_pricing_tier_rule, as: :destroy_pricing_tier_rule
         delete "public_holidays/:id", action: :destroy_public_holiday_rule, as: :destroy_public_holiday_rule
       end
@@ -307,6 +314,18 @@ Rails.application.routes.draw do
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board
+    namespace :reservation_board, path: "reservation-board" do
+      get "/", to: "boards#index", as: :index
+      resources :board_bookings, path: "bookings", only: [ :new, :create, :show, :update ] do
+        member do
+          get :check_in
+          get :check_out
+          get :edit_stay
+          get :notes
+          patch :transition
+        end
+      end
+    end
     resources :room_statuses, only: [ :update ]
     resources :room_blocks, only: [ :create, :update, :destroy ] do
       post :finish, on: :member

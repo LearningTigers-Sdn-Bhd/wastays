@@ -44,6 +44,15 @@
               </span>
             <% end %>
           </button>
+          <button type="button"
+                  data-booking-tabs-target="tab"
+                  data-tab-name="history"
+                  data-action="click->booking-tabs#switch"
+                  class="relative min-w-0 flex-1 bg-white first:border-s-0 border-s border-b-2 border-slate-200 py-4 px-4 text-slate-500 hover:text-slate-900 text-sm font-bold text-center overflow-hidden transition-all
+                         data-[active=true]:border-b-blue-600 data-[active=true]:text-slate-950 data-[active=true]:bg-slate-50/50"
+                  role="tab">
+            History
+          </button>
         </nav>
 
         <!-- Tab Panels -->
@@ -51,15 +60,26 @@
           <%= render "tab_details", booking: @booking, presenter: @presenter %>
         </div>
 
-        <div data-booking-tabs-target="panel" data-tab-panel="requests">
+        <div data-booking-tabs-target="panel" data-tab-panel="requests" class="hidden">
           <%= render "tab_requests", booking: @booking, presenter: @presenter %>
         </div>
+
+        <div data-booking-tabs-target="panel" data-tab-panel="history" class="hidden">
+          <%= render "hotel_portal/bookings/audit_history", audit_logs: @audit_logs %>
+        </div>
+
       </div>
+      <!-- END booking-tabs controller -->
     </div>
+    <!-- END Main Column -->
 
     <!-- Sidebar Column -->
     <div class="lg:col-span-3 space-y-8">
       <%= render "sidebar", booking: @booking, presenter: @presenter %>
     </div>
+    <!-- END Sidebar Column -->
+
   </div>
+  <!-- END grid -->
+
 </div>

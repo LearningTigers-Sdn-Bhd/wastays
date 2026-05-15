@@ -28,6 +28,7 @@ module BookingEngine
         end
 
         quote.update!(status: "expired")
+        Bookings::RecordAuditLog.call(auditable: quote, action_type: "expire")
       end
     rescue => e
       Rails.logger.error "Failed to release hold for Quote #{quote.id}: #{e.message}"

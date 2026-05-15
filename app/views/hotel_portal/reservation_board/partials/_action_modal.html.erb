@@ -1,0 +1,53 @@
+<%# app/views/hotel_portal/reservation_board/partials/_action_modal.html.erb %>
+<div data-controller="reservation-board-modal"
+     data-reservation-board-modal-hotel-id-value="<%= current_hotel.id %>">
+  
+  <%# 1. Dedicated Booking Sheet (Full Screen) %>
+  <%= render "hotel_portal/reservation_board/partials/modals/booking_details" %>
+
+  <%# 2. Dedicated Check-In (Normal) %>
+  <%= render "hotel_portal/reservation_board/partials/modals/check_in" %>
+
+  <%# 3. Dedicated Check-Out (Normal) %>
+  <%= render "hotel_portal/reservation_board/partials/modals/check_out" %>
+
+  <%# 4. Dedicated Notes (Normal Native Dialog) %>
+  <%= render "hotel_portal/reservation_board/partials/modals/notes" %>
+
+  <%# 5. Dedicated Edit Stay (Normal) %>
+  <%= render "hotel_portal/reservation_board/partials/modals/edit_stay" %>
+
+  <%# 6. Dedicated Extend Duration (Normal Shell) %>
+  <div id="reservation-board-extend-duration-overlay" 
+       class="hs-overlay hidden w-full h-full fixed top-0 start-0 z-[100] overflow-x-hidden overflow-y-auto"
+       role="dialog"
+       tabindex="-1"
+       data-reservation-board-modal-target="dialog"
+       data-controller="extend-duration-confirm">
+    <div class="hs-overlay-open:opacity-100 hs-overlay-open:duration-500 opacity-0 ease-out transition-all w-full min-h-full flex items-center justify-center p-4 sm:p-6">
+      <div class="flex flex-col bg-white rounded-3xl overflow-hidden pointer-events-auto p-8 shadow-[0_20px_50px_rgba(0,0,0,0.15)] max-w-lg w-full">
+        <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight">Confirm Extension</h3>
+        <p class="mt-2 text-sm text-slate-500">
+          Extend stay for <span data-extend-duration-confirm-target="guestName" class="font-bold text-slate-900"></span>?
+        </p>
+        <div class="mt-6 flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="text-center">
+            <p class="text-[10px] font-bold text-slate-400 uppercase">Current</p>
+            <p data-extend-duration-confirm-target="currentCheckOut" class="text-sm font-bold text-slate-700"></p>
+          </div>
+          <div class="text-slate-300">
+            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" /></svg>
+          </div>
+          <div class="text-center">
+            <p class="text-[10px] font-bold text-slate-400 uppercase">New</p>
+            <p data-extend-duration-confirm-target="newCheckOut" class="text-sm font-bold text-emerald-600"></p>
+          </div>
+        </div>
+        <div class="mt-8 flex items-center justify-end gap-3">
+          <button type="button" data-action="extend-duration-confirm#cancel" class="px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-lg">Cancel</button>
+          <button type="button" data-action="extend-duration-confirm#confirm" class="px-6 py-2 bg-slate-900 text-white rounded-lg text-sm font-bold hover:bg-slate-700 shadow-sm">Confirm Extension</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

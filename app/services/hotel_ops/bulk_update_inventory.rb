@@ -12,6 +12,7 @@ module HotelOps
     end
 
     def call
+      Thread.current[:skip_ari_sync] = true
       ActiveRecord::Base.transaction do
         (@start_date..@end_date).each do |date|
           inventory = @room_type.room_inventories.find_or_initialize_by(date: date)
@@ -68,6 +69,8 @@ module HotelOps
       end
     rescue => e
       { success: false, error: e.message }
+    ensure
+      Thread.current[:skip_ari_sync] = nil
     end
   end
 end

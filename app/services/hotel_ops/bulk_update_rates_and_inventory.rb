@@ -1,8 +1,9 @@
 module HotelOps
   class BulkUpdateRatesAndInventory
-    def initialize(hotel:, room_type_ids: [], start_date:, end_date:, price: nil, quantity: nil, status: nil, user:, room_numbers: nil)
+    def initialize(hotel:, room_type_ids: [], rate_plan_ids: [], start_date:, end_date:, price: nil, quantity: nil, status: nil, user:, room_numbers: nil)
       @hotel = hotel
       @room_type_ids = room_type_ids
+      @rate_plan_ids = rate_plan_ids
       @start_date = start_date.to_date
       @end_date = end_date.to_date
       @price = price.presence&.to_f
@@ -30,17 +31,19 @@ module HotelOps
     private
 
     def update_rates(room_type)
-      standard_plan = room_type.rate_plans.first
-      return unless standard_plan
+      rate_plans = room_type.rate_plans
+      rate_plans = rate_plans.where(id: @rate_plan_ids) if @rate_plan_ids.present?
 
-      HotelOps::BulkUpdateRates.new(
-        hotel: @hotel,
-        rate_plan: standard_plan,
-        start_date: @start_date,
-        end_date: @end_date,
-        price: @price,
-        user: @user
-      ).call
+      rate_plans.find_each do |rate_plan|
+        HotelOps::BulkUpdateRates.new(
+          hotel: @hotel,
+          rate_plan: rate_plan,
+          start_date: @start_date,
+          end_date: @end_date,
+          price: @price,
+          user: @user
+        ).call
+      end
     end
 
     def update_inventory(room_type)

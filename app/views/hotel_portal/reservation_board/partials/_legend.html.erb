@@ -1,0 +1,13 @@
+<%# app/views/hotel_portal/reservation_board/partials/_legend.html.erb %>
+<% status_list = [ "all", "not_ready" ] + %w[confirmed checked_in pending] %>
+<div class="rounded-xl border border-slate-200 bg-white p-2 shadow-sm overflow-x-auto whitespace-nowrap scrollbar-hide">
+  <div class="flex items-center gap-2">
+    <% status_list.each do |status| %>
+      <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide <%= legend_style_for(status, booking_styles) %> transition-all hover:shadow-sm">
+        <%= status_icons[status]&.html_safe %>
+        <%= status.humanize.titleize %>
+        <span class="opacity-60 font-black">(<%= legend_count_for(reservation_board, status) %>)</span>
+      </span>
+    <% end %>
+  </div>
+</div>

@@ -9,6 +9,12 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
     @note.user = current_user
 
     if @note.save
+      Bookings::RecordAuditLog.call(
+        auditable: @booking,
+        user: current_user,
+        action_type: "note_added",
+        metadata: { "note_id" => @note.id }
+      )
       respond_to do |format|
         format.turbo_stream { render_notes_update("Note added.", :notice) }
         format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Note added." }
@@ -43,6 +49,12 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
     end
 
     if @note.update(body: updated_body)
+      Bookings::RecordAuditLog.call(
+        auditable: @booking,
+        user: current_user,
+        action_type: "note_updated",
+        metadata: { "note_id" => @note.id }
+      )
       respond_to do |format|
         format.turbo_stream { render_notes_update("Note updated.", :notice) }
         format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Note updated." }
@@ -57,6 +69,12 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
 
   def destroy
     if @note.destroy
+      Bookings::RecordAuditLog.call(
+        auditable: @booking,
+        user: current_user,
+        action_type: "note_deleted",
+        metadata: { "note_id" => @note.id }
+      )
       respond_to do |format|
         format.turbo_stream { render_notes_update("Note deleted.", :notice) }
         format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Note deleted." }

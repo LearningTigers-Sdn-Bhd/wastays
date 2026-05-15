@@ -1,0 +1,81 @@
+<%# app/views/hotel_portal/reservation_board/bookings/edit_stay.html.erb %>
+
+<%= turbo_frame_tag "reservation_board_edit_stay_content" do %>
+  <div class="flex flex-col h-full bg-white">
+    <%# Modal Header %>
+    <%= render "hotel_portal/reservation_board/partials/content_header",
+               title: "Edit Stay & Room",
+               subtitle: "Update booking dates and room assignment",
+               icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>' %>
+
+    <div class="flex-1 overflow-y-auto p-8">
+      <%= form_with model: @booking, url: hotel_reservation_board_board_booking_path(current_hotel, @booking), method: :patch,
+          class: "flex flex-col h-full",
+          data: {
+            controller: "booking-calc",
+            booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
+            booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel),
+            booking_calc_exclude_booking_id_value: @booking.id
+          } do |f| %>
+        
+        <div class="grid sm:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Check-in Date</label>
+            <%= f.date_field :check_in, 
+                class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm", 
+                data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
+          </div>
+          <div class="space-y-2">
+            <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Check-out Date</label>
+            <%= f.date_field :check_out, 
+                class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm", 
+                data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Room Category</label>
+          <% current_room_type_id = @booking.booking_rooms.first&.room_type_id %>
+          <%= f.collection_select :room_type_id, @room_types, :id, :name, { selected: current_room_type_id }, 
+              { class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm", 
+                data: { 
+                  booking_calc_target: "roomType", 
+                  action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate",
+                  prices: @room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
+                  room_numbers: @room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
+                } 
+              } %>
+        </div>
+
+        <div data-controller="room-lock" 
+             data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
+             data-room-lock-room-type-id-value="<%= current_room_type_id %>"
+             data-room-lock-current-room-value="<%= @booking.hotel_snapshot.is_a?(Hash) ? (@booking.hotel_snapshot['room_number'] || @booking.hotel_snapshot.dig('assignment', 'room_number')) : nil %>"
+             data-booking-calc-target="roomNumberContainer"
+             class="space-y-2">
+          <label for="booking_room_number" class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Room Number</label>
+          <% current_room_number = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
+          <%= f.select :room_number, [[current_room_number, current_room_number]], { selected: current_room_number }, 
+              { id: "booking_room_number",
+                required: true,
+                class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm", 
+                data: { 
+                  booking_calc_target: "roomNumberSelect",
+                  action: "change->room-lock#lock"
+                } 
+              } %>
+          <p class="text-[10px] font-bold text-slate-400 mt-2 italic uppercase tracking-wider">Only available rooms for the selected dates are shown.</p>
+        </div>
+
+        <div class="pt-6 flex items-center justify-end gap-x-4">
+          <button type="button" 
+                  class="px-6 py-3 text-sm font-black text-slate-500 hover:text-slate-900 uppercase tracking-widest transition-colors" 
+                  data-hs-overlay="#reservation-board-edit-stay-overlay">
+            Cancel
+          </button>
+          <%= f.submit "Save Changes", class: "px-8 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-700 transition-all shadow-[0_10px_20px_rgba(0,0,0,0.1)] active:scale-95" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
