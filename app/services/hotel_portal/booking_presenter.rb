@@ -52,6 +52,10 @@ module HotelPortal
       user.has_permission?("manage_bookings", hotel: hotel)
     end
 
+    def can_add_guests?(user)
+      can_manage_bookings?(user) && %w[checked_in confirmed].include?(booking.status)
+    end
+
     def additional_guests
       @additional_guests ||= booking.booking_guests.where(is_primary: false).includes(:guest)
     end
@@ -107,12 +111,25 @@ module HotelPortal
       end
     end
 
+    def room_type_prices_json
+      room_types.map { |rt| [ rt.id, rt.base_price ] }.to_h.to_json
+    end
+
+    def room_type_numbers_json
+      room_types.map { |rt| [ rt.id, rt.room_numbers ] }.to_h.to_json
+    end
+
     def room_types
       @room_types ||= hotel.room_types.order(:name)
     end
 
     def booking_rooms
       @booking_rooms ||= booking.booking_rooms
+    end
+
+    def room_number_for(room)
+      room.room_number.presence ||
+        (booking.hotel_snapshot.is_a?(Hash) ? booking.hotel_snapshot["room_number"].presence || booking.hotel_snapshot.dig("assignment", "room_number").presence : nil)
     end
 
     def pre_checkin

@@ -168,6 +168,10 @@ class Booking < ApplicationRecord
     pre_checkin_status.presence || pre_checkin&.status.presence || "not_started"
   end
 
+  def pre_checkin_completed?
+    pre_checkin_display_status == "completed"
+  end
+
   def tourism_tax?
     tourism_tax_applied && tourism_tax_amount.positive?
   end
