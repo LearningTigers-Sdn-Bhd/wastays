@@ -23,6 +23,7 @@ RSpec.describe Bookings::TransitionStatus do
         expect(booking.reload.status).to eq("checked_in")
         expect(booking.checked_in_at).to be_within(1.second).of(timestamp)
         expect(booking.booking_folio).to be_present
+        expect(booking.booking_folio.hotel).to eq(booking.hotel)
         expect(booking.booking_folio.folio_number).to be_present
 
         log = BookingAuditLog.last
@@ -43,6 +44,21 @@ RSpec.describe Bookings::TransitionStatus do
         expect(result.error).to include("posting blocked")
         expect(booking.reload.status).to eq("confirmed")
         expect(booking.booking_folio).to be_nil
+      end
+
+      it "allows different hotels to use the same folio number" do
+        other_booking = create(:booking, status: "confirmed")
+        allow(HotelCounter).to receive(:increment!).and_call_original
+        allow(HotelCounter).to receive(:increment!).with(hotel: booking.hotel, type: "folio").and_return(1)
+        allow(HotelCounter).to receive(:increment!).with(hotel: other_booking.hotel, type: "folio").and_return(1)
+
+        first_result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
+        second_result = described_class.new(booking: other_booking, status: "checked_in", timestamp: timestamp).call
+
+        expect(first_result.success?).to be true
+        expect(second_result.success?).to be true
+        expect(booking.reload.booking_folio.folio_number).to eq(1)
+        expect(other_booking.reload.booking_folio.folio_number).to eq(1)
       end
     end
 

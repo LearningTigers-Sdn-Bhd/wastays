@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_15_093100) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_15_101000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -117,8 +117,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_093100) do
     t.string "status", default: "open"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "hotel_id", null: false
     t.index ["booking_id"], name: "index_booking_folios_on_booking_id", unique: true
-    t.index ["folio_number"], name: "index_booking_folios_on_folio_number"
+    t.index ["hotel_id", "folio_number"], name: "index_booking_folios_on_hotel_id_and_folio_number", unique: true
+    t.index ["hotel_id"], name: "index_booking_folios_on_hotel_id"
   end
 
   create_table "booking_guests", force: :cascade do |t|
@@ -317,6 +319,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_093100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index "booking_folio_id, ((metadata ->> 'payment_transaction_id'::text))", name: "index_folio_transactions_on_gateway_payment", unique: true, where: "(metadata ? 'payment_transaction_id'::text)"
+    t.index "booking_folio_id, ((metadata ->> 'refund_request_id'::text))", name: "index_folio_transactions_on_refund_request", unique: true, where: "(metadata ? 'refund_request_id'::text)"
     t.index ["booking_folio_id"], name: "index_folio_transactions_on_booking_folio_id"
     t.index ["category"], name: "index_folio_transactions_on_category"
     t.index ["posting_date"], name: "index_folio_transactions_on_posting_date"
@@ -974,6 +977,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_093100) do
   add_foreign_key "booking_audit_logs", "hotels"
   add_foreign_key "booking_audit_logs", "users"
   add_foreign_key "booking_folios", "bookings"
+  add_foreign_key "booking_folios", "hotels"
   add_foreign_key "booking_guests", "bookings"
   add_foreign_key "booking_guests", "guests"
   add_foreign_key "booking_notes", "bookings"

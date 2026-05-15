@@ -48,7 +48,7 @@ module Bookings
           checked_in_at: @timestamp,
           guest_registration_number: guest_reg
         )
-        folio = @booking.create_booking_folio!(folio_number: folio_number)
+        folio = @booking.create_booking_folio!(hotel: @booking.hotel, folio_number: folio_number)
 
         # Initialize folio with charges and existing payments
         Folios::PostInitialCharges.call(folio: folio, user: @user, options: @options)

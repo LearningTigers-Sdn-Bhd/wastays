@@ -56,8 +56,8 @@ module Folios
         )
       end
 
-      # Tourism tax if applicable
-      if @booking.tourism_tax_amount.to_d > 0
+      # Legacy fallback for bookings that store tourism tax outside tax_lines.
+      if @booking.tourism_tax_amount.to_d > 0 && !tourism_tax_in_tax_lines?
         insert_transaction!(
           booking_folio: @folio,
           amount: @booking.tourism_tax_amount,
@@ -68,6 +68,15 @@ module Folios
           posting_date: @booking.check_in,
           options: @options
         )
+      end
+    end
+
+    def tourism_tax_in_tax_lines?
+      @booking.tax_lines.any? do |tax_line|
+        tax_type = tax_line["type"].presence || tax_line[:type]
+        tax_name = tax_line["name"].presence || tax_line[:name]
+
+        tax_type.to_s.in?(%w[ttx tourism_tax]) || tax_name.to_s.downcase.include?("tourism")
       end
     end
 
