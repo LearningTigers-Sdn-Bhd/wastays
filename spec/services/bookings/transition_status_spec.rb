@@ -60,6 +60,74 @@ RSpec.describe Bookings::TransitionStatus do
         expect(booking.reload.booking_folio.folio_number).to eq(1)
         expect(other_booking.reload.booking_folio.folio_number).to eq(1)
       end
+
+      it "silently no-ops when the booking is already checked in" do
+        create(:booking_room, booking: booking, subtotal: 100.0)
+        first_result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
+        expect(first_result.success?).to be true
+        create(:night_audit, hotel: booking.hotel, business_date: (timestamp + 1.hour).to_date, status: "completed")
+
+        booking.reload
+        folio = booking.booking_folio
+        checked_in_at = booking.checked_in_at
+        guest_registration_number = booking.guest_registration_number
+        folio_number = folio.folio_number
+
+        expect {
+          second_result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp + 1.hour).call
+          expect(second_result.success?).to be true
+        }.to change(BookingAuditLog, :count).by(0)
+          .and change(BookingFolio, :count).by(0)
+          .and change(FolioTransaction, :count).by(0)
+          .and have_enqueued_job(WebhookBroadcastJob).exactly(0).times
+          .and have_enqueued_job(Notifications::DeliverJob).exactly(0).times
+
+        booking.reload
+        expect(booking.checked_in_at).to eq(checked_in_at)
+        expect(booking.guest_registration_number).to eq(guest_registration_number)
+        expect(booking.booking_folio.folio_number).to eq(folio_number)
+      end
+
+      it "repairs a checked-in booking with a missing folio without check-in side effects" do
+        checked_in_at = 1.hour.ago
+        booking.update!(status: "checked_in", checked_in_at: checked_in_at, guest_registration_number: 99)
+        create(:booking_room, booking: booking, subtotal: 100.0)
+        create(:night_audit, hotel: booking.hotel, business_date: booking.check_in, status: "completed")
+
+        expect {
+          result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
+          expect(result.success?).to be true
+        }.to change(BookingFolio, :count).by(1)
+          .and change(FolioTransaction, :count).by(1)
+          .and change(BookingAuditLog, :count).by(0)
+          .and have_enqueued_job(WebhookBroadcastJob).exactly(0).times
+          .and have_enqueued_job(Notifications::DeliverJob).exactly(0).times
+
+        booking.reload
+        expect(booking.checked_in_at.to_i).to eq(checked_in_at.to_i)
+        expect(booking.guest_registration_number).to eq(99)
+        expect(booking.booking_folio).to be_present
+      end
+
+      it "fails when a completed booking is checked in again" do
+        booking.update!(status: "completed")
+
+        result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
+
+        expect(result.success?).to be false
+        expect(result.error).to include("Cannot check in booking with status completed")
+        expect(booking.reload.status).to eq("completed")
+      end
+
+      it "fails when a cancelled booking is checked in again" do
+        booking.update!(status: "cancelled")
+
+        result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
+
+        expect(result.success?).to be false
+        expect(result.error).to include("Cannot check in booking with status cancelled")
+        expect(booking.reload.status).to eq("cancelled")
+      end
     end
 
     context "when status is completed" do

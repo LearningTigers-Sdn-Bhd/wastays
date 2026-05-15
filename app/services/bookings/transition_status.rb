@@ -32,28 +32,44 @@ module Bookings
     def check_in
       business_date = @timestamp.to_date
       is_retroactive = NightAudit.closed_for_date?(@booking.hotel_id, business_date)
+      transitioned = false
+      error = nil
 
-      if is_retroactive
-        unless @options[:override_night_audit] && @options[:reason].present?
-          return failure("The business date #{business_date} is already closed by a night audit. Please provide an override flag and reason for retroactive check-in.")
+      Booking.transaction do
+        @booking.with_lock do
+          @booking.reload
+
+          if @booking.checked_in?
+            repair_options = @booking.booking_folio.present? ? @options : @options.reverse_merge(override_night_audit: true)
+            Folios::InitializeForBooking.call(booking: @booking, user: @user, options: repair_options, lock: false)
+            next
+          end
+
+          unless @booking.status == "confirmed"
+            error = "Cannot check in booking with status #{@booking.status}"
+            next
+          end
+
+          if is_retroactive && !(@options[:override_night_audit] && @options[:reason].present?)
+            error = "The business date #{business_date} is already closed by a night audit. Please provide an override flag and reason for retroactive check-in."
+            next
+          end
+
+          guest_reg = HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
+
+          @booking.update!(
+            status: "checked_in",
+            checked_in_at: @timestamp,
+            guest_registration_number: guest_reg
+          )
+
+          Folios::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
+          transitioned = true
         end
       end
 
-      folio_number = HotelCounter.increment!(hotel: @booking.hotel, type: "folio")
-      guest_reg    = HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
-
-      Booking.transaction do
-        @booking.update!(
-          status: "checked_in",
-          checked_in_at: @timestamp,
-          guest_registration_number: guest_reg
-        )
-        folio = @booking.create_booking_folio!(hotel: @booking.hotel, folio_number: folio_number)
-
-        # Initialize folio with charges and existing payments
-        Folios::PostInitialCharges.call(folio: folio, user: @user, options: @options)
-        Folios::SyncExistingPayments.call(folio: folio, user: @user, options: @options)
-      end
+      return failure(error) if error.present?
+      return success unless transitioned
 
       metadata = {}
       if is_retroactive
