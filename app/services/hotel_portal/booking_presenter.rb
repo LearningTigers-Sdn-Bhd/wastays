@@ -9,12 +9,127 @@ module HotelPortal
       @hotel = hotel
     end
 
+    def confirmation_token
+      booking.confirmation_token
+    end
+
+    def status
+      booking.status
+    end
+
+    def status_label_class
+      case status
+      when "confirmed" then "border-green-800 text-green-800"
+      when "checked_in" then "border-blue-800 text-blue-800"
+      when "completed" then "border-emerald-800 text-emerald-800"
+      when "cancelled" then "border-red-800 text-red-800"
+      when "pending" then "border-yellow-800 text-yellow-800"
+      else "border-gray-800 text-gray-800"
+      end
+    end
+
+    def created_at_formatted
+      booking.created_at.strftime("%d %b %Y at %H:%M")
+    end
+
+    def check_in_formatted
+      booking.check_in.strftime("%d %b %Y")
+    end
+
+    def check_out_formatted
+      booking.check_out.strftime("%d %b %Y")
+    end
+
+    def checked_in_at_form_value
+      (booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M")
+    end
+
+    def checked_out_at_form_value
+      Time.current.strftime("%Y-%m-%dT%H:%M")
+    end
+
+    def can_manage_bookings?(user)
+      user.has_permission?("manage_bookings", hotel: hotel)
+    end
+
+    def can_add_guests?(user)
+      can_manage_bookings?(user) && %w[checked_in confirmed].include?(booking.status)
+    end
+
+    def additional_guests
+      @additional_guests ||= booking.booking_guests.where(is_primary: false).includes(:guest)
+    end
+
+    def guest_document_type_label(guest)
+      guest.document_type&.upcase || "IC/Passport"
+    end
+
+    def pre_checkin_metadata
+      @pre_checkin_metadata ||= (booking.pre_checkin&.metadata || {})
+    end
+
+    def estimated_arrival_time_label
+      pre_checkin_metadata["estimated_arrival_time"].presence || booking.estimated_arrival_time.presence || "Not provided"
+    end
+
+    def guest_government_id_label
+      pre_checkin_metadata["guest_government_id"].presence || "Not provided"
+    end
+
+    def current_room_number
+      @current_room_number ||= if booking.hotel_snapshot.is_a?(Hash)
+        booking.hotel_snapshot["room_number"].presence || booking.hotel_snapshot.dig("assignment", "room_number").presence
+      end
+    end
+
+    def payment_status_display
+      status = booking.payment_status.to_s
+      status == "refunded" ? "cancelled" : status
+    end
+
+    def payment_status_label_class
+      display_status = payment_status_display
+      case display_status
+      when "captured", "completed" then "border-emerald-800 text-emerald-800"
+      when "pending", "authorized" then "border-yellow-800 text-yellow-800"
+      when "failed", "cancelled", "refunded" then "border-red-800 text-red-800"
+      else "border-gray-800 text-gray-800"
+      end
+    end
+
+    def pre_checkin_display_status
+      booking.pre_checkin_display_status
+    end
+
+    def pre_checkin_status_label_class
+      case pre_checkin_display_status
+      when "completed" then "border-green-800 text-green-800"
+      when "in_progress" then "border-blue-800 text-blue-800"
+      when "failed" then "border-red-800 text-red-800"
+      when "pending" then "border-yellow-800 text-yellow-800"
+      else "border-gray-800 text-gray-800"
+      end
+    end
+
+    def room_type_prices_json
+      room_types.map { |rt| [ rt.id, rt.base_price ] }.to_h.to_json
+    end
+
+    def room_type_numbers_json
+      room_types.map { |rt| [ rt.id, rt.room_numbers ] }.to_h.to_json
+    end
+
     def room_types
       @room_types ||= hotel.room_types.order(:name)
     end
 
     def booking_rooms
       @booking_rooms ||= booking.booking_rooms
+    end
+
+    def room_number_for(room)
+      room.room_number.presence ||
+        (booking.hotel_snapshot.is_a?(Hash) ? booking.hotel_snapshot["room_number"].presence || booking.hotel_snapshot.dig("assignment", "room_number").presence : nil)
     end
 
     def pre_checkin

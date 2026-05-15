@@ -1,0 +1,62 @@
+<!-- Check-In / Edit Check-In Modal -->
+<dialog id="check-in-modal-show-<%= booking.id %>"
+        class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,28rem)] max-w-md shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
+  <div class="p-6 bg-white" onclick="event.stopPropagation()">
+    <h3 class="text-lg font-bold text-slate-900"><%= booking.checked_in? ? "Edit Check-In" : "Confirm Check-In" %></h3>
+    <p class="text-sm text-slate-500 mt-1">Set check-in time and assign rooms for <%= booking.guest_name %>.</p>
+    <%= form_with model: booking, url: check_in_hotel_booking_path(current_hotel, booking), method: :post, local: true, 
+        class: "mt-6 space-y-4" do |f| %>
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
+        <%= f.datetime_local_field :checked_in_at,
+            value: presenter.checked_in_at_form_value,
+            class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+      </div>
+
+      <div class="space-y-3">
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Room Assignments</label>
+        <%= f.fields_for :booking_rooms do |rf| %>
+          <div class="flex items-center gap-3" 
+               data-controller="room-lock"
+               data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
+               data-room-lock-room-type-id-value="<%= rf.object.room_type_id %>"
+               data-room-lock-current-room-value="<%= rf.object.room_number %>">
+            <div class="flex-1">
+              <p class="text-[10px] font-medium text-slate-400 uppercase mb-1"><%= rf.object.room_type.name %></p>
+              <%= rf.text_field :room_number, 
+                  placeholder: "Room No.",
+                  class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                  data: { action: "change->room-lock#lock" } %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      <div class="flex items-center justify-end gap-x-3 pt-2">
+        <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
+        <%= f.submit (booking.checked_in? ? "Save Changes" : "Confirm Check In"), class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
+      </div>
+    <% end %>
+  </div>
+</dialog>
+
+<!-- Check-Out Modal -->
+<dialog id="check-out-modal-show-<%= booking.id %>" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,28rem)] max-w-md shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
+  <div class="p-6 bg-white" onclick="event.stopPropagation()">
+    <h3 class="text-lg font-bold text-slate-900">Confirm Check-Out</h3>
+    <p class="text-sm text-slate-500 mt-1">Set check-out time for <%= booking.guest_name %>.</p>
+
+    <%= form_with url: check_out_hotel_booking_path(current_hotel, booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-out Date & Time</label>
+        <%= f.datetime_local_field :checked_out_at,
+            value: presenter.checked_out_at_form_value,
+            class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+      </div>
+
+      <div class="flex items-center justify-end gap-x-3 pt-2">
+        <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
+        <%= f.submit "Confirm Check-Out", class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
+      </div>
+    <% end %>
+  </div>
+</dialog>
