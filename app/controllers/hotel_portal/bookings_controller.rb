@@ -230,6 +230,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       end
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+      set_audit_logs
 
       respond_to do |format|
         format.turbo_stream do
@@ -237,7 +238,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
             # Append an alert toast to the board instead of rendering show
             render turbo_stream: turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
           else
-            render :show, status: :unprocessable_content
+            render :show, status: :unprocessable_content, formats: :html
           end
         end
         format.html do

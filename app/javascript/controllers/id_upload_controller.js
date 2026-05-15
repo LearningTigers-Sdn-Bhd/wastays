@@ -76,6 +76,7 @@ export default class extends Controller {
   updatePreview(event) {
     const file = event.target.files[0]
     if (file) {
+      this.lastFile = file // Backup the file
       const reader = new FileReader()
       reader.onload = (e) => {
         this.previewTarget.src = e.target.result
@@ -83,7 +84,19 @@ export default class extends Controller {
         this.placeholderTarget.classList.add("hidden")
       }
       reader.readAsDataURL(file)
+    } else if (this.lastFile) {
+      // If the input was cleared (e.g. user clicked 'Cancel' in browser picker)
+      // but we have a backup, restore it!
+      this.restoreBackup()
     }
+  }
+
+  restoreBackup() {
+    if (!this.lastFile) return
+    
+    const dataTransfer = new DataTransfer()
+    dataTransfer.items.add(this.lastFile)
+    this.inputTarget.files = dataTransfer.files
   }
 
   reset(event) {

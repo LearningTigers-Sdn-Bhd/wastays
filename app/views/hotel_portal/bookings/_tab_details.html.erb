@@ -6,20 +6,52 @@
       <p class="mt-1 text-sm font-medium text-slate-600">Contact details and identity information.</p>
     </div>
     <div class="p-6 sm:p-8">
-      <%= form_with model: booking, url: hotel_booking_path(current_hotel, booking), method: :patch, local: true, class: "grid sm:grid-cols-2 gap-6" do |f| %>
-        <div class="sm:col-span-2">
-          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Full Guest Name</label>
-          <%= f.text_field :guest_name, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+      <%= form_with model: booking, url: hotel_booking_path(current_hotel, booking), method: :patch, local: true, class: "space-y-6" do |f| %>
+        <div class="grid sm:grid-cols-2 gap-6">
+          <div class="sm:col-span-2">
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Full Guest Name</label>
+            <%= f.text_field :guest_name, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
+            <%= f.email_field :guest_email, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Phone Number</label>
+            <%= f.telephone_field :guest_phone, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          </div>
         </div>
-        <div>
-          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
-          <%= f.email_field :guest_email, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
-        </div>
-        <div>
-          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Phone Number</label>
-          <%= f.telephone_field :guest_phone, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
-        </div>
-        <div class="sm:col-span-2 pt-4 flex justify-end">
+
+        <% if !booking.pre_checkin_completed? && (booking.id_front.attached? || booking.id_back.attached?) %>
+          <div class="pt-6 border-t border-slate-100">
+            <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-4">Identity Verification</dt>
+            <div class="grid sm:grid-cols-2 gap-6">
+              <% if booking.id_front.attached? %>
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Front Side / Passport</span>
+                  </div>
+                  <div class="relative w-full aspect-[1.586/1] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden shadow-sm flex items-center justify-center">
+                    <%= image_tag booking.id_front, class: "max-w-full max-h-full object-contain" %>
+                  </div>
+                </div>
+              <% end %>
+
+              <% if booking.id_back.attached? %>
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Back Side</span>
+                  </div>
+                  <div class="relative w-full aspect-[1.586/1] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden shadow-sm flex items-center justify-center">
+                    <%= image_tag booking.id_back, class: "max-w-full max-h-full object-contain" %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <div class="pt-4 flex justify-end">
           <%= f.submit "Save Changes", class: "inline-flex items-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
         </div>
       <% end %>
@@ -152,71 +184,78 @@
         </span>
       </div>
       <div class="p-6 sm:p-8">
-        <% if booking.pre_checkin_completed? %>
-          <div class="grid lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-1 space-y-6">
+        <div class="grid lg:grid-cols-3 gap-8">
+          <div class="lg:col-span-1 space-y-6">
+            <% if booking.pre_checkin_completed? || presenter.estimated_arrival_time_label.present? %>
               <div>
                 <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Estimated Arrival</dt>
                 <dd class="text-base font-semibold text-slate-900"><%= presenter.estimated_arrival_time_label %></dd>
               </div>
+            <% end %>
+
+            <% if booking.pre_checkin_completed? && presenter.guest_government_id_label.present? && presenter.guest_government_id_label != "—" %>
               <div>
                 <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">ID / Passport Number</dt>
                 <dd class="text-base font-semibold text-slate-900"><%= presenter.guest_government_id_label %></dd>
               </div>
-            </div>
-
-            <% if booking.id_front.attached? || booking.id_back.attached? %>
-              <div class="lg:col-span-2">
-                <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-4">ID / Passport Documents</dt>
-                <div class="grid sm:grid-cols-2 gap-6">
-                  <% if booking.id_front.attached? %>
-                    <div class="space-y-2">
-                      <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Front Side</span>
-                      </div>
-                      <div class="relative w-full aspect-[1.586/1] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden shadow-sm flex items-center justify-center">
-                        <%= image_tag booking.id_front, class: "max-w-full max-h-full object-contain" %>
-                      </div>
-                    </div>
-                  <% end %>
-
-                  <% if booking.id_back.attached? %>
-                    <div class="space-y-2">
-                      <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Back Side</span>
-                      </div>
-                      <div class="relative w-full aspect-[1.586/1] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden shadow-sm flex items-center justify-center">
-                        <%= image_tag booking.id_back, class: "max-w-full max-h-full object-contain" %>
-                      </div>
-                    </div>
-                  <% end %>
-                </div>
-              </div>
             <% end %>
           </div>
-        <% else %>
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div class="flex-1">
-              <p class="text-sm font-medium text-slate-600 mb-4">The guest has not yet completed their pre-check-in. You can share the following link with them to accelerate their arrival process.</p>
-              <div class="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 group">
-                <div class="flex-1 min-w-0">
-                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Guest Form Link</p>
-                  <p class="text-xs font-mono text-slate-600 truncate"><%= pre_checkin_url(presenter.pre_checkin.token) %></p>
-                </div>
-                <button type="button" 
-                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm active:scale-95"
-                        data-controller="clipboard" 
-                        data-clipboard-text="<%= pre_checkin_url(presenter.pre_checkin.token) %>" 
-                        data-action="click->clipboard#copy">
-                  <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                  <span>Copy</span>
-                </button>
+
+          <% if booking.pre_checkin_completed? && (booking.id_front.attached? || booking.id_back.attached?) %>
+            <div class="lg:col-span-2">
+              <dt class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-4">Digital Identity Verification</dt>
+              <div class="grid sm:grid-cols-2 gap-6">
+                <% if booking.id_front.attached? %>
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Front Side / Passport</span>
+                    </div>
+                    <div class="relative w-full aspect-[1.586/1] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden shadow-sm flex items-center justify-center">
+                      <%= image_tag booking.id_front, class: "max-w-full max-h-full object-contain" %>
+                    </div>
+                  </div>
+                <% end %>
+
+                <% if booking.id_back.attached? %>
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Back Side</span>
+                    </div>
+                    <div class="relative w-full aspect-[1.586/1] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden shadow-sm flex items-center justify-center">
+                      <%= image_tag booking.id_back, class: "max-w-full max-h-full object-contain" %>
+                    </div>
+                  </div>
+                <% end %>
               </div>
             </div>
-            <div class="flex shrink-0 gap-3">
-              <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
-                Resend SMS/WhatsApp
-              </button>
+          <% end %>
+        </div>
+
+        <% if !booking.pre_checkin_completed? %>
+          <div class="mt-8 pt-8 border-t border-slate-100">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div class="flex-1">
+                <p class="text-sm font-medium text-slate-600 mb-4">The guest has not yet completed their pre-check-in. You can share the following link with them to accelerate their arrival process.</p>
+                <div class="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 group">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Guest Form Link</p>
+                    <p class="text-xs font-mono text-slate-600 truncate"><%= pre_checkin_url(presenter.pre_checkin.token) %></p>
+                  </div>
+                  <button type="button" 
+                          class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm active:scale-95"
+                          data-controller="clipboard" 
+                          data-clipboard-text="<%= pre_checkin_url(presenter.pre_checkin.token) %>" 
+                          data-action="click->clipboard#copy">
+                    <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    <span>Copy</span>
+                  </button>
+                </div>
+              </div>
+              <div class="flex shrink-0 gap-3">
+                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                  Resend SMS/WhatsApp
+                </button>
+              </div>
             </div>
           </div>
         <% end %>

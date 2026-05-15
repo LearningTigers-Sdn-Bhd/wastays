@@ -29,13 +29,19 @@ module Bookings
     private
 
     def check_in
-      folio     = HotelCounter.increment!(hotel: @booking.hotel, type: "folio")
-      guest_reg = HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
+      # Only increment counters if they haven't been assigned yet (new check-in)
+      # For edits, we preserve the existing numbers.
+      folio     = @booking.folio_number || HotelCounter.increment!(hotel: @booking.hotel, type: "folio")
+      guest_reg = @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
 
       if @booking.update(status: "checked_in", checked_in_at: @timestamp, folio_number: folio, guest_registration_number: guest_reg)
-        Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "check_in")
-        Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
-        Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
+        # Only record audit log and trigger events if it's the FIRST check-in
+        # (or if we want to record every edit, we can, but usually check_in action is for the transition)
+        if @booking.previously_new_record? || @booking.saved_change_to_status?
+          Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "check_in")
+          Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
+          Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
+        end
         success
       else
         failure(@booking.errors.full_messages.to_sentence)
