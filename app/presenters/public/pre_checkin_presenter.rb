@@ -41,5 +41,17 @@ module Public
     def any_errors?
       errors.any?
     end
+
+    def document_type_options
+      [ [ "Select Document", "" ] ] + Booking::DOCUMENT_TYPES
+    end
+
+    def hours_options
+      (1..12).to_a
+    end
+
+    def minutes_options
+      (0..59).map { |m| m.to_s.rjust(2, "0") }
+    end
   end
 end

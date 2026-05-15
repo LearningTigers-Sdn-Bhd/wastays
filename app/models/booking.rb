@@ -28,6 +28,10 @@ class Booking < ApplicationRecord
   PRE_CHECKIN_STATUSES = %w[not_started pending in_progress completed failed].freeze
   GUARANTEE_METHODS = %w[none pre_checkin_completed manual_at_hotel card_authorization_document charge_now].freeze
   DEPOSIT_STATUSES = %w[not_required pending_at_hotel authorized collected released failed].freeze
+  DOCUMENT_TYPES = [
+    [ "Identity Card (IC)", "ic" ],
+    [ "Passport", "passport" ]
+  ].freeze
 
   validates :status, presence: true, inclusion: { in: STATUSES }
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
