@@ -77,9 +77,10 @@ module HotelPortal
     end
 
     def current_room_number
-      @current_room_number ||= if booking.hotel_snapshot.is_a?(Hash)
-        booking.hotel_snapshot["room_number"].presence || booking.hotel_snapshot.dig("assignment", "room_number").presence
-      end
+      @current_room_number ||= booking.booking_rooms.first&.room_number.presence ||
+                               (if booking.hotel_snapshot.is_a?(Hash)
+                                  booking.hotel_snapshot["room_number"].presence || booking.hotel_snapshot.dig("assignment", "room_number").presence
+                                end)
     end
 
     def payment_status_display

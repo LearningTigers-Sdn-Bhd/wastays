@@ -19,10 +19,10 @@ class Booking < ApplicationRecord
   has_many :payment_transactions, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time
-  
+
   def guest_government_id
-    @guest_government_id.presence || 
-      pre_checkin&.metadata&.dig("guest_government_id").presence || 
+    @guest_government_id.presence ||
+      pre_checkin&.metadata&.dig("guest_government_id").presence ||
       primary_guest&.government_id
   end
 
