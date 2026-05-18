@@ -93,10 +93,29 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
   describe "POST /check_out" do
     it "updates the booking status and redirects within the hotel path" do
       booking.update!(status: 'checked_in')
+      folio = create(:booking_folio, booking: booking, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100.0)
+
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out", params: { checked_out_at: Time.current.to_s }
+
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
       expect(booking.reload.status).to eq("completed")
       expect(booking.reload.checked_out_at).to be_present
+      expect(folio.reload.status).to eq("closed")
+    end
+
+    it "does not check out when the folio is unsettled" do
+      booking.update!(status: 'checked_in')
+      folio = create(:booking_folio, booking: booking, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out", params: { checked_out_at: Time.current.to_s }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Cannot check out with outstanding balance")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(folio.reload.status).to eq("open")
     end
   end
 

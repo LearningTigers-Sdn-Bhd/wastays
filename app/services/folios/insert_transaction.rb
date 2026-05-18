@@ -16,26 +16,34 @@ module Folios
     end
 
     def call
-      if NightAudit.closed_for_date?(@booking_folio.booking.hotel_id, @posting_date)
-        unless @options[:override_night_audit]
-          return failure("The business date #{@posting_date} is already closed. Please provide an override flag to post to a closed date.")
+      @booking_folio.with_lock do
+        @booking_folio.reload
+
+        if @booking_folio.status == "closed" && !@options[:override_closed_folio]
+          return failure("Folio is closed. Please provide an override flag to post to a closed folio.")
         end
-      end
 
-      transaction = @booking_folio.folio_transactions.build(
-        amount: @amount,
-        transaction_type: @transaction_type,
-        category: @category,
-        user: @user,
-        description: @description,
-        posting_date: @posting_date,
-        metadata: @options[:metadata] || {}
-      )
+        if NightAudit.closed_for_date?(@booking_folio.booking.hotel_id, @posting_date)
+          unless @options[:override_night_audit]
+            return failure("The business date #{@posting_date} is already closed. Please provide an override flag to post to a closed date.")
+          end
+        end
 
-      if transaction.save
-        success(transaction)
-      else
-        failure(transaction.errors.full_messages.to_sentence)
+        transaction = @booking_folio.folio_transactions.build(
+          amount: @amount,
+          transaction_type: @transaction_type,
+          category: @category,
+          user: @user,
+          description: @description,
+          posting_date: @posting_date,
+          metadata: @options[:metadata] || {}
+        )
+
+        if transaction.save
+          success(transaction)
+        else
+          failure(transaction.errors.full_messages.to_sentence)
+        end
       end
     rescue StandardError => e
       failure(e.message)

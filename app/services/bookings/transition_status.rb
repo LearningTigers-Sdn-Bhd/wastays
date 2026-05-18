@@ -86,11 +86,41 @@ module Bookings
     end
 
     def check_out
+      close_result = nil
+      error = nil
+
       Booking.transaction do
-        @booking.update!(status: "completed", checked_out_at: @timestamp)
-        Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "check_out")
-        mark_assigned_rooms_pending_cleaning
+        @booking.with_lock do
+          @booking.reload
+
+          unless @booking.checked_in?
+            error = "Cannot check out booking with status #{@booking.status}"
+            next
+          end
+
+          close_result = Folios::CloseForCheckout.call(booking: @booking, user: @user, checked_out_at: @timestamp)
+          unless close_result.success?
+            error = close_result.error
+            next
+          end
+
+          @booking.update!(status: "completed", checked_out_at: @timestamp)
+          Bookings::RecordAuditLog.call(
+            auditable: @booking,
+            user: @user,
+            action_type: "check_out",
+            metadata: {
+              folio_id: close_result.folio.id,
+              folio_number: close_result.folio.folio_number,
+              folio_status: close_result.folio.status,
+              outstanding_balance: close_result.balance.to_s
+            }
+          )
+          mark_assigned_rooms_pending_cleaning
+        end
       end
+
+      return failure(error) if error.present?
 
       Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
       Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call

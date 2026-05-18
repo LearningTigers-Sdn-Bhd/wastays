@@ -237,6 +237,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       end
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+      set_audit_logs
 
       respond_to do |format|
         format.turbo_stream do

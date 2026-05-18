@@ -14,22 +14,32 @@ module Folios
     end
 
     def call
-      @booking.payment_transactions.where(status: "captured").find_each do |pt|
-        next if already_recorded?(pt)
+      @folio.with_lock do
+        @booking.payment_transactions.where(status: "captured").find_each do |pt|
+          next if already_recorded?(pt)
 
-        amount = pt.amount_subunits.to_d / 100.0
-        result = Folios::InsertTransaction.new(
-          booking_folio: @folio,
-          amount: amount,
-          transaction_type: :payment,
-          category: "gateway_payment",
-          user: nil,
-          description: "Payment via #{pt.gateway} (#{pt.external_reference})",
-          posting_date: pt.captured_at&.to_date || pt.created_at.to_date,
-          options: @options.merge({ metadata: { payment_transaction_id: pt.id } })
-        ).call
+          amount = pt.amount_subunits.to_d / 100.0
+          result = Folios::InsertTransaction.new(
+            booking_folio: @folio,
+            amount: amount,
+            transaction_type: :payment,
+            category: "advance_deposit",
+            user: nil,
+            description: "Advance deposit from booking quote payment via #{pt.gateway} (#{pt.external_reference})",
+            posting_date: pt.captured_at&.to_date || pt.created_at.to_date,
+            options: @options.merge({
+              metadata: {
+                payment_transaction_id: pt.id,
+                source: "booking_quote",
+                applied_as: "advance_deposit"
+              }
+            })
+          ).call
 
-        raise "Failed to sync folio payment: #{result.error}" unless result.success?
+          next if result.success? || already_recorded?(pt)
+
+          raise "Failed to sync folio payment: #{result.error}"
+        end
       end
     end
 

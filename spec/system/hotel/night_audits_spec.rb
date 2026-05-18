@@ -27,7 +27,7 @@ RSpec.describe "Hotel night audits", type: :system do
   it "renders the page and lets front desk run a completed audit" do
     business_date = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current - 1.day }
 
-    create(:booking,
+    booking = create(:booking,
       hotel: hotel,
       status: "completed",
       payment_status: "captured",
@@ -35,6 +35,9 @@ RSpec.describe "Hotel night audits", type: :system do
       check_out: business_date,
       checked_in_at: 1.day.ago,
       checked_out_at: Time.current)
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+    create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 200.0, posting_date: business_date - 1.day)
+    create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 200.0, posting_date: business_date)
 
     visit hotel_night_audits_path(hotel)
 

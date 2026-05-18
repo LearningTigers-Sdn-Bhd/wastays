@@ -32,6 +32,8 @@ module HotelOps
 
         log_event(night_audit, "process_started", "Night audit process started for business date #{@business_date}")
 
+        Folios::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
+
         blocked_details = build_blocked_details
         log_blockers(night_audit, blocked_details)
 
@@ -104,7 +106,7 @@ module HotelOps
         "checked_in_missing_timestamp" => serialize_bookings(checked_in_missing_timestamp, "Checked-in booking is missing check-in timestamp"),
         "completed_missing_timestamp" => serialize_bookings(completed_missing_timestamp, "Completed booking is missing check-out timestamp"),
         "missing_folio" => serialize_bookings(missing_folio_bookings, "Booking requires a folio before night audit can close"),
-        "missing_initial_charges" => serialize_bookings(missing_initial_charge_bookings, "Booking folio is missing required initial charges"),
+        "missing_nightly_charges" => serialize_bookings(missing_nightly_charge_bookings, "Booking folio is missing required nightly charges"),
         "outstanding_folio_balance" => serialize_bookings(outstanding_balance_bookings, "Booking has outstanding folio balance at checkout"),
         "captured_payment_not_synced" => serialize_payment_transactions(unsynced_captured_payment_transactions, "Captured payment is not synced to the booking folio"),
         "refund_not_synced" => serialize_refund_requests(unsynced_completed_refund_requests, "Completed refund is not synced to the booking folio")
@@ -146,12 +148,20 @@ module HotelOps
       @missing_folio_bookings ||= financially_relevant_bookings.select { |booking| booking.booking_folio.blank? }
     end
 
-    def missing_initial_charge_bookings
-      @missing_initial_charge_bookings ||= financially_relevant_bookings.select do |booking|
+    def nightly_charge_bookings
+      @nightly_charge_bookings ||= hotel_bookings
+        .includes(:booking_rooms, booking_folio: :folio_transactions)
+        .checked_in
+        .where("check_in <= ? AND check_out > ?", @business_date, @business_date)
+        .to_a
+    end
+
+    def missing_nightly_charge_bookings
+      @missing_nightly_charge_bookings ||= nightly_charge_bookings.select do |booking|
         folio = booking.booking_folio
         next false unless folio
 
-        missing_accommodation_charge?(booking, folio) || missing_tax_charge?(booking, folio)
+        missing_nightly_accommodation_charge?(booking, folio) || missing_nightly_tax_charge?(booking, folio)
       end
     end
 
@@ -201,18 +211,18 @@ module HotelOps
       hotel_bookings.group(:payment_status).count.transform_keys(&:to_s)
     end
 
-    def missing_accommodation_charge?(booking, folio)
-      room_total = booking.booking_rooms.to_a.sum { |room| room.subtotal.to_d }
-      return false if room_total.zero?
+    def missing_nightly_accommodation_charge?(booking, folio)
+      expected_total = booking.booking_rooms.to_a.sum { |room| nightly_amount(room.subtotal, booking) }
+      return false if expected_total.zero?
 
-      folio_charge_total(folio, "accommodation") != room_total
+      nightly_charge_total(folio, "accommodation") != expected_total
     end
 
-    def missing_tax_charge?(booking, folio)
-      expected_tax_total = expected_booking_tax_total(booking)
+    def missing_nightly_tax_charge?(booking, folio)
+      expected_tax_total = nightly_amount(expected_booking_tax_total(booking), booking)
       return false unless expected_tax_total.positive?
 
-      folio_charge_total(folio, "tax") != expected_tax_total
+      nightly_charge_total(folio, "tax") != expected_tax_total
     end
 
     def expected_booking_tax_total(booking)
@@ -222,10 +232,23 @@ module HotelOps
       booking.tourism_tax_amount.to_d
     end
 
-    def folio_charge_total(folio, category)
+    def nightly_charge_total(folio, category)
       folio.folio_transactions.to_a.sum do |transaction|
-        transaction.transaction_type == "charge" && transaction.category == category ? transaction.amount.to_d : 0.to_d
+        transaction.transaction_type == "charge" &&
+          transaction.category == category &&
+          transaction.metadata["posting_source"] == "night_audit" &&
+          transaction.metadata["stay_date"] == @business_date.iso8601 ? transaction.amount.to_d : 0.to_d
       end
+    end
+
+    def nightly_amount(total_amount, booking)
+      nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
+      return 0.to_d unless nights.positive?
+
+      per_night = (total_amount.to_d / nights).round(2)
+      return per_night unless @business_date == booking.check_out.to_date - 1.day
+
+      total_amount.to_d - (per_night * (nights - 1))
     end
 
     def folio_outstanding_balance(folio)

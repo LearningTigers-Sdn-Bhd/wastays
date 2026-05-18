@@ -110,26 +110,7 @@
     </div>
   </dialog>
 
-  <dialog id="check-out-modal-show-<%= @booking.id %>" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,28rem)] max-w-md shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
-    <div class="p-6 bg-white" onclick="event.stopPropagation()">
-      <h3 class="text-lg font-bold text-slate-900">Confirm Check-Out</h3>
-      <p class="text-sm text-slate-500 mt-1">Set check-out time for <%= @booking.guest_name %>.</p>
-
-      <%= form_with url: check_out_hotel_booking_path(current_hotel, @booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
-        <div>
-          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-out Date & Time</label>
-          <%= f.datetime_local_field :checked_out_at,
-              value: Time.current.strftime("%Y-%m-%dT%H:%M"),
-              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
-        </div>
-
-        <div class="flex items-center justify-end gap-x-3 pt-2">
-          <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
-          <%= f.submit "Confirm Check-Out", class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
-        </div>
-      <% end %>
-    </div>
-  </dialog>
+  <%= render "hotel_portal/bookings/checkout_modal", booking: @booking, hotel: current_hotel %>
 
   <div class="grid lg:grid-cols-12 gap-8 px-4 md:px-0">
     <!-- Main Column -->

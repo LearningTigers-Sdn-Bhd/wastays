@@ -31,8 +31,8 @@ RSpec.describe Bookings::TransitionStatus do
         expect(log.auditable).to eq(booking)
       end
 
-      it "rolls back the folio when initial charge posting fails" do
-        create(:booking_room, booking: booking, subtotal: 100.0)
+      it "rolls back the folio when payment sync fails" do
+        create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
 
         failed_result = OpenStruct.new(success?: false, error: "posting blocked")
         insert_service = instance_double(Folios::InsertTransaction, call: failed_result)
@@ -98,7 +98,7 @@ RSpec.describe Bookings::TransitionStatus do
           result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
           expect(result.success?).to be true
         }.to change(BookingFolio, :count).by(1)
-          .and change(FolioTransaction, :count).by(1)
+          .and change(FolioTransaction, :count).by(0)
           .and change(BookingAuditLog, :count).by(0)
           .and have_enqueued_job(WebhookBroadcastJob).exactly(0).times
           .and have_enqueued_job(Notifications::DeliverJob).exactly(0).times
@@ -134,7 +134,15 @@ RSpec.describe Bookings::TransitionStatus do
       let(:booking) { create(:booking, status: "checked_in") }
       subject { described_class.new(booking: booking, status: "completed", timestamp: timestamp) }
 
+      def create_settled_folio
+        folio = create(:booking_folio, booking: booking, status: "open")
+        create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+        create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100.0)
+        folio
+      end
+
       it "updates status and checked_out_at" do
+        folio = create_settled_folio
         NotificationConfig.create!(
           hotel: booking.hotel,
           notification_type: "post_stay_review_request",
@@ -159,9 +167,48 @@ RSpec.describe Bookings::TransitionStatus do
 
         expect(booking.reload.status).to eq("completed")
         expect(booking.checked_out_at).to be_within(1.second).of(timestamp)
+        expect(folio.reload.status).to eq("closed")
 
         log = BookingAuditLog.last
         expect(log.action_type).to eq("check_out")
+        expect(log.metadata["folio_id"]).to eq(folio.id)
+      end
+
+      it "fails when the folio has an outstanding balance" do
+        folio = create(:booking_folio, booking: booking, status: "open")
+        create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+        expect {
+          result = subject.call
+          expect(result.success?).to be(false)
+          expect(result.error).to include("outstanding balance")
+        }.to change(BookingAuditLog, :count).by(0)
+          .and have_enqueued_job(WebhookBroadcastJob).exactly(0).times
+          .and have_enqueued_job(Notifications::DeliverJob).exactly(0).times
+
+        expect(booking.reload.status).to eq("checked_in")
+        expect(booking.checked_out_at).to be_nil
+        expect(folio.reload.status).to eq("open")
+      end
+
+      it "fails when the folio has a credit balance" do
+        folio = create(:booking_folio, booking: booking, status: "open")
+        create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 50.0)
+
+        result = subject.call
+
+        expect(result.success?).to be(false)
+        expect(result.error).to include("credit balance")
+        expect(booking.reload.status).to eq("checked_in")
+        expect(folio.reload.status).to eq("open")
+      end
+
+      it "fails without a folio" do
+        result = subject.call
+
+        expect(result.success?).to be(false)
+        expect(result.error).to eq("Booking has no folio.")
+        expect(booking.reload.status).to eq("checked_in")
       end
     end
 

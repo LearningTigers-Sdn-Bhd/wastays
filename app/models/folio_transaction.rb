@@ -2,7 +2,7 @@
 
 class FolioTransaction < ApplicationRecord
   CHARGE_CATEGORIES = %w[accommodation tax fb other].freeze
-  PAYMENT_CATEGORIES = %w[gateway_payment cash refund].freeze
+  PAYMENT_CATEGORIES = %w[gateway_payment cash refund advance_deposit].freeze
   ADJUSTMENT_CATEGORIES = %w[adjustment correction discount write_off other].freeze
   CATEGORIES_BY_TYPE = {
     "charge" => CHARGE_CATEGORIES,

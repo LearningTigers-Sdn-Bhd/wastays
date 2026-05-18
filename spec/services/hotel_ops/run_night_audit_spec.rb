@@ -51,10 +51,27 @@ RSpec.describe HotelOps::RunNightAudit do
 
     expect(run_audit.success?).to be(true)
     expect(night_audit).to be_completed
-    
+
     logs = night_audit.night_audit_logs
     expect(logs.first.action_type).to eq("process_started")
     expect(logs.last.action_type).to eq("completed")
+  end
+
+  it "posts nightly charges before completing the audit" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 2.days,
+      checked_in_at: business_date.beginning_of_day,
+      tax_lines: [ { "name" => "SST", "amount" => "20.00", "type" => "sst" } ])
+    create(:booking_room, booking: booking, subtotal: 200.0)
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+
+    result = run_audit
+
+    expect(result.success?).to be(true)
+    expect(folio.folio_transactions.charge.where("metadata->>'posting_source' = ?", "night_audit").count).to eq(2)
   end
 
   it "blocks and logs when a due-out booking is not checked out" do
@@ -73,7 +90,7 @@ RSpec.describe HotelOps::RunNightAudit do
 
     expect(result.success?).to be(false)
     expect(result.night_audit).to be_blocked
-    
+
     log = result.night_audit.night_audit_logs.find_by(action_type: "blocker_found")
     expect(log.message).to include("Found 1 blockers of type: Due out not checked out")
     expect(log.metadata["items"].first["confirmation_token"]).to be_present
@@ -89,7 +106,7 @@ RSpec.describe HotelOps::RunNightAudit do
     result = run_audit
 
     expect(result.night_audit).to be_completed
-    
+
     expect(result.night_audit.night_audit_logs.where(action_type: "exception_found").count).to eq(2)
   end
 
@@ -138,7 +155,8 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(result.night_audit.blocked_details["missing_folio"].first["booking_id"]).to eq(booking.id)
   end
 
-  it "blocks when an in-house booking folio is missing initial charges" do
+  it "blocks when an in-house booking folio is missing nightly charges" do
+    allow(Folios::PostNightlyCharges).to receive(:call)
     booking = create(:booking,
       hotel: hotel,
       status: "checked_in",
@@ -151,10 +169,11 @@ RSpec.describe HotelOps::RunNightAudit do
     result = run_audit
 
     expect(result.success?).to be(false)
-    expect(result.night_audit.blocked_details["missing_initial_charges"].first["booking_id"]).to eq(booking.id)
+    expect(result.night_audit.blocked_details["missing_nightly_charges"].first["booking_id"]).to eq(booking.id)
   end
 
-  it "blocks when initial charges are under-posted" do
+  it "blocks when nightly charges are under-posted" do
+    allow(Folios::PostNightlyCharges).to receive(:call)
     booking = create(:booking,
       hotel: hotel,
       status: "checked_in",
@@ -168,7 +187,7 @@ RSpec.describe HotelOps::RunNightAudit do
     result = run_audit
 
     expect(result.success?).to be(false)
-    expect(result.night_audit.blocked_details["missing_initial_charges"].first["booking_id"]).to eq(booking.id)
+    expect(result.night_audit.blocked_details["missing_nightly_charges"].first["booking_id"]).to eq(booking.id)
   end
 
   it "blocks when a due-out completed booking has an outstanding folio balance" do

@@ -31,7 +31,6 @@ module Folios
         unless folio.present?
           folio = create_folio!
 
-          Folios::PostInitialCharges.call(folio: folio, user: @user, options: @options)
           Folios::SyncExistingPayments.call(folio: folio, user: @user, options: @options)
         end
 

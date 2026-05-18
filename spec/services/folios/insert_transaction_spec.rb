@@ -77,5 +77,41 @@ RSpec.describe Folios::InsertTransaction do
         expect(folio.outstanding_balance).to eq(50.0)
       end
     end
+
+    context "on a closed folio" do
+      it "fails without override" do
+        stale_folio = BookingFolio.find(folio.id)
+        folio.update!(status: "closed")
+
+        result = described_class.new(
+          booking_folio: stale_folio,
+          amount: 50.0,
+          transaction_type: :charge,
+          category: "other",
+          user: user,
+          description: "Late charge"
+        ).call
+
+        expect(result.success?).to be(false)
+        expect(result.error).to include("Folio is closed")
+      end
+
+      it "succeeds with override" do
+        folio.update!(status: "closed")
+
+        result = described_class.new(
+          booking_folio: folio,
+          amount: 50.0,
+          transaction_type: :charge,
+          category: "other",
+          user: user,
+          description: "Late charge",
+          options: { override_closed_folio: true }
+        ).call
+
+        expect(result.success?).to be(true)
+        expect(folio.outstanding_balance).to eq(50.0)
+      end
+    end
   end
 end
