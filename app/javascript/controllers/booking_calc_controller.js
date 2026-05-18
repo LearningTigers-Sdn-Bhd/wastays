@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["checkIn", "checkOut", "roomType", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer"]
+  static targets = ["checkIn", "checkOut", "roomType", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput"]
   static values = { availabilityUrl: String, priceUrl: String, bookingId: String }
 
   connect() {
@@ -143,5 +143,10 @@ export default class extends Controller {
     const formatted = amount.toFixed(2)
     this.displayTotalTarget.textContent = formatted
     this.totalInputTarget.value = formatted
+    
+    // Also update the manual payment amount field if it exists
+    if (this.hasPaymentAmountInputTarget) {
+      this.paymentAmountInputTarget.value = formatted
+    }
   }
 }
