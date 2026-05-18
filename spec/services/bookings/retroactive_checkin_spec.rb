@@ -4,9 +4,9 @@ require "rails_helper"
 
 RSpec.describe "Retroactive Check-in", type: :service do
   let(:hotel) { create(:hotel) }
-  let(:booking) { create(:booking, hotel: hotel, status: "confirmed", total_amount: 250.0) }
-  let(:user) { create(:user) }
   let(:past_date) { 1.day.ago.to_date }
+  let(:booking) { create(:booking, hotel: hotel, status: "confirmed", total_amount: 250.0, check_in: past_date, check_out: past_date + 1.day) }
+  let(:user) { create(:user) }
   let(:timestamp) { past_date.to_time + 14.hours } # 2 PM yesterday
 
   before do
@@ -24,7 +24,7 @@ RSpec.describe "Retroactive Check-in", type: :service do
     ).call
 
     expect(result.success?).to be false
-    expect(result.error).to include("already closed")
+    expect(result.error).to include("Reason required for backdated check-in")
   end
 
   it "allows check-in on a closed date with override and posts charges" do

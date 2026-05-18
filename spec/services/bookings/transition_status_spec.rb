@@ -128,6 +128,30 @@ RSpec.describe Bookings::TransitionStatus do
         expect(result.error).to include("Cannot check in booking with status cancelled")
         expect(booking.reload.status).to eq("cancelled")
       end
+
+      it "does not require override before the hotel business end closes the check-in date" do
+        zone = Time.find_zone("Kuala Lumpur")
+        hotel = create(:hotel, time_zone: "Kuala Lumpur")
+        booking = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 5, 18), check_out: Date.new(2026, 5, 19))
+
+        result = described_class.new(booking: booking, status: "checked_in", timestamp: zone.local(2026, 5, 19, 1, 30)).call
+
+        expect(result.success?).to be true
+        expect(booking.reload.status).to eq("checked_in")
+      end
+
+      it "requires override when the booking check-in business date is already closed" do
+        zone = Time.find_zone("Kuala Lumpur")
+        hotel = create(:hotel, time_zone: "Kuala Lumpur")
+        booking = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 5, 18), check_out: Date.new(2026, 5, 19))
+        create(:night_audit, hotel: hotel, business_date: Date.new(2026, 5, 18), status: "completed")
+
+        result = described_class.new(booking: booking, status: "checked_in", timestamp: zone.local(2026, 5, 19, 3, 0)).call
+
+        expect(result.success?).to be false
+        expect(result.error).to include("Reason required for backdated check-in on closed date 2026-05-18")
+        expect(booking.reload.status).to eq("confirmed")
+      end
     end
 
     context "when status is completed" do
@@ -248,6 +272,93 @@ RSpec.describe Bookings::TransitionStatus do
       result = subject.call
       expect(result.success?).to be false
       expect(result.error).to eq("Error")
+    end
+    context "late-night check-in scenarios" do
+      let(:hotel) { booking.hotel }
+      let(:business_date) { booking.check_in }
+
+      before do
+        create(:booking_room, booking: booking, subtotal: 100.0)
+      end
+
+      context "when booking was marked as no_show" do
+        before do
+          booking.update!(status: "no_show")
+          # Create a night audit record and no-show penalties
+          create(:night_audit, hotel: hotel, business_date: business_date, status: "completed")
+          folio = create(:booking_folio, booking: booking, hotel: hotel)
+          create(:folio_transaction,
+                 booking_folio: folio,
+                 transaction_type: :charge,
+                 category: :accommodation,
+                 amount: 100.0,
+                 metadata: { "posting_source" => "no_show" })
+        end
+
+        it "allows check-in, recovers inventory, and processes catch-up charges" do
+          inventory_manager = instance_double(Bookings::InventoryManager)
+          allow(Bookings::InventoryManager).to receive(:new).with(booking).and_return(inventory_manager)
+          expect(inventory_manager).to receive(:reserve_by_dates).with(business_date + 1.day, booking.check_out)
+
+          options = { override_night_audit: true, reason: "Late arrival" }
+          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: nil, options: options)
+
+          expect {
+            result = subject.call
+            expect(result.success?).to be true
+          }.to change(FolioTransaction, :count).by(2) # 1 reversal adjustment + 1 catch-up charge
+
+          booking.reload
+          expect(booking.status).to eq("checked_in")
+
+          folio = booking.booking_folio
+          # Check for reversal
+          reversal = folio.folio_transactions.adjustment.first
+          expect(reversal.amount).to eq(-100.0)
+          expect(reversal.category).to eq("correction")
+
+          # Check for catch-up charge
+          catch_up = folio.folio_transactions.charge.find_by("metadata->>'posting_source' = ?", "catch_up")
+          expect(catch_up.amount).to eq(100.0)
+          expect(catch_up.category).to eq("accommodation")
+        end
+
+        it "does not reinstate a no-show when the assigned room has already been reused" do
+          room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ], quantity: 1)
+          booking.booking_rooms.sole.update!(room_type: room_type, room_number: "101")
+          reused_booking = create(:booking, hotel: hotel, status: "confirmed", check_in: booking.check_in, check_out: booking.check_out)
+          create(:booking_room, booking: reused_booking, room_type: room_type, room_number: "101")
+
+          options = { override_night_audit: true, reason: "Late arrival" }
+          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: nil, options: options)
+
+          result = subject.call
+
+          expect(result.success?).to be false
+          expect(result.error).to include("Assigned room 101 is no longer available")
+          expect(booking.reload.status).to eq("no_show")
+        end
+      end
+
+      context "when check-in is retroactive for a confirmed booking" do
+        before do
+          create(:night_audit, hotel: hotel, business_date: business_date, status: "completed")
+        end
+
+        it "posts catch-up charges immediately" do
+          options = { override_night_audit: true, reason: "Manual walk-in after audit" }
+          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: nil, options: options)
+
+          expect {
+            result = subject.call
+            expect(result.success?).to be true
+          }.to change(FolioTransaction, :count).by(1) # 1 catch-up charge (assuming no existing payments)
+
+          catch_up = booking.booking_folio.folio_transactions.charge.first
+          expect(catch_up.amount).to eq(100.0)
+          expect(catch_up.metadata["posting_source"]).to eq("catch_up")
+        end
+      end
     end
   end
 end

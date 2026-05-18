@@ -9,7 +9,7 @@ module Rooms
       "pending_cleaning" => %w[preparing ready out_of_service],
       "preparing" => %w[awaiting_inspection ready inspection_failed out_of_service],
       "awaiting_inspection" => %w[ready inspection_failed preparing out_of_service],
-      "inspection_failed" => %w[preparing out_of_service],
+      "inspection_failed" => %w[preparing ready out_of_service],
       "out_of_service" => %w[ready pending_cleaning]
     }.freeze
 

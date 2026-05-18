@@ -24,6 +24,12 @@ module Bookings
       end
     end
 
+    def reserve_by_dates(start_date, end_date)
+      @booking.booking_rooms.each do |room|
+        update_inventory(room, -room.quantity, dates: (start_date...end_date).to_a)
+      end
+    end
+
     private
 
     def update_inventory(room, quantity_change, dates: nil)

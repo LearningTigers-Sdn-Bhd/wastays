@@ -14,6 +14,7 @@ module Bookings
       @business_date = night_audit.business_date.to_date
       @user = user
       @processed = []
+      @hotel_zone = Time.find_zone(@hotel.time_zone.presence || User::DEFAULT_TIME_ZONE) || Time.zone
     end
 
     def call
@@ -28,7 +29,7 @@ module Bookings
 
     def no_show_candidates
       @hotel.bookings.confirmed
-        .includes(:booking_rooms, :payment_transactions, booking_folio: :folio_transactions)
+        .includes(:pre_checkin, :payment_transactions, booking_rooms: :room_type, booking_folio: :folio_transactions)
         .where(check_in: @business_date)
     end
 
@@ -36,12 +37,13 @@ module Bookings
       Booking.transaction do
         booking.with_lock do
           booking.reload
-          next unless booking.status == "confirmed" && booking.check_in == @business_date
+          next unless no_show_eligible?(booking)
 
           folio = Folios::InitializeForBooking.call(booking: booking, user: @user, lock: false)
           post_no_show_charges(booking, folio)
           booking.update!(status: "no_show")
           Bookings::InventoryManager.new(booking).release_by_dates(@business_date + 1.day, booking.check_out)
+          release_assigned_rooms_to_ready(booking)
           Bookings::RecordAuditLog.call(
             auditable: booking,
             user: @user,
@@ -51,6 +53,104 @@ module Bookings
           @processed << booking
         end
       end
+    end
+
+    def no_show_eligible?(booking)
+      booking.status == "confirmed" &&
+        booking.check_in == @business_date &&
+        !active_pre_checkin_hold?(booking)
+    end
+
+    def active_pre_checkin_hold?(booking)
+      pre_checkin = booking.pre_checkin
+      return false unless pre_checkin&.completed?
+
+      declared_arrival_at = declared_arrival_at_for(booking, pre_checkin)
+      return false unless declared_arrival_at
+
+      audit_reference_time < declared_arrival_at + @hotel.arrival_grace_period.seconds
+    end
+
+    def declared_arrival_at_for(booking, pre_checkin)
+      arrival_time = pre_checkin.metadata&.fetch("estimated_arrival_time", nil).presence
+      return nil unless arrival_time
+
+      time_parts = arrival_time.to_s.split(":")
+      return nil unless time_parts.size >= 2
+
+      hour, minute = time_parts.first(2).map(&:to_i)
+      return nil unless hour.between?(0, 23) && minute.between?(0, 59)
+
+      arrival_date = booking.check_in.to_date
+      if business_day_crosses_midnight? && seconds_since_midnight(hour, minute) <= seconds_since_midnight(@hotel.business_ends_at.hour, @hotel.business_ends_at.min)
+        arrival_date += 1.day
+      end
+
+      @hotel_zone.local(arrival_date.year, arrival_date.month, arrival_date.day, hour, minute)
+    end
+
+    def audit_reference_time
+      @audit_reference_time ||= (@night_audit.completed_at || @night_audit.started_at || Time.current).in_time_zone(@hotel_zone)
+    end
+
+    def business_day_crosses_midnight?
+      @hotel.business_ends_at <= @hotel.business_starts_at
+    end
+
+    def seconds_since_midnight(hour, minute)
+      (hour * 3600) + (minute * 60)
+    end
+
+    def release_assigned_rooms_to_ready(booking)
+      booking.booking_rooms.each do |booking_room|
+        next if booking_room.room_number.blank?
+
+        room_status = RoomStatus.create_with(status: "ready").find_or_create_by!(
+          hotel: booking.hotel,
+          room_type: booking_room.room_type,
+          room_number: booking_room.room_number
+        )
+        was_ready = room_status.status == "ready"
+
+        result = Rooms::SetStatus.new(
+          room_status: room_status,
+          status: "ready",
+          user: @user,
+          booking: booking,
+          event_type: "no_show_released_after_night_audit",
+          reason: "Booking marked no-show after night audit",
+          metadata: {
+            "source" => "bookings_process_no_shows",
+            "booking_id" => booking.id,
+            "night_audit_id" => @night_audit.id,
+            "business_date" => @business_date.iso8601
+          }
+        ).call
+
+        raise result.error unless result.success?
+
+        record_ready_room_release(room_status, booking) if was_ready
+      end
+    end
+
+    def record_ready_room_release(room_status, booking)
+      RoomOperationalAuditLog.create!(
+        hotel: room_status.hotel,
+        room_type: room_status.room_type,
+        booking: booking,
+        user: @user,
+        room_number: room_status.room_number,
+        event_type: "no_show_released_after_night_audit",
+        old_status: "ready",
+        new_status: "ready",
+        reason: "Booking marked no-show after night audit",
+        metadata: {
+          "source" => "bookings_process_no_shows",
+          "booking_id" => booking.id,
+          "night_audit_id" => @night_audit.id,
+          "business_date" => @business_date.iso8601
+        }
+      )
     end
 
     def post_no_show_charges(booking, folio)

@@ -34,40 +34,50 @@ namespace :hotel_ops do
 
       puts "Recalibrating rates from #{start_date} to #{end_date}..."
       hotel.room_types.each do |room_type|
-        # Ensure a Standard Rate plan exists if none are present
-        if room_type.rate_plans.empty?
-          puts "  -> Creating 'Standard Rate' plan for #{room_type.name}..."
-          room_type.rate_plans.create!(
-            name: "Standard Rate",
-            sell_mode: "per_room",
-            currency: hotel.default_currency || "MYR"
-          )
-          room_type.reload
+        # 2a. Ensure Rate Plans exist
+        standard_plan = room_type.rate_plans.find_or_create_by!(name: "Standard Rate") do |p|
+          p.sell_mode = "per_room"
+          p.currency = hotel.default_currency || "MYR"
+        end
+
+        non_ref_plan = room_type.rate_plans.find_or_create_by!(name: "Non-Refundable Rate") do |p|
+          p.sell_mode = "per_room"
+          p.currency = hotel.default_currency || "MYR"
         end
 
         base_price = room_type.base_price
+        puts "  -> Configuring rates for #{room_type.name} (Base: #{base_price})..."
 
-        room_type.rate_plans.each do |rate_plan|
-          puts "  -> Resetting rates for #{room_type.name} (#{rate_plan.name}) to #{base_price} #{rate_plan.currency}..."
+        # 2b. Remove existing rates for this room type in the range
+        RoomRate.where(room_type_id: room_type.id, date: start_date..end_date).delete_all
 
-          # Remove existing rates in the range
-          rate_plan.room_rates.where(date: start_date..end_date).delete_all
+        # 2c. Create new rates for all plans
+        rates_to_insert = []
+        (start_date..end_date).each do |date|
+          # Standard Rate
+          rates_to_insert << {
+            room_type_id: room_type.id,
+            rate_plan_id: standard_plan.id,
+            date: date,
+            price: base_price,
+            currency: standard_plan.currency,
+            created_at: Time.current,
+            updated_at: Time.current
+          }
 
-          # Create new rates
-          rates_to_insert = (start_date..end_date).map do |date|
-            {
-              room_type_id: room_type.id,
-              rate_plan_id: rate_plan.id,
-              date: date,
-              price: base_price,
-              currency: rate_plan.currency,
-              created_at: Time.current,
-              updated_at: Time.current
-            }
-          end
-
-          RoomRate.insert_all(rates_to_insert) if rates_to_insert.any?
+          # Non-Refundable Rate (10% discount)
+          rates_to_insert << {
+            room_type_id: room_type.id,
+            rate_plan_id: non_ref_plan.id,
+            date: date,
+            price: (base_price * 0.9).round(2),
+            currency: non_ref_plan.currency,
+            created_at: Time.current,
+            updated_at: Time.current
+          }
         end
+
+        RoomRate.insert_all(rates_to_insert) if rates_to_insert.any?
       end
 
       # 3. Recalibrate Room Statuses

@@ -9,6 +9,12 @@ module Bookings
       @params = params.dup
       @room_type_id = @params.delete(:room_type_id)
       @room_number = @params.delete(:room_number)
+
+      @record_payment = @params.delete(:record_payment)
+      @payment_method = @params.delete(:payment_method)
+      @payment_amount = @params.delete(:payment_amount)
+      @payment_reference = @params.delete(:payment_reference)
+
       @user = user
     end
 
@@ -43,8 +49,26 @@ module Bookings
       end
 
       booking.status = "confirmed"
-      booking.payment_status = "captured"
       booking.hotel_snapshot = @hotel.booking_snapshot.merge("room_number" => @room_number)
+
+      if @record_payment == "1" || @record_payment == true
+        payment_amount_value = @payment_amount.presence || booking.total_amount
+        booking.payment_status = (payment_amount_value.to_d >= booking.total_amount.to_d) ? "captured" : "partial"
+
+        booking.payment_transactions.build(
+          gateway: "manual",
+          payment_method: @payment_method.presence || "cash",
+          amount_subunits: (payment_amount_value.to_d * 100).to_i,
+          currency: booking.currency || "MYR",
+          status: "captured",
+          captured_at: Time.current,
+          external_reference: @payment_reference,
+          event_source: "manual_booking",
+          metadata: { recorded_by_user_id: @user&.id }
+        )
+      else
+        booking.payment_status = "pending"
+      end
 
       result = ActiveRecord::Base.transaction do
         if booking.save

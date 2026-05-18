@@ -2,6 +2,8 @@
 
 module Folios
   class PostNightlyCharges
+    include NightlyChargeCalculation
+
     def self.call(night_audit:, user:, options: {})
       new(night_audit: night_audit, user: user, options: options).call
     end
@@ -36,7 +38,7 @@ module Folios
 
     def post_accommodation_charges(booking)
       booking.booking_rooms.each do |booking_room|
-        amount = nightly_amount(booking_room.subtotal, booking)
+        amount = nightly_amount(booking_room.subtotal, booking, @business_date)
         next if amount.zero?
 
         insert_transaction!(
@@ -51,7 +53,7 @@ module Folios
 
     def post_tax_charges(booking)
       tax_lines_for(booking).each_with_index do |tax_line, index|
-        amount = nightly_amount(tax_line_amount(tax_line), booking)
+        amount = nightly_amount(tax_line_amount(tax_line), booking, @business_date)
         next if amount.zero?
 
         tax_identity = tax_line_identity(tax_line, index)
@@ -101,38 +103,6 @@ module Folios
 
     def nightly_charge_key(booking, charge_kind, identity)
       [ booking.id, @business_date.iso8601, charge_kind, identity ].join(":")
-    end
-
-    def nightly_amount(total_amount, booking)
-      nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
-      return 0.to_d unless nights.positive?
-
-      per_night = (total_amount.to_d / nights).round(2)
-      return per_night unless @business_date == booking.check_out.to_date - 1.day
-
-      total_amount.to_d - (per_night * (nights - 1))
-    end
-
-    def tax_lines_for(booking)
-      tax_lines = Array(booking.tax_lines)
-      return tax_lines if tax_lines.any?
-
-      return [] unless booking.tourism_tax_amount.to_d.positive?
-
-      [ { "name" => "Tourism Tax", "amount" => booking.tourism_tax_amount, "type" => "tourism_tax" } ]
-    end
-
-    def tax_line_amount(tax_line)
-      (tax_line["amount"].presence || tax_line[:amount]).to_d
-    end
-
-    def tax_line_name(tax_line)
-      tax_line["name"].presence || tax_line[:name].presence || "Tax"
-    end
-
-    def tax_line_identity(tax_line, index)
-      identity = tax_line["type"].presence || tax_line[:type].presence || tax_line_name(tax_line).parameterize.presence || "tax"
-      "#{identity}:#{index}"
     end
   end
 end
