@@ -23,6 +23,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     end
 
     @room_types = current_hotel.room_types.order(:id)
+    @partners = current_hotel.partners.ordered
     @calendar = build_calendar
     @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules
   end
@@ -209,6 +210,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       wi_price: pricing_params[:wi_price],
       wi_start_date: pricing_params[:wi_start_date],
       wi_end_date: pricing_params[:wi_end_date],
+      cr_price: pricing_params[:cr_price],
+      cr_start_date: pricing_params[:cr_start_date],
+      cr_end_date: pricing_params[:cr_end_date],
       public_holidays: pricing_params[:public_holidays]
     ).call
 
@@ -217,6 +221,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @end_date = @start_date + 13.days
       @view_mode = "combined"
       @room_types = current_hotel.room_types.order(:id)
+      @partners = current_hotel.partners.ordered
 
       @hotel_base_currency = current_hotel.default_currency || "MYR"
       requested_currencies = Array(params[:view_currencies]).reject(&:blank?)
@@ -298,7 +303,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
     rule_type = params[:rule_type].to_s
-    unless %w[general weekends school_holiday walk_in].include?(rule_type)
+    unless %w[general weekends school_holiday walk_in corporate_rate].include?(rule_type)
       return redirect_to hotel_inventory_index_path(current_hotel), alert: "Unsupported pricing tier."
     end
 
@@ -352,6 +357,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :wi_price,
       :wi_start_date,
       :wi_end_date,
+      :cr_price,
+      :cr_start_date,
+      :cr_end_date,
       room_type_ids: [],
       weekend_days: [],
       public_holidays: [ :name, :price, :start_date, :end_date ]

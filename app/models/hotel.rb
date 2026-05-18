@@ -51,6 +51,7 @@ class Hotel < ApplicationRecord
   has_many :onboarding_sessions, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
   has_many :room_rates, through: :room_types
+  has_many :partners, dependent: :destroy
   has_many :room_locks, dependent: :destroy
   has_many :room_statuses, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :destroy

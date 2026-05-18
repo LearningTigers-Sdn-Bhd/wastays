@@ -1,6 +1,6 @@
 module HotelOps
   class SyncPricingRules
-    def initialize(hotel:, gp_price:, gp_start_date:, gp_end_date:, wk_price:, wk_start_date:, wk_end_date:, weekend_days:, sc_price:, sc_start_date:, sc_end_date:, wi_price: nil, wi_start_date: nil, wi_end_date: nil, public_holidays:)
+    def initialize(hotel:, gp_price:, gp_start_date:, gp_end_date:, wk_price:, wk_start_date:, wk_end_date:, weekend_days:, sc_price:, sc_start_date:, sc_end_date:, wi_price: nil, wi_start_date: nil, wi_end_date: nil, cr_price: nil, cr_start_date: nil, cr_end_date: nil, public_holidays:)
       @hotel = hotel
       @gp_price = decimal_or_nil(gp_price)
       @gp_start_date = date_or_nil(gp_start_date)
@@ -15,6 +15,9 @@ module HotelOps
       @wi_price = decimal_or_nil(wi_price)
       @wi_start_date = date_or_nil(wi_start_date)
       @wi_end_date = date_or_nil(wi_end_date) || @wi_start_date
+      @cr_price = decimal_or_nil(cr_price)
+      @cr_start_date = date_or_nil(cr_start_date)
+      @cr_end_date = date_or_nil(cr_end_date) || @cr_start_date
       @public_holidays = Array(public_holidays)
     end
 
@@ -118,6 +121,25 @@ module HotelOps
           price: @wi_price,
           start_date: @wi_start_date,
           end_date: @wi_end_date
+        }
+      end
+
+      if @cr_price
+        if @cr_start_date.blank?
+          @errors[:base] << "Corporate rate requires a start date."
+          raise ArgumentError, "Corporate rate requires a start date."
+        end
+        if @cr_end_date < @cr_start_date
+          @errors[:base] << "Corporate rate end date cannot be earlier than start date."
+          raise ArgumentError, "Corporate rate end date cannot be earlier than start date."
+        end
+
+        rows << {
+          rule_type: "corporate_rate",
+          name: "Corporate Rate",
+          price: @cr_price,
+          start_date: @cr_start_date,
+          end_date: @cr_end_date
         }
       end
 

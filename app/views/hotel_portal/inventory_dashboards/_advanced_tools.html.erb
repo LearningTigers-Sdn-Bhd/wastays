@@ -45,7 +45,7 @@
           <div>
             <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Pricing Tiers to Update</label>
             <div class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <% [["General", "general"], ["Weekends", "weekends"], ["School Holiday", "school_holiday"], ["Walk-in", "walk_in"], ["Public Holiday", "public_holiday"]].each do |label, tier| %>
+              <% [["General", "general"], ["Weekends", "weekends"], ["School Holiday", "school_holiday"], ["Walk-in", "walk_in"], ["Corporate Rate", "corporate_rate"], ["Public Holiday", "public_holiday"]].each do |label, tier| %>
                 <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
                   <input type="checkbox" data-tier="<%= tier %>" data-action="change->pricing-sections#toggle" class="size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0">
                   <%= label %>
@@ -164,6 +164,32 @@
               <div class="mt-4">
                 <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
                 <%= f.number_field :wi_price, value: @pricing_form.pricing_data[:wi_price], step: 0.01, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-pricing-sections-target="section" data-tier="corporate_rate">
+              <div class="mb-3 flex items-center justify-between">
+                <h4 class="text-sm font-black uppercase tracking-[0.16em] text-slate-900">Corporate Rate</h4>
+                <% if @pricing_form.corporate_rule.present? %>
+                  <%= link_to "Remove",
+                              destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "corporate_rate", start_date: @start_date),
+                              data: { turbo_method: :delete, turbo_confirm: "Remove Corporate Rate pricing?" },
+                              class: "rounded-full bg-red-600 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700" %>
+                <% end %>
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+                  <%= f.date_field :cr_start_date, value: @pricing_form.pricing_data[:cr_start_date], class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                </div>
+                <div>
+                  <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+                  <%= f.date_field :cr_end_date, value: @pricing_form.pricing_data[:cr_end_date], class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                </div>
+              </div>
+              <div class="mt-4">
+                <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+                <%= f.number_field :cr_price, value: @pricing_form.pricing_data[:cr_price], step: 0.01, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
               </div>
             </div>
 
@@ -309,6 +335,68 @@
           </div>
 
           <%= f.submit "Apply Availability Override", class: "inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-slate-700" %>
+        <% end %>
+      </div>
+    </details>
+
+    <details class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <summary class="cursor-pointer list-none px-6 py-5">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h3 class="text-sm font-black tracking-tight text-slate-950">Partners Management</h3>
+            <p class="mt-0.5 text-xs font-medium text-slate-600">Manage partner names and partner codes for corporate rate usage.</p>
+          </div>
+          <span class="rounded-full bg-slate-100 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-500">Corporate</span>
+        </div>
+      </summary>
+
+      <div class="border-t border-slate-200 px-6 py-6 space-y-5">
+        <%= form_with model: Partner.new, url: hotel_partners_path(current_hotel), local: true, class: "grid gap-3 md:grid-cols-4" do |f| %>
+          <div class="md:col-span-2">
+            <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Partner Name</label>
+            <%= f.text_field :name, required: true, placeholder: "e.g. ABC Travel", class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+          </div>
+          <div class="md:col-span-1">
+            <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Email Domain</label>
+            <%= f.text_field :domain, placeholder: "e.g. abc.com", class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+          </div>
+          <div class="md:col-span-1 md:self-end">
+            <%= f.submit "Add Partner", class: "inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-slate-700" %>
+          </div>
+        <% end %>
+
+        <% if @partners.present? %>
+          <div class="space-y-3">
+            <% @partners.each do |partner| %>
+              <%= form_with model: partner, url: hotel_partner_path(current_hotel, partner), method: :patch, local: true, class: "rounded-2xl border border-slate-200 bg-slate-50 p-4" do |f| %>
+                <div class="grid gap-3 md:grid-cols-12">
+                  <div class="md:col-span-4">
+                    <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Partner Name</label>
+                    <%= f.text_field :name, required: true, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                  </div>
+                  <div class="md:col-span-3">
+                    <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Email Domain</label>
+                    <%= f.text_field :domain, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Code (Display)</label>
+                    <%= f.text_field :code, readonly: true, class: "w-full rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-black uppercase text-slate-500 shadow-sm focus:outline-none" %>
+                  </div>
+                  <div class="md:col-span-3 md:self-end">
+                    <div class="flex gap-2">
+                      <%= f.submit "Save", class: "inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-slate-700" %>
+                      <%= link_to "Delete",
+                                  hotel_partner_path(current_hotel, partner),
+                                  data: { turbo_method: :delete, turbo_confirm: "Delete this partner?" },
+                                  class: "inline-flex flex-1 items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-red-600 shadow-sm transition hover:bg-red-50" %>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">No partners yet. Add your first partner and code above.</p>
         <% end %>
       </div>
     </details>
