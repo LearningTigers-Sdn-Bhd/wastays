@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["checkIn", "checkOut", "roomType", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput"]
-  static values = { availabilityUrl: String, priceUrl: String, bookingId: String }
+  static values = { availabilityUrl: String, priceUrl: String, bookingId: String, excludeBookingId: String }
 
   connect() {
     // Trigger initial calculation and room numbers load
@@ -40,7 +40,7 @@ export default class extends Controller {
     try {
       if (!this.hasAvailabilityUrlValue) return
       
-      const bookingId = this.bookingIdValue || ""
+      const bookingId = this.excludeBookingIdValue || this.bookingIdValue || ""
       const url = `${this.availabilityUrlValue}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}&exclude_booking_id=${bookingId}`
       
       const response = await fetch(url)

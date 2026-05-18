@@ -1,0 +1,44 @@
+<!-- Scanner Modal -->
+<div data-scanner-target="modal" class="hidden fixed inset-0 z-[100] bg-black items-center justify-center flex-col overflow-hidden">
+  <div class="relative w-full h-full flex items-center justify-center">
+    <video data-scanner-target="video" class="w-full h-full object-cover" playsinline muted></video>
+    <canvas data-scanner-target="canvas" class="hidden w-full h-full object-cover"></canvas>
+    
+    <!-- Viewfinder Overlay -->
+    <div class="absolute inset-0 pointer-events-none flex items-start justify-center p-8 pt-16">
+      <div class="w-full max-w-[280px] aspect-[1/1.6] border-2 border-white/30 rounded-3xl relative shadow-[0_0_0_100vw_rgba(0,0,0,0.7)]">
+        <!-- Corners -->
+        <div class="absolute -top-1 -left-1 w-10 h-10 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl"></div>
+        <div class="absolute -top-1 -right-1 w-10 h-10 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl"></div>
+        <div class="absolute -bottom-1 -left-1 w-10 h-10 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl"></div>
+        <div class="absolute -bottom-1 -right-1 w-10 h-10 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl"></div>
+        
+        <div class="absolute inset-x-0 -top-12 text-center">
+          <p class="text-white text-base font-black uppercase tracking-[0.2em] drop-shadow-lg">Scan ID Card</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="absolute bottom-12 inset-x-0 flex items-center justify-center gap-10">
+      <button type="button" data-action="click->scanner#close" class="w-14 h-14 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center text-white border border-white/20 hover:bg-white/20 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <button type="button" data-scanner-target="captureButton" data-action="click->scanner#capture" class="w-20 h-20 rounded-full border-4 border-white p-1.5 hover:scale-105 transition active:scale-95">
+        <div class="w-full h-full rounded-full bg-white shadow-inner"></div>
+      </button>
+
+      <div class="flex gap-4">
+        <button type="button" data-scanner-target="retakeButton" data-action="click->scanner#retake" class="hidden px-6 py-4 rounded-2xl bg-white/10 backdrop-blur-xl text-white text-xs font-black uppercase tracking-widest border border-white/20 hover:bg-white/20 transition">
+          Retake
+        </button>
+        <button type="button" data-scanner-target="useButton" data-action="click->scanner#use" class="hidden px-8 py-4 rounded-2xl bg-emerald-500 text-white text-xs font-black uppercase tracking-widest shadow-2xl hover:bg-emerald-400 transition">
+          Confirm Scan
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

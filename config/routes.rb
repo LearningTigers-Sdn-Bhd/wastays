@@ -240,8 +240,6 @@ Rails.application.routes.draw do
         delete :destroy_photo
         delete :bulk_destroy_photos
       end
-      resources :rates, only: [ :index, :create ]
-      resources :inventories, only: [ :index, :create ]
     end
 
     resources :nearby_attractions, except: [ :show ]
@@ -249,6 +247,7 @@ Rails.application.routes.draw do
       collection do
         get :availability
         get :stay_price
+        post :sync
       end
       member do
         patch :move

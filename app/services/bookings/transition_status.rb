@@ -67,7 +67,14 @@ module Bookings
             Bookings::InventoryManager.new(@booking).reserve_by_dates(@booking.check_in.to_date + 1.day, @booking.check_out)
           end
 
-          guest_reg = HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
+          guest_reg = @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
+
+          # Sync room number to hotel_snapshot for consistency
+          room_number = @booking.booking_rooms.first&.room_number
+          if room_number.present?
+            @booking.hotel_snapshot ||= {}
+            @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => room_number)
+          end
 
           @booking.update!(
             status: "checked_in",

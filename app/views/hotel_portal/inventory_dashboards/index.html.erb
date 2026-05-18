@@ -7,251 +7,267 @@
 <div class="mx-auto max-w-none space-y-3 pb-0" 
      data-controller="inventory-calendar inventory-row inventory-highlight" 
      data-inventory-calendar-hotel-id-value="<%= current_hotel.id %>"
+     data-inventory-calendar-batch-url-value="<%= batch_save_ari_hotel_inventory_dashboards_path(current_hotel) %>"
      data-inventory-calendar-default-mode-value="<%= @view_mode %>" 
      data-inventory-calendar-default-start-value="<%= @start_date %>" 
      data-inventory-calendar-default-end-value="<%= @end_date %>" 
      data-inventory-calendar-default-currency-value="<%= @display_currency %>"
      data-inventory-calendar-base-currency-value="<%= @hotel_base_currency %>">
   
-  <% if @missing_rates.any? %>
-    <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 mb-4">
-      <div class="flex items-center gap-3 text-rose-800">
-        <svg class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-        </svg>
-        <div class="text-sm">
-          <span class="font-bold">Exchange Rates Missing:</span>
-          Conversion rates for <span class="font-bold"><%= @missing_rates.to_sentence %></span> are not set yet relative to <%= @hotel_base_currency %>. 
-          <% if current_user.has_permission?("manage_hotel_profile") %>
-            Please <%= link_to "inform admin", admin_exchange_rates_path, class: "underline font-black decoration-rose-400 hover:text-rose-600" %> to configure them.
-          <% else %>
-            Please inform system admin.
-          <% end %>
+  <turbo-frame id="inventory_calendar_frame" data-turbo-action="advance">
+    <% if @missing_rates.any? %>
+      <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 mb-4">
+        <div class="flex items-center gap-3 text-rose-800">
+          <svg class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+          <div class="text-sm">
+            <span class="font-bold">Exchange Rates Missing:</span>
+            Conversion rates for <span class="font-bold"><%= @missing_rates.to_sentence %></span> are not set yet relative to <%= @hotel_base_currency %>. 
+            <% if current_user.has_permission?("manage_hotel_profile") %>
+              Please <%= link_to "inform admin", admin_exchange_rates_path, class: "underline font-black decoration-rose-400 hover:text-rose-600", data: { turbo: false } %> to configure them.
+            <% else %>
+              Please inform system admin.
+            <% end %>
+          </div>
         </div>
       </div>
-    </div>
-  <% end %>
+    <% end %>
 
-  <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-    <div class="flex flex-col gap-4 border-b border-slate-200 p-4 xl:flex-row xl:items-center xl:justify-between">
-      <div class="flex items-center gap-3">
-        <h1 class="text-sm font-black uppercase tracking-widest text-slate-900">Rates & Availability</h1>
-        <div class="h-4 w-px bg-slate-200 hidden xl:block"></div>
-        <div class="flex items-center gap-1">
-          <%= link_to hotel_inventory_index_path(current_hotel, { start_date: @start_date - 14.days, view_currencies: @view_currencies, room_type_id: @calendar.selected_room_type_id }.compact),
-                      class: "inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900",
-                      title: "Previous 14 days" do %>
-            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          <% end %>
+    <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex flex-col gap-4 border-b border-slate-200 p-4 xl:flex-row xl:items-center xl:justify-between">
+        <div class="flex items-center gap-3">
+          <h1 class="text-sm font-black uppercase tracking-widest text-slate-900">Rates & Availability</h1>
+          <div class="h-4 w-px bg-slate-200 hidden xl:block"></div>
+          <div class="flex items-center gap-1">
+            <%= link_to hotel_inventory_index_path(current_hotel, { start_date: @start_date - 14.days, view_currencies: @view_currencies, room_type_id: @calendar.selected_room_type_id }.compact),
+                        class: "inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900",
+                        title: "Previous 14 days" do %>
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            <% end %>
 
-          <input type="date"
-                 value="<%= @start_date %>"
-                 class="h-8 rounded-lg border border-slate-200 bg-white px-2 py-0 text-xs font-bold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-0"
-                 onchange="window.location.href = '<%= hotel_inventory_index_path(current_hotel) %>?start_date=' + this.value + '&<%= @view_currencies.map { |c| "view_currencies[]=" + c }.join("&") %>&room_type_id=<%= @calendar.selected_room_type_id %>'">
+            <input type="date"
+                   value="<%= @start_date %>"
+                   class="h-8 rounded-lg border border-slate-200 bg-white px-2 py-0 text-xs font-bold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-0"
+                   data-inventory-calendar-target="navStartDate"
+                   data-action="change->inventory-calendar#navigate">
 
-          <%= link_to hotel_inventory_index_path(current_hotel, { start_date: @start_date + 14.days, view_currencies: @view_currencies, room_type_id: @calendar.selected_room_type_id }.compact),
-                      class: "inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900",
-                      title: "Next 14 days" do %>
-            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          <% end %>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <!-- Room Filter -->
-        <select id="room_type_id" name="room_type_id" class="h-9 rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs font-bold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-0"
-                onchange="window.location.href = '<%= hotel_inventory_index_path(current_hotel) %>?start_date=<%= @start_date %>&<%= @view_currencies.map { |c| "view_currencies[]=" + c }.join("&") %>&room_type_id=' + this.value">
-          <option value="">All room types</option>
-          <%= options_from_collection_for_select(@calendar.room_type_options, :id, :name, @calendar.selected_room_type_id) %>
-        </select>
-
-        <!-- View Currencies -->
-        <div class="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-sm gap-1">
-          <% @view_currencies.each do |currency| %>
-            <div class="group relative flex h-full items-center">
-              <%= link_to currency,
-                          hotel_inventory_index_path(current_hotel, { start_date: @start_date, view_currencies: @view_currencies, display_currency: currency, room_type_id: @calendar.selected_room_type_id }.compact),
-                          class: "flex h-full items-center rounded-md px-3 text-[10px] font-black tracking-wider transition #{@display_currency == currency ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-900'}" %>
-              <% if @view_currencies.size > 1 && currency != @hotel_base_currency %>
-                <%= link_to hotel_inventory_index_path(current_hotel, { start_date: @start_date, view_currencies: (@view_currencies - [currency]), room_type_id: @calendar.selected_room_type_id }.compact),
-                            title: "Remove from view",
-                            class: "absolute -top-1 -right-1 hidden group-hover:flex size-4 items-center justify-center rounded-full bg-slate-900 text-white text-[8px] font-bold shadow-sm" do %>
-                  ✕
-                <% end %>
-              <% end %>
-            </div>
-          <% end %>
-          
-          <div class="relative h-full" data-controller="dropdown">
-            <button type="button" 
-                    data-action="click->dropdown#toggle"
-                    class="flex h-full w-7 items-center justify-center rounded-md text-slate-400 hover:bg-white hover:text-slate-900 transition-all border border-transparent hover:border-slate-200">
-              <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v16m7.5-7.5h-16" />
-              </svg>
-            </button>
-            <div data-dropdown-target="menu" class="absolute right-0 top-full z-[100] mt-2 hidden w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
-              <div class="max-h-60 overflow-y-auto p-1 custom-scrollbar">
-                <div class="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 mb-1">Add Currency</div>
-                <% (CurrencyCatalog::COMMON_CODES - @view_currencies).each do |c| %>
-                  <%= link_to c, 
-                              hotel_inventory_index_path(current_hotel, { start_date: @start_date, view_currencies: (@view_currencies + [c]), room_type_id: @calendar.selected_room_type_id }.compact),
-                              class: "block rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors" %>
-                <% end %>
-              </div>
-            </div>
+            <%= link_to hotel_inventory_index_path(current_hotel, { start_date: @start_date + 14.days, view_currencies: @view_currencies, room_type_id: @calendar.selected_room_type_id }.compact),
+                        class: "inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900",
+                        title: "Next 14 days" do %>
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            <% end %>
           </div>
         </div>
 
-        <div class="h-4 w-px bg-slate-200 hidden xl:block"></div>
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Room Filter -->
+          <select id="room_type_id_nav" name="room_type_id" class="h-9 rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs font-bold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-0"
+                  data-inventory-calendar-target="navRoomType"
+                  data-action="change->inventory-calendar#navigate">
+            <option value="">All room types</option>
+            <%= options_from_collection_for_select(@calendar.room_type_options, :id, :name, @calendar.selected_room_type_id) %>
+          </select>
 
-        <div class="flex items-center gap-2">
-          <button type="button" 
-                  data-action="inventory-calendar#openBulk" 
-                  class="h-9 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all active:scale-95">
-            Bulk Edit
-          </button>
+          <!-- View Currencies -->
+          <div class="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-sm gap-1">
+            <% @view_currencies.each do |currency| %>
+              <div class="group relative flex h-full items-center">
+                <%= link_to currency,
+                            hotel_inventory_index_path(current_hotel, { start_date: @start_date, view_currencies: @view_currencies, display_currency: currency, room_type_id: @calendar.selected_room_type_id }.compact),
+                            class: "flex h-full items-center rounded-md px-3 text-[10px] font-black tracking-wider transition #{@display_currency == currency ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-900'}" %>
+                <% if @view_currencies.size > 1 && currency != @hotel_base_currency %>
+                  <%= link_to hotel_inventory_index_path(current_hotel, { start_date: @start_date, view_currencies: (@view_currencies - [currency]), room_type_id: @calendar.selected_room_type_id }.compact),
+                              title: "Remove from view",
+                              class: "absolute -top-1 -right-1 hidden group-hover:flex size-4 items-center justify-center rounded-full bg-slate-900 text-white text-[8px] font-bold shadow-sm" do %>
+                    ✕
+                  <% end %>
+                <% end %>
+              </div>
+            <% end %>
+            
+            <div class="relative h-full" data-controller="dropdown">
+              <button type="button" 
+                      data-action="click->dropdown#toggle"
+                      class="flex h-full w-7 items-center justify-center rounded-md text-slate-400 hover:bg-white hover:text-slate-900 transition-all border border-transparent hover:border-slate-200">
+                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v16m7.5-7.5h-16" />
+                </svg>
+              </button>
+              <div data-dropdown-target="menu" class="absolute right-0 top-full z-[100] mt-2 hidden w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
+                <div class="max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                  <div class="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 mb-1">Add Currency</div>
+                  <% (CurrencyCatalog::COMMON_CODES - @view_currencies).each do |c| %>
+                    <%= link_to c, 
+                                hotel_inventory_index_path(current_hotel, { start_date: @start_date, view_currencies: (@view_currencies + [c]), room_type_id: @calendar.selected_room_type_id }.compact),
+                                class: "block rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors" %>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <button type="button" 
-                  data-inventory-calendar-target="syncButton"
-                  data-action="inventory-calendar#openReview"
-                  disabled
-                  class="h-9 inline-flex items-center justify-center gap-2 rounded-lg bg-slate-200 px-5 text-xs font-black uppercase tracking-widest text-slate-500 shadow-sm transition-all enabled:bg-indigo-600 enabled:text-white enabled:hover:bg-indigo-700 disabled:cursor-not-allowed">
-            <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-            <span>Sync</span>
-            <span data-inventory-calendar-target="syncCounter" class="hidden rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-black tabular-nums">0</span>
-          </button>
+          <div class="h-4 w-px bg-slate-200 hidden xl:block"></div>
+
+          <div class="flex items-center gap-2">
+            <button type="button" 
+                    data-action="inventory-calendar#openBulk" 
+                    class="h-9 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all active:scale-95">
+              Bulk Edit
+            </button>
+
+            <button type="button" 
+                    data-inventory-calendar-target="syncButton"
+                    data-action="inventory-calendar#openReview"
+                    disabled
+                    class="h-9 inline-flex items-center justify-center gap-2 rounded-lg bg-slate-200 px-5 text-xs font-black uppercase tracking-widest text-slate-500 shadow-sm transition-all enabled:bg-indigo-600 enabled:text-white enabled:hover:bg-indigo-700 disabled:cursor-not-allowed">
+              <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+              <span>Sync</span>
+              <span data-inventory-calendar-target="syncCounter" class="hidden rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-black tabular-nums">0</span>
+            </button>
+
+            <% if current_hotel.preferred_channel_manager.present? %>
+              <div class="h-4 w-px bg-slate-200"></div>
+              <%= button_to sync_hotel_bookings_path(current_hotel), 
+                            method: :post, 
+                            class: "group flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 active:scale-95",
+                            title: "Fetch latest bookings from Channel Manager",
+                            data: { turbo: false, confirm: "Sync all upcoming bookings from Channex?" } do %>
+                <svg class="size-4 transition-transform group-hover:rotate-180 duration-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+              <% end %>
+            <% end %>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="overflow-x-auto">
-      <table class="min-w-full table-fixed border-separate border-spacing-0" data-testid="inventory-calendar-grid">
-        <thead>
-          <tr class="bg-slate-50">
-            <th class="sticky left-0 z-50 w-[260px] border-b border-r border-slate-200 bg-slate-50 px-4 py-1.5 text-left shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]">
-              <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Room / Plan</span>
-            </th>
-            <% @calendar.dates.each do |date| %>
-              <th class="min-w-[108px] border-b border-r border-slate-200 px-2 py-1.5 text-center last:border-r-0 transition-colors <%= date == Date.current ? 'bg-blue-50' : '' %>"
-                  data-inventory-highlight-target="columnHeader"
-                  data-column-id="<%= date %>">
-                <span class="block text-[9px] font-bold uppercase tracking-[0.1em] <%= date == Date.current ? 'text-blue-700' : 'text-slate-500' %>"><%= date.strftime("%a") %></span>
-                <span class="mt-0.5 block text-xs font-bold <%= date == Date.current ? 'text-blue-900' : 'text-slate-900' %>"><%= date.strftime("%d %b") %></span>
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-fixed border-separate border-spacing-0" data-testid="inventory-calendar-grid">
+          <thead>
+            <tr class="bg-slate-50">
+              <th class="sticky left-0 z-[70] w-[260px] border-b border-r border-slate-200 bg-slate-50 px-4 py-1.5 text-left shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]">
+                <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Room / Plan</span>
               </th>
-            <% end %>
-          </tr>
-        </thead>
+              <% @calendar.dates.each do |date| %>
+                <th class="min-w-[108px] border-b border-r border-slate-200 px-2 py-1.5 text-center last:border-r-0 transition-colors <%= date == Date.current ? 'bg-blue-50' : '' %>"
+                    data-inventory-highlight-target="columnHeader"
+                    data-column-id="<%= date %>">
+                  <span class="block text-[9px] font-bold uppercase tracking-[0.1em] <%= date == Date.current ? 'text-blue-700' : 'text-slate-500' %>"><%= date.strftime("%a") %></span>
+                  <span class="mt-0.5 block text-xs font-bold <%= date == Date.current ? 'text-blue-900' : 'text-slate-900' %>"><%= date.strftime("%d %b") %></span>
+                </th>
+              <% end %>
+            </tr>
+          </thead>
 
-        <tbody class="bg-white">
-          <% if @calendar.rows.any? %>
-            <% @calendar.rows.each do |row| %>
-              <tr class="<%= inventory_parent_row?(row) ? 'bg-slate-50/40' : 'bg-white hover:bg-slate-50/70 transition-colors' %>"
-                  data-inventory-row-target="row"
-                  data-parent-room-type-id="<%= inventory_parent_room_type_id_for(row) %>">
-                <td class="sticky left-0 z-40 border-b border-r border-slate-200 bg-white px-3 py-0.5 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]"
-                    data-inventory-highlight-target="rowHeader">
-                  <div class="space-y-0.5">
-                    <div>
-                      <% if inventory_parent_row?(row) %>
-                        <div class="flex items-center justify-between gap-2">
-                          <div class="flex items-center gap-1.5">
-                            <button type="button" 
-                                    data-action="inventory-row#toggle" 
-                                    data-room-type-id="<%= row.room_type_id %>"
-                                    data-collapsed="false"
-                                    class="text-slate-400 hover:text-slate-600 transition-transform">
-                              <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                            </button>
-                            <p class="truncate text-[11px] font-black uppercase tracking-wider text-slate-950 transition-colors" data-inventory-highlight-target="rowLabel"><%= row.label %></p>
+          <tbody class="bg-white">
+            <% if @calendar.rows.any? %>
+              <% @calendar.rows.each do |row| %>
+                <tr class="<%= inventory_parent_row?(row) ? 'bg-slate-50/40' : 'bg-white hover:bg-slate-50/70 transition-colors' %>"
+                    data-inventory-row-target="row"
+                    data-parent-room-type-id="<%= inventory_parent_room_type_id_for(row) %>">
+                  <td class="sticky left-0 z-[60] border-b border-r border-slate-200 bg-white px-3 py-0.5 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]"
+                      data-inventory-highlight-target="rowHeader">
+                    <div class="space-y-0.5">
+                      <div>
+                        <% if inventory_parent_row?(row) %>
+                          <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-1.5">
+                              <button type="button" 
+                                      data-action="inventory-row#toggle" 
+                                      data-room-type-id="<%= row.room_type_id %>"
+                                      data-collapsed="false"
+                                      class="text-slate-400 hover:text-slate-600 transition-transform">
+                                <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                              </button>
+                              <p class="truncate text-[11px] font-black uppercase tracking-wider text-slate-950 transition-colors" data-inventory-highlight-target="rowLabel"><%= row.label %></p>
+                            </div>
                           </div>
-                          <div class="inline-flex items-center gap-1">
-                            <%= link_to "Rates", hotel_room_type_rates_path(current_hotel, row.room_type), class: "rounded-md border border-slate-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500 hover:text-slate-900" %>
-                            <%= link_to "Inv", hotel_room_type_inventories_path(current_hotel, row.room_type), class: "rounded-md border border-slate-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500 hover:text-slate-900" %>
-                          </div>
-                        </div>
-                        <p class="mt-0.5 ms-5 text-[10px] font-semibold text-slate-500"><%= pluralize(row.room_type.quantity, "unit") %></p>
-                      <% else %>
-                        <p class="ms-5 truncate text-[10px] font-bold text-slate-600 uppercase tracking-tight transition-colors" data-inventory-highlight-target="rowLabel"><span class="me-1.5 text-slate-300">↳</span><%= row.sublabel %></p>
-                      <% end %>
+                          <p class="mt-0.5 ms-5 text-[10px] font-semibold text-slate-500"><%= pluralize(row.room_type.quantity, "unit") %></p>
+                        <% else %>
+                          <p class="ms-5 truncate text-[10px] font-bold text-slate-600 uppercase tracking-tight transition-colors" data-inventory-highlight-target="rowLabel"><span class="me-1.5 text-slate-300">↳</span><%= row.sublabel %></p>
+                        <% end %>
+                      </div>
                     </div>
-                  </div>
-                </td>
-
-                <% @calendar.dates.each do |date| %>
-                  <% cell = inventory_calendar_cell(@calendar, row, date) %>
-                  <td class="border-b border-r border-slate-100 p-0 last:border-r-0">
-                    <% if row.inventory_row? %>
-                      <button type="button"
-                              class="min-h-[54px] w-full px-2 py-2 text-center transition <%= cell[:closed] ? 'bg-rose-100' : 'bg-emerald-200 hover:bg-emerald-300' %>"
-                              data-testid="availability-cell-<%= row.room_type_id %>-<%= date %>"
-                              data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
-                              data-mode="availability"
-                              data-room-type-id="<%= row.room_type_id %>"
-                              data-date="<%= date %>"
-                              data-quantity="<%= cell[:quantity] %>"
-                              data-status="<%= cell[:status] %>">
-                        <% if cell[:closed] %>
-                          <span class="block truncate text-[9px] font-bold uppercase tracking-[0.1em] text-rose-800"><%= cell[:status_label] %></span>
-                        <% end %>
-                        <span class="mt-0 block text-sm font-black text-slate-950"><%= cell[:quantity] %></span>
-                      </button>
-                    <% else %>
-                      <button type="button"
-                              class="min-h-[54px] w-full bg-white px-2 py-2 text-center transition hover:bg-slate-100"
-                              data-testid="rate-cell-<%= row.room_type_id %>-<%= row.rate_plan_id %>-<%= date %>"
-                              data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
-                              data-mode="rates"
-                              data-room-type-id="<%= row.room_type_id %>"
-                              data-rate-plan-id="<%= row.rate_plan_id %>"
-                              data-date="<%= date %>"
-                              data-price="<%= cell[:price] %>"
-                              data-currency="<%= cell[:currency] %>"
-                              data-min-stay="<%= cell[:min_stay] %>"
-                              data-max-stay="<%= cell[:max_stay] %>"
-                              data-closed-to-arrival="<%= cell[:closed_to_arrival] %>"
-                              data-closed-to-departure="<%= cell[:closed_to_departure] %>"
-                              data-stop-sell="<%= cell[:stop_sell] %>">
-                        <div class="flex flex-col items-center justify-center min-h-[32px]">
-                          <% if cell[:conversion_missing] %>
-                            <span class="text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
-                            <span class="mt-0.5 text-[8px] font-medium text-slate-400 italic">Set <%= cell[:currency] %>→<%= cell[:display_currency] %></span>
-                          <% else %>
-                            <span class="block truncate text-sm font-black tabular-nums <%= cell[:is_modified] ? 'text-indigo-600' : 'text-slate-950' %>">
-                              <%= cell[:formatted_price] %>
-                            </span>
-                            <% if cell[:estimated] %>
-                              <span class="text-[8px] font-black text-emerald-600 uppercase tracking-tighter mt-0.5">Est. <%= cell[:currency] %></span>
-                            <% end %>
-                          <% end %>
-                        </div>
-                        <% if cell[:restriction_compact].present? %>
-                          <span class="mt-1 block truncate text-center text-[8px] font-bold uppercase tracking-[0.02em] text-amber-700 bg-amber-50 rounded px-1"><%= cell[:restriction_compact] %></span>
-                        <% end %>
-                      </button>
-                    <% end %>
                   </td>
-                <% end %>
+
+                  <% @calendar.dates.each do |date| %>
+                    <% cell = inventory_calendar_cell(@calendar, row, date) %>
+                    <td class="border-b border-r border-slate-100 p-0 last:border-r-0">
+                      <% if row.inventory_row? %>
+                        <button type="button"
+                                class="min-h-[54px] w-full px-2 py-2 text-center transition <%= cell[:closed] ? 'bg-rose-100' : 'bg-emerald-200 hover:bg-emerald-300' %>"
+                                data-testid="availability-cell-<%= row.room_type_id %>-<%= date %>"
+                                data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
+                                data-mode="availability"
+                                data-room-type-id="<%= row.room_type_id %>"
+                                data-date="<%= date %>"
+                                data-quantity="<%= cell[:quantity] %>"
+                                data-status="<%= cell[:status] %>">
+                          <div class="flex flex-col items-center justify-center">
+                            <% if cell[:closed] %>
+                              <span class="block truncate text-[9px] font-bold uppercase tracking-[0.1em] text-rose-800"><%= cell[:status_label] %></span>
+                            <% else %>
+                              <span class="block truncate text-[9px] font-bold uppercase tracking-[0.1em] <%= cell[:sold_count] > 0 ? 'text-emerald-800' : 'text-slate-400' %>"><%= cell[:sold_count] %> Sold</span>
+                            <% end %>
+                            <span class="mt-0.5 block text-sm font-black text-slate-950"><%= cell[:quantity] %></span>
+                          </div>
+                        </button>
+                      <% else %>
+                        <button type="button"
+                                class="min-h-[54px] w-full bg-white px-2 py-2 text-center transition hover:bg-slate-100"
+                                data-testid="rate-cell-<%= row.room_type_id %>-<%= row.rate_plan_id %>-<%= date %>"
+                                data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
+                                data-mode="rates"
+                                data-room-type-id="<%= row.room_type_id %>"
+                                data-rate-plan-id="<%= row.rate_plan_id %>"
+                                data-date="<%= date %>"
+                                data-price="<%= cell[:price] %>"
+                                data-currency="<%= cell[:currency] %>"
+                                data-min-stay="<%= cell[:min_stay] %>"
+                                data-max-stay="<%= cell[:max_stay] %>"
+                                data-closed-to-arrival="<%= cell[:closed_to_arrival] %>"
+                                data-closed-to-departure="<%= cell[:closed_to_departure] %>"
+                                data-stop-sell="<%= cell[:stop_sell] %>">
+                          <div class="flex flex-col items-center justify-center min-h-[32px]">
+                            <% if cell[:conversion_missing] %>
+                              <span class="text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
+                              <span class="mt-0.5 text-[8px] font-medium text-slate-400 italic">Set <%= cell[:currency] %>→<%= cell[:display_currency] %></span>
+                            <% else %>
+                              <span class="block truncate text-sm font-black tabular-nums <%= cell[:is_modified] ? 'text-indigo-600' : 'text-slate-950' %>">
+                                <%= cell[:formatted_price] %>
+                              </span>
+                              <% if cell[:estimated] %>
+                                <span class="text-[8px] font-black text-emerald-600 uppercase tracking-tighter mt-0.5">Est. <%= cell[:currency] %></span>
+                              <% end %>
+                            <% end %>
+                          </div>
+                          <% if cell[:restriction_compact].present? %>
+                            <span class="mt-1 block truncate text-center text-[8px] font-bold uppercase tracking-[0.02em] text-amber-700 bg-amber-50 rounded px-1"><%= cell[:restriction_compact] %></span>
+                          <% end %>
+                        </button>
+                      <% end %>
+                    </td>
+                  <% end %>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="<%= @calendar.dates.count + 1 %>" class="px-6 py-16 text-center text-sm font-semibold text-slate-500">
+                  <%= @calendar.empty_message %>
+                </td>
               </tr>
             <% end %>
-          <% else %>
-            <tr>
-              <td colspan="<%= @calendar.dates.count + 1 %>" class="px-6 py-16 text-center text-sm font-semibold text-slate-500">
-                <%= @calendar.empty_message %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </section>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </turbo-frame>
 
-  <dialog data-inventory-calendar-target="dialog" class="fixed inset-0 m-auto max-h-[90vh] w-[min(94vw,42rem)] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
-    <div class="flex h-full max-h-[90vh] flex-col bg-white" onclick="event.stopPropagation()">
+  <dialog data-inventory-calendar-target="dialog" class="fixed inset-0 m-auto max-h-[90vh] w-[min(94vw,42rem)] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/50">
+    <div class="flex h-full max-h-[90vh] flex-col bg-white">
       <div class="flex-none flex items-start justify-between border-b border-slate-100 px-5 py-4">
         <div>
-          <h2 data-inventory-calendar-target="title" class="text-lg font-bold tracking-tight text-slate-950">Bulk Update</h2>
-          <p data-inventory-calendar-target="subtitle" class="text-xs font-semibold text-slate-500">Choose one or more update types, then apply and sync.</p>
+          <h2 data-inventory-calendar-target="title" class="text-lg font-bold tracking-tight text-slate-950">Update Values</h2>
+          <p data-inventory-calendar-target="subtitle" class="text-xs font-semibold text-slate-500">Updates will be detected automatically as you change fields.</p>
         </div>
         <button type="button" data-action="inventory-calendar#close" class="rounded-lg p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-700" aria-label="Close bulk update">
           <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -260,20 +276,11 @@
 
       <%= form_with scope: :selection_update, url: bulk_save_ari_hotel_inventory_dashboards_path(current_hotel), local: true, class: "flex min-h-0 flex-1 flex-col", data: { inventory_calendar_target: "form", action: "submit->inventory-calendar#confirmSubmit" } do |f| %>
         <div class="flex-1 overflow-y-auto px-5 py-5 space-y-6">
-          <div class="flex flex-wrap gap-2">
-            <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">
-              <%= f.check_box :apply_inventory, { checked: false, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "applyInventory", action: "change->inventory-calendar#toggleSections" } }, "1", "0" %>
-              Inventory
-            </label>
-            <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">
-              <%= f.check_box :apply_rates, { checked: false, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "applyRates", action: "change->inventory-calendar#toggleSections" } }, "1", "0" %>
-              Rates
-            </label>
-            <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">
-              <%= f.check_box :apply_restrictions, { checked: false, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "applyRestrictions", action: "change->inventory-calendar#toggleSections" } }, "1", "0" %>
-              Restrictions
-            </label>
-          </div>
+          <!-- Automatic change detection will handle which categories to update -->
+          <%= f.hidden_field :mode, data: { inventory_calendar_target: "mode" } %>
+          <%= f.hidden_field :apply_inventory, value: "0", data: { inventory_calendar_target: "applyInventory" } %>
+          <%= f.hidden_field :apply_rates, value: "0", data: { inventory_calendar_target: "applyRates" } %>
+          <%= f.hidden_field :apply_restrictions, value: "0", data: { inventory_calendar_target: "applyRestrictions" } %>
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div>
@@ -329,95 +336,119 @@
             </div>
           </div>
 
-          <div data-inventory-calendar-target="inventoryFields" class="grid gap-4 sm:grid-cols-2 pt-2">
+          <div data-inventory-calendar-target="inventoryFields" class="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-50 pt-5">
             <div>
-              <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Quantity</label>
-              <%= f.number_field :quantity, min: 0, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "quantityField" } %>
+              <div class="mb-1.5 flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Quantity</label>
+                  <button type="button" data-action="click->inventory-calendar#toggleInfo" data-info-id="quantity" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                  </button>
+                </div>
+                <span data-inventory-calendar-target="currentQuantityHint" class="text-[10px] font-bold text-indigo-600"></span>
+              </div>
+              <%= f.number_field :quantity, min: 0, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "quantityField", action: "input->inventory-calendar#markTouched" } %>
+              <div data-inventory-calendar-target="info" data-info-id="quantity" class="mt-1.5 hidden rounded-md bg-slate-50 p-2 text-[10px] font-medium text-slate-600 leading-relaxed border border-slate-100">
+                Total rooms available for sale. <span data-inventory-calendar-target="currentQuantityHint" class="font-bold text-indigo-600"></span>
+              </div>
             </div>
             <div>
               <div class="mb-1.5 flex items-center justify-between">
-                <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Status</label>
-                <span data-inventory-calendar-target="currentStatusHint" class="text-[10px] font-bold text-indigo-600"></span>
+                <div class="flex items-center gap-1.5">
+                  <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Status</label>
+                  <button type="button" data-action="click->inventory-calendar#toggleInfo" data-info-id="status" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                  </button>
+                </div>
               </div>
-              <%= f.select :status, [["No change", ""], ["Open", "open"], ["Closed", "closed"]], {}, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "statusField" } %>
+              <%= f.select :status, [["No change", ""], ["Open", "open"], ["Closed", "closed"]], {}, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "statusField", action: "change->inventory-calendar#markTouched" } %>
+              <div data-inventory-calendar-target="info" data-info-id="status" class="mt-1.5 hidden rounded-md bg-slate-50 p-2 text-[10px] font-medium text-slate-600 leading-relaxed border border-slate-100">
+                Whether this room type is open for sale. <span data-inventory-calendar-target="currentStatusHint" class="font-bold text-indigo-600"></span>
+              </div>
             </div>
           </div>
 
-          <div data-inventory-calendar-target="rateFields" class="grid gap-4 sm:grid-cols-2 pt-2">
+          <div data-inventory-calendar-target="rateFields" class="pt-2">
             <div>
-              <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Price</label>
-              <%= f.number_field :price, step: 0.01, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "priceField" } %>
-            </div>
-            <div data-controller="searchable-select" class="relative">
-              <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Currency</label>
-              <div class="relative group">
-                <input type="text" 
-                       data-searchable-select-target="input"
-                       data-action="input->searchable-select#filter click->searchable-select#open"
-                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition-all placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-0"
-                       placeholder="Search currency..."
-                       autocomplete="off">
-                
-                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 group-focus-within:text-slate-600">
-                  <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </div>
-
-                <%= f.hidden_field :currency, 
-                    data: { 
-                      searchable_select_target: "hiddenInput",
-                      inventory_calendar_target: "currencyField"
-                    } %>
-
-                <!-- Dropdown Options -->
-                <div data-searchable-select-target="options" 
-                     class="absolute z-[100] hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5">
-                  <div class="max-height-[240px] overflow-y-auto p-1 custom-scrollbar" style="max-height: 240px;">
-                    <% inventory_currency_options.each do |label, value| %>
-                      <button type="button"
-                              data-searchable-select-target="option"
-                              data-action="click->searchable-select#select"
-                              data-value="<%= value %>"
-                              data-label="<%= label %>"
-                              class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950">
-                        <span class="flex size-6 shrink-0 items-center justify-center rounded bg-slate-100 text-[10px] font-bold text-slate-600 group-hover:bg-white">
-                          <%= value %>
-                        </span>
-                        <span class="truncate"><%= label %></span>
-                      </button>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
+              <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Price (<%= @hotel_base_currency %>)</label>
+              <%= f.number_field :price, step: 0.01, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "priceField", action: "input->inventory-calendar#markTouched" } %>
+              <%= f.hidden_field :currency, value: @hotel_base_currency, data: { inventory_calendar_target: "currencyField" } %>
             </div>
           </div>
 
-          <div data-inventory-calendar-target="restrictionFields" class="space-y-4 pt-2">
+          <div data-inventory-calendar-target="restrictionFields" class="space-y-4 pt-2 border-t border-slate-50 pt-5">
             <div class="grid gap-4 sm:grid-cols-2">
               <div>
-                <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Min Stay</label>
-                <%= f.number_field :min_stay, min: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "minStayField" } %>
+                <div class="mb-1.5 flex items-center gap-1.5">
+                  <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Min Stay</label>
+                  <button type="button" data-action="click->inventory-calendar#toggleInfo" data-info-id="min_stay" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                  </button>
+                </div>
+                <%= f.number_field :min_stay, min: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "minStayField", action: "input->inventory-calendar#markTouched" } %>
+                <div data-inventory-calendar-target="info" data-info-id="min_stay" class="mt-1.5 hidden rounded-md bg-slate-50 p-2 text-[10px] font-medium text-slate-600 leading-relaxed border border-slate-100">
+                  Minimum number of nights for a booking arriving on this date.
+                </div>
               </div>
               <div>
-                <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Max Stay</label>
-                <%= f.number_field :max_stay, min: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "maxStayField" } %>
+                <div class="mb-1.5 flex items-center gap-1.5">
+                  <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Max Stay</label>
+                  <button type="button" data-action="click->inventory-calendar#toggleInfo" data-info-id="max_stay" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                  </button>
+                </div>
+                <%= f.number_field :max_stay, min: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "maxStayField", action: "input->inventory-calendar#markTouched" } %>
+                <div data-inventory-calendar-target="info" data-info-id="max_stay" class="mt-1.5 hidden rounded-md bg-slate-50 p-2 text-[10px] font-medium text-slate-600 leading-relaxed border border-slate-100">
+                  Maximum number of nights for a booking arriving on this date.
+                </div>
               </div>
             </div>
 
-            <div class="grid gap-2 sm:grid-cols-3">
-              <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50">
-                <%= f.check_box :closed_to_arrival, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "ctaField" } %>
-                CTA
-              </label>
-              <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50">
-                <%= f.check_box :closed_to_departure, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "ctdField" } %>
-                CTD
-              </label>
-              <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50">
-                <%= f.check_box :stop_sell, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "stopSellField" } %>
-                Stop Sell
-              </label>
+            <div class="grid gap-2">
+              <div class="group relative">
+                <label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
+                  <div class="flex items-center gap-2.5">
+                    <%= f.check_box :closed_to_arrival, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "ctaField", action: "change->inventory-calendar#markTouched" } %>
+                    <span>Closed to Arrival</span>
+                  </div>
+                  <button type="button" data-action="click->inventory-calendar#toggleInfo" data-info-id="cta" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                  </button>
+                </label>
+                <div data-inventory-calendar-target="info" data-info-id="cta" class="hidden rounded-md bg-slate-50 p-2 text-[10px] font-medium text-slate-600 leading-relaxed border border-slate-100 mt-1">
+                  If enabled, guests cannot start their stay on this specific date.
+                </div>
+              </div>
+
+              <div class="group relative">
+                <label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
+                  <div class="flex items-center gap-2.5">
+                    <%= f.check_box :closed_to_departure, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "ctdField", action: "change->inventory-calendar#markTouched" } %>
+                    <span>Closed to Departure</span>
+                  </div>
+                  <button type="button" data-action="click->inventory-calendar#toggleInfo" data-info-id="ctd" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                  </button>
+                </label>
+                <div data-inventory-calendar-target="info" data-info-id="ctd" class="hidden rounded-md bg-slate-50 p-2 text-[10px] font-medium text-slate-600 leading-relaxed border border-slate-100 mt-1">
+                  If enabled, guests cannot end their stay on this specific date.
+                </div>
+              </div>
+
+              <div class="group relative">
+                <label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
+                  <div class="flex items-center gap-2.5 text-red-600">
+                    <%= f.check_box :stop_sell, class: "size-4 rounded border-slate-300 text-red-600 focus:ring-0", data: { inventory_calendar_target: "stopSellField", action: "change->inventory-calendar#markTouched" } %>
+                    <span class="font-black uppercase tracking-wider">Stop Sell</span>
+                  </div>
+                  <button type="button" data-action="click->inventory-calendar#toggleInfo" data-info-id="stop_sell" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                  </button>
+                </label>
+                <div data-inventory-calendar-target="info" data-info-id="stop_sell" class="hidden rounded-md bg-slate-50 p-2 text-[10px] font-medium text-slate-600 leading-relaxed border border-slate-100 mt-1">
+                  Completely stop all sales for this room/rate on the selected dates.
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -430,8 +461,8 @@
     </div>
   </dialog>
 
-  <dialog data-inventory-calendar-target="confirmDialog" class="fixed inset-0 m-auto w-[min(94vw,30rem)] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
-    <div class="bg-white" onclick="event.stopPropagation()">
+  <dialog data-inventory-calendar-target="confirmDialog" class="fixed inset-0 m-auto w-[min(94vw,30rem)] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/50">
+    <div class="bg-white">
       <div class="border-b border-slate-200 bg-slate-50/50 px-5 py-4">
         <h3 class="text-lg font-bold tracking-tight text-slate-950">Confirm Bulk Update</h3>
         <p class="text-xs font-semibold text-slate-500">Please review the changes before applying.</p>
@@ -446,8 +477,8 @@
     </div>
   </dialog>
 
-  <dialog data-inventory-calendar-target="reviewDialog" class="fixed inset-0 m-auto max-h-[80vh] w-[min(94vw,36rem)] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
-    <div class="flex h-full max-h-[80vh] flex-col bg-white" onclick="event.stopPropagation()">
+  <dialog data-inventory-calendar-target="reviewDialog" class="fixed inset-0 m-auto max-h-[80vh] w-[min(94vw,36rem)] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/50">
+    <div class="flex h-full max-h-[80vh] flex-col bg-white">
       <div class="flex-none flex items-start justify-between border-b border-slate-100 px-5 py-4">
         <div>
           <h2 class="text-lg font-bold tracking-tight text-slate-950">Review Changes</h2>
@@ -472,9 +503,23 @@
         <button type="button" 
                 data-inventory-calendar-target="finalSyncButton"
                 data-action="inventory-calendar#submitStaged" 
+                data-sync-text="<%= current_hotel.preferred_channel_manager.present? ? "Confirm & Sync" : "Confirm & Save" %>"
                 class="inline-flex justify-center rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 shadow-sm">
           <%= current_hotel.preferred_channel_manager.present? ? "Confirm & Sync" : "Confirm & Save" %>
         </button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog data-inventory-calendar-target="successDialog" class="fixed inset-0 m-auto w-[min(94vw,28rem)] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/50">
+    <div class="bg-white p-8 text-center">
+      <div class="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+        <svg class="size-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h3 class="text-lg font-bold tracking-tight text-slate-950">Sync Successful</h3>
+      <p class="mt-2 text-sm font-medium text-slate-500">Your changes have been applied and synced with the Channel Manager.</p>
+      <div class="mt-6">
+        <button type="button" data-action="inventory-calendar#closeSuccess" class="inline-flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-700 transition-all">Dismiss</button>
       </div>
     </div>
   </dialog>

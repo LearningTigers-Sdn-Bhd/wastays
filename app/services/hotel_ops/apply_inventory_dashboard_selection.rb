@@ -238,7 +238,14 @@ module HotelOps
     def sync_to_channel_manager
       return if hotel.preferred_channel_manager.blank?
 
-      ChannelManagers::SyncJob.perform_later(hotel.id, start_date, end_date)
+      ChannelManagers::SyncJob.perform_later(
+        hotel.id,
+        start_date,
+        end_date,
+        sync_availability: apply_inventory?,
+        sync_rates: apply_rates?,
+        sync_restrictions: apply_restrictions?
+      )
     end
 
     def changed_rate?(old_values, rate)

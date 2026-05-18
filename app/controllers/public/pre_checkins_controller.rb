@@ -6,7 +6,9 @@ class Public::PreCheckinsController < ApplicationController
   before_action :set_hotel
   before_action :prepare_form_values, only: :show
 
-  def show; end
+  def show
+    @presenter = Public::PreCheckinPresenter.new(@pre_checkin)
+  end
 
   def update
     result = GuestArrival::ProcessPreCheckin.new(
@@ -62,6 +64,8 @@ class Public::PreCheckinsController < ApplicationController
       :guest_country,
       :guest_document_type,
       :guest_government_id,
+      :id_front,
+      :id_back,
       :estimated_arrival_time
     )
   end

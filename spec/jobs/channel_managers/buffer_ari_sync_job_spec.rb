@@ -13,11 +13,20 @@ RSpec.describe ChannelManagers::BufferAriSyncJob, type: :job do
   end
 
   it "coalesces dates and schedules a single flush job" do
-    described_class.perform_now(hotel.id, Date.new(2026, 5, 10))
-    described_class.perform_now(hotel.id, Date.new(2026, 5, 12))
+    described_class.perform_now(hotel.id, Date.new(2026, 5, 10), type: :availability)
+    described_class.perform_now(hotel.id, Date.new(2026, 5, 12), type: :restrictions)
 
     window = Rails.cache.read("channex:ari:window:#{hotel.id}")
-    expect(window).to eq({ "min_date" => "2026-05-10", "max_date" => "2026-05-12" })
+    expect(window).to eq({
+      "min_date" => "2026-05-10",
+      "max_date" => "2026-05-12",
+      "sync_availability" => true,
+      "sync_rates" => false,
+      "sync_restrictions" => true,
+      "room_type_windows" => {},
+      "rate_plan_windows" => {},
+      "rate_plan_fields" => {}
+    })
 
     jobs = enqueued_jobs.select { |job| job[:job] == ChannelManagers::FlushAriSyncJob }
     expect(jobs.size).to eq(1)

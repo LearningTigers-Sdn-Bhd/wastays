@@ -22,6 +22,11 @@ class RoomRate < ApplicationRecord
     return if Thread.current[:skip_ari_sync]
     return if room_type.hotel.preferred_channel_manager.blank?
 
-    ChannelManagers::BufferAriSyncJob.perform_later(room_type.hotel_id, date)
+    ChannelManagers::BufferAriSyncJob.perform_later(
+      room_type.hotel_id,
+      date,
+      type: :restrictions,
+      rate_plan_id: rate_plan_id
+    )
   end
 end

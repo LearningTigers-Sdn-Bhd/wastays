@@ -12,6 +12,18 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @bookings = @all_bookings.page(params[:page]).per(25)
   end
 
+  def sync
+    authorize_manage_bookings!
+
+    result = ChannelManagers::FetchBookingsService.new(hotel: current_hotel).call
+
+    if result.success?
+      redirect_to hotel_bookings_path(current_hotel), notice: result.message
+    else
+      redirect_to hotel_bookings_path(current_hotel), alert: result.message
+    end
+  end
+
   def new
     @booking = current_hotel.bookings.build(
       check_in: params[:check_in].presence || Date.current,
@@ -138,11 +150,13 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   end
 
   def check_in
-    transition_status("checked_in", transition_timestamp(:checked_in_at), "Guest checked in successfully.")
+    timestamp = transition_timestamp(:checked_in_at)
+    transition_status("checked_in", timestamp, "Guest checked in successfully.")
   end
 
   def check_out
-    transition_status("completed", transition_timestamp(:checked_out_at), "Guest has been checked out.")
+    timestamp = transition_timestamp(:checked_out_at)
+    transition_status("completed", timestamp, "Guest has been checked out.")
   end
 
   def cancel
@@ -173,6 +187,38 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     bg.destroy
     guest.destroy if guest.booking_guests.empty?
     redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest removed."
+  end
+
+  def complete_housekeeping_request
+    @booking = current_hotel.bookings.find(params[:id])
+    updater = ::HotelPortal::Requests::StatusUpdater.new(
+      hotel: current_hotel,
+      kind: "housekeeping",
+      request_id: params[:housekeeping_request_id],
+      status: "completed"
+    )
+
+    if updater.call
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Housekeeping request completed."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to update request."
+    end
+  end
+
+  def resolve_complaint_request
+    @booking = current_hotel.bookings.find(params[:id])
+    updater = ::HotelPortal::Requests::StatusUpdater.new(
+      hotel: current_hotel,
+      kind: "complaint",
+      request_id: params[:complaint_request_id],
+      status: "resolved"
+    )
+
+    if updater.call
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Complaint resolved."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to update request."
+    end
   end
 
   private
@@ -262,6 +308,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       :guest_name, :guest_email, :guest_phone, :status, :checked_in_at, :checked_out_at,
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
       :record_payment, :payment_method, :payment_amount, :payment_reference,
+      :id_front, :id_back,
       booking_rooms_attributes: [ :id, :room_number ]
     )
   end

@@ -51,6 +51,10 @@ module ApplicationHelper
     end
   end
 
+  def status_badge_class(status_class)
+    status_class.gsub("bg-", "border-")
+  end
+
   def display_housekeeping_date(value)
     return "Not provided" if value.blank?
 

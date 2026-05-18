@@ -80,6 +80,12 @@
     display: none !important;
   }
 
+  @media (max-width: 767px) {
+    html.scanner-active #abw-btn-cont {
+      display: none !important;
+    }
+  }
+
   body {
     @apply bg-neutral-bg text-neutral-text-primary font-sans antialiased;
   }

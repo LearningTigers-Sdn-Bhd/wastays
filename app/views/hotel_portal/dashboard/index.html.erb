@@ -49,6 +49,33 @@
     <%# SIDE PANE: STATUS & TOOLS %>
     <div class="lg:col-span-3 space-y-8">
 
+      <%# Live Inventory Counter %>
+      <div class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="mb-2 border-b border-slate-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Inventory <span class="text-[10px] font-medium text-slate-400">(Today)</span></h3>
+        <div class="space-y-4">
+          <% @live_inventory.each do |item| %>
+            <div>
+              <div class="flex justify-between items-start mb-1.5">
+                <div class="flex flex-col">
+                  <span class="text-xs font-bold text-slate-900"><%= item[:name] %></span>
+                  <span class="text-[10px] font-medium text-slate-500"><%= item[:total] %> Total Units</span>
+                </div>
+                <div class="flex flex-col items-end">
+                  <span class="text-xs font-black <%= item[:remaining] > 0 ? 'text-emerald-600' : 'text-rose-600' %>">
+                    <%= item[:remaining] %> <%= 'Room'.pluralize(item[:remaining]) %> Left
+                  </span>
+                  <span class="text-[10px] font-bold text-slate-400"><%= item[:sold] %> Sold</span>
+                </div>
+              </div>
+              <div class="flex w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="flex flex-col justify-center overflow-hidden bg-brand-primary transition-all duration-500" role="progressbar" style="width: <%= item[:percentage] %>%" aria-valuenow="<%= item[:sold] %>" aria-valuemin="0" aria-valuemax="<%= item[:total] %>"></div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+        <%= link_to "Manage Availability", hotel_inventory_index_path(@current_hotel), class: "mt-2 flex items-center justify-center w-full py-2 bg-slate-50 text-slate-600 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors" %>
+      </div>
+
       <%# 7-Day Occupancy %>
       <div class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 class="mb-2 border-b border-slate-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">7-Day Occupancy</h3>
