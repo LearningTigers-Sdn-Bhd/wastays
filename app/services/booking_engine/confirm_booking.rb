@@ -8,17 +8,17 @@ module BookingEngine
     end
 
     def call
-      return OpenStruct.new(success?: true, booking: existing_booking) if existing_booking
+      @quote.with_lock do
+        return OpenStruct.new(success?: true, booking: existing_booking) if existing_booking
 
-      # Pre-assign sequential numbers outside the transaction to avoid nested lock conflicts
-      reservation_num = HotelCounter.increment!(hotel: @quote.hotel, type: "reservation")
-      receipt_num     = HotelCounter.increment!(hotel: @quote.hotel, type: "receipt")
-
-      Booking.transaction do
         # 1. Double check quote haven't expired (though it should have been held)
-        if @quote.status == "expired"
+        if quote_expired?
+          expire_quote!
           return OpenStruct.new(success?: false, message: "Quote has expired.")
         end
+
+        reservation_num = HotelCounter.increment!(hotel: @quote.hotel, type: "reservation")
+        receipt_num     = HotelCounter.increment!(hotel: @quote.hotel, type: "receipt")
 
         # 2. Create Booking from Quote snapshots
         margin_rate = @quote.hotel.effective_margin_rate
@@ -139,7 +139,25 @@ module BookingEngine
     private
 
     def existing_booking
-      @existing_booking ||= Booking.find_by(booking_quote_id: @quote.id)
+      Booking.find_by(booking_quote_id: @quote.id)
+    end
+
+    def quote_expired?
+      @quote.status == "expired" || @quote.expires_at <= Time.current
+    end
+
+    def expire_quote!
+      return if @quote.status == "expired"
+
+      @quote.booking_quote_items.includes(:room_type).each do |item|
+        (@quote.check_in...@quote.check_out).each do |date|
+          inventory = item.room_type.room_inventories.lock.find_by(date: date)
+          inventory&.update!(quantity: inventory.quantity + item.quantity)
+        end
+      end
+
+      @quote.update!(status: "expired")
+      Bookings::RecordAuditLog.call(auditable: @quote, action_type: "expire")
     end
 
     def normalize_country(value)

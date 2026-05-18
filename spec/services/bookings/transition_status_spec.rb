@@ -255,6 +255,29 @@ RSpec.describe Bookings::TransitionStatus do
         log = BookingAuditLog.last
         expect(log.action_type).to eq("cancel")
       end
+
+      it "does not release inventory again when already cancelled" do
+        booking.update!(status: "cancelled")
+
+        expect(Bookings::InventoryManager).not_to receive(:new)
+
+        result = subject.call
+
+        expect(result.success?).to be true
+        expect(booking.reload.status).to eq("cancelled")
+      end
+
+      it "fails for checked-in bookings" do
+        booking.update!(status: "checked_in")
+
+        expect(Bookings::InventoryManager).not_to receive(:new)
+
+        result = subject.call
+
+        expect(result.success?).to be false
+        expect(result.error).to eq("Cannot cancel booking with status checked_in")
+        expect(booking.reload.status).to eq("checked_in")
+      end
     end
 
     it "returns failure for unsupported status" do

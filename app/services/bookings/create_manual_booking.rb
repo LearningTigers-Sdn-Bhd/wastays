@@ -53,6 +53,10 @@ module Bookings
 
       if @record_payment == "1" || @record_payment == true
         payment_amount_value = @payment_amount.presence || booking.total_amount
+        if payment_amount_value.to_d <= 0
+          return OpenStruct.new(success?: false, errors: [ "Payment amount must be greater than 0." ])
+        end
+
         booking.payment_status = (payment_amount_value.to_d >= booking.total_amount.to_d) ? "captured" : "partial"
 
         booking.payment_transactions.build(

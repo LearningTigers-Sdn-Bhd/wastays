@@ -21,7 +21,7 @@ class Booking < ApplicationRecord
   attr_accessor :guest_government_id
 
   STATUSES = %w[pending confirmed checked_in cancelled completed overbooked no_show].freeze
-  PAYMENT_STATUSES = %w[pending authorized captured failed refunded].freeze
+  PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
   PRE_CHECKIN_STATUSES = %w[not_started pending in_progress completed failed].freeze

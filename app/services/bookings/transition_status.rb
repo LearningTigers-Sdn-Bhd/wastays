@@ -148,16 +148,47 @@ module Bookings
     end
 
     def cancel
+      transitioned = false
+      error = nil
+
       Booking.transaction do
-        if @booking.update(status: "cancelled")
+        @booking.with_lock do
+          @booking.reload
+
+          if @booking.status == "cancelled"
+            return success
+          end
+
+          unless cancellable_status?
+            error = "Cannot cancel booking with status #{@booking.status}"
+            next
+          end
+
+          previous_status = @booking.status
+          @booking.update!(status: "cancelled")
+          InventoryManager.new(@booking).release if release_inventory_on_cancel?(previous_status)
           Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "cancel")
-          InventoryManager.new(@booking).release
-          Bookings::WebhookTriggerService.new(@booking).trigger(:booking_cancelled)
-          success
-        else
-          failure(@booking.errors.full_messages.to_sentence)
+          transitioned = true
         end
       end
+
+      return failure(error) if error.present?
+
+      if transitioned
+        Bookings::WebhookTriggerService.new(@booking).trigger(:booking_cancelled)
+      end
+
+      success
+    rescue ActiveRecord::RecordInvalid => e
+      failure(e.record.errors.full_messages.to_sentence)
+    end
+
+    def cancellable_status?
+      @booking.status.in?(%w[pending confirmed overbooked])
+    end
+
+    def release_inventory_on_cancel?(previous_status)
+      previous_status.in?(%w[pending confirmed])
     end
 
     def mark_assigned_rooms_pending_cleaning

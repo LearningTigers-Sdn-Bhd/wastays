@@ -42,4 +42,27 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.success?).to be false
     expect(result.errors).to include("Guest name can't be blank")
   end
+
+  it "allows a manually recorded partial payment" do
+    params.merge!(
+      record_payment: "1",
+      payment_amount: "25.00",
+      payment_method: "cash"
+    )
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    expect(result.booking.payment_status).to eq("partial")
+    expect(result.booking.payment_transactions.first.amount_subunits).to eq(2_500)
+  end
+
+  it "rejects non-positive manual payment amounts" do
+    params.merge!(record_payment: "1", payment_amount: "0")
+
+    result = subject.call
+
+    expect(result.success?).to be false
+    expect(result.errors).to include("Payment amount must be greater than 0.")
+  end
 end

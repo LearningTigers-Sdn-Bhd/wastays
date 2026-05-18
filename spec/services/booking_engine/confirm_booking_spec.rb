@@ -87,5 +87,18 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(result.success?).to be(false)
       expect(result.message).to eq('Quote has expired.')
     end
+
+    it 'expires and releases a stale active quote before confirmation' do
+      quote.update!(expires_at: 1.minute.ago)
+      create(:room_inventory, room_type: room_type, date: quote.check_in, quantity: 4, status: 'open')
+
+      result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
+
+      expect(result.success?).to be(false)
+      expect(result.message).to eq('Quote has expired.')
+      expect(quote.reload.status).to eq('expired')
+      expect(room_type.room_inventories.find_by(date: quote.check_in).quantity).to eq(5)
+      expect(Booking.where(booking_quote_id: quote.id)).to be_empty
+    end
   end
 end
