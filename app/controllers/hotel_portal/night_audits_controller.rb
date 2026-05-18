@@ -3,8 +3,9 @@ module HotelPortal
     before_action :authorize_night_audit_access!
 
     def index
-      @suggested_business_date = Date.current - 1.day
+      @suggested_business_date = current_hotel.latest_closable_business_date
       @night_audits = current_hotel.night_audits.recent_first.page(params[:page]).per(25)
+      @pre_audit_evaluation = HotelOps::EvaluateNightAudit.new(hotel: current_hotel, business_date: @suggested_business_date).call
     end
 
     def show
@@ -36,9 +37,9 @@ module HotelPortal
 
     def requested_business_date
       raw_value = params.dig(:night_audit, :business_date)
-      raw_value.present? ? Date.parse(raw_value) : Date.current - 1.day
+      raw_value.present? ? Date.parse(raw_value) : current_hotel.latest_closable_business_date
     rescue ArgumentError, TypeError
-      Date.current - 1.day
+      current_hotel.latest_closable_business_date
     end
   end
 end

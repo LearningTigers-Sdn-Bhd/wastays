@@ -12,6 +12,15 @@ RSpec.describe Hotel, type: :model do
     it { should validate_presence_of(:status) }
     it { should validate_presence_of(:city) }
     it { should validate_presence_of(:country) }
+    it { should validate_presence_of(:business_starts_at) }
+    it { should validate_presence_of(:business_ends_at) }
+
+    it 'requires a non-negative arrival grace period in seconds' do
+      hotel = build(:hotel, arrival_grace_period: -1)
+
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:arrival_grace_period]).to be_present
+    end
   end
 
   describe 'constants' do
@@ -44,6 +53,38 @@ RSpec.describe Hotel, type: :model do
     it 'returns false if status is registered' do
       hotel = build(:hotel, status: 'registered')
       expect(hotel.active?).to be false
+    end
+  end
+
+  describe 'business dates' do
+    let(:hotel) do
+      build(:hotel,
+        time_zone: 'Kuala Lumpur',
+        business_starts_at: '08:00',
+        business_ends_at: '02:00',
+        arrival_grace_period: 7200)
+    end
+    let(:zone) { Time.find_zone('Kuala Lumpur') }
+
+    it 'maps after-midnight time before business end to the previous business date' do
+      expect(hotel.business_date_for(zone.local(2026, 5, 19, 1, 30))).to eq(Date.new(2026, 5, 18))
+    end
+
+    it 'uses the current calendar date at business end' do
+      expect(hotel.business_date_for(zone.local(2026, 5, 19, 2, 0))).to eq(Date.new(2026, 5, 19))
+    end
+
+    it 'only makes yesterday closable once business end has passed' do
+      expect(hotel.latest_closable_business_date(zone.local(2026, 5, 19, 1, 59))).to eq(Date.new(2026, 5, 17))
+      expect(hotel.latest_closable_business_date(zone.local(2026, 5, 19, 2, 0))).to eq(Date.new(2026, 5, 18))
+      expect(hotel.latest_closable_business_date(zone.local(2026, 5, 19, 15, 0))).to eq(Date.new(2026, 5, 18))
+    end
+
+    it 'builds the business day window across midnight' do
+      window = hotel.business_day_window_for(Date.new(2026, 5, 18))
+
+      expect(window.begin).to eq(zone.local(2026, 5, 18, 8, 0))
+      expect(window.end).to eq(zone.local(2026, 5, 19, 2, 0))
     end
   end
 

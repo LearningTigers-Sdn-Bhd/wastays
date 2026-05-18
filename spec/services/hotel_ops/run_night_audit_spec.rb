@@ -314,7 +314,7 @@ RSpec.describe HotelOps::RunNightAudit do
   end
 
   it "marks the audit failed and logs error when processing raises" do
-    allow_any_instance_of(described_class).to receive(:build_summary).and_raise(StandardError, "boom")
+    allow_any_instance_of(HotelOps::EvaluateNightAudit).to receive(:call).and_raise(StandardError, "boom")
 
     expect { run_audit }.to change(NightAuditLog, :count).by(2) # process_started, failed
 

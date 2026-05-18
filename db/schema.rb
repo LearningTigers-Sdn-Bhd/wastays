@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_18_000200) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_18_052729) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -417,6 +417,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_000200) do
     t.boolean "sst_enabled", default: false, null: false
     t.string "hotel_prefix"
     t.string "time_zone"
+    t.time "business_starts_at", default: "2000-01-01 08:00:00", null: false
+    t.time "business_ends_at", default: "2000-01-01 02:00:00", null: false
+    t.integer "arrival_grace_period", default: 7200, null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
@@ -478,6 +481,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_000200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_nearby_attractions_on_hotel_id"
+  end
+
+  create_table "night_audit_financial_summaries", force: :cascade do |t|
+    t.bigint "night_audit_id", null: false
+    t.decimal "room_revenue", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "tax_revenue", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "payments_total", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "refunds_total", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "no_show_penalties", precision: 12, scale: 2, default: "0.0", null: false
+    t.jsonb "changelog", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["night_audit_id"], name: "index_night_audit_financial_summaries_on_night_audit_id", unique: true
   end
 
   create_table "night_audit_logs", force: :cascade do |t|
@@ -1006,6 +1022,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_000200) do
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
   add_foreign_key "nearby_attractions", "hotels"
+  add_foreign_key "night_audit_financial_summaries", "night_audits"
   add_foreign_key "night_audit_logs", "hotels"
   add_foreign_key "night_audit_logs", "night_audits"
   add_foreign_key "night_audit_logs", "users"

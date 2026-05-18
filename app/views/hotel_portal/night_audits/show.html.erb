@@ -53,6 +53,44 @@ end %>
 
   <div class="grid gap-8 lg:grid-cols-3 px-4 md:px-0">
     <div class="lg:col-span-2 space-y-8">
+      <% financial_summary = @night_audit.financial_summary %>
+      <% if financial_summary %>
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+            <h2 class="text-lg font-bold tracking-tight text-slate-950">Financial Summary</h2>
+            <p class="mt-1 text-sm font-medium text-slate-600">Calculated totals for the business date <%= @night_audit.business_date.strftime("%d %b %Y") %>.</p>
+          </div>
+          <div class="p-6 sm:p-8">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Room Revenue</p>
+                <p class="text-2xl font-bold text-slate-950"><%= number_to_currency(financial_summary.room_revenue) %></p>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Tax Revenue</p>
+                <p class="text-2xl font-bold text-slate-950"><%= number_to_currency(financial_summary.tax_revenue) %></p>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">No-Show Penalties</p>
+                <p class="text-2xl font-bold text-slate-950"><%= number_to_currency(financial_summary.no_show_penalties) %></p>
+              </div>
+              <div class="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 mb-2">Payments Received</p>
+                <p class="text-2xl font-bold text-emerald-700"><%= number_to_currency(financial_summary.payments_total) %></p>
+              </div>
+              <div class="rounded-2xl border border-red-100 bg-red-50/50 p-5">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-red-600 mb-2">Refunds Issued</p>
+                <p class="text-2xl font-bold text-red-700"><%= number_to_currency(financial_summary.refunds_total) %></p>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-950 p-5">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Net Revenue</p>
+                <p class="text-2xl font-bold text-white"><%= number_to_currency(financial_summary.room_revenue + financial_summary.tax_revenue + financial_summary.no_show_penalties - financial_summary.refunds_total) %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
       <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950">Blocked Details</h2>

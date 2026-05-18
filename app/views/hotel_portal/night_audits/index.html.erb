@@ -15,6 +15,77 @@
   <div class="px-4 md:px-0">
     <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+        <h2 class="text-lg font-bold tracking-tight text-slate-950">Pre-Audit Check: <%= @suggested_business_date.strftime("%d %b %Y") %></h2>
+        <p class="mt-1 text-sm font-medium text-slate-600">Current status of the hotel for the next scheduled audit run.</p>
+      </div>
+      <div class="p-6 sm:p-8 space-y-6">
+        <% blockers = @pre_audit_evaluation[:blocked_details] %>
+        <% warnings = @pre_audit_evaluation[:exceptions] %>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Blockers</p>
+            <p class="text-2xl font-bold <%= blockers.values.flatten.any? ? 'text-red-600' : 'text-slate-950' %>"><%= blockers.values.flatten.count %></p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Warnings</p>
+            <p class="text-2xl font-bold <%= warnings.values.flatten.any? ? 'text-amber-600' : 'text-slate-950' %>"><%= warnings.values.flatten.count %></p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Arrivals</p>
+            <p class="text-2xl font-bold text-slate-950"><%= @pre_audit_evaluation[:summary]["arrivals_count"] %></p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Due Outs</p>
+            <p class="text-2xl font-bold text-slate-950"><%= @pre_audit_evaluation[:summary]["due_out_count"] %></p>
+          </div>
+        </div>
+
+        <% if blockers.values.flatten.any? %>
+          <div class="rounded-2xl border border-red-200 bg-red-50 p-6">
+            <div class="flex items-start gap-4">
+              <div class="shrink-0 rounded-full bg-red-100 p-2 text-red-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-red-950">Audit Blocked</h3>
+                <p class="mt-1 text-sm font-medium text-red-800">The following issues must be resolved before the night audit can complete successfully.</p>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                  <% blockers.each do |label, rows| %>
+                    <% next if rows.blank? %>
+                    <div class="text-xs">
+                      <p class="font-bold text-red-900 mb-1"><%= label.humanize %></p>
+                      <p class="font-medium text-red-800"><%= rows.count %> items requiring attention</p>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% else %>
+          <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+            <div class="flex items-start gap-4">
+              <div class="shrink-0 rounded-full bg-emerald-100 p-2 text-emerald-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-emerald-950">Ready for Audit</h3>
+                <p class="mt-1 text-sm font-medium text-emerald-800">No critical blockers found for the business date <%= @suggested_business_date.strftime("%d %b %Y") %>.</p>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4 md:px-0">
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
         <h2 class="text-lg font-bold tracking-tight text-slate-950">Manual Run</h2>
         <p class="mt-1 text-sm font-medium text-slate-600">Run night audit for a business date. The field defaults to yesterday to match the scheduled run.</p>
       </div>

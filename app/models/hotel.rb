@@ -67,6 +67,8 @@ class Hotel < ApplicationRecord
   validates :status, presence: true
   validates :city, presence: true
   validates :country, presence: true
+  validates :business_starts_at, :business_ends_at, presence: true
+  validates :arrival_grace_period, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
@@ -143,6 +145,41 @@ class Hotel < ApplicationRecord
     %w[approved live].include?(status)
   end
 
+  def hotel_time_zone
+    Time.find_zone(time_zone.presence || User::DEFAULT_TIME_ZONE) || Time.zone
+  end
+
+  def business_date_for(time = Time.current)
+    local_time = time.in_time_zone(hotel_time_zone)
+    date = local_time.to_date
+
+    return date if business_day_window_for(date).cover?(local_time)
+    return date - 1.day if business_day_window_for(date - 1.day).cover?(local_time)
+
+    date
+  end
+
+  def latest_closable_business_date(time = Time.current)
+    local_time = time.in_time_zone(hotel_time_zone)
+    today = local_time.to_date
+
+    [ today, today - 1.day, today - 2.days ].each do |date|
+      window = business_day_window_for(date)
+      return date if local_time >= window.end
+    end
+
+    today - 1.day
+  end
+
+  def business_day_window_for(business_date)
+    date = business_date.to_date
+    start_at = hotel_time_zone.local(date.year, date.month, date.day, business_starts_at.hour, business_starts_at.min)
+    end_date = business_day_crosses_midnight? ? date + 1.day : date
+    end_at = hotel_time_zone.local(end_date.year, end_date.month, end_date.day, business_ends_at.hour, business_ends_at.min)
+
+    start_at...end_at
+  end
+
   def effective_payment_setting(gateway)
     # 1. Check hotel-level override
     setting = payment_settings.active.find_by(gateway: gateway)
@@ -217,6 +254,18 @@ class Hotel < ApplicationRecord
 
     default_rule = SetupFeeRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ])
     default_rule&.amount&.to_f || 0.0
+  end
+
+  def business_day_crosses_midnight?
+    # Compare hours and minutes directly to avoid zone issues on the 'time' column
+    start_total_mins = (business_starts_at.hour * 60) + business_starts_at.min
+    end_total_mins = (business_ends_at.hour * 60) + business_ends_at.min
+
+    end_total_mins <= start_total_mins
+  end
+
+  def seconds_since_midnight(time)
+    (time.hour * 3600) + (time.min * 60) + time.sec
   end
 
   def onboarding?

@@ -1,10 +1,9 @@
 class RunScheduledNightAuditsJob < ApplicationJob
   queue_as :default
 
-  def perform(business_date = Date.current - 1.day)
-    target_date = business_date.to_date
-
+  def perform(business_date = nil)
     Hotel.where(status: %w[approved live]).find_each do |hotel|
+      target_date = business_date.present? ? business_date.to_date : hotel.latest_closable_business_date
       run_for_hotel(hotel, target_date)
     end
   end

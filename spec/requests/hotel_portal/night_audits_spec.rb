@@ -1,8 +1,18 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::NightAudits", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
+
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "live") }
+  let(:hotel) do
+    create(:hotel,
+      account: account,
+      status: "live",
+      time_zone: "Kuala Lumpur",
+      business_starts_at: "08:00",
+      business_ends_at: "02:00",
+      arrival_grace_period: 7200)
+  end
   let(:user) { create(:user, account: account, role: "hotel_staff") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
   let!(:permission) do
@@ -42,10 +52,14 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
   it "defaults manual business date to yesterday when omitted" do
     sign_in(user)
 
-    post hotel_night_audits_path(hotel), params: { night_audit: { notes: "Default run" } }
+    kl_zone = Time.find_zone("Kuala Lumpur")
+    travel_to(kl_zone.local(2026, 5, 19, 10, 10)) do
+      # At 10:10 AM on May 19, May 18 should be the latest closable date
+      expect(hotel.latest_closable_business_date).to eq(Date.new(2026, 5, 18))
+      post hotel_night_audits_path(hotel), params: { night_audit: { notes: "Default run" } }
+    end
 
-    yesterday_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current - 1.day }
-    expect(NightAudit.last.business_date).to eq(yesterday_kl)
+    expect(NightAudit.last.business_date).to eq(Date.new(2026, 5, 18))
     expect(NightAudit.last.trigger_mode).to eq("manual")
   end
 
