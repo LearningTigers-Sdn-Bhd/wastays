@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_18_052729) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_18_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -243,7 +243,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_052729) do
     t.integer "reservation_number"
     t.integer "receipt_number"
     t.integer "guest_registration_number"
-    t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
+    t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id_unique", unique: true, where: "(booking_quote_id IS NOT NULL)"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
@@ -665,7 +665,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_052729) do
     t.jsonb "metadata"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["booking_id"], name: "index_pre_checkins_on_booking_id"
+    t.index ["booking_id"], name: "index_pre_checkins_on_booking_id", unique: true
+    t.index ["token"], name: "index_pre_checkins_on_token", unique: true
   end
 
   create_table "property_policies", force: :cascade do |t|
