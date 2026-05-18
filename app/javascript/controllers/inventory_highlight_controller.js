@@ -22,13 +22,12 @@ export default class extends Controller {
 
     // Highlight row header (Indigo contrast)
     if (rowHeader) {
-      rowHeader.classList.add("bg-indigo-600", "text-white", "ring-1", "ring-inset", "ring-indigo-700", "z-40")
-      rowHeader.classList.remove("bg-white", "bg-slate-50/40")
+      rowHeader.classList.add("bg-indigo-600", "text-white", "ring-1", "ring-inset", "ring-indigo-700")
     }
 
     // Highlight row label
     if (rowLabel) {
-      rowLabel.classList.add("text-white", "font-black")
+      rowLabel.classList.add("text-slate-900", "font-black")
       rowLabel.classList.remove("text-slate-950", "text-slate-600")
     }
 
@@ -44,10 +43,12 @@ export default class extends Controller {
 
     this.rowHeaderTargets.forEach(header => {
       header.classList.remove("bg-indigo-600", "text-white", "ring-1", "ring-inset", "ring-indigo-700")
+      // Keep sticky Room/Plan column opaque after hover clears.
+      header.classList.add("bg-white")
     })
 
     this.rowLabelTargets.forEach(label => {
-      label.classList.remove("text-white", "font-black")
+      label.classList.remove("font-black")
       // Restore standard colors
       if (label.classList.contains("ms-5")) { // Rate plan label
         label.classList.add("text-slate-600")

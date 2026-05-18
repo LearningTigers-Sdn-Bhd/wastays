@@ -12,6 +12,18 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @bookings = @all_bookings.page(params[:page]).per(25)
   end
 
+  def sync
+    authorize_manage_bookings!
+
+    result = ChannelManagers::FetchBookingsService.new(hotel: current_hotel).call
+
+    if result.success?
+      redirect_to hotel_bookings_path(current_hotel), notice: result.message
+    else
+      redirect_to hotel_bookings_path(current_hotel), alert: result.message
+    end
+  end
+
   def new
     @booking = current_hotel.bookings.build(
       check_in: params[:check_in].presence || Date.current,
