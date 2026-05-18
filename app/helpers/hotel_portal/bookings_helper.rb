@@ -9,4 +9,23 @@ module HotelPortal::BookingsHelper
 
     payment_status_class(display_status)
   end
+
+  def folio_transaction_amount_label(transaction)
+    amount = transaction.amount.to_d
+    signed_amount = case transaction.transaction_type
+    when "charge" then amount
+    when "payment" then -amount
+    else amount
+    end
+
+    sign = signed_amount.negative? ? "-" : "+"
+    "#{sign} MYR #{number_with_precision(signed_amount.abs, precision: 2)}"
+  end
+
+  def folio_transaction_amount_class(transaction)
+    amount = transaction.amount.to_d
+    balance_effect = transaction.payment? ? -amount : amount
+
+    balance_effect.negative? ? "text-emerald-600" : "text-slate-900"
+  end
 end

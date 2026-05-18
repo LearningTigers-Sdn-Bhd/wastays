@@ -138,11 +138,11 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   end
 
   def check_in
-    transition_status("checked_in", params[:checked_in_at], "Guest checked in successfully.")
+    transition_status("checked_in", transition_timestamp(:checked_in_at), "Guest checked in successfully.")
   end
 
   def check_out
-    transition_status("completed", params[:checked_out_at], "Guest has been checked out.")
+    transition_status("completed", transition_timestamp(:checked_out_at), "Guest has been checked out.")
   end
 
   def cancel
@@ -205,7 +205,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @booking = current_hotel.bookings.find(params[:id])
 
     # Apply nested attributes (like room assignment) if provided in the form
-    @booking.assign_attributes(booking_params) if params[:booking].present?
+    @booking.assign_attributes(booking_params.except(:checked_in_at, :checked_out_at)) if params[:booking].present?
 
     options = {}
     if params[:override_night_audit] == "1"
@@ -245,7 +245,8 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
             # Append an alert toast to the board instead of rendering show
             render turbo_stream: turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
           else
-            render :show, status: :unprocessable_content
+            flash.now[:alert] = result.error
+            render :show, formats: [ :html ], status: :unprocessable_content
           end
         end
         format.html do
@@ -260,8 +261,13 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     params.fetch(:booking, {}).permit(
       :guest_name, :guest_email, :guest_phone, :status, :checked_in_at, :checked_out_at,
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
+      :record_payment, :payment_method, :payment_amount, :payment_reference,
       booking_rooms_attributes: [ :id, :room_number ]
     )
+  end
+
+  def transition_timestamp(attribute)
+    params[attribute].presence || booking_params[attribute].presence
   end
 
   def reservation_board_request?

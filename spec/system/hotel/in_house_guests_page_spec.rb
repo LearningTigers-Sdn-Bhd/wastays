@@ -97,6 +97,9 @@ RSpec.describe "Hotel in-house guests page", type: :system do
       subtotal: older_booking.total_amount
     )
 
+    Folios::InitializeForBooking.call(booking: matching_booking, user: user)
+    Folios::InitializeForBooking.call(booking: older_booking, user: user)
+
     visit login_path
     fill_in "Email Address", with: user.email
     fill_in "Password", with: "password123"

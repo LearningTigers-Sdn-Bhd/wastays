@@ -1,0 +1,13 @@
+<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+  <div>
+    <h2 class="text-lg font-bold tracking-tight text-slate-950">Folio Balance</h2>
+    <p class="mt-1 text-sm font-medium text-slate-600">Total outstanding for this booking.</p>
+  </div>
+  <div class="flex flex-col items-start gap-4 lg:items-end">
+    <div class="lg:text-right">
+      <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Outstanding Balance</p>
+      <p class="text-3xl font-black text-slate-900">MYR <%= number_with_precision(booking.booking_folio&.outstanding_balance || 0, precision: 2) %></p>
+    </div>
+    <%= render "hotel_portal/bookings/folio_actions", booking: booking, hotel: current_hotel %>
+  </div>
+</div>

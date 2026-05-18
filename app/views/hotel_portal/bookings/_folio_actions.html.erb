@@ -1,0 +1,56 @@
+<% folio = booking.booking_folio %>
+<% can_post = folio&.status == "open" && current_user.has_permission?("post_folio_transactions", hotel: hotel) %>
+
+<% if can_post %>
+  <div class="flex flex-wrap items-center gap-2">
+    <button type="button" class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('folio-payment-modal-<%= booking.id %>').showModal()">Post Payment</button>
+    <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" onclick="document.getElementById('folio-charge-modal-<%= booking.id %>').showModal()">Post Charge</button>
+    <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" onclick="document.getElementById('folio-adjustment-modal-<%= booking.id %>').showModal()">Post Adjustment</button>
+    <button type="button" class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 shadow-sm transition hover:bg-amber-100" onclick="document.getElementById('folio-refund-modal-<%= booking.id %>').showModal()">Record Refund</button>
+  </div>
+
+  <%= render "hotel_portal/bookings/folio_transaction_modal",
+      booking: booking,
+      hotel: hotel,
+      modal_id: "folio-payment-modal-#{booking.id}",
+      title: "Post Payment",
+      description: "Record a staff-posted cash payment against this folio.",
+      transaction_type: "payment",
+      category: "cash",
+      signed_amount: false,
+      submit_label: "Post Payment" %>
+
+  <%= render "hotel_portal/bookings/folio_transaction_modal",
+      booking: booking,
+      hotel: hotel,
+      modal_id: "folio-charge-modal-#{booking.id}",
+      title: "Post Charge",
+      description: "Record a manual other charge. Accommodation and tax are posted by audit flows.",
+      transaction_type: "charge",
+      category: "other",
+      signed_amount: false,
+      submit_label: "Post Charge" %>
+
+  <%= render "hotel_portal/bookings/folio_transaction_modal",
+      booking: booking,
+      hotel: hotel,
+      modal_id: "folio-adjustment-modal-#{booking.id}",
+      title: "Post Adjustment",
+      description: "Record a correction, discount, write-off, or other adjustment.",
+      transaction_type: "adjustment",
+      category: nil,
+      category_options: %w[adjustment correction discount write_off other],
+      signed_amount: true,
+      submit_label: "Post Adjustment" %>
+
+  <%= render "hotel_portal/bookings/folio_transaction_modal",
+      booking: booking,
+      hotel: hotel,
+      modal_id: "folio-refund-modal-#{booking.id}",
+      title: "Record Refund",
+      description: "Enter a positive refund amount. It will be recorded as a negative refund payment.",
+      transaction_type: "payment",
+      category: "refund",
+      signed_amount: false,
+      submit_label: "Record Refund" %>
+<% end %>

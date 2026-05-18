@@ -80,6 +80,18 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(booking.reload.checked_in_at).to be_present
     end
 
+    it "checks in when the timestamp is submitted through booking params" do
+      checked_in_at = "2026-05-18T13:08"
+      expected_checked_in_at = Time.find_zone!(user.time_zone).parse(checked_in_at)
+
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
+           params: { booking: { checked_in_at: checked_in_at } }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(booking.reload.status).to eq("checked_in")
+      expect(booking.checked_in_at.to_i).to eq(expected_checked_in_at.to_i)
+    end
+
     it "returns turbo stream reload when requested from reservation board" do
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
            params: { checked_in_at: Time.current.to_s },
@@ -87,6 +99,18 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="reload"')
+    end
+
+    it "renders the booking show page on turbo failures outside the reservation board" do
+      booking.update!(status: "pending")
+
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
+           params: { checked_in_at: Time.current.to_s },
+           headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Cannot check in booking with status pending")
+      expect(response.body).to include("Stay & Room Details")
     end
   end
 
