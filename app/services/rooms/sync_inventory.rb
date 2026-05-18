@@ -57,7 +57,14 @@ module Rooms
 
     def trigger_channel_sync
       return if @hotel.preferred_channel_manager.blank?
-      ChannelManagers::SyncJob.perform_later(@hotel.id, @start_date, @end_date)
+      ChannelManagers::SyncJob.perform_later(
+        @hotel.id,
+        @start_date,
+        @end_date,
+        sync_availability: true,
+        sync_rates: false,
+        sync_restrictions: false
+      )
     end
   end
 end

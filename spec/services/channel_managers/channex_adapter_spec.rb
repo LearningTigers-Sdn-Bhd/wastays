@@ -73,9 +73,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
             rate_plan_id: "ch_rp_123",
             date_from: start_date.to_s,
             date_to: end_date.to_s,
-            rate: "200.00",
-            currency: "MYR",
-            occupancy: 2
+            rate: "200.00"
           }
         ]
       }).and_return({ "data" => { "id" => "task_2" } })
@@ -107,6 +105,34 @@ RSpec.describe ChannelManagers::ChannexAdapter do
 
       result = adapter.push_ari(date_range: (start_date..diff_date))
       expect(result.success?).to be true
+    end
+  end
+
+  describe '#ingest_booking' do
+    it 'builds full guest name from PersonName fields when available' do
+      payload = {
+        "data" => {
+          "id" => "bk_123",
+          "booking_id" => "bk_123",
+          "status" => "new",
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "amount" => "100.00",
+          "currency" => "MYR",
+          "customer" => {
+            "name" => "John",
+            "PersonName" => {
+              "GivenName" => "John",
+              "Surname" => "Doe"
+            }
+          },
+          "rooms" => []
+        }
+      }
+
+      result = adapter.ingest_booking(payload: payload)
+
+      expect(result[:guest_details][:name]).to eq("John Doe")
     end
   end
 end

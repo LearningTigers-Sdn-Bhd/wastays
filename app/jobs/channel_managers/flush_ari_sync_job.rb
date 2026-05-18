@@ -22,8 +22,24 @@ module ChannelManagers
 
       start_date = Date.parse(window["min_date"])
       end_date = Date.parse(window["max_date"])
+      sync_availability = window.fetch("sync_availability", true)
+      sync_rates = window.fetch("sync_rates", true)
+      sync_restrictions = window.fetch("sync_restrictions", true)
+      room_type_ids = window["room_type_windows"]
+      rate_plan_ids = window["rate_plan_windows"]
+      rate_plan_fields = window["rate_plan_fields"]
 
-      ChannelManagers::SyncJob.perform_now(hotel_id, start_date, end_date)
+      ChannelManagers::SyncJob.perform_now(
+        hotel_id,
+        start_date,
+        end_date,
+        sync_availability: sync_availability,
+        sync_rates: sync_rates,
+        sync_restrictions: sync_restrictions,
+        room_type_ids: room_type_ids,
+        rate_plan_ids: rate_plan_ids,
+        rate_plan_fields: rate_plan_fields
+      )
       Rails.cache.delete(window_key)
     rescue Date::Error
       Rails.cache.delete(window_key)

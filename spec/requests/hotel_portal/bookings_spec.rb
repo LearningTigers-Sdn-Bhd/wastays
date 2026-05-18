@@ -150,5 +150,26 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(option_101["selectable"]).to be(false)
       expect(option_101["label"]).to eq("101 (Pending Cleaning)")
     end
+
+    it "includes the current booking's assigned room when exclude_booking_id is provided" do
+      booking.update!(check_in: Date.current, check_out: Date.current + 2.days, status: "confirmed")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
+      other_booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 2.days, status: "confirmed")
+      create(:booking_room, booking: other_booking, room_type: room_type, room_number: "102")
+
+      get "/hotel/#{hotel.id}/bookings/availability", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s,
+        exclude_booking_id: booking.id
+      }
+
+      expect(response).to have_http_status(:success)
+      body = JSON.parse(response.body)
+
+      expect(body["available_rooms"]).to include("101")
+      expect(body["available_rooms"]).not_to include("102")
+    end
   end
 end
