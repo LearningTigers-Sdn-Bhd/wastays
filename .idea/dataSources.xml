@@ -8,5 +8,12 @@
       <jdbc-url>jdbc:postgresql://localhost:5432/wastays_development</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="wastays_demo@46.202.166.235" uuid="b4b2c0b1-6f81-4b41-b641-33d6649e0e6f">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://46.202.166.235:5441/wastays_demo</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>
