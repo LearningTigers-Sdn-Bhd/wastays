@@ -35,6 +35,32 @@ module HotelPortal
         .count
     end
 
+    def live_inventory
+      date = Date.current
+      @hotel.room_types.order(:id).map do |room_type|
+        inventory = room_type.room_inventories.find_by(date: date)
+        
+        total_capacity = room_type.quantity
+        remaining = inventory&.status == "closed" ? 0 : (inventory&.quantity || total_capacity)
+        
+        # Count actual sold rooms from bookings
+        sold = @hotel.bookings.revenue_generating
+                     .joins(:booking_rooms)
+                     .where(booking_rooms: { room_type_id: room_type.id })
+                     .where(":date >= check_in AND :date < check_out", date: date)
+                     .count
+
+        {
+          room_type: room_type,
+          name: room_type.name,
+          total: total_capacity,
+          sold: sold,
+          remaining: remaining,
+          status: inventory&.status || "open"
+        }
+      end
+    end
+
     def occupancy_snapshot(days: 7)
       (Date.current..(Date.current + (days - 1).days)).map do |date|
         # Correctly sum the quantity column from room_inventories
