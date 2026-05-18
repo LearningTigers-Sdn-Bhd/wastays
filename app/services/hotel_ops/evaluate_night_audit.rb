@@ -2,9 +2,10 @@ module HotelOps
   class EvaluateNightAudit
     include Folios::NightlyChargeCalculation
 
-    def initialize(hotel:, business_date:)
+    def initialize(hotel:, business_date:, phase: :post_close)
       @hotel = hotel
       @business_date = business_date.to_date
+      @phase = phase.to_sym
     end
 
     def call
@@ -29,7 +30,7 @@ module HotelOps
     end
 
     def build_blocked_details
-      {
+      details = {
         "due_out_not_checked_out" => serialize_bookings(due_out_not_checked_out, "Due out today but still not checked out"),
         "checked_in_missing_timestamp" => serialize_bookings(checked_in_missing_timestamp, "Checked-in booking is missing check-in timestamp"),
         "completed_missing_timestamp" => serialize_bookings(completed_missing_timestamp, "Completed booking is missing check-out timestamp"),
@@ -39,6 +40,20 @@ module HotelOps
         "captured_payment_not_synced" => serialize_payment_transactions(unsynced_captured_payment_transactions, "Captured payment is not synced to the booking folio"),
         "refund_not_synced" => serialize_refund_requests(unsynced_completed_refund_requests, "Completed refund is not synced to the booking folio")
       }
+
+      return details unless pre_close?
+
+      details.slice(
+        "due_out_not_checked_out",
+        "checked_in_missing_timestamp",
+        "completed_missing_timestamp",
+        "captured_payment_not_synced",
+        "refund_not_synced"
+      )
+    end
+
+    def pre_close?
+      @phase == :pre_close
     end
 
     def build_exceptions

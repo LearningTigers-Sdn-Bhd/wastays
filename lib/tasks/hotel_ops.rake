@@ -1,5 +1,5 @@
 namespace :hotel_ops do
-  desc "Clean state for a specific hotel (delete bookings, reset rates to base, recalibrate statuses)"
+  desc "Clean state for a specific hotel (delete bookings/night audits, reset rates to base, recalibrate statuses)"
   task :clean_state, [ :hotel_name ] => :environment do |_, args|
     hotel_name = args[:hotel_name]
     if hotel_name.blank?
@@ -14,7 +14,7 @@ namespace :hotel_ops do
       exit 1
     end
 
-    puts "!!! WARNING: This will PERMANENTLY DELETE all bookings and reset rates/statuses for '#{hotel.name}' !!!"
+    puts "!!! WARNING: This will PERMANENTLY DELETE all bookings and night audits, then reset rates/statuses for '#{hotel.name}' !!!"
     puts "Starting in 5 seconds... (Press Ctrl+C to abort)"
     5.times do |i|
       print "#{5 - i}... "
@@ -23,12 +23,17 @@ namespace :hotel_ops do
     puts "\nProceeding..."
 
     ActiveRecord::Base.transaction do
-      # 1. Clean Bookings
+      # 1. Clean Night Audits
+      night_audit_count = hotel.night_audits.count
+      puts "Destroying #{night_audit_count} night audits..."
+      hotel.night_audits.destroy_all
+
+      # 2. Clean Bookings
       booking_count = hotel.bookings.count
       puts "Destroying #{booking_count} bookings..."
       hotel.bookings.destroy_all
 
-      # 2. Clean and Recalibrate Rates
+      # 3. Clean and Recalibrate Rates
       start_date = Date.current
       end_date = Date.new(Date.current.year, 12, 31)
 
@@ -80,7 +85,7 @@ namespace :hotel_ops do
         RoomRate.insert_all(rates_to_insert) if rates_to_insert.any?
       end
 
-      # 3. Recalibrate Room Statuses
+      # 4. Recalibrate Room Statuses
       puts "Recalibrating room statuses..."
       hotel.room_types.each do |room_type|
         # Reset all existing statuses to 'ready'
@@ -110,7 +115,7 @@ namespace :hotel_ops do
         end
       end
 
-      # 4. Trigger Sync if needed
+      # 5. Trigger Sync if needed
       if hotel.preferred_channel_manager.present?
         puts "Triggering Channel Manager Sync..."
         ChannelManagers::SyncJob.perform_later(hotel.id, start_date, end_date)

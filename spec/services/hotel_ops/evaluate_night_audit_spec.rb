@@ -19,6 +19,35 @@ RSpec.describe HotelOps::EvaluateNightAudit do
       expect(result[:blocked_details]["due_out_not_checked_out"]).not_to be_empty
     end
 
+    it 'omits posting-generated blockers during pre-close evaluation' do
+      booking = create(:booking,
+        status: 'checked_in',
+        hotel: hotel,
+        check_in: business_date,
+        check_out: business_date + 1.day,
+        checked_in_at: business_date.beginning_of_day)
+      create(:booking_room, booking: booking, subtotal: 120.0)
+
+      result = described_class.new(hotel: hotel, business_date: business_date, phase: :pre_close).call
+
+      expect(result[:blocked_details]).not_to have_key("missing_folio")
+      expect(result[:blocked_details]).not_to have_key("missing_nightly_charges")
+    end
+
+    it 'includes posting-generated blockers during post-close evaluation' do
+      booking = create(:booking,
+        status: 'checked_in',
+        hotel: hotel,
+        check_in: business_date,
+        check_out: business_date + 1.day,
+        checked_in_at: business_date.beginning_of_day)
+      create(:booking_room, booking: booking, subtotal: 120.0)
+
+      result = described_class.new(hotel: hotel, business_date: business_date, phase: :post_close).call
+
+      expect(result[:blocked_details]["missing_folio"].first["booking_id"]).to eq(booking.id)
+    end
+
     it 'identifies large balance exceptions' do
       booking = create(:booking, status: 'checked_in', hotel: hotel)
       folio = create(:booking_folio, booking: booking)

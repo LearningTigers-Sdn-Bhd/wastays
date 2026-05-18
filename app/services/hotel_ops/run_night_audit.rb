@@ -28,11 +28,30 @@ module HotelOps
 
         log_event(night_audit, "process_started", "Night audit process started for business date #{@business_date}")
 
+        pre_evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :pre_close).call
+
+        if blocked?(pre_evaluation)
+          log_blockers(night_audit, pre_evaluation[:blocked_details])
+          log_exceptions(night_audit, pre_evaluation[:exceptions])
+          persist_financial_summary(night_audit, calculate_financial_totals)
+
+          night_audit.update!(
+            status: "blocked",
+            completed_at: Time.current,
+            summary: pre_evaluation[:summary],
+            blocked_details: pre_evaluation[:blocked_details],
+            exceptions: pre_evaluation[:exceptions]
+          )
+
+          log_event(night_audit, "blocker_found", "Night audit process stopped before posting due to blockers")
+          next
+        end
+
         Bookings::ProcessNoShows.call(night_audit: night_audit, user: @performed_by_user)
         Folios::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
 
         # Use the evaluation service to get blockers and exceptions
-        evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date).call
+        evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :post_close).call
         
         log_blockers(night_audit, evaluation[:blocked_details])
         log_exceptions(night_audit, evaluation[:exceptions])
@@ -42,7 +61,7 @@ module HotelOps
         persist_financial_summary(night_audit, financial_totals)
 
         night_audit.update!(
-          status: evaluation[:blocked_details].values.flatten.any? ? "blocked" : "completed",
+          status: blocked?(evaluation) ? "blocked" : "completed",
           completed_at: Time.current,
           summary: evaluation[:summary],
           blocked_details: evaluation[:blocked_details],
@@ -89,6 +108,10 @@ module HotelOps
 
     def calculate_financial_totals
       HotelOps::CalculateBusinessDayFinancials.call(hotel: @hotel, business_date: @business_date)
+    end
+
+    def blocked?(evaluation)
+      evaluation[:blocked_details].values.flatten.any?
     end
 
     def persist_financial_summary(night_audit, totals)

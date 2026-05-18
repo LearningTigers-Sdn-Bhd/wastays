@@ -106,6 +106,9 @@ RSpec.describe HotelOps::RunNightAudit do
   end
 
   it "blocks and logs when a due-out booking is not checked out" do
+    allow(Bookings::ProcessNoShows).to receive(:call)
+    allow(Folios::PostNightlyCharges).to receive(:call)
+
     booking = create(:booking,
       hotel: hotel,
       status: "checked_in",
@@ -125,6 +128,8 @@ RSpec.describe HotelOps::RunNightAudit do
     log = result.night_audit.night_audit_logs.find_by(action_type: "blocker_found")
     expect(log.message).to include("Found 1 blockers of type: Due out not checked out")
     expect(log.metadata["items"].first["confirmation_token"]).to be_present
+    expect(Bookings::ProcessNoShows).not_to have_received(:call)
+    expect(Folios::PostNightlyCharges).not_to have_received(:call)
   end
 
   it "stores open requests as warnings and logs exceptions" do
