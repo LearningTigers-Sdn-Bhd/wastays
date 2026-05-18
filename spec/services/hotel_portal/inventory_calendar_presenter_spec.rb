@@ -25,4 +25,19 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
       expect(p.send(:format_price, 100)).to eq("$ 100.00")
     end
   end
+
+  describe '#rows' do
+    it 'filters out walk-in named rate plans from regular rows' do
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: [ "101" ], quantity: 1)
+      create(:rate_plan, room_type: room_type, name: "Standard Rate", currency: "MYR")
+      create(:rate_plan, room_type: room_type, name: "Walk-in Rate", currency: "MYR")
+
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+
+      rate_labels = presenter.rows.select(&:rate_row?).map(&:sublabel)
+
+      expect(rate_labels).to contain_exactly("Standard Rate")
+      expect(presenter.rows.select(&:walk_in_row?).size).to eq(1)
+    end
+  end
 end

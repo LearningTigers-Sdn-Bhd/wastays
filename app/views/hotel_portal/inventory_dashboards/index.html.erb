@@ -211,6 +211,22 @@
                             <span class="mt-0.5 block text-sm font-black text-slate-950"><%= cell[:quantity] %></span>
                           </div>
                         </button>
+                      <% elsif row.walk_in_row? %>
+                        <div class="min-h-[54px] w-full bg-emerald-50/30 px-2 py-2 text-center transition cursor-default"
+                             data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear"
+                             data-column-id="<%= date %>">
+                          <div class="flex flex-col items-center justify-center min-h-[32px]">
+                            <% if cell[:conversion_missing] %>
+                              <span class="text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
+                            <% elsif cell[:price].present? %>
+                              <span class="block truncate text-sm font-black tabular-nums text-emerald-700">
+                                <%= cell[:formatted_price] %>
+                              </span>
+                            <% else %>
+                              <span class="text-[9px] font-bold text-slate-300 uppercase italic">Not Set</span>
+                            <% end %>
+                          </div>
+                        </div>
                       <% else %>
                         <button type="button"
                                 class="min-h-[54px] w-full bg-white px-2 py-2 text-center transition hover:bg-slate-100"

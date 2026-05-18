@@ -159,6 +159,25 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Public holiday entries must include name, date, and price.")
     end
+
+    it "saves walk-in pricing rules successfully" do
+      room_type = create(:room_type, hotel: hotel)
+
+      post apply_pricing_rules_hotel_inventory_dashboards_path(hotel), params: {
+        pricing_rule: {
+          room_type_ids: [ room_type.id ],
+          gp_price: "150",
+          gp_start_date: "2026-05-20",
+          gp_end_date: "2026-06-02",
+          wi_price: "200",
+          wi_start_date: "2026-05-20",
+          wi_end_date: "2026-06-02"
+        }
+      }
+
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: "2026-05-20"))
+      expect(hotel.pricing_rules.find_by(rule_type: "walk_in").price.to_f).to eq(200.0)
+    end
   end
 
   describe "POST /apply_availability_override" do

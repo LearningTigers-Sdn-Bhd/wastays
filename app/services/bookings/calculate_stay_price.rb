@@ -13,7 +13,7 @@ module Bookings
 
       (@check_in..(@check_out - 1.day)).sum do |date|
         rate = @room_type.room_rates.find_by(date: date)
-        rate&.price || @room_type.base_price
+        rate&.walk_in_price || rate&.price || @room_type.base_price
       end
     end
   end

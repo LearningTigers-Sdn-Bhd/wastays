@@ -1,6 +1,6 @@
 module HotelOps
   class SyncPricingRules
-    def initialize(hotel:, gp_price:, gp_start_date:, gp_end_date:, wk_price:, wk_start_date:, wk_end_date:, weekend_days:, sc_price:, sc_start_date:, sc_end_date:, public_holidays:)
+    def initialize(hotel:, gp_price:, gp_start_date:, gp_end_date:, wk_price:, wk_start_date:, wk_end_date:, weekend_days:, sc_price:, sc_start_date:, sc_end_date:, wi_price: nil, wi_start_date: nil, wi_end_date: nil, public_holidays:)
       @hotel = hotel
       @gp_price = decimal_or_nil(gp_price)
       @gp_start_date = date_or_nil(gp_start_date)
@@ -12,6 +12,9 @@ module HotelOps
       @sc_price = decimal_or_nil(sc_price)
       @sc_start_date = date_or_nil(sc_start_date)
       @sc_end_date = date_or_nil(sc_end_date) || @sc_start_date
+      @wi_price = decimal_or_nil(wi_price)
+      @wi_start_date = date_or_nil(wi_start_date)
+      @wi_end_date = date_or_nil(wi_end_date) || @wi_start_date
       @public_holidays = Array(public_holidays)
     end
 
@@ -96,6 +99,25 @@ module HotelOps
           price: @sc_price,
           start_date: @sc_start_date,
           end_date: @sc_end_date
+        }
+      end
+
+      if @wi_price
+        if @wi_start_date.blank?
+          @errors[:base] << "Walk-in pricing requires a start date."
+          raise ArgumentError, "Walk-in pricing requires a start date."
+        end
+        if @wi_end_date < @wi_start_date
+          @errors[:base] << "Walk-in pricing end date cannot be earlier than start date."
+          raise ArgumentError, "Walk-in pricing end date cannot be earlier than start date."
+        end
+
+        rows << {
+          rule_type: "walk_in",
+          name: "Walk-in",
+          price: @wi_price,
+          start_date: @wi_start_date,
+          end_date: @wi_end_date
         }
       end
 

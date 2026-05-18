@@ -206,6 +206,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       sc_price: pricing_params[:sc_price],
       sc_start_date: pricing_params[:sc_start_date],
       sc_end_date: pricing_params[:sc_end_date],
+      wi_price: pricing_params[:wi_price],
+      wi_start_date: pricing_params[:wi_start_date],
+      wi_end_date: pricing_params[:wi_end_date],
       public_holidays: pricing_params[:public_holidays]
     ).call
 
@@ -295,7 +298,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
     rule_type = params[:rule_type].to_s
-    unless %w[general weekends school_holiday].include?(rule_type)
+    unless %w[general weekends school_holiday walk_in].include?(rule_type)
       return redirect_to hotel_inventory_index_path(current_hotel), alert: "Unsupported pricing tier."
     end
 
@@ -346,6 +349,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :sc_price,
       :sc_start_date,
       :sc_end_date,
+      :wi_price,
+      :wi_start_date,
+      :wi_end_date,
       room_type_ids: [],
       weekend_days: [],
       public_holidays: [ :name, :price, :start_date, :end_date ]

@@ -4,7 +4,7 @@ RSpec.describe HotelOps::SyncPricingRules do
   let(:hotel) { create(:hotel) }
 
   describe "#call" do
-    it "stores general, weekends, school holiday, and public holiday rules" do
+    it "stores general, weekends, school holiday, walk-in, and public holiday rules" do
       result = described_class.new(
         hotel: hotel,
         gp_price: "120",
@@ -17,13 +17,16 @@ RSpec.describe HotelOps::SyncPricingRules do
         sc_price: "220",
         sc_start_date: "2026-05-20",
         sc_end_date: "2026-05-31",
+        wi_price: "250",
+        wi_start_date: "2026-05-01",
+        wi_end_date: "2026-05-31",
         public_holidays: [
           { name: "Kaamatan", start_date: "2026-05-30", end_date: "2026-05-31", price: "320" }
         ]
       ).call
 
       expect(result[:success]).to eq(true)
-      expect(hotel.pricing_rules.pluck(:rule_type)).to include("general", "weekends", "school_holiday", "public_holiday")
+      expect(hotel.pricing_rules.pluck(:rule_type)).to include("general", "weekends", "school_holiday", "walk_in", "public_holiday")
     end
 
     it "replaces old rules when applying new inputs" do
@@ -41,6 +44,9 @@ RSpec.describe HotelOps::SyncPricingRules do
         sc_price: nil,
         sc_start_date: nil,
         sc_end_date: nil,
+        wi_price: nil,
+        wi_start_date: nil,
+        wi_end_date: nil,
         public_holidays: []
       ).call
 

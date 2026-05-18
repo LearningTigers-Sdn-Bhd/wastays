@@ -1,6 +1,6 @@
 module HotelOps
   class ApplyPricingRules
-    PRIORITY = {
+    ONLINE_PRIORITY = {
       gp: 1,
       wk: 2,
       sc: 3,
@@ -37,38 +37,48 @@ module HotelOps
       target_currency = standard_plan&.currency || @hotel.default_currency || "MYR"
 
       (@start_date..@end_date).each do |date|
-        winner = winning_rule_for(date)
+        online_winner = winning_rule_for(date, category: :online)
+        walk_in_winner = winning_rule_for(date, category: :walk_in)
 
         rate = room_type.room_rates.find_or_initialize_by(date: date, currency: target_currency)
-        if winner.blank?
+        if online_winner.blank? && walk_in_winner.blank?
           rate.destroy! if rate.persisted?
           next
         end
 
         old_price = rate.price
+        old_wi_price = rate.walk_in_price
         old_currency = rate.currency
 
-        rate.price = winner[:price]
+        rate.price = online_winner&.dig(:price)
+        rate.walk_in_price = walk_in_winner&.dig(:price)
         rate.currency = target_currency
         rate.rate_plan = standard_plan if standard_plan
         rate.save!
 
-        next if old_price == winner[:price] && old_currency == rate.currency
+        next if old_price == rate.price && old_wi_price == rate.walk_in_price && old_currency == rate.currency
 
         @hotel.inventory_audit_logs.create!(
           room_type: room_type,
           user: @user,
           action_type: "rate_update",
-          old_value: { date: date, price: old_price.to_f },
-          new_value: { date: date, price: winner[:price].to_f },
-          metadata: { source: "pricing_rules", tier: winner[:tier].to_s, label: winner[:label] }
+          old_value: { date: date, price: old_price.to_f, walk_in_price: old_wi_price&.to_f },
+          new_value: { date: date, price: rate.price&.to_f, walk_in_price: rate.walk_in_price&.to_f },
+          metadata: {
+            source: "pricing_rules",
+            online_tier: online_winner&.dig(:tier)&.to_s,
+            walk_in_tier: walk_in_winner&.dig(:tier)&.to_s
+          }
         )
       end
     end
 
-    def winning_rule_for(date)
+    def winning_rule_for(date, category: :online)
       rules = []
       @hotel.pricing_rules.find_each do |pricing_rule|
+        rule_cat = pricing_rule.rule_type == "walk_in" ? :walk_in : :online
+        next unless rule_cat == category
+
         tier = rule_tier(pricing_rule.rule_type)
         next if tier.blank?
         next unless rule_applies_for_date?(pricing_rule, date)
@@ -77,7 +87,11 @@ module HotelOps
       end
       return nil if rules.empty?
 
-      rules.max_by { |rule| [ rule[:price], PRIORITY.fetch(rule[:tier]) ] }
+      if category == :online
+        rules.max_by { |rule| [ ONLINE_PRIORITY.fetch(rule[:tier]), rule[:price] ] }
+      else
+        rules.max_by { |rule| rule[:price] }
+      end
     end
 
     def rule_tier(rule_type)
@@ -85,7 +99,8 @@ module HotelOps
         "general" => :gp,
         "weekends" => :wk,
         "school_holiday" => :sc,
-        "public_holiday" => :ph
+        "public_holiday" => :ph,
+        "walk_in" => :wi
       }[rule_type]
     end
 
@@ -95,7 +110,7 @@ module HotelOps
         within_rule_window?(pricing_rule, date)
       when "weekends"
         within_rule_window?(pricing_rule, date) && pricing_rule.weekdays.include?(date.wday)
-      when "school_holiday", "public_holiday"
+      when "school_holiday", "public_holiday", "walk_in"
         within_rule_window?(pricing_rule, date)
       else
         false

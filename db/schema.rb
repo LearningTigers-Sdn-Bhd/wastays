@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_18_060033) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -683,6 +683,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
     t.string "currency", default: "MYR", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "sync_to_channels", default: true, null: false
     t.index ["room_type_id"], name: "index_rate_plans_on_room_type_id"
   end
 
@@ -818,6 +819,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
     t.boolean "closed_to_arrival"
     t.boolean "closed_to_departure"
     t.boolean "stop_sell"
+    t.decimal "walk_in_price", precision: 10, scale: 2
     t.index ["rate_plan_id"], name: "index_room_rates_on_rate_plan_id"
     t.index ["room_type_id", "rate_plan_id", "date", "currency"], name: "index_room_rates_on_rt_rp_date_curr", unique: true
     t.index ["room_type_id"], name: "index_room_rates_on_room_type_id"

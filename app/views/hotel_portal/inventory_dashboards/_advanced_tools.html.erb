@@ -28,7 +28,7 @@
         </div>
       </summary>
 
-      <div class="border-t border-slate-200 px-6 py-6">
+      <div class="border-t border-slate-200 px-6 py-6" data-controller="pricing-sections">
         <%= form_with scope: :pricing_rule, url: apply_pricing_rules_hotel_inventory_dashboards_path(current_hotel), local: true, class: "space-y-4 text-xs" do |f| %>
           <div>
             <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Target Room Categories</label>
@@ -42,8 +42,19 @@
             </div>
           </div>
 
+          <div>
+            <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Pricing Tiers to Update</label>
+            <div class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <% [["General", "general"], ["Weekends", "weekends"], ["School Holiday", "school_holiday"], ["Walk-in", "walk_in"], ["Public Holiday", "public_holiday"]].each do |label, tier| %>
+                <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input type="checkbox" data-tier="<%= tier %>" data-action="change->pricing-sections#toggle" class="size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0">
+                  <%= label %>
+                </label>
+              <% end %>
+            </div>          </div>
+
           <div class="grid gap-6 xl:grid-cols-2">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-pricing-sections-target="section" data-tier="general">
               <div class="mb-3 flex items-center justify-between">
                 <h4 class="text-sm font-black uppercase tracking-[0.16em] text-slate-900">General Pricing</h4>
                 <% if @pricing_form.general_rule.present? %>
@@ -69,7 +80,7 @@
               </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-pricing-sections-target="section" data-tier="weekends">
               <div class="mb-3 flex items-center justify-between">
                 <h4 class="text-sm font-black uppercase tracking-[0.16em] text-slate-900">Weekend Pricing</h4>
                 <% if @pricing_form.weekends_rule.present? %>
@@ -104,7 +115,7 @@
               </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-pricing-sections-target="section" data-tier="school_holiday">
               <div class="mb-3 flex items-center justify-between">
                 <h4 class="text-sm font-black uppercase tracking-[0.16em] text-slate-900">School Holiday Pricing</h4>
                 <% if @pricing_form.school_rule.present? %>
@@ -130,7 +141,33 @@
               </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-controller="public-holiday-rules">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-pricing-sections-target="section" data-tier="walk_in">
+              <div class="mb-3 flex items-center justify-between">
+                <h4 class="text-sm font-black uppercase tracking-[0.16em] text-slate-900">Walk-in Rate</h4>
+                <% if @pricing_form.walk_in_rule.present? %>
+                  <%= link_to "Remove",
+                              destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "walk_in", start_date: @start_date),
+                              data: { turbo_method: :delete, turbo_confirm: "Remove Walk-in pricing?" },
+                              class: "rounded-full bg-red-600 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700" %>
+                <% end %>
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+                  <%= f.date_field :wi_start_date, value: @pricing_form.pricing_data[:wi_start_date], class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                </div>
+                <div>
+                  <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+                  <%= f.date_field :wi_end_date, value: @pricing_form.pricing_data[:wi_end_date], class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                </div>
+              </div>
+              <div class="mt-4">
+                <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+                <%= f.number_field :wi_price, value: @pricing_form.pricing_data[:wi_price], step: 0.01, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-controller="public-holiday-rules" data-pricing-sections-target="section" data-tier="public_holiday">
               <div class="mb-3 flex items-center justify-between">
                 <h4 class="text-sm font-black uppercase tracking-[0.16em] text-slate-900">Public Holiday Pricing</h4>
                 <button type="button" data-action="public-holiday-rules#add" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50">Add Holiday</button>
