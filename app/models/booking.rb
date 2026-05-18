@@ -19,7 +19,16 @@ class Booking < ApplicationRecord
   has_many :payment_transactions, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time
-  attr_accessor :guest_government_id
+
+  def guest_government_id
+    @guest_government_id.presence ||
+      pre_checkin&.metadata&.dig("guest_government_id").presence ||
+      primary_guest&.government_id
+  end
+
+  def guest_government_id=(value)
+    @guest_government_id = value
+  end
 
   STATUSES = %w[pending confirmed checked_in cancelled completed overbooked].freeze
   PAYMENT_STATUSES = %w[pending authorized captured failed refunded].freeze

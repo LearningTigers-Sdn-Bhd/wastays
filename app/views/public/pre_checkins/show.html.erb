@@ -96,8 +96,8 @@
               </div>
 
               <div class="grid gap-6 md:grid-cols-2 mt-4">
-                <%= render "document_upload", f: f, side: :front, label: "Front ID / Passport" %>
-                <%= render "document_upload", f: f, side: :back, label: "Back ID / Passport" %>
+                <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: "Front ID / Passport" %>
+                <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID / Passport" %>
               </div>
             </section>
 
@@ -154,7 +154,7 @@
           <% end %>
         <% end %>
 
-        <%= render "scanner_modal" %>
+        <%= render "shared/scanner_modal" %>
       </div>
     </div>
   </div>
