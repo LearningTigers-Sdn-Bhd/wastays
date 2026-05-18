@@ -91,6 +91,27 @@ module HotelPortal
 
     private
 
+    def sold_counts_by_room_type
+      @sold_counts_by_room_type ||= begin
+        counts = hotel.bookings.revenue_generating
+                      .joins(:booking_rooms)
+                      .where(booking_rooms: { room_type_id: active_room_type_ids })
+                      .where("check_in < :end_date AND check_out > :start_date", start_date: start_date, end_date: end_date + 1.day)
+                      .group("booking_rooms.room_type_id", "check_in", "check_out")
+                      .count
+
+        # Expand the counts per date
+        result = Hash.new { |h, k| h[k] = Hash.new(0) }
+        counts.each do |(room_type_id, b_start, b_end), count|
+          (b_start...b_end).each do |date|
+            next unless date >= start_date && date <= end_date
+            result[room_type_id][date] += count
+          end
+        end
+        result
+      end
+    end
+
     def default_currency
       hotel.default_currency.presence || "MYR"
     end
@@ -127,6 +148,8 @@ module HotelPortal
       inventory = inventories_by_room_type.dig(room_type.id, date)
       quantity = inventory&.quantity || room_type.quantity
       persisted_status = inventory&.status || "open"
+      sold_count = sold_counts_by_room_type.dig(room_type.id, date) || 0
+
       status_label = if persisted_status == "closed"
         "Closed"
       elsif quantity.to_i <= 0
@@ -138,6 +161,7 @@ module HotelPortal
       {
         date: date,
         quantity: quantity,
+        sold_count: sold_count,
         status: persisted_status,
         status_label: status_label,
         closed: status_label != "Open"
