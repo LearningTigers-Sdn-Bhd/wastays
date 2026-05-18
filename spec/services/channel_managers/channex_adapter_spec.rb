@@ -65,7 +65,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
         ]
       }).and_return({ "data" => { "id" => "task_1" } })
 
-      # Expect restrictions/rates to be grouped into ONE range
+      # Expect restrictions/rates to be grouped into ONE range with defaults for restrictions
       expect(client_double).to receive(:post).with("/restrictions", {
         values: [
           {
@@ -73,7 +73,12 @@ RSpec.describe ChannelManagers::ChannexAdapter do
             rate_plan_id: "ch_rp_123",
             date_from: start_date.to_s,
             date_to: end_date.to_s,
-            rate: "200.00"
+            rate: "200.00",
+            min_stay_arrival: 1,
+            max_stay_arrival: 999,
+            closed_to_arrival: 0,
+            closed_to_departure: 0,
+            stop_sell: 0
           }
         ]
       }).and_return({ "data" => { "id" => "task_2" } })
@@ -88,13 +93,24 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       rate_plan.room_rates.create!(date: diff_date, price: 300.0, currency: "MYR", room_type: room_type)
       room_type.room_inventories.create!(date: diff_date, quantity: 10, status: "open")
 
-      # Expect 2 restriction ranges due to different price
+      # Expect 2 restriction ranges:
+      # 1. First 3 days at 200.00
+      # 2. Fourth day at 300.00
       expect(client_double).to receive(:post).with("/restrictions", hash_including(
-        values: array_including(
-          hash_including(date_from: start_date.to_s, date_to: end_date.to_s, rate: "200.00"),
-          hash_including(date_from: diff_date.to_s, date_to: diff_date.to_s, rate: "300.00")
-        )
+        values: [
+          hash_including(date_from: start_date.to_s, date_to: end_date.to_s, rate: "200.00", stop_sell: 0),
+          hash_including(date_from: diff_date.to_s, date_to: diff_date.to_s, rate: "300.00", stop_sell: 0)
+        ]
       )).and_return({ "data" => { "id" => "task_2" } })
+      
+      # Wait, end_date was start_date + 2.days.
+      # (start_date..end_date) is 3 days.
+      # diff_date is start_date + 3.days.
+      # So dates are: D0, D1, D2, D3.
+      # D0-D2 have price 200.
+      # D3 has price 300.
+      # No gap! contiguous.
+      # So 2 ranges for restrictions.
 
       # Expect 1 availability range because availability is same (10) and dates are contiguous
       expect(client_double).to receive(:post).with("/availability", hash_including(
@@ -106,6 +122,54 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       result = adapter.push_ari(date_range: (start_date..diff_date))
       expect(result.success?).to be true
     end
+
+    it 'provides full snapshot including defaults for missing records during full sync' do
+      rate_plan.room_rates.destroy_all
+      room_type.room_inventories.destroy_all
+      
+      # Create only one record
+      rate_plan.room_rates.create!(date: start_date, price: 250.0, currency: "MYR", room_type: room_type, stop_sell: true)
+      room_type.room_inventories.create!(date: start_date, quantity: 5, status: "open")
+
+      # Range: start_date..start_date + 1.day
+      expect(client_double).to receive(:post).with("/availability", {
+        values: [
+          { property_id: "ch_prop_123", room_type_id: "ch_rt_123", date_from: start_date.to_s, date_to: start_date.to_s, availability: 5 },
+          { property_id: "ch_prop_123", room_type_id: "ch_rt_123", date_from: (start_date + 1.day).to_s, date_to: (start_date + 1.day).to_s, availability: 0 }
+        ]
+      }).and_return({ "data" => { "id" => "task_1" } })
+
+      expect(client_double).to receive(:post).with("/restrictions", {
+        values: [
+          {
+            property_id: "ch_prop_123",
+            rate_plan_id: "ch_rp_123",
+            date_from: start_date.to_s,
+            date_to: start_date.to_s,
+            rate: "250.00",
+            min_stay_arrival: 1,
+            max_stay_arrival: 999,
+            closed_to_arrival: 0,
+            closed_to_departure: 0,
+            stop_sell: 1
+          },
+          {
+            property_id: "ch_prop_123",
+            rate_plan_id: "ch_rp_123",
+            date_from: (start_date + 1.day).to_s,
+            date_to: (start_date + 1.day).to_s,
+            min_stay_arrival: 1,
+            max_stay_arrival: 999,
+            closed_to_arrival: 0,
+            closed_to_departure: 0,
+            stop_sell: 0
+          }
+        ]
+      }).and_return({ "data" => { "id" => "task_2" } })
+
+      adapter.push_ari(date_range: (start_date..start_date+1.day), sync_restrictions: true, sync_rates: true, sync_availability: true)
+    end
+
   end
 
   describe '#ingest_booking' do

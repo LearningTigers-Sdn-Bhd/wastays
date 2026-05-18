@@ -317,21 +317,29 @@ module ChannelManagers
         next if ext_rt_id == "pending"
 
         current_range = nil
+        inventories_by_date = room_type.room_inventories.where(date: effective_range).index_by(&:date)
 
-        room_type.room_inventories.where(date: effective_range).order(:date).each do |inventory|
+        effective_range.each do |date|
+          inventory = inventories_by_date[date]
+
+          # During Full Sync (room_type_ids is nil), we ensure all dates in the range are covered.
+          # For surgical updates, we only sync dates where a record exists.
+          is_full_sync = room_type_ids.nil?
+          next if inventory.nil? && !is_full_sync
+
           val_data = {
             property_id: property_id,
             room_type_id: ext_rt_id,
-            availability: inventory.quantity
+            availability: inventory&.quantity || 0
           }
 
           if current_range.nil?
-            current_range = val_data.merge(date_from: inventory.date.to_s, date_to: inventory.date.to_s)
-          elsif current_range.except(:date_from, :date_to) == val_data && Date.parse(current_range[:date_to]) + 1.day == inventory.date
-            current_range[:date_to] = inventory.date.to_s
+            current_range = val_data.merge(date_from: date.to_s, date_to: date.to_s)
+          elsif current_range.except(:date_from, :date_to) == val_data && Date.parse(current_range[:date_to]) + 1.day == date
+            current_range[:date_to] = date.to_s
           else
             values << current_range
-            current_range = val_data.merge(date_from: inventory.date.to_s, date_to: inventory.date.to_s)
+            current_range = val_data.merge(date_from: date.to_s, date_to: date.to_s)
           end
         end
 
@@ -381,15 +389,26 @@ module ChannelManagers
           end
 
           current_range = nil
+          rates_by_date = rate_plan.room_rates.where(date: effective_range, currency: rate_plan.currency).index_by(&:date)
 
-          # Only push rates that match the rate plan's currency to avoid conflicting payloads
-          rate_plan.room_rates.where(date: effective_range, currency: rate_plan.currency).order(:date).each do |rate|
+          # Iterate over all dates in the effective range to ensure a full snapshot
+          effective_range.each do |date|
+            rate = rates_by_date[date]
+
+            # During Full Sync (specific_fields is nil), we ensure all dates in the range are covered.
+            # For surgical updates, we only sync dates where a record exists.
+            is_full_restrictions_sync = sync_restrictions && specific_fields.nil?
+            is_full_rates_sync = sync_rates && specific_fields.nil?
+            next if rate.nil? && !is_full_restrictions_sync && !is_full_rates_sync
+
             val_data = {
               property_id: property_id,
               rate_plan_id: ext_rp_id
             }
 
-            val_data[:rate] = format("%.2f", rate.price.to_f) if final_sync_rates
+            if final_sync_rates && rate&.price
+              val_data[:rate] = format("%.2f", rate.price.to_f)
+            end
 
             if final_sync_restrictions
               # Map supported restrictions surgically
@@ -401,22 +420,23 @@ module ChannelManagers
                 val_data[:closed_to_departure] = rate.closed_to_departure ? 1 : 0 if s_fields.include?("closed_to_departure") && !rate.closed_to_departure.nil?
                 val_data[:stop_sell] = rate.stop_sell ? 1 : 0 if s_fields.include?("stop_sell") && !rate.stop_sell.nil?
               else
-                # Fallback to general category sync
-                val_data[:min_stay_arrival] = rate.min_stay if rate.min_stay.present?
-                val_data[:max_stay_arrival] = rate.max_stay if rate.max_stay.present?
-                val_data[:closed_to_arrival] = rate.closed_to_arrival ? 1 : 0 unless rate.closed_to_arrival.nil?
-                val_data[:closed_to_departure] = rate.closed_to_departure ? 1 : 0 unless rate.closed_to_departure.nil?
-                val_data[:stop_sell] = rate.stop_sell ? 1 : 0 unless rate.stop_sell.nil?
+                # For Full Sync, we provide a full snapshot with defaults for each date and rate plan.
+                # This ensures that any stale values in the channel manager are overwritten.
+                val_data[:min_stay_arrival] = rate&.min_stay || 1
+                val_data[:max_stay_arrival] = rate&.max_stay || 999
+                val_data[:closed_to_arrival] = (rate&.closed_to_arrival ? 1 : 0)
+                val_data[:closed_to_departure] = (rate&.closed_to_departure ? 1 : 0)
+                val_data[:stop_sell] = (rate&.stop_sell ? 1 : 0)
               end
             end
 
             if current_range.nil?
-              current_range = val_data.merge(date_from: rate.date.to_s, date_to: rate.date.to_s)
-            elsif current_range.except(:date_from, :date_to) == val_data && Date.parse(current_range[:date_to]) + 1.day == rate.date
-              current_range[:date_to] = rate.date.to_s
+              current_range = val_data.merge(date_from: date.to_s, date_to: date.to_s)
+            elsif current_range.except(:date_from, :date_to) == val_data && Date.parse(current_range[:date_to]) + 1.day == date
+              current_range[:date_to] = date.to_s
             else
               values << current_range
-              current_range = val_data.merge(date_from: rate.date.to_s, date_to: rate.date.to_s)
+              current_range = val_data.merge(date_from: date.to_s, date_to: date.to_s)
             end
           end
 
