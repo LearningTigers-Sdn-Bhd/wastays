@@ -5,6 +5,10 @@ RSpec.describe Booking, type: :model do
     it "includes checked_in in STATUSES" do
       expect(Booking::STATUSES).to include('checked_in')
     end
+
+    it "includes no_show in STATUSES" do
+      expect(Booking::STATUSES).to include('no_show')
+    end
   end
 
   describe "scopes" do
@@ -12,18 +16,19 @@ RSpec.describe Booking, type: :model do
     let!(:confirmed_booking) { create(:booking, hotel: hotel, status: 'confirmed') }
     let!(:checked_in_booking) { create(:booking, hotel: hotel, status: 'checked_in') }
     let!(:completed_booking) { create(:booking, hotel: hotel, status: 'completed') }
+    let!(:no_show_booking) { create(:booking, hotel: hotel, status: 'no_show') }
     let!(:cancelled_booking) { create(:booking, hotel: hotel, status: 'cancelled') }
 
     describe ".active" do
       it "includes confirmed and checked_in bookings" do
         expect(Booking.active).to include(confirmed_booking, checked_in_booking)
-        expect(Booking.active).not_to include(completed_booking, cancelled_booking)
+        expect(Booking.active).not_to include(completed_booking, no_show_booking, cancelled_booking)
       end
     end
 
     describe ".revenue_generating" do
-      it "includes confirmed, checked_in, and completed bookings" do
-        expect(Booking.revenue_generating).to include(confirmed_booking, checked_in_booking, completed_booking)
+      it "includes confirmed, checked_in, completed, and no-show bookings" do
+        expect(Booking.revenue_generating).to include(confirmed_booking, checked_in_booking, completed_booking, no_show_booking)
         expect(Booking.revenue_generating).not_to include(cancelled_booking)
       end
     end

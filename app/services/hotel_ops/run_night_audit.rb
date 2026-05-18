@@ -32,6 +32,7 @@ module HotelOps
 
         log_event(night_audit, "process_started", "Night audit process started for business date #{@business_date}")
 
+        Bookings::ProcessNoShows.call(night_audit: night_audit, user: @performed_by_user)
         Folios::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
 
         blocked_details = build_blocked_details
@@ -91,6 +92,7 @@ module HotelOps
     def build_summary(blocked_details:, exceptions:)
       {
         "arrivals_count" => hotel_bookings.where(check_in: @business_date).count,
+        "no_show_count" => hotel_bookings.no_show.where(check_in: @business_date).count,
         "due_out_count" => hotel_bookings.where(check_out: @business_date).count,
         "checked_out_count" => hotel_bookings.completed.where(checked_out_at: @business_date.all_day).count,
         "in_house_count" => hotel_bookings.checked_in.where("check_in <= ? AND check_out >= ?", @business_date, @business_date).count,
@@ -139,8 +141,10 @@ module HotelOps
     def financially_relevant_bookings
       @financially_relevant_bookings ||= hotel_bookings
         .includes(:payment_transactions, :refund_request, :booking_rooms, booking_folio: :folio_transactions)
-        .where(status: %w[checked_in completed])
-        .where("check_in <= ? AND check_out >= ?", @business_date, @business_date)
+        .where(
+          "(status IN (?) AND check_in <= ? AND check_out >= ?) OR (status = ? AND check_in = ?)",
+          %w[checked_in completed], @business_date, @business_date, "no_show", @business_date
+        )
         .to_a
     end
 
@@ -168,6 +172,7 @@ module HotelOps
     def outstanding_balance_bookings
       @outstanding_balance_bookings ||= financially_relevant_bookings.select do |booking|
         next false unless booking.booking_folio
+        next false if booking.status == "no_show"
         next false unless booking.check_out == @business_date || booking.status == "completed"
 
         folio_outstanding_balance(booking.booking_folio) != 0.to_d

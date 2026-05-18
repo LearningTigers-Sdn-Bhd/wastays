@@ -19,7 +19,7 @@ RSpec.describe HotelOps::RunNightAudit do
   let(:trigger_mode) { "manual" }
 
   def create_balanced_folio(booking, charge_amount: 200.0, payment_amount: charge_amount)
-    folio = create(:booking_folio, hotel: booking.hotel, booking: booking)
+    folio = create(:booking_folio, hotel: booking.hotel, booking: booking, folio_number: 10_000 + booking.id)
     create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: charge_amount, posting_date: booking.check_in)
     create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: payment_amount, posting_date: booking.check_out)
     folio
@@ -30,8 +30,8 @@ RSpec.describe HotelOps::RunNightAudit do
       hotel: hotel,
       status: "confirmed",
       payment_status: "captured",
-      check_in: business_date,
-      check_out: business_date + 1.day)
+      check_in: business_date + 1.day,
+      check_out: business_date + 2.days)
     completed_booking = create(:booking,
       hotel: hotel,
       status: "completed",
@@ -72,6 +72,37 @@ RSpec.describe HotelOps::RunNightAudit do
 
     expect(result.success?).to be(true)
     expect(folio.folio_transactions.charge.where("metadata->>'posting_source' = ?", "night_audit").count).to eq(2)
+  end
+
+  it "processes no-shows before completing the audit" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "confirmed",
+      payment_status: "captured",
+      check_in: business_date,
+      check_out: business_date + 1.day)
+    create(:booking_room, booking: booking, subtotal: 100.0)
+
+    result = run_audit
+
+    expect(result.success?).to be(true)
+    expect(booking.reload.status).to eq("no_show")
+    expect(booking.booking_folio.folio_transactions.charge.where("metadata->>'posting_source' = ?", "no_show").count).to eq(1)
+    expect(result.night_audit.summary["no_show_count"]).to eq(1)
+  end
+
+  it "does not keep no-shows financially relevant on later audit dates" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "no_show",
+      check_in: business_date - 1.day,
+      check_out: business_date + 1.day)
+    create(:booking_folio, hotel: hotel, booking: booking)
+
+    result = run_audit
+
+    expect(result.success?).to be(true)
+    expect(result.night_audit.blocked_details["missing_folio"]).to be_empty
   end
 
   it "blocks and logs when a due-out booking is not checked out" do

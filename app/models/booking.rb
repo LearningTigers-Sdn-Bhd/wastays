@@ -20,7 +20,7 @@ class Booking < ApplicationRecord
   attr_accessor :estimated_arrival_time
   attr_accessor :guest_government_id
 
-  STATUSES = %w[pending confirmed checked_in cancelled completed overbooked].freeze
+  STATUSES = %w[pending confirmed checked_in cancelled completed overbooked no_show].freeze
   PAYMENT_STATUSES = %w[pending authorized captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
@@ -49,8 +49,9 @@ class Booking < ApplicationRecord
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
+  scope :no_show, -> { where(status: "no_show") }
   scope :active, -> { where(status: [ "confirmed", "checked_in" ]) }
-  scope :revenue_generating, -> { where(status: [ "confirmed", "checked_in", "completed" ]) }
+  scope :revenue_generating, -> { where(status: [ "confirmed", "checked_in", "completed", "no_show" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
 
   scope :search, ->(query) {
