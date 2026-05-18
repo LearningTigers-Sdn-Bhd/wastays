@@ -23,6 +23,12 @@ RSpec.describe ChannelManagers::IngestBookingService do
     }
   end
 
+  before do
+    (booking_data[:check_in]...booking_data[:check_out]).each do |date|
+      create(:room_inventory, room_type: room_type, date: date, quantity: 2, status: "open")
+    end
+  end
+
   it "creates a booking from valid data" do
     dispatcher = instance_double(Notifications::Dispatcher, call: [])
     allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
@@ -34,6 +40,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(result.booking.persisted?).to be(true)
     expect(result.booking.guest_name).to eq("John Doe")
     expect(result.booking.hotel).to eq(hotel)
+    expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 1, 1 ])
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: result.booking)
   end
 
@@ -44,6 +51,9 @@ RSpec.describe ChannelManagers::IngestBookingService do
       check_in: Date.current + 5.days,
       check_out: Date.current + 7.days)
     data = booking_data.merge(check_in: Date.current + 6.days, check_out: Date.current + 8.days, revision_number: 2)
+    (data[:check_in]...data[:check_out]).each do |date|
+      create(:room_inventory, room_type: room_type, date: date, quantity: 2, status: "open")
+    end
     dispatcher = instance_double(Notifications::Dispatcher, call: [])
     allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
 
@@ -52,5 +62,40 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(result.success?).to be(true)
     expect(existing.reload.check_in).to eq(Date.current + 6.days)
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_updated, booking: existing)
+  end
+
+  it "releases inventory and dispatches cancellation for OTA cancellations" do
+    existing = create(:booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "confirmed")
+    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    room_type.room_inventories.update_all(quantity: 1)
+    data = booking_data.merge(status: "cancelled", revision_number: 2)
+    dispatcher = instance_double(Notifications::Dispatcher, call: [])
+    allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+
+    result = described_class.new(booking_data: data).call
+
+    expect(result.success?).to be(true)
+    expect(existing.reload.status).to eq("cancelled")
+    expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 2, 2 ])
+    expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_cancelled, booking: existing)
+    expect(Notifications::Dispatcher).not_to have_received(:new).with(event: :booking_confirmed, booking: existing)
+  end
+
+  it "marks OTA booking overbooked without deducting inventory when inventory is insufficient" do
+    room_type.room_inventories.update_all(quantity: 0)
+    dispatcher = instance_double(Notifications::Dispatcher, call: [])
+    allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+
+    result = described_class.new(booking_data: booking_data).call
+
+    expect(result.success?).to be(true)
+    expect(result.booking.status).to eq("overbooked")
+    expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 0, 0 ])
+    expect(Notifications::Dispatcher).not_to have_received(:new).with(event: :booking_confirmed, booking: result.booking)
   end
 end

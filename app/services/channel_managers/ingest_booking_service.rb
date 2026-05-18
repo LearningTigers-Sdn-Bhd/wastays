@@ -11,15 +11,24 @@ module ChannelManagers
 
     def call
       Booking.transaction do
+        @hotel.lock!
         booking = find_or_initialize_booking
         is_existing_booking = booking.persisted?
+        booking.lock! if is_existing_booking
+
         previous_check_in = booking.check_in
         previous_check_out = booking.check_out
+        previous_status = booking.status
+        previous_rooms = booking.booking_rooms.includes(:room_type).map do |room|
+          { room_type: room.room_type, quantity: room.quantity }
+        end
 
         # If it's a modification, check revision number
         if booking.persisted? && booking.revision_number.to_i >= @data[:revision_number].to_i
           return OpenStruct.new(success?: true, booking: booking, message: "Duplicate or older revision ignored")
         end
+
+        release_inventory(previous_rooms, previous_check_in, previous_check_out) if inventory_held_status?(previous_status)
 
         # Update core details
         booking.assign_attributes(
@@ -37,7 +46,7 @@ module ChannelManagers
           external_reference: @data[:external_reference],
           channel_manager_reference: @data[:channel_manager_reference],
           revision_number: @data[:revision_number],
-          payment_status: "captured" # Usually OTA bookings are pre-paid or handled externally
+          payment_status: payment_status_for(booking)
         )
 
         # Check for overbooking
@@ -52,6 +61,8 @@ module ChannelManagers
           # Handle Rooms
           sync_rooms(booking)
 
+          Bookings::InventoryManager.new(booking).deduct if inventory_held_status?(booking.status)
+
           # Record Audit Log
           action = is_existing_booking ? "external_modification" : "external_creation"
           Bookings::RecordAuditLog.call(
@@ -60,13 +71,7 @@ module ChannelManagers
             metadata: { "source" => booking.source, "external_reference" => booking.external_reference }
           )
 
-          # Trigger Webhooks
-          Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
-          Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
-
-          if is_existing_booking && stay_dates_changed?(previous_check_in, previous_check_out, booking)
-            Notifications::Dispatcher.new(event: :booking_updated, booking: booking).call
-          end
+          dispatch_lifecycle_event(booking, is_existing_booking, previous_check_in, previous_check_out, previous_status)
 
           OpenStruct.new(success?: true, booking: booking)
         else
@@ -91,11 +96,51 @@ module ChannelManagers
     def inventory_insufficient?(booking)
       (@data[:check_in]..(@data[:check_out] - 1.day)).each do |date|
         @data[:rooms].each do |room_item|
-          inventory = room_item[:room_type].room_inventories.find_by(date: date)
+          inventory = room_item[:room_type].room_inventories.lock.find_by(date: date)
           return true if !inventory || inventory.quantity < room_item[:quantity]
         end
       end
       false
+    end
+
+    def release_inventory(rooms, check_in, check_out)
+      return if check_in.blank? || check_out.blank?
+
+      rooms.each do |room|
+        (check_in...check_out).each do |date|
+          inventory = room[:room_type].room_inventories.lock.find_by(date: date)
+          inventory&.update!(quantity: inventory.quantity + room[:quantity])
+        end
+      end
+    end
+
+    def inventory_held_status?(status)
+      status.in?(%w[confirmed checked_in])
+    end
+
+    def payment_status_for(booking)
+      status = @data[:payment_status].presence || @data.dig(:payment, :status).presence
+      return status if Booking::PAYMENT_STATUSES.include?(status.to_s)
+      return "refunded" if @data[:status] == "cancelled" && booking.payment_status == "captured"
+
+      booking.payment_status.presence || "pending"
+    end
+
+    def dispatch_lifecycle_event(booking, is_existing_booking, previous_check_in, previous_check_out, previous_status)
+      event = lifecycle_event_for(booking, is_existing_booking, previous_check_in, previous_check_out, previous_status)
+      return unless event
+
+      Bookings::WebhookTriggerService.new(booking).trigger(event)
+      Notifications::Dispatcher.new(event: event, booking: booking).call
+    end
+
+    def lifecycle_event_for(booking, is_existing_booking, previous_check_in, previous_check_out, previous_status)
+      return :booking_cancelled if booking.status == "cancelled" && previous_status != "cancelled"
+      return :booking_confirmed if !is_existing_booking && booking.status == "confirmed"
+      return :booking_updated if stay_dates_changed?(previous_check_in, previous_check_out, booking)
+      return :booking_updated if previous_status != booking.status
+
+      nil
     end
 
     def sync_guest(booking)
