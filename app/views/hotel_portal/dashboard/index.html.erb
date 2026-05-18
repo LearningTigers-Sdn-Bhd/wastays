@@ -68,8 +68,7 @@
                 </div>
               </div>
               <div class="flex w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <% percentage = item[:total] > 0 ? (item[:sold].to_f / item[:total] * 100).round : 0 %>
-                <div class="flex flex-col justify-center overflow-hidden bg-brand-primary transition-all duration-500" role="progressbar" style="width: <%= percentage %>%" aria-valuenow="<%= item[:sold] %>" aria-valuemin="0" aria-valuemax="<%= item[:total] %>"></div>
+                <div class="flex flex-col justify-center overflow-hidden bg-brand-primary transition-all duration-500" role="progressbar" style="width: <%= item[:percentage] %>%" aria-valuenow="<%= item[:sold] %>" aria-valuemin="0" aria-valuemax="<%= item[:total] %>"></div>
               </div>
             </div>
           <% end %>

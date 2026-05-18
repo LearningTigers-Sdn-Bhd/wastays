@@ -50,17 +50,19 @@ module HotelPortal
                      .where(":date >= check_in AND :date < check_out", date: date)
                      .count
 
+        percentage = total_capacity > 0 ? (sold.to_f / total_capacity * 100).round : 0
+
         {
           room_type: room_type,
           name: room_type.name,
           total: total_capacity,
           sold: sold,
           remaining: remaining,
+          percentage: percentage,
           status: inventory&.status || "open"
         }
-      end
-    end
-
+        end
+        end
     def occupancy_snapshot(days: 7)
       (Date.current..(Date.current + (days - 1).days)).map do |date|
         # Correctly sum the quantity column from room_inventories
