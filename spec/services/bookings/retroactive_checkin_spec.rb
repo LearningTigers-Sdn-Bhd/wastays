@@ -11,7 +11,7 @@ RSpec.describe "Retroactive Check-in", type: :service do
 
   before do
     create(:booking_room, booking: booking, subtotal: 200.0)
-    booking.update(tax_lines: [{ "name" => "SST", "amount" => "12.00" }])
+    booking.update(tax_lines: [ { "name" => "SST", "amount" => "12.00" } ])
     create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
   end
 
@@ -44,7 +44,7 @@ RSpec.describe "Retroactive Check-in", type: :service do
     expect(folio).to be_present
     expect(folio.folio_transactions.count).to be >= 2 # Room charge + SST
     expect(folio.outstanding_balance).to eq(212.0) # 200 + 12
-    
+
     log = BookingAuditLog.last
     expect(log.metadata["retroactive_checkin"]).to be true
     expect(log.metadata["retroactive_reason"]).to eq("Manual reservation missed")

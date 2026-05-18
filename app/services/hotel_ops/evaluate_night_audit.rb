@@ -162,11 +162,11 @@ module HotelOps
     def build_folio_balance_exceptions
       # Find in-house guests with unusual balances
       in_house_bookings = hotel_bookings.checked_in.includes(booking_folio: :folio_transactions)
-      
+
       in_house_bookings.filter_map do |booking|
         next unless booking.booking_folio
         balance = folio_outstanding_balance(booking.booking_folio)
-        
+
         # We flag large outstanding balances (e.g. > 1000) or large credits (e.g. < -100)
         # These thresholds could eventually be hotel-configurable.
         if balance > 1000.to_d || balance < -100.to_d

@@ -9,7 +9,7 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
   it "calculates correct financial totals for a business date" do
     booking = create(:booking, hotel: hotel)
     folio = create(:booking_folio, booking: booking)
-    
+
     # Accommodation charge for the date
     create(:folio_transaction,
       booking_folio: folio,
@@ -58,7 +58,7 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
   it "identifies no-show penalties correctly" do
     booking = create(:booking, hotel: hotel)
     folio = create(:booking_folio, booking: booking)
-    
+
     create(:folio_transaction,
       booking_folio: folio,
       transaction_type: "charge",

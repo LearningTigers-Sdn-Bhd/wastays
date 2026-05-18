@@ -16,7 +16,7 @@ module HotelOps
 
       if totals_changed?(summary, new_totals)
         previous_values = summary.attributes.slice(*new_totals.keys.map(&:to_s))
-        
+
         summary.assign_attributes(new_totals)
         summary.log_change(
           user: @user,

@@ -52,7 +52,7 @@ module HotelOps
 
         # Use the evaluation service to get blockers and exceptions
         evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :post_close).call
-        
+
         log_blockers(night_audit, evaluation[:blocked_details])
         log_exceptions(night_audit, evaluation[:exceptions])
 

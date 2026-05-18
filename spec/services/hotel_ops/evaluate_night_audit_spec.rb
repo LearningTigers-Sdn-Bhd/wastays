@@ -52,7 +52,7 @@ RSpec.describe HotelOps::EvaluateNightAudit do
       booking = create(:booking, status: 'checked_in', hotel: hotel)
       folio = create(:booking_folio, booking: booking)
       create(:folio_transaction, :charge, booking_folio: folio, amount: 2000, category: "other")
-      
+
       result = service.call
       expect(result[:exceptions]["folio_balance_exceptions"]).not_to be_empty
       expect(result[:exceptions]["folio_balance_exceptions"].first["reason"]).to eq("Large outstanding balance")

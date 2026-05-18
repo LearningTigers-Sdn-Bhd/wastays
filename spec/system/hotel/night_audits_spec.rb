@@ -25,7 +25,10 @@ RSpec.describe "Hotel night audits", type: :system do
   end
 
   it "renders the page and lets front desk run a completed audit" do
-    business_date = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current - 1.day }
+    # Freeze time to 10 AM to ensure we are well past the business day end (2 AM)
+    # and into a clearly closable business date.
+    travel_to Time.zone.local(2026, 5, 19, 10, 0, 0)
+    business_date = hotel.latest_closable_business_date
 
     booking = create(:booking,
       hotel: hotel,

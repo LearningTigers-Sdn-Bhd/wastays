@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Folios::PostInitialCharges do
-  let(:booking) { create(:booking, check_in: Date.current, tourism_tax_amount: 0, tax_lines: [{ "name" => "SST", "amount" => "12.00" }]) }
+  let(:booking) { create(:booking, check_in: Date.current, tourism_tax_amount: 0, tax_lines: [ { "name" => "SST", "amount" => "12.00" } ]) }
   let(:folio) { create(:booking_folio, booking: booking) }
   let(:user) { create(:user) }
 
@@ -31,7 +31,7 @@ RSpec.describe Folios::PostInitialCharges do
 
   it "does not duplicate tourism tax already present in tax lines" do
     booking.update!(
-      tax_lines: [{ "name" => "Tourism Tax", "amount" => "10.00" }],
+      tax_lines: [ { "name" => "Tourism Tax", "amount" => "10.00" } ],
       tourism_tax_amount: 10.0,
       tourism_tax_applied: true
     )
@@ -46,7 +46,7 @@ RSpec.describe Folios::PostInitialCharges do
 
   it "detects tourism tax by tax line type" do
     booking.update!(
-      tax_lines: [{ "name" => "TTx", "type" => "ttx", "amount" => "10.00" }],
+      tax_lines: [ { "name" => "TTx", "type" => "ttx", "amount" => "10.00" } ],
       tourism_tax_amount: 10.0,
       tourism_tax_applied: true
     )
