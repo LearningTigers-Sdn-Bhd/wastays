@@ -39,10 +39,10 @@ module HotelPortal
       date = Date.current
       @hotel.room_types.order(:id).map do |room_type|
         inventory = room_type.room_inventories.find_by(date: date)
-        
+
         total_capacity = room_type.quantity
         remaining = inventory&.status == "closed" ? 0 : (inventory&.quantity || total_capacity)
-        
+
         # Count actual sold rooms from bookings
         sold = @hotel.bookings.revenue_generating
                      .joins(:booking_rooms)

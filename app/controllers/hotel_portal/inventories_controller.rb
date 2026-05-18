@@ -9,6 +9,19 @@ class HotelPortal::InventoriesController < HotelPortal::BaseController
     @end_date = @start_date + 13.days
 
     @inventories = @room_type.room_inventories.where(date: @start_date..@end_date).index_by(&:date)
+
+    # Calculate sold counts for this room type
+    @sold_counts = current_hotel.bookings.revenue_generating
+                                .joins(:booking_rooms)
+                                .where(booking_rooms: { room_type_id: @room_type.id })
+                                .where("check_in < :end_date AND check_out > :start_date", start_date: @start_date, end_date: @end_date + 1.day)
+                                .group("check_in", "check_out")
+                                .count
+                                .each_with_object(Hash.new(0)) do |((b_start, b_end), count), memo|
+                                  (b_start...b_end).each do |date|
+                                    memo[date] += count if date >= @start_date && date <= @end_date
+                                  end
+                                end
   end
 
   def create
