@@ -107,4 +107,32 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(result.success?).to be true
     end
   end
+
+  describe '#ingest_booking' do
+    it 'builds full guest name from PersonName fields when available' do
+      payload = {
+        "data" => {
+          "id" => "bk_123",
+          "booking_id" => "bk_123",
+          "status" => "new",
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "amount" => "100.00",
+          "currency" => "MYR",
+          "customer" => {
+            "name" => "John",
+            "PersonName" => {
+              "GivenName" => "John",
+              "Surname" => "Doe"
+            }
+          },
+          "rooms" => []
+        }
+      }
+
+      result = adapter.ingest_booking(payload: payload)
+
+      expect(result[:guest_details][:name]).to eq("John Doe")
+    end
+  end
 end

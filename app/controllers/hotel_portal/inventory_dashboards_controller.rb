@@ -60,7 +60,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
             rate_plan_ids = {}
             rp_ids.each { |id| rate_plan_ids[id.to_s] = { "min" => s_date.to_s, "max" => e_date.to_s } }
-            
+
             # Map modified fields to all involved rate plans for this single selection
             modified_fields = Array(selection_update_params[:modified_fields]).reject(&:blank?)
             rate_plan_fields = {}
@@ -120,7 +120,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
           # Track the overall date range and sync types for a single final sync
           s_date = selection[:start_date]&.to_date
           e_date = selection[:end_date]&.to_date
-          
+
           # Guard against missing dates
           next unless s_date && e_date
 
@@ -399,6 +399,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   end
 
   def selected_room_type_id
+    return nil if params.key?(:room_type_id) && params[:room_type_id].blank?
+
     params[:room_type_id].presence || Array(params[:room_type_ids]).reject(&:blank?).first
   end
 

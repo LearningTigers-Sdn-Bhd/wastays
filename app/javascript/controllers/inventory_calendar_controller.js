@@ -796,6 +796,9 @@ export default class extends Controller {
     } else {
       url.searchParams.delete("room_type_id")
     }
+    // Clear legacy multi-select params so "All room types" is not pinned by stale query state.
+    url.searchParams.delete("room_type_ids")
+    url.searchParams.delete("room_type_ids[]")
 
     const frame = document.getElementById("inventory_calendar_frame")
     if (frame) {

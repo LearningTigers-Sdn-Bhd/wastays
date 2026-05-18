@@ -251,7 +251,7 @@
                 controller: "booking-calc", 
                 booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
                 booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel),
-                booking_calc_booking_id_value: booking.id
+                booking_calc_exclude_booking_id_value: booking.id
               } do |f| %>
             <div class="grid sm:grid-cols-2 gap-4">
               <div>
@@ -286,7 +286,6 @@
               <label for="booking_room_number" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
               <%= f.select :room_number, [[presenter.current_room_number, presenter.current_room_number]], { selected: presenter.current_room_number }, 
                   { id: "booking_room_number",
-                    required: true,
                     class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", 
                     data: { 
                       booking_calc_target: "roomNumberSelect",

@@ -24,6 +24,11 @@ RSpec.describe ChannelManagers::IngestBookingService do
   end
 
   it "creates a booking from valid data" do
+    # Create inventory for the dates to avoid overbooking
+    (booking_data[:check_in]..(booking_data[:check_out] - 1.day)).each do |date|
+      create(:room_inventory, room_type: room_type, date: date, quantity: 5)
+    end
+
     dispatcher = instance_double(Notifications::Dispatcher, call: [])
     allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
 

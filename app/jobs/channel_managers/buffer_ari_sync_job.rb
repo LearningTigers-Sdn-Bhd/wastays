@@ -42,15 +42,15 @@ module ChannelManagers
         win["min"] = [ win["min"].to_date, changed_date ].min.to_s
         win["max"] = [ win["max"].to_date, changed_date ].max.to_s
         rate_plan_windows[rate_plan_id.to_s] = win
-        
+
         # Track specific fields modified for this rate plan
         fields = (rate_plan_fields[rate_plan_id.to_s] || [])
-        # When called from models/bulk services, we might not have specific fields, 
+        # When called from models/bulk services, we might not have specific fields,
         # so we assume common ones based on type.
         new_fields = if type.to_s == "rates"
-          ["price"]
+          [ "price" ]
         elsif type.to_s == "restrictions"
-          ["min_stay", "max_stay", "closed_to_arrival", "closed_to_departure", "stop_sell"]
+          [ "min_stay", "max_stay", "closed_to_arrival", "closed_to_departure", "stop_sell" ]
         else
           []
         end
