@@ -3,7 +3,7 @@
 class BookingFolio < ApplicationRecord
   belongs_to :hotel
   belongs_to :booking
-  has_many :folio_transactions, dependent: :destroy
+  has_many :folio_transactions, dependent: :restrict_with_error
 
   validates :folio_number, presence: true, uniqueness: { scope: :hotel_id }
   validates :status, presence: true

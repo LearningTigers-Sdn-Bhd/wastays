@@ -36,6 +36,11 @@ module Folios
           user: @user,
           description: @description,
           posting_date: @posting_date,
+          posted_at: @options[:posted_at] || Time.current,
+          currency: @options[:currency] || @booking_folio.booking.currency,
+          reversal_of_transaction: @options[:reversal_of_transaction],
+          correction_reason: @options[:correction_reason],
+          correction_note: @options[:correction_note],
           metadata: @options[:metadata] || {}
         )
 

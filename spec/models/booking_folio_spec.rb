@@ -6,6 +6,7 @@ RSpec.describe BookingFolio, type: :model do
   describe "associations" do
     it { should belong_to(:hotel) }
     it { should belong_to(:booking) }
+    it { should have_many(:folio_transactions).dependent(:restrict_with_error) }
   end
 
   describe "validations" do
@@ -60,6 +61,17 @@ RSpec.describe BookingFolio, type: :model do
       create(:folio_transaction, booking_folio: folio, transaction_type: :adjustment, category: "discount", amount: -10.0)
 
       expect(folio.outstanding_balance).to eq(50.0)
+    end
+  end
+
+  describe "immutability interaction" do
+    it "prevents destroying a folio with transactions" do
+      folio = create(:booking_folio)
+      create(:folio_transaction, booking_folio: folio)
+
+      expect(folio.destroy).to be(false)
+      expect(folio.errors[:base]).to include("Cannot delete record because dependent folio transactions exist")
+      expect(described_class.exists?(folio.id)).to be(true)
     end
   end
 end
