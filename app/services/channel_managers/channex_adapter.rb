@@ -192,11 +192,22 @@ module ChannelManagers
         check_out ||= first_room["departure_date"] || first_room["checkout_date"]
       end
 
+      # Extract revision number
+      # Some Channex payloads have a numeric revision_id, others only have a UUID id.
+      # To ensure ordering and duplicate detection in our integer revision_number column,
+      # we fallback to a timestamp-based integer if revision_id is not a number.
+      revision_val = attributes["revision_id"] || attributes["id"]
+      numeric_revision = if revision_val.to_s =~ /^\d+$/
+        revision_val.to_i
+      else
+        safe_parse_datetime(attributes["inserted_at"]).to_i
+      end
+
       {
         hotel: @hotel,
         external_reference: attributes["ota_reservation_id"] || attributes["unique_id"] || attributes["id"],
         channel_manager_reference: attributes["booking_id"] || attributes["id"],
-        revision_number: attributes["revision_id"] || 0,
+        revision_number: numeric_revision,
         status: wa_status,
         check_in: safe_parse_date(check_in),
         check_out: safe_parse_date(check_out),
@@ -519,6 +530,13 @@ module ChannelManagers
       return nil if value.blank?
       Date.parse(value.to_s)
     rescue Date::Error
+      nil
+    end
+
+    def safe_parse_datetime(value)
+      return nil if value.blank?
+      DateTime.parse(value.to_s)
+    rescue Date::Error, ArgumentError
       nil
     end
   end

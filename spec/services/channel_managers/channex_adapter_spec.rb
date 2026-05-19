@@ -102,7 +102,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
           hash_including(date_from: diff_date.to_s, date_to: diff_date.to_s, rate: "300.00", stop_sell: 0)
         ]
       )).and_return({ "data" => { "id" => "task_2" } })
-      
+
       # Wait, end_date was start_date + 2.days.
       # (start_date..end_date) is 3 days.
       # diff_date is start_date + 3.days.
@@ -126,7 +126,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
     it 'provides full snapshot including defaults for missing records during full sync' do
       rate_plan.room_rates.destroy_all
       room_type.room_inventories.destroy_all
-      
+
       # Create only one record
       rate_plan.room_rates.create!(date: start_date, price: 250.0, currency: "MYR", room_type: room_type, stop_sell: true)
       room_type.room_inventories.create!(date: start_date, quantity: 5, status: "open")
@@ -169,7 +169,6 @@ RSpec.describe ChannelManagers::ChannexAdapter do
 
       adapter.push_ari(date_range: (start_date..start_date+1.day), sync_restrictions: true, sync_rates: true, sync_availability: true)
     end
-
   end
 
   describe '#ingest_booking' do

@@ -5,30 +5,56 @@ module ChannelManagers
 
     def perform
       client = Channex::Client.new
-      # The feed returns revisions that haven't been acknowledged yet
-      response = client.get("/booking_revisions/feed")
-      if response[:error] || response["error"]
-        if response[:retryable] || response["retryable"]
-          raise Channex::Client::RetryableRequestError, "Pull revisions retryable failure: #{response[:details] || response['details'] || response}"
+      page = 1
+      per_page = 100
+
+      loop do
+        # The feed returns revisions that haven't been acknowledged yet
+        # We order by oldest first to process in correct chronological order
+        response = client.get("/booking_revisions/feed", {
+          "order[inserted_at]" => "asc",
+          "page" => page,
+          "limit" => per_page
+        })
+
+        if response[:error] || response["error"]
+          if response[:retryable] || response["retryable"]
+            raise Channex::Client::RetryableRequestError, "Pull revisions retryable failure: #{response[:details] || response['details'] || response}"
+          end
+
+          Rails.logger.error("Channel Manager Pull Revisions Failed: #{response}")
+          break
         end
 
-        Rails.logger.error("Channel Manager Pull Revisions Failed: #{response}")
-        return
-      end
+        revisions = response["data"]
+        break if revisions.blank?
 
-      return unless response["data"]
+        revisions.each do |revision|
+          attributes = revision["attributes"] || revision
+          property_id = attributes["property_id"] || revision["property_id"]
 
-      response["data"].each do |revision|
-        property_id = revision["property_id"]
-        # Find hotel mapping
-        mapping = ChannelMapping.find_by(provider: "channex", external_id: property_id, mappable_type: "Hotel")
-        next unless mapping
+          # Find hotel mapping
+          mapping = ChannelMapping.find_by(provider: "channex", external_id: property_id, mappable_type: "Hotel")
+          next unless mapping
 
-        # Reuse IngestRevisionJob but we already have data?
-        # Actually IngestRevisionJob pulls full data which is safer.
-        # But for efficiency we could pass data if feed has it all.
-        # Channel Manager feed usually has partial data, so pulling full revision is better.
-        ChannelManagers::IngestRevisionJob.perform_later(mapping.mappable_id, revision["id"])
+          # We enqueue a job for each revision to process and acknowledge it independently
+          ChannelManagers::IngestRevisionJob.perform_later(mapping.mappable_id, revision["id"])
+        end
+
+        # Check for next page if meta pagination info is provided
+        meta = response["meta"]
+        if meta && meta["pagination"]
+          current_page = meta.dig("pagination", "current_page")
+          total_pages = meta.dig("pagination", "total_pages")
+          break if current_page >= total_pages
+          page += 1
+        else
+          # Fallback: if we got exactly per_page, there might be more, but feed usually drains as we ack.
+          # However, PullRevisionsJob enqueues jobs that will ack LATER.
+          # So the feed will NOT drain immediately. We must use pagination.
+          break if revisions.size < per_page
+          page += 1
+        end
       end
     end
   end
