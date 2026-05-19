@@ -149,6 +149,7 @@ Rails.application.routes.draw do
         post :approve, to: "hotels/status#approve"
         post :suspend, to: "hotels/status#suspend"
         post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
+        post :full_refresh, to: "hotels/channel_managers#full_refresh"
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
       end
       resources :onboarding_sessions, module: :hotels do
@@ -189,6 +190,7 @@ Rails.application.routes.draw do
     resources :global_search, only: [ :index ]
     resources :margin_rules, only: [ :index, :create, :destroy ]
     resources :setup_fee_rules, only: [ :index, :create, :destroy ]
+    resources :exchange_rates, only: [ :index, :create, :update, :destroy ]
     resources :audit_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
@@ -256,8 +258,6 @@ Rails.application.routes.draw do
         delete :destroy_photo
         delete :bulk_destroy_photos
       end
-      resources :rates, only: [ :index, :create ]
-      resources :inventories, only: [ :index, :create ]
     end
 
     resources :nearby_attractions, except: [ :show ]
@@ -265,6 +265,7 @@ Rails.application.routes.draw do
       collection do
         get :availability
         get :stay_price
+        post :sync
       end
       member do
         patch :move
@@ -314,6 +315,8 @@ Rails.application.routes.draw do
       collection do
         post :apply_pricing_rules
         post :apply_availability_override
+        post :bulk_save_ari
+        post :batch_save_ari
         delete "pricing_tiers/:rule_type", action: :destroy_pricing_tier_rule, as: :destroy_pricing_tier_rule
         delete "public_holidays/:id", action: :destroy_public_holiday_rule, as: :destroy_public_holiday_rule
       end

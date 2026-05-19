@@ -80,6 +80,12 @@ module Bookings
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
           Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
 
+          # Trigger Channex CRS Sync if connected
+          if @hotel.preferred_channel_manager.present?
+            adapter = ChannelManagers::SyncOrchestrator.adapter_for(@hotel)
+            adapter.push_booking(booking)
+          end
+
           OpenStruct.new(success?: true, booking: booking)
         else
           OpenStruct.new(success?: false, errors: booking.errors.full_messages)

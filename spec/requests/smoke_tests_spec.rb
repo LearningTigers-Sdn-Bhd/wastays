@@ -83,8 +83,8 @@ RSpec.describe "Platform Smoke Tests", type: :request do
       end
     end
 
-    it "renders nested room type rates successfully" do
-      path = "/hotel/#{hotel.id}/room_types/#{room_type.id}/rates"
+    it "renders inventory dashboard successfully" do
+      path = "/hotel/#{hotel.id}/inventory"
       get path
       expect(response).to have_http_status(:ok)
     end

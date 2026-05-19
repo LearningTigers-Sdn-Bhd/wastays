@@ -35,6 +35,7 @@ class Hotel < ApplicationRecord
   has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
   has_one :property_policy, dependent: :destroy
+  accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
   has_many :nearby_attractions, dependent: :destroy
   has_many :pricing_rules, class_name: "HotelPricingRule", dependent: :destroy
@@ -49,6 +50,7 @@ class Hotel < ApplicationRecord
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
+  has_many :room_rates, through: :room_types
   has_many :room_locks, dependent: :destroy
   has_many :room_statuses, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :destroy
@@ -59,11 +61,13 @@ class Hotel < ApplicationRecord
   validates :name, presence: true
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true
 
+  before_validation :normalize_default_currency
   before_create :assign_hotel_prefix
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
   validates :city, presence: true
   validates :country, presence: true
+  validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
@@ -87,6 +91,10 @@ class Hotel < ApplicationRecord
     else
       super
     end
+  end
+
+  def normalize_default_currency
+    self.default_currency = CurrencyCatalog.normalize(default_currency)
   end
 
   scope :search, ->(query) {
@@ -415,7 +423,7 @@ class Hotel < ApplicationRecord
   end
 
   def saved_changes_to_synced_attributes?
-    (saved_changes.keys & %w[name city country default_currency]).any?
+    (saved_changes.keys & %w[name city country default_currency amenities]).any?
   end
 
   def sync_with_channel_manager

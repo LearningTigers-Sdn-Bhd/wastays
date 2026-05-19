@@ -33,6 +33,20 @@ RSpec.describe BookingEngine::CreateQuote do
       end
     end
 
+    it "stores display currency snapshot separately from charge currency" do
+      create(:exchange_rate, base_currency: "MYR", currency_code: "USD", rate: 0.25)
+      service = described_class.new(params.merge(display_currency: "USD"))
+      result = service.call
+
+      expect(result.success?).to be true
+      expect(result.quote.currency).to eq("MYR")
+      expect(result.quote.total_amount).to eq(200)
+      expect(result.quote.display_currency).to eq("USD")
+      expect(result.quote.display_total_amount).to eq(50)
+      expect(result.quote.display_exchange_rate).to eq(0.25)
+      expect(result.quote.display_rate_source).to eq("managed_fx")
+    end
+
     it "fails if room is no longer available" do
       RoomInventory.update_all(quantity: 0)
       service = described_class.new(params)

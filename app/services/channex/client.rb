@@ -62,7 +62,8 @@ module Channex
       ActiveSupport::Notifications.instrument("request.faraday", {
         method: request.method,
         url: uri.to_s,
-        request_headers: request.to_hash
+        request_headers: request.to_hash,
+        request_body: request.body
       }) do |payload|
         response = http.request(request)
         payload[:status] = response.code.to_i

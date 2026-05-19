@@ -6,7 +6,8 @@ module Notifications
       booking_confirmed: %w[pre_arrival_notification in_stay_guest_messaging],
       booking_checked_in: "check_in_confirmation",
       booking_completed: %w[post_stay_review_request check_out_receipt_message],
-      booking_updated: %w[pre_arrival_notification in_stay_guest_messaging]
+      booking_updated: %w[pre_arrival_notification in_stay_guest_messaging],
+      booking_cancelled: []
     }.freeze
 
     def initialize(event:, booking:)
@@ -15,6 +16,12 @@ module Notifications
     end
 
     def call
+      # 1. Handle Cancellation: Delete all pending/failed notification deliveries
+      if @event == :booking_cancelled
+        @booking.notification_deliveries.where(status: [ "pending", "failed" ]).destroy_all
+        return []
+      end
+
       notification_types = Array(EVENT_TO_NOTIFICATION_TYPE.fetch(@event))
       return dispatch_scheduled_notifications(notification_types) if scheduled_only_events?
 

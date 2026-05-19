@@ -529,9 +529,17 @@
                 <div class="space-y-4 pt-6 border-t border-neutral-border">
                   <div class="flex justify-between items-center text-xl">
                     <span class="font-black text-neutral-text-primary">Total</span>
-                    <span class="font-black text-brand-primary"><%= display_amount(@quote.total_amount, quote_currency: @quote.currency, display_currency: @display_currency, hotel: @hotel) %></span>
+                    <span class="font-black text-brand-primary">
+                      <% if @quote.display_currency.present? && @quote.display_total_amount.present? %>
+                        <%= CurrencyFormatter.format(@quote.display_total_amount, currency: @quote.display_currency) %>
+                      <% else %>
+                        <%= display_amount(@quote.total_amount, quote_currency: @quote.currency, display_currency: @display_currency, hotel: @hotel) %>
+                      <% end %>
+                    </span>
                   </div>
-                  <p class="text-[10px] text-neutral-text-secondary italic text-right leading-tight">All-in price including taxes and service charges.</p>
+                  <p class="text-[10px] text-neutral-text-secondary italic text-right leading-tight">
+                    All-in price including taxes and service charges. Payment is charged in <%= @quote.currency %>.
+                  </p>
                 </div>
               </div>
             </div>

@@ -19,7 +19,7 @@ RSpec.describe ChannelManagers::IngestRevisionJob, type: :job do
     allow(WebhookBroadcastJob).to receive(:perform_later)
   end
 
-  it 'pulls revision, ingests booking, and acknowledges booking' do
+  it 'pulls revision, ingests booking, and acknowledges revision' do
     allow(client_double).to receive(:get).with('/booking_revisions/rev_100').and_return(
       {
         'data' => {
@@ -49,7 +49,7 @@ RSpec.describe ChannelManagers::IngestRevisionJob, type: :job do
         }
       }
     )
-    expect(client_double).to receive(:post).with('/bookings/ch_booking_1/ack').and_return({ 'meta' => { 'message' => 'Success' } })
+    expect(client_double).to receive(:post).with('/booking_revisions/rev_100/ack').and_return({ 'meta' => { 'message' => 'Success' } })
 
     described_class.perform_now(hotel.id, 'rev_100')
 

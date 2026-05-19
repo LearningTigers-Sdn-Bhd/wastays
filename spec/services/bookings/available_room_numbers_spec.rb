@@ -61,6 +61,12 @@ RSpec.describe Bookings::AvailableRoomNumbers do
     Current.user_id = nil
   end
 
+  it "treats open inventory with blank available_room_numbers as all room numbers (quantity mode)" do
+    create(:room_inventory, room_type: room_type, date: check_in, status: "open", quantity: 2, available_room_numbers: [])
+
+    expect(subject.call).to match_array([ "101", "102", "103" ])
+  end
+
   describe "#options" do
     it "returns non-ready rooms as non-selectable options with labels" do
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")

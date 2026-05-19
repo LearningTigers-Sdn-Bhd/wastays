@@ -13,11 +13,12 @@ RSpec.describe ChannelManagers::PullRevisionsJob, type: :job do
   end
 
   it 'enqueues ingest job for mapped property revisions in feed' do
-    allow(client_double).to receive(:get).with('/booking_revisions/feed').and_return({
+    allow(client_double).to receive(:get).with('/booking_revisions/feed', hash_including('order[inserted_at]' => 'asc')).and_return({
       'data' => [
         { 'id' => 'rev_100', 'property_id' => 'prop_1' },
         { 'id' => 'rev_200', 'property_id' => 'unknown_prop' }
-      ]
+      ],
+      'meta' => { 'pagination' => { 'current_page' => 1, 'total_pages' => 1 } }
     })
 
     expect do

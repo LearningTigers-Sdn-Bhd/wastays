@@ -11,6 +11,8 @@ class Booking < ApplicationRecord
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
   has_one :refund_request, dependent: :destroy
+  has_one_attached :id_front
+  has_one_attached :id_back
   has_many :housekeeping_requests, dependent: :destroy
   has_many :complaint_requests, dependent: :destroy
   has_many :check_out_requests, dependent: :destroy
@@ -18,7 +20,16 @@ class Booking < ApplicationRecord
   has_many :payment_transactions, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time
-  attr_accessor :guest_government_id
+
+  def guest_government_id
+    @guest_government_id.presence ||
+      pre_checkin&.metadata&.dig("guest_government_id").presence ||
+      primary_guest&.government_id
+  end
+
+  def guest_government_id=(value)
+    @guest_government_id = value
+  end
 
   STATUSES = %w[pending confirmed checked_in cancelled completed overbooked].freeze
   PAYMENT_STATUSES = %w[pending authorized captured failed refunded].freeze
@@ -27,6 +38,10 @@ class Booking < ApplicationRecord
   PRE_CHECKIN_STATUSES = %w[not_started pending in_progress completed failed].freeze
   GUARANTEE_METHODS = %w[none pre_checkin_completed manual_at_hotel card_authorization_document charge_now].freeze
   DEPOSIT_STATUSES = %w[not_required pending_at_hotel authorized collected released failed].freeze
+  DOCUMENT_TYPES = [
+    [ "Identity Card (IC)", "ic" ],
+    [ "Passport", "passport" ]
+  ].freeze
 
   validates :status, presence: true, inclusion: { in: STATUSES }
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
@@ -161,6 +176,10 @@ class Booking < ApplicationRecord
     return "not_started" unless has_real_pre_checkin_data
 
     pre_checkin_status.presence || pre_checkin&.status.presence || "not_started"
+  end
+
+  def pre_checkin_completed?
+    pre_checkin_display_status == "completed"
   end
 
   def tourism_tax?

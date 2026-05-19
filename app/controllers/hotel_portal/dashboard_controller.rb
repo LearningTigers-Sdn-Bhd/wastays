@@ -27,6 +27,7 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
     @revenue_this_month = stats.revenue_this_month
     @pending_actions_count = stats.pending_actions_count
     @occupancy_snapshot = stats.occupancy_snapshot
+    @live_inventory = stats.live_inventory
 
     @active_setup_fee = @current_hotel.active_setup_fee
     @setup_fee_amount = @active_setup_fee&.amount&.to_f || 0.0

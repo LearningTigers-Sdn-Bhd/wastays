@@ -6,6 +6,9 @@ class Guest < ApplicationRecord
   has_many :bookings, through: :booking_guests
   has_many :prospects, dependent: :nullify
 
+  has_one_attached :id_front
+  has_one_attached :id_back
+
   encrypts :email, deterministic: true
   encrypts :phone, deterministic: true
   encrypts :government_id
