@@ -13,6 +13,7 @@ class NightAudit < ApplicationRecord
   validates :hotel_id, uniqueness: { scope: :business_date }
 
   scope :recent_first, -> { order(business_date: :desc, created_at: :desc) }
+  scope :completed, -> { where(status: "completed") }
 
   def self.closed_for_date?(hotel_id, date)
     exists?(hotel_id: hotel_id, business_date: date, status: "completed")

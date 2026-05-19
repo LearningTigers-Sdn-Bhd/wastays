@@ -7,16 +7,17 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
   let(:start_date) { Date.new(2026, 5, 6) }
   let(:end_date) { Date.new(2026, 5, 7) }
 
-  it "aggregates daily rows and source rows with per-night revenue allocation" do
-    # 1-night stay on May 6
-    create(:booking, hotel: hotel, status: "confirmed", source: "walk_in",
-           total_amount: 100, tourism_tax_applied: true, tourism_tax_amount: 10,
-           check_in: Date.new(2026, 5, 6), check_out: Date.new(2026, 5, 7))
+  it "aggregates daily rows and source rows from folio transactions" do
+    # May 6: 1 booking with accommodation and tax
+    booking1 = create(:booking, hotel: hotel, source: "walk_in")
+    folio1 = create(:booking_folio, booking: booking1, hotel: hotel)
+    create(:folio_transaction, booking_folio: folio1, category: "accommodation", amount: 100, posting_date: Date.new(2026, 5, 6))
+    create(:folio_transaction, booking_folio: folio1, category: "tax", amount: 10, posting_date: Date.new(2026, 5, 6))
 
-    # 1-night stay on May 7
-    create(:booking, hotel: hotel, status: "completed", source: "agoda",
-           total_amount: 200, tourism_tax_applied: false, tourism_tax_amount: 0,
-           check_in: Date.new(2026, 5, 7), check_out: Date.new(2026, 5, 8))
+    # May 7: 1 different booking with accommodation
+    booking2 = create(:booking, hotel: hotel, source: "agoda")
+    folio2 = create(:booking_folio, booking: booking2, hotel: hotel)
+    create(:folio_transaction, booking_folio: folio2, category: "accommodation", amount: 200, posting_date: Date.new(2026, 5, 7))
 
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
@@ -25,20 +26,61 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     expect(report.totals[:room_revenue]).to eq(300.to_d)
     expect(report.totals[:tax_amount]).to eq(10.to_d)
     expect(report.totals[:total_revenue]).to eq(310.to_d)
+    expect(report.totals[:booking_count]).to eq(2)
+
+    # Check daily rows
+    row1 = report.rows.find { |r| r[:date] == Date.new(2026, 5, 6) }
+    expect(row1[:room_revenue]).to eq(100.to_d)
+    expect(row1[:tax_amount]).to eq(10.to_d)
+    expect(row1[:booking_count]).to eq(1)
+
+    row2 = report.rows.find { |r| r[:date] == Date.new(2026, 5, 7) }
+    expect(row2[:room_revenue]).to eq(200.to_d)
+    expect(row2[:booking_count]).to eq(1)
   end
 
-  it "splits multi-night booking revenue across stay dates" do
-    # 3-night booking: May 6, 7, 8 — RM900 total = RM300/night
-    create(:booking, hotel: hotel, status: "confirmed", source: "walk_in",
-           total_amount: 900, tourism_tax_applied: false, tourism_tax_amount: 0,
-           check_in: Date.new(2026, 5, 6), check_out: Date.new(2026, 5, 9))
+  it "includes adjustments/reversals in the totals" do
+    booking = create(:booking, hotel: hotel, source: "walk_in")
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    tx = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: start_date)
 
-    report = described_class.new(hotel: hotel, start_date: Date.new(2026, 5, 6), end_date: Date.new(2026, 5, 8)).call
+    # Reversal of that transaction on the same day
+    create(:folio_transaction,
+           booking_folio: folio,
+           transaction_type: "adjustment",
+           category: "correction",
+           amount: -100,
+           posting_date: start_date,
+           reversal_of_transaction: tx)
 
-    # Each of the 3 days should show RM300
-    report.rows.each do |row|
-      expect(row[:room_revenue]).to eq(300.to_d)
-    end
-    expect(report.totals[:room_revenue]).to eq(900.to_d)
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    row = report.rows.find { |r| r[:date] == start_date }
+    expect(row[:room_revenue]).to eq(0.to_d)
+    expect(row[:booking_count]).to eq(1) # Still counted as active because a booking_id had accommodation activity
+  end
+
+  it "correctly filters by hotel" do
+    other_hotel = create(:hotel)
+    booking = create(:booking, hotel: other_hotel, source: "walk_in")
+    folio = create(:booking_folio, booking: booking, hotel: other_hotel)
+    create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 500, posting_date: start_date)
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.totals[:room_revenue]).to eq(0)
+  end
+
+  it "ignores non-revenue categories (e.g., F&B or Payments)" do
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: folio, category: "fb", amount: 50, posting_date: start_date)
+    create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 100, posting_date: start_date)
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.totals[:room_revenue]).to eq(0)
+    expect(report.totals[:total_revenue]).to eq(0)
+    expect(report.totals[:booking_count]).to eq(0)
   end
 end

@@ -149,6 +149,40 @@ class Hotel < ApplicationRecord
     Time.find_zone(time_zone.presence || User::DEFAULT_TIME_ZONE) || Time.zone
   end
 
+  def arrival_grace_period_hours
+    (arrival_grace_period || 0) / 3600
+  end
+
+  def arrival_grace_period_hours=(hours)
+    self.arrival_grace_period = hours.to_i * 3600
+  end
+
+  def business_starts_at
+    read_attribute(:business_starts_at)&.utc
+  end
+
+  def business_starts_at=(value)
+    if value.is_a?(String) && value.present?
+      # Parse as UTC to preserve the intended wall-clock hour/minute
+      write_attribute(:business_starts_at, Time.find_zone("UTC").parse(value))
+    else
+      super
+    end
+  end
+
+  def business_ends_at
+    read_attribute(:business_ends_at)&.utc
+  end
+
+  def business_ends_at=(value)
+    if value.is_a?(String) && value.present?
+      # Parse as UTC to preserve the intended wall-clock hour/minute
+      write_attribute(:business_ends_at, Time.find_zone("UTC").parse(value))
+    else
+      super
+    end
+  end
+
   def business_date_for(time = Time.current)
     local_time = time.in_time_zone(hotel_time_zone)
     date = local_time.to_date
@@ -161,14 +195,7 @@ class Hotel < ApplicationRecord
 
   def latest_closable_business_date(time = Time.current)
     local_time = time.in_time_zone(hotel_time_zone)
-    today = local_time.to_date
-
-    [ today, today - 1.day, today - 2.days ].each do |date|
-      window = business_day_window_for(date)
-      return date if local_time >= window.end
-    end
-
-    today - 1.day
+    local_time.to_date - 1.day
   end
 
   def business_day_window_for(business_date)
