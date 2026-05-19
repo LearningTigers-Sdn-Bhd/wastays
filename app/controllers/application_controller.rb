@@ -9,7 +9,7 @@ class ApplicationController < ActionController::Base
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
   rescue_from ActiveRecord::RecordNotFound, with: :not_found
 
-  helper_method :current_user, :logged_in?, :can_view_room_status_board?
+  helper_method :current_user, :logged_in?, :can_view_room_status_board?, :can_view_reservation_board?
   around_action :use_user_time_zone
   before_action :set_current_request_id
   before_action :redirect_legacy_hotel_portal_path
@@ -46,6 +46,13 @@ class ApplicationController < ActionController::Base
       current_user&.has_permission?("view_room_readiness") ||
       current_user&.has_permission?("manage_room_status", hotel: current_hotel) ||
       current_user&.has_permission?("manage_room_status")
+  end
+
+  def can_view_reservation_board?
+    current_user&.has_permission?("view_reservation_board", hotel: current_hotel) ||
+      current_user&.has_permission?("view_reservation_board") ||
+      current_user&.has_permission?("manage_bookings", hotel: current_hotel) ||
+      current_user&.has_permission?("manage_bookings")
   end
 
   def authenticate_user!

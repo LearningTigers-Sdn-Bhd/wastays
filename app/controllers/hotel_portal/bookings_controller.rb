@@ -2,7 +2,7 @@
 
 class HotelPortal::BookingsController < HotelPortal::BaseController
   before_action :authorize_view_bookings!, only: %i[index show availability stay_price]
-  before_action :authorize_manage_bookings!, only: %i[new create update check_in check_out cancel]
+  before_action :authorize_manage_bookings!, only: %i[new create update check_in check_out cancel add_guest remove_guest]
 
   def index
     @all_bookings = current_hotel.bookings.recent_first
@@ -12,12 +12,34 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @bookings = @all_bookings.page(params[:page]).per(25)
   end
 
+  def sync
+    authorize_manage_bookings!
+
+    result = ChannelManagers::FetchBookingsService.new(hotel: current_hotel).call
+
+    if result.success?
+      redirect_to hotel_bookings_path(current_hotel), notice: result.message
+    else
+      redirect_to hotel_bookings_path(current_hotel), alert: result.message
+    end
+  end
+
   def new
     @booking = current_hotel.bookings.build(
       check_in: params[:check_in].presence || Date.current,
       check_out: params[:check_out].presence || Date.current + 1.day,
       adults: 2
     )
+
+    if params[:room_type_id].present?
+      room_type = current_hotel.room_types.find(params[:room_type_id])
+      @booking.total_amount = Bookings::CalculateStayPrice.new(
+        room_type: room_type,
+        check_in: @booking.check_in,
+        check_out: @booking.check_out
+      ).call
+    end
+
     @room_types = current_hotel.room_types.order(:name)
   end
 
@@ -76,6 +98,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def show
     @booking = current_hotel.bookings.find(params[:id])
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+    set_audit_logs
   end
 
   def update
@@ -90,27 +113,130 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
     if result.success?
       release_room_locks(@booking)
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking updated successfully."
+      respond_to do |format|
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking updated successfully." }
+        format.json { render json: { success: true, booking: @booking } }
+      end
     else
-      @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-      @booking.errors.add(:base, result.errors.to_sentence)
-      render :show, status: :unprocessable_content
+      respond_to do |format|
+        format.html do
+          @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+          set_audit_logs
+          @booking.errors.add(:base, result.errors.to_sentence)
+          render :show, status: :unprocessable_content
+        end
+        format.json { render json: { success: false, errors: result.errors }, status: :unprocessable_content }
+      end
+    end
+  end
+
+  def move
+    @booking = current_hotel.bookings.find(params[:id])
+    # For move, we only expect check_in, check_out, room_type_id, and room_number
+    # We allow children and adults to stay the same if not provided
+    move_params = params.permit(:check_in, :check_out, :room_type_id, :room_number)
+
+    result = Bookings::UpdateStayService.new(
+      booking: @booking,
+      params: move_params,
+      user: current_user
+    ).call
+
+    if result.success?
+      render json: { success: true, booking: @booking.as_json(only: %i[id check_in check_out status]) }
+    else
+      render json: { success: false, errors: result.errors }, status: :unprocessable_entity
     end
   end
 
   def check_in
-    transition_status("checked_in", params[:checked_in_at], "Guest checked in successfully.")
+    timestamp = params[:checked_in_at].presence || params.dig(:booking, :checked_in_at).presence
+    transition_status("checked_in", timestamp, "Guest checked in successfully.")
   end
 
   def check_out
-    transition_status("completed", params[:checked_out_at], "Guest has been checked out.")
+    timestamp = params[:checked_out_at].presence || params.dig(:booking, :checked_out_at).presence
+    transition_status("completed", timestamp, "Guest has been checked out.")
   end
 
   def cancel
     transition_status("cancelled", nil, "Booking cancelled successfully.")
   end
 
+  def add_guest
+    @booking = current_hotel.bookings.find(params[:id])
+    guest = Guest.create!(
+      name: params[:name].to_s.strip,
+      phone: params[:phone].to_s.strip,
+      email: params[:email].to_s.strip.presence,
+      gender: params[:gender].to_s.strip.presence,
+      government_id: params[:government_id].to_s.strip,
+      document_type: params[:document_type].to_s.strip.presence || "ic",
+      country: params[:country].presence || current_hotel.country.presence || "Malaysia"
+    )
+    @booking.booking_guests.create!(guest: guest, is_primary: false)
+    redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest added."
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to hotel_booking_path(current_hotel, @booking), alert: e.message
+  end
+
+  def remove_guest
+    @booking = current_hotel.bookings.find(params[:id])
+    bg = @booking.booking_guests.find_by!(id: params[:guest_id], is_primary: false)
+    guest = bg.guest
+    bg.destroy
+    guest.destroy if guest.booking_guests.empty?
+    redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest removed."
+  end
+
+  def complete_housekeeping_request
+    @booking = current_hotel.bookings.find(params[:id])
+    updater = ::HotelPortal::Requests::StatusUpdater.new(
+      hotel: current_hotel,
+      kind: "housekeeping",
+      request_id: params[:housekeeping_request_id],
+      status: "completed"
+    )
+
+    if updater.call
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Housekeeping request completed."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to update request."
+    end
+  end
+
+  def resolve_complaint_request
+    @booking = current_hotel.bookings.find(params[:id])
+    updater = ::HotelPortal::Requests::StatusUpdater.new(
+      hotel: current_hotel,
+      kind: "complaint",
+      request_id: params[:complaint_request_id],
+      status: "resolved"
+    )
+
+    if updater.call
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Complaint resolved."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to update request."
+    end
+  end
+
   private
+
+  def set_audit_logs
+    # Fetch audit logs for this booking and its related entities
+    base_query = BookingAuditLog.where(hotel: current_hotel)
+
+    @audit_logs = base_query.where(auditable: @booking)
+
+    if @booking.booking_quote_id.present?
+      @audit_logs = @audit_logs.or(base_query.where(auditable_type: "BookingQuote", auditable_id: @booking.booking_quote_id))
+    end
+
+    @audit_logs = @audit_logs.or(base_query.where(auditable_type: "BookingRoom", auditable_id: @booking.booking_rooms.select(:id)))
+                            .includes(:user, :auditable)
+                            .order(created_at: :desc)
+  end
 
   def release_room_locks(booking)
     # Release locks for all rooms assigned to this booking
@@ -123,6 +249,10 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def transition_status(status, timestamp, success_notice)
     @booking = current_hotel.bookings.find(params[:id])
+
+    # Apply nested attributes (like room assignment) if provided in the form
+    @booking.assign_attributes(booking_params) if params[:booking].present?
+
     result = Bookings::TransitionStatus.new(
       booking: @booking,
       status: status,
@@ -132,11 +262,37 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
     if result.success?
       release_room_locks(@booking) if status == "checked_in"
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice
+
+      respond_to do |format|
+        format.turbo_stream do
+          if reservation_board_request?
+            render turbo_stream: turbo_stream.action(:reload, "reservation_board")
+          else
+            # Fallback for other pages that might use turbo streams but expect a redirect
+            redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice, status: :see_other
+          end
+        end
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice }
+      end
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-      flash.now[:alert] = result.error
-      render :show, status: :unprocessable_content
+      set_audit_logs
+
+      respond_to do |format|
+        format.turbo_stream do
+          if reservation_board_request?
+            # Append an alert toast to the board instead of rendering show
+            render turbo_stream: turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
+          else
+            flash.now[:alert] = result.error
+            render :show, status: :unprocessable_content, formats: :html
+          end
+        end
+        format.html do
+          flash.now[:alert] = result.error
+          render :show, status: :unprocessable_content
+        end
+      end
     end
   end
 
@@ -144,8 +300,13 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     params.fetch(:booking, {}).permit(
       :guest_name, :guest_email, :guest_phone, :status, :checked_in_at, :checked_out_at,
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
+      :id_front, :id_back,
       booking_rooms_attributes: [ :id, :room_number ]
     )
+  end
+
+  def reservation_board_request?
+    params[:source] == "reservation_board" || request.referer&.include?("reservation-board")
   end
 
   def authorize_view_bookings!

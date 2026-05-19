@@ -12,6 +12,7 @@ module HotelOps
     end
 
     def call
+      Thread.current[:skip_ari_sync] = true
       ActiveRecord::Base.transaction do
         (@start_date..@end_date).each do |date|
           inventory = @room_type.room_inventories.find_or_initialize_by(date: date)
@@ -61,13 +62,22 @@ module HotelOps
 
         # Trigger ARI Sync if CM is connected
         if @hotel.preferred_channel_manager.present?
-          ChannelManagers::SyncJob.perform_later(@hotel.id, @start_date, @end_date)
+          ChannelManagers::SyncJob.perform_later(
+            @hotel.id,
+            @start_date,
+            @end_date,
+            sync_availability: true,
+            sync_rates: false,
+            sync_restrictions: false
+          )
         end
 
         { success: true }
       end
     rescue => e
       { success: false, error: e.message }
+    ensure
+      Thread.current[:skip_ari_sync] = nil
     end
   end
 end

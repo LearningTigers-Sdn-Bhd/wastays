@@ -43,7 +43,14 @@ module Bookings
       inventory_allowed_rooms = (@check_in..(@check_out - 1.day)).map do |date|
         inv = @room_type.room_inventories.find_by(date: date)
         if inv
-          inv.status == "open" ? inv.available_room_numbers : []
+          if inv.status == "open"
+            # Legacy quantity mode stores open inventory with an empty available_room_numbers array.
+            # In that case, treat all room_type numbers as candidates and let occupancy/locks/status
+            # filters decide final assignability.
+            inv.available_room_numbers.presence || @room_type.room_numbers
+          else
+            []
+          end
         else
           @room_type.room_numbers
         end

@@ -1,6 +1,10 @@
 require_relative "../app/constraints/superadmin_constraint"
 
 Rails.application.routes.draw do
+  namespace :hotel_portal do
+    get "room_blocks/create"
+    get "room_blocks/destroy"
+  end
   if Rails.env.development?
     require "letter_opener_web"
     mount LetterOpenerWeb::Engine, at: "/letter_opener"
@@ -31,6 +35,7 @@ Rails.application.routes.draw do
     get    "dashboard",           to: "dashboard#index",           as: :dashboard
     resources :bookings, only: [ :index, :show ] do
       member do
+        get :receipt
         get :invoice
       end
       resources :refund_requests, only: [ :new, :create ]
@@ -66,7 +71,9 @@ Rails.application.routes.draw do
 
   # Public Booking Engine
   scope module: :public do
-    resources :hotels, only: [ :index, :show ]
+    resources :hotels, only: [ :index, :show ] do
+      get :rate_calendar, on: :member
+    end
     resources :quotes, only: [ :create, :show ] do
       member do
         get :guest_lookup
@@ -74,6 +81,7 @@ Rails.application.routes.draw do
     end
     resources :bookings, only: [ :show ] do
       member do
+        get :receipt
         get :invoice
         get :voucher
       end
@@ -123,6 +131,7 @@ Rails.application.routes.draw do
         post :approve, to: "hotels/status#approve"
         post :suspend, to: "hotels/status#suspend"
         post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
+        post :full_refresh, to: "hotels/channel_managers#full_refresh"
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
       end
       resources :onboarding_sessions, module: :hotels do
@@ -134,6 +143,7 @@ Rails.application.routes.draw do
     end
     resources :bookings, only: [ :index, :show ] do
       member do
+        get :receipt
         get :invoice
       end
     end
@@ -162,6 +172,7 @@ Rails.application.routes.draw do
     resources :global_search, only: [ :index ]
     resources :margin_rules, only: [ :index, :create, :destroy ]
     resources :setup_fee_rules, only: [ :index, :create, :destroy ]
+    resources :exchange_rates, only: [ :index, :create, :update, :destroy ]
     resources :audit_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
@@ -229,8 +240,6 @@ Rails.application.routes.draw do
         delete :destroy_photo
         delete :bulk_destroy_photos
       end
-      resources :rates, only: [ :index, :create ]
-      resources :inventories, only: [ :index, :create ]
     end
 
     resources :nearby_attractions, except: [ :show ]
@@ -238,11 +247,15 @@ Rails.application.routes.draw do
       collection do
         get :availability
         get :stay_price
+        post :sync
       end
       member do
+        patch :move
         post :check_in
         post :check_out
         post :cancel
+        post :add_guest
+        delete "guests/:guest_id", action: :remove_guest, as: :remove_guest
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings#complete_housekeeping_request", as: :complete_housekeeping_request
         patch "complaint_requests/:complaint_request_id", to: "bookings#update_complaint_request", as: :update_complaint_request
         post "complaint_requests/:complaint_request_id/resolve", to: "bookings#resolve_complaint_request", as: :resolve_complaint_request
@@ -284,6 +297,8 @@ Rails.application.routes.draw do
       collection do
         post :apply_pricing_rules
         post :apply_availability_override
+        post :bulk_save_ari
+        post :batch_save_ari
         delete "pricing_tiers/:rule_type", action: :destroy_pricing_tier_rule, as: :destroy_pricing_tier_rule
         delete "public_holidays/:id", action: :destroy_public_holiday_rule, as: :destroy_public_holiday_rule
       end
@@ -294,9 +309,25 @@ Rails.application.routes.draw do
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"
+    resources :hotel_taxes, only: %i[index create update destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board
+    namespace :reservation_board, path: "reservation-board" do
+      get "/", to: "boards#index", as: :index
+      resources :board_bookings, path: "bookings", only: [ :new, :create, :show, :update ] do
+        member do
+          get :check_in
+          get :check_out
+          get :edit_stay
+          get :notes
+          patch :transition
+        end
+      end
+    end
     resources :room_statuses, only: [ :update ]
+    resources :room_blocks, only: [ :create, :update, :destroy ] do
+      post :finish, on: :member
+    end
   end
 end

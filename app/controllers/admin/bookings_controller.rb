@@ -1,6 +1,6 @@
 module Admin
   class BookingsController < BaseController
-    before_action :set_booking, only: [ :show, :invoice ]
+    before_action :set_booking, only: [ :show, :receipt, :invoice ]
 
     def index
       @all_bookings = Booking.all.order(created_at: :desc)
@@ -21,6 +21,14 @@ module Admin
 
     def show
       # @booking set by before_action
+    end
+
+    def receipt
+      pdf_bytes = ReceiptPdfService.new(@booking).generate
+      send_data pdf_bytes,
+        filename: "wastays-receipt-#{@booking.confirmation_token}.pdf",
+        type: "application/pdf",
+        disposition: "inline"
     end
 
     def invoice

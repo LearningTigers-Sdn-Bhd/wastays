@@ -1,0 +1,193 @@
+<% content_for :breadcrumbs do %>
+  <%= render "shared/navigation/admin_breadcrumbs", current: "Exchange Rates" %>
+<% end %>
+
+<div class="mx-auto max-w-[1400px] space-y-6 pb-20">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Exchange Rates</h1>
+      <p class="mt-1 text-sm font-medium text-slate-600">Manage global exchange rates. Hotels will use these for display conversion and OTA sync.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm">
+      Enterprise Multi-Base Support Enabled
+    </div>
+  </div>
+
+  <div class="grid gap-6 xl:grid-cols-[360px_1fr]">
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-bold text-slate-950">Add Rate</h2>
+      <p class="mt-1 text-sm text-slate-600">
+        Define a direct conversion between two currencies.<br>
+        <span class="text-[11px] font-medium text-slate-400 italic">Example: If 1 USD = 4.75 MYR, set Base as USD and Target as MYR with rate 4.75</span>
+      </p>
+
+      <% if @exchange_rate.errors.any? %>
+        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <%= @exchange_rate.errors.full_messages.to_sentence %>
+        </div>
+      <% end %>
+
+      <div data-controller="exchange-rate-calculator">
+        <%= form_with model: [:admin, @exchange_rate], local: true, class: "mt-5 space-y-4" do |f| %>
+          <!-- Base Currency -->
+          <div data-controller="searchable-select" class="relative">
+            <%= f.label :base_currency, "Base Currency", class: "mb-2 block text-sm font-semibold text-slate-700" %>
+            <div class="relative group">
+              <input type="text" 
+                     data-searchable-select-target="input"
+                     data-action="input->searchable-select#filter click->searchable-select#open"
+                     class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm font-semibold text-slate-700 transition-all placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-50"
+                     placeholder="Search base (e.g. USD)"
+                     autocomplete="off"
+                     value="<%= @exchange_rate.base_currency %>">
+              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 group-focus-within:text-slate-600">
+                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+              </div>
+              <%= f.hidden_field :base_currency, 
+                  data: { 
+                    searchable_select_target: "hiddenInput",
+                    exchange_rate_calculator_target: "baseCurrency",
+                    action: "input->exchange-rate-calculator#update"
+                  } %>
+              <div data-searchable-select-target="options" class="absolute z-[100] hidden w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5">
+                <div class="max-height-[240px] overflow-y-auto p-1 custom-scrollbar" style="max-height: 240px;">
+                  <% @currency_options.each do |label, value| %>
+                    <button type="button" data-searchable-select-target="option" data-action="click->searchable-select#select" data-value="<%= value %>" data-label="<%= label %>" class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                      <span class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-600"><%= value %></span>
+                      <span class="truncate"><%= label %></span>
+                    </button>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Target Currency -->
+          <div data-controller="searchable-select" class="relative">
+            <%= f.label :currency_code, "Target Currency", class: "mb-2 block text-sm font-semibold text-slate-700" %>
+            <div class="relative group">
+              <input type="text" 
+                     data-searchable-select-target="input"
+                     data-action="input->searchable-select#filter click->searchable-select#open"
+                     class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm font-semibold text-slate-700 transition-all placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-50"
+                     placeholder="Search target (e.g. MYR)"
+                     autocomplete="off"
+                     value="<%= @exchange_rate.currency_code %>">
+              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 group-focus-within:text-slate-600">
+                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+              </div>
+              <%= f.hidden_field :currency_code, 
+                  data: { 
+                    searchable_select_target: "hiddenInput",
+                    exchange_rate_calculator_target: "targetCurrency",
+                    action: "input->exchange-rate-calculator#update"
+                  } %>
+              <div data-searchable-select-target="options" class="absolute z-[100] hidden w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5">
+                <div class="max-height-[240px] overflow-y-auto p-1 custom-scrollbar" style="max-height: 240px;">
+                  <% @currency_options.each do |label, value| %>
+                    <button type="button" data-searchable-select-target="option" data-action="click->searchable-select#select" data-value="<%= value %>" data-label="<%= label %>" class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                      <span class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-600"><%= value %></span>
+                      <span class="truncate"><%= label %></span>
+                    </button>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between">
+              <%= f.label :rate, "Conversion Rate", class: "mb-2 block text-sm font-semibold text-slate-700" %>
+              <span class="mb-2 text-[10px] font-bold uppercase text-slate-400">1 <span data-exchange-rate-calculator-target="baseLabel">BASE</span> = ? <span data-exchange-rate-calculator-target="targetLabel">TARGET</span></span>
+            </div>
+            <%= f.number_field :rate, 
+                step: 0.00000001, 
+                min: 0, 
+                class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0",
+                placeholder: "0.0000",
+                data: { 
+                  action: "input->exchange-rate-calculator#update",
+                  exchange_rate_calculator_target: "rate" 
+                } %>
+          </div>
+
+          <!-- Dynamic Calculation Display -->
+          <div class="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-2 hidden" data-exchange-rate-calculator-target="calculation">
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-slate-600 font-medium">Forward Rate:</span>
+              <span class="text-slate-900 font-bold">1 <span data-exchange-rate-calculator-target="curr1">BASE</span> = <span data-exchange-rate-calculator-target="forwardRate">1.0000</span> <span data-exchange-rate-calculator-target="targetLabel">TARGET</span></span>
+            </div>
+            <div class="flex justify-between items-center text-sm border-t border-slate-200 pt-2">
+              <span class="text-slate-600 font-medium">Inverse Rate:</span>
+              <span class="text-slate-900 font-bold">1 <span data-exchange-rate-calculator-target="targetLabel">TARGET</span> = <span data-exchange-rate-calculator-target="inverseRate">1.0000</span> <span data-exchange-rate-calculator-target="curr2">BASE</span></span>
+            </div>
+          </div>
+
+          <div>
+            <%= f.label :effective_at, "Effective At", class: "mb-2 block text-sm font-semibold text-slate-700" %>
+            <%= f.datetime_field :effective_at, value: (@exchange_rate.effective_at || Time.current).strftime("%Y-%m-%dT%H:%M"), class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+          </div>
+          <div>
+            <%= f.label :source, class: "mb-2 block text-sm font-semibold text-slate-700" %>
+            <%= f.text_field :source, value: @exchange_rate.source.presence || "manual", class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+          </div>
+          <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <%= f.check_box :active, checked: @exchange_rate.active != false, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0" %>
+            Active for display conversion
+          </label>
+          <%= f.submit "Save Rate", class: "w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-700" %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 px-6 py-5">
+        <h2 class="text-lg font-bold text-slate-950">Managed Rates</h2>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Pair</th>
+              <th class="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Rate</th>
+              <th class="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Inverse</th>
+              <th class="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Status</th>
+              <th class="px-6 py-3 text-right text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <% @exchange_rates.each do |rate| %>
+              <tr>
+                <td class="px-6 py-4 text-sm font-bold text-slate-950">
+                  <%= rate.base_currency %> → <%= rate.currency_code %>
+                </td>
+                <td class="px-6 py-4 text-sm font-semibold text-slate-700">
+                  1 <%= rate.base_currency %> = <%= rate.rate %> <%= rate.currency_code %>
+                </td>
+                <td class="px-6 py-4 text-sm font-medium text-slate-400 italic">
+                  1 <%= rate.currency_code %> = <%= (1.0 / rate.rate).round(8) %> <%= rate.base_currency %>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="rounded-full px-2.5 py-1 text-xs font-bold <%= rate.active? ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' %>"><%= rate.active? ? "Active" : "Inactive" %></span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <%= button_to "Remove", admin_exchange_rate_path(rate), method: :delete, class: "rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100", data: { turbo_confirm: "Remove this exchange rate?" } %>
+                </td>
+              </tr>
+            <% end %>
+            <% if @exchange_rates.empty? %>
+              <tr>
+                <td colspan="5" class="px-6 py-12 text-center text-sm font-semibold text-slate-500">No managed exchange rates yet.</td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>

@@ -35,29 +35,39 @@ class Hotel < ApplicationRecord
   has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
   has_one :property_policy, dependent: :destroy
+  accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
   has_many :nearby_attractions, dependent: :destroy
   has_many :pricing_rules, class_name: "HotelPricingRule", dependent: :destroy
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
+  has_many :hotel_taxes, dependent: :destroy
+  has_many :hotel_counters, dependent: :destroy
   has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
+  has_many :room_rates, through: :room_types
   has_many :room_locks, dependent: :destroy
   has_many :room_statuses, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :destroy
+  has_many :room_blocks, dependent: :destroy
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
 
   validates :name, presence: true
+  validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true
+
+  before_validation :normalize_default_currency
+  before_create :assign_hotel_prefix
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
   validates :city, presence: true
   validates :country, presence: true
+  validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
@@ -81,6 +91,10 @@ class Hotel < ApplicationRecord
     else
       super
     end
+  end
+
+  def normalize_default_currency
+    self.default_currency = CurrencyCatalog.normalize(default_currency)
   end
 
   scope :search, ->(query) {
@@ -367,6 +381,18 @@ class Hotel < ApplicationRecord
       "Not Configured"
     end
   end
+
+  def booking_snapshot
+    as_json(except: %i[
+      ai_provider_enabled
+      ai_provider_name
+      ai_provider_key
+      ai_concierge_tone
+      faq
+      policy
+    ])
+  end
+
   def should_generate_new_friendly_id?
     name_changed? || slug.blank?
   end
@@ -375,8 +401,25 @@ class Hotel < ApplicationRecord
 
   private
 
+  def assign_hotel_prefix
+    return if hotel_prefix.present?
+    self.hotel_prefix = generate_unique_prefix
+  end
+
+  def generate_unique_prefix
+    # Build base from initials of each word
+    base = name.to_s.scan(/\b\w/).join.upcase.first(4).presence || name.to_s.upcase.first(2)
+    candidate = base
+    counter = 2
+    while Hotel.exists?(hotel_prefix: candidate)
+      candidate = "#{base}#{counter}"
+      counter += 1
+    end
+    candidate
+  end
+
   def saved_changes_to_synced_attributes?
-    (saved_changes.keys & %w[name city country default_currency]).any?
+    (saved_changes.keys & %w[name city country default_currency amenities]).any?
   end
 
   def sync_with_channel_manager

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class RoomStatus < ApplicationRecord
-  STATUSES = %w[ready pending_cleaning preparing inspection_failed out_of_service].freeze
+  STATUSES = %w[ready pending_cleaning preparing awaiting_inspection inspection_failed out_of_service].freeze
   ASSIGNABLE_STATUSES = %w[ready].freeze
 
   belongs_to :hotel

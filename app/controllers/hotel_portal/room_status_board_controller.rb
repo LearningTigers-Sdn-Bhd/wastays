@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_dependency Rails.root.join("app/presenters/hotel_portal/room_status_board_presenter").to_s
+
 module HotelPortal
   class RoomStatusBoardController < BaseController
     before_action :authorize_room_status_board!
@@ -10,6 +12,13 @@ module HotelPortal
       @board_layout = parse_board_layout
       @board_query_params = { days: @board_days, layout: @board_layout }
       @room_status_board = Rooms::RoomStatusBoardBuilder.new(hotel: current_hotel, start_date: @start_date, days: @board_days).call
+
+      @presenter = HotelPortal::RoomStatusBoardPresenter.new(
+        room_status_board: @room_status_board,
+        start_date: @start_date,
+        board_days: @board_days,
+        board_layout: @board_layout
+      )
     end
 
     private

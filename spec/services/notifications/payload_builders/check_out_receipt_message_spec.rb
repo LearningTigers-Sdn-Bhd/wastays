@@ -12,7 +12,8 @@ RSpec.describe Notifications::PayloadBuilders::CheckOutReceiptMessage do
       checked_out_at: Time.zone.local(2026, 5, 8, 11, 0),
       total_amount: 330.0,
       tourism_tax_applied: true,
-      tourism_tax_amount: 10.0
+      tourism_tax_amount: 10.0,
+      tax_lines: [ { "name" => "Tourism Tax (TTx)", "amount" => 10.0, "type" => "ttx" } ]
     )
   end
 
@@ -32,7 +33,7 @@ RSpec.describe Notifications::PayloadBuilders::CheckOutReceiptMessage do
       .and_return({ host: "example.com", protocol: "https" })
   end
 
-  it "builds folio-style checkout receipt payload with totals and invoice link" do
+  it "builds folio-style checkout payload with receipt link when folio balance is zero" do
     payload = described_class.new(booking: booking).call
 
     expect(payload[:notification_type]).to eq("check_out_receipt_message")
@@ -45,14 +46,17 @@ RSpec.describe Notifications::PayloadBuilders::CheckOutReceiptMessage do
         room_number: "104"
       }
     )
-    expect(payload[:tax_line]).to eq({ description: "Tourism tax", quantity: 1, amount: 10.0 })
+    expect(payload[:tax_line]).to contain_exactly(
+      { description: "Tourism Tax (TTx)", quantity: 1, amount: 10.0 }
+    )
     expect(payload[:line_items_total]).to eq(320.0)
     expect(payload[:tax_total]).to eq(10.0)
     expect(payload[:derived_grand_total]).to eq(330.0)
     expect(payload[:booking_total]).to eq(330.0)
     expect(payload[:totals_mismatch]).to be(false)
     expect(payload[:totals_mismatch_amount]).to eq(0.0)
-    expect(payload[:invoice_url]).to eq("https://example.com/bookings/#{booking.confirmation_token}/invoice")
+    expect(payload[:document_type]).to eq("receipt")
+    expect(payload[:invoice_url]).to eq("https://example.com/bookings/#{booking.confirmation_token}/receipt")
   end
 
   it "flags totals mismatch when booking total differs from derived totals" do

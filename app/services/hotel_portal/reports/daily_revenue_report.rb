@@ -15,23 +15,60 @@ module HotelPortal
 
       def initialize(hotel:, start_date:, end_date:)
         @hotel = hotel
-        @start_date = start_date
-        @end_date = end_date
+        @start_date = start_date.to_date
+        @end_date = end_date.to_date
       end
 
       def call
-        bookings = @hotel.bookings.revenue_generating.created_between(@start_date, @end_date)
+        # Load bookings whose stay overlaps the report date range
+        bookings = @hotel.bookings.revenue_generating
+                         .where("check_in <= ? AND check_out > ?", @end_date, @start_date)
 
-        rows = bookings.group_by { |booking| booking.created_at.to_date }.sort.map do |date, grouped|
-          row_payload(date, grouped)
+        # Allocate each booking's revenue across its stay nights
+        daily_allocations = Hash.new { |h, k| h[k] = { booking_count: 0, room_revenue: 0.to_d, tax_amount: 0.to_d } }
+        source_allocations = Hash.new { |h, k| h[k] = { booking_count: 0, room_revenue: 0.to_d, tax_amount: 0.to_d } }
+
+        bookings.each do |booking|
+          nights = [ (booking.check_out - booking.check_in).to_i, 1 ].max
+          nightly_revenue = booking.total_amount.to_d / nights
+          nightly_tax = booking.tourism_tax_applied? ? (booking.tourism_tax_amount.to_d / nights) : 0.to_d
+          source = normalize_source(booking.source)
+
+          stay_nights_in_range(booking).each_with_index do |date, idx|
+            daily_allocations[date][:room_revenue] += nightly_revenue
+            daily_allocations[date][:tax_amount] += nightly_tax
+            # Count booking once — on its first night within the range
+            daily_allocations[date][:booking_count] += 1 if idx == 0
+
+            source_allocations[source][:room_revenue] += nightly_revenue
+            source_allocations[source][:tax_amount] += nightly_tax
+            source_allocations[source][:booking_count] += 1 if idx == 0
+          end
         end
 
-        source_rows = bookings.group_by { |booking| normalize_source(booking.source) }
-                              .map { |source, grouped| row_payload(source, grouped, key: :source) }
-                              .sort_by { |row| -row[:total_revenue] }
+        rows = (@start_date..@end_date).map do |date|
+          alloc = daily_allocations[date]
+          {
+            date: date,
+            booking_count: alloc[:booking_count],
+            room_revenue: alloc[:room_revenue].round(2),
+            tax_amount: alloc[:tax_amount].round(2),
+            total_revenue: (alloc[:room_revenue] + alloc[:tax_amount]).round(2)
+          }
+        end
 
-        room_revenue = bookings.sum(:total_amount).to_d
-        tax_amount = bookings.where(tourism_tax_applied: true).sum(:tourism_tax_amount).to_d
+        source_rows = source_allocations.map do |source, alloc|
+          {
+            source: source,
+            booking_count: alloc[:booking_count],
+            room_revenue: alloc[:room_revenue].round(2),
+            tax_amount: alloc[:tax_amount].round(2),
+            total_revenue: (alloc[:room_revenue] + alloc[:tax_amount]).round(2)
+          }
+        end.sort_by { |row| -row[:total_revenue] }
+
+        room_revenue = rows.sum { |r| r[:room_revenue] }
+        tax_amount = rows.sum { |r| r[:tax_amount] }
 
         Result.new(
           start_date: @start_date,
@@ -49,23 +86,16 @@ module HotelPortal
 
       private
 
-      def row_payload(identifier, grouped, key: :date)
-        room_revenue = grouped.sum(&:total_amount).to_d
-        tax_amount = grouped.sum { |booking| booking.tourism_tax_applied? ? booking.tourism_tax_amount.to_d : 0.to_d }
-
-        {
-          key => identifier,
-          booking_count: grouped.count,
-          room_revenue: room_revenue,
-          tax_amount: tax_amount,
-          total_revenue: room_revenue + tax_amount
-        }
+      # Returns stay nights that fall within the report date range
+      def stay_nights_in_range(booking)
+        first_night = [ booking.check_in.to_date, @start_date ].max
+        last_night  = [ booking.check_out.to_date - 1, @end_date ].min
+        (first_night..last_night).to_a
       end
 
       def normalize_source(source)
         source_key = source.to_s.strip
         source_key = "unknown" if source_key.empty?
-
         SOURCE_LABELS[source_key] || source_key.titleize.presence || "Others"
       end
     end

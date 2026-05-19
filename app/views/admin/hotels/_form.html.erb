@@ -35,6 +35,12 @@
             <%= f.select :star_rating, (1..5).map { |rating| ["#{rating} #{'★' * rating}", rating] }, { include_blank: "Select Rating" }, class: input_classes %>
           </div>
 
+          <div>
+            <label for="hotel_prefix" class="mb-2 block text-sm font-medium text-slate-700">Hotel Prefix</label>
+            <%= f.text_field :hotel_prefix, placeholder: "e.g. SH", maxlength: 6, class: input_classes %>
+            <p class="mt-1 text-xs text-slate-400">Used to prefix receipt, folio, and reservation numbers (e.g. SH-1). Must be unique.</p>
+          </div>
+
           <div class="sm:col-span-2">
             <label for="address" class="mb-2 block text-sm font-medium text-slate-700">Address</label>
             <%= f.text_area :address, rows: 3, class: "#{input_classes} min-h-[112px]" %>
@@ -113,6 +119,12 @@
           <div>
             <label for="preferred_channel_manager" class="mb-2 block text-sm font-medium text-slate-700">Preferred Channel Manager</label>
             <%= f.select :preferred_channel_manager, [["None", ""], ["Channel Manager", "channex"]], {}, class: input_classes %>
+          </div>
+
+          <div>
+            <label for="hotel_default_currency" class="mb-2 block text-sm font-medium text-slate-700">Default Currency</label>
+            <%= f.select :default_currency, CurrencyCatalog.options, {}, class: input_classes %>
+            <p class="mt-1 text-xs text-slate-400">The primary accounting and sell currency for this property.</p>
           </div>
 
           <% if hotel.persisted? %>

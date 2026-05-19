@@ -6,10 +6,11 @@ export default class extends Controller {
   connect() {
     this.toggleButton = this.element.querySelector("button")
     this.boundHandleOutsideClick = this.handleOutsideClick.bind(this)
+    this.boundPositionFloatingMenu = this.positionFloatingMenu.bind(this)
   }
 
   disconnect() {
-    document.removeEventListener("click", this.boundHandleOutsideClick)
+    this.stopTracking()
   }
 
   // Toggles the dropdown menu
@@ -21,29 +22,44 @@ export default class extends Controller {
 
     // Close all other dropdowns on the page first
     document.querySelectorAll('[data-dropdown-target="menu"]').forEach(el => {
-      el.classList.add("hidden")
+      if (el !== this.menuTarget) el.classList.add("hidden")
     })
 
     if (isHidden) {
+      this.menuTarget.classList.remove("hidden")
+      
       if (this.isFloatingDropdown()) {
         this.positionFloatingMenu()
+        this.startTracking()
       }
 
-      this.menuTarget.classList.remove("hidden")
       document.addEventListener("click", this.boundHandleOutsideClick)
     } else {
-      this.menuTarget.classList.add("hidden")
-      this.resetFloatingMenu()
-      document.removeEventListener("click", this.boundHandleOutsideClick)
+      this.close()
     }
+  }
+
+  close() {
+    this.menuTarget.classList.add("hidden")
+    this.resetFloatingMenu()
+    this.stopTracking()
+    document.removeEventListener("click", this.boundHandleOutsideClick)
   }
 
   handleOutsideClick(event) {
     if (!this.element.contains(event.target)) {
-      this.menuTarget.classList.add("hidden")
-      this.resetFloatingMenu()
-      document.removeEventListener("click", this.boundHandleOutsideClick)
+      this.close()
     }
+  }
+
+  startTracking() {
+    window.addEventListener("scroll", this.boundPositionFloatingMenu, true)
+    window.addEventListener("resize", this.boundPositionFloatingMenu)
+  }
+
+  stopTracking() {
+    window.removeEventListener("scroll", this.boundPositionFloatingMenu, true)
+    window.removeEventListener("resize", this.boundPositionFloatingMenu)
   }
 
   isFloatingDropdown() {
@@ -51,7 +67,7 @@ export default class extends Controller {
   }
 
   positionFloatingMenu() {
-    if (!this.toggleButton) return
+    if (!this.toggleButton || this.menuTarget.classList.contains("hidden")) return
 
     const rect = this.toggleButton.getBoundingClientRect()
     // Keep floating menus compact by default while still respecting trigger width.
@@ -59,9 +75,8 @@ export default class extends Controller {
     const viewportPadding = 16
     const spacing = 8
     
-    // Estimate menu height (max-height is 18rem = 288px)
-    // We use a safe estimate to decide flipping
-    const estimatedMenuHeight = 288 
+    // Deciding flipping based on available space
+    const menuHeight = this.menuTarget.offsetHeight || 288
     const spaceBelow = window.innerHeight - rect.bottom
     const spaceAbove = rect.top
     
@@ -69,8 +84,8 @@ export default class extends Controller {
     let isFlipped = false
 
     // If not enough space below AND more space above, flip it
-    if (spaceBelow < (estimatedMenuHeight + spacing) && spaceAbove > spaceBelow) {
-      top = rect.top - estimatedMenuHeight - spacing
+    if (spaceBelow < (menuHeight + spacing) && spaceAbove > spaceBelow) {
+      top = rect.top - menuHeight - spacing
       isFlipped = true
     } else {
       top = rect.bottom + spacing

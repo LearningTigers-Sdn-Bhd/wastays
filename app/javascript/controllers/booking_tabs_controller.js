@@ -4,21 +4,12 @@ export default class extends Controller {
   static targets = ["tab", "panel"]
 
   connect() {
-    // Check if there is a tab in the URL params
-    const params = new URLSearchParams(window.location.search)
-    const tabParam = params.get('tab')
-    
-    this.activate(tabParam || this.tabTargets[0]?.dataset.tabName || "booking-details")
+    this.activate(this.tabTargets[0]?.dataset.tabName || "booking-details")
   }
 
   switch(event) {
     event.preventDefault()
     this.activate(event.currentTarget.dataset.tabName)
-    
-    // Optional: Update URL without reloading
-    const url = new URL(window.location)
-    url.searchParams.set('tab', event.currentTarget.dataset.tabName)
-    window.history.pushState({}, '', url)
   }
 
   activate(name) {

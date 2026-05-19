@@ -1,3 +1,6 @@
+<% content_for :body_controllers, 'room-block-modal' %>
+<% content_for :body_attributes, '' %>
+
 <% content_for :breadcrumbs do %>
   <div class="flex items-center gap-x-2">
     <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
@@ -6,352 +9,176 @@
   </div>
 <% end %>
 
-<% comfortable_mode = @board_layout == "comfortable" %>
-<% board_dates = @room_status_board[:dates] %>
-<% board_groups = @room_status_board[:room_groups] %>
-<% visible_start_date = board_dates.first %>
-<% visible_end_exclusive = board_dates.last + 1.day %>
-<% board_range_end = @start_date + (@board_days - 1).days %>
-<% nav_step_days = @board_days %>
-<% grid_room_width = comfortable_mode ? 180 : 130 %>
-<% grid_day_width = comfortable_mode ? 84 : 64 %>
-<% grid_template_columns = "#{grid_room_width}px repeat(#{board_dates.size}, minmax(#{grid_day_width}px, 1fr))" %>
-<% page_spacing = comfortable_mode ? "space-y-6" : "space-y-4" %>
-<% container_padding = comfortable_mode ? "px-4 md:px-0" : "px-3 md:px-0" %>
-<% card_padding = comfortable_mode ? "px-4 py-3" : "px-3 py-2" %>
-<% title_class = comfortable_mode ? "text-xl sm:text-2xl" : "text-lg sm:text-xl" %>
-<% subtitle_class = comfortable_mode ? "text-xs" : "text-[11px]" %>
-<% summary_padding = comfortable_mode ? "px-4 py-3" : "px-3 py-2" %>
-<% summary_gap = comfortable_mode ? "gap-3" : "gap-2" %>
-<% chip_text_class = comfortable_mode ? "text-[10px]" : "text-[9px]" %>
-<% room_number_class = comfortable_mode ? "text-xl" : "text-lg" %>
-<% row_min_base = comfortable_mode ? 80 : 64 %>
-<% block_step = comfortable_mode ? 48 : 40 %>
-<% block_top = comfortable_mode ? 6 : 4 %>
-<% block_left_pad = comfortable_mode ? 6 : 4 %>
-<% status_styles = {
-  "all" => "border-slate-300 bg-slate-100 text-slate-700",
-  "ready" => "border-emerald-200 bg-emerald-50 text-emerald-700",
-  "occupied" => "border-sky-200 bg-sky-50 text-sky-700",
-  "pending_cleaning" => "border-orange-200 bg-orange-50 text-orange-700",
-  "preparing" => "border-blue-200 bg-blue-50 text-blue-700",
-  "inspection_failed" => "border-rose-200 bg-rose-50 text-rose-700",
-  "out_of_service" => "border-slate-300 bg-slate-100 text-slate-700"
-} %>
-<% status_icons = {
-  "ready" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>',
-  "occupied" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>',
-  "pending_cleaning" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
-  "preparing" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" /></svg>',
-  "inspection_failed" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>',
-  "out_of_service" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>',
-  "all" => '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z" /></svg>'
-} %>
-<% booking_styles = {
-  "confirmed" => "border-blue-200 bg-blue-50 text-blue-700",
-  "checked_in" => "border-violet-200 bg-violet-50 text-violet-700",
-  "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
-  "cancelled" => "border-slate-300 bg-slate-100 text-slate-600"
-} %>
-
-<div class="max-w-[1600px] mx-auto pb-20 <%= page_spacing %>">
-  <div class="<%= container_padding %> mt-5">
+<div class="max-w-[1600px] mx-auto pb-20 <%= @presenter.page_spacing %>">
+  <div class="<%= @presenter.container_padding %> mt-5">
+    <%# Header Section %>
     <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
       <div class="space-y-3">
         <div>
-          <h1 class="font-bold tracking-tight text-slate-950 <%= title_class %>">Room Status</h1>
-          <p class="mt-1 font-medium text-slate-600 <%= subtitle_class %>"><%= current_hotel.name %> · Live room status and occupancy timeline</p>
+          <h1 class="font-bold tracking-tight text-slate-950 <%= @presenter.title_class %>">Room Status</h1>
+          <p class="mt-1 font-medium text-slate-600 <%= @presenter.subtitle_class %>"><%= current_hotel.name %> · Live room status and occupancy timeline</p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
           <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm">
-            Showing <%= @start_date.strftime("%b %-d, %Y") %> → <%= board_range_end.strftime("%b %-d, %Y") %> (<%= @board_days %> days)
+            Showing <%= @presenter.start_date.strftime("%b %-d, %Y") %> → <%= @presenter.board_range_end.strftime("%b %-d, %Y") %> (<%= @presenter.board_days %> days)
           </span>
         </div>
       </div>
     </div>
 
     <div class="mt-4 space-y-2">
-      <%# Toolbar 1: Navigation and Compact Mode %>
+      <%# Navigation Toolbar %>
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
         <div class="flex flex-wrap items-center gap-3">
           <%= form_with url: hotel_room_status_board_path(current_hotel), method: :get, local: true, class: "flex items-center gap-2", data: { controller: "auto-submit", action: "change->auto-submit#submit" } do %>
-            <%= hidden_field_tag :days, @board_days %>
-            <%= hidden_field_tag :layout, @board_layout %>
-            <%= date_field_tag :start_date, @start_date.to_s, class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
+            <%= hidden_field_tag :days, @presenter.board_days %>
+            <%= hidden_field_tag :layout, @presenter.board_layout %>
+            <%= date_field_tag :start_date, @presenter.start_date.to_s, class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
           <% end %>
 
           <div class="h-6 w-px bg-slate-200"></div>
 
           <%= form_with url: hotel_room_status_board_path(current_hotel), method: :get, local: true, class: "flex items-center gap-2", data: { controller: "auto-submit", action: "change->auto-submit#submit" } do %>
-            <%= hidden_field_tag :start_date, @start_date.to_s %>
-            <%= hidden_field_tag :layout, @board_layout %>
+            <%= hidden_field_tag :start_date, @presenter.start_date.to_s %>
+            <%= hidden_field_tag :layout, @presenter.board_layout %>
             <div class="flex items-center gap-2">
               <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Days</span>
-              <%= select_tag :days, options_for_select([7, 14, 21], @board_days), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
+              <%= select_tag :days, options_for_select([7, 14, 21], @presenter.board_days), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
             </div>
           <% end %>
 
           <div class="h-6 w-px bg-slate-200"></div>
 
           <div class="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
-            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: (@start_date - nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Previous #{nav_step_days} days" do %>
+            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: (@presenter.start_date - @presenter.nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Previous #{@presenter.nav_step_days} days" do %>
               &larr; Prev
             <% end %>
             <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: Date.current.to_s)), class: "rounded bg-white px-2.5 py-1 text-xs font-black text-slate-900 shadow-sm transition hover:bg-slate-50" do %>
               Today
             <% end %>
-            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: (@start_date + nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Next #{nav_step_days} days" do %>
+            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: (@presenter.start_date + @presenter.nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Next #{@presenter.nav_step_days} days" do %>
               Next &rarr;
             <% end %>
           </div>
         </div>
 
         <div class="px-2">
-          <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @start_date.to_s, layout: comfortable_mode ? "compact" : "comfortable")), class: "flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors" do %>
-            <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= comfortable_mode ? 'bg-slate-200' : 'bg-slate-900' %> transition-colors">
-              <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= comfortable_mode ? 'translate-x-1' : 'translate-x-3' %>"></span>
+          <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.start_date.to_s, layout: @presenter.comfortable_mode? ? "compact" : "comfortable")), class: "flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors" do %>
+            <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= @presenter.comfortable_mode? ? 'bg-slate-200' : 'bg-slate-900' %> transition-colors">
+              <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= @presenter.comfortable_mode? ? 'translate-x-1' : 'translate-x-3' %>"></span>
             </div>
             Compact Mode
           <% end %>
         </div>
       </div>
 
-      <%# Toolbar 2: All Status Badges %>
-      <div class="rounded-xl border border-slate-200 bg-white p-2 shadow-sm overflow-x-auto whitespace-nowrap scrollbar-hide">
-        <div class="flex items-center gap-2">
-          <% (["all", "occupied"] + RoomStatus::STATUSES).each do |status| %>
-            <% count = @room_status_board[:status_counts][status] %>
-            <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide <%= status_styles.fetch(status, 'border-slate-200 bg-slate-50 text-slate-600') %> transition-all hover:shadow-sm">
-              <%= status_icons[status]&.html_safe %>
-              <%= status.humanize.titleize %>
-              <span class="opacity-60 font-black">(<%= count %>)</span>
-            </span>
-          <% end %>
+      <%# Status Badges Toolbar %>
+      <div class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm overflow-x-auto whitespace-nowrap scrollbar-hide">
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center gap-3">
+            <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[90px]">Inventory Status</span>
+            <div class="flex items-center gap-2">
+              <% (["all", "occupied"] + RoomStatus::STATUSES).each do |status| %>
+                <% count = @presenter.status_counts[status] %>
+                <span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide <%= @presenter.status_style(status) %> transition-all hover:shadow-sm">
+                  <%= @presenter.status_icon(status) %>
+                  <%= status.humanize.titleize %>
+                  <% if count > 0 %>
+                    <span class="opacity-60 font-black">(<%= count %>)</span>
+                  <% end %>
+                </span>
+              <% end %>
+            </div>
+          </div>
+
+          <div class="h-px bg-slate-100 w-full"></div>
+
+          <div class="flex items-center gap-3">
+            <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[90px]">Daily Occupancy</span>
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">Available</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-700">Completed Booking</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">Arriving</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-rose-700">Occupied</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-700">Blocked / Maintenance</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white bg-[repeating-linear-gradient(-45deg,transparent,transparent_10px,#f8fafc_10px,#f8fafc_20px)] shadow-sm">
-    <% if board_groups.blank? %>
-      <div class="px-8 py-20 text-center bg-white">
-        <p class="text-sm font-medium text-slate-500">No rooms found for this property.</p>
-      </div>
-    <% else %>
-      <div class="overflow-x-auto">
-        <div class="min-w-[1200px] w-fit">
-          <div class="grid border-b border-slate-200 bg-slate-50" style="grid-template-columns: <%= grid_template_columns %>;">
-            <div class="sticky left-0 z-30 border-r border-slate-200 bg-slate-50 shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= card_padding %> text-left text-sm font-semibold uppercase tracking-[0.08em] text-slate-600">
-              Rooms
-            </div>
+  <%= render "hotel_portal/room_status_board/board_grid", presenter: @presenter %>
 
-            <% board_dates.each_with_index do |date, index| %>
-              <div class="border-l <%= 'border-r' if index == board_dates.size - 1 %> border-slate-200 <%= summary_padding %> text-center <%= 'bg-slate-100' if date == Date.current %>">
-                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500"><%= date.strftime('%a') %></p>
-                <p class="text-2xl font-black leading-none text-slate-900"><%= date.day %></p>
-              </div>
-            <% end %>
+  <%# Room Block Modal %>
+  <dialog data-room-block-modal-target="dialog" class="fixed inset-0 z-[200] m-auto p-0 rounded-3xl bg-transparent backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm" onclick="if(event.target===this){this.close()}">
+    <div class="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+      <div class="border-b border-slate-100 bg-slate-50/50 px-8 py-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-xl font-black text-slate-900" data-room-block-modal-target="title">Room Block</h3>
+            <p class="mt-1 text-xs font-medium text-slate-500">Block <span data-room-block-modal-target="roomDisplay" class="font-bold text-slate-900">Room 101</span> for operational holds</p>
           </div>
-
-          <% board_groups.each do |group| %>
-            <details open class="group border-b border-slate-200">
-              <summary class="list-none cursor-pointer bg-slate-100 [&::-webkit-details-marker]:hidden">
-                <div class="grid" style="grid-template-columns: <%= grid_template_columns %>;">
-                  <div class="sticky left-0 z-20 bg-slate-100 text-xs font-bold uppercase tracking-[0.08em] text-slate-600">
-                    <div class="flex items-center justify-between gap-2 opacity-0 <%= summary_padding %> pointer-events-none">
-                      <span class="truncate whitespace-nowrap"><%= group[:room_type].name %></span>
-                      <svg class="size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="m9 6 6 6-6 6"/>
-                      </svg>
-                    </div>
-                    <div class="absolute inset-y-0 left-0 w-max min-w-full flex items-center justify-between gap-4 <%= summary_padding %> pointer-events-auto">
-                      <span class="whitespace-nowrap"><%= group[:room_type].name %></span>
-                      <svg class="size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="m9 6 6 6-6 6"/>
-                      </svg>
-                    </div>
-                  </div>
-                  <div style="grid-column: 2 / -1;" class="bg-slate-100 border-r border-slate-200"></div>
-                </div>
-              </summary>
-
-              <% if group[:rooms].blank? %>
-                <div class="grid min-h-[72px] border-t border-slate-100" style="grid-template-columns: <%= grid_template_columns %>;">
-                  <div class="flex items-center justify-center gap-2 px-6 py-4 text-center border-r border-slate-100 bg-white" style="grid-column: 1 / -1;">
-                    <p class="text-sm font-semibold text-slate-500">No rooms configured.</p>
-                    <p class="text-sm font-medium text-slate-400">Add room numbers in Room Categories to start tracking readiness for this room type.</p>
-                  </div>
-                </div>
-              <% end %>
-
-              <% group[:rooms].each do |room| %>
-                <% status = room.dig(:status, :status).to_s %>
-                <% max_blocks_same_start = room[:blocks].group_by { |block| [block[:check_in], visible_start_date].max }.values.map(&:size).max || 1 %>
-                <% row_min_height = [row_min_base, 24 + (max_blocks_same_start * block_step)].max %>
-                <% room_type = room[:room_type] %>
-                <div class="grid border-b border-slate-100" style="grid-template-columns: <%= grid_template_columns %>; min-height: <%= row_min_height %>px;">
-                  <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= card_padding %> flex flex-col justify-center">
-                    <div class="flex items-center justify-between gap-2">
-                      <p class="font-black leading-none text-slate-950 <%= room_number_class %>"><%= room[:room_number] %></p>
-                      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-                        <span data-floating-target="reference" class="inline-flex items-center justify-center rounded-full border size-6 <%= status_styles.fetch(status, 'border-slate-200 bg-slate-50 text-slate-700') %> cursor-help">
-                          <%= status_icons[status]&.html_safe %>
-                        </span>
-                        
-                        <div data-floating-target="floating" class="hidden z-[100] px-3 py-1.5 bg-white border border-slate-200 rounded-full shadow-xl pointer-events-none">
-                          <div class="flex items-center gap-2">
-                            <div class="p-1 rounded-full <%= status_styles.fetch(status, '').split(' ').first.gsub('border-', 'bg-') %> text-white">
-                              <%= status_icons[status]&.html_safe %>
-                            </div>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700"><%= status.humanize.titleize %></span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="mt-2 flex items-center gap-2">
-                      <% smoking_label = room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking" %>
-                      <% smoking_color = room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400" %>
-                      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-                        <div data-floating-target="reference" class="<%= smoking_color %> cursor-help">
-                          <% if room_type.smoking_allowed %>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h14" /><path d="M18 8c0-2.5-2-2.5-2-5" /><path d="M21 16a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /><path d="M22 8c0-2.5-2-2.5-2-5" /><path d="M7 12v4" /></svg>
-                          <% else %>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h13" /><path d="M18 8c0-2.5-2-2.5-2-5" /><path d="m2 2 20 20" /><path d="M21 12a1 1 0 0 1 1 1v2a1 1 0 0 1-.5.866" /><path d="M22 8c0-2.5-2-2.5-2-5" /><path d="M7 12v4" /></svg>
-                          <% end %>
-                        </div>
-                        <div data-floating-target="floating" class="hidden z-[100] px-2.5 py-1 bg-white border border-slate-200 rounded-full shadow-xl pointer-events-none">
-                          <span class="text-[9px] font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap"><%= smoking_label %></span>
-                        </div>
-                      </div>
-
-                      <% pets_label = room_type.pets_allowed ? "Pets Allowed" : "No Pets" %>
-                      <% pets_color = room_type.pets_allowed ? "text-emerald-500" : "text-slate-400" %>
-                      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-                        <div data-floating-target="reference" class="<%= pets_color %> cursor-help">
-                          <% if room_type.pets_allowed %>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /></svg>
-                          <% else %>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /><path d="m2 2 20 20" /></svg>
-                          <% end %>
-                        </div>
-                        <div data-floating-target="floating" class="hidden z-[100] px-2.5 py-1 bg-white border border-slate-200 rounded-full shadow-xl pointer-events-none">
-                          <span class="text-[9px] font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap"><%= pets_label %></span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <% 
-                      room_status_id = room.dig(:status, :room_status_id)
-                      can_manage = current_user.has_permission?("manage_room_status", hotel: current_hotel)
-                      has_actions = ["pending_cleaning", "preparing", "inspection_failed"].include?(status)
-                    %>
-                    <% if can_manage && room_status_id.present? && has_actions %>
-                      <div class="mt-2 flex flex-wrap gap-1.5">
-                        <div data-controller="floating" data-floating-placement-value="bottom-end" class="relative inline-flex">
-                          <button data-floating-target="reference" data-action="click->floating#toggle" id="room-actions-<%= room_status_id %>" type="button" class="inline-flex items-center gap-x-1 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 shadow-sm hover:bg-slate-50 focus:outline-none focus:bg-slate-50 transition-[background-color,border-color,color,box-shadow]">
-                            Actions
-                            <svg class="size-3 text-slate-400 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                          </button>
-
-                          <div data-floating-target="floating" class="hidden z-50 min-w-48 bg-white shadow-xl rounded-xl p-1 border border-slate-100" aria-labelledby="room-actions-<%= room_status_id %>">
-                            <% if status == "pending_cleaning" %>
-                              <div class="p-1 border-b border-slate-50 mb-1">
-                                <%= form_with url: hotel_room_status_path(current_hotel, room_status_id), method: :patch, local: true do |f| %>
-                                  <%= hidden_field_tag "room_status[status]", "preparing" %>
-                                  <%= hidden_field_tag "start_date", @start_date.to_s %>
-                                  <%= hidden_field_tag "days", @board_days %>
-                                  <%= hidden_field_tag "layout", @board_layout %>
-                                  <%= f.button class: "w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-blue-50 focus:outline-none transition-colors cursor-pointer group" do %>
-                                    <div class="p-1.5 rounded-md bg-blue-50 text-blue-500 group-hover:bg-blue-100 transition-colors">
-                                      <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                    </div>
-                                    <div class="text-left">
-                                      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 group-hover:text-blue-700 transition-colors">Preparing</p>
-                                      <p class="text-[9px] font-medium text-slate-500 group-hover:text-blue-600 transition-colors leading-tight">Mark as currently being cleaned</p>
-                                    </div>
-                                  <% end %>
-                                <% end %>
-                              </div>
-                            <% end %>
-
-                            <% if ["pending_cleaning", "preparing", "inspection_failed"].include?(status) %>
-                              <div class="p-1">
-                                <%= form_with url: hotel_room_status_path(current_hotel, room_status_id), method: :patch, local: true do |f| %>
-                                  <%= hidden_field_tag "room_status[status]", "ready" %>
-                                  <%= hidden_field_tag "start_date", @start_date.to_s %>
-                                  <%= hidden_field_tag :days, @board_days %>
-                                  <%= hidden_field_tag :layout, @board_layout %>
-                                  <%= f.button class: "w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-emerald-50 focus:outline-none transition-colors cursor-pointer group" do %>
-                                    <div class="p-1.5 rounded-md bg-emerald-50 text-emerald-500 group-hover:bg-emerald-100 transition-colors">
-                                      <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                                      </svg>
-                                    </div>
-                                    <div class="text-left">
-                                      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 group-hover:text-emerald-700 transition-colors">Ready</p>
-                                      <p class="text-[9px] font-medium text-slate-500 group-hover:text-emerald-600 transition-colors leading-tight">Mark as clean and ready for check-in</p>
-                                    </div>
-                                  <% end %>
-                                <% end %>
-                              </div>
-                            <% end %>
-                          </div>
-                        </div>
-                      </div>
-                    <% end %>
-                  </div>
-
-                  <% board_dates.each_with_index do |date, index| %>
-                    <div class="relative border-l <%= 'border-r' if index == board_dates.size - 1 %> border-slate-100 <%= summary_padding %> <%= date == Date.current ? 'bg-slate-50/50' : 'bg-white' %>">
-                      <% room[:blocks].select { |block| [block[:check_in], visible_start_date].max == date }.each_with_index do |block, block_index| %>
-                        <% block_class = booking_styles.fetch(block[:status].to_s, 'border-sky-200 bg-sky-50 text-sky-700') %>
-                        <% clipped_left = block[:check_in] < visible_start_date %>
-                        <% clipped_right = block[:check_out] > visible_end_exclusive %>
-                        <% left_offset = clipped_left ? 0 : block_left_pad %>
-                        <% right_trim = clipped_right ? 0 : block_left_pad %>
-                        <% width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)" %>
-                        <% clip_corner_class = [ ("rounded-l-none" if clipped_left), ("rounded-r-none" if clipped_right) ].compact.join(" ") %>
-                        <% tooltip_text = "#{block[:guest_name]} (#{block[:status].to_s.humanize}) · #{block[:check_in]} to #{block[:check_out]}" %>
-                        <div
-                          data-controller="floating"
-                          data-floating-trigger-value="hover"
-                          data-floating-placement-value="bottom"
-                          class="absolute z-10 overflow-hidden rounded-xl border px-3 py-2 shadow-sm <%= block_class %> <%= clip_corner_class %>"
-                          style="top: <%= block_top + (block_index * block_step) %>px; left: <%= left_offset %>px; width: <%= width_calc %>; min-width: 88px;"
-                          data-floating-target="reference"
-                        >
-                          <p class="truncate text-sm font-bold"><%= block[:guest_name] %></p>
-                          <p class="truncate text-xs font-semibold uppercase tracking-wide"><%= block[:status].to_s.humanize.titleize %></p>
-
-                          <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-white border border-slate-200 rounded-xl shadow-xl pointer-events-none">
-                            <div class="flex items-center gap-2 mb-2">
-                              <div class="size-2 rounded-full <%= block_class.split(' ').first %>"></div>
-                              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= block[:status].to_s.humanize %></span>
-                            </div>
-                            <p class="text-sm font-bold text-slate-900"><%= block[:guest_name] %></p>
-                            <div class="mt-2 space-y-1">
-                              <div class="flex items-center gap-2 text-[11px] text-slate-600">
-                                <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                <span><%= block[:check_in].strftime("%b %-d") %> — <%= block[:check_out].strftime("%b %-d, %Y") %></span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      <% end %>
-                    </div>
-                  <% end %>
-                </div>
-              <% end %>
-            </details>
-          <% end %>
+          <button type="button" onclick="this.closest('dialog').close()" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors">
+            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
       </div>
-    <% end %>
-  </div>
-</div>
 
+      <%= form_with model: RoomBlock.new, url: hotel_room_blocks_path(current_hotel), 
+          data: { 
+            room_block_modal_target: "form",
+            create_url: hotel_room_blocks_path(current_hotel)
+          }, 
+          class: "contents" do |f| %>
+        <%= f.hidden_field :room_type_id, data: { room_block_modal_target: "roomTypeId" } %>
+        <%= f.hidden_field :room_number, data: { room_block_modal_target: "roomNumber" } %>
+        <%= hidden_field_tag :start_date, @presenter.start_date.to_s %>
+        <%= hidden_field_tag :days, @presenter.board_days %>
+        <%= hidden_field_tag :layout, @presenter.board_layout %>
+
+        <div class="px-8 py-8 space-y-6">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Start Date</label>
+              <%= f.date_field :start_date, 
+                  data: { room_block_modal_target: "startDate" },
+                  class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">End Date</label>
+              <%= f.date_field :end_date, 
+                  data: { room_block_modal_target: "endDate" },
+                  class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Block Type</label>
+            <%= f.text_field :block_type, 
+                placeholder: "e.g. Maintenance, Deep Cleaning, Admin Hold",
+                data: { room_block_modal_target: "blockType" },
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Reason</label>
+            <%= f.text_area :reason, 
+                rows: 3, 
+                placeholder: "Describe the issue (e.g., Leaky faucet, AC repair, Deep cleaning)",
+                data: { room_block_modal_target: "reason" },
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-100 bg-slate-50/50 px-8 py-6 flex items-center justify-between gap-3">
+          <button type="button" onclick="this.closest('dialog').close()" class="rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Cancel</button>
+          <%= f.submit "Block Room", 
+              data: { room_block_modal_target: "submit" },
+              class: "rounded-2xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 hover:bg-slate-800 transition-all active:scale-95" %>
+        </div>
+      <% end %>
+    </div>
+  </dialog>
+</div>

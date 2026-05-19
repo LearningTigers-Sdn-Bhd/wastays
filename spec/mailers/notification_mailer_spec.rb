@@ -95,25 +95,27 @@ RSpec.describe NotificationMailer, type: :mailer do
         check_out: "2026-05-09",
         currency: "MYR",
         line_items: [ { description: "Executive King", quantity: 1, amount: 240.0, room_number: "101" } ],
-        tax_items: [ { description: "Tourism Tax", amount: 10.0 } ],
+        tax_line: [ { description: "Tourism Tax", quantity: 1, amount: 10.0 } ],
         line_items_total: 240.0,
         tax_total: 10.0,
         derived_grand_total: 250.0,
         booking_total: 250.0,
         totals_mismatch: false,
         totals_mismatch_amount: 0.0,
+        document_type: "receipt",
         invoice_url: "https://example.com/invoices/#{delivery.booking.confirmation_token}"
       }
     )
 
     checkout_mail = described_class.check_out_receipt_message(checkout_delivery)
+    html_body = checkout_mail.html_part.body.decoded
 
     expect(checkout_mail.to).to eq([ delivery.booking.guest_email ])
-    expect(checkout_mail.subject).to include("checkout receipt")
-    expect(checkout_mail.body.encoded).to include("Folio Summary")
-    expect(checkout_mail.body.encoded).to include("Tourism Tax")
-    expect(checkout_mail.body.encoded).to include("View Invoice")
-    expect(checkout_mail.body.encoded).to include(checkout_delivery.payload["invoice_url"])
+    expect(checkout_mail.subject).to include("checkout invoice")
+    expect(html_body).to include("Charges")
+    expect(html_body).to include("Tourism Tax")
+    expect(html_body).to include("View Receipt")
+    expect(html_body).to include(checkout_delivery.payload["invoice_url"])
   end
 
   it "includes mismatch note when totals_mismatch is true" do
@@ -133,21 +135,23 @@ RSpec.describe NotificationMailer, type: :mailer do
         check_out: "2026-05-09",
         currency: "MYR",
         line_items: [ { description: "Executive King", quantity: 1, amount: 200.0 } ],
-        tax_items: [],
+        tax_line: [],
         line_items_total: 200.0,
         tax_total: 0.0,
         derived_grand_total: 200.0,
         booking_total: 250.0,
         totals_mismatch: true,
         totals_mismatch_amount: 50.0,
+        document_type: "receipt",
         invoice_url: "https://example.com/invoices/#{delivery.booking.confirmation_token}"
       }
     )
 
     checkout_mail = described_class.check_out_receipt_message(checkout_delivery)
+    html_body = checkout_mail.html_part.body.decoded
 
-    expect(checkout_mail.body.encoded).to include("Receipt note")
-    expect(checkout_mail.body.encoded).to include("50.00")
+    expect(html_body).to include("Note: line-item total differs")
+    expect(html_body).to include("50.00")
   end
 
   it "builds in-stay messaging email with rule label" do

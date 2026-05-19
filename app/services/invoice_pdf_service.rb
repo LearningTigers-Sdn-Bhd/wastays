@@ -4,7 +4,6 @@ require "prawn/table"
 Prawn::Fonts::AFM.hide_m17n_warning = true
 
 class InvoicePdfService
-  # Colors
   DARK_GREEN   = "0a2e29"
   GOLD         = "d9c5a0"
   WHITE        = "ffffff"
@@ -16,9 +15,9 @@ class InvoicePdfService
   WARNING      = "d97706"
 
   def initialize(booking)
-    @booking      = booking
-    @hotel        = booking.hotel
-    @nights       = (booking.check_out - booking.check_in).to_i
+    @booking       = booking
+    @hotel         = booking.hotel
+    @nights        = (booking.check_out - booking.check_in).to_i
     @booking_rooms = booking.booking_rooms.includes(:room_type)
   end
 
@@ -26,17 +25,12 @@ class InvoicePdfService
     pdf = Prawn::Document.new(
       page_size: "A4",
       margin: [ 40, 40, 40, 40 ],
-      info: {
-        Title: "Invoice - #{@booking.confirmation_token}",
-        Author: "WAStays",
-        Creator: "WAStays",
-        CreationDate: Time.now
-      }
+      info: { Title: "Invoice - #{@booking.confirmation_token}", Author: "WAStays", Creator: "WAStays", CreationDate: Time.now }
     )
 
     draw_header(pdf)
     pdf.move_down 20
-    draw_invoice_meta(pdf)
+    draw_meta(pdf)
     pdf.move_down 30
     draw_parties(pdf)
     pdf.move_down 35
@@ -51,20 +45,10 @@ class InvoicePdfService
 
   def draw_header(pdf)
     logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-
-    # Left: Logo
-    if File.exist?(logo_path)
-      pdf.image logo_path, height: 32
-    else
-      pdf.fill_color DARK_GREEN
-      pdf.text "WAStays", size: 22, style: :bold
-    end
-
-    # Right: INVOICE label
+    File.exist?(logo_path) ? pdf.image(logo_path, height: 32) : (pdf.fill_color DARK_GREEN; pdf.text "WAStays", size: 22, style: :bold)
     pdf.move_up 32
     pdf.fill_color DARK_GREEN
     pdf.text "INVOICE", size: 22, style: :bold, align: :right
-
     pdf.move_down 12
     pdf.stroke_color DARK_GREEN
     pdf.line_width 0.5
@@ -72,125 +56,82 @@ class InvoicePdfService
     pdf.line_width 1
   end
 
-  def draw_invoice_meta(pdf)
-    is_paid = @booking.payment_status == "captured"
-    status_text = is_paid ? "PAID" : @booking.payment_status.upcase.tr("_", " ")
-    status_color = is_paid ? SUCCESS : WARNING
+  def draw_meta(pdf)
+    issue_date = (@booking.checked_out_at || @booking.check_out).strftime("%d %B %Y")
 
-    # Status badge ABOVE Invoice Number
-    pdf.fill_color status_color
-    pdf.fill_rectangle [ 0, pdf.cursor ], 50, 16
-    pdf.fill_color WHITE
-    pdf.text_box status_text, at: [ 0, pdf.cursor ], width: 50, height: 16, align: :center, valign: :center, size: 8, style: :bold
-
-    pdf.move_down 26
     pdf.fill_color TEXT_PRIMARY
-
-    data = [
-      [
-        { content: "INVOICE NUMBER", font_style: :bold, text_color: GOLD, size: 8, borders: [] },
-        { content: "ISSUE DATE",     font_style: :bold, text_color: GOLD, size: 8, borders: [], align: :right }
-      ],
-      [
-        { content: @booking.confirmation_token, font_style: :bold, size: 14, text_color: TEXT_PRIMARY, borders: [] },
-        { content: @booking.created_at.strftime("%d %B %Y"), size: 11, text_color: TEXT_PRIMARY, borders: [], align: :right }
-      ]
-    ]
-    pdf.table(data, width: pdf.bounds.width)
+    pdf.table([
+      [ { content: "INVOICE NUMBER", font_style: :bold, text_color: GOLD, size: 8, borders: [] },
+        { content: "ISSUE DATE", font_style: :bold, text_color: GOLD, size: 8, borders: [], align: :right } ],
+      [ { content: @booking.confirmation_token, font_style: :bold, size: 14, text_color: TEXT_PRIMARY, borders: [] },
+        { content: issue_date, size: 11, text_color: TEXT_PRIMARY, borders: [], align: :right } ],
+      [ { content: @booking.folio_number ? "Folio No. #{@booking.formatted_folio_number}  ·  Guest Reg. No. #{@booking.formatted_guest_registration_number}" : "", size: 9, text_color: TEXT_MUTED, borders: [] },
+        { content: "", borders: [], align: :right } ]
+    ], width: pdf.bounds.width)
   end
 
   def draw_parties(pdf)
-    pdf.fill_color TEXT_PRIMARY # Explicitly reset to ensure names are not white
-
-    hotel_name   = @hotel.name
+    pdf.fill_color TEXT_PRIMARY
     hotel_location = [ @hotel.city, @hotel.country ].compact.join(", ")
 
-    data = [
-      [
-        { content: "BILLED TO", font_style: :bold, text_color: GOLD, size: 8, borders: [], padding: [ 0, 0, 6, 0 ] },
-        { content: "PROPERTY",  font_style: :bold, text_color: GOLD, size: 8, borders: [], padding: [ 0, 0, 6, 0 ], align: :right }
-      ],
-      [
-        { content: @booking.guest_name, font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 2, 0 ] },
-        { content: hotel_name,          font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 2, 0 ], align: :right }
-      ],
-      [
-        { content: @booking.guest_email, size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 1, 0 ] },
-        { content: hotel_location,       size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 1, 0 ], align: :right }
-      ],
-      [
-        { content: @booking.guest_phone, size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 0, 0 ] },
-        { content: "", borders: [], padding: [ 0, 0, 0, 0 ] }
-      ]
-    ]
-    pdf.table(data, width: pdf.bounds.width, column_widths: [ pdf.bounds.width / 2, pdf.bounds.width / 2 ])
+    pdf.table([
+      [ { content: "BILLED TO", font_style: :bold, text_color: GOLD, size: 8, borders: [], padding: [ 0, 0, 6, 0 ] },
+        { content: "PROPERTY",  font_style: :bold, text_color: GOLD, size: 8, borders: [], padding: [ 0, 0, 6, 0 ], align: :right } ],
+      [ { content: @booking.guest_name,  font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 2, 0 ] },
+        { content: @hotel.name,          font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 2, 0 ], align: :right } ],
+      [ { content: @booking.guest_email, size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 1, 0 ] },
+        { content: hotel_location,       size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 1, 0 ], align: :right } ],
+      [ { content: @booking.guest_phone, size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 0, 0 ] },
+        { content: "", borders: [], padding: [ 0, 0, 0, 0 ] } ]
+    ], width: pdf.bounds.width, column_widths: [ pdf.bounds.width / 2, pdf.bounds.width / 2 ])
   end
 
   def draw_line_items(pdf)
     nights_label = @nights == 1 ? "1 Night" : "#{@nights} Nights"
 
-    # Stay details header bar
     pdf.fill_color LIGHT_GRAY
     pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, 26
     pdf.fill_color TEXT_PRIMARY
     pdf.move_down 8
-    pdf.indent(12) do
-      pdf.text "STAY DETAILS: #{@booking.check_in.strftime('%d %b %Y')} — #{@booking.check_out.strftime('%d %b %Y')}  (#{nights_label})", size: 9, style: :bold
-    end
+    pdf.indent(12) { pdf.text "STAY DETAILS: #{@booking.check_in.strftime('%d %b %Y')} — #{@booking.check_out.strftime('%d %b %Y')}  (#{nights_label})", size: 9, style: :bold }
     pdf.move_down 18
 
-    desc_width    = (pdf.bounds.width * 0.55).floor
-    qty_width     = 50
-    nights_width  = 60
-    amount_width  = pdf.bounds.width - desc_width - qty_width - nights_width
-    col_widths    = [ desc_width, qty_width, nights_width, amount_width ]
+    desc_w   = (pdf.bounds.width * 0.55).floor
+    qty_w    = 50
+    nights_w = 60
+    amt_w    = pdf.bounds.width - desc_w - qty_w - nights_w
 
-    header_row = [
-      { content: "DESCRIPTION", font_style: :bold, size: 8, text_color: TEXT_MUTED },
-      { content: "QTY",         font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :center },
-      { content: "NIGHTS",      font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :center },
-      { content: "SUBTOTAL",    font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :right }
-    ]
-
-    room_rows = @booking_rooms.map do |room|
+    rows = @booking_rooms.map do |room|
       name = room.room_type_snapshot["name"].presence || room.room_type.name
-      [
-        { content: name,                      size: 10, text_color: TEXT_PRIMARY },
-        { content: room.quantity.to_s,        size: 10, text_color: TEXT_PRIMARY, align: :center },
-        { content: @nights.to_s,              size: 10, text_color: TEXT_PRIMARY, align: :center },
-        { content: "MYR #{fmt(room.subtotal)}", size: 10, text_color: TEXT_PRIMARY, align: :right }
-      ]
+      [ { content: name, size: 10, text_color: TEXT_PRIMARY },
+        { content: room.quantity.to_s, size: 10, text_color: TEXT_PRIMARY, align: :center },
+        { content: @nights.to_s, size: 10, text_color: TEXT_PRIMARY, align: :center },
+        { content: "MYR #{fmt(room.subtotal)}", size: 10, text_color: TEXT_PRIMARY, align: :right } ]
     end
 
-    tax_rows = []
+    tax_rows = Array(@booking.tax_lines).map do |tax|
+      [ { content: tax["name"].to_s, size: 10, text_color: TEXT_MUTED, colspan: 3 },
+        { content: "MYR #{fmt(tax["amount"])}", size: 10, text_color: TEXT_MUTED, align: :right } ]
+    end
 
     pdf.table(
-      [ header_row ] + room_rows + tax_rows,
+      [ [ { content: "DESCRIPTION", font_style: :bold, size: 8, text_color: TEXT_MUTED },
+          { content: "QTY",      font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :center },
+          { content: "NIGHTS",   font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :center },
+          { content: "SUBTOTAL", font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :right } ] ] + rows + tax_rows,
       width: pdf.bounds.width,
-      column_widths: col_widths,
+      column_widths: [ desc_w, qty_w, nights_w, amt_w ],
       cell_style: { borders: [ :bottom ], padding: [ 12, 6, 12, 6 ], border_color: BORDER_GRAY }
     )
 
     pdf.move_down 30
-
-    # Total Section
-    band_height = 54
+    band_h = 54
     pdf.fill_color DARK_GREEN
-    pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, band_height
-
+    pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, band_h
     pdf.fill_color WHITE
     pdf.draw_text "TOTAL AMOUNT", at: [ 18, pdf.cursor - 32 ], size: 10, style: :bold
-
-    pdf.text_box "MYR #{fmt(@booking.total_amount)}",
-      at: [ 0, pdf.cursor ],
-      width: pdf.bounds.width - 18,
-      height: band_height,
-      align: :right,
-      valign: :center,
-      size: 20,
-      style: :bold
-
-    pdf.move_down band_height + 40
+    pdf.text_box "MYR #{fmt(@booking.total_amount)}", at: [ 0, pdf.cursor ], width: pdf.bounds.width - 18, height: band_h, align: :right, valign: :center, size: 20, style: :bold
+    pdf.move_down band_h + 40
     pdf.fill_color TEXT_PRIMARY
   end
 
@@ -198,11 +139,9 @@ class InvoicePdfService
     pdf.stroke_color BORDER_GRAY
     pdf.stroke_horizontal_rule
     pdf.move_down 20
-
     pdf.fill_color TEXT_MUTED
-    pdf.text "Thank you for choosing WAStays. We hope you have a pleasant stay!", size: 9, align: :center, style: :italic
+    pdf.text "Thank you for staying with us. We hope to welcome you again soon!", size: 9, align: :center, style: :italic
     pdf.move_down 12
-
     pdf.text "This is a system-generated invoice. No signature required.", size: 8, align: :center
     pdf.text "WAStays · hello@wastays.com · www.wastays.com", size: 8, align: :center
   end

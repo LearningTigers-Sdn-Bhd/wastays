@@ -32,6 +32,17 @@ class Guest::BookingsController < Guest::BaseController
     redirect_to guest_bookings_path, alert: "Booking not found."
   end
 
+  def receipt
+    @booking = current_guest.bookings.find(params[:id])
+    pdf_bytes = ReceiptPdfService.new(@booking).generate
+    send_data pdf_bytes,
+      filename: "wastays-receipt-#{@booking.confirmation_token}.pdf",
+      type: "application/pdf",
+      disposition: "attachment"
+  rescue ActiveRecord::RecordNotFound
+    redirect_to guest_bookings_path, alert: "Booking not found."
+  end
+
   def invoice
     @booking = current_guest.bookings.find(params[:id])
     pdf_bytes = InvoicePdfService.new(@booking).generate

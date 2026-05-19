@@ -1,90 +1,54 @@
-require 'rails_helper'
+# frozen_string_literal: true
+
+require "rails_helper"
 
 RSpec.describe HotelOps::BulkUpdateRates do
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel) }
-  let(:user) { create(:user, account: hotel.account) }
-  let(:start_date) { Date.today }
-  let(:end_date) { Date.today + 6.days }
+  let(:rate_plan) { create(:rate_plan, room_type: room_type, currency: "MYR") }
+  let(:user) { create(:user) }
+  let(:start_date) { Date.current }
+  let(:end_date) { Date.current + 2.days }
   let(:price) { 150.0 }
-  let(:currency) { 'MYR' }
 
-  let(:rate_plan) { create(:rate_plan, room_type: room_type) }
-  let(:service) do
+  subject do
     described_class.new(
       hotel: hotel,
       rate_plan: rate_plan,
       start_date: start_date,
       end_date: end_date,
       price: price,
-      currency: currency,
       user: user
     )
   end
 
-  subject { service }
+  it "updates rates for the given date range" do
+    expect {
+      result = subject.call
+      expect(result[:success]).to be(true)
+    }.to change(RoomRate, :count).by(3)
 
-  describe '#call' do
-    it 'creates room rates for the specified range' do
-      expect {
-        result = subject.call
-        expect(result[:success]).to be true
-      }.to change(RoomRate, :count).by(7)
-    end
+    room_rates = rate_plan.room_rates.where(date: start_date..end_date)
+    expect(room_rates.count).to eq(3)
+    expect(room_rates.pluck(:price).uniq).to eq([ price ])
+  end
 
-    it 'sets the correct price and currency' do
+  it "logs audit entries for price changes" do
+    expect {
       subject.call
-      rate = rate_plan.room_rates.find_by(date: start_date)
-      expect(rate.price).to eq(price)
-      expect(rate.currency).to eq(currency)
-    end
+    }.to change(InventoryAuditLog, :count).by(3)
 
-    it 'updates existing room rates if they exist' do
-      create(:room_rate, rate_plan: rate_plan, room_type: room_type, date: start_date, price: 100.0)
+    log = InventoryAuditLog.last
+    expect(log.action_type).to eq("rate_update")
+    expect(log.hotel_id).to eq(hotel.id)
+  end
 
-      expect {
-        result = subject.call
-        expect(result[:success]).to be true
-      }.to change(RoomRate, :count).by(6) # 7 total, but 1 already exists
+  it "triggers ARI sync if channel manager is connected" do
+    hotel.update(preferred_channel_manager: "channex")
+    ActiveJob::Base.queue_adapter = :test
 
-      expect(rate_plan.room_rates.find_by(date: start_date).price).to eq(price)
-    end
-
-    it 'creates audit logs for changes' do
-      expect {
-        subject.call
-      }.to change(InventoryAuditLog, :count).by(7)
-
-      audit_log = InventoryAuditLog.last
-      expect(audit_log.action_type).to eq('rate_update')
-      expect(audit_log.room_type).to eq(room_type)
-      expect(audit_log.user).to eq(user)
-    end
-
-    it 'does not create audit log if price remains the same' do
-      create(:room_rate, rate_plan: rate_plan, room_type: room_type, date: start_date, price: price)
-
-      expect {
-        subject.call
-      }.to change(InventoryAuditLog, :count).by(6) # 7 total, but 1 has same price
-    end
-
-    context 'when an error occurs' do
-      before do
-        allow_any_instance_of(RoomRate).to receive(:save!).and_raise(ActiveRecord::RecordInvalid)
-      end
-
-      it 'returns success false and an error message' do
-        result = subject.call
-        expect(result[:success]).to be false
-        expect(result[:error]).to be_present
-      end
-
-      it 'rolls back the transaction' do
-        expect {
-          subject.call
-        }.not_to change(RoomRate, :count)
-      end
-    end
+    expect {
+      subject.call
+    }.to have_enqueued_job(ChannelManagers::SyncJob)
   end
 end

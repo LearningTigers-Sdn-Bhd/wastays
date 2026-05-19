@@ -34,7 +34,10 @@
       html.skip-landing-loader.landing-loader-active body { overflow: auto !important; }
     </style>
   </head>
-  <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased" data-preline-enabled="<%= !(controller_name == 'static_pages' && action_name == 'home') %>" data-controller="widget">
+  <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased" 
+        data-preline-enabled="<%= !(controller_name == 'static_pages' && action_name == 'home') %>" 
+        data-controller="widget <%= yield :body_controllers %>"
+        <%= yield :body_attributes %>>
     <div id="abw-btn-cont" data-turbo-permanent></div>
     <style id="abw-style" data-turbo-permanent></style>
     <% unless controller_name == "static_pages" && action_name == "home" %>

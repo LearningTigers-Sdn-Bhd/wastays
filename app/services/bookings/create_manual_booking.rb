@@ -44,7 +44,7 @@ module Bookings
 
       booking.status = "confirmed"
       booking.payment_status = "captured"
-      booking.hotel_snapshot = @hotel.as_json.merge("room_number" => @room_number)
+      booking.hotel_snapshot = @hotel.booking_snapshot.merge("room_number" => @room_number)
 
       result = ActiveRecord::Base.transaction do
         if booking.save
@@ -69,9 +69,22 @@ module Bookings
           InventoryManager.new(booking).deduct
           sync_guest(booking)
 
+          # Record Audit Log
+          Bookings::RecordAuditLog.call(
+            auditable: booking,
+            user: @user,
+            action_type: "create"
+          )
+
           # Trigger Webhooks
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
           Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
+
+          # Trigger Channex CRS Sync if connected
+          if @hotel.preferred_channel_manager.present?
+            adapter = ChannelManagers::SyncOrchestrator.adapter_for(@hotel)
+            adapter.push_booking(booking)
+          end
 
           OpenStruct.new(success?: true, booking: booking)
         else

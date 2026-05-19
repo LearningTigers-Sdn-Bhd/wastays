@@ -18,6 +18,7 @@ module Bookings
 
       BookingRoom.transaction do
         booking_room.update!(room_number: @room_number)
+        ::Bookings::RecordAuditLog.call(auditable: booking_room, user: @user, action_type: "room_assignment")
         write_override_audit_log if override_assignment?
         RoomLock.where(hotel: @booking.hotel, user: @user, room_number: @room_number).destroy_all
       end

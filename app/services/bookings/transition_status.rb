@@ -29,9 +29,26 @@ module Bookings
     private
 
     def check_in
-      if @booking.update(status: "checked_in", checked_in_at: @timestamp)
-        Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
-        Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
+      # Only increment counters if they haven't been assigned yet (new check-in)
+      # For edits, we preserve the existing numbers.
+      folio     = @booking.folio_number || HotelCounter.increment!(hotel: @booking.hotel, type: "folio")
+      guest_reg = @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
+
+      # Sync room number to hotel_snapshot for consistency if provided via nested attributes
+      room_number = @booking.booking_rooms.first&.room_number
+      if room_number.present?
+        @booking.hotel_snapshot ||= {}
+        @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => room_number)
+      end
+
+      if @booking.update(status: "checked_in", checked_in_at: @timestamp, folio_number: folio, guest_registration_number: guest_reg)
+        action = (@booking.previously_new_record? || @booking.saved_change_to_status?) ? "check_in" : "update"
+        Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: action)
+
+        if action == "check_in"
+          Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
+          Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
+        end
         success
       else
         failure(@booking.errors.full_messages.to_sentence)
@@ -41,6 +58,7 @@ module Bookings
     def check_out
       Booking.transaction do
         @booking.update!(status: "completed", checked_out_at: @timestamp)
+        Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "check_out")
         mark_assigned_rooms_pending_cleaning
       end
 
@@ -55,6 +73,7 @@ module Bookings
     def cancel
       Booking.transaction do
         if @booking.update(status: "cancelled")
+          Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "cancel")
           InventoryManager.new(@booking).release
           Bookings::WebhookTriggerService.new(@booking).trigger(:booking_cancelled)
           success

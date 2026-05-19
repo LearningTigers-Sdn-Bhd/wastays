@@ -6,6 +6,9 @@ class ObservationEntry < ApplicationRecord
       when /POST \/guest\/request_magic_link/ then "Guest login link requested"
       when /GET \/guest\/login/ then "Guest viewed login page"
       when /POST \/api\/v1\/bookings/ then "New booking attempt"
+      when /POST \/webhooks\/channex/
+        ch_id = tags.find { |t| t.start_with?("channex_id:") }&.split(":")&.last
+        "Channex Webhook #{ch_id ? "(ID: #{ch_id})" : ""}"
       when /GET \/admin\/observation_deck/ then "Admin viewed observation deck"
       else "Web Request: #{path.split(' ').last}"
       end
@@ -17,7 +20,8 @@ class ObservationEntry < ApplicationRecord
       "Database: #{path}"
     when "api"
       if path.include?("channex")
-        "Channel Manager Update (Channel Manager)"
+        ch_id = tags.find { |t| t.start_with?("channex_id:") }&.split(":")&.last
+        "Channel Manager Update #{ch_id ? "(ID: #{ch_id})" : "(Channel Manager)"}"
       elsif path.include?("razorpay")
         "Payment Gateway Action (Razorpay)"
       else
