@@ -4,15 +4,16 @@ module Folios
   class ProcessCatchUpCharges
     include NightlyChargeCalculation
 
-    def self.call(booking:, user:)
-      new(booking: booking, user: user).call
+    def self.call(booking:, user:, is_reinstate: false)
+      new(booking: booking, user: user, is_reinstate: is_reinstate).call
     end
 
-    def initialize(booking:, user:)
+    def initialize(booking:, user:, is_reinstate: false)
       @booking = booking
       @folio = booking.booking_folio
       @user = user
       @hotel = booking.hotel
+      @is_reinstate = is_reinstate
     end
 
     def call
@@ -31,19 +32,22 @@ module Folios
         # Avoid double-reversing if already corrected
         next if already_corrected?(penalty)
 
+        description = @is_reinstate ? "Void Penalty: Reinstated Reservation" : "Auto-reversal of no-show penalty: #{penalty.description}"
+
         result = Folios::InsertTransaction.new(
           booking_folio: @folio,
           amount: -penalty.amount, # Negative adjustment to zero it out
           transaction_type: :adjustment,
           category: :correction,
           user: @user,
-          description: "Auto-reversal of no-show penalty: #{penalty.description}",
+          description: description,
           posting_date: penalty.posting_date,
           options: {
             override_night_audit: true,
             metadata: {
               source: "late_checkin_correction",
-              reversed_transaction_id: penalty.id
+              reversed_transaction_id: penalty.id,
+              is_reinstate: @is_reinstate
             }
           }
         ).call
@@ -80,20 +84,23 @@ module Folios
         amount = nightly_amount(room.subtotal, @booking, date)
         next if amount.zero?
 
+        description = @is_reinstate ? "Reinstate Charge - #{date.strftime('%d %b %Y')}" : "Unexpected Check-in (Room Charge) - #{date.strftime('%d %b %Y')}"
+
         result = Folios::InsertTransaction.new(
           booking_folio: @folio,
           amount: amount,
           transaction_type: :charge,
           category: :accommodation,
           user: @user,
-          description: "Room Charge (Catch-up) - #{date.strftime('%d %b %Y')}",
+          description: description,
           posting_date: date,
           options: {
             override_night_audit: true,
             metadata: {
               posting_source: "catch_up",
               catch_up_key: charge_key,
-              stay_date: date.iso8601
+              stay_date: date.iso8601,
+              is_reinstate: @is_reinstate
             }
           }
         ).call
@@ -111,13 +118,19 @@ module Folios
         amount = nightly_amount(tax_line_amount(tax_line), @booking, date)
         next if amount.zero?
 
+        description = if @is_reinstate
+                        "Reinstate Tax: #{tax_line_name(tax_line)} - #{date.strftime('%d %b %Y')}"
+                      else
+                        "Unexpected Check-in Tax: #{tax_line_name(tax_line)} - #{date.strftime('%d %b %Y')}"
+                      end
+
         result = Folios::InsertTransaction.new(
           booking_folio: @folio,
           amount: amount,
           transaction_type: :charge,
           category: :tax,
           user: @user,
-          description: "Tax: #{tax_line_name(tax_line)} (Catch-up) - #{date.strftime('%d %b %Y')}",
+          description: description,
           posting_date: date,
           options: {
             override_night_audit: true,
@@ -125,7 +138,8 @@ module Folios
               posting_source: "catch_up",
               catch_up_key: charge_key,
               stay_date: date.iso8601,
-              tax_line: tax_line
+              tax_line: tax_line,
+              is_reinstate: @is_reinstate
             }
           }
         ).call
