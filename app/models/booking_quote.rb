@@ -1,5 +1,6 @@
 class BookingQuote < ApplicationRecord
   belongs_to :hotel
+  belongs_to :partner, optional: true
   has_many :booking_quote_items, dependent: :destroy
 
   validates :check_in, :check_out, :adults, :total_amount, :expires_at, :token, presence: true

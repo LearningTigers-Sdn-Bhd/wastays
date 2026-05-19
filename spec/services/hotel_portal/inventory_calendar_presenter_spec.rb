@@ -40,4 +40,20 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
       expect(presenter.rows.select(&:walk_in_row?).size).to eq(1)
     end
   end
+
+  describe '#cell_for' do
+    it 'falls back to the standard rate for walk-in and corporate rows when special prices are missing' do
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: [ "101" ], quantity: 1)
+      rate_plan = create(:rate_plan, room_type: room_type, name: "Standard Rate", currency: "MYR")
+      create(:room_rate, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150, walk_in_price: nil, corporate_price: nil)
+
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+
+      walk_in_row = presenter.rows.find(&:walk_in_row?)
+      corporate_row = presenter.rows.find(&:corporate_row?)
+
+      expect(presenter.cell_for(walk_in_row, start_date)[:formatted_price]).to eq("RM 150.00")
+      expect(presenter.cell_for(corporate_row, start_date)[:formatted_price]).to eq("RM 150.00")
+    end
+  end
 end

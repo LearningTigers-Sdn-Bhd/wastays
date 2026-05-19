@@ -2,6 +2,8 @@ module BookingEngine
   class AvailabilityService
     PricingOption = Struct.new(:rate_plan, :currency, :total_price, :nightly_price, :nightly_rates, keyword_init: true)
 
+    attr_reader :params, :check_in, :check_out, :adults, :children, :room_count, :partner_code
+
     def initialize(params)
       @params = params
       @city = params[:city]
@@ -10,6 +12,7 @@ module BookingEngine
       @adults = (params[:adults] || 2).to_i
       @children = (params[:children] || 0).to_i
       @room_count = (params[:room_count] || 1).to_i
+      @partner_code = params[:partner_code].to_s.strip.upcase.presence
     end
 
     def find_available_hotels
@@ -55,6 +58,8 @@ module BookingEngine
       option = lowest_pricing_option_for(room_type)
       return {} if option.blank?
 
+      partner = find_partner_for(room_type.hotel)
+
       {
         rate_plan: option.rate_plan,
         rate_plan_name: option.rate_plan&.name,
@@ -62,7 +67,8 @@ module BookingEngine
         total_price: option.total_price,
         nightly_price: option.nightly_price,
         nightly_rates: option.nightly_rates,
-        available_rate_plans: pricing_options_for(room_type).map(&:rate_plan).compact
+        available_rate_plans: pricing_options_for(room_type).map(&:rate_plan).compact,
+        partner: partner
       }
     end
 
@@ -114,6 +120,8 @@ module BookingEngine
       rates_by_date = scope.index_by(&:date)
       return nil unless rates_by_date.size == stay_dates.size
 
+      partner = find_partner_for(room_type.hotel)
+
       first_rate = rates_by_date[stay_dates.first]
       last_rate = rates_by_date[stay_dates.last]
       return nil if rates_by_date.values.any?(&:stop_sell?)
@@ -122,7 +130,15 @@ module BookingEngine
       return nil if rates_by_date.values.any? { |rate| rate.min_stay.present? && nights < rate.min_stay }
       return nil if rates_by_date.values.any? { |rate| rate.max_stay.present? && nights > rate.max_stay }
 
-      nightly_total = rates_by_date.values.sum { |rate| rate.price.to_d }
+      nightly_total = rates_by_date.values.sum do |rate|
+        price = if partner.present?
+          rate.corporate_price.presence || rate.price
+        else
+          rate.price
+        end
+        price.to_d
+      end
+
       PricingOption.new(
         rate_plan: rate_plan,
         currency: currency,
@@ -130,6 +146,13 @@ module BookingEngine
         nightly_price: nightly_total / nights,
         nightly_rates: rates_by_date
       )
+    end
+
+    def find_partner_for(hotel)
+      return nil if @partner_code.blank?
+      return @matched_partner if defined?(@matched_partner) && @matched_partner&.hotel_id == hotel.id
+
+      @matched_partner = hotel.partners.find_by(code: @partner_code)
     end
   end
 end

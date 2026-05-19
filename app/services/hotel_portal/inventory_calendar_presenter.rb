@@ -8,10 +8,17 @@ module HotelPortal
       def room_type_id = room_type.id
       def rate_plan_id = rate_plan&.id
       def label = room_type.name
-      def sublabel = kind == :walk_in ? "Walk-in Rate" : rate_plan&.name
+      def sublabel
+        case kind
+        when :walk_in then "Walk-in Rate"
+        when :corporate then "Corporate Rate"
+        else rate_plan&.name
+        end
+      end
       def inventory_row? = kind == :availability
       def rate_row? = kind == :rate
       def walk_in_row? = kind == :walk_in
+      def corporate_row? = kind == :corporate
     end
 
     attr_reader :hotel, :start_date, :end_date, :display_currency
@@ -37,11 +44,15 @@ module HotelPortal
           Row.new(key: "room-#{room_type.id}-walk-in", kind: :walk_in, room_type: room_type)
         end
 
+        corporate_row = if has_corporate_rates?(room_type)
+          Row.new(key: "room-#{room_type.id}-corporate", kind: :corporate, room_type: room_type)
+        end
+
         rate_rows = rate_plans_for(room_type).map do |rate_plan|
           Row.new(key: "room-#{room_type.id}-rate-#{rate_plan.id}", kind: :rate, room_type: room_type, rate_plan: rate_plan)
         end
 
-        [ inventory_row ] + rate_rows + [ walk_in_row ].compact
+        [ inventory_row ] + rate_rows + [ walk_in_row, corporate_row ].compact
       end
     end
 
@@ -86,6 +97,8 @@ module HotelPortal
         inventory_cell(row.room_type, date)
       elsif row.walk_in_row?
         walk_in_cell(row.room_type, date)
+      elsif row.corporate_row?
+        corporate_cell(row.room_type, date)
       else
         rate_cell(row.room_type, row.rate_plan, date)
       end
@@ -105,13 +118,20 @@ module HotelPortal
       end
     end
 
+    def has_corporate_rates?(room_type)
+      rate_plans_for(room_type).any? do |rp|
+        rates_by_rate_plan[rp.id]&.values&.any? { |r| r.corporate_price.present? }
+      end
+    end
+
     def walk_in_cell(room_type, date)
       # Walk-in rates are tied to the first rate plan in our current implementation
       rate_plan = rate_plans_for(room_type).first
       return { date: date } if rate_plan.blank?
 
       rate = rates_by_rate_plan.dig(rate_plan.id, date)
-      price = rate&.walk_in_price
+      actual_price = rate&.walk_in_price
+      price = actual_price.presence || rate&.price || room_type.base_price
       native_currency = default_currency
 
       display_conversion = display_conversion_for(price, from: native_currency)
@@ -122,13 +142,43 @@ module HotelPortal
 
       {
         date: date,
-        price: price,
+        price: actual_price, # Original set price
         formatted_price: format_price(display_price, formatted_currency),
         currency: native_currency,
         display_currency: formatted_currency,
         estimated: display_conversion.present? && native_currency != formatted_currency,
         conversion_missing: conversion_missing,
-        is_modified: price.present?,
+        is_modified: actual_price.present?,
+        restriction_badges: [],
+        restriction_compact: nil
+      }
+    end
+
+    def corporate_cell(room_type, date)
+      # Corporate rates are tied to the first rate plan in our current implementation
+      rate_plan = rate_plans_for(room_type).first
+      return { date: date } if rate_plan.blank?
+
+      rate = rates_by_rate_plan.dig(rate_plan.id, date)
+      actual_price = rate&.corporate_price
+      price = actual_price.presence || rate&.price || room_type.base_price
+      native_currency = default_currency
+
+      display_conversion = display_conversion_for(price, from: native_currency)
+      conversion_missing = price.present? && display_currency != native_currency && display_conversion.nil?
+
+      display_price = display_conversion&.amount || price
+      formatted_currency = (display_conversion.present? || conversion_missing) ? display_currency : native_currency
+
+      {
+        date: date,
+        price: actual_price, # Original set price
+        formatted_price: format_price(display_price, formatted_currency),
+        currency: native_currency,
+        display_currency: formatted_currency,
+        estimated: display_conversion.present? && native_currency != formatted_currency,
+        conversion_missing: conversion_missing,
+        is_modified: actual_price.present?,
         restriction_badges: [],
         restriction_compact: nil
       }

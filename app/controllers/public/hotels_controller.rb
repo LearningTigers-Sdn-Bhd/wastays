@@ -62,7 +62,8 @@ class Public::HotelsController < ApplicationController
       hotel: @hotel,
       start_date: start_date,
       end_date: end_date,
-      room_count: room_count
+      room_count: room_count,
+      partner_code: params[:partner_code]
     ).call
 
     expires_in 5.minutes, public: true

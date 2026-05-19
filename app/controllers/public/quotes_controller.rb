@@ -34,20 +34,37 @@ class Public::QuotesController < ApplicationController
       return render json: { found: false, message: "Email is required." }, status: :unprocessable_content
     end
 
+    corporate_status = validate_corporate_domain(quote, email)
+
     guest = Guest.find_by(email: email)
     found = guest.present?
 
     render json: {
       found: found,
       guest_details: found ? guest_lookup_payload(guest) : {},
-      quote_token: quote.token
+      quote_token: quote.token,
+      corporate_valid: corporate_status[:valid],
+      corporate_message: corporate_status[:message]
     }
   end
 
   private
 
+  def validate_corporate_domain(quote, email)
+    return { valid: true } if quote.partner.blank? || quote.partner.domain.blank?
+
+    email_domain = email.split("@").last
+    if email_domain == quote.partner.domain
+      { valid: true, message: "✓ Work email verified for #{quote.partner.name}." }
+    else
+      { valid: false, message: "This corporate rate is only valid for @#{quote.partner.domain} email addresses. Please use your work email." }
+    end
+  end
+
+  private
+
   def quote_params
-    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency)
+    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency, :partner_code)
   end
 
   def display_currency_for_request

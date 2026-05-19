@@ -53,6 +53,7 @@ module BookingEngine
         booking = Booking.new(
           booking_quote: @quote,
           hotel: @quote.hotel,
+          partner: @quote.partner,
           guest_name: @payment_details[:guest_name], # From checkout form
           guest_email: @payment_details[:guest_email],
           guest_phone: @payment_details[:guest_phone],

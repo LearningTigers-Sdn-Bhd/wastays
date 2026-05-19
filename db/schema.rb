@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_18_093001) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_18_093003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -169,8 +169,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_093001) do
     t.decimal "display_exchange_rate", precision: 18, scale: 8
     t.string "display_rate_source"
     t.bigint "corporate_entity_id"
+    t.bigint "partner_id"
     t.index ["corporate_entity_id"], name: "index_booking_quotes_on_corporate_entity_id"
     t.index ["hotel_id"], name: "index_booking_quotes_on_hotel_id"
+    t.index ["partner_id"], name: "index_booking_quotes_on_partner_id"
     t.index ["token"], name: "index_booking_quotes_on_token", unique: true
   end
 
@@ -237,12 +239,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_093001) do
     t.integer "receipt_number"
     t.integer "guest_registration_number"
     t.bigint "corporate_entity_id"
+    t.bigint "partner_id"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
     t.index ["corporate_entity_id"], name: "index_bookings_on_corporate_entity_id"
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
+    t.index ["partner_id"], name: "index_bookings_on_partner_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
     t.index ["source"], name: "index_bookings_on_source"
     t.index ["status"], name: "index_bookings_on_status"
@@ -1014,12 +1018,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_093001) do
   add_foreign_key "booking_quote_items", "room_types"
   add_foreign_key "booking_quotes", "corporate_entities"
   add_foreign_key "booking_quotes", "hotels"
+  add_foreign_key "booking_quotes", "partners"
   add_foreign_key "booking_rooms", "bookings"
   add_foreign_key "booking_rooms", "rate_plans"
   add_foreign_key "booking_rooms", "room_types"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "corporate_entities"
   add_foreign_key "bookings", "hotels"
+  add_foreign_key "bookings", "partners"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "corporate_entities", "hotels"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"

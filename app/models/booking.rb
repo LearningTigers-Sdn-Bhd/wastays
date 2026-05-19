@@ -4,6 +4,7 @@ class Booking < ApplicationRecord
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
   belongs_to :payout_batch, optional: true
+  belongs_to :partner, optional: true
   has_many :booking_rooms, dependent: :destroy
   accepts_nested_attributes_for :booking_rooms
   has_many :booking_notes, dependent: :destroy

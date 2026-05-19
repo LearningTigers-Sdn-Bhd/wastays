@@ -218,12 +218,24 @@
                           <div class="flex flex-col items-center justify-center min-h-[32px]">
                             <% if cell[:conversion_missing] %>
                               <span class="text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
-                            <% elsif cell[:price].present? %>
-                              <span class="block truncate text-sm font-black tabular-nums text-emerald-700">
+                            <% else %>
+                              <span class="block truncate text-sm font-black tabular-nums <%= cell[:is_modified] ? 'text-emerald-700' : 'text-slate-950' %>">
                                 <%= cell[:formatted_price] %>
                               </span>
+                            <% end %>
+                          </div>
+                        </div>
+                      <% elsif row.corporate_row? %>
+                        <div class="min-h-[54px] w-full bg-blue-50/30 px-2 py-2 text-center transition cursor-default"
+                             data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear"
+                             data-column-id="<%= date %>">
+                          <div class="flex flex-col items-center justify-center min-h-[32px]">
+                            <% if cell[:conversion_missing] %>
+                              <span class="text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                             <% else %>
-                              <span class="text-[9px] font-bold text-slate-300 uppercase italic">Not Set</span>
+                              <span class="block truncate text-sm font-black tabular-nums <%= cell[:is_modified] ? 'text-blue-700' : 'text-slate-950' %>">
+                                <%= cell[:formatted_price] %>
+                              </span>
                             <% end %>
                           </div>
                         </div>

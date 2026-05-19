@@ -20,6 +20,12 @@ module Payments
     def call
       return failure("Invalid parameters") unless valid?
 
+      if quote.partner.present? && quote.partner.domain.present?
+        unless valid_partner_email?
+          return failure("This corporate rate is only valid for @#{quote.partner.domain} email addresses. Please use your work email.")
+        end
+      end
+
       setting = quote.hotel.effective_payment_setting(gateway)
       return failure("Payment gateway is not configured.") unless setting
 
@@ -54,6 +60,14 @@ module Payments
         document_type: guest_details[:document_type],
         marketing_consent: guest_details[:marketing_consent]
       }
+    end
+
+    def valid_partner_email?
+      email = guest_details[:email].to_s.strip.downcase
+      return false if email.blank?
+
+      email_domain = email.split("@").last
+      email_domain == quote.partner.domain
     end
 
     def success(payload)
