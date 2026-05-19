@@ -27,3 +27,7 @@ document.addEventListener("turbo:frame-render", initializePreline)
 Turbo.StreamActions.reload = function() {
   Turbo.visit(window.location.href, { action: "replace" })
 }
+
+Turbo.StreamActions.redirect = function() {
+  Turbo.visit(this.getAttribute("url"))
+}
