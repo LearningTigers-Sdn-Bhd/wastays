@@ -20,10 +20,12 @@ RSpec.describe Bookings::CreateManualBooking do
 
   subject { described_class.new(hotel: hotel, params: params) }
 
-  it "creates a booking and deducts inventory" do
+  before do
     dispatcher = instance_double(Notifications::Dispatcher, call: [])
     allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+  end
 
+  it "creates a booking and deducts inventory" do
     expect {
       result = subject.call
       expect(result.success?).to be true
@@ -64,5 +66,241 @@ RSpec.describe Bookings::CreateManualBooking do
 
     expect(result.success?).to be false
     expect(result.errors).to include("Payment amount must be greater than 0.")
+  end
+
+  it "associates a selected hotel guest without creating a duplicate" do
+    guest = create(
+      :guest,
+      created_by_hotel: hotel,
+      name: "Existing Guest",
+      email: "existing@example.com",
+      phone: "+60111111111",
+      country: "Malaysia",
+      gender: "male",
+      document_type: "ic",
+      government_id: "old-ic"
+    )
+    params.merge!(
+      existing_guest_id: guest.id,
+      guest_name: "Typed Over Name",
+      guest_email: "typed@example.com",
+      guest_phone: "+60999999999",
+      guest_country: "Singapore",
+      guest_gender: "female",
+      guest_document_type: "passport",
+      guest_government_id: "new-passport",
+      guest_update_intent: "update_existing"
+    )
+
+    expect {
+      result = subject.call
+
+      expect(result.success?).to be true
+      expect(result.booking.guests).to contain_exactly(guest)
+      expect(result.booking.guest_name).to eq("Typed Over Name")
+      expect(result.booking.guest_email).to eq("typed@example.com")
+      expect(result.booking.guest_phone).to eq("+60999999999")
+      expect(result.booking.guest_country).to eq("Singapore")
+      expect(result.booking.guest_gender).to eq("female")
+      expect(result.booking.guest_document_type).to eq("passport")
+    }.not_to change(Guest, :count)
+
+    guest.reload
+    expect(guest.name).to eq("Typed Over Name")
+    expect(guest.email).to eq("typed@example.com")
+    expect(guest.phone).to eq("+60999999999")
+    expect(guest.country).to eq("Singapore")
+    expect(guest.gender).to eq("female")
+    expect(guest.document_type).to eq("passport")
+    expect(guest.government_id).to eq("new-passport")
+  end
+
+  it "rejects a selected guest that is not visible to the hotel" do
+    other_hotel = create(:hotel)
+    guest = create(:guest, created_by_hotel: other_hotel)
+    params[:existing_guest_id] = guest.id
+
+    expect {
+      result = subject.call
+
+      expect(result.success?).to be false
+      expect(result.errors).to include("Selected guest could not be found for this hotel.")
+    }.not_to change(Booking, :count)
+  end
+
+  it "matches manual guest details by email instead of creating a duplicate" do
+    guest = create(:guest, created_by_hotel: hotel, name: "Repeat Guest", email: "repeat@example.com", phone: "+60222222222")
+    params.merge!(
+      guest_name: "Repeat Guest Updated",
+      guest_email: "repeat@example.com",
+      guest_phone: "+60333333333",
+      guest_country: "Thailand",
+      guest_gender: "other",
+      guest_document_type: "passport",
+      guest_government_id: "repeat-passport"
+    )
+
+    expect {
+      result = subject.call
+
+      expect(result.success?).to be true
+      expect(result.booking.guests).to contain_exactly(guest)
+    }.not_to change(Guest, :count)
+
+    guest.reload
+    expect(guest.name).to eq("Repeat Guest Updated")
+    expect(guest.phone).to eq("+60222222222")
+  end
+
+  it "keeps selected guest unchanged while booking stores edited guest fields" do
+    guest = create(:guest, created_by_hotel: hotel, name: "Existing Guest", email: "existing@example.com", phone: "+60111111111")
+    params.merge!(
+      existing_guest_id: guest.id,
+      guest_name: "Edited Booking Name",
+      guest_email: "edited@example.com",
+      guest_phone: "+60999999999",
+      guest_update_intent: "keep_existing"
+    )
+
+    expect {
+      result = subject.call
+
+      expect(result.success?).to be true
+      expect(result.booking.guests).to contain_exactly(guest)
+      expect(result.booking.guest_name).to eq("Edited Booking Name")
+      expect(result.booking.guest_email).to eq("edited@example.com")
+      expect(result.booking.guest_phone).to eq("+60999999999")
+    }.not_to change(Guest, :count)
+
+    guest.reload
+    expect(guest.name).to eq("Existing Guest")
+    expect(guest.email).to eq("existing@example.com")
+    expect(guest.phone).to eq("+60111111111")
+  end
+
+  it "defaults selected guest changes to keep existing when intent is blank" do
+    guest = create(:guest, created_by_hotel: hotel, name: "Existing Guest", email: "existing@example.com", phone: "+60111111111")
+    params.merge!(existing_guest_id: guest.id, guest_email: "edited@example.com")
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    expect(guest.reload.email).to eq("existing@example.com")
+    expect(result.booking.guest_email).to eq("edited@example.com")
+  end
+
+  it "creates a new guest for create-new intent when identity fields differ" do
+    selected_guest = create(:guest, created_by_hotel: hotel, name: "Same Name", email: "old@example.com", phone: "+60111111111", government_id: "old-id")
+    params.merge!(
+      existing_guest_id: selected_guest.id,
+      guest_update_intent: "create_new",
+      guest_name: "Same Name",
+      guest_email: "new@example.com",
+      guest_phone: "+60222222222",
+      guest_country: "Malaysia",
+      guest_gender: "male",
+      guest_document_type: "passport",
+      guest_government_id: "new-id"
+    )
+
+    expect {
+      result = subject.call
+
+      expect(result.success?).to be true
+      expect(result.booking.guests).not_to include(selected_guest)
+      expect(result.booking.guests.first.email).to eq("new@example.com")
+    }.to change(Guest, :count).by(1)
+
+    expect(selected_guest.reload.email).to eq("old@example.com")
+  end
+
+  it "rejects create-new intent when submitted email matches selected guest" do
+    selected_guest = create(:guest, created_by_hotel: hotel, email: "same@example.com", phone: "+60111111111", government_id: "old-id")
+    params.merge!(existing_guest_id: selected_guest.id, guest_update_intent: "create_new", guest_email: "same@example.com", guest_phone: "+60222222222", guest_government_id: "new-id")
+
+    expect {
+      result = subject.call
+
+      expect(result.success?).to be false
+      expect(result.errors).to include("This guest has the same email, phone, or IC/passport number as the selected guest. Update the existing guest information instead.")
+    }.not_to change(Guest, :count)
+  end
+
+  it "rejects create-new intent when submitted identity matches another guest" do
+    selected_guest = create(:guest, created_by_hotel: hotel, email: "selected@example.com", phone: "+60111111111", government_id: "selected-id")
+    create(:guest, created_by_hotel: hotel, email: "other@example.com", phone: "+60222222222", government_id: "other-id")
+    params.merge!(existing_guest_id: selected_guest.id, guest_update_intent: "create_new", guest_email: "other@example.com", guest_phone: "+60333333333", guest_government_id: "new-id")
+
+    expect {
+      result = subject.call
+
+      expect(result.success?).to be false
+      expect(result.errors).to include("Another guest already exists with this email, phone, or IC/passport number. Select that guest instead.")
+    }.not_to change(Guest, :count)
+  end
+
+  it "creates a new guest with identity fields" do
+    params.merge!(
+      guest_country: "Indonesia",
+      guest_gender: "female",
+      guest_document_type: "passport",
+      guest_government_id: "A987654"
+    )
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    guest = result.booking.guests.first
+    expect(guest.country).to eq("Indonesia")
+    expect(guest.gender).to eq("female")
+    expect(guest.document_type).to eq("passport")
+    expect(guest.government_id).to eq("a987654")
+    expect(result.booking.guest_country).to eq("Indonesia")
+    expect(result.booking.guest_gender).to eq("female")
+    expect(result.booking.guest_document_type).to eq("passport")
+  end
+
+  it "persists the selected rate plan and calculates total with base-price fallback" do
+    room_type.update!(base_price: 80)
+    rate_plan = create(:rate_plan, room_type: room_type)
+    create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 120)
+    params.merge!(
+      rate_plan_id: rate_plan.id,
+      check_in: Date.current,
+      check_out: Date.current + 2.days
+    )
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    expect(result.booking.total_amount).to eq(200.to_d)
+    expect(result.booking.booking_rooms.first.rate_plan).to eq(rate_plan)
+  end
+
+  it "rejects a selected rate plan from another room category" do
+    other_room_type = create(:room_type, hotel: hotel)
+    rate_plan = create(:rate_plan, room_type: other_room_type)
+    params[:rate_plan_id] = rate_plan.id
+
+    result = subject.call
+
+    expect(result.success?).to be false
+    expect(result.errors).to include("Selected rate plan could not be found for this room category.")
+  end
+
+  it "ignores stop-sell restrictions unless staff chooses to respect them" do
+    rate_plan = create(:rate_plan, room_type: room_type)
+    create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 120, stop_sell: true)
+    params[:rate_plan_id] = rate_plan.id
+
+    result = subject.call
+    expect(result.success?).to be true
+
+    params[:room_number] = "102"
+    params[:apply_stop_sell_restriction] = "1"
+    result = described_class.new(hotel: hotel, params: params).call
+
+    expect(result.success?).to be false
+    expect(result.errors).to include("Selected rate plan is restricted for these stay dates.")
   end
 end
