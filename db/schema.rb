@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_18_060000) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_19_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -245,6 +245,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_060000) do
     t.integer "reservation_number"
     t.integer "receipt_number"
     t.integer "guest_registration_number"
+    t.text "internal_notes"
+    t.decimal "manual_rate_override"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id_unique", unique: true, where: "(booking_quote_id IS NOT NULL)"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
@@ -320,15 +322,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_060000) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "reversal_of_transaction_id"
+    t.bigint "voided_by_transaction_id"
+    t.string "correction_reason"
+    t.text "correction_note"
+    t.datetime "posted_at"
+    t.string "currency"
     t.index "booking_folio_id, ((metadata ->> 'nightly_charge_key'::text))", name: "index_folio_transactions_on_nightly_charge", unique: true, where: "(metadata ? 'nightly_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'no_show_charge_key'::text))", name: "index_folio_transactions_on_no_show_charge", unique: true, where: "(metadata ? 'no_show_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'payment_transaction_id'::text))", name: "index_folio_transactions_on_gateway_payment", unique: true, where: "(metadata ? 'payment_transaction_id'::text)"
     t.index "booking_folio_id, ((metadata ->> 'refund_request_id'::text))", name: "index_folio_transactions_on_refund_request", unique: true, where: "(metadata ? 'refund_request_id'::text)"
+    t.index ["booking_folio_id", "posting_date"], name: "index_folio_transactions_on_folio_and_posting_date"
     t.index ["booking_folio_id"], name: "index_folio_transactions_on_booking_folio_id"
     t.index ["category"], name: "index_folio_transactions_on_category"
     t.index ["posting_date"], name: "index_folio_transactions_on_posting_date"
+    t.index ["reversal_of_transaction_id"], name: "index_folio_transactions_on_reversal_of_transaction_id"
     t.index ["transaction_type"], name: "index_folio_transactions_on_transaction_type"
     t.index ["user_id"], name: "index_folio_transactions_on_user_id"
+    t.index ["voided_by_transaction_id"], name: "index_folio_transactions_on_voided_by_transaction_id"
   end
 
   create_table "guests", force: :cascade do |t|
@@ -1015,6 +1026,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_18_060000) do
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
   add_foreign_key "folio_transactions", "booking_folios"
+  add_foreign_key "folio_transactions", "folio_transactions", column: "reversal_of_transaction_id"
+  add_foreign_key "folio_transactions", "folio_transactions", column: "voided_by_transaction_id"
   add_foreign_key "folio_transactions", "users"
   add_foreign_key "hotel_counters", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"

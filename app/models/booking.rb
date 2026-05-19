@@ -19,7 +19,7 @@ class Booking < ApplicationRecord
   has_many :notification_deliveries, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :nullify
-  attr_accessor :estimated_arrival_time
+  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent
 
   def guest_government_id
     @guest_government_id.presence ||
