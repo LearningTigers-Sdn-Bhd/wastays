@@ -85,7 +85,7 @@ module Bookings
           Folios::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
 
           if is_retroactive || was_no_show
-            Folios::ProcessCatchUpCharges.call(booking: @booking, user: @user)
+            Folios::ProcessCatchUpCharges.call(booking: @booking, user: @user, is_reinstate: was_no_show)
           end
 
           transitioned = true

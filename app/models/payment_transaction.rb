@@ -7,7 +7,15 @@ class PaymentTransaction < ApplicationRecord
   validates :gateway, presence: true
   validates :status, presence: true, inclusion: { in: STATUSES }
 
+  before_validation :normalize_references
+
   scope :captured, -> { where(status: "captured") }
   scope :failed, -> { where(status: "failed") }
   scope :with_payment_method, -> { where.not(payment_method: [ nil, "" ]) }
+
+  private
+
+  def normalize_references
+    self.external_reference = external_reference.presence
+  end
 end

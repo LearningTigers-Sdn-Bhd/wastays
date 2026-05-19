@@ -23,7 +23,17 @@ namespace :hotel_ops do
     puts "\nProceeding..."
 
     ActiveRecord::Base.transaction do
-      # 1. Clean Night Audits
+      # 1. Recalibrate Business Hours & Policies
+      puts "Recalibrating business hours, grace period, and amenities..."
+      hotel.update!(
+        time_zone: "Kuala Lumpur",
+        business_starts_at: "08:00",
+        business_ends_at: "02:00",
+        arrival_grace_period: 7200,
+        amenities: %w[wifi swimming_pool fitness_center spa_wellness_centre laundry]
+      )
+
+      # 2. Clean Night Audits
       night_audit_count = hotel.night_audits.count
       puts "Destroying #{night_audit_count} night audits..."
       hotel.night_audits.destroy_all

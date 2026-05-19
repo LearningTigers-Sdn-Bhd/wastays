@@ -39,6 +39,7 @@ module HotelPortal
 
       def check_in
         @booking = current_hotel.bookings.includes(booking_rooms: :room_type).find(params[:id])
+        @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
       end
 
       def check_out
