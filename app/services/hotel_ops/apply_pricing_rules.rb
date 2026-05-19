@@ -4,8 +4,7 @@ module HotelOps
       gp: 1,
       wk: 2,
       sc: 3,
-      ph: 4,
-      cr: 5
+      ph: 4
     }.freeze
 
     def initialize(hotel:, room_type_ids: [], start_date:, end_date:, user:)
@@ -41,9 +40,10 @@ module HotelOps
         online_winner = winning_rule_for(date, category: :online)
         walk_in_winner = winning_rule_for(date, category: :walk_in)
         corporate_winner = winning_rule_for(date, category: :corporate)
+        ota_winner = winning_rule_for(date, category: :ota)
 
         rate = room_type.room_rates.find_or_initialize_by(date: date, currency: target_currency)
-        if online_winner.blank? && walk_in_winner.blank? && corporate_winner.blank?
+        if online_winner.blank? && walk_in_winner.blank? && corporate_winner.blank? && ota_winner.blank?
           rate.destroy! if rate.persisted?
           next
         end
@@ -51,29 +51,32 @@ module HotelOps
         old_price = rate.price
         old_wi_price = rate.walk_in_price
         old_cr_price = rate.corporate_price
+        old_ota_price = rate.ota_price
         old_currency = rate.currency
 
         # Fallback to base_price if no online rule applies but we are saving a rate record
         rate.price = online_winner&.dig(:price) || room_type.base_price
         rate.walk_in_price = walk_in_winner&.dig(:price)
         rate.corporate_price = corporate_winner&.dig(:price)
+        rate.ota_price = ota_winner&.dig(:price)
         rate.currency = target_currency
         rate.rate_plan = standard_plan if standard_plan
         rate.save!
 
-        next if old_price == rate.price && old_wi_price == rate.walk_in_price && old_cr_price == rate.corporate_price && old_currency == rate.currency
+        next if old_price == rate.price && old_wi_price == rate.walk_in_price && old_cr_price == rate.corporate_price && old_ota_price == rate.ota_price && old_currency == rate.currency
 
         @hotel.inventory_audit_logs.create!(
           room_type: room_type,
           user: @user,
           action_type: "rate_update",
-          old_value: { date: date, price: old_price.to_f, walk_in_price: old_wi_price&.to_f, corporate_price: old_cr_price&.to_f },
-          new_value: { date: date, price: rate.price&.to_f, walk_in_price: rate.walk_in_price&.to_f, corporate_price: rate.corporate_price&.to_f },
+          old_value: { date: date, price: old_price.to_f, walk_in_price: old_wi_price&.to_f, corporate_price: old_cr_price&.to_f, ota_price: old_ota_price&.to_f },
+          new_value: { date: date, price: rate.price&.to_f, walk_in_price: rate.walk_in_price&.to_f, corporate_price: rate.corporate_price&.to_f, ota_price: rate.ota_price&.to_f },
           metadata: {
             source: "pricing_rules",
             online_tier: online_winner&.dig(:tier)&.to_s,
             walk_in_tier: walk_in_winner&.dig(:tier)&.to_s,
-            corporate_tier: corporate_winner&.dig(:tier)&.to_s
+            corporate_tier: corporate_winner&.dig(:tier)&.to_s,
+            ota_tier: ota_winner&.dig(:tier)&.to_s
           }
         )
       end
@@ -85,6 +88,7 @@ module HotelOps
         rule_cat = case pricing_rule.rule_type
                    when "walk_in" then :walk_in
                    when "corporate_rate" then :corporate
+                   when "ota_rate" then :ota
                    else :online
                    end
         next unless rule_cat == category
@@ -111,7 +115,8 @@ module HotelOps
         "school_holiday" => :sc,
         "public_holiday" => :ph,
         "walk_in" => :wi,
-        "corporate_rate" => :cr
+        "corporate_rate" => :cr,
+        "ota_rate" => :ota
       }[rule_type]
     end
 
@@ -121,7 +126,7 @@ module HotelOps
         within_rule_window?(pricing_rule, date)
       when "weekends"
         within_rule_window?(pricing_rule, date) && pricing_rule.weekdays.include?(date.wday)
-      when "school_holiday", "public_holiday", "walk_in", "corporate_rate"
+      when "school_holiday", "public_holiday", "walk_in", "corporate_rate", "ota_rate"
         within_rule_window?(pricing_rule, date)
       else
         false

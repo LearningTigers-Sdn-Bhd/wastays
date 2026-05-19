@@ -213,6 +213,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       cr_price: pricing_params[:cr_price],
       cr_start_date: pricing_params[:cr_start_date],
       cr_end_date: pricing_params[:cr_end_date],
+      ota_price: pricing_params[:ota_price],
+      ota_start_date: pricing_params[:ota_start_date],
+      ota_end_date: pricing_params[:ota_end_date],
       public_holidays: pricing_params[:public_holidays]
     ).call
 
@@ -303,7 +306,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
     rule_type = params[:rule_type].to_s
-    unless %w[general weekends school_holiday walk_in corporate_rate].include?(rule_type)
+    unless %w[general weekends school_holiday walk_in corporate_rate ota_rate].include?(rule_type)
       return redirect_to hotel_inventory_index_path(current_hotel), alert: "Unsupported pricing tier."
     end
 
@@ -360,6 +363,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :cr_price,
       :cr_start_date,
       :cr_end_date,
+      :ota_price,
+      :ota_start_date,
+      :ota_end_date,
       room_type_ids: [],
       weekend_days: [],
       public_holidays: [ :name, :price, :start_date, :end_date ]

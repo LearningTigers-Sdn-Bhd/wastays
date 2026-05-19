@@ -1,7 +1,7 @@
 class HotelPricingRule < ApplicationRecord
   belongs_to :hotel
 
-  RULE_TYPES = %w[general weekends school_holiday public_holiday walk_in corporate_rate].freeze
+  RULE_TYPES = %w[general weekends school_holiday public_holiday walk_in corporate_rate ota_rate].freeze
 
   validates :rule_type, presence: true, inclusion: { in: RULE_TYPES }
   validates :price, presence: true, numericality: { greater_than_or_equal_to: 0 }
