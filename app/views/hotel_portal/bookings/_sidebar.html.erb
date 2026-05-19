@@ -56,5 +56,13 @@
       Resend Pre-Check-in
       <svg class="size-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </button>
+    <% if booking.status == "no_show" %>
+      <button type="button" 
+              onclick="document.getElementById('reinstate-modal-show-<%= booking.id %>').showModal()"
+              class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors">
+        Reinstate Reservation
+        <svg class="size-3.5 text-blue-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    <% end %>
   </div>
 </div>

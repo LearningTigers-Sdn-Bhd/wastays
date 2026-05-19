@@ -48,6 +48,10 @@ module HotelPortal
       Time.current.strftime("%Y-%m-%dT%H:%M")
     end
 
+    def requires_backdated_checkin_reason?
+      hotel.night_audits.completed.where(business_date: booking.check_in.to_date).exists?
+    end
+
     def can_manage_bookings?(user)
       user.has_permission?("manage_bookings", hotel: hotel)
     end

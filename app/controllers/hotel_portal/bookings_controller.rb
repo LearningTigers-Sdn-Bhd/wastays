@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class HotelPortal::BookingsController < HotelPortal::BaseController
-  before_action :authorize_view_bookings!, only: %i[index show availability stay_price]
-  before_action :authorize_manage_bookings!, only: %i[new create update check_in check_out cancel add_guest remove_guest]
+  before_action :authorize_view_bookings!, only: %i[index show availability rate_options stay_price]
+  before_action :authorize_manage_bookings!, only: %i[new create update check_in check_out cancel reinstate add_guest remove_guest]
 
   def index
     @all_bookings = current_hotel.bookings.recent_first.includes(:booking_folio)
@@ -25,6 +25,11 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   end
 
   def new
+    unless turbo_frame_request?
+      redirect_to hotel_bookings_path(current_hotel)
+      return
+    end
+
     @booking = current_hotel.bookings.build(
       check_in: params[:check_in].presence || Date.current,
       check_out: params[:check_out].presence || Date.current + 1.day,
@@ -67,14 +72,34 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     end
 
     room_type = current_hotel.room_types.find(params[:room_type_id])
+    rate_plan = rate_plan_for(room_type, params[:rate_plan_id])
 
     total = Bookings::CalculateStayPrice.new(
       room_type: room_type,
+      rate_plan: rate_plan,
       check_in: Date.parse(params[:check_in]),
       check_out: Date.parse(params[:check_out])
     ).call
 
     render json: { total_amount: total }
+  end
+
+  def rate_options
+    if params[:check_in].blank? || params[:check_out].blank? || params[:room_type_id].blank?
+      return render json: { rate_options: [] }
+    end
+
+    room_type = current_hotel.room_types.find(params[:room_type_id])
+    options = Bookings::RateOptions.new(
+      room_type: room_type,
+      check_in: Date.parse(params[:check_in]),
+      check_out: Date.parse(params[:check_out]),
+      apply_stop_sell: params[:apply_stop_sell_restriction],
+      apply_arrival_departure: params[:apply_arrival_departure_restrictions],
+      apply_stay_length: params[:apply_stay_length_restrictions]
+    ).call
+
+    render json: { rate_options: options }
   end
 
   def create
@@ -86,12 +111,25 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
     if result.success?
       release_room_locks(result.booking)
-      redirect_to hotel_booking_path(current_hotel, result.booking), notice: "Booking created successfully."
+
+      respond_to do |format|
+        format.turbo_stream do
+          flash[:notice] = "Booking created successfully."
+          render turbo_stream: turbo_stream_redirect_to(hotel_booking_path(current_hotel, result.booking))
+        end
+        format.html { redirect_to hotel_booking_path(current_hotel, result.booking), notice: "Booking created successfully." }
+      end
     else
-      @booking = current_hotel.bookings.build(booking_params.except(:room_type_id, :room_number))
+      Rails.logger.error "ManualBooking Creation Failed: #{result.errors.join(", ")}"
+      @booking = current_hotel.bookings.build(booking_params.except(*manual_booking_form_only_param_keys))
+      result.errors.each { |error| @booking.errors.add(:base, error) }
       @room_types = current_hotel.room_types.order(:name)
       flash.now[:alert] = result.errors.to_sentence
-      render :new, status: :unprocessable_content
+
+      respond_to do |format|
+        format.turbo_stream { render :new, formats: [ :html ], layout: false, status: :unprocessable_content }
+        format.html { render :new, status: :unprocessable_content }
+      end
     end
   end
 
@@ -161,6 +199,26 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def cancel
     transition_status("cancelled", nil, "Booking cancelled successfully.")
+  end
+
+  def reinstate
+    @booking = current_hotel.bookings.find(params[:id])
+    
+    result = Bookings::ReinstateReservation.new(
+      booking: @booking,
+      params: booking_params.slice(:booking_rooms_attributes),
+      user: current_user,
+      options: {
+        override_night_audit: true,
+        reason: params[:retroactive_reason]
+      }
+    ).call
+
+    if result.success?
+      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking reinstated and checked in successfully."
+    else
+      redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to reinstate booking: #{result.error}"
+    end
   end
 
   def add_guest
@@ -306,11 +364,31 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def booking_params
     params.fetch(:booking, {}).permit(
       :guest_name, :guest_email, :guest_phone, :status, :checked_in_at, :checked_out_at,
+      :guest_country, :guest_gender, :guest_document_type, :guest_government_id, :guest_update_intent,
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
       :record_payment, :payment_method, :payment_amount, :payment_reference,
-      :id_front, :id_back,
-      booking_rooms_attributes: [ :id, :room_number ]
+      :id_front, :id_back, :source, :internal_notes, :manual_rate_override, :existing_guest_id,
+      :rate_plan_id, :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
+      booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ]
     )
+  end
+
+  def rate_plan_for(room_type, rate_plan_id)
+    return if rate_plan_id.blank?
+
+    room_type.rate_plans.find_by(id: rate_plan_id)
+  end
+
+  def manual_booking_form_only_param_keys
+    %i[
+      room_type_id room_number record_payment payment_method payment_amount payment_reference
+      existing_guest_id guest_update_intent rate_plan_id
+      apply_stop_sell_restriction apply_arrival_departure_restrictions apply_stay_length_restrictions
+    ]
+  end
+
+  def turbo_stream_redirect_to(path)
+    %(<turbo-stream action="redirect" url="#{ERB::Util.html_escape(path)}"></turbo-stream>).html_safe
   end
 
   def transition_timestamp(attribute)

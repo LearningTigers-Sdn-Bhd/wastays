@@ -246,6 +246,7 @@ Rails.application.routes.draw do
     resources :bookings, only: [ :index, :show, :update, :new, :create ] do
       collection do
         get :availability
+        get :rate_options
         get :stay_price
         post :sync
       end
@@ -253,6 +254,7 @@ Rails.application.routes.draw do
         patch :move
         post :check_in
         post :check_out
+        post :reinstate
         post :cancel
         post :add_guest
         delete "guests/:guest_id", action: :remove_guest, as: :remove_guest
@@ -305,7 +307,9 @@ Rails.application.routes.draw do
       end
     end
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
-    resources :guests, only: [ :index, :show, :new, :create, :edit, :update, :destroy ]
+    resources :guests, only: [ :index, :show, :new, :create, :edit, :update, :destroy ] do
+      get :search, on: :collection
+    end
     resources :in_house_guests, only: [ :index ]
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings

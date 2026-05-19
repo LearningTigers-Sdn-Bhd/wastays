@@ -44,6 +44,22 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     end
   end
 
+  describe "GET /new" do
+    it "redirects direct page requests to the bookings index" do
+      get "/hotel/#{hotel.id}/bookings/new"
+
+      expect(response).to redirect_to(hotel_bookings_path(hotel))
+    end
+
+    it "renders the offcanvas frame for turbo frame requests" do
+      get "/hotel/#{hotel.id}/bookings/new", headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
+      expect(response.body).to include("Add New Booking")
+    end
+  end
+
   describe "GET /show" do
     it "returns http success" do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
@@ -69,6 +85,49 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "redirects within the hotel path" do
       patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: { booking: { status: "confirmed" } }
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    end
+  end
+
+  describe "POST /create" do
+    let(:room_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: [ "101", "102" ], base_price: 100) }
+    let(:booking_params) do
+      {
+        guest_name: "Manual Guest",
+        guest_email: "manual@example.com",
+        guest_phone: "+60123456789",
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 1.day).to_s,
+        room_type_id: room_type.id,
+        room_number: "101",
+        adults: 2,
+        children: 0
+      }
+    end
+
+    before do
+      dispatcher = instance_double(Notifications::Dispatcher, call: [])
+      allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+    end
+
+    it "returns a turbo redirect action for offcanvas submits" do
+      post "/hotel/#{hotel.id}/bookings",
+           params: { booking: booking_params },
+           headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('action="redirect"')
+      expect(response.body).to include(hotel_booking_path(hotel, Booking.last))
+    end
+
+    it "renders validation errors inside the offcanvas frame" do
+      post "/hotel/#{hotel.id}/bookings",
+           params: { booking: booking_params.merge(guest_name: "") },
+           headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
+      expect(response.body).to include("Guest name can&#39;t be blank")
     end
   end
 
@@ -169,6 +228,87 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(JSON.parse(response.body)).to eq({ "total_amount" => 0 })
+    end
+
+    it "uses the selected rate plan and falls back to base price for missing nightly rates" do
+      rate_plan = create(:rate_plan, room_type: room_type)
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 150)
+
+      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+        room_type_id: room_type.id,
+        rate_plan_id: rate_plan.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)["total_amount"].to_d).to eq(250.to_d)
+    end
+
+    it "falls back to base pricing when the selected rate plan is stale" do
+      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+        room_type_id: room_type.id,
+        rate_plan_id: 999_999,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)["total_amount"].to_d).to eq(200.to_d)
+    end
+  end
+
+  describe "GET /rate_options" do
+    let(:room_type) { create(:room_type, hotel: hotel, base_price: 100) }
+
+    it "returns rate plans for the selected room type" do
+      rate_plan = create(:rate_plan, room_type: room_type, name: "Flexible Rate")
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 125)
+
+      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 1.day).to_s
+      }
+
+      expect(response).to have_http_status(:success)
+      option = JSON.parse(response.body)["rate_options"].first
+      expect(option).to include("id" => rate_plan.id, "name" => "Flexible Rate", "currency" => "MYR")
+      expect(option["total_amount"].to_d).to eq(125.to_d)
+    end
+
+    it "ignores stop-sell restrictions unless staff chooses to respect them" do
+      rate_plan = create(:rate_plan, room_type: room_type, name: "OTA Rate")
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 125, stop_sell: true)
+
+      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 1.day).to_s
+      }
+
+      expect(JSON.parse(response.body)["rate_options"].map { |option| option["id"] }).to include(rate_plan.id)
+
+      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 1.day).to_s,
+        apply_stop_sell_restriction: "1"
+      }
+
+      expect(JSON.parse(response.body)["rate_options"].map { |option| option["id"] }).not_to include(rate_plan.id)
+    end
+
+    it "returns a base rate option when no rate plans exist" do
+      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s
+      }
+
+      option = JSON.parse(response.body)["rate_options"].first
+      expect(option).to include("id" => nil, "name" => "Base Rate", "currency" => "MYR")
+      expect(option["total_amount"].to_d).to eq(200.to_d)
     end
   end
 

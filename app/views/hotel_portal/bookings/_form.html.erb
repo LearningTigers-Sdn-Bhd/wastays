@@ -1,0 +1,354 @@
+<% is_reservation_board = params[:controller].include?("reservation_board") %>
+<% form_url = is_reservation_board ? hotel_reservation_board_board_bookings_path(current_hotel) : hotel_bookings_path(current_hotel) %>
+
+<div class="flex flex-col h-full" data-controller="guest-change-confirmation">
+  <!-- Header -->
+  <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white sticky top-0 z-10">
+    <div>
+      <h2 class="text-xl font-bold text-slate-900">Add New Booking</h2>
+      <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Manual Reservation</p>
+    </div>
+    <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors" data-action="click->offcanvas#close">
+      <svg class="size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/50">
+    <%= form_with model: @booking, url: form_url, local: true, class: "mx-auto max-w-[1500px] space-y-6",
+        id: "manual_booking_form",
+        data: {
+          controller: "booking-calc room-lock",
+          action: "submit->guest-change-confirmation#confirm guest:selected->guest-change-confirmation#storeOriginalGuest",
+          room_lock_url_value: hotel_room_locks_path(current_hotel),
+          booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
+          booking_calc_rate_options_url_value: rate_options_hotel_bookings_path(current_hotel),
+          booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel)
+        } do |f| %>
+      <%= f.hidden_field :guest_update_intent, data: { guest_change_confirmation_target: "intent" } %>
+      
+      <div id="booking_errors" class="<%= @booking.errors.any? ? 'block' : 'hidden' %> p-4 rounded-xl bg-red-50 border border-red-200 mb-6" data-controller="auto-scroll-top">
+        <% if @booking.errors.any? %>
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-bold text-red-800"><%= pluralize(@booking.errors.count, "error") %> prohibited this booking from being saved:</h3>
+              <div class="mt-2 text-sm text-red-700">
+                <ul class="list-disc pl-5 space-y-1">
+                  <% @booking.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Pricing Summary -->
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+          <h3 class="text-sm font-bold text-slate-900">Payment Summary</h3>
+          <span class="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 ring-1 ring-slate-200">Live Calculation</span>
+        </div>
+        <div class="grid gap-6 p-6 lg:grid-cols-[1fr_320px] lg:items-end">
+          <div>
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Calculated Total</p>
+            <p class="mt-2 text-4xl font-black tracking-tight text-slate-950">MYR <span data-booking-calc-target="displayTotal"><%= number_with_precision(@booking.total_amount || 0, precision: 2) %></span></p>
+            <p class="mt-2 text-xs font-medium text-slate-500">Updates automatically from selected dates, room category, and rate plan.</p>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Adjust Price (Optional)</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-sm font-bold">MYR</span>
+              <%= f.number_field :total_amount, step: 0.01,
+                  class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-12 pr-4 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm text-right",
+                  data: {
+                    booking_calc_target: "totalInput",
+                    action: "input->booking-calc#setOverride"
+                  } %>
+            </div>
+            <%= f.hidden_field :manual_rate_override, value: @booking.manual_rate_override, data: { booking_calc_target: "rateOverrideFlag" } %>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div class="space-y-6">
+      <!-- Guest Information Card -->
+      <div class="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm relative z-40" 
+           data-controller="guest-autocomplete" 
+           data-guest-autocomplete-url-value="<%= search_hotel_guests_path(current_hotel) %>">
+        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+          <h3 class="text-sm font-bold text-slate-900">Guest Information</h3>
+        </div>
+        <div class="p-6 space-y-6">
+          <div class="relative z-50">
+            <%= f.label :guest_name, "Full Name", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+            <%= f.text_field :guest_name, required: true, placeholder: "Search or enter name", 
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                role: "combobox",
+                aria: { expanded: "false", controls: "booking_guest_results", autocomplete: "list" },
+                  data: { 
+                  guest_autocomplete_target: "input", guest_change_confirmation_target: "name",
+                  action: "input->guest-autocomplete#search focus->guest-autocomplete#search blur->guest-autocomplete#hideOnBlur" 
+                } %>
+            <%= f.hidden_field :existing_guest_id, data: { guest_autocomplete_target: "guestId", guest_change_confirmation_target: "guestId" } %>
+            <div id="booking_guest_results"
+                 class="absolute z-20 w-full mt-1 bg-white rounded-xl border border-slate-200 shadow-xl max-h-60 overflow-y-auto hidden"
+                 role="listbox"
+                 data-guest-autocomplete-target="results"></div>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-6">
+            <div>
+              <%= f.label :guest_email, "Email Address", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.email_field :guest_email, required: true, placeholder: "john@example.com", 
+                  class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                  data: { guest_autocomplete_target: "email", guest_change_confirmation_target: "email" } %>
+            </div>
+            <div>
+              <%= f.label :guest_phone, "Phone Number", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.telephone_field :guest_phone, required: true, placeholder: "+60 12-345 6789", 
+                  class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                  data: { guest_autocomplete_target: "phone", guest_change_confirmation_target: "phone" } %>
+            </div>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-6">
+            <div>
+              <%= f.label :guest_country, "Country", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.text_field :guest_country, placeholder: current_hotel.country.presence || "Malaysia",
+                  class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                  data: { guest_autocomplete_target: "country", guest_change_confirmation_target: "country" } %>
+            </div>
+            <div>
+              <%= f.label :guest_gender, "Gender", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.select :guest_gender, Guest::GENDERS.map { |gender| [gender.titleize, gender] }, { include_blank: "Select gender" },
+                  { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                    data: { guest_autocomplete_target: "gender", guest_change_confirmation_target: "gender" } } %>
+            </div>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-6">
+            <div>
+              <%= f.label :guest_document_type, "Document Type", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.select :guest_document_type, Booking::DOCUMENT_TYPES, { include_blank: "Select document type" },
+                  { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                    data: { guest_autocomplete_target: "documentType", guest_change_confirmation_target: "documentType" } } %>
+            </div>
+            <div>
+              <%= f.label :guest_government_id, "IC / Passport No.", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.text_field :guest_government_id, placeholder: "Identity card or passport number",
+                  class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                  data: { guest_autocomplete_target: "governmentId", guest_change_confirmation_target: "governmentId" } %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stay Details -->
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+          <h3 class="text-sm font-bold text-slate-900">Stay & Room Details</h3>
+        </div>
+        <div class="p-6 space-y-6">
+          <div class="grid sm:grid-cols-2 gap-6">
+            <div>
+              <%= f.label :check_in, "Check-in Date", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.date_field :check_in, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
+            </div>
+            <div>
+              <%= f.label :check_out, "Check-out Date", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.date_field :check_out, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
+            </div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-6">
+            <div>
+              <%= f.label :adults, class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.number_field :adults, required: true, min: 1, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+            </div>
+            <div>
+              <%= f.label :children, class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.number_field :children, required: true, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+            </div>
+          </div>
+
+          <div>
+            <%= f.label :source, "Booking Source", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+            <%= f.select :source, [["Phone", "phone"], ["Walk-in", "walk_in"], ["Email", "email"], ["WhatsApp", "whatsapp"], ["Other", "internal"]], { selected: "phone" },
+                { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" } %>
+          </div>
+
+          <div>
+            <%= f.label :internal_notes, "Internal Notes", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+            <%= f.text_area :internal_notes, rows: 2, placeholder: "Special requests, late check-in, etc.", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          </div>
+        </div>
+      </div>
+        </div>
+
+        <div class="space-y-6">
+
+      <!-- Select Room -->
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+          <h3 class="text-sm font-bold text-slate-900">Select Room</h3>
+        </div>
+        <div class="p-6 space-y-6">
+          <div class="grid sm:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Category</label>
+              <%= f.collection_select :room_type_id, @room_types, :id, :name, { selected: @room_type_id, prompt: "Select a category" },
+                  { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                    data: {
+                      booking_calc_target: "roomType",
+                      action: "change->booking-calc#calculate",
+                      prices: @room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
+                      room_numbers: @room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
+                    }
+                  } %>
+            </div>
+            <div data-booking-calc-target="roomNumberContainer">
+              <label for="booking_room_number" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
+              <%= f.select :room_number, (@room_number.present? ? [[@room_number, @room_number]] : []), { selected: @room_number, prompt: "Select a room" },
+                  { id: "booking_room_number",
+                    required: true,
+                    disabled: @room_number.blank?,
+                    class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                    data: {
+                      booking_calc_target: "roomNumberSelect",
+                      action: "change->room-lock#lock"
+                    }
+                  } %>
+            </div>
+          </div>
+
+          <div>
+            <%= f.label :rate_plan_id, "Select Rates", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+            <%= f.select :rate_plan_id, [], { prompt: "Select room category and dates first" },
+                { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                  data: { booking_calc_target: "ratePlanSelect", action: "change->booking-calc#calculate" } } %>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Respect Rate Restrictions</p>
+            <div class="mt-3 grid gap-3 sm:grid-cols-3">
+              <label class="flex items-start gap-2 text-xs font-semibold text-slate-700">
+                <%= f.check_box :apply_stop_sell_restriction, class: "mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900", data: { booking_calc_target: "restrictionCheckbox", action: "change->booking-calc#calculate" } %>
+                <span>Stop sell</span>
+              </label>
+              <label class="flex items-start gap-2 text-xs font-semibold text-slate-700">
+                <%= f.check_box :apply_arrival_departure_restrictions, class: "mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900", data: { booking_calc_target: "restrictionCheckbox", action: "change->booking-calc#calculate" } %>
+                <span>Closed arrival/departure</span>
+              </label>
+              <label class="flex items-start gap-2 text-xs font-semibold text-slate-700">
+                <%= f.check_box :apply_stay_length_restrictions, class: "mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900", data: { booking_calc_target: "restrictionCheckbox", action: "change->booking-calc#calculate" } %>
+                <span>Min/max stay</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Capture -->
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-controller="payment-toggle">
+        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+          <h3 class="text-sm font-bold text-slate-900">Advance Payment</h3>
+        </div>
+        <div class="p-6 space-y-6">
+          <label class="flex items-center justify-between gap-4">
+            <span>
+              <span class="block text-sm font-bold text-slate-900">Record advance payment now</span>
+              <span class="mt-1 block text-xs font-medium text-slate-500">Enable payment method, amount, and receipt reference fields.</span>
+            </span>
+            <span class="relative inline-flex shrink-0 items-center">
+              <%= f.check_box :record_payment,
+                  class: "peer sr-only",
+                  data: { action: "change->payment-toggle#toggle", payment_toggle_target: "checkbox" } %>
+              <span class="h-7 w-12 rounded-full bg-slate-200 transition peer-checked:bg-slate-900 peer-focus:ring-2 peer-focus:ring-slate-300"></span>
+              <span class="absolute left-1 size-5 rounded-full bg-white shadow transition peer-checked:translate-x-5"></span>
+            </span>
+          </label>
+
+          <div class="space-y-6 pt-4 border-t border-slate-100 opacity-50" data-payment-toggle-target="container">
+            <div class="grid sm:grid-cols-2 gap-6">
+              <div>
+                <%= f.label :payment_method, "Payment Method", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+                <%= f.select :payment_method, [["Cash", "cash"], ["Credit Card", "credit_card"], ["Bank Transfer", "bank_transfer"]], { selected: "cash" }, { disabled: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm disabled:cursor-not-allowed", data: { payment_toggle_target: "field" } } %>
+              </div>
+              <div>
+                <%= f.label :payment_amount, "Amount (MYR)", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+                <%= f.number_field :payment_amount, step: 0.01, disabled: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm disabled:cursor-not-allowed", data: { booking_calc_target: "paymentAmountInput", payment_toggle_target: "field" } %>
+                <p class="mt-1.5 text-[10px] font-medium text-slate-500">Defaults to total stay price if left blank.</p>
+              </div>
+            </div>
+            <div>
+              <%= f.label :payment_reference, "Reference / Receipt No.", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+              <%= f.text_field :payment_reference, placeholder: "Optional reference number", disabled: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm disabled:cursor-not-allowed", data: { payment_toggle_target: "field" } %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Footer -->
+  <div class="px-6 py-4 border-t border-slate-200 bg-white sticky bottom-0 z-10 flex items-center justify-end gap-x-4">
+    <button type="button" class="px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition" data-action="click->offcanvas#close">
+      Cancel
+    </button>
+    <button type="submit" form="manual_booking_form" class="inline-flex items-center rounded-xl bg-slate-900 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer" data-turbo-submits-with="Creating booking...">
+      Confirm & Create Booking
+    </button>
+  </div>
+
+  <!-- Guest Change Confirmation Modal -->
+  <div data-guest-change-confirmation-target="modal" class="hidden fixed inset-0 z-[120] bg-slate-950/55 backdrop-blur-sm items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true">
+    <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20 animate-in fade-in zoom-in duration-200">
+      <div class="border-b border-slate-200 bg-slate-50/80 px-6 py-4">
+        <h3 class="text-base font-bold text-slate-900">Guest Details Changed</h3>
+      </div>
+
+      <div class="px-6 py-5">
+        <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3.5 mb-4">
+          <svg class="mt-0.5 h-5 w-5 flex-none text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007v.008H12v-.008ZM3.94 19.5h16.12c1.42 0 2.31-1.53 1.6-2.76L13.6 3.26c-.71-1.23-2.49-1.23-3.2 0L2.34 16.74c-.71 1.23.18 2.76 1.6 2.76Z" />
+          </svg>
+          <p class="text-sm leading-relaxed text-slate-700">You selected an existing guest, but some details were changed. Choose how this booking should handle the edited information.</p>
+        </div>
+        
+        <div class="space-y-3">
+          <button type="button" data-action="click->guest-change-confirmation#chooseIntent" data-intent="create_new" class="w-full flex flex-col text-left p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition group">
+            <span class="text-sm font-bold text-slate-900 group-hover:text-blue-600">Create New Guest</span>
+            <span class="text-xs text-slate-500 mt-1">Create a separate profile using these edited details. This will be blocked if email, phone, or IC/passport number already belongs to another guest.</span>
+          </button>
+          
+          <button type="button" data-action="click->guest-change-confirmation#chooseIntent" data-intent="update_existing" class="w-full flex flex-col text-left p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition group">
+            <span class="text-sm font-bold text-slate-900 group-hover:text-blue-600">Update Existing Guest</span>
+            <span class="text-xs text-slate-500 mt-1">Save these edited details to the selected guest profile.</span>
+          </button>
+          
+          <button type="button" data-action="click->guest-change-confirmation#chooseIntent" data-intent="keep_existing" class="w-full flex flex-col text-left p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition group">
+            <span class="text-sm font-bold text-slate-900 group-hover:text-blue-600">Use Changes For This Booking Only</span>
+            <span class="text-xs text-slate-500 mt-1">Keep the selected guest profile unchanged, but save the edited details on this booking.</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 border-t border-slate-200 px-6 py-4 bg-slate-50/50">
+        <button type="button" data-action="click->guest-change-confirmation#cancel" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+          Back to Editing
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
