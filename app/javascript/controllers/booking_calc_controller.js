@@ -1,8 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["checkIn", "checkOut", "roomType", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput"]
-  static values = { availabilityUrl: String, priceUrl: String, bookingId: String, excludeBookingId: String }
+  static targets = ["checkIn", "checkOut", "roomType", "ratePlanSelect", "restrictionCheckbox", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput", "rateOverrideFlag"]
+  static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, bookingId: String, excludeBookingId: String }
 
   connect() {
     // Trigger initial calculation and room numbers load
@@ -11,26 +11,82 @@ export default class extends Controller {
     }
   }
 
+  async loadRateOptions() {
+    const roomTypeId = this.roomTypeTarget.value
+    const checkIn = this.checkInTarget.value
+    const checkOut = this.checkOutTarget.value
+
+    if (!this.hasRatePlanSelectTarget) return
+
+    if (!roomTypeId || !checkIn || !checkOut || !this.hasRateOptionsUrlValue) {
+      this.populateRateOptions([], "Select room category and dates first")
+      return
+    }
+
+    const currentSelection = this.ratePlanSelectTarget.value
+    this.populateRateOptions([], "Loading rates...")
+    this.ratePlanSelectTarget.disabled = true
+
+    try {
+      const params = new URLSearchParams({
+        room_type_id: roomTypeId,
+        check_in: checkIn,
+        check_out: checkOut
+      })
+
+      this.restrictionCheckboxTargets.forEach((checkbox) => {
+        params.set(checkbox.name.replace(/^booking\[|\]$/g, ""), checkbox.checked ? "1" : "0")
+      })
+
+      const response = await fetch(`${this.rateOptionsUrlValue}?${params}`)
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+
+      const data = await response.json()
+      this.populateRateOptions(data.rate_options || [], "No rate options available", currentSelection)
+    } catch (error) {
+      console.error("Rate options load failed:", error)
+      this.populateRateOptions([], `Error: ${error.message}`)
+    } finally {
+      this.ratePlanSelectTarget.disabled = false
+    }
+  }
+
+  populateRateOptions(options, promptText, currentSelection = "") {
+    this.ratePlanSelectTarget.innerHTML = ""
+
+    const prompt = document.createElement("option")
+    prompt.value = ""
+    prompt.textContent = options.length > 0 ? "Select a rate" : promptText
+    this.ratePlanSelectTarget.appendChild(prompt)
+
+    options.forEach((rateOption) => {
+      const option = document.createElement("option")
+      option.value = rateOption.id || ""
+      option.textContent = `${rateOption.name} - ${rateOption.currency} ${parseFloat(rateOption.total_amount || 0).toFixed(2)}`
+      if ((rateOption.id || "").toString() === (currentSelection || "").toString()) option.selected = true
+      this.ratePlanSelectTarget.appendChild(option)
+    })
+  }
+
   async updateRoomNumbers() {
     const roomTypeId = this.roomTypeTarget.value
     const checkIn = this.checkInTarget.value
     const checkOut = this.checkOutTarget.value
     
     if (!roomTypeId || !checkIn || !checkOut) {
-      if (this.hasRoomNumberContainerTarget) this.roomNumberContainerTarget.classList.add("hidden")
+      this.roomNumberSelectTarget.innerHTML = '<option value="">Select room category and dates first</option>'
+      this.roomNumberSelectTarget.disabled = true
       return
     }
 
     // Update the room-lock controller's room type if it exists in the same container
     if (this.hasRoomNumberContainerTarget) {
-      const lockController = this.application.getControllerForElementAndIdentifier(this.roomNumberContainerTarget, "room-lock")
+      const lockController = this.application.getControllerForElementAndIdentifier(this.element, "room-lock")
       if (lockController) {
         lockController.roomTypeIdValue = roomTypeId
       }
     }
 
-    // Show container and loading state
-    if (this.hasRoomNumberContainerTarget) this.roomNumberContainerTarget.classList.remove("hidden")
     this.roomNumberSelectTarget.required = true
     
     const currentSelection = this.roomNumberSelectTarget.value
@@ -122,13 +178,28 @@ export default class extends Controller {
     }
 
     // Crucial: Always check availability when dates/room type change
-    this.updateRoomNumbers()
+    await this.updateRoomNumbers()
+    await this.loadRateOptions()
 
     if (!this.hasPriceUrlValue) return
 
+    // Skip price calculation if manual override is active
+    if (this.hasRateOverrideFlagTarget && this.rateOverrideFlagTarget.value === "1") {
+      return
+    }
+
     try {
       this.displayTotalTarget.textContent = "Calculating..."
-      const url = `${this.priceUrlValue}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}`
+      const params = new URLSearchParams({
+        room_type_id: roomTypeId,
+        check_in: checkIn,
+        check_out: checkOut
+      })
+      if (this.hasRatePlanSelectTarget && this.ratePlanSelectTarget.value) {
+        params.set("rate_plan_id", this.ratePlanSelectTarget.value)
+      }
+
+      const url = `${this.priceUrlValue}?${params}`
       const response = await fetch(url)
       const data = await response.json()
       this.updateDisplay(parseFloat(data.total_amount || 0))
@@ -148,5 +219,19 @@ export default class extends Controller {
     if (this.hasPaymentAmountInputTarget) {
       this.paymentAmountInputTarget.value = formatted
     }
+  }
+
+  // Called when user manually edits the total input
+  setOverride() {
+    if (this.hasRateOverrideFlagTarget) {
+      this.rateOverrideFlagTarget.value = "1"
+    }
+  }
+
+  clearOverride() {
+    if (this.hasRateOverrideFlagTarget) {
+      this.rateOverrideFlagTarget.value = ""
+    }
+    this.calculate()
   }
 }

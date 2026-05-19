@@ -56,36 +56,39 @@ export default class extends Controller {
 
   selectHour(event) {
     const val = event.currentTarget.dataset.value
-    this.currentHour = parseInt(val)
-    this.highlightCurrent()
+    const h = parseInt(val)
     
-    if (!this.hasPeriodTarget) {
-      // 24h mode: update everything
-      this.updateDisplay()
+    if (this.hasPeriodTarget) {
+      // In 12h mode, preserve PM if already set
+      const isPM = this.currentHour !== undefined && this.currentHour >= 12
+      let newH24 = h % 12
+      if (isPM) newH24 += 12
+      else if (h === 12) newH24 = 0 // 12 AM is 0
+      this.currentHour = newH24
+    } else {
+      this.currentHour = h
     }
+
+    this.updateDisplay()
+    this.highlightCurrent()
+    this.checkAutoClose()
   }
 
   selectMinute(event) {
     const val = event.currentTarget.dataset.value
     this.currentMinute = parseInt(val)
-    this.highlightCurrent()
     
-    if (!this.hasPeriodTarget) {
-      // 24h mode: update everything and close
-      this.updateDisplay()
-      this.close()
-      this.advance()
-    }
+    this.updateDisplay()
+    this.highlightCurrent()
+    this.checkAutoClose()
   }
 
   selectPeriod(event) {
     const period = event.currentTarget.dataset.value
-    
-    // Default to 12 if no hour selected yet when picking period
-    if (this.currentHour === undefined) this.currentHour = 12
-    
     const isPM = period === "PM"
-    let currentH12 = this.currentHour % 12
+    
+    // Default to 12 if no hour selected yet
+    let currentH12 = this.currentHour !== undefined ? (this.currentHour % 12) : 12
     if (currentH12 === 0) currentH12 = 12
     
     let newH24 = currentH12
@@ -93,17 +96,26 @@ export default class extends Controller {
     if (!isPM && currentH12 === 12) newH24 = 0
     
     this.currentHour = newH24
+    
+    this.updateDisplay()
     this.highlightCurrent()
+    this.checkAutoClose()
   }
 
-  confirm(event) {
-    if (event) event.preventDefault()
-    
+  checkAutoClose() {
     if (this.currentHour !== undefined && this.currentMinute !== undefined) {
-      this.updateDisplay()
-      this.close()
-      this.advance()
+      if (!this.hasPeriodTarget || this.hasSelectedPeriod()) {
+        this.close()
+        this.advance()
+      }
     }
+  }
+
+  hasSelectedPeriod() {
+    if (!this.hasPeriodTarget) return true
+    // If we parsed an initial value or clicked a period, we consider it "selected"
+    // Since we default to AM/PM on selectHour, we look for an explicit click or existing state
+    return true // For the simplified 3-column UI, we want it to feel live
   }
 
   updateDisplay() {
@@ -112,13 +124,7 @@ export default class extends Controller {
     const formatted = this.formatTime(h, m)
     
     if (this.hasInputTarget) {
-      if (this.hasPeriodTarget) {
-        const h24 = h.toString().padStart(2, '0')
-        const m24 = m.toString().padStart(2, '0')
-        this.inputTarget.value = `${h24}:${m24}`
-      } else {
-        this.inputTarget.value = formatted
-      }
+      this.inputTarget.value = formatted
     }
 
     if (this.hasDisplayTarget) {
@@ -128,14 +134,15 @@ export default class extends Controller {
     }
 
     if (this.hasHiddenInputTarget) {
-      this.hiddenInputTarget.value = formatted
+      const h24 = h.toString().padStart(2, '0')
+      const m24 = m.toString().padStart(2, '0')
+      this.hiddenInputTarget.value = `${h24}:${m24}`
       this.hiddenInputTarget.dispatchEvent(new Event("change", { bubbles: true }))
     }
   }
 
   highlightCurrent() {
     if (this.currentHour === undefined && this.currentMinute === undefined) {
-      // Clear all highlights
       this.hourTargets.forEach(el => this.applyClasses(el, false))
       this.minuteTargets.forEach(el => this.applyClasses(el, false))
       if (this.hasPeriodTarget) this.periodTargets.forEach(el => this.applyClasses(el, false))
@@ -145,7 +152,6 @@ export default class extends Controller {
     const h24 = this.currentHour ?? -1
     const m = this.currentMinute ?? -1
     
-    // 12h vs 24h highlighting
     if (this.hasPeriodTarget) {
       let h12 = h24 % 12
       if (h12 === 0) h12 = 12
@@ -179,21 +185,10 @@ export default class extends Controller {
   }
 
   applyClasses(el, active) {
-    // Both branches used different classes. 
-    // HEAD: bg-blue-600, text-white
-    // main: bg-slate-900, text-white, bg-white, text-slate-700
-    
-    if (this.hasPeriodTarget) {
-      // HEAD branch style
-      el.classList.toggle("bg-blue-600", active)
-      el.classList.toggle("text-white", active)
-    } else {
-      // main branch style
-      el.classList.toggle("bg-slate-900", active)
-      el.classList.toggle("text-white", active)
-      el.classList.toggle("bg-white", !active)
-      el.classList.toggle("text-slate-700", !active)
-    }
+    el.classList.toggle("bg-slate-900", active)
+    el.classList.toggle("text-white", active)
+    el.classList.toggle("bg-white", !active)
+    el.classList.toggle("text-slate-700", !active)
   }
 
   formatTime(h, m) {
