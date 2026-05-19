@@ -89,4 +89,81 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
     end
   end
+
+  describe "late flow — past check-in time, pre-checkin not done" do
+    let(:kl_zone) { Time.find_zone("Kuala Lumpur") }
+    let(:policy) { hotel.build_property_policy(check_in_time: "15:00", check_out_time: "12:00", currency: "MYR", usd_rate: 4.5) }
+
+    before do
+      policy.save!
+      travel_to kl_zone.parse("#{Date.today} 16:00") do
+        post concierge_check_in_lookup_path(hotel.slug),
+             params: { confirmation_token: booking.confirmation_token }
+      end
+    end
+
+    it "redirects to check_in_now when past check-in time and no pre-checkin" do
+      travel_to kl_zone.parse("#{Date.today} 16:00") do
+        post concierge_check_in_lookup_path(hotel.slug),
+             params: { confirmation_token: booking.confirmation_token }
+        expect(response).to redirect_to(concierge_check_in_now_path(hotel.slug))
+      end
+    end
+
+    it "check_in_now renders inline registration form" do
+      travel_to kl_zone.parse("#{Date.today} 16:00") do
+        post concierge_check_in_lookup_path(hotel.slug),
+             params: { confirmation_token: booking.confirmation_token }
+      end
+      get concierge_check_in_now_path(hotel.slug)
+      expect(response.body).to include("Guest Registration")
+      expect(response.body).to include("guest_home_address")
+    end
+
+    it "submit_check_in saves guest fields and checks in" do
+      travel_to kl_zone.parse("#{Date.today} 16:00") do
+        post concierge_check_in_lookup_path(hotel.slug),
+             params: { confirmation_token: booking.confirmation_token }
+      end
+      create(:room_inventory, room_type: room_type, date: Date.today,
+             quantity: 1, status: "open", available_room_numbers: ["101"])
+
+      post concierge_submit_check_in_path(hotel.slug), params: {
+        booking: {
+          guest_name: "Ahmad Zulkifli",
+          guest_email: "ahmad@example.com",
+          guest_phone: "+60123456789",
+          guest_country: "Malaysia",
+          guest_document_type: "ic",
+          guest_government_id: "900101011234",
+          guest_home_address: "No. 12, Jalan Ampang, 50450 KL"
+        }
+      }
+
+      expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
+      expect(booking.reload.status).to eq("checked_in")
+      expect(booking.reload.guest_home_address).to eq("No. 12, Jalan Ampang, 50450 KL")
+    end
+
+    it "submit_check_in re-renders with error when guest fields missing" do
+      travel_to kl_zone.parse("#{Date.today} 16:00") do
+        post concierge_check_in_lookup_path(hotel.slug),
+             params: { confirmation_token: booking.confirmation_token }
+      end
+
+      post concierge_submit_check_in_path(hotel.slug), params: {
+        booking: {
+          guest_name: "Ahmad Zulkifli",
+          guest_email: "",
+          guest_phone: "+60123456789",
+          guest_country: "Malaysia",
+          guest_document_type: "ic",
+          guest_government_id: "900101011234",
+          guest_home_address: "No. 12, Jalan Ampang"
+        }
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+    end
+  end
 end

@@ -1,24 +1,36 @@
 <% content_for :title, "Check In Now | #{@hotel.name}" %>
 <%= render layout: "public/concierge/shared/page_shell" do %>
+  <% subtitle = @booking&.pre_checkin&.completed? ? "Your pre-check-in is complete. Confirm below to check in and get your room assigned." : "Complete your guest registration below to check in and get your room assigned." %>
   <%= render "public/concierge/shared/page_header",
              back_path: concierge_check_in_path(@hotel.slug),
              back_label: "Back to Check In",
              eyebrow: "Check In",
              title_prefix: "Ready to",
              title_accent: "check in?",
-             subtitle: "Your pre-check-in is complete. Confirm below to check in and get your room assigned.",
+             subtitle: subtitle,
              divider_suffix: "/60" %>
+
   <%= render "public/concierge/shared/error_alert", message: @error %>
 
   <div class="mb-5 rounded-2xl border border-neutral-border bg-white p-5 shadow-sm">
     <div class="mb-4 flex items-center gap-3">
-      <div class="flex-none rounded-xl bg-green-50 text-green-600">
-        <svg class="h-10 w-10 p-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      </div>
-      <div>
-        <p class="text-xs font-bold uppercase tracking-widest text-green-600">Pre-check-in Complete</p>
-        <p class="text-xs text-neutral-text-secondary">Your details have been verified</p>
-      </div>
+      <% if @booking&.pre_checkin&.completed? %>
+        <div class="flex-none rounded-xl bg-green-50 text-green-600">
+          <svg class="h-10 w-10 p-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest text-green-600">Pre-check-in Complete</p>
+          <p class="text-xs text-neutral-text-secondary">Your details have been verified</p>
+        </div>
+      <% else %>
+        <div class="flex-none rounded-xl bg-amber-50 text-amber-600">
+          <svg class="h-10 w-10 p-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest text-amber-600">Registration Required</p>
+          <p class="text-xs text-neutral-text-secondary">Please fill in your details to proceed</p>
+        </div>
+      <% end %>
     </div>
 
     <div class="space-y-1 border-t border-neutral-border pt-4">
@@ -47,13 +59,73 @@
     <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-700">
       No rooms are ready right now. Please proceed to the front desk and our staff will check you in shortly.
     </div>
+  <% elsif @error_code == :registration_error %>
+    <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
+      Please check the details below and try again.
+    </div>
   <% elsif @error_code.present? %>
     <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
       Something went wrong. Please try again or see the front desk.
     </div>
   <% end %>
 
-  <%= form_with url: concierge_submit_check_in_path(@hotel.slug), method: :post do %>
+  <%= form_with url: concierge_submit_check_in_path(@hotel.slug), method: :post, scope: :booking do |f| %>
+    <% unless @booking&.pre_checkin&.completed? %>
+      <div class="card p-6 mb-5">
+        <div class="mb-4">
+          <h2 class="text-sm font-black uppercase tracking-widest text-neutral-text-primary">Guest Registration</h2>
+          <p class="mt-1 text-xs text-neutral-text-secondary">Fill in your details to complete check-in.</p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <%= f.label :guest_name, "Full Name (as per IC/Passport)", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.text_field :guest_name, value: @booking.guest_name, class: "form-input py-3 px-5 border border-neutral-border", required: true %>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <div>
+              <%= f.label :guest_document_type, "Document Type", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+              <%= f.select :guest_document_type,
+                    [["MyKad (IC)", "ic"], ["Passport", "passport"]],
+                    { selected: @booking.guest_document_type, prompt: "Select document type" },
+                    class: "form-input py-3 px-5 border border-neutral-border", required: true %>
+            </div>
+
+            <div>
+              <%= f.label :guest_government_id, "IC / Passport Number", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+              <%= f.text_field :guest_government_id, value: @booking.guest_government_id, class: "form-input py-3 px-5 border border-neutral-border", required: true, placeholder: "e.g. 900101011234" %>
+            </div>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <div>
+              <%= f.label :guest_email, "Email Address", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+              <%= f.email_field :guest_email, value: @booking.guest_email, class: "form-input py-3 px-5 border border-neutral-border", required: true %>
+            </div>
+
+            <div>
+              <%= f.label :guest_phone, "Phone Number", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+              <%= f.telephone_field :guest_phone, value: @booking.guest_phone, class: "form-input py-3 px-5 border border-neutral-border", required: true %>
+            </div>
+          </div>
+
+          <div>
+            <%= f.label :guest_country, "Nationality", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.select :guest_country,
+                  country_options,
+                  { selected: @booking.guest_country.presence || "Malaysia", prompt: "Select nationality" },
+                  class: "form-input py-3 px-5 border border-neutral-border", required: true %>
+          </div>
+
+          <div>
+            <%= f.label :guest_home_address, "Home Address", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.text_area :guest_home_address, value: @booking.guest_home_address, class: "form-input py-3 px-5 border border-neutral-border", required: true, rows: 3, placeholder: "e.g. No. 12, Jalan Ampang, 50450 Kuala Lumpur, Malaysia" %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
     <%= submit_tag "Confirm Check In →", class: "btn btn-primary w-full cursor-pointer py-3 text-sm font-black uppercase tracking-widest" %>
   <% end %>
 <% end %>

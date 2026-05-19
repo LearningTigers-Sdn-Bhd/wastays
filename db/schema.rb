@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_19_071205) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -234,7 +234,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
     t.integer "folio_number"
     t.integer "receipt_number"
     t.integer "guest_registration_number"
-    t.bigint "walk_in_arrival_id"
+    t.string "guest_home_address"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
@@ -243,7 +243,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
     t.index ["source"], name: "index_bookings_on_source"
     t.index ["status"], name: "index_bookings_on_status"
-    t.index ["walk_in_arrival_id"], name: "index_bookings_on_walk_in_arrival_id"
   end
 
   create_table "cancellation_policy_templates", force: :cascade do |t|
@@ -300,6 +299,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
   end
 
+  create_table "complaints", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "category"
+    t.text "description"
+    t.string "status", default: "open"
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_complaints_on_booking_id"
+  end
+
   create_table "exchange_rates", force: :cascade do |t|
     t.string "currency_code", null: false
     t.decimal "rate", precision: 18, scale: 8, null: false
@@ -331,7 +341,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
     t.string "magic_token_digest"
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
-    t.jsonb "chat_history", default: []
     t.bigint "created_by_hotel_id"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
@@ -393,9 +402,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
     t.integer "salesperson_id"
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
-    t.string "whatsapp_number"
-    t.text "ai_persona"
-    t.string "openai_api_key"
     t.jsonb "amenities", default: [], null: false
     t.string "slug", null: false
     t.boolean "ai_provider_enabled", default: false
@@ -408,6 +414,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
     t.string "hotel_prefix"
     t.string "contact_phone"
     t.string "contact_email"
+    t.string "whatsapp_number"
     t.boolean "concierge_enabled", default: true, null: false
     t.string "time_zone"
     t.index ["account_id"], name: "index_hotels_on_account_id"
@@ -415,7 +422,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
-    t.index ["whatsapp_number"], name: "index_hotels_on_whatsapp_number", unique: true
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
@@ -959,39 +965,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
     t.index ["email"], name: "index_users_on_email"
   end
 
-  create_table "walk_in_arrivals", force: :cascade do |t|
-    t.bigint "hotel_id", null: false
-    t.bigint "guest_id"
-    t.bigint "booking_id"
-    t.string "guest_name", null: false
-    t.string "guest_email"
-    t.string "guest_phone", null: false
-    t.string "guest_country"
-    t.string "guest_document_type"
-    t.string "guest_government_id"
-    t.string "estimated_arrival_time"
-    t.integer "party_size_adults", default: 1, null: false
-    t.integer "party_size_children", default: 0, null: false
-    t.string "status", default: "pending", null: false
-    t.datetime "matched_at"
-    t.bigint "matched_by_user_id"
-    t.string "ip_address"
-    t.string "user_agent"
-    t.jsonb "metadata", default: {}, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["booking_id"], name: "index_walk_in_arrivals_on_booking_id"
-    t.index ["guest_id"], name: "index_walk_in_arrivals_on_guest_id"
-    t.index ["hotel_id", "created_at"], name: "index_walk_in_arrivals_on_hotel_id_and_created_at"
-    t.index ["hotel_id", "status"], name: "index_walk_in_arrivals_on_hotel_id_and_status"
-    t.index ["hotel_id"], name: "index_walk_in_arrivals_on_hotel_id"
-    t.index ["matched_by_user_id"], name: "index_walk_in_arrivals_on_matched_by_user_id"
-  end
-
   create_table "webhook_endpoints", force: :cascade do |t|
     t.string "name"
     t.string "url"
-    t.string "event_types"
     t.boolean "enabled"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -1025,7 +1001,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
   add_foreign_key "booking_rooms", "room_types"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
-  add_foreign_key "bookings", "walk_in_arrivals"
   add_foreign_key "check_out_requests", "bookings"
   add_foreign_key "check_out_requests", "users", column: "acknowledged_by_user_id"
   add_foreign_key "complaint_requests", "bookings"
@@ -1088,8 +1063,4 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_073751) do
   add_foreign_key "user_roles", "roles"
   add_foreign_key "user_roles", "users"
   add_foreign_key "users", "accounts"
-  add_foreign_key "walk_in_arrivals", "bookings"
-  add_foreign_key "walk_in_arrivals", "guests"
-  add_foreign_key "walk_in_arrivals", "hotels"
-  add_foreign_key "walk_in_arrivals", "users", column: "matched_by_user_id"
 end
