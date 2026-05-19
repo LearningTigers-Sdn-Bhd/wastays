@@ -14,42 +14,53 @@ module ChannelManagers
       client = Channex::Client.new
       property_id = mapping_for(@hotel).external_id
 
-      # Fetch future bookings for this property
-      # We filter by property_id and only include active/confirmed ones if desired,
-      # but usually we want to sync all upcoming.
-      response = client.get("/bookings", { "filter[property_id]" => property_id })
-
-      if response[:error] || response["error"]
-        return OpenStruct.new(success?: false, message: "Failed to fetch bookings: #{response[:details] || response['details'] || response}")
-      end
-
-      bookings = response["data"] || []
+      page = 1
+      per_page = 100
       ingested_count = 0
       errors = []
 
-      adapter = ChannelManagers::SyncOrchestrator.adapter_for(@hotel)
+      loop do
+        response = client.get("/booking_revisions/feed", {
+          "order[inserted_at]" => "asc",
+          "page" => page,
+          "limit" => per_page
+        })
 
-      bookings.each do |booking_payload|
-        begin
-          # The list endpoint might have slightly different structure than the revision endpoint,
-          # but ChannexAdapter#ingest_booking is designed to be robust.
-          booking_data = adapter.ingest_booking(payload: booking_payload)
-          result = ChannelManagers::IngestBookingService.new(booking_data: booking_data).call
+        if response[:error] || response["error"]
+          return OpenStruct.new(success?: false, message: "Failed to fetch booking revisions: #{response[:details] || response['details'] || response}")
+        end
 
-          if result.success?
+        revisions = Array(response["data"]).select do |revision|
+          attributes = revision["attributes"] || revision
+          (attributes["property_id"] || revision["property_id"]) == property_id
+        end
+
+        revisions.each do |revision|
+          begin
+            ChannelManagers::IngestRevisionJob.perform_now(@hotel.id, revision["id"])
             ingested_count += 1
-          else
-            errors << "Booking #{booking_payload['id']}: #{result.message}"
+          rescue => e
+            errors << "Revision #{revision['id']}: #{e.message}"
           end
-        rescue => e
-          errors << "Booking #{booking_payload['id']}: #{e.message}"
+        end
+
+        # Check for next page
+        meta = response["meta"]
+        if meta && meta["pagination"]
+          current_page = meta.dig("pagination", "current_page")
+          total_pages = meta.dig("pagination", "total_pages")
+          break if current_page >= total_pages
+          page += 1
+        else
+          break if Array(response["data"]).size < per_page
+          page += 1
         end
       end
 
       if errors.any?
         OpenStruct.new(success?: true, ingested_count: ingested_count, message: "Sync partially successful. Errors: #{errors.join(', ')}")
       else
-        OpenStruct.new(success?: true, ingested_count: ingested_count, message: "Successfully synced #{ingested_count} bookings.")
+        OpenStruct.new(success?: true, ingested_count: ingested_count, message: "Successfully synced #{ingested_count} booking revisions.")
       end
     end
 
