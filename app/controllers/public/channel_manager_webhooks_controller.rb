@@ -12,17 +12,23 @@ module Public
       # Payload: { "id": "...", "event": "booking.created", "payload": { "revision_id": "...", "property_id": "..." } }
 
       payload = JSON.parse(request.body.read)
-      event_type = payload["event"]
+      event_type = payload["event"].to_s
 
-      if event_type.start_with?("booking.")
-        revision_id = payload.dig("payload", "revision_id")
-        property_id = payload.dig("payload", "property_id")
+      if event_type == "booking" || event_type.start_with?("booking.")
+        revision_id = payload.dig("payload", "revision_id") || payload["id"]
+        property_id = payload.dig("payload", "property_id") || payload["property_id"]
 
         # Find local hotel by external ID
         mapping = ChannelMapping.find_by(provider: "channex", external_id: property_id, mappable_type: "Hotel")
 
         if mapping
-          ChannelManagers::IngestRevisionJob.perform_later(mapping.mappable_id, revision_id)
+          if revision_id.present?
+            ChannelManagers::IngestRevisionJob.perform_later(mapping.mappable_id, revision_id)
+          else
+            # If no revision_id, it's likely a notification to check the feed
+            # We can trigger PullRevisionsJob which handles all properties
+            ChannelManagers::PullRevisionsJob.perform_later
+          end
           head :ok
         else
           # Hotel not found in our system

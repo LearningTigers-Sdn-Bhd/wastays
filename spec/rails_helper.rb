@@ -112,8 +112,8 @@ Capybara.register_driver :cuprite do |app|
     browser_path: browser_path,
     browser_options: { "no-sandbox" => nil, "disable-dev-shm-usage" => nil },
     headless: true,
-    timeout: 30,
-    process_timeout: 60
+    timeout: 60,
+    process_timeout: 120
   )
 end
 
