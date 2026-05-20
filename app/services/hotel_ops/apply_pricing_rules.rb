@@ -86,11 +86,11 @@ module HotelOps
       rules = []
       @hotel.pricing_rules.find_each do |pricing_rule|
         rule_cat = case pricing_rule.rule_type
-                   when "walk_in" then :walk_in
-                   when "corporate_rate" then :corporate
-                   when "ota_rate" then :ota
-                   else :online
-                   end
+        when "walk_in" then :walk_in
+        when "corporate_rate" then :corporate
+        when "ota_rate" then :ota
+        else :online
+        end
         next unless rule_cat == category
 
         tier = rule_tier(pricing_rule.rule_type)

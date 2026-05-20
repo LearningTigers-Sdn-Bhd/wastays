@@ -1,0 +1,61 @@
+<div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+  <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <h3 class="text-sm font-black tracking-tight text-slate-950">Partners Management</h3>
+        <p class="mt-0.5 text-xs font-medium text-slate-600">Manage partner names and codes for corporate rates.</p>
+      </div>
+      <span class="inline-flex items-center justify-center text-center rounded-full bg-slate-100 px-3 py-1.5 sm:px-2.5 sm:py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-500">Corporate</span>
+    </div>
+  </div>
+
+  <div class="px-6 py-6 space-y-5">
+    <%= form_with model: Partner.new, url: hotel_partners_path(current_hotel), local: true, class: "grid gap-3 md:grid-cols-4" do |f| %>
+      <div class="md:col-span-2">
+        <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Partner Name</label>
+        <%= f.text_field :name, required: true, placeholder: "e.g. ABC Travel", class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+      </div>
+      <div class="md:col-span-1">
+        <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Email Domain</label>
+        <%= f.text_field :domain, placeholder: "e.g. abc.com", class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+      </div>
+      <div class="md:col-span-1 md:self-end">
+        <%= f.submit "Add Partner", class: "inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-slate-700" %>
+      </div>
+    <% end %>
+
+    <% if @partners.present? %>
+      <div class="space-y-3">
+        <% @partners.each do |partner| %>
+          <%= form_with model: partner, url: hotel_partner_path(current_hotel, partner), method: :patch, local: true, class: "rounded-2xl border border-slate-200 bg-slate-50 p-4" do |f| %>
+            <div class="grid gap-3 md:grid-cols-12">
+              <div class="md:col-span-4">
+                <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Partner Name</label>
+                <%= f.text_field :name, required: true, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              </div>
+              <div class="md:col-span-3">
+                <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Email Domain</label>
+                <%= f.text_field :domain, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              </div>
+              <div class="md:col-span-2">
+                <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Code (Display)</label>
+                <%= f.text_field :code, readonly: true, class: "w-full rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-black uppercase text-slate-500 shadow-sm focus:outline-none" %>
+              </div>
+              <div class="md:col-span-3 md:self-end">
+                <div class="flex gap-2">
+                  <%= f.submit "Save", class: "inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-slate-700" %>
+                  <%= link_to "Delete",
+                              hotel_partner_path(current_hotel, partner),
+                              data: { turbo_method: :delete, turbo_confirm: "Delete this partner?" },
+                              class: "inline-flex flex-1 items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-red-600 shadow-sm transition hover:bg-red-50" %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">No partners yet. Add your first partner and code above.</p>
+    <% end %>
+  </div>
+</div>

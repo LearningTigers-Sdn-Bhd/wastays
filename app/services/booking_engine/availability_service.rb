@@ -118,25 +118,33 @@ module BookingEngine
       scope = room_type.room_rates.where(date: stay_dates, currency: currency)
       scope = rate_plan.present? ? scope.where(rate_plan: rate_plan) : scope.where(rate_plan_id: nil)
       rates_by_date = scope.index_by(&:date)
-      return nil unless rates_by_date.size == stay_dates.size
 
       partner = find_partner_for(room_type.hotel)
 
-      first_rate = rates_by_date[stay_dates.first]
-      last_rate = rates_by_date[stay_dates.last]
-      return nil if rates_by_date.values.any?(&:stop_sell?)
-      return nil if first_rate&.closed_to_arrival?
-      return nil if last_rate&.closed_to_departure?
-      return nil if rates_by_date.values.any? { |rate| rate.min_stay.present? && nights < rate.min_stay }
-      return nil if rates_by_date.values.any? { |rate| rate.max_stay.present? && nights > rate.max_stay }
+      nightly_total = 0.to_d
+      stay_dates.each do |date|
+        rate = rates_by_date[date]
 
-      nightly_total = rates_by_date.values.sum do |rate|
-        price = if partner.present?
-          rate.corporate_price.presence || rate.price
+        if rate.present?
+          return nil if rate.stop_sell?
+          return nil if date == stay_dates.first && rate.closed_to_arrival?
+          return nil if date == stay_dates.last && rate.closed_to_departure?
+          return nil if rate.min_stay.present? && nights < rate.min_stay
+          return nil if rate.max_stay.present? && nights > rate.max_stay
+
+          price = if partner.present?
+            rate.corporate_price.presence || rate.price
+          else
+            rate.price
+          end
+          nightly_total += price.to_d
+        elsif room_type.base_price.present?
+          # Fallback to base price if no specific rate record exists
+          nightly_total += room_type.base_price.to_d
         else
-          rate.price
+          # No rate record and no base price, cannot price this date
+          return nil
         end
-        price.to_d
       end
 
       PricingOption.new(

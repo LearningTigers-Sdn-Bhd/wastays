@@ -152,10 +152,9 @@ export default class extends Controller {
     this.resetForm()
     this.touchedFields.clear()
     
-    // When clicking a rate cell, we show both Rates and Restrictions by default
-    // so the user can see current values and decide what to change.
-    const mode = data.mode === "rates" ? "combined" : data.mode
-    this.setMode(mode || this.currentMode())
+    // Set mode based on data attribute (rates, availability, etc.)
+    const mode = data.mode === "rates" ? "combined" : (data.mode || this.currentMode())
+    this.setMode(mode)
     
     this.startDateTarget.value = data.date
     this.endDateTarget.value = data.date
@@ -167,7 +166,7 @@ export default class extends Controller {
 
     this.syncRatePlans()
 
-    // Select the specific rate plan if applicable
+    // Select the specific rate plan OR virtual tier checkbox
     if (data.ratePlanId) {
       this.ratePlanCheckboxTargets.forEach(cb => {
         cb.checked = (cb.value === data.ratePlanId)
@@ -389,10 +388,18 @@ export default class extends Controller {
             status: change.status
           })
         }
-        
+
         if (change.apply_rates || change.apply_restrictions) {
           change.rate_plan_ids.forEach(ratePlanId => {
-            this.markCellDirty(`rate-cell-${roomTypeId}-${ratePlanId}-${date}`, {
+            let testid = `rate-cell-${roomTypeId}-${ratePlanId}-${date}`
+
+            // Handle virtual tiers (e.g. tier_walk_in_123)
+            if (typeof ratePlanId === 'string' && ratePlanId.startsWith('tier_')) {
+              const tierName = ratePlanId.split('_')[1].replace('_', '-')
+              testid = `${tierName}-cell-${roomTypeId}-${date}`
+            }
+
+            this.markCellDirty(testid, {
               price: change.apply_rates ? change.price : undefined,
               currency: change.currency,
               min_stay: change.apply_restrictions ? change.min_stay : undefined,
@@ -423,13 +430,15 @@ export default class extends Controller {
     if (cell) {
       cell.classList.add("ring-2", "ring-inset", "ring-indigo-500", "after:content-['*']", "after:absolute", "after:top-0", "after:right-1", "after:text-[10px]", "after:font-black", "after:text-indigo-600")
       cell.style.position = "relative"
-      
+
       // Update dataset with pending values so re-editing shows the correct data
       if (data) {
         if (data.quantity !== undefined && data.quantity !== "") cell.dataset.quantity = data.quantity
         if (data.status !== undefined && data.status !== "") cell.dataset.status = data.status
         if (data.price !== undefined && data.price !== "") {
           cell.dataset.price = data.price
+
+          // Update visual price display
           const priceSpan = cell.querySelector(".tabular-nums")
           if (priceSpan) {
             let symbol = data.currency
@@ -444,6 +453,12 @@ export default class extends Controller {
               maximumFractionDigits: 2
             })
             priceSpan.textContent = `${symbol}${formatted}`
+
+            // For tiered rates, apply blue coloring if modified
+            if (cell.dataset.rateTier) {
+              priceSpan.classList.remove("text-slate-950")
+              priceSpan.classList.add("text-blue-700")
+            }
           }
         }
         if (data.min_stay !== undefined && data.min_stay !== "") cell.dataset.minStay = data.min_stay
@@ -751,6 +766,10 @@ export default class extends Controller {
     this.ctdFieldTarget.checked = false
     this.stopSellFieldTarget.checked = false
     
+    // Reset Tiered Logic
+    if (this.hasRateTierFieldTarget) this.rateTierFieldTarget.value = ""
+    if (this.hasMasterPlanStaticTarget) this.masterPlanStaticTarget.classList.add("hidden")
+
     this.toggleSections()
   }
 
@@ -796,6 +815,12 @@ export default class extends Controller {
     } else {
       url.searchParams.delete("room_type_id")
     }
+
+    // Preserve tab state if present in current URL
+    const currentParams = new URLSearchParams(window.location.search)
+    if (currentParams.has("tab")) url.searchParams.set("tab", currentParams.get("tab"))
+    if (currentParams.has("subtab")) url.searchParams.set("subtab", currentParams.get("subtab"))
+
     // Clear legacy multi-select params so "All room types" is not pinned by stale query state.
     url.searchParams.delete("room_type_ids")
     url.searchParams.delete("room_type_ids[]")

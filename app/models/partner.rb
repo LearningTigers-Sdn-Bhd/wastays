@@ -3,6 +3,9 @@
 class Partner < ApplicationRecord
   belongs_to :hotel
 
+  has_many :bookings, dependent: :nullify
+  has_many :booking_quotes, dependent: :nullify
+
   before_validation :generate_code, if: -> { code.blank? }
   before_validation :normalize_fields
 

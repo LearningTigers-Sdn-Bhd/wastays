@@ -186,6 +186,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     end
 
     if errors.empty?
+      flash[:notice] = "All changes synced successfully."
       render json: { success: true, message: "All changes synced successfully." }
     else
       render json: { success: false, error: errors.join(", ") }, status: :unprocessable_entity
@@ -256,7 +257,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     if result[:success]
       redirect_to hotel_inventory_index_path(current_hotel, start_date: apply_start_date), notice: "Pricing rules applied successfully."
     else
-      redirect_to hotel_inventory_index_path(current_hotel), alert: "Error applying pricing rules: #{result[:error]}"
+      redirect_to hotel_inventory_index_path(current_hotel, tab: "advanced", subtab: "pricing"), alert: "Error applying pricing rules: #{result[:error]}"
     end
   end
 
@@ -277,7 +278,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     if result[:success]
       redirect_to hotel_inventory_index_path(current_hotel, start_date: availability_params[:start_date]), notice: "Availability override applied successfully."
     else
-      redirect_to hotel_inventory_index_path(current_hotel), alert: "Error applying availability override: #{result[:error]}"
+      redirect_to hotel_inventory_index_path(current_hotel, tab: "advanced", subtab: "overrides"), alert: "Error applying availability override: #{result[:error]}"
     end
   end
 
@@ -297,9 +298,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       user: current_user
     ).call
 
-    redirect_to hotel_inventory_index_path(current_hotel, start_date: params[:start_date]), notice: "Public holiday removed successfully."
+    redirect_to hotel_inventory_index_path(current_hotel, start_date: params[:start_date], tab: "advanced", subtab: "pricing"), notice: "Public holiday removed successfully."
   rescue ActiveRecord::RecordNotFound
-    redirect_to hotel_inventory_index_path(current_hotel), alert: "Public holiday rule not found."
+    redirect_to hotel_inventory_index_path(current_hotel, tab: "advanced", subtab: "pricing"), alert: "Public holiday rule not found."
   end
 
   def destroy_pricing_tier_rule
@@ -307,11 +308,11 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
     rule_type = params[:rule_type].to_s
     unless %w[general weekends school_holiday walk_in corporate_rate ota_rate].include?(rule_type)
-      return redirect_to hotel_inventory_index_path(current_hotel), alert: "Unsupported pricing tier."
+      return redirect_to hotel_inventory_index_path(current_hotel, tab: "advanced", subtab: "pricing"), alert: "Unsupported pricing tier."
     end
 
     pricing_rule = current_hotel.pricing_rules.find_by(rule_type: rule_type)
-    return redirect_to(hotel_inventory_index_path(current_hotel), alert: "Pricing tier not found.") if pricing_rule.blank?
+    return redirect_to(hotel_inventory_index_path(current_hotel, tab: "advanced", subtab: "pricing"), alert: "Pricing tier not found.") if pricing_rule.blank?
 
     affected_start_date = pricing_rule.start_date
     affected_end_date = pricing_rule.end_date
@@ -325,7 +326,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       user: current_user
     ).call
 
-    redirect_to hotel_inventory_index_path(current_hotel, start_date: params[:start_date]), notice: "#{rule_type.humanize} pricing removed successfully."
+    redirect_to hotel_inventory_index_path(current_hotel, start_date: params[:start_date], tab: "advanced", subtab: "pricing"), notice: "#{rule_type.humanize} pricing removed successfully."
   end
 
   private

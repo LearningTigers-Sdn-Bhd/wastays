@@ -1,0 +1,69 @@
+<div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+  <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <h3 class="text-sm font-black tracking-tight text-slate-950">Availability Override</h3>
+        <p class="mt-0.5 text-xs font-medium text-slate-600">Room-number-specific overrides and status fixes.</p>
+      </div>
+      <span class="inline-flex items-center justify-center text-center leading-tight rounded-full bg-amber-100 px-3 py-1.5 sm:px-2.5 sm:py-1 text-[9px] font-black uppercase tracking-[0.12em] text-amber-700">
+        Fallback<br class="sm:hidden"> Tool
+      </span>
+    </div>
+  </div>
+
+  <div class="px-6 py-6" data-controller="inventory-filter">
+    <%= form_with scope: :availability_override, url: apply_availability_override_hotel_inventory_dashboards_path(current_hotel), local: true, class: "space-y-4 text-xs" do |f| %>
+      <div>
+        <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Target Room Categories</label>
+        <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2 xl:grid-cols-3">
+          <% @room_types.each do |rt| %>
+            <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+              <%= f.check_box :room_type_ids, {
+                  multiple: true,
+                  checked: true,
+                  class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0",
+                  data: { inventory_filter_target: "category", action: "change->inventory-filter#filter" }
+                }, rt.id, nil %>
+              <%= rt.name %>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Start Date</label>
+          <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+        </div>
+        <div>
+          <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">End Date</label>
+          <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+        </div>
+      </div>
+
+      <div>
+        <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Daily Room Assignments</label>
+        <div class="grid gap-2 max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2 xl:grid-cols-3">
+          <% @room_types.each do |rt| %>
+            <% rt.room_numbers.sort.each do |num| %>
+              <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm" data-inventory-filter-target="roomRow" data-room-type-id="<%= rt.id %>">
+                <%= f.check_box :room_numbers, { multiple: true, checked: rt.room_numbers.include?(num.to_s), class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0" }, num, nil %>
+                Room <%= num %>
+                <span class="text-xs font-medium text-slate-400">(<%= rt.name %>)</span>
+              </label>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+
+      <div>
+        <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Room Status</label>
+        <%= f.select :status, [["No change", ""], ["Open", "open"], ["Closed", "closed"]], {}, class: "w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+      </div>
+
+      <div class="pt-4">
+        <%= f.submit "Apply Availability Override", class: "w-full sm:w-auto inline-flex items-center justify-center rounded-2xl bg-slate-900 px-8 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-slate-700 active:scale-[0.98]" %>
+      </div>
+    <% end %>
+  </div>
+</div>

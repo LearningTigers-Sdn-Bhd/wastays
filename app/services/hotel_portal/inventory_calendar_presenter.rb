@@ -60,17 +60,27 @@ module HotelPortal
 
     def rate_plan_options
       @rate_plan_options ||= hotel.room_types.includes(:rate_plans).order(:id).flat_map do |room_type|
-        room_type.rate_plans.order(:id).map do |rate_plan|
+        room_type.rate_plans.order(:id).reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }.map do |rate_plan|
           [ "#{room_type.name} - #{rate_plan.name}", rate_plan.id ]
         end
       end
     end
 
     def rate_plan_options_struct
-      @rate_plan_options_struct ||= hotel.room_types.includes(:rate_plans).order(:id).flat_map do |room_type|
-        room_type.rate_plans.order(:id).map do |rate_plan|
-          OpenStruct.new(label: "#{room_type.name} - #{rate_plan.name}", id: rate_plan.id, room_type_id: room_type.id)
+      @rate_plan_options_struct ||= visible_room_types.flat_map do |room_type|
+        # Standard Rate Plans
+        plans = room_type.rate_plans.order(:id).reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }.map do |rate_plan|
+          OpenStruct.new(label: "#{room_type.name} - #{rate_plan.name}", id: rate_plan.id, room_type_id: room_type.id, kind: :standard)
         end
+
+        # Virtual Pricing Tiers (locked to master plan logic)
+        tiers = [
+          OpenStruct.new(label: "#{room_type.name} - Walk-in Rate", id: "tier_walk_in_#{room_type.id}", room_type_id: room_type.id, kind: :tier),
+          OpenStruct.new(label: "#{room_type.name} - Corporate Rate", id: "tier_corporate_#{room_type.id}", room_type_id: room_type.id, kind: :tier),
+          OpenStruct.new(label: "#{room_type.name} - OTA Rate", id: "tier_ota_#{room_type.id}", room_type_id: room_type.id, kind: :tier)
+        ]
+
+        plans + tiers
       end
     end
 
@@ -149,6 +159,8 @@ module HotelPortal
       {
         date: date,
         price: actual_price, # Original set price
+        rate_plan_id: rate_plan.id,
+        rate_tier: :walk_in,
         formatted_price: format_price(display_price, formatted_currency),
         currency: native_currency,
         display_currency: formatted_currency,
@@ -179,6 +191,8 @@ module HotelPortal
       {
         date: date,
         price: actual_price, # Original set price
+        rate_plan_id: rate_plan.id,
+        rate_tier: :corporate,
         formatted_price: format_price(display_price, formatted_currency),
         currency: native_currency,
         display_currency: formatted_currency,
@@ -209,6 +223,8 @@ module HotelPortal
       {
         date: date,
         price: actual_price, # Original set price
+        rate_plan_id: rate_plan.id,
+        rate_tier: :ota,
         formatted_price: format_price(display_price, formatted_currency),
         currency: native_currency,
         display_currency: formatted_currency,
@@ -255,7 +271,7 @@ module HotelPortal
 
     def rate_plans_for(room_type)
       plans = room_type.rate_plans.sort_by(&:id)
-      plans = plans.reject { |rate_plan| walk_in_rate_plan_name?(rate_plan.name) }
+      plans = plans.reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }
       plans = plans.select { |rate_plan| rate_plan.id == selected_rate_plan_id } if selected_rate_plan_id.present?
       plans
     end
@@ -380,8 +396,9 @@ module HotelPortal
       CurrencyFormatter.format(price, currency: currency)
     end
 
-    def walk_in_rate_plan_name?(name)
-      name.to_s.strip.casecmp("walk-in rate").zero? || name.to_s.strip.casecmp("walk in rate").zero? || name.to_s.strip.casecmp("walk-in").zero? || name.to_s.strip.casecmp("walk in").zero?
+    def special_tier_rate_plan_name?(name)
+      normalized = name.to_s.strip.downcase
+      normalized.in?([ "walk-in rate", "walk in rate", "walk-in", "walk in", "corporate rate", "corporate", "ota rate", "ota" ])
     end
   end
 end

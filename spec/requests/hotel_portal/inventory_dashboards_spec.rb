@@ -25,7 +25,8 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(page).to have_content("Rates & Availability")
       expect(page).to have_css("[data-testid='inventory-calendar-grid']")
       expect(page).to have_button("Bulk Edit")
-      expect(page).to have_content("Advanced Pricing & Overrides")
+      expect(page).to have_content("Pricing Rules")
+      expect(page).to have_content("Availability Overrides")
     end
 
     it "renders rate rows with room-type filtering in toolbar" do
