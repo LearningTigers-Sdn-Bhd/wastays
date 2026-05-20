@@ -34,7 +34,7 @@ class Public::QuotesController < ApplicationController
       return render json: { found: false, message: "Email is required." }, status: :unprocessable_content
     end
 
-    corporate_status = validate_corporate_domain(quote, email)
+    corporate_status = BookingEngine::VerifyCorporateDomain.new(quote: quote, email: email).call
 
     guest = Guest.find_by(email: email)
     found = guest.present?
@@ -46,19 +46,6 @@ class Public::QuotesController < ApplicationController
       corporate_valid: corporate_status[:valid],
       corporate_message: corporate_status[:message]
     }
-  end
-
-  private
-
-  def validate_corporate_domain(quote, email)
-    return { valid: true } if quote.partner.blank? || quote.partner.domain.blank?
-
-    email_domain = email.split("@").last
-    if email_domain == quote.partner.domain
-      { valid: true, message: "✓ Work email verified for #{quote.partner.name}." }
-    else
-      { valid: false, message: "This corporate rate is only valid for @#{quote.partner.domain} email addresses. Please use your work email." }
-    end
   end
 
   private

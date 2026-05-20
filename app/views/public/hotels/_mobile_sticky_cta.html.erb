@@ -1,0 +1,20 @@
+<%# frozen_string_literal: true %>
+
+<div class="lg:hidden fixed bottom-0 inset-x-0 z-[49] bg-white border-t border-neutral-border p-4 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.1)]">
+  <div class="flex items-center justify-between gap-x-4 max-w-[85rem] mx-auto">
+    <div>
+      <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-tighter">Starting from</p>
+      <p class="text-xl font-black text-neutral-text-primary">
+        <% starting_price = hotel.starting_price(availability_service, room_types) %>
+        <% if starting_price %>
+          RM <%= number_with_precision(starting_price, precision: 2) %>
+        <% else %>
+          Select dates
+        <% end %>
+      </p>
+    </div>
+    <a href="#rooms-section" class="btn btn-primary px-8 py-3 shadow-lg shadow-brand-primary/20">
+      Choose Room
+    </a>
+  </div>
+</div>

@@ -85,12 +85,7 @@ module HotelOps
     def winning_rule_for(date, category: :online)
       rules = []
       @hotel.pricing_rules.find_each do |pricing_rule|
-        rule_cat = case pricing_rule.rule_type
-        when "walk_in" then :walk_in
-        when "corporate_rate" then :corporate
-        when "ota_rate" then :ota
-        else :online
-        end
+        rule_cat = rule_category(pricing_rule.rule_type)
         next unless rule_cat == category
 
         tier = rule_tier(pricing_rule.rule_type)
@@ -106,6 +101,14 @@ module HotelOps
       else
         rules.max_by { |rule| rule[:price] }
       end
+    end
+
+    def rule_category(rule_type)
+      {
+        "walk_in" => :walk_in,
+        "corporate_rate" => :corporate,
+        "ota_rate" => :ota
+      }.fetch(rule_type, :online)
     end
 
     def rule_tier(rule_type)

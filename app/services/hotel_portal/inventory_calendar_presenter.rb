@@ -104,11 +104,11 @@ module HotelPortal
       if row.inventory_row?
         inventory_cell(row.room_type, date)
       elsif row.walk_in_row?
-        walk_in_cell(row.room_type, date)
+        tier_cell(row.room_type, date, :walk_in)
       elsif row.corporate_row?
-        corporate_cell(row.room_type, date)
+        tier_cell(row.room_type, date, :corporate)
       elsif row.ota_row?
-        ota_cell(row.room_type, date)
+        tier_cell(row.room_type, date, :ota)
       else
         rate_cell(row.room_type, row.rate_plan, date)
       end
@@ -140,13 +140,19 @@ module HotelPortal
       end
     end
 
-    def walk_in_cell(room_type, date)
-      # Walk-in rates are tied to the first rate plan in our current implementation
+    def tier_cell(room_type, date, tier_type)
+      # Tiers are tied to the first rate plan in our current implementation
       rate_plan = room_type.rate_plans.sort_by(&:id).first
       return { date: date } if rate_plan.blank?
 
       rate = rates_by_rate_plan.dig(rate_plan.id, date)
-      actual_price = rate&.walk_in_price
+
+      actual_price = case tier_type
+      when :walk_in then rate&.walk_in_price
+      when :corporate then rate&.corporate_price
+      when :ota then rate&.ota_price
+      end
+
       price = actual_price.presence || rate&.price || room_type.base_price
       native_currency = default_currency
 
@@ -160,71 +166,7 @@ module HotelPortal
         date: date,
         price: actual_price, # Original set price
         rate_plan_id: rate_plan.id,
-        rate_tier: :walk_in,
-        formatted_price: format_price(display_price, formatted_currency),
-        currency: native_currency,
-        display_currency: formatted_currency,
-        estimated: display_conversion.present? && native_currency != formatted_currency,
-        conversion_missing: conversion_missing,
-        is_modified: actual_price.present?,
-        restriction_badges: [],
-        restriction_compact: nil
-      }
-    end
-
-    def corporate_cell(room_type, date)
-      # Corporate rates are tied to the first rate plan in our current implementation
-      rate_plan = room_type.rate_plans.sort_by(&:id).first
-      return { date: date } if rate_plan.blank?
-
-      rate = rates_by_rate_plan.dig(rate_plan.id, date)
-      actual_price = rate&.corporate_price
-      price = actual_price.presence || rate&.price || room_type.base_price
-      native_currency = default_currency
-
-      display_conversion = display_conversion_for(price, from: native_currency)
-      conversion_missing = price.present? && display_currency != native_currency && display_conversion.nil?
-
-      display_price = display_conversion&.amount || price
-      formatted_currency = (display_conversion.present? || conversion_missing) ? display_currency : native_currency
-
-      {
-        date: date,
-        price: actual_price, # Original set price
-        rate_plan_id: rate_plan.id,
-        rate_tier: :corporate,
-        formatted_price: format_price(display_price, formatted_currency),
-        currency: native_currency,
-        display_currency: formatted_currency,
-        estimated: display_conversion.present? && native_currency != formatted_currency,
-        conversion_missing: conversion_missing,
-        is_modified: actual_price.present?,
-        restriction_badges: [],
-        restriction_compact: nil
-      }
-    end
-
-    def ota_cell(room_type, date)
-      # OTA rates are tied to the first rate plan in our current implementation
-      rate_plan = room_type.rate_plans.sort_by(&:id).first
-      return { date: date } if rate_plan.blank?
-
-      rate = rates_by_rate_plan.dig(rate_plan.id, date)
-      actual_price = rate&.ota_price
-      price = actual_price.presence || rate&.price || room_type.base_price
-      native_currency = default_currency
-
-      display_conversion = display_conversion_for(price, from: native_currency)
-      conversion_missing = price.present? && display_currency != native_currency && display_conversion.nil?
-
-      display_price = display_conversion&.amount || price
-      formatted_currency = (display_conversion.present? || conversion_missing) ? display_currency : native_currency
-
-      {
-        date: date,
-        price: actual_price, # Original set price
-        rate_plan_id: rate_plan.id,
-        rate_tier: :ota,
+        rate_tier: tier_type,
         formatted_price: format_price(display_price, formatted_currency),
         currency: native_currency,
         display_currency: formatted_currency,

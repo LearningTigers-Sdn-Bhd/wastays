@@ -51,6 +51,10 @@ module HotelPortal
       self
     end
 
+    def pricing_rules_count
+      @hotel.pricing_rules.count
+    end
+
     def from_params(params)
       @general_rule = nil
       @weekends_rule = nil

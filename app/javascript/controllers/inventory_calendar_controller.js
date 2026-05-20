@@ -134,7 +134,7 @@ export default class extends Controller {
     this.titleTarget.textContent = "Bulk Edit"
     this.subtitleTarget.textContent = "Updates will be detected automatically as you change fields."
     this.submitButtonTarget.value = "Stage Changes"
-    this.currentStatusHintTarget.textContent = ""
+    if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = ""
     
     // In bulk mode, we treat all fields as 'empty' initially
     this.initialValues = {
@@ -178,11 +178,11 @@ export default class extends Controller {
       this.statusFieldTarget.value = ""
       
       const current = data.status || "open"
-      this.currentStatusHintTarget.textContent = `Currently: ${current.toUpperCase()}`
-      this.currentQuantityHintTarget.textContent = `Current: ${data.quantity || 0}`
+      if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = `Currently: ${current.toUpperCase()}`
+      if (this.hasCurrentQuantityHintTarget) this.currentQuantityHintTarget.textContent = `Current: ${data.quantity || 0}`
     } else {
-      this.currentStatusHintTarget.textContent = ""
-      this.currentQuantityHintTarget.textContent = ""
+      if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = ""
+      if (this.hasCurrentQuantityHintTarget) this.currentQuantityHintTarget.textContent = ""
       this.priceFieldTarget.value = data.price || ""
       
       const currency = data.currency || this.baseCurrencyValue || this.defaultCurrencyValue || "MYR"
@@ -595,7 +595,9 @@ export default class extends Controller {
         // 3. Reload the calendar table from the server
         const frame = document.getElementById("inventory_calendar_frame")
         if (frame) {
-          frame.reload()
+          const url = new URL(window.location.href)
+          frame.src = url.toString()
+          // Turbo frame src update automatically triggers a reload
         } else {
           window.location.reload()
         }
@@ -752,8 +754,8 @@ export default class extends Controller {
     this.quantityFieldTarget.value = ""
     this.statusFieldTarget.value = ""
     this.priceFieldTarget.value = ""
-    this.currentStatusHintTarget.textContent = ""
-    this.currentQuantityHintTarget.textContent = ""
+    if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = ""
+    if (this.hasCurrentQuantityHintTarget) this.currentQuantityHintTarget.textContent = ""
     
     // Reset hidden fields
     if (this.hasCurrencyFieldTarget) {

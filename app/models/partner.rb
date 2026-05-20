@@ -20,9 +20,14 @@ class Partner < ApplicationRecord
     return if name.blank?
 
     # Get first 3 alphanumeric characters from name, or pad with 'X' if too short
-    prefix = name.gsub(/[^a-zA-Z0-9]/, "").first(3).upcase.ljust(3, "X")
-    random_suffix = rand(100..999).to_s
-    self.code = "#{prefix}#{random_suffix}"
+    base_prefix = name.gsub(/[^a-zA-Z0-9]/, "").first(3).upcase.ljust(3, "X")
+
+    # Generate 3 random numbers and append to the prefix
+    loop do
+      random_suffix = rand(100..999).to_s
+      self.code = "#{base_prefix}#{random_suffix}"
+      break unless self.class.exists?(hotel_id: hotel_id, code: self.code)
+    end
   end
 
   def normalize_fields

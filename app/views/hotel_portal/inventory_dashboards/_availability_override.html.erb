@@ -5,12 +5,9 @@
         <h3 class="text-sm font-black tracking-tight text-slate-950">Availability Override</h3>
         <p class="mt-0.5 text-xs font-medium text-slate-600">Room-number-specific overrides and status fixes.</p>
       </div>
-      <span class="inline-flex items-center justify-center text-center leading-tight rounded-full bg-amber-100 px-3 py-1.5 sm:px-2.5 sm:py-1 text-[9px] font-black uppercase tracking-[0.12em] text-amber-700">
-        Fallback<br class="sm:hidden"> Tool
-      </span>
+      <%= render "shared/components/badge", label: "Fallback Tool", color_key: "amber" %>
     </div>
   </div>
-
   <div class="px-6 py-6" data-controller="inventory-filter">
     <%= form_with scope: :availability_override, url: apply_availability_override_hotel_inventory_dashboards_path(current_hotel), local: true, class: "space-y-4 text-xs" do |f| %>
       <div>

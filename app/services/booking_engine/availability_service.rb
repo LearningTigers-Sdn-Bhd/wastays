@@ -123,28 +123,10 @@ module BookingEngine
 
       nightly_total = 0.to_d
       stay_dates.each do |date|
-        rate = rates_by_date[date]
+        price = nightly_price_for(date, rates_by_date[date], room_type, partner)
+        return nil if price.nil? # Stay is restricted or unpriced on this date
 
-        if rate.present?
-          return nil if rate.stop_sell?
-          return nil if date == stay_dates.first && rate.closed_to_arrival?
-          return nil if date == stay_dates.last && rate.closed_to_departure?
-          return nil if rate.min_stay.present? && nights < rate.min_stay
-          return nil if rate.max_stay.present? && nights > rate.max_stay
-
-          price = if partner.present?
-            rate.corporate_price.presence || rate.price
-          else
-            rate.price
-          end
-          nightly_total += price.to_d
-        elsif room_type.base_price.present?
-          # Fallback to base price if no specific rate record exists
-          nightly_total += room_type.base_price.to_d
-        else
-          # No rate record and no base price, cannot price this date
-          return nil
-        end
+        nightly_total += price
       end
 
       PricingOption.new(
@@ -154,6 +136,27 @@ module BookingEngine
         nightly_price: nightly_total / nights,
         nightly_rates: rates_by_date
       )
+    end
+
+    def nightly_price_for(date, rate, room_type, partner)
+      if rate.present?
+        # 1. Check Restrictions
+        return nil if rate.stop_sell?
+        return nil if date == stay_dates.first && rate.closed_to_arrival?
+        return nil if date == stay_dates.last && rate.closed_to_departure?
+        return nil if rate.min_stay.present? && nights < rate.min_stay
+        return nil if rate.max_stay.present? && nights > rate.max_stay
+
+        # 2. Resolve Price (Partner vs Standard)
+        if partner.present?
+          rate.corporate_price.presence || rate.price
+        else
+          rate.price
+        end
+      else
+        # 3. Fallback to base price if no specific rate record exists
+        room_type.base_price.presence
+      end
     end
 
     def find_partner_for(hotel)
