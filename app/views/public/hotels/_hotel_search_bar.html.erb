@@ -13,7 +13,6 @@
            data-rate-calendar-url-value="<%= rate_calendar_hotel_path(hotel) %>"
            data-rate-calendar-currency-value="<%= hotel.property_policy&.currency || 'MYR' %>"
            data-rate-calendar-room-count-value="<%= room_count %>"
-           data-rate-calendar-partner-code-value="<%= params[:partner_code] %>"
            class="flex-1 flex items-center gap-x-0 rounded-full border border-neutral-border bg-white shadow-sm hover:shadow-md transition-shadow min-w-0 sm:max-w-2xl sm:mx-auto">
 
         <%# Date pill segment %>
@@ -126,15 +125,6 @@
                         data-hotel-search-bar-max-param="5"
                         class="w-8 h-8 rounded-full border border-neutral-border flex items-center justify-center text-neutral-text-secondary hover:border-brand-primary hover:text-brand-primary transition-colors text-lg font-light">+</button>
               </div>
-            </div>
-
-            <%# Promo code row %>
-            <div class="py-2 border-t border-neutral-border mt-1">
-              <label for="partner_code" class="block text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1.5">Corporate / Promo Code</label>
-              <%= f.text_field :partner_code, 
-                               value: params[:partner_code], 
-                               placeholder: "Enter code", 
-                               class: "w-full rounded-xl border border-neutral-border px-3 py-2 text-sm font-semibold text-neutral-text-primary focus:border-brand-primary focus:ring-0 placeholder:text-neutral-text-secondary/50 uppercase" %>
             </div>
           </div>
 

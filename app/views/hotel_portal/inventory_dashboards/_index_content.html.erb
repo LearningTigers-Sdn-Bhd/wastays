@@ -355,15 +355,6 @@
                   role="tab">
             Availability Overrides
           </button>
-          <button type="button"
-                  data-subtabs-target="tab"
-                  data-tab-name="partners"
-                  data-action="click->subtabs#switch"
-                  data-active="<%= active_subtab == 'partners' %>"
-                  class="<%= dashboard_tab_classes %>"
-                  role="tab">
-            Partners
-          </button>
         </div>
       </nav>
 
@@ -373,10 +364,6 @@
 
       <div data-subtabs-target="panel" data-tab-panel="overrides" class="<%= active_subtab == 'overrides' ? '' : 'hidden' %>">
         <%= render "availability_override" %>
-      </div>
-
-      <div data-subtabs-target="panel" data-tab-panel="partners" class="<%= active_subtab == 'partners' ? '' : 'hidden' %>">
-        <%= render "partners_management" %>
       </div>
     </div>
   </div>

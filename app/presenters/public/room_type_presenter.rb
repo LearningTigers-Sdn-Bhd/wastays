@@ -27,11 +27,7 @@ module Public
     end
 
     def partner_rate?
-      pricing_summary[:partner].present?
-    end
-
-    def partner_name
-      pricing_summary[:partner]&.name
+      pricing_summary[:corporate_rate_applied]
     end
 
     def details_json

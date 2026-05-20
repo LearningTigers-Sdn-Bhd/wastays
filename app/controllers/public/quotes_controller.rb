@@ -34,8 +34,6 @@ class Public::QuotesController < ApplicationController
       return render json: { found: false, message: "Email is required." }, status: :unprocessable_content
     end
 
-    corporate_status = BookingEngine::VerifyCorporateDomain.new(quote: quote, email: email).call
-
     guest = Guest.find_by(email: email)
     found = guest.present?
 
@@ -43,15 +41,15 @@ class Public::QuotesController < ApplicationController
       found: found,
       guest_details: found ? guest_lookup_payload(guest) : {},
       quote_token: quote.token,
-      corporate_valid: corporate_status[:valid],
-      corporate_message: corporate_status[:message]
+      corporate_valid: true,
+      corporate_message: nil
     }
   end
 
   private
 
   def quote_params
-    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency, :partner_code)
+    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency)
   end
 
   def display_currency_for_request

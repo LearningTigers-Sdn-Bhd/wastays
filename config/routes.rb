@@ -303,7 +303,6 @@ Rails.application.routes.draw do
         delete "public_holidays/:id", action: :destroy_public_holiday_rule, as: :destroy_public_holiday_rule
       end
     end
-    resources :partners, only: [ :create, :update, :destroy ]
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
     resources :guests, only: [ :index, :show, :new, :create, :edit, :update, :destroy ]
     resources :in_house_guests, only: [ :index ]

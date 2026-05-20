@@ -2,7 +2,7 @@ module BookingEngine
   class AvailabilityService
     PricingOption = Struct.new(:rate_plan, :currency, :total_price, :nightly_price, :nightly_rates, keyword_init: true)
 
-    attr_reader :params, :check_in, :check_out, :adults, :children, :room_count, :partner_code
+    attr_reader :params, :check_in, :check_out, :adults, :children, :room_count
 
     def initialize(params)
       @params = params
@@ -12,7 +12,6 @@ module BookingEngine
       @adults = (params[:adults] || 2).to_i
       @children = (params[:children] || 0).to_i
       @room_count = (params[:room_count] || 1).to_i
-      @partner_code = params[:partner_code].to_s.strip.upcase.presence
     end
 
     def find_available_hotels
@@ -58,7 +57,7 @@ module BookingEngine
       option = lowest_pricing_option_for(room_type)
       return {} if option.blank?
 
-      partner = find_partner_for(room_type.hotel)
+      corporate_rate_applied = option.nightly_rates.values.any? { |rate| rate.corporate_price.present? }
 
       {
         rate_plan: option.rate_plan,
@@ -68,7 +67,7 @@ module BookingEngine
         nightly_price: option.nightly_price,
         nightly_rates: option.nightly_rates,
         available_rate_plans: pricing_options_for(room_type).map(&:rate_plan).compact,
-        partner: partner
+        corporate_rate_applied: corporate_rate_applied
       }
     end
 
@@ -119,11 +118,9 @@ module BookingEngine
       scope = rate_plan.present? ? scope.where(rate_plan: rate_plan) : scope.where(rate_plan_id: nil)
       rates_by_date = scope.index_by(&:date)
 
-      partner = find_partner_for(room_type.hotel)
-
       nightly_total = 0.to_d
       stay_dates.each do |date|
-        price = nightly_price_for(date, rates_by_date[date], room_type, partner)
+        price = nightly_price_for(date, rates_by_date[date], room_type)
         return nil if price.nil? # Stay is restricted or unpriced on this date
 
         nightly_total += price
@@ -138,7 +135,7 @@ module BookingEngine
       )
     end
 
-    def nightly_price_for(date, rate, room_type, partner)
+    def nightly_price_for(date, rate, room_type)
       if rate.present?
         # 1. Check Restrictions
         return nil if rate.stop_sell?
@@ -147,23 +144,12 @@ module BookingEngine
         return nil if rate.min_stay.present? && nights < rate.min_stay
         return nil if rate.max_stay.present? && nights > rate.max_stay
 
-        # 2. Resolve Price (Partner vs Standard)
-        if partner.present?
-          rate.corporate_price.presence || rate.price
-        else
-          rate.price
-        end
+        # 2. Resolve Price (Corporate vs Standard)
+        rate.corporate_price.presence || rate.price
       else
         # 3. Fallback to base price if no specific rate record exists
         room_type.base_price.presence
       end
-    end
-
-    def find_partner_for(hotel)
-      return nil if @partner_code.blank?
-      return @matched_partner if defined?(@matched_partner) && @matched_partner&.hotel_id == hotel.id
-
-      @matched_partner = hotel.partners.find_by(code: @partner_code)
     end
   end
 end

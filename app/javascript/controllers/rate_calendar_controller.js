@@ -7,8 +7,7 @@ export default class extends Controller {
   static values = {
     url: String,
     currency: { type: String, default: "MYR" },
-    roomCount: { type: Number, default: 1 },
-    partnerCode: { type: String, default: "" }
+    roomCount: { type: Number, default: 1 }
   }
 
   connect() {
@@ -326,8 +325,7 @@ export default class extends Controller {
       const params = new URLSearchParams({
         start_date: startISO,
         end_date: endISO,
-        room_count: this.roomCountValue,
-        partner_code: this.partnerCodeValue
+        room_count: this.roomCountValue
       })
       const res    = await fetch(`${this.urlValue}?${params}`, { headers: { Accept: "application/json" } })
       if (!res.ok) throw new Error("rate_calendar fetch failed")

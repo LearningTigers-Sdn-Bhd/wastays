@@ -3,27 +3,21 @@ module BookingEngine
     Day = Struct.new(:date, :min_price, :available, :rooms_left, keyword_init: true)
     MAX_WINDOW_DAYS = 180
 
-    def initialize(hotel:, start_date:, end_date:, room_count: 1, partner_code: nil)
+    def initialize(hotel:, start_date:, end_date:, room_count: 1)
       @hotel = hotel
       @start_date = start_date
       @end_date = end_date
       @room_count = [ room_count.to_i, 1 ].max
-      @partner_code = partner_code.to_s.strip.upcase.presence
     end
 
     def call
       validate!
       dates = (@start_date..@end_date).to_a
       room_type_ids = @hotel.room_types.select(:id)
-      partner = @hotel.partners.find_by(code: @partner_code) if @partner_code.present?
 
       # MIN price only over room types that are actually available that night
-      # If partner is present, we consider BOTH corporate_price and price
-      price_expression = if partner.present?
-        "LEAST(price, COALESCE(corporate_price, price))"
-      else
-        "price"
-      end
+      # We consider BOTH corporate_price and price
+      price_expression = "LEAST(price, COALESCE(corporate_price, price))"
 
       rates = RoomRate
         .joins("INNER JOIN room_inventories ri

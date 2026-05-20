@@ -15,7 +15,6 @@ module BookingEngine
       @guest_email = params[:guest_email]
       @guest_phone = params[:guest_phone]
       @display_currency = CurrencyCatalog.normalize(params[:display_currency], fallback: nil)
-      @partner_code = params[:partner_code].to_s.strip.upcase.presence
     end
 
     def call
@@ -29,8 +28,7 @@ module BookingEngine
           check_out: @check_out,
           adults: @adults,
           children: @children,
-          room_count: @room_count,
-          partner_code: @partner_code
+          room_count: @room_count
         )
 
         available_rooms = availability_service.available_rooms_for_hotel(@hotel)
@@ -46,12 +44,10 @@ module BookingEngine
         total_amount = pricing_summary[:total_price]
         quote_currency = pricing_summary[:currency]
         display_snapshot = display_snapshot_for(total_amount, quote_currency)
-        partner = pricing_summary[:partner]
 
         # 3. Create Quote with snapshots
         quote = BookingQuote.new(
           hotel: @hotel,
-          partner: partner,
           check_in: @check_in,
           check_out: @check_out,
           adults: @adults,
