@@ -3,7 +3,7 @@ require "csv"
 class HotelPortal::ReportsController < HotelPortal::BaseController
   include FinancialFiltering
 
-  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue outstanding_balance arrivals_departures folio_ledger journal_batches]
+  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches]
   before_action :authorize_view_payouts!, only: %i[payouts]
 
   def index
@@ -216,6 +216,38 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
         pdf = HotelPortal::Reports::OutstandingBalancePdfExportService.new(hotel: current_hotel, report: @report).generate
         send_data pdf,
           filename: "outstanding-balance-#{@report.start_date}-#{@report.end_date}.pdf",
+          type: "application/pdf",
+          disposition: "attachment"
+      end
+    end
+  end
+
+  def deposit_liability
+    @report_as_of_date = parse_single_report_date(params[:as_of_date]) || parse_single_report_date(params[:date]) || current_hotel.business_date_for || Date.current
+    @report = HotelPortal::Reports::DepositLiabilityReport.new(
+      hotel: current_hotel,
+      as_of_date: @report_as_of_date
+    ).call
+
+    respond_to do |format|
+      format.html
+      format.csv do
+        csv = HotelPortal::Reports::DepositLiabilityCsvExportService.new(report: @report).generate
+        send_data csv,
+          filename: "deposit-liability-#{@report.as_of_date}.csv",
+          type: "text/csv"
+      end
+      format.any(:xls) do
+        workbook = HotelPortal::Reports::DepositLiabilityExcelExportService.new(report: @report).generate
+        send_data workbook,
+          filename: "deposit-liability-#{@report.as_of_date}.xls",
+          type: "application/vnd.ms-excel",
+          disposition: "attachment"
+      end
+      format.pdf do
+        pdf = HotelPortal::Reports::DepositLiabilityPdfExportService.new(hotel: current_hotel, report: @report).generate
+        send_data pdf,
+          filename: "deposit-liability-#{@report.as_of_date}.pdf",
           type: "application/pdf",
           disposition: "attachment"
       end

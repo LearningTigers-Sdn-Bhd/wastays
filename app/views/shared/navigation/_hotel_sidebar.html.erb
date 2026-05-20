@@ -5,6 +5,7 @@ reports_nav_items = [
   { label: "Arrivals & Departures", path: arrivals_departures_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "arrivals_departures" },
   { label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "daily_occupancy" },
   { label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "outstanding_balance" },
+  { label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "deposit_liability" },
   { label: "Journal Batches", path: journal_batches_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "journal_batches" },
   { label: "GL Mappings", path: hotel_general_ledger_maps_path(current_hotel), active: controller_name == "general_ledger_maps" }
 ]

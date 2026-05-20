@@ -298,6 +298,7 @@ Rails.application.routes.draw do
         get :daily_occupancy
         get :daily_revenue
         get :outstanding_balance
+        get :deposit_liability
         get :folio_ledger
         get :journal_batches
       end
