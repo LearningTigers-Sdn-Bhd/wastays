@@ -69,15 +69,26 @@ module Bookings
         return OpenStruct.new(success?: false, errors: [ "Room #{@room_number} is currently being assigned by another staff member." ])
       end
 
-      # 2. Calculate accurate total amount from Grid Rates (if not overridden)
-      unless booking.manual_rate_override.present?
-        booking.total_amount = CalculateStayPrice.new(
+      begin
+        financial_snapshot = BuildFinancialSnapshot.new(
+          hotel: @hotel,
           room_type: room_type,
           rate_plan: rate_plan,
           check_in: booking.check_in,
-          check_out: booking.check_out
+          check_out: booking.check_out,
+          guest_country: booking.guest_country,
+          manual_total_amount: booking.manual_rate_override
         ).call
+      rescue ArgumentError => e
+        return OpenStruct.new(success?: false, errors: [ e.message ])
       end
+
+      booking.total_amount = financial_snapshot.room_total
+      booking.tax_lines = financial_snapshot.tax_lines
+      booking.tax_posting_snapshot = financial_snapshot.tax_posting_snapshot
+      tourism_tax = booking.tax_lines.find { |tax| tax["type"].to_s == "tourism_tax" }
+      booking.tourism_tax_amount = tourism_tax ? tourism_tax["amount"].to_d : 0
+      booking.tourism_tax_applied = booking.tourism_tax_amount.positive?
 
       booking.status = "confirmed"
       booking.hotel_snapshot = @hotel.booking_snapshot.merge("room_number" => @room_number)
@@ -113,7 +124,8 @@ module Bookings
               rate_plan: rate_plan,
               quantity: 1,
               subtotal: booking.total_amount,
-              room_type_snapshot: room_type.as_json
+              room_type_snapshot: room_type.as_json,
+              nightly_rate_snapshot: financial_snapshot.nightly_rate_snapshot
             )
 
             assignment_result = Bookings::AssignRoom.new(

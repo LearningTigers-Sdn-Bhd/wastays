@@ -29,26 +29,22 @@ module BookingEngine
         gender = @payment_details[:gender]&.downcase&.strip
         document_type = @payment_details[:document_type]&.downcase&.strip
 
-        rooms_subtotal = @quote.booking_quote_items.sum(&:subtotal).to_f
+        financial_snapshot = Bookings::BuildFinancialSnapshot.new(
+          hotel: @quote.hotel,
+          check_in: @quote.check_in,
+          check_out: @quote.check_out,
+          guest_country: guest_country,
+          room_items: @quote.booking_quote_items.map do |item|
+            {
+              quantity: item.quantity,
+              nightly_rate_snapshot: item.nightly_rate_snapshot
+            }
+          end
+        ).call
 
-        # Build tax lines from hotel's custom taxes
-        tax_lines = @quote.hotel.hotel_taxes.enabled.filter_map do |tax|
-          next unless tax.applicable_for?(guest_country)
-          tax.to_tax_line(rooms_subtotal: rooms_subtotal)
-        end
-
-        # Add SST if enabled (8% of room subtotal, all guests)
-        if @quote.hotel.sst_enabled?
-          tax_lines << {
-            "name"   => "Service Tax (SST 8%)",
-            "amount" => (rooms_subtotal * 0.08).round(2),
-            "type"   => "sst"
-          }
-        end
-
-        # Backward-compat: keep tourism_tax_amount/applied
-        ttx = tax_lines.find { |t| t["name"].to_s.downcase.include?("tourism") }
-        tourism_tax_amount = ttx ? ttx["amount"].to_f : @quote.hotel.tourism_tax_amount_for(guest_country)
+        tax_lines = financial_snapshot.tax_lines
+        tourism_tax = tax_lines.find { |tax| tax["type"].to_s == "tourism_tax" }
+        tourism_tax_amount = tourism_tax ? tourism_tax["amount"].to_d : 0
 
         booking = Booking.new(
           booking_quote: @quote,
@@ -75,6 +71,7 @@ module BookingEngine
           tourism_tax_amount: tourism_tax_amount,
           tourism_tax_applied: tourism_tax_amount.positive?,
           tax_lines: tax_lines,
+          tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
           reservation_number: reservation_num,
           receipt_number: receipt_num
         )

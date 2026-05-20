@@ -23,6 +23,7 @@ RSpec.describe Bookings::CreateManualBooking do
   before do
     dispatcher = instance_double(Notifications::Dispatcher, call: [])
     allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+    create(:room_rate, room_type: room_type, date: Date.current, price: 200)
   end
 
   it "creates a booking and deducts inventory" do
@@ -260,10 +261,23 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.booking.guest_document_type).to eq("passport")
   end
 
-  it "persists the selected rate plan and calculates total with base-price fallback" do
+  it "stores a nightly rate snapshot and tax posting snapshot" do
+    hotel.update!(sst_enabled: true)
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    booking_room = result.booking.booking_rooms.first
+    expect(booking_room.nightly_rate_snapshot[Date.current.iso8601]["price"]).to eq("200.0")
+    expect(result.booking.tax_lines.find { |line| line["type"] == "sst" }["amount"]).to eq("16.0")
+    expect(result.booking.tax_posting_snapshot[Date.current.iso8601].first["amount"]).to eq("16.0")
+  end
+
+  it "persists the selected rate plan and requires complete room rates" do
     room_type.update!(base_price: 80)
     rate_plan = create(:rate_plan, room_type: room_type)
     create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 120)
+    create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current + 1.day, price: 130)
     params.merge!(
       rate_plan_id: rate_plan.id,
       check_in: Date.current,
@@ -273,8 +287,43 @@ RSpec.describe Bookings::CreateManualBooking do
     result = subject.call
 
     expect(result.success?).to be true
-    expect(result.booking.total_amount).to eq(200.to_d)
+    expect(result.booking.total_amount).to eq(250.to_d)
     expect(result.booking.booking_rooms.first.rate_plan).to eq(rate_plan)
+  end
+
+  it "rejects manual bookings when a required room rate is missing" do
+    params.merge!(check_in: Date.current, check_out: Date.current + 2.days)
+
+    result = subject.call
+
+    expect(result.success?).to be false
+    expect(result.errors).to include("Missing room rates for #{(Date.current + 1.day).iso8601}.")
+  end
+
+  it "distributes a manual override total across the nightly snapshot" do
+    params.merge!(manual_rate_override: 333.33, check_in: Date.current, check_out: Date.current + 3.days)
+
+    result = subject.call
+
+    expect(result.success?).to be true
+
+    snapshot = result.booking.booking_rooms.first.nightly_rate_snapshot
+    expect(snapshot[Date.current.iso8601]["price"]).to eq("111.11")
+    expect(snapshot[(Date.current + 2.days).iso8601]["price"]).to eq("111.11")
+    expect(result.booking.total_amount).to eq(333.33.to_d)
+  end
+
+  it "posts custom flat hotel tax once in the tax posting snapshot" do
+    HotelTax.create!(hotel: hotel, name: "Admin Levy", rate_type: "flat", amount: 12)
+    create(:room_rate, room_type: room_type, date: Date.current + 1.day, price: 220)
+    params.merge!(check_in: Date.current, check_out: Date.current + 2.days)
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    expect(result.booking.tax_lines.find { |line| line["name"] == "Admin Levy" }["amount"]).to eq("12.0")
+    expect(result.booking.tax_posting_snapshot[Date.current.iso8601].count { |tax| tax["name"] == "Admin Levy" }).to eq(1)
+    expect(result.booking.tax_posting_snapshot[(Date.current + 1.day).iso8601].to_a).to be_empty
   end
 
   it "rejects a selected rate plan from another room category" do
