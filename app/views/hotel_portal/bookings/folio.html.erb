@@ -1,0 +1,226 @@
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <%= link_to "Bookings", hotel_bookings_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <span class="text-sm text-slate-400">/</span>
+    <%= link_to @booking.confirmation_token, hotel_booking_path(current_hotel, @booking), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900">Folio Management</span>
+  </div>
+<% end %>
+
+<div class="max-w-[1600px] mx-auto pb-20 space-y-8 px-4 md:px-0 mt-5">
+  <!-- Flat Header (Matching Booking Show style) -->
+  <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Folio <%= @booking.confirmation_token %></h1>
+        <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wider <%= @presenter.status_label_class %> bg-opacity-10 uppercase">
+          <%= @presenter.status %>
+        </span>
+      </div>
+      <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-slate-600">
+        <span class="flex items-center gap-1">
+          <%= lucide_icon "user", class: "size-3.5" %>
+          <%= @booking.guest_name %>
+        </span>
+        <span class="flex items-center gap-1">
+          <%= lucide_icon "calendar", class: "size-3.5" %>
+          <%= @booking.check_in.strftime("%d %b") %> — <%= @booking.check_out.strftime("%d %b %Y") %>
+        </span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <%= link_to hotel_booking_path(current_hotel, @booking), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 flex items-center gap-2" do %>
+        <%= lucide_icon "arrow-left", stroke_width: 2.5, class: "size-4" %>
+        Back to Booking
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Full-Width Outstanding Balance Banner -->
+  <div class="bg-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-200/50">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-8">
+      <div>
+        <div class="flex items-center gap-2 mb-4">
+          <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Outstanding Balance</h3>
+          <div class="size-5 rounded-lg bg-white/10 flex items-center justify-center text-slate-300">
+            <%= lucide_icon "credit-card", stroke_width: 2.5, class: "size-3" %>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span class="text-sm font-bold text-slate-400">MYR</span>
+          <span class="text-5xl font-black tracking-tight"><%= number_with_precision(@booking.booking_folio&.outstanding_balance || 0, precision: 2) %></span>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-12 md:pl-12 md:border-l border-slate-800">
+        <div>
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Folio Status</p>
+          <p class="text-lg font-black uppercase tracking-tight text-white"><%= @booking.booking_folio&.status || "N/A" %></p>
+        </div>
+        <div>
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Charges</p>
+          <p class="text-lg font-black text-white">MYR <%= number_with_precision(@booking.booking_folio&.total_charges || 0, precision: 2) %></p>
+        </div>
+        <div>
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Payments</p>
+          <p class="text-lg font-black text-emerald-400">MYR <%= number_with_precision(@booking.booking_folio&.total_payments || 0, precision: 2) %></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Financial Actions Toolbar -->
+  <div class="flex flex-wrap items-center gap-3">
+    <button type="button" class="flex items-center gap-2.5 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('folio-payment-modal-<%= @booking.id %>').showModal()">
+      <%= lucide_icon "plus-circle", stroke_width: 3, class: "size-4" %>
+      Post Payment
+    </button>
+    
+    <button type="button" class="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" onclick="document.getElementById('folio-charge-modal-<%= @booking.id %>').showModal()">
+      <%= lucide_icon "banknote", stroke_width: 2.5, class: "size-4 text-slate-500" %>
+      Post Charge
+    </button>
+
+    <button type="button" class="flex items-center gap-2.5 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-bold text-indigo-700 shadow-sm transition hover:bg-indigo-100" onclick="document.getElementById('folio-adjustment-modal-<%= @booking.id %>').showModal()">
+      <%= lucide_icon "sliders-horizontal", stroke_width: 2.5, class: "size-4 text-indigo-500" %>
+      Post Adjustment
+    </button>
+
+    <button type="button" class="flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-800 shadow-sm transition hover:bg-amber-100" onclick="document.getElementById('folio-refund-modal-<%= @booking.id %>').showModal()">
+      <%= lucide_icon "undo-2", stroke_width: 2.5, class: "size-4 text-amber-600" %>
+      Record Refund
+    </button>
+  </div>
+
+  <!-- Detailed Transaction Ledger -->
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+      <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Transaction Ledger</h3>
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <%= @booking.booking_folio&.folio_transactions&.count || 0 %> entries
+      </div>
+    </div>
+    <div class="p-0 overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="bg-slate-50/50 border-b border-slate-200">
+            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">ID</th>
+            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Date</th>
+            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Description</th>
+            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">GL Code</th>
+            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Staff / Source</th>
+            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px] text-right">Amount</th>
+            <th class="px-6 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% if @booking.booking_folio&.folio_transactions&.any? %>
+            <% @booking.booking_folio.folio_transactions.order(posting_date: :asc, created_at: :asc).each do |tx| %>
+              <tr class="<%= "opacity-50 bg-slate-50/30" if tx.reversed? %>">
+                <td class="px-6 py-4 font-mono text-[10px] text-slate-400">#<%= tx.id.to_s.last(6) %></td>
+                <td class="px-6 py-4 text-slate-600 whitespace-nowrap font-medium text-[12px]"><%= tx.posting_date.strftime("%d %b %Y") %></td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-2">
+                    <p class="font-bold text-slate-900 <%= "line-through text-slate-400" if tx.reversed? %>"><%= tx.description %></p>
+                    <% if tx.reversed? %>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-100 text-slate-500 uppercase tracking-tighter">REVERSED</span>
+                    <% elsif tx.reversal_of_transaction_id.present? %>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-700 uppercase tracking-tighter">REVERSAL</span>
+                    <% end %>
+                  </div>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span class="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-100 text-slate-500"><%= tx.transaction_type %></span>
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-slate-400"><%= tx.category.tr("_", " ") %></span>
+                  </div>
+                </td>
+                <td class="px-6 py-4 font-mono text-[11px] text-slate-500"><%= tx.gl_code || "—" %></td>
+                <td class="px-6 py-4">
+                  <% if tx.user %>
+                    <p class="text-[12px] font-bold text-slate-700"><%= tx.user.name %></p>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Manual</p>
+                  <% else %>
+                    <p class="text-[12px] font-bold text-slate-500">Night Audit</p>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">System</p>
+                  <% end %>
+                </td>
+                <td class="px-6 py-4 text-right font-black <%= folio_transaction_amount_class(tx) %> <%= "line-through" if tx.reversed? %> text-[15px]">
+                  <%= folio_transaction_amount_label(tx) %>
+                </td>
+                <td class="px-6 py-4 text-right">
+                </td>
+              </tr>
+            <% end %>
+          <% else %>
+            <tr>
+              <td colspan="7" class="px-6 py-20 text-center">
+                <div class="flex flex-col items-center">
+                  <div class="size-12 rounded-full bg-slate-50 flex items-center justify-center mb-4 text-slate-300">
+                    <%= lucide_icon "circle-alert", stroke_width: 2, class: "size-6" %>
+                  </div>
+                  <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">No transactions recorded yet.</p>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Render Modals (reusing existing partial) -->
+<%= render "hotel_portal/bookings/action_modals", booking: @booking, presenter: @presenter %>
+
+<!-- Financial Modals with redirect_to_folio flag -->
+<%= render "hotel_portal/bookings/folio_transaction_modal",
+    booking: @booking,
+    hotel: current_hotel,
+    modal_id: "folio-payment-modal-#{@booking.id}",
+    title: "Post Payment",
+    description: "Record a staff-posted cash payment against this folio.",
+    transaction_type: "payment",
+    category: "cash",
+    signed_amount: false,
+    submit_label: "Post Payment",
+    redirect_to_folio: true %>
+
+<%= render "hotel_portal/bookings/folio_transaction_modal",
+    booking: @booking,
+    hotel: current_hotel,
+    modal_id: "folio-charge-modal-#{@booking.id}",
+    title: "Post Charge",
+    description: "Record a manual other charge. Accommodation and tax are posted by audit flows.",
+    transaction_type: "charge",
+    category: "other",
+    signed_amount: false,
+    submit_label: "Post Charge",
+    redirect_to_folio: true %>
+
+<%= render "hotel_portal/bookings/folio_transaction_modal",
+    booking: @booking,
+    hotel: current_hotel,
+    modal_id: "folio-adjustment-modal-#{@booking.id}",
+    title: "Post Adjustment",
+    description: "Record a correction, discount, write-off, or other adjustment.",
+    transaction_type: "adjustment",
+    category: nil,
+    category_options: %w[adjustment correction discount write_off other],
+    signed_amount: true,
+    submit_label: "Post Adjustment",
+    redirect_to_folio: true %>
+
+<%= render "hotel_portal/bookings/folio_transaction_modal",
+    booking: @booking,
+    hotel: current_hotel,
+    modal_id: "folio-refund-modal-#{@booking.id}",
+    title: "Record Refund",
+    description: "Enter a positive refund amount. It will be recorded as a negative refund payment.",
+    transaction_type: "payment",
+    category: "refund",
+    signed_amount: false,
+    submit_label: "Record Refund",
+    redirect_to_folio: true %>

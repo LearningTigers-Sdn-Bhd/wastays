@@ -7,6 +7,9 @@
 
     <%= form_with url: hotel_booking_folio_transactions_path(hotel, booking), method: :post, local: true, class: "p-6 space-y-4" do |f| %>
       <%= hidden_field_tag "folio_transaction[transaction_type]", transaction_type %>
+      <% if local_assigns[:redirect_to_folio] %>
+        <%= hidden_field_tag "redirect_to_folio", "true" %>
+      <% end %>
       <% if category.present? %>
         <%= hidden_field_tag "folio_transaction[category]", category %>
       <% else %>

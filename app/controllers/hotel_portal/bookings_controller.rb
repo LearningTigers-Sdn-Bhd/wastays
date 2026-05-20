@@ -139,6 +139,11 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     set_audit_logs
   end
 
+  def folio
+    @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(params[:id])
+    @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+  end
+
   def update
     @booking = current_hotel.bookings.find(params[:id])
     result = Bookings::UpdateStayService.new(

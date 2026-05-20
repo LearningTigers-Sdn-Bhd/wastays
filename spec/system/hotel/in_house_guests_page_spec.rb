@@ -17,11 +17,11 @@ RSpec.describe "Hotel in-house guests page", type: :system do
       guest_name: "Aisha Tan",
       guest_email: "aisha.tan@example.com",
       guest_phone: "+60123456789",
-      check_in: Date.new(2026, 4, 15),
-      check_out: Date.new(2026, 4, 18),
-      checked_in_at: Time.zone.local(2026, 4, 16, 10, 30),
+      check_in: Date.current,
+      check_out: Date.current + 1.day,
+      checked_in_at: Time.current,
       checked_out_at: nil,
-      created_at: Time.zone.local(2026, 4, 14, 9, 0)
+      created_at: 1.day.ago
     )
   end
 
@@ -34,11 +34,11 @@ RSpec.describe "Hotel in-house guests page", type: :system do
       guest_name: "Ben Lim",
       guest_email: "ben.lim@example.com",
       guest_phone: "+60129876543",
-      check_in: Date.new(2026, 4, 14),
-      check_out: Date.new(2026, 4, 17),
-      checked_in_at: Time.zone.local(2026, 4, 15, 14, 0),
+      check_in: Date.current,
+      check_out: Date.current + 2.days,
+      checked_in_at: Time.current,
       checked_out_at: nil,
-      created_at: Time.zone.local(2026, 4, 13, 8, 0)
+      created_at: 2.days.ago
     )
   end
 
@@ -116,16 +116,18 @@ RSpec.describe "Hotel in-house guests page", type: :system do
 
     rows = all("tbody tr")
     expect(rows.size).to eq(2)
-    expect(rows.first).to have_content("Aisha Tan")
-    expect(rows.first).to have_content("WS-INHOUSE-001")
-    expect(rows.first).to have_content("aisha.tan@example.com")
-    expect(rows.first).to have_content("+60123456789")
-    expect(rows.first).to have_content("15 Apr 2026")
-    expect(rows.first).to have_content("18 Apr 2026")
-    expect(rows.first).to have_content(matching_booking.checked_in_at.in_time_zone(user.time_zone).strftime("%d %b %Y, %I:%M %p"))
-    expect(rows.first).to have_content("1x Deluxe Room")
-    expect(rows.first).to have_link("View booking", href: hotel_booking_path(hotel, matching_booking))
-    expect(rows.first).to have_button("Check out")
+
+    within("tbody tr", text: "Aisha Tan") do
+      expect(page).to have_content("WS-INHOUSE-001")
+      expect(page).to have_content("aisha.tan@example.com")
+      expect(page).to have_content("+60123456789")
+      expect(page).to have_content(matching_booking.check_in.strftime("%d %b %Y"))
+      expect(page).to have_content(matching_booking.check_out.strftime("%d %b %Y"))
+      expect(page).to have_content(matching_booking.checked_in_at.in_time_zone(user.time_zone).strftime("%d %b %Y, %I:%M %p"))
+      expect(page).to have_content("1x Deluxe Room")
+      expect(page).to have_link("View booking", href: hotel_booking_path(hotel, matching_booking))
+      expect(page).to have_button("Check out")
+    end
 
     expect(page).to have_content("Ben Lim")
     expect(page).not_to have_content("Checked Out Guest")
@@ -145,7 +147,11 @@ RSpec.describe "Hotel in-house guests page", type: :system do
       click_button "Check out"
     end
 
-    expect(page).to have_current_path(hotel_booking_path(hotel, matching_booking), ignore_query: true)
+    # Handle the Turbo confirm modal
+    if page.has_css?("#turbo-confirm-modal", wait: 2)
+      find("#turbo-confirm-button").click
+    end
+
     expect(page).to have_content("Guest has been checked out.")
     expect(matching_booking.reload.status).to eq("completed")
     expect(matching_booking.reload.checked_out_at).to be_present

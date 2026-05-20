@@ -234,6 +234,7 @@ Rails.application.routes.draw do
       patch :reactivate, on: :member
     end
     resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions"
+    resources :general_ledger_maps, only: [ :index, :edit, :update ], path: "general-ledger-mappings"
 
     resources :room_types do
       member do
@@ -251,6 +252,7 @@ Rails.application.routes.draw do
         post :sync
       end
       member do
+        get  :folio
         patch :move
         post :check_in
         post :check_out
@@ -297,6 +299,7 @@ Rails.application.routes.draw do
         get :daily_revenue
         get :outstanding_balance
         get :folio_ledger
+        get :journal_batches
       end
     end
     resources :night_audits, only: [ :index, :show, :create ]

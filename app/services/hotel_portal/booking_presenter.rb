@@ -49,7 +49,7 @@ module HotelPortal
     end
 
     def requires_backdated_checkin_reason?
-      hotel.night_audits.completed.where(business_date: booking.check_in.to_date).exists?
+      hotel.date_closed?(booking.check_in.to_date)
     end
 
     def can_manage_bookings?(user)
