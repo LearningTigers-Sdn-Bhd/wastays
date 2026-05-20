@@ -26,7 +26,8 @@ module Folios
         return failure("Cannot check out with outstanding balance of #{formatted_balance(balance)}.", folio: folio, balance: balance) if balance.positive?
         return failure("Cannot check out with credit balance of #{formatted_balance(balance)}. Process refund or adjustment first.", folio: folio, balance: balance) if balance.negative?
 
-        folio.update!(status: "closed")
+        invoice_num = HotelCounter.increment!(hotel: folio.hotel, type: "invoice")
+        folio.update!(status: "closed", invoice_number: invoice_num)
         success(folio: folio, balance: balance)
       end
     rescue ActiveRecord::RecordInvalid => e

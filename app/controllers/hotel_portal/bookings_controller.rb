@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class HotelPortal::BookingsController < HotelPortal::BaseController
-  before_action :authorize_view_bookings!, only: %i[index show availability rate_options stay_price]
+  before_action :authorize_view_bookings!, only: %i[index show availability rate_options stay_price folio_invoice]
   before_action :authorize_manage_bookings!, only: %i[new create update check_in check_out cancel reinstate add_guest remove_guest]
 
   def index
@@ -276,6 +276,31 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), notice: "Complaint resolved."
     else
       redirect_to hotel_booking_path(current_hotel, @booking, tab: "requests"), alert: "Failed to update request."
+    end
+  end
+
+  def folio_invoice
+    @booking = current_hotel.bookings
+      .includes(booking_folio: :folio_transactions, booking_rooms: :room_type)
+      .find(params[:id])
+
+    folio = @booking.booking_folio
+    unless folio&.status == "closed"
+      redirect_to hotel_booking_path(current_hotel, @booking),
+        alert: "Folio invoice is only available for checked-out bookings with a closed folio."
+      return
+    end
+
+    pdf_bytes = FolioInvoicePdfService.new(@booking).generate
+    filename  = "folio-invoice-#{@booking.formatted_invoice_number || @booking.confirmation_token}.pdf"
+
+    respond_to do |format|
+      format.pdf do
+        send_data pdf_bytes, filename: filename, type: "application/pdf", disposition: "inline"
+      end
+      format.html do
+        send_data pdf_bytes, filename: filename, type: "application/pdf", disposition: "attachment"
+      end
     end
   end
 

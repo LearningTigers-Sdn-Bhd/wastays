@@ -3,7 +3,7 @@ require "csv"
 class HotelPortal::ReportsController < HotelPortal::BaseController
   include FinancialFiltering
 
-  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy outstanding_balance arrivals_departures]
+  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy outstanding_balance arrivals_departures folio_ledger]
   before_action :authorize_view_payouts!, only: %i[payouts]
 
   def index
@@ -255,6 +255,35 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
     end
   end
 
+  def folio_ledger
+    @start_date, @end_date = parse_date_range(params[:start_date], params[:end_date])
+
+    # Default to the last completed night audit date if no range given
+    if @start_date.nil?
+      last_audit = current_hotel.night_audits.completed.order(business_date: :desc).first
+      @start_date = last_audit&.business_date || Date.current - 1.day
+      @end_date   = @start_date
+    end
+
+    service = folio_ledger_export_service
+    @totals = service.totals
+
+    respond_to do |format|
+      format.html
+      format.csv do
+        send_data service.generate_csv,
+          filename: "folio-ledger-#{@start_date}-#{@end_date}.csv",
+          type: "text/csv"
+      end
+      format.any(:xls) do
+        send_data service.generate_xls,
+          filename: "folio-ledger-#{@start_date}-#{@end_date}.xls",
+          type: "application/vnd.ms-excel",
+          disposition: "attachment"
+      end
+    end
+  end
+
   private
 
   def parse_report_date_range
@@ -329,6 +358,14 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
       upcoming_payout_amount: @upcoming_payout_amount,
       processing_batches: @processing_batches,
       payout_history: history_scope
+    )
+  end
+
+  def folio_ledger_export_service
+    @folio_ledger_export_service ||= FolioLedgerExportService.new(
+      hotel: current_hotel,
+      start_date: @start_date,
+      end_date: @end_date
     )
   end
 end

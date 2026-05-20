@@ -257,6 +257,7 @@ Rails.application.routes.draw do
         post :reinstate
         post :cancel
         post :add_guest
+        get  :folio_invoice
         delete "guests/:guest_id", action: :remove_guest, as: :remove_guest
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings#complete_housekeeping_request", as: :complete_housekeeping_request
         patch "complaint_requests/:complaint_request_id", to: "bookings#update_complaint_request", as: :update_complaint_request
@@ -293,6 +294,7 @@ Rails.application.routes.draw do
         get :daily_occupancy
         get :daily_revenue
         get :outstanding_balance
+        get :folio_ledger
       end
     end
     resources :night_audits, only: [ :index, :show, :create ]

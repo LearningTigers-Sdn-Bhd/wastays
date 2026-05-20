@@ -23,15 +23,26 @@ namespace :hotel_ops do
     puts "\nProceeding..."
 
     ActiveRecord::Base.transaction do
-      # 1. Recalibrate Business Hours & Policies
-      puts "Recalibrating business hours, grace period, and amenities..."
+      # 1. Recalibrate Business Hours, Policies, and Taxes
+      puts "Recalibrating business hours, grace period, amenities, and taxes..."
       hotel.update!(
         time_zone: "Kuala Lumpur",
         business_starts_at: "08:00",
         business_ends_at: "02:00",
         arrival_grace_period: 7200,
-        amenities: %w[wifi swimming_pool fitness_center spa_wellness_centre laundry]
+        amenities: %w[wifi swimming_pool fitness_center spa_wellness_centre laundry],
+        tourism_tax_enabled: true,
+        tourism_tax_amount: 10.0,
+        sst_enabled: true
       )
+
+      # 1b. Recalibrate Hotel Taxes
+      puts "Cleaning and resetting hotel taxes..."
+      hotel.hotel_taxes.destroy_all
+      hotel.hotel_taxes.create!([
+        { name: "Service Tax", rate_type: "percentage", amount: 8.0, enabled: true, foreign_guests_only: false },
+        { name: "Service Charge", rate_type: "percentage", amount: 10.0, enabled: true, foreign_guests_only: false }
+      ])
 
       # 2. Clean Night Audits
       night_audit_count = hotel.night_audits.count
@@ -39,6 +50,12 @@ namespace :hotel_ops do
       hotel.night_audits.destroy_all
 
       # 2. Clean Bookings
+      booking_ids = hotel.bookings.pluck(:id)
+      folio_ids = BookingFolio.where(booking_id: booking_ids).pluck(:id)
+
+      puts "Force cleaning #{FolioTransaction.where(booking_folio_id: folio_ids).count} immutable transactions..."
+      FolioTransaction.where(booking_folio_id: folio_ids).delete_all
+
       booking_count = hotel.bookings.count
       puts "Destroying #{booking_count} bookings..."
       hotel.bookings.destroy_all
