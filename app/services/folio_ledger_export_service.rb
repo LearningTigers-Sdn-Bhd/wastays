@@ -109,7 +109,7 @@ class FolioLedgerExportService
       .joins(booking_folio: :booking)
       .where(bookings: { hotel_id: @hotel.id })
       .where(posting_date: @start_date..@end_date)
-      .includes(booking_folio: [ :booking, :folio_transactions ])
+      .includes(booking_folio: { booking: :booking_rooms })
       .order(:posting_date, :id)
   end
 

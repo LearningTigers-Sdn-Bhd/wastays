@@ -27,6 +27,28 @@ module HotelPortal
       end
     end
 
+    def reverse
+      unless @booking.booking_folio
+        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
+      end
+
+      transaction = @booking.booking_folio.folio_transactions.find(params[:id])
+      result = Folios::ReverseTransaction.call(
+        transaction: transaction,
+        user: current_user,
+        correction_reason: reversal_params[:correction_reason],
+        correction_note: reversal_params[:correction_note],
+        posting_date: reversal_params[:posting_date].presence || Time.current.to_date,
+        options: reversal_options
+      )
+
+      if result.success?
+        redirect_to hotel_booking_path(current_hotel, @booking), notice: "Folio transaction reversed."
+      else
+        redirect_to hotel_booking_path(current_hotel, @booking), alert: result.error
+      end
+    end
+
     private
 
     def authorize_post_folio_transactions!
@@ -39,6 +61,23 @@ module HotelPortal
 
     def folio_transaction_params
       params.require(:folio_transaction).permit(:transaction_type, :category, :amount, :description, :posting_date)
+    end
+
+    def reversal_params
+      params.require(:folio_transaction).permit(
+        :correction_reason,
+        :correction_note,
+        :posting_date,
+        :override_closed_folio,
+        :override_night_audit
+      )
+    end
+
+    def reversal_options
+      {
+        override_closed_folio: ActiveModel::Type::Boolean.new.cast(reversal_params[:override_closed_folio]),
+        override_night_audit: ActiveModel::Type::Boolean.new.cast(reversal_params[:override_night_audit])
+      }
     end
   end
 end

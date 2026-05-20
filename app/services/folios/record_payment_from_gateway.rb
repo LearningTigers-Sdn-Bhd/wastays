@@ -24,10 +24,7 @@ module Folios
           user: nil, # System/Gateway payment
           description: "Payment via #{payment_transaction.gateway} (#{payment_transaction.external_reference})",
           posting_date: payment_transaction.captured_at&.to_date || Time.current.to_date,
-          options: {
-            metadata: { payment_transaction_id: payment_transaction.id },
-            override_night_audit: true # Always allow gateway payments even on closed dates
-          }
+          options: posting_options(booking, payment_transaction)
         ).call
 
         return result if result.success?
@@ -44,6 +41,19 @@ module Folios
       folio.folio_transactions.payment
         .where("metadata->>'payment_transaction_id' = ?", payment_transaction.id.to_s)
         .first
+    end
+
+    def self.posting_options(booking, payment_transaction)
+      posting_date = payment_transaction.captured_at&.to_date || Time.current.to_date
+      options = { metadata: { payment_transaction_id: payment_transaction.id } }
+      return options unless NightAudit.closed_for_date?(booking.hotel_id, posting_date)
+
+      options.merge(
+        override_night_audit: true,
+        system_posting: true,
+        correction_reason: "gateway_payment_on_closed_date",
+        correction_note: "Record captured gateway payment on a closed business date."
+      )
     end
 
     def self.success(transaction)

@@ -23,6 +23,10 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     post hotel_booking_folio_transactions_path(hotel, booking), params: { folio_transaction: params }
   end
 
+  def reverse_transaction(transaction, params)
+    post reverse_hotel_booking_folio_transaction_path(hotel, booking, transaction), params: { folio_transaction: params }
+  end
+
   context "with post_folio_transactions permission" do
     before do
       grant_permission("post_folio_transactions")
@@ -81,6 +85,58 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
 
       expect(flash[:alert]).to include("business date #{closed_date} is already closed")
     end
+
+    it "reverses a folio transaction with correction details" do
+      transaction = create(:folio_transaction, booking_folio: folio, amount: 100, category: "accommodation")
+
+      expect {
+        reverse_transaction(transaction, correction_reason: "Posting error", correction_note: "Wrong booking", posting_date: Date.current)
+      }.to change { folio.folio_transactions.adjustment.count }.by(1)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:notice]).to eq("Folio transaction reversed.")
+      reversal = folio.folio_transactions.order(:id).last
+      expect(reversal.reversal_of_transaction).to eq(transaction)
+      expect(reversal.amount).to eq(-100.to_d)
+      expect(transaction.reload.voided_by_transaction).to eq(reversal)
+    end
+
+    it "rejects reversal without a correction reason" do
+      transaction = create(:folio_transaction, booking_folio: folio)
+
+      expect {
+        reverse_transaction(transaction, correction_reason: "", correction_note: "Wrong booking", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(flash[:alert]).to eq("Correction reason can't be blank.")
+    end
+
+    it "rejects reversal without a correction note" do
+      transaction = create(:folio_transaction, booking_folio: folio)
+
+      expect {
+        reverse_transaction(transaction, correction_reason: "Posting error", correction_note: "", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(flash[:alert]).to eq("Correction note can't be blank.")
+    end
+
+    it "rejects already reversed transactions" do
+      transaction = create(:folio_transaction, booking_folio: folio)
+      result = Folios::ReverseTransaction.call(
+        transaction: transaction,
+        user: user,
+        correction_reason: "Posting error",
+        correction_note: "Initial correction"
+      )
+      expect(result).to be_success
+
+      expect {
+        reverse_transaction(transaction, correction_reason: "Posting error", correction_note: "Duplicate correction", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(flash[:alert]).to eq("Transaction has already been reversed.")
+    end
   end
 
   it "requires post_folio_transactions permission" do
@@ -88,6 +144,18 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
 
     expect {
       post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
+    }.not_to change(FolioTransaction, :count)
+
+    expect(response).to redirect_to(root_path)
+    expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+  end
+
+  it "requires post_folio_transactions permission to reverse" do
+    folio
+    transaction = create(:folio_transaction, booking_folio: folio)
+
+    expect {
+      reverse_transaction(transaction, correction_reason: "Posting error", correction_note: "Wrong booking", posting_date: Date.current)
     }.not_to change(FolioTransaction, :count)
 
     expect(response).to redirect_to(root_path)

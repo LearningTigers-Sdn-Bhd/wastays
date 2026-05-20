@@ -86,6 +86,14 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: { booking: { status: "confirmed" } }
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
     end
+
+    it "does not change lifecycle status through booking params" do
+      patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: { booking: { status: "checked_in", guest_name: "Updated Guest" } }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(booking.reload.status).to eq("confirmed")
+      expect(booking.guest_name).to eq("Updated Guest")
+    end
   end
 
   describe "POST /create" do
@@ -107,6 +115,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     before do
       dispatcher = instance_double(Notifications::Dispatcher, call: [])
       allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+      create(:room_rate, room_type: room_type, date: Date.current, price: 100, currency: hotel.default_currency.presence || "MYR")
     end
 
     it "returns a turbo redirect action for offcanvas submits" do
@@ -161,7 +170,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     end
 
     it "renders the booking show page on turbo failures outside the reservation board" do
-      booking.update!(status: "pending")
+      booking = create(:booking, hotel: hotel, status: "pending")
 
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
            params: { checked_in_at: Time.current.to_s },
@@ -175,7 +184,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
   describe "POST /check_out" do
     it "updates the booking status and redirects within the hotel path" do
-      booking.update!(status: 'checked_in')
+      booking.transition_status_to!("checked_in", event: "check_in")
       folio = create(:booking_folio, booking: booking, status: "open")
       create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
       create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100.0)
@@ -189,7 +198,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     end
 
     it "does not check out when the folio is unsettled" do
-      booking.update!(status: 'checked_in')
+      booking.transition_status_to!("checked_in", event: "check_in")
       folio = create(:booking_folio, booking: booking, status: "open")
       create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
 

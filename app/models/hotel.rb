@@ -195,7 +195,18 @@ class Hotel < ApplicationRecord
 
   def latest_closable_business_date(time = Time.current)
     local_time = time.in_time_zone(hotel_time_zone)
-    local_time.to_date - 1.day
+    current_biz_date = business_date_for(local_time)
+
+    # Candidate date is the day before the current active business date
+    candidate = current_biz_date - 1.day
+    candidate_end = business_day_window_for(candidate).end
+
+    # Safe to close if local time is at least 30 minutes after candidate's business day end
+    if local_time >= candidate_end + 30.minutes
+      candidate
+    else
+      candidate - 1.day
+    end
   end
 
   def business_day_window_for(business_date)

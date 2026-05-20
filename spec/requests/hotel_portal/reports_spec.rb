@@ -216,8 +216,14 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     let(:end_date) { Date.new(2026, 5, 8) }
 
     it "renders outstanding balance report for selected range" do
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Unpaid Guest", confirmation_token: "WS-UNPAID")
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", check_in: start_date, check_out: start_date + 1.day, guest_name: "Paid Guest", confirmation_token: "WS-PAID")
+      unpaid = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Unpaid Guest", confirmation_token: "WS-UNPAID")
+      unpaid_folio = create(:booking_folio, booking: unpaid, hotel: hotel)
+      create(:folio_transaction, booking_folio: unpaid_folio, transaction_type: "charge", category: "accommodation", amount: 100)
+
+      paid = create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", check_in: start_date, check_out: start_date + 1.day, guest_name: "Paid Guest", confirmation_token: "WS-PAID")
+      paid_folio = create(:booking_folio, booking: paid, hotel: hotel)
+      create(:folio_transaction, booking_folio: paid_folio, transaction_type: "charge", category: "accommodation", amount: 100)
+      create(:folio_transaction, booking_folio: paid_folio, transaction_type: "payment", category: "cash", amount: 100)
 
       get outstanding_balance_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -228,7 +234,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "exports CSV" do
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "CSV Outstanding", confirmation_token: "WS-OB-CSV")
+      booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "CSV Outstanding", confirmation_token: "WS-OB-CSV")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
 
       get outstanding_balance_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -239,7 +247,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "exports PDF" do
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day)
+      booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day)
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
 
       get outstanding_balance_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -249,7 +259,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "exports XLS" do
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Outstanding")
+      booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Outstanding")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
 
       get outstanding_balance_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 

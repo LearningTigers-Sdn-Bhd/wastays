@@ -44,6 +44,8 @@ module Folios
           posting_date: penalty.posting_date,
           options: {
             override_night_audit: true,
+            correction_reason: "late_checkin_correction",
+            correction_note: description,
             metadata: {
               source: "late_checkin_correction",
               reversed_transaction_id: penalty.id,
@@ -96,6 +98,8 @@ module Folios
           posting_date: date,
           options: {
             override_night_audit: true,
+            correction_reason: "late_checkin_catch_up",
+            correction_note: description,
             metadata: {
               posting_source: "catch_up",
               catch_up_key: charge_key,
@@ -136,6 +140,8 @@ module Folios
           posting_date: date,
           options: {
             override_night_audit: true,
+            correction_reason: "late_checkin_catch_up",
+            correction_note: description,
             metadata: {
               posting_source: "catch_up",
               catch_up_key: charge_key,

@@ -70,7 +70,11 @@ RSpec.describe Folios::InsertTransaction do
           user: user,
           description: "Late charge",
           posting_date: closed_date,
-          options: { override_night_audit: true }
+          options: {
+            override_night_audit: true,
+            correction_reason: "late_charge",
+            correction_note: "Approved closed-date posting."
+          }
         ).call
 
         expect(result.success?).to be true
@@ -106,7 +110,11 @@ RSpec.describe Folios::InsertTransaction do
           category: "other",
           user: user,
           description: "Late charge",
-          options: { override_closed_folio: true }
+          options: {
+            override_closed_folio: true,
+            correction_reason: "late_charge",
+            correction_note: "Approved closed-folio posting."
+          }
         ).call
 
         expect(result.success?).to be(true)

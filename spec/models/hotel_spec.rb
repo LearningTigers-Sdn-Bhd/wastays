@@ -74,9 +74,11 @@ RSpec.describe Hotel, type: :model do
       expect(hotel.business_date_for(zone.local(2026, 5, 19, 2, 0))).to eq(Date.new(2026, 5, 19))
     end
 
-    it 'always makes yesterday closable regardless of business end' do
-      expect(hotel.latest_closable_business_date(zone.local(2026, 5, 19, 1, 59))).to eq(Date.new(2026, 5, 18))
-      expect(hotel.latest_closable_business_date(zone.local(2026, 5, 19, 2, 0))).to eq(Date.new(2026, 5, 18))
+    it 'makes yesterday closable 30 minutes after business ends' do
+      expect(hotel.latest_closable_business_date(zone.local(2026, 5, 19, 1, 59))).to eq(Date.new(2026, 5, 17))
+      expect(hotel.latest_closable_business_date(zone.local(2026, 5, 19, 2, 0))).to eq(Date.new(2026, 5, 17))
+      expect(hotel.latest_closable_business_date(zone.local(2026, 5, 19, 2, 29))).to eq(Date.new(2026, 5, 17))
+      expect(hotel.latest_closable_business_date(zone.local(2026, 5, 19, 2, 30))).to eq(Date.new(2026, 5, 18))
       expect(hotel.latest_closable_business_date(zone.local(2026, 5, 19, 15, 0))).to eq(Date.new(2026, 5, 18))
     end
 

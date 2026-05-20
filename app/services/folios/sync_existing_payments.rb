@@ -24,10 +24,10 @@ module Folios
             amount: amount,
             transaction_type: :payment,
             category: "advance_deposit",
-            user: nil,
+            user: posting_user,
             description: "Advance deposit from booking quote payment via #{pt.gateway} (#{pt.external_reference})",
             posting_date: pt.captured_at&.to_date || pt.created_at.to_date,
-            options: @options.merge({
+            options: override_options.merge({
               metadata: {
                 payment_transaction_id: pt.id,
                 source: "booking_quote",
@@ -44,6 +44,19 @@ module Folios
     end
 
     private
+
+    def override_options
+      return @options unless @options[:override_night_audit]
+
+      @options.reverse_merge(
+        correction_reason: "payment_sync_on_retroactive_checkin",
+        correction_note: "Sync captured payment while opening folio on a closed business date."
+      )
+    end
+
+    def posting_user
+      @options[:override_night_audit] ? @user : nil
+    end
 
     def already_recorded?(pt)
       @folio.folio_transactions.payment.where("metadata->>'payment_transaction_id' = ?", pt.id.to_s).exists?

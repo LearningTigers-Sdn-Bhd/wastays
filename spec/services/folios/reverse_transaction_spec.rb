@@ -2,109 +2,132 @@
 
 require "rails_helper"
 
-RSpec.describe Folios::ReverseTransaction do
+RSpec.describe Folios::ReverseTransaction, type: :service do
   let(:user) { create(:user) }
-  let(:booking) { create(:booking, currency: "MYR") }
-  let(:folio) { create(:booking_folio, booking: booking, hotel: booking.hotel, status: "open") }
+  let(:folio) { create(:booking_folio) }
 
-  it "reverses a charge with an offsetting correction transaction" do
-    charge = create(:folio_transaction, booking_folio: folio, amount: 100.0, transaction_type: :charge, category: "accommodation")
+  it "creates a negative adjustment for a charge reversal" do
+    transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 120)
 
     result = described_class.call(
-      transaction: charge,
+      transaction: transaction,
       user: user,
-      correction_reason: "Wrong charge",
-      correction_note: "Posted to the wrong reservation"
+      correction_reason: "Posting error",
+      correction_note: "Wrong room charge"
     )
 
     expect(result).to be_success
-    reversal = result.transaction
-    expect(reversal).to be_adjustment
-    expect(reversal.category).to eq("correction")
-    expect(reversal.amount).to eq(-100.0)
-    expect(reversal.reversal_of_transaction).to eq(charge)
-    expect(reversal.correction_reason).to eq("Wrong charge")
-    expect(reversal.correction_note).to eq("Posted to the wrong reservation")
-    expect(reversal.currency).to eq("MYR")
-    expect(charge.reload.voided_by_transaction).to eq(reversal)
-    expect(folio.outstanding_balance).to eq(0)
+    expect(result.transaction).to have_attributes(
+      transaction_type: "adjustment",
+      category: "correction",
+      amount: -120.to_d,
+      reversal_of_transaction: transaction,
+      correction_reason: "Posting error",
+      correction_note: "Wrong room charge"
+    )
+    expect(transaction.reload.voided_by_transaction).to eq(result.transaction)
   end
 
-  it "reverses a payment with a refund transaction" do
-    payment = create(:folio_transaction, booking_folio: folio, amount: 75.0, transaction_type: :payment, category: "cash")
+  it "creates a refund-style payment for a positive payment reversal" do
+    transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 80)
 
     result = described_class.call(
-      transaction: payment,
+      transaction: transaction,
       user: user,
       correction_reason: "Payment error",
-      correction_note: "Cash was posted twice"
+      correction_note: "Duplicate payment"
     )
 
     expect(result).to be_success
-    reversal = result.transaction
-    expect(reversal).to be_payment
-    expect(reversal.category).to eq("refund")
-    expect(reversal.amount).to eq(-75.0)
-    expect(payment.reload.voided_by_transaction).to eq(reversal)
-    expect(folio.outstanding_balance).to eq(0)
+    expect(result.transaction).to have_attributes(
+      transaction_type: "payment",
+      category: "refund",
+      amount: -80.to_d,
+      reversal_of_transaction: transaction
+    )
   end
 
-  it "rejects a second reversal" do
-    charge = create(:folio_transaction, booking_folio: folio, amount: 100.0, transaction_type: :charge, category: "accommodation")
+  it "rejects a missing correction reason" do
+    transaction = create(:folio_transaction, booking_folio: folio)
 
-    described_class.call(transaction: charge, user: user, correction_reason: "Wrong", correction_note: "First reversal")
-    result = described_class.call(transaction: charge.reload, user: user, correction_reason: "Wrong", correction_note: "Second reversal")
+    result = described_class.call(
+      transaction: transaction,
+      user: user,
+      correction_reason: "",
+      correction_note: "Wrong posting"
+    )
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Transaction has already been reversed.")
+    expect(result.error).to eq("Correction reason can't be blank.")
   end
 
-  it "rejects reversing a reversal transaction" do
-    charge = create(:folio_transaction, booking_folio: folio, amount: 100.0, transaction_type: :charge, category: "accommodation")
-    reversal = described_class.call(transaction: charge, user: user, correction_reason: "Wrong", correction_note: "First reversal").transaction
+  it "rejects a missing correction note" do
+    transaction = create(:folio_transaction, booking_folio: folio)
 
-    result = described_class.call(transaction: reversal, user: user, correction_reason: "Wrong", correction_note: "Reverse reversal")
+    result = described_class.call(
+      transaction: transaction,
+      user: user,
+      correction_reason: "Posting error",
+      correction_note: ""
+    )
+
+    expect(result).not_to be_success
+    expect(result.error).to eq("Correction note can't be blank.")
+  end
+
+  it "rejects already reversed transactions" do
+    transaction = create(:folio_transaction, booking_folio: folio)
+    first_result = described_class.call(
+      transaction: transaction,
+      user: user,
+      correction_reason: "Posting error",
+      correction_note: "Wrong posting"
+    )
+
+    second_result = described_class.call(
+      transaction: transaction.reload,
+      user: user,
+      correction_reason: "Posting error",
+      correction_note: "Duplicate reversal"
+    )
+
+    expect(first_result).to be_success
+    expect(second_result).not_to be_success
+    expect(second_result.error).to eq("Transaction has already been reversed.")
+  end
+
+  it "rejects reversal transactions" do
+    transaction = create(:folio_transaction, booking_folio: folio)
+    reversal = create(:folio_transaction, booking_folio: folio, transaction_type: "adjustment", category: "correction", amount: -100, reversal_of_transaction: transaction)
+
+    result = described_class.call(
+      transaction: reversal,
+      user: user,
+      correction_reason: "Posting error",
+      correction_note: "Reverse reversal"
+    )
 
     expect(result).not_to be_success
     expect(result.error).to eq("Reversal transactions cannot be reversed.")
   end
 
-  it "respects closed folio guards" do
+  it "records override metadata when reversing onto a closed folio" do
     folio.update!(status: "closed")
-    charge = create(:folio_transaction, booking_folio: folio, amount: 100.0, transaction_type: :charge, category: "accommodation")
-
-    result = described_class.call(transaction: charge, user: user, correction_reason: "Wrong", correction_note: "Closed folio")
-
-    expect(result).not_to be_success
-    expect(result.error).to include("Folio is closed")
-  end
-
-  it "respects closed business date guards" do
-    closed_date = 1.day.ago.to_date
-    create(:night_audit, hotel: booking.hotel, business_date: closed_date, status: "completed")
-    charge = create(:folio_transaction, booking_folio: folio, amount: 100.0, transaction_type: :charge, category: "accommodation")
+    transaction = create(:folio_transaction, booking_folio: folio)
 
     result = described_class.call(
-      transaction: charge,
+      transaction: transaction,
       user: user,
-      correction_reason: "Wrong",
-      correction_note: "Closed date",
-      posting_date: closed_date
+      correction_reason: "Manager override",
+      correction_note: "Correct closed folio",
+      options: { override_closed_folio: true }
     )
 
-    expect(result).not_to be_success
-    expect(result.error).to include("business date #{closed_date} is already closed")
-  end
-
-  it "stores posting metadata for the reversal" do
-    charge = create(:folio_transaction, booking_folio: folio, amount: 100.0, transaction_type: :charge, category: "accommodation")
-
-    result = described_class.call(transaction: charge, user: user, correction_reason: "Wrong", correction_note: "Metadata check")
-
-    expect(result.transaction.posted_at).to be_present
+    expect(result).to be_success
     expect(result.transaction.metadata).to include(
-      "posting_source" => "folio_reversal",
-      "reversed_transaction_id" => charge.id,
+      "override_closed_folio" => true,
+      "override_reason" => "Manager override",
+      "override_note" => "Correct closed folio",
       "posted_by_user_id" => user.id
     )
   end

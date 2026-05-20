@@ -19,6 +19,9 @@ module Folios
       @booking_folio.with_lock do
         @booking_folio.reload
 
+        override_error = validate_override_context
+        return failure(override_error) if override_error.present?
+
         if @booking_folio.status == "closed" && !@options[:override_closed_folio]
           return failure("Folio is closed. Please provide an override flag to post to a closed folio.")
         end
@@ -41,7 +44,7 @@ module Folios
           reversal_of_transaction: @options[:reversal_of_transaction],
           correction_reason: @options[:correction_reason],
           correction_note: @options[:correction_note],
-          metadata: @options[:metadata] || {}
+          metadata: transaction_metadata
         )
 
         if transaction.save
@@ -55,6 +58,32 @@ module Folios
     end
 
     private
+
+    def validate_override_context
+      return unless override_requested?
+      return "Override postings require a user." if @user.blank? && !@options[:system_posting]
+      return "Override reason can't be blank." if @options[:correction_reason].to_s.strip.blank?
+      return "Override note can't be blank." if @options[:correction_note].to_s.strip.blank?
+
+      nil
+    end
+
+    def override_requested?
+      @options[:override_closed_folio] || @options[:override_night_audit]
+    end
+
+    def transaction_metadata
+      metadata = (@options[:metadata] || {}).merge(posted_by_user_id: @user&.id)
+      return metadata unless override_requested?
+
+      metadata.merge(
+        override_closed_folio: !!@options[:override_closed_folio],
+        override_night_audit: !!@options[:override_night_audit],
+        system_posting: !!@options[:system_posting],
+        override_reason: @options[:correction_reason].to_s,
+        override_note: @options[:correction_note].to_s
+      )
+    end
 
     def success(transaction)
       OpenStruct.new(success?: true, transaction: transaction)

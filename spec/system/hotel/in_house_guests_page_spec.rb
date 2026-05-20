@@ -165,8 +165,8 @@ RSpec.describe "Hotel in-house guests page", type: :system do
   end
 
   it "shows the empty state when there are no current in-house guests" do
-    matching_booking.update!(status: "completed", checked_out_at: Time.current)
-    older_booking.update!(status: "completed", checked_out_at: Time.current)
+    matching_booking.transition_status_to!("completed", event: "check_out", attributes: { checked_out_at: Time.current })
+    older_booking.transition_status_to!("completed", event: "check_out", attributes: { checked_out_at: Time.current })
 
     visit hotel_in_house_guests_path(hotel)
 

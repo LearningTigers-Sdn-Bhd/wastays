@@ -264,7 +264,9 @@ Rails.application.routes.draw do
         post "complaint_requests/:complaint_request_id/resolve", to: "bookings#resolve_complaint_request", as: :resolve_complaint_request
       end
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
-      resources :folio_transactions, only: [ :create ]
+      resources :folio_transactions, only: [ :create ] do
+        post :reverse, on: :member
+      end
     end
 
     get "requests", to: "requests#index", as: :requests
