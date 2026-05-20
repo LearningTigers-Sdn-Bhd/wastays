@@ -248,7 +248,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
   end
 
   it "resumes slot collection with a date after a hotel information interruption" do
-    hotel.update!(amenities: [ "pool" ])
+    hotel.update!(amenities: [ "swimming_pool" ])
 
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call) do |agent|
       case agent.instance_variable_get(:@message)
@@ -325,7 +325,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
   end
 
   it "answers hotel amenities after a completed quote without treating it as room information" do
-    hotel.update!(amenities: [ "wifi", "pool" ])
+    hotel.update!(amenities: [ "wifi", "swimming_pool" ])
     prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
     branch = {
       "branch_id" => "branch-1",

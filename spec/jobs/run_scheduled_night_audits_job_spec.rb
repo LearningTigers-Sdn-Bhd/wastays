@@ -73,7 +73,7 @@ RSpec.describe RunScheduledNightAuditsJob, type: :job do
 
     yesterday_audit = hotel.night_audits.find_by(business_date: Date.new(2026, 5, 18))
     day_before_yesterday_audit = hotel.night_audits.find_by(business_date: Date.new(2026, 5, 17))
-    
+
     expect(yesterday_audit).to be_nil
     expect(day_before_yesterday_audit).to be_present
     expect(HotelOps::RunNightAuditJob).to have_received(:perform_later).with(day_before_yesterday_audit.id, nil)

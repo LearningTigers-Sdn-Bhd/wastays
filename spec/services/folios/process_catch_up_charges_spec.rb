@@ -42,7 +42,7 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
       booking_r.update(tax_lines: [ { "name" => "SST", "amount" => "12.00" } ])
       create(:booking_room, booking: booking_r, subtotal: 200.0)
       folio_r = create(:booking_folio, booking: booking_r)
-      
+
       described_class.call(booking: booking_r, user: user, is_reinstate: true)
       folio_r.reload
 
@@ -58,7 +58,7 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
     it "reverses existing no-show penalties with specific descriptions" do
       booking_p = create(:booking, hotel: hotel, status: "checked_in", check_in: past_date, check_out: past_date + 1.day)
       folio_p = create(:booking_folio, booking: booking_p)
-      
+
       penalty = create(:folio_transaction,
         booking_folio: folio_p,
         transaction_type: "charge",

@@ -203,7 +203,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def reinstate
     @booking = current_hotel.bookings.find(params[:id])
-    
+
     result = Bookings::ReinstateReservation.new(
       booking: @booking,
       params: booking_params.slice(:booking_rooms_attributes),

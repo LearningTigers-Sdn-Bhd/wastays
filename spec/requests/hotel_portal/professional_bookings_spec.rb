@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user, account: hotel.account) }
-  let(:room_type) { create(:room_type, hotel: hotel, base_price: 100, room_numbers: ["101", "102"]) }
+  let(:room_type) { create(:room_type, hotel: hotel, base_price: 100, room_numbers: [ "101", "102" ]) }
   let(:existing_guest) { create(:guest, created_by_hotel: hotel, name: "Existing Guest", email: "existing@example.com") }
 
   before do
@@ -21,7 +21,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
     it "returns matching guests for autocomplete" do
       existing_guest # ensure created
       get search_hotel_guests_path(hotel, q: "Exist")
-      
+
       expect(response).to have_http_status(:success)
       json = JSON.parse(response.body)
       expect(json.first["name"]).to eq("Existing Guest")
@@ -51,7 +51,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
     it "creates a booking with manual rate override and internal notes" do
       post hotel_bookings_path(hotel), params: valid_params
       expect(response).to redirect_to(hotel_booking_path(hotel, Booking.last)) if Booking.last
-      
+
       expect(Booking.count).to eq(1)
       booking = Booking.last
       expect(booking.total_amount).to eq(150)
@@ -61,7 +61,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
 
     it "links an existing guest via existing_guest_id" do
       params = valid_params.deep_merge(booking: { existing_guest_id: existing_guest.id })
-      
+
       expect {
         post hotel_bookings_path(hotel), params: params
       }.to change(Booking, :count).by(1)

@@ -34,3 +34,4 @@
 /db/test*.db
 /db/test*.sqlite3
 .aider*
+.antigravitycli/

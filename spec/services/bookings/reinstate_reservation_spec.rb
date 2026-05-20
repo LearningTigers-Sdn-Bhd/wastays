@@ -10,7 +10,7 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
   let(:room_type) { create(:room_type, hotel: hotel, base_price: 200, room_numbers: %w[101 102]) }
   let(:booking) { create(:booking, hotel: hotel, status: "no_show", check_in: check_in, check_out: check_out) }
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 600) }
-  let(:params) { { booking_rooms_attributes: [{ id: booking_room.id, room_number: "101" }] } }
+  let(:params) { { booking_rooms_attributes: [ { id: booking_room.id, room_number: "101" } ] } }
   let(:options) { { reason: "Guest arrived late" } }
 
   subject { described_class.new(booking: booking, params: params, user: user, options: options) }
@@ -92,7 +92,7 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
       allow(inventory_manager).to receive(:reserve_by_dates)
 
       subject.call
-      
+
       business_date = hotel.business_date_for(Time.current)
       expect(inventory_manager).to have_received(:reserve_by_dates).with(business_date, booking.check_out)
     end

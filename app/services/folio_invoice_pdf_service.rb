@@ -146,7 +146,7 @@ class FolioInvoicePdfService
         ],
         [
           { content: @booking.guest_phone, size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 0, 0 ] },
-          { content: @hotel.phone.to_s,    size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 0, 0 ], align: :right }
+          { content: "",                   size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 0, 0 ], align: :right }
         ]
       ],
       width: pdf.bounds.width,
