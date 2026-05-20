@@ -74,27 +74,7 @@
   </div>
 
   <!-- Financial Actions Toolbar -->
-  <div class="flex flex-wrap items-center gap-3">
-    <button type="button" class="flex items-center gap-2.5 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('folio-payment-modal-<%= @booking.id %>').showModal()">
-      <%= lucide_icon "plus-circle", stroke_width: 3, class: "size-4" %>
-      Post Payment
-    </button>
-    
-    <button type="button" class="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" onclick="document.getElementById('folio-charge-modal-<%= @booking.id %>').showModal()">
-      <%= lucide_icon "banknote", stroke_width: 2.5, class: "size-4 text-slate-500" %>
-      Post Charge
-    </button>
-
-    <button type="button" class="flex items-center gap-2.5 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-bold text-indigo-700 shadow-sm transition hover:bg-indigo-100" onclick="document.getElementById('folio-adjustment-modal-<%= @booking.id %>').showModal()">
-      <%= lucide_icon "sliders-horizontal", stroke_width: 2.5, class: "size-4 text-indigo-500" %>
-      Post Adjustment
-    </button>
-
-    <button type="button" class="flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-800 shadow-sm transition hover:bg-amber-100" onclick="document.getElementById('folio-refund-modal-<%= @booking.id %>').showModal()">
-      <%= lucide_icon "undo-2", stroke_width: 2.5, class: "size-4 text-amber-600" %>
-      Record Refund
-    </button>
-  </div>
+  <%= render "hotel_portal/bookings/folio_actions", booking: @booking, hotel: current_hotel, redirect_to_folio: true %>
 
   <!-- Detailed Transaction Ledger -->
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -174,53 +154,3 @@
 
 <!-- Render Modals (reusing existing partial) -->
 <%= render "hotel_portal/bookings/action_modals", booking: @booking, presenter: @presenter %>
-
-<!-- Financial Modals with redirect_to_folio flag -->
-<%= render "hotel_portal/bookings/folio_transaction_modal",
-    booking: @booking,
-    hotel: current_hotel,
-    modal_id: "folio-payment-modal-#{@booking.id}",
-    title: "Post Payment",
-    description: "Record a staff-posted cash payment against this folio.",
-    transaction_type: "payment",
-    category: "cash",
-    signed_amount: false,
-    submit_label: "Post Payment",
-    redirect_to_folio: true %>
-
-<%= render "hotel_portal/bookings/folio_transaction_modal",
-    booking: @booking,
-    hotel: current_hotel,
-    modal_id: "folio-charge-modal-#{@booking.id}",
-    title: "Post Charge",
-    description: "Record a manual other charge. Accommodation and tax are posted by audit flows.",
-    transaction_type: "charge",
-    category: "other",
-    signed_amount: false,
-    submit_label: "Post Charge",
-    redirect_to_folio: true %>
-
-<%= render "hotel_portal/bookings/folio_transaction_modal",
-    booking: @booking,
-    hotel: current_hotel,
-    modal_id: "folio-adjustment-modal-#{@booking.id}",
-    title: "Post Adjustment",
-    description: "Record a correction, discount, write-off, or other adjustment.",
-    transaction_type: "adjustment",
-    category: nil,
-    category_options: %w[adjustment correction discount write_off other],
-    signed_amount: true,
-    submit_label: "Post Adjustment",
-    redirect_to_folio: true %>
-
-<%= render "hotel_portal/bookings/folio_transaction_modal",
-    booking: @booking,
-    hotel: current_hotel,
-    modal_id: "folio-refund-modal-#{@booking.id}",
-    title: "Record Refund",
-    description: "Enter a positive refund amount. It will be recorded as a negative refund payment.",
-    transaction_type: "payment",
-    category: "refund",
-    signed_amount: false,
-    submit_label: "Record Refund",
-    redirect_to_folio: true %>
