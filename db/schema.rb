@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_19_020000) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_19_232734) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -118,8 +118,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_19_020000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "hotel_id", null: false
+    t.integer "invoice_number"
     t.index ["booking_id"], name: "index_booking_folios_on_booking_id", unique: true
     t.index ["hotel_id", "folio_number"], name: "index_booking_folios_on_hotel_id_and_folio_number", unique: true
+    t.index ["hotel_id", "invoice_number"], name: "index_booking_folios_on_hotel_id_and_invoice_number", unique: true, where: "(invoice_number IS NOT NULL)"
     t.index ["hotel_id"], name: "index_booking_folios_on_hotel_id"
   end
 
@@ -247,6 +249,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_19_020000) do
     t.integer "guest_registration_number"
     t.text "internal_notes"
     t.decimal "manual_rate_override"
+    t.jsonb "tax_posting_snapshot", default: {}, null: false
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id_unique", unique: true, where: "(booking_quote_id IS NOT NULL)"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true

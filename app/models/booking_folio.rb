@@ -7,6 +7,7 @@ class BookingFolio < ApplicationRecord
 
   validates :folio_number, presence: true, uniqueness: { scope: :hotel_id }
   validates :status, presence: true
+  validates :invoice_number, uniqueness: { scope: :hotel_id, allow_nil: true }
   validate :hotel_matches_booking
 
   def outstanding_balance

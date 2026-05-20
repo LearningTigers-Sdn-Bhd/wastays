@@ -180,6 +180,7 @@ class Booking < ApplicationRecord
   end
 
   delegate :folio_number, to: :booking_folio, allow_nil: true
+  delegate :invoice_number, to: :booking_folio, allow_nil: true
 
   def pre_checkin_completed?
     pre_checkin_display_status == "completed"
@@ -211,6 +212,10 @@ class Booking < ApplicationRecord
 
   def formatted_folio_number
     format_number(folio_number)
+  end
+
+  def formatted_invoice_number
+    format_number(invoice_number)
   end
 
   def formatted_guest_registration_number
