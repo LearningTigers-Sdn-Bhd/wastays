@@ -25,6 +25,30 @@ module Folios
       [ { "name" => "Tourism Tax", "amount" => booking.tourism_tax_amount, "type" => "tourism_tax" } ]
     end
 
+    def nightly_room_amount(booking_room, business_date)
+      snapshot = nightly_rate_snapshot_for(booking_room, business_date)
+      return snapshot["price"].to_d * booking_room.quantity.to_i if snapshot.present?
+
+      nightly_amount(booking_room.subtotal, booking_room.booking, business_date)
+    end
+
+    def nightly_rate_snapshot_for(booking_room, business_date)
+      booking_room.nightly_rate_snapshot.to_h[business_date.to_date.iso8601]
+    end
+
+    def tax_postings_for(booking, business_date)
+      postings = booking.tax_posting_snapshot.to_h[business_date.to_date.iso8601]
+      return postings if postings.present?
+
+      tax_lines_for(booking).each_with_index.map do |tax_line, index|
+        tax_line.to_h.merge(
+          "amount" => nightly_amount(tax_line_amount(tax_line), booking, business_date).to_s("F"),
+          "tax_line_index" => index,
+          "source" => tax_line["source"].presence || tax_line[:source].presence || "legacy_tax_lines"
+        )
+      end
+    end
+
     def tax_line_amount(tax_line)
       (tax_line["amount"].presence || tax_line[:amount]).to_d
     end

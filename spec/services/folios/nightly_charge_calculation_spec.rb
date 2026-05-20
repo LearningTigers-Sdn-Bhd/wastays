@@ -7,7 +7,7 @@ RSpec.describe Folios::NightlyChargeCalculation do
     Class.new do
       include Folios::NightlyChargeCalculation
 
-      public :nightly_amount, :tax_lines_for, :tax_line_amount, :tax_line_name, :tax_line_identity
+      public :nightly_amount, :nightly_room_amount, :tax_lines_for, :tax_postings_for, :tax_line_amount, :tax_line_name, :tax_line_identity
     end.new
   end
 
@@ -27,6 +27,21 @@ RSpec.describe Folios::NightlyChargeCalculation do
       expect(calculator.tax_lines_for(booking)).to eq(
         [ { "name" => "Tourism Tax", "amount" => 10, "type" => "tourism_tax" } ]
       )
+    end
+  end
+
+  describe "#nightly_room_amount" do
+    it "uses the contracted nightly rate snapshot when present" do
+      booking = create(:booking, check_in: Date.current, check_out: Date.current + 2.days)
+      booking_room = create(:booking_room,
+        booking: booking,
+        quantity: 2,
+        subtotal: 1_000,
+        nightly_rate_snapshot: {
+          Date.current.iso8601 => { "price" => "125.50" }
+        })
+
+      expect(calculator.nightly_room_amount(booking_room, Date.current)).to eq(251.to_d)
     end
   end
 end

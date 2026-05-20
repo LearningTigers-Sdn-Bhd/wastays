@@ -187,14 +187,14 @@ module HotelOps
     end
 
     def missing_nightly_accommodation_charge?(booking, folio)
-      expected_total = booking.booking_rooms.to_a.sum { |room| nightly_amount(room.subtotal, booking, @business_date) }
+      expected_total = booking.booking_rooms.to_a.sum { |room| nightly_room_amount(room, @business_date) }
       return false if expected_total.zero?
 
       nightly_charge_total(folio, "accommodation") != expected_total
     end
 
     def missing_nightly_tax_charge?(booking, folio)
-      expected_tax_total = nightly_amount(expected_booking_tax_total(booking), booking, @business_date)
+      expected_tax_total = tax_postings_for(booking, @business_date).sum { |tax_line| tax_line_amount(tax_line) }
       return false unless expected_tax_total.positive?
 
       nightly_charge_total(folio, "tax") != expected_tax_total

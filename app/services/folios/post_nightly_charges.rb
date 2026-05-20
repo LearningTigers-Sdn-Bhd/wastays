@@ -38,7 +38,7 @@ module Folios
 
     def post_accommodation_charges(booking)
       booking.booking_rooms.each do |booking_room|
-        amount = nightly_amount(booking_room.subtotal, booking, @business_date)
+        amount = nightly_room_amount(booking_room, @business_date)
         next if amount.zero?
 
         insert_transaction!(
@@ -46,14 +46,17 @@ module Folios
           amount: amount,
           category: "accommodation",
           description: "Room Charge - #{@business_date}",
-          metadata: nightly_metadata(booking, "accommodation", booking_room.id)
+          metadata: nightly_metadata(booking, "accommodation", booking_room.id).merge(
+            rate_source: nightly_rate_snapshot_for(booking_room, @business_date).present? ? "nightly_rate_snapshot" : "legacy_subtotal_average",
+            nightly_rate_snapshot: nightly_rate_snapshot_for(booking_room, @business_date)
+          )
         )
       end
     end
 
     def post_tax_charges(booking)
-      tax_lines_for(booking).each_with_index do |tax_line, index|
-        amount = nightly_amount(tax_line_amount(tax_line), booking, @business_date)
+      tax_postings_for(booking, @business_date).each_with_index do |tax_line, index|
+        amount = tax_line_amount(tax_line)
         next if amount.zero?
 
         tax_identity = tax_line_identity(tax_line, index)

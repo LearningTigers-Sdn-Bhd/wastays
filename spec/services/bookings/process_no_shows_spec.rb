@@ -41,6 +41,26 @@ RSpec.describe Bookings::ProcessNoShows do
     expect(folio.outstanding_balance).to eq(110.0)
   end
 
+  it "uses first-night room and tax snapshots for no-show penalties" do
+    booking = create_no_show_candidate(
+      tax_lines: [],
+      tax_posting_snapshot: {
+        business_date.iso8601 => [ { "name" => "SST", "amount" => "16.00", "type" => "sst", "source" => "hotel_sst" } ],
+        (business_date + 1.day).iso8601 => [ { "name" => "SST", "amount" => "24.00", "type" => "sst", "source" => "hotel_sst" } ]
+      }
+    )
+    booking.booking_rooms.sole.update!(nightly_rate_snapshot: {
+      business_date.iso8601 => { "price" => "200.00", "source" => "room_rate" },
+      (business_date + 1.day).iso8601 => { "price" => "300.00", "source" => "room_rate" },
+      (business_date + 2.days).iso8601 => { "price" => "400.00", "source" => "room_rate" }
+    })
+
+    described_class.call(night_audit: night_audit, user: user)
+
+    expect(booking.booking_folio.folio_transactions.charge.where(category: "accommodation").sole.amount).to eq(200.0)
+    expect(booking.booking_folio.folio_transactions.charge.where(category: "tax").sole.amount).to eq(16.0)
+  end
+
   it "syncs captured payment as an advance deposit before posting penalty" do
     booking = create_no_show_candidate
     payment_transaction = create(:payment_transaction, booking: booking, booking_quote: booking.booking_quote, status: "captured", amount_subunits: 33_000)

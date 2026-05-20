@@ -4,6 +4,8 @@ require "ostruct"
 
 module Bookings
   class ProcessNoShows
+    include Folios::NightlyChargeCalculation
+
     def self.call(night_audit:, user:)
       new(night_audit: night_audit, user: user).call
     end
@@ -155,7 +157,7 @@ module Bookings
 
     def post_no_show_charges(booking, folio)
       booking.booking_rooms.each do |booking_room|
-        amount = nightly_amount(booking_room.subtotal, booking)
+        amount = nightly_room_amount(booking_room, @business_date)
         next if amount.zero?
 
         insert_charge!(
@@ -163,12 +165,15 @@ module Bookings
           amount: amount,
           category: "accommodation",
           description: "No-show room penalty - #{@business_date}",
-          metadata: no_show_metadata(booking, "accommodation", booking_room.id)
+          metadata: no_show_metadata(booking, "accommodation", booking_room.id).merge(
+            rate_source: nightly_rate_snapshot_for(booking_room, @business_date).present? ? "nightly_rate_snapshot" : "legacy_subtotal_average",
+            nightly_rate_snapshot: nightly_rate_snapshot_for(booking_room, @business_date)
+          )
         )
       end
 
-      tax_lines_for(booking).each_with_index do |tax_line, index|
-        amount = nightly_amount(tax_line_amount(tax_line), booking)
+      tax_postings_for(booking, @business_date).each_with_index do |tax_line, index|
+        amount = tax_line_amount(tax_line)
         next if amount.zero?
 
         insert_charge!(
@@ -213,34 +218,6 @@ module Bookings
         charge_kind: charge_kind,
         no_show_charge_key: [ booking.id, @business_date.iso8601, "no_show_penalty", charge_kind, identity ].join(":")
       }
-    end
-
-    def nightly_amount(total_amount, booking)
-      nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
-      return 0.to_d unless nights.positive?
-
-      (total_amount.to_d / nights).round(2)
-    end
-
-    def tax_lines_for(booking)
-      tax_lines = Array(booking.tax_lines)
-      return tax_lines if tax_lines.any?
-      return [] unless booking.tourism_tax_amount.to_d.positive?
-
-      [ { "name" => "Tourism Tax", "amount" => booking.tourism_tax_amount, "type" => "tourism_tax" } ]
-    end
-
-    def tax_line_amount(tax_line)
-      (tax_line["amount"].presence || tax_line[:amount]).to_d
-    end
-
-    def tax_line_name(tax_line)
-      tax_line["name"].presence || tax_line[:name].presence || "Tax"
-    end
-
-    def tax_line_identity(tax_line, index)
-      identity = tax_line["type"].presence || tax_line[:type].presence || tax_line_name(tax_line).parameterize.presence || "tax"
-      "#{identity}:#{index}"
     end
   end
 end

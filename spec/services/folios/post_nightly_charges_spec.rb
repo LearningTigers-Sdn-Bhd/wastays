@@ -28,6 +28,32 @@ RSpec.describe Folios::PostNightlyCharges do
     expect(charges.map { |charge| charge.metadata["stay_date"] }.uniq).to eq([ business_date.iso8601 ])
   end
 
+  it "posts accommodation and tax from financial snapshots" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 2.days,
+      tax_posting_snapshot: {
+        business_date.iso8601 => [ { "name" => "SST", "amount" => "20.00", "type" => "sst", "source" => "hotel_sst" } ]
+      })
+    create(:booking_room,
+      booking: booking,
+      subtotal: 999.0,
+      nightly_rate_snapshot: {
+        business_date.iso8601 => { "price" => "250.00", "source" => "room_rate" },
+        (business_date + 1.day).iso8601 => { "price" => "300.00", "source" => "room_rate" }
+      })
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+
+    described_class.call(night_audit: night_audit, user: user)
+
+    expect(folio.folio_transactions.charge.find_by(category: "accommodation").amount).to eq(250.0)
+    tax = folio.folio_transactions.charge.find_by(category: "tax")
+    expect(tax.amount).to eq(20.0)
+    expect(tax.metadata["tax_line"]["source"]).to eq("hotel_sst")
+  end
+
   it "does not post a checkout-day charge" do
     booking = create(:booking,
       hotel: hotel,

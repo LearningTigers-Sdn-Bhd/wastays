@@ -81,7 +81,7 @@ module Folios
         charge_key = [ "catch_up", @booking.id, date.iso8601, "accommodation", room.id ].join(":")
         next if already_posted?(charge_key)
 
-        amount = nightly_amount(room.subtotal, @booking, date)
+        amount = nightly_room_amount(room, date)
         next if amount.zero?
 
         description = @is_reinstate ? "Reinstate Charge - #{date.strftime('%d %b %Y')}" : "Unexpected Check-in (Room Charge) - #{date.strftime('%d %b %Y')}"
@@ -100,6 +100,8 @@ module Folios
               posting_source: "catch_up",
               catch_up_key: charge_key,
               stay_date: date.iso8601,
+              rate_source: nightly_rate_snapshot_for(room, date).present? ? "nightly_rate_snapshot" : "legacy_subtotal_average",
+              nightly_rate_snapshot: nightly_rate_snapshot_for(room, date),
               is_reinstate: @is_reinstate
             }
           }
@@ -110,19 +112,19 @@ module Folios
     end
 
     def post_tax_catch_up(date)
-      tax_lines_for(@booking).each_with_index do |tax_line, index|
+      tax_postings_for(@booking, date).each_with_index do |tax_line, index|
         tax_identity = tax_line_identity(tax_line, index)
         charge_key = [ "catch_up", @booking.id, date.iso8601, "tax", tax_identity ].join(":")
         next if already_posted?(charge_key)
 
-        amount = nightly_amount(tax_line_amount(tax_line), @booking, date)
+        amount = tax_line_amount(tax_line)
         next if amount.zero?
 
         description = if @is_reinstate
-                        "Reinstate Tax: #{tax_line_name(tax_line)} - #{date.strftime('%d %b %Y')}"
-                      else
-                        "Unexpected Check-in Tax: #{tax_line_name(tax_line)} - #{date.strftime('%d %b %Y')}"
-                      end
+          "Reinstate Tax: #{tax_line_name(tax_line)} - #{date.strftime('%d %b %Y')}"
+        else
+          "Unexpected Check-in Tax: #{tax_line_name(tax_line)} - #{date.strftime('%d %b %Y')}"
+        end
 
         result = Folios::InsertTransaction.new(
           booking_folio: @folio,
