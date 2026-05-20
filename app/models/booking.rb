@@ -93,10 +93,20 @@ class Booking < ApplicationRecord
     base = base_scope || revenue_generating
     base = base.created_between(start_date, end_date).search(query)
 
+    # Reconcile to FolioTransaction SSOT
+    transactions = FolioTransaction.joins(booking_folio: :booking)
+                                   .where(bookings: { id: base.select(:id) })
+                                   .where(transaction_type: %w[charge adjustment])
+
+    total_gross = transactions.sum(:amount)
+    # Proportional margin calculation based on booking snapshots
+    total_margin = base.sum("COALESCE(margin_amount, 0)")
+    total_net = total_gross - total_margin
+
     {
-      total_revenue: base.sum(:total_amount) || 0,
-      total_margin: base.sum("COALESCE(margin_amount, 0)"),
-      total_net: base.sum("COALESCE(net_amount, 0)"),
+      total_revenue: total_gross,
+      total_margin: total_margin,
+      total_net: total_net,
       booking_count: base.count,
       active_hotels_count: base.distinct.count(:hotel_id)
     }
@@ -104,24 +114,36 @@ class Booking < ApplicationRecord
 
   def self.daily_analytics(start_date, end_date, query: nil, base_scope: nil)
     base = base_scope || revenue_generating
-    base.created_between(start_date, end_date)
-      .search(query)
-      .group_by { |booking| booking.created_at.to_date }
+    base = base.created_between(start_date, end_date).search(query).includes(booking_folio: :folio_transactions)
+
+    base.group_by { |booking| booking.created_at.to_date }
       .sort
       .map do |date, bookings|
+        # Sum gross from transactions for these specific bookings
+        gross = FolioTransaction.joins(booking_folio: :booking)
+                                .where(bookings: { id: bookings.map(&:id) })
+                                .where(transaction_type: %w[charge adjustment])
+                                .sum(:amount)
+        margin = bookings.sum { |b| b.margin_amount || 0 }
         {
           date: date,
           booking_count: bookings.count,
-          revenue: bookings.sum(&:total_amount),
-          margin: bookings.sum { |b| b.margin_amount || 0 },
-          net: bookings.sum { |b| b.net_amount || 0 }
+          revenue: gross,
+          margin: margin,
+          net: gross - margin
         }
       end
   end
 
   def self.daily_revenue_data(bookings)
+    # Reconcile to ledger
     bookings.group_by { |b| b.created_at.to_date }
-            .transform_values { |bs| bs.sum(&:total_amount) }
+            .transform_values do |bs|
+              FolioTransaction.joins(booking_folio: :booking)
+                              .where(bookings: { id: bs.map(&:id) })
+                              .where(transaction_type: %w[charge adjustment])
+                              .sum(:amount)
+            end
             .sort.to_h
   end
   def self.last_friday

@@ -112,6 +112,10 @@ module SeedData
     booking.update!(guarantee_method: guarantee, deposit_status: deposit)
     booking
   end
+
+  def ensure_default_gl_maps(hotel)
+    Financials::EnsureDefaultGlMaps.call(hotel)
+  end
 end
 
 AmenitiesSeeder.run
@@ -139,6 +143,7 @@ platform_permissions = [
   { name: 'Manage Room Status', slug: 'manage_room_status' },
   { name: 'Post Charges', slug: 'post_charges' },
   { name: 'Post Folio Transactions', slug: 'post_folio_transactions' },
+  { name: 'Manage GL Mappings', slug: 'manage_general_ledger_maps' },
   { name: 'View Reports', slug: 'view_reports' },
   { name: 'View Payouts', slug: 'view_payouts' },
   { name: 'Manage Requests', slug: 'manage_requests' }
@@ -294,6 +299,8 @@ if Rails.env.development?
         tourism_tax_enabled: hotel_attrs[:tourism_tax_enabled],
         tourism_tax_amount: hotel_attrs[:tourism_tax_amount]
       )
+
+      SeedData.ensure_default_gl_maps(hotel)
 
       PropertyPolicy.find_or_create_by!(hotel: hotel) do |policy|
         policy.check_in_time = hotel_attrs[:policy][:check_in_time]

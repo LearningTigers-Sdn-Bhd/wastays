@@ -11,18 +11,28 @@ RSpec.describe Folios::InsertTransaction do
   describe "#call" do
     context "on an open business date" do
       it "creates a transaction successfully" do
-        result = described_class.new(
-          booking_folio: folio,
-          amount: 100.0,
-          transaction_type: :charge,
-          category: "fb",
-          user: user,
-          description: "Breakfast"
-        ).call
+        expect {
+          @result = described_class.new(
+            booking_folio: folio,
+            amount: 100.0,
+            transaction_type: :charge,
+            category: "fb",
+            user: user,
+            description: "Breakfast"
+          ).call
+        }.to change(FinancialAuditEvent, :count).by(1)
+
+        result = @result
 
         expect(result.success?).to be true
         expect(result.transaction.amount).to eq(100.0)
         expect(folio.outstanding_balance).to eq(100.0)
+
+        event = FinancialAuditEvent.last
+        expect(event.event_type).to eq("folio_transaction_created")
+        expect(event.folio_transaction).to eq(result.transaction)
+        expect(event.booking_folio).to eq(folio)
+        expect(event.booking).to eq(booking)
       end
 
       it "allows system transactions without a user" do
@@ -38,6 +48,24 @@ RSpec.describe Folios::InsertTransaction do
         expect(result.success?).to be true
         expect(result.transaction.user).to be_nil
       end
+
+      it "rolls back the transaction if audit event recording fails" do
+        allow(FinancialControls::AuditEventRecorder).to receive(:call!).and_raise("Audit event failed")
+
+        expect {
+          @result = described_class.new(
+            booking_folio: folio,
+            amount: 100.0,
+            transaction_type: :charge,
+            category: "fb",
+            user: user,
+            description: "Breakfast"
+          ).call
+        }.not_to change(FolioTransaction, :count)
+
+        expect(@result.success?).to be(false)
+        expect(@result.error).to eq("Audit event failed")
+      end
     end
 
     context "on a closed business date" do
@@ -47,15 +75,19 @@ RSpec.describe Folios::InsertTransaction do
       end
 
       it "fails without override" do
-        result = described_class.new(
-          booking_folio: folio,
-          amount: 50.0,
-          transaction_type: :charge,
-          category: "other",
-          user: user,
-          description: "Late charge",
-          posting_date: closed_date
-        ).call
+        expect {
+          @result = described_class.new(
+            booking_folio: folio,
+            amount: 50.0,
+            transaction_type: :charge,
+            category: "other",
+            user: user,
+            description: "Late charge",
+            posting_date: closed_date
+          ).call
+        }.not_to change(FinancialAuditEvent, :count)
+
+        result = @result
 
         expect(result.success?).to be false
         expect(result.error).to include("already closed")
@@ -79,6 +111,7 @@ RSpec.describe Folios::InsertTransaction do
 
         expect(result.success?).to be true
         expect(folio.outstanding_balance).to eq(50.0)
+        expect(FinancialAuditEvent.last.event_type).to eq("closed_date_override_posted")
       end
     end
 
@@ -153,6 +186,23 @@ RSpec.describe Folios::InsertTransaction do
         ).call
 
         expect(result.success?).to be(true)
+        expect(FinancialAuditEvent.last.event_type).to eq("audit_blocker_resolution_posted")
+      end
+
+      it "does not log failed blocker-resolution postings" do
+        expect {
+          result = described_class.new(
+            booking_folio: folio,
+            amount: 50.0,
+            transaction_type: :payment,
+            category: "gateway_payment",
+            user: user,
+            description: "Sync blocked payment",
+            options: { posting_source: "audit_blocker_resolution" }
+          ).call
+
+          expect(result.success?).to be(false)
+        }.not_to change(FinancialAuditEvent, :count)
       end
     end
 

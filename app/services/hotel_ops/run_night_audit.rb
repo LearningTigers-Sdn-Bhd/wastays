@@ -14,6 +14,15 @@ module HotelOps
       night_audit = @hotel.night_audits.find_or_initialize_by(business_date: @business_date)
       return Result.new(success?: false, error: "Night audit has already been completed for this date.", night_audit: night_audit) if night_audit.completed?
 
+      unless @hotel.can_audit_date?(@business_date)
+        window = @hotel.business_day_window_for(@business_date)
+        return Result.new(
+          success?: false,
+          error: "Business date #{@business_date} cannot be audited yet. The business day ends at #{window.end.strftime('%I:%M %p')}.",
+          night_audit: night_audit
+        )
+      end
+
       business_date, claim_error = claim_business_date
       return Result.new(success?: false, error: claim_error, night_audit: night_audit) if claim_error
 
@@ -29,6 +38,8 @@ module HotelOps
       night_audit.save!
 
       log_event(night_audit, "process_started", "Night audit process started for business date #{@business_date}")
+      record_night_audit_event!(night_audit, business_date, "night_audit_started", "Night audit started")
+      record_night_audit_event!(night_audit, business_date, "business_date_audit_started", "Business date moved to audit_running")
 
       pre_evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :pre_close).call
 
@@ -50,6 +61,8 @@ module HotelOps
         end
 
         log_event(night_audit, "blocker_found", "Night audit process stopped before posting due to blockers")
+        record_night_audit_event!(night_audit, business_date, "night_audit_blocked", "Night audit blocked before posting", blockers: pre_evaluation[:blocked_details])
+        record_night_audit_event!(night_audit, business_date, "business_date_audit_blocked", "Business date moved to audit_blocked", blockers: pre_evaluation[:blocked_details])
         return Result.new(success?: night_audit.completed?, night_audit: night_audit)
       end
 
@@ -65,6 +78,8 @@ module HotelOps
       # Calculate and persist financial summary
       financial_totals = calculate_financial_totals
 
+      next_business_date = nil
+
       ActiveRecord::Base.transaction do
         persist_financial_summary(night_audit, financial_totals)
 
@@ -79,6 +94,11 @@ module HotelOps
 
         if final_status == "completed"
           business_date.complete_audit!
+          next_business_date = business_date.open_next_business_date!
+          Financials::CreateJournalBatch.call(hotel: @hotel, business_date: @business_date)
+          persist_night_audit_event!(night_audit, business_date, "night_audit_completed", "Night audit completed", financial_totals: financial_totals)
+          persist_night_audit_event!(night_audit, business_date, "business_date_closed", "Business date moved to closed")
+          persist_night_audit_event!(night_audit, next_business_date, "business_date_opened", "Next business date opened after night audit", opened_business_date: next_business_date.business_date)
         else
           business_date.block_audit!(blockers: evaluation[:blocked_details])
         end
@@ -86,6 +106,10 @@ module HotelOps
 
       final_status = night_audit.status
       log_event(night_audit, final_status == "completed" ? "completed" : "blocker_found", "Night audit process finished with status: #{final_status}")
+      if final_status != "completed"
+        record_night_audit_event!(night_audit, business_date, "night_audit_blocked", "Night audit blocked after posting", blockers: evaluation[:blocked_details])
+        record_night_audit_event!(night_audit, business_date, "business_date_audit_blocked", "Business date moved to audit_blocked", blockers: evaluation[:blocked_details])
+      end
 
       Result.new(success?: night_audit.completed?, night_audit: night_audit)
     rescue StandardError => e
@@ -175,8 +199,36 @@ module HotelOps
       failed_audit.save!(validate: false)
 
       log_event(failed_audit, "failed", "Night audit failed: #{error_message}", { error: error_message })
+      business_date = HotelBusinessDate.find_by(hotel: @hotel, business_date: @business_date)
+      record_night_audit_event!(failed_audit, business_date, "night_audit_failed", "Night audit failed", error: error_message)
+      if business_date&.audit_blocked?
+        record_night_audit_event!(failed_audit, business_date, "business_date_audit_blocked", "Business date moved to audit_blocked", error: error_message)
+      end
 
       failed_audit
+    end
+
+    def record_night_audit_event!(night_audit, business_date, event_type, reason, metadata = {})
+      persist_night_audit_event!(night_audit, business_date, event_type, reason, metadata)
+    rescue StandardError => e
+      Rails.logger.error("Failed to record financial audit event #{event_type} for night audit #{night_audit.id}: #{e.message}")
+    end
+
+    def persist_night_audit_event!(night_audit, business_date, event_type, reason, metadata = {})
+      FinancialControls::AuditEventRecorder.call!(
+        hotel: @hotel,
+        business_date: business_date&.business_date || @business_date,
+        event_type: event_type,
+        source: "night_audit",
+        actor: @performed_by_user,
+        night_audit: night_audit,
+        hotel_business_date: business_date,
+        reason: reason,
+        metadata: metadata.merge(
+          night_audit_status: night_audit.status,
+          trigger_mode: @trigger_mode
+        )
+      )
     end
   end
 end

@@ -45,6 +45,7 @@ module Folios
         )
 
         if transaction.save
+          record_financial_audit_event!(transaction)
           success(transaction)
         else
           failure(transaction.errors.full_messages.to_sentence)
@@ -101,6 +102,41 @@ module Folios
 
     def posting_source
       @options[:posting_source].presence || (@options[:metadata] || {})[:posting_source].presence || "staff"
+    end
+
+    def record_financial_audit_event!(transaction)
+      FinancialControls::AuditEventRecorder.call!(
+        hotel: @booking_folio.booking.hotel,
+        business_date: @posting_date,
+        event_type: financial_audit_event_type,
+        source: posting_source,
+        actor: @user,
+        folio_transaction: transaction,
+        reason: @options[:correction_reason],
+        metadata: financial_audit_metadata(transaction)
+      )
+    end
+
+    def financial_audit_event_type
+      return "audit_blocker_resolution_posted" if posting_source == "audit_blocker_resolution"
+      return "closed_date_override_posted" if @options[:override_night_audit]
+      return "folio_transaction_reversed" if posting_source == "reversal"
+
+      "folio_transaction_created"
+    end
+
+    def financial_audit_metadata(transaction)
+      {
+        transaction_type: transaction.transaction_type,
+        category: transaction.category,
+        posting_source: posting_source,
+        description: transaction.description,
+        correction_reason: transaction.correction_reason,
+        correction_note: transaction.correction_note,
+        override_closed_folio: !!@options[:override_closed_folio],
+        override_night_audit: !!@options[:override_night_audit],
+        blocker_resolution: @options[:blocker_resolution]
+      }.compact.merge(transaction.metadata || {})
     end
 
     def success(transaction)

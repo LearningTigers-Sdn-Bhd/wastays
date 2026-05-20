@@ -21,9 +21,9 @@ module HotelPortal
       )
 
       if result.success?
-        redirect_to hotel_booking_path(current_hotel, @booking), notice: "Folio transaction posted."
+        redirect_after_post(notice: "Folio transaction posted.")
       else
-        redirect_to hotel_booking_path(current_hotel, @booking), alert: result.error
+        redirect_after_post(alert: result.error)
       end
     end
 
@@ -43,13 +43,21 @@ module HotelPortal
       )
 
       if result.success?
-        redirect_to hotel_booking_path(current_hotel, @booking), notice: "Folio transaction reversed."
+        redirect_after_post(notice: "Folio transaction reversed.")
       else
-        redirect_to hotel_booking_path(current_hotel, @booking), alert: result.error
+        redirect_after_post(alert: result.error)
       end
     end
 
     private
+
+    def redirect_after_post(options = {})
+      if params[:redirect_to_folio] == "true"
+        redirect_to folio_hotel_booking_path(current_hotel, @booking), options
+      else
+        redirect_to hotel_booking_path(current_hotel, @booking), options
+      end
+    end
 
     def authorize_post_folio_transactions!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("post_folio_transactions", hotel: current_hotel)

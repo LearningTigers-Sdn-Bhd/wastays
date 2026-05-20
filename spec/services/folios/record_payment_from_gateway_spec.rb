@@ -70,15 +70,17 @@ RSpec.describe Folios::RecordPaymentFromGateway do
     }.not_to change { folio.folio_transactions.payment.count }
   end
 
-  it "blocks gateway payment sync for a closed business date" do
+  it "shifts gateway payment sync to current business date for closed dates" do
     closed_date = 1.day.ago.to_date
+    current_biz_date = booking.hotel.business_date_for
     create(:hotel_business_date, hotel: booking.hotel, business_date: closed_date, status: "closed")
     payment_transaction.update!(captured_at: closed_date.noon)
 
     result = described_class.call(payment_transaction)
 
-    expect(result.success?).to be(false)
-    expect(result.error).to include("already closed")
-    expect(folio.folio_transactions.payment).to be_empty
+    expect(result.success?).to be(true)
+    transaction = result.transaction
+    expect(transaction.posting_date).to eq(current_biz_date)
+    expect(transaction.description).to include("Original date: #{closed_date.strftime('%d %b %Y')}")
   end
 end

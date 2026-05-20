@@ -4,6 +4,7 @@ class HotelBusinessDate < ApplicationRecord
   STATUSES = %w[open audit_running audit_blocked closed reopened force_closed].freeze
 
   belongs_to :hotel
+  has_many :financial_audit_events, dependent: :restrict_with_error
 
   validates :business_date, presence: true
   validates :status, presence: true, inclusion: { in: STATUSES }
@@ -14,9 +15,12 @@ class HotelBusinessDate < ApplicationRecord
   scope :closed_states, -> { where(status: %w[closed force_closed]) }
 
   def self.for_hotel_date!(hotel:, date:)
-    find_or_create_by!(hotel: hotel, business_date: date.to_date) do |business_date|
-      business_date.opened_at = Time.current
+    date = date.to_date
+    find_by(hotel: hotel, business_date: date) || transaction(requires_new: true) do
+      create!(hotel: hotel, business_date: date, opened_at: Time.current)
     end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+    find_by!(hotel: hotel, business_date: date)
   end
 
   def self.closed_for?(hotel:, date:)
@@ -47,6 +51,23 @@ class HotelBusinessDate < ApplicationRecord
     end
   end
 
+  def open_next_business_date!
+    next_date = business_date + 1.day
+    next_business_date = self.class.find_by(hotel: hotel, business_date: next_date) || create_next_business_date!(next_date)
+
+    next_business_date.with_lock do
+      unless next_business_date.open?
+        raise InvalidTransition, "Next business date #{next_business_date.business_date} is already #{next_business_date.status}"
+      end
+
+      next_business_date.opened_at ||= Time.current
+      next_business_date.blockers_snapshot ||= {}
+      next_business_date.save! if next_business_date.changed?
+    end
+
+    next_business_date
+  end
+
   def retry_audit!
     start_audit!
   end
@@ -70,6 +91,14 @@ class HotelBusinessDate < ApplicationRecord
   end
 
   private
+
+  def create_next_business_date!(next_date)
+    self.class.transaction(requires_new: true) do
+      self.class.create!(hotel: hotel, business_date: next_date, status: "open", opened_at: Time.current, blockers_snapshot: {})
+    end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+    self.class.find_by!(hotel: hotel, business_date: next_date)
+  end
 
   def set_defaults
     self.status ||= "open"

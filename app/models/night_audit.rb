@@ -2,6 +2,7 @@ class NightAudit < ApplicationRecord
   belongs_to :hotel
   belongs_to :performed_by_user, class_name: "User", optional: true
   has_many :night_audit_logs, dependent: :destroy
+  has_many :financial_audit_events, dependent: :restrict_with_error
   has_one :financial_summary, class_name: "NightAuditFinancialSummary", dependent: :destroy
 
   STATUSES = %w[pending running completed blocked failed].freeze
@@ -16,11 +17,7 @@ class NightAudit < ApplicationRecord
   scope :completed, -> { where(status: "completed") }
 
   def self.closed_for_date?(hotel_id, date)
-    if defined?(HotelBusinessDate) && HotelBusinessDate.closed_for?(hotel: hotel_id, date: date)
-      return true
-    end
-
-    exists?(hotel_id: hotel_id, business_date: date, status: "completed")
+    Hotel.find(hotel_id).date_closed?(date)
   end
 
   def completed?

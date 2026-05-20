@@ -15,16 +15,24 @@ module Folios
         existing_transaction = existing_payment_transaction(folio, payment_transaction)
         return success(existing_transaction) if existing_transaction
 
-        amount = payment_transaction.amount_subunits.to_d / 100.0
+        target_date = payment_transaction.captured_at&.to_date || Time.current.to_date
+        posting_date = target_date
+        description = "Payment via #{payment_transaction.gateway} (#{payment_transaction.external_reference})"
+
+        if NightAudit.closed_for_date?(booking.hotel_id, target_date)
+          posting_date = booking.hotel.business_date_for
+          description += " (Original date: #{target_date.strftime('%d %b %Y')} - posted to current business date as original date was closed)"
+        end
+
         result = Folios::InsertTransaction.new(
           booking_folio: folio,
-          amount: amount,
+          amount: payment_transaction.amount_subunits.to_d / 100.0,
           transaction_type: :payment,
           category: "gateway_payment",
           user: nil, # System/Gateway payment
-          description: "Payment via #{payment_transaction.gateway} (#{payment_transaction.external_reference})",
-          posting_date: payment_transaction.captured_at&.to_date || Time.current.to_date,
-          options: posting_options(booking, payment_transaction)
+          description: description,
+          posting_date: posting_date,
+          options: posting_options(booking, payment_transaction).merge(posted_at: payment_transaction.captured_at || Time.current)
         ).call
 
         return result if result.success?

@@ -4,7 +4,7 @@ RSpec.describe HotelOps::RunNightAudit do
   let(:account) { create(:account) }
   let(:hotel) { create(:hotel, account: account) }
   let(:user) { create(:user, account: account, role: "hotel_staff") }
-  let(:business_date) { Date.current }
+  let(:business_date) { 2.days.ago.to_date }
 
   subject(:run_audit) do
     described_class.new(
@@ -26,6 +26,7 @@ RSpec.describe HotelOps::RunNightAudit do
   end
 
   before do
+    allow(Financials::CreateJournalBatch).to receive(:call)
     create(:booking,
       hotel: hotel,
       status: "confirmed",
@@ -52,10 +53,50 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(run_audit.success?).to be(true)
     expect(night_audit).to be_completed
     expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_closed
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date + 1.day)).to be_open
 
     logs = night_audit.night_audit_logs
     expect(logs.first.action_type).to eq("process_started")
     expect(logs.last.action_type).to eq("completed")
+
+    expect(Financials::CreateJournalBatch).to have_received(:call).with(hotel: hotel, business_date: business_date)
+  end
+
+  it "records successful night audit financial audit events" do
+    result = run_audit
+
+    expect(result.success?).to be(true)
+    expect(result.night_audit.financial_audit_events.pluck(:event_type)).to include(
+      "night_audit_started",
+      "business_date_audit_started",
+      "night_audit_completed",
+      "business_date_closed",
+      "business_date_opened"
+    )
+
+    opened_event = result.night_audit.financial_audit_events.find_by!(event_type: "business_date_opened")
+    expect(opened_event.business_date).to eq(business_date + 1.day)
+    expect(opened_event.hotel_business_date.business_date).to eq(business_date + 1.day)
+  end
+
+  it "fails safely when completion audit event recording fails" do
+    allow(FinancialControls::AuditEventRecorder).to receive(:call!).and_raise("audit ledger unavailable")
+
+    result = run_audit
+
+    expect(result.success?).to be(false)
+    expect(result.night_audit).to be_failed
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
+    expect(hotel.hotel_business_dates.find_by(business_date: business_date + 1.day)).to be_nil
+  end
+
+  it "reuses an existing open next business date" do
+    existing_next_date = create(:hotel_business_date, hotel: hotel, business_date: business_date + 1.day, status: "open")
+
+    expect { run_audit }.to change(HotelBusinessDate, :count).by(1)
+
+    expect(run_audit.success?).to be(true)
+    expect(existing_next_date.reload).to be_open
   end
 
   it "posts nightly charges before completing the audit" do
@@ -126,12 +167,36 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(result.success?).to be(false)
     expect(result.night_audit).to be_blocked
     expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
+    expect(hotel.hotel_business_dates.find_by(business_date: business_date + 1.day)).to be_nil
 
     log = result.night_audit.night_audit_logs.find_by(action_type: "blocker_found")
     expect(log.message).to include("Found 1 blockers of type: Due out not checked out")
     expect(log.metadata["items"].first["confirmation_token"]).to be_present
     expect(Bookings::ProcessNoShows).not_to have_received(:call)
     expect(Folios::PostNightlyCharges).not_to have_received(:call)
+  end
+
+  it "records successful blocked-audit financial audit events" do
+    allow(Bookings::ProcessNoShows).to receive(:call)
+    allow(Folios::PostNightlyCharges).to receive(:call)
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      payment_status: "captured",
+      check_in: business_date - 1.day,
+      check_out: business_date,
+      checked_in_at: 1.day.ago)
+    create_balanced_folio(booking)
+
+    result = run_audit
+
+    expect(result.success?).to be(false)
+    expect(result.night_audit.financial_audit_events.pluck(:event_type)).to include(
+      "night_audit_started",
+      "business_date_audit_started",
+      "night_audit_blocked",
+      "business_date_audit_blocked"
+    )
   end
 
   it "stores open requests as warnings and logs exceptions" do
@@ -332,8 +397,13 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(result.error).to eq("boom")
     expect(result.night_audit).to be_failed
     expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
+    expect(hotel.hotel_business_dates.find_by(business_date: business_date + 1.day)).to be_nil
     expect(result.night_audit.night_audit_logs.last.action_type).to eq("failed")
     expect(result.night_audit.night_audit_logs.last.metadata["error"]).to eq("boom")
+    expect(result.night_audit.financial_audit_events.pluck(:event_type)).to include(
+      "night_audit_failed",
+      "business_date_audit_blocked"
+    )
   end
 
   it "does not claim a business date that is already audit_running" do
@@ -354,5 +424,18 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(result.success?).to be(false)
     expect(result.error).to eq("Night audit has already been closed for this date.")
     expect(result.night_audit).not_to be_persisted
+  end
+
+  it "fails safely when the next business date is locked" do
+    create(:hotel_business_date, hotel: hotel, business_date: business_date + 1.day, status: "audit_running")
+
+    result = run_audit
+
+    expect(result.success?).to be(false)
+    expect(result.night_audit).to be_failed
+    expect(result.error).to eq("Next business date #{business_date + 1.day} is already audit_running")
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date + 1.day)).to be_audit_running
+    expect(Financials::CreateJournalBatch).not_to have_received(:call).with(hotel: hotel, business_date: business_date)
   end
 end

@@ -9,12 +9,16 @@ RSpec.describe Folios::ReverseTransaction, type: :service do
   it "creates a negative adjustment for a charge reversal" do
     transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 120)
 
-    result = described_class.call(
-      transaction: transaction,
-      user: user,
-      correction_reason: "Posting error",
-      correction_note: "Wrong room charge"
-    )
+    expect {
+      @result = described_class.call(
+        transaction: transaction,
+        user: user,
+        correction_reason: "Posting error",
+        correction_note: "Wrong room charge"
+      )
+    }.to change(FinancialAuditEvent, :count).by(1)
+
+    result = @result
 
     expect(result).to be_success
     expect(result.transaction).to have_attributes(
@@ -26,6 +30,7 @@ RSpec.describe Folios::ReverseTransaction, type: :service do
       correction_note: "Wrong room charge"
     )
     expect(transaction.reload.voided_by_transaction).to eq(result.transaction)
+    expect(FinancialAuditEvent.last.event_type).to eq("folio_transaction_reversed")
   end
 
   it "creates a refund-style payment for a positive payment reversal" do

@@ -44,6 +44,14 @@ namespace :hotel_ops do
         { name: "Service Charge", rate_type: "percentage", amount: 10.0, enabled: true, foreign_guests_only: false }
       ])
 
+      # 1c. Recalibrate GL Mappings
+      puts "Recalibrating General Ledger mappings..."
+      Financials::EnsureDefaultGlMaps.call(hotel)
+
+      # 1d. Clean Immutable Audit Logs
+      puts "Force cleaning #{FinancialAuditEvent.where(hotel_id: hotel.id).count} immutable audit events..."
+      FinancialAuditEvent.where(hotel_id: hotel.id).delete_all
+
       # 2. Clean Night Audits
       night_audit_count = hotel.night_audits.count
       puts "Destroying #{night_audit_count} night audits..."
@@ -55,6 +63,9 @@ namespace :hotel_ops do
 
       puts "Force cleaning #{FolioTransaction.where(booking_folio_id: folio_ids).count} immutable transactions..."
       FolioTransaction.where(booking_folio_id: folio_ids).delete_all
+
+      puts "Cleaning #{PaymentTransaction.where(booking_id: booking_ids).count} payment transactions..."
+      PaymentTransaction.where(booking_id: booking_ids).destroy_all
 
       booking_count = hotel.bookings.count
       puts "Destroying #{booking_count} bookings..."

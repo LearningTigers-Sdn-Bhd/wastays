@@ -55,8 +55,8 @@ RSpec.describe 'Admin::Dashboard', type: :request do
     let(:other_hotel_account) { create(:account, name: "Ocean Breeze Group #{token}", status: 'active') }
     let(:other_hotel) { create(:hotel, account: other_hotel_account, name: "Ocean Breeze #{token}", status: 'approved') }
 
-    let!(:current_month_booking) do
-      create(
+    let!(:first_current_month_booking) do
+      booking = create(
         :booking,
         hotel: hotel,
         booking_quote: create(:booking_quote, hotel: hotel, token: "tok_#{token}_1"),
@@ -67,10 +67,13 @@ RSpec.describe 'Admin::Dashboard', type: :request do
         margin_rate: 10.0,
         created_at: Time.current.beginning_of_month + 2.days
       )
+      folio = create(:booking_folio, hotel: hotel, booking: booking)
+      create(:folio_transaction, booking_folio: folio, transaction_type: 'charge', category: 'accommodation', amount: 500.0, created_at: booking.created_at)
+      booking
     end
 
     let!(:second_current_month_booking) do
-      create(
+      booking = create(
         :booking,
         hotel: other_hotel,
         booking_quote: create(:booking_quote, hotel: other_hotel, token: "tok_#{token}_2"),
@@ -81,7 +84,11 @@ RSpec.describe 'Admin::Dashboard', type: :request do
         margin_rate: 15.0,
         created_at: Time.current.beginning_of_month + 5.days
       )
+      folio = create(:booking_folio, hotel: other_hotel, booking: booking)
+      create(:folio_transaction, booking_folio: folio, transaction_type: 'charge', category: 'accommodation', amount: 300.0, created_at: booking.created_at)
+      booking
     end
+
 
     let!(:previous_month_booking) do
       create(

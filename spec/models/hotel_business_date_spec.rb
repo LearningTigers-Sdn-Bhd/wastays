@@ -25,6 +25,55 @@ RSpec.describe HotelBusinessDate, type: :model do
     expect(record.blockers_snapshot).to eq({})
   end
 
+  describe ".for_hotel_date!" do
+    it "creates an open business date" do
+      hotel = create(:hotel)
+      date = Date.current
+
+      record = described_class.for_hotel_date!(hotel: hotel, date: date)
+
+      expect(record).to be_persisted
+      expect(record.hotel).to eq(hotel)
+      expect(record.business_date).to eq(date)
+      expect(record).to be_open
+      expect(record.opened_at).to be_present
+    end
+
+    it "returns an existing business date" do
+      existing = create(:hotel_business_date, business_date: Date.current)
+
+      record = described_class.for_hotel_date!(hotel: existing.hotel, date: existing.business_date)
+
+      expect(record).to eq(existing)
+    end
+  end
+
+  describe "#open_next_business_date!" do
+    it "opens the next business date" do
+      record = create(:hotel_business_date, business_date: Date.current, status: "closed")
+
+      next_record = record.open_next_business_date!
+
+      expect(next_record.business_date).to eq(record.business_date + 1.day)
+      expect(next_record).to be_open
+      expect(next_record.opened_at).to be_present
+    end
+
+    it "reuses an existing open next business date" do
+      record = create(:hotel_business_date, business_date: Date.current, status: "closed")
+      existing = create(:hotel_business_date, hotel: record.hotel, business_date: record.business_date + 1.day, status: "open")
+
+      expect(record.open_next_business_date!).to eq(existing)
+    end
+
+    it "rejects an existing locked next business date" do
+      record = create(:hotel_business_date, business_date: Date.current, status: "closed")
+      create(:hotel_business_date, hotel: record.hotel, business_date: record.business_date + 1.day, status: "audit_running")
+
+      expect { record.open_next_business_date! }.to raise_error(described_class::InvalidTransition, /already audit_running/)
+    end
+  end
+
   it "transitions from open to audit_running" do
     record = create(:hotel_business_date, status: "open")
 

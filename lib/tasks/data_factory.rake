@@ -76,6 +76,7 @@ namespace :data_factory do
       { name: "Manage Guest Arrival", slug: "manage_guest_arrival" },
       { name: "View Audit Logs", slug: "view_audit_logs" },
       { name: "Export Audit Logs", slug: "export_audit_logs" },
+      { name: "Manage GL Mappings", slug: "manage_general_ledger_maps" },
       { name: "Manage Users", slug: "manage_users" }
     ]
     platform_permissions.each do |p|

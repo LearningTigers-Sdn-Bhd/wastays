@@ -31,7 +31,7 @@ module Bookings
 
     def check_in
       business_date = @booking.check_in.to_date
-      is_retroactive = NightAudit.closed_for_date?(@booking.hotel_id, business_date)
+      is_retroactive = @booking.hotel.date_closed?(business_date)
       transitioned = false
       error = nil
 

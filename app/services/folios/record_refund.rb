@@ -23,14 +23,23 @@ module Folios
       @folio.with_lock do
         return success(existing_refund_transaction) if existing_refund_transaction
 
+        target_date = @posting_date
+        posting_date = target_date
+        description = "Refund completed"
+
+        if NightAudit.closed_for_date?(@booking.hotel_id, target_date)
+          posting_date = @booking.hotel.business_date_for
+          description += " (Original date: #{target_date.strftime('%d %b %Y')} - posted to current business date as original date was closed)"
+        end
+
         result = Folios::InsertTransaction.new(
           booking_folio: @folio,
           amount: -@refund_request.refund_amount.to_d,
           transaction_type: :payment,
           category: "refund",
           user: @user,
-          description: "Refund completed",
-          posting_date: @posting_date,
+          description: description,
+          posting_date: posting_date,
           options: merged_options
         ).call
 

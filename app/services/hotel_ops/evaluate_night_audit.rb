@@ -48,7 +48,8 @@ module HotelOps
         "checked_in_missing_timestamp",
         "completed_missing_timestamp",
         "captured_payment_not_synced",
-        "refund_not_synced"
+        "refund_not_synced",
+        "outstanding_folio_balance"
       )
     end
 

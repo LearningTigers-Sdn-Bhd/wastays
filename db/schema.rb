@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_20_001000) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_20_064754) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -314,6 +314,43 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_20_001000) do
     t.check_constraint "rate > 0::numeric", name: "exchange_rates_rate_positive"
   end
 
+  create_table "financial_audit_events", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.date "business_date", null: false
+    t.string "event_type", null: false
+    t.bigint "actor_id"
+    t.string "actor_type"
+    t.string "source", null: false
+    t.decimal "amount", precision: 10, scale: 2
+    t.string "currency"
+    t.bigint "folio_transaction_id"
+    t.bigint "booking_folio_id"
+    t.bigint "booking_id"
+    t.bigint "payment_transaction_id"
+    t.bigint "refund_request_id"
+    t.bigint "night_audit_id"
+    t.bigint "hotel_business_date_id"
+    t.string "reason"
+    t.jsonb "metadata", default: {}, null: false
+    t.string "request_id"
+    t.datetime "occurred_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_financial_audit_events_on_actor_id"
+    t.index ["booking_folio_id"], name: "index_financial_audit_events_on_booking_folio_id"
+    t.index ["booking_id"], name: "index_financial_audit_events_on_booking_id"
+    t.index ["event_type", "folio_transaction_id"], name: "idx_financial_audit_events_unique_transaction_event", unique: true, where: "(folio_transaction_id IS NOT NULL)"
+    t.index ["folio_transaction_id"], name: "index_financial_audit_events_on_folio_transaction_id"
+    t.index ["hotel_business_date_id"], name: "index_financial_audit_events_on_hotel_business_date_id"
+    t.index ["hotel_id", "business_date", "occurred_at"], name: "idx_financial_audit_events_on_hotel_date_time"
+    t.index ["hotel_id", "event_type", "occurred_at"], name: "idx_financial_audit_events_on_hotel_event_time"
+    t.index ["hotel_id"], name: "index_financial_audit_events_on_hotel_id"
+    t.index ["night_audit_id"], name: "index_financial_audit_events_on_night_audit_id"
+    t.index ["payment_transaction_id"], name: "index_financial_audit_events_on_payment_transaction_id"
+    t.index ["refund_request_id"], name: "index_financial_audit_events_on_refund_request_id"
+    t.index ["request_id"], name: "index_financial_audit_events_on_request_id"
+  end
+
   create_table "folio_transactions", force: :cascade do |t|
     t.bigint "booking_folio_id", null: false
     t.decimal "amount", precision: 10, scale: 2, null: false
@@ -331,6 +368,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_20_001000) do
     t.text "correction_note"
     t.datetime "posted_at"
     t.string "currency"
+    t.string "gl_code"
     t.index "booking_folio_id, ((metadata ->> 'nightly_charge_key'::text))", name: "index_folio_transactions_on_nightly_charge", unique: true, where: "(metadata ? 'nightly_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'no_show_charge_key'::text))", name: "index_folio_transactions_on_no_show_charge", unique: true, where: "(metadata ? 'no_show_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'payment_transaction_id'::text))", name: "index_folio_transactions_on_gateway_payment", unique: true, where: "(metadata ? 'payment_transaction_id'::text)"
@@ -338,6 +376,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_20_001000) do
     t.index ["booking_folio_id", "posting_date"], name: "index_folio_transactions_on_folio_and_posting_date"
     t.index ["booking_folio_id"], name: "index_folio_transactions_on_booking_folio_id"
     t.index ["category"], name: "index_folio_transactions_on_category"
+    t.index ["gl_code"], name: "index_folio_transactions_on_gl_code"
     t.index ["posting_date"], name: "index_folio_transactions_on_posting_date"
     t.index ["reversal_of_transaction_id"], name: "index_folio_transactions_on_reversal_of_transaction_id"
     t.index ["transaction_type"], name: "index_folio_transactions_on_transaction_type"
@@ -391,6 +430,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_20_001000) do
     t.datetime "updated_at", null: false
     t.index ["hotel_id", "counter_type"], name: "index_hotel_counters_on_hotel_id_and_counter_type", unique: true
     t.index ["hotel_id"], name: "index_hotel_counters_on_hotel_id"
+  end
+
+  create_table "hotel_general_ledger_maps", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "transaction_category", null: false
+    t.string "gl_code", null: false
+    t.string "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "transaction_category"], name: "idx_hotel_gl_maps_on_hotel_and_category", unique: true
+    t.index ["hotel_id"], name: "index_hotel_general_ledger_maps_on_hotel_id"
   end
 
   create_table "hotel_pricing_rules", force: :cascade do |t|
@@ -492,6 +542,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_20_001000) do
     t.index ["hotel_id"], name: "index_inventory_audit_logs_on_hotel_id"
     t.index ["room_type_id"], name: "index_inventory_audit_logs_on_room_type_id"
     t.index ["user_id"], name: "index_inventory_audit_logs_on_user_id"
+  end
+
+  create_table "journal_batch_entries", force: :cascade do |t|
+    t.bigint "journal_batch_id", null: false
+    t.string "gl_code", null: false
+    t.string "transaction_type", null: false
+    t.decimal "debit_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.decimal "credit_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["journal_batch_id"], name: "index_journal_batch_entries_on_journal_batch_id"
+  end
+
+  create_table "journal_batches", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.date "business_date", null: false
+    t.string "status", default: "finalized", null: false
+    t.datetime "finalized_at"
+    t.jsonb "summary_data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "business_date"], name: "index_journal_batches_on_hotel_id_and_business_date", unique: true
+    t.index ["hotel_id"], name: "index_journal_batches_on_hotel_id"
   end
 
   create_table "margin_rules", force: :cascade do |t|
@@ -1045,12 +1119,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_20_001000) do
   add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
+  add_foreign_key "financial_audit_events", "booking_folios"
+  add_foreign_key "financial_audit_events", "bookings"
+  add_foreign_key "financial_audit_events", "folio_transactions"
+  add_foreign_key "financial_audit_events", "hotel_business_dates"
+  add_foreign_key "financial_audit_events", "hotels"
+  add_foreign_key "financial_audit_events", "night_audits"
+  add_foreign_key "financial_audit_events", "payment_transactions"
+  add_foreign_key "financial_audit_events", "refund_requests"
   add_foreign_key "folio_transactions", "booking_folios"
   add_foreign_key "folio_transactions", "folio_transactions", column: "reversal_of_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "voided_by_transaction_id"
   add_foreign_key "folio_transactions", "users"
   add_foreign_key "hotel_business_dates", "hotels"
   add_foreign_key "hotel_counters", "hotels"
+  add_foreign_key "hotel_general_ledger_maps", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotel_taxes", "hotels"
   add_foreign_key "hotels", "accounts"
@@ -1059,6 +1142,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_20_001000) do
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
+  add_foreign_key "journal_batch_entries", "journal_batches"
+  add_foreign_key "journal_batches", "hotels"
   add_foreign_key "nearby_attractions", "hotels"
   add_foreign_key "night_audit_financial_summaries", "night_audits"
   add_foreign_key "night_audit_logs", "hotels"

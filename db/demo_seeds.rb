@@ -39,13 +39,14 @@ module DemoSeeds
     { name: "Manage Night Audit", slug: "manage_night_audit" },
     { name: "Manage Users", slug: "manage_users" },
     { name: "Post Folio Transactions", slug: "post_folio_transactions" },
+    { name: "Manage GL Mappings", slug: "manage_general_ledger_maps" },
     { name: "View Reports", slug: "view_reports" },
     { name: "View Payouts", slug: "view_payouts" }
   ].freeze
 
   ROLE_TEMPLATES = [
-    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit post_folio_transactions view_reports view_payouts] },
-    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit post_folio_transactions view_reports view_payouts] },
+    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit post_folio_transactions manage_general_ledger_maps view_reports view_payouts] },
+    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit post_folio_transactions manage_general_ledger_maps view_reports view_payouts] },
     { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit post_folio_transactions] },
     { name: "Reservation Staff", slug: "reservation_staff", permissions: %w[view_bookings manage_bookings view_guest_phone] }
   ].freeze
@@ -1189,7 +1190,13 @@ module DemoSeeds
       )
     end
 
+    ensure_default_gl_maps(hotel)
+
     hotel
+  end
+
+  def ensure_default_gl_maps(hotel)
+    Financials::EnsureDefaultGlMaps.call(hotel)
   end
 
   def add_hotel_access(user, hotel, role)

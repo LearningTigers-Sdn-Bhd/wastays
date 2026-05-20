@@ -47,6 +47,9 @@ class Hotel < ApplicationRecord
   has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy
   has_many :hotel_business_dates, dependent: :destroy
+  has_many :hotel_general_ledger_maps, dependent: :destroy
+  has_many :journal_batches, dependent: :destroy
+  has_many :financial_audit_events, dependent: :restrict_with_error
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
@@ -58,6 +61,8 @@ class Hotel < ApplicationRecord
   has_many :room_blocks, dependent: :destroy
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+
+  after_create :ensure_default_gl_maps
 
   validates :name, presence: true
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true
@@ -192,6 +197,34 @@ class Hotel < ApplicationRecord
     return date - 1.day if business_day_window_for(date - 1.day).cover?(local_time)
 
     date
+  end
+
+  def date_closed?(date)
+    date = date.to_date
+    current_biz_date = business_date_for
+
+    # Strictly closed if it's more than 1 day behind the current active business date
+    return true if date < current_biz_date - 1.day
+
+    # If it's "yesterday" relative to the business date, it's only closed if night audit finished
+    if date == current_biz_date - 1.day
+      return true if defined?(HotelBusinessDate) && HotelBusinessDate.closed_for?(hotel: id, date: date)
+      return NightAudit.exists?(hotel_id: id, business_date: date, status: "completed")
+    end
+
+    # Current business date or future dates are never "closed" in this context
+    false
+  end
+
+  def can_audit_date?(business_date, time = Time.current)
+    local_time = time.in_time_zone(hotel_time_zone)
+    window = business_day_window_for(business_date)
+
+    # Cannot audit if the business day window has not ended yet
+    return false if local_time < window.end
+
+    # Optional: add a small buffer (e.g. 5 minutes) to ensure last-minute transactions are processed
+    local_time >= window.end + 5.minutes
   end
 
   def latest_closable_business_date(time = Time.current)
@@ -547,5 +580,11 @@ class Hotel < ApplicationRecord
   def final_onboarding_session
     onboarding_sessions.completed.where(notes: "FINAL_ONBOARDING_COMPLETION").order(completed_at: :desc).first ||
       onboarding_sessions.where(notes: "FINAL_ONBOARDING_COMPLETION").order(updated_at: :desc).first
+  end
+
+  private
+
+  def ensure_default_gl_maps
+    Financials::EnsureDefaultGlMaps.call(self)
   end
 end
