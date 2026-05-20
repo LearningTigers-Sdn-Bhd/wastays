@@ -7,29 +7,9 @@ require "cgi"
 # Sources data from FolioTransaction records (not booking snapshots) to give
 # a true accounting-ready view of charges, payments, adjustments, and taxes.
 #
-# Includes a static GL code mapping for accounting reconciliation.
-# GL codes can be promoted to a DB-backed table later if hotels need customisation.
+# Uses transaction-level GL snapshots first, then hotel GL mappings, so exports
+# preserve historical accounting codes while supporting legacy rows.
 class FolioLedgerExportService
-  # Lightweight GL code mapping — per transaction category.
-  # Extend to DB-backed HotelGlCode model in future if needed.
-  GL_CODES = {
-    "accommodation"   => "4000",  # Room Revenue
-    "tax"             => "2100",  # Tax Payable (generic)
-    "sst"             => "2101",  # SST Payable
-    "tourism_tax"     => "2102",  # Tourism Tax Payable
-    "fb"              => "4100",  # F&B Revenue
-    "no_show_penalty" => "4200",  # No-Show Penalty Revenue
-    "other"           => "4900",  # Other Revenue
-    "adjustment"      => "5000",  # Revenue Adjustments
-    "correction"      => "5001",  # Corrections
-    "discount"        => "5002",  # Discounts
-    "write_off"       => "5003",  # Write-Offs
-    "gateway_payment" => "1100",  # Cash/Bank — Gateway
-    "cash"            => "1101",  # Cash — Front Desk
-    "refund"          => "2200",  # Refunds Payable
-    "advance_deposit" => "2300"   # Advance Deposit Liability
-  }.freeze
-
   CSV_HEADERS = [
     "Posting Date",
     "Invoice Number",
@@ -113,6 +93,10 @@ class FolioLedgerExportService
       .order(:posting_date, :id)
   end
 
+  def gl_maps_by_category
+    @gl_maps_by_category ||= @hotel.hotel_general_ledger_maps.index_by(&:transaction_category)
+  end
+
   def each_row(&block)
     transactions.each do |txn|
       folio   = txn.booking_folio
@@ -145,10 +129,8 @@ class FolioLedgerExportService
     end
   end
 
-  def gl_code_for(txn, tax_type)
-    return GL_CODES.fetch(tax_type, GL_CODES["tax"]) if txn.category == "tax" && tax_type.present?
-
-    GL_CODES.fetch(txn.category, "9999")
+  def gl_code_for(txn, _tax_type)
+    txn.gl_code.presence || gl_maps_by_category[txn.category]&.gl_code.presence || "9999"
   end
 
   def derive_tax_type(txn)

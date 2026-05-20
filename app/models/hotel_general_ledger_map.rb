@@ -5,9 +5,7 @@ class HotelGeneralLedgerMap < ApplicationRecord
   validates :gl_code, presence: true
 
   validates :transaction_category, inclusion: {
-    in: FolioTransaction::CHARGE_CATEGORIES +
-        FolioTransaction::PAYMENT_CATEGORIES +
-        FolioTransaction::ADJUSTMENT_CATEGORIES,
+    in: FolioTransaction.gl_mappable_categories,
     message: "%{value} is not a valid transaction category"
   }
 end

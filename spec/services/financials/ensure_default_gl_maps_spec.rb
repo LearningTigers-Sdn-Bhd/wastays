@@ -4,16 +4,17 @@ RSpec.describe Financials::EnsureDefaultGlMaps, type: :service do
   let(:hotel) { create(:hotel) }
 
   describe '.call' do
-    it 'creates 7 default GL mappings for the hotel' do
+    it 'creates default GL mappings for every folio transaction category' do
       # The after_create callback already calls this service.
-      # So we expect 7 mappings to already exist.
-      expect(hotel.hotel_general_ledger_maps.count).to eq(7)
+      expect(hotel.hotel_general_ledger_maps.pluck(:transaction_category)).to match_array(FolioTransaction.gl_mappable_categories)
 
       # We can delete them and run it again to verify it recreates them.
       hotel.hotel_general_ledger_maps.destroy_all
       expect {
         described_class.call(hotel)
-      }.to change { hotel.hotel_general_ledger_maps.count }.from(0).to(7)
+      }.to change { hotel.hotel_general_ledger_maps.count }.from(0).to(FolioTransaction.gl_mappable_categories.count)
+
+      expect(hotel.hotel_general_ledger_maps.pluck(:transaction_category)).to match_array(FolioTransaction.gl_mappable_categories)
     end
 
     it 'is idempotent and does not create duplicates' do
@@ -32,6 +33,27 @@ RSpec.describe Financials::EnsureDefaultGlMaps, type: :service do
       tax = hotel.hotel_general_ledger_maps.find_by(transaction_category: 'tax')
       expect(tax.gl_code).to eq('2010')
       expect(tax.description).to eq('Tax Liabilities')
+
+      advance_deposit = hotel.hotel_general_ledger_maps.find_by(transaction_category: 'advance_deposit')
+      expect(advance_deposit.gl_code).to eq('2020')
+      expect(advance_deposit.description).to eq('Advance Deposit Liability')
+
+      write_off = hotel.hotel_general_ledger_maps.find_by(transaction_category: 'write_off')
+      expect(write_off.gl_code).to eq('5040')
+      expect(write_off.description).to eq('Write-Offs')
+    end
+
+    it 'does not overwrite customized existing mappings' do
+      hotel.hotel_general_ledger_maps.find_by!(transaction_category: 'accommodation').update!(
+        gl_code: 'CUSTOM-ROOM',
+        description: 'Custom room revenue'
+      )
+
+      described_class.call(hotel)
+
+      accommodation = hotel.hotel_general_ledger_maps.find_by!(transaction_category: 'accommodation')
+      expect(accommodation.gl_code).to eq('CUSTOM-ROOM')
+      expect(accommodation.description).to eq('Custom room revenue')
     end
   end
 end

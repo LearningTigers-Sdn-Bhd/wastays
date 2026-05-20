@@ -10,6 +10,8 @@ class FolioTransaction < ApplicationRecord
     "adjustment" => ADJUSTMENT_CATEGORIES
   }.freeze
 
+  GL_MAPPABLE_CATEGORIES = CATEGORIES_BY_TYPE.values.flatten.uniq.freeze
+
   belongs_to :booking_folio
   belongs_to :user, optional: true
   belongs_to :reversal_of_transaction, class_name: "FolioTransaction", optional: true
@@ -47,6 +49,10 @@ class FolioTransaction < ApplicationRecord
 
   def self.total_amount
     sum(:amount)
+  end
+
+  def self.gl_mappable_categories
+    GL_MAPPABLE_CATEGORIES
   end
 
   def reversed?

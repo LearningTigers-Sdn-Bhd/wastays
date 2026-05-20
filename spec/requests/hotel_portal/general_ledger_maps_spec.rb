@@ -23,6 +23,16 @@ RSpec.describe "HotelPortal::GeneralLedgerMaps", type: :request do
       get hotel_general_ledger_maps_path(hotel)
       expect(response).to have_http_status(:success)
     end
+
+    it "backfills missing default GL mappings for existing hotels" do
+      hotel.hotel_general_ledger_maps.find_by!(transaction_category: "write_off").destroy!
+
+      expect {
+        get hotel_general_ledger_maps_path(hotel)
+      }.to change { hotel.hotel_general_ledger_maps.where(transaction_category: "write_off").count }.from(0).to(1)
+
+      expect(response).to have_http_status(:success)
+    end
   end
 
   describe "GET /edit" do

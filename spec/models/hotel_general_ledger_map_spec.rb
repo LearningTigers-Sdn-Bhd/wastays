@@ -12,9 +12,10 @@ RSpec.describe HotelGeneralLedgerMap, type: :model do
     it { is_expected.to validate_presence_of(:gl_code) }
 
     it 'validates inclusion of transaction_category in allowed categories' do
-      valid_category = FolioTransaction::CHARGE_CATEGORIES.first
-      map = build(:hotel_general_ledger_map, transaction_category: valid_category)
-      expect(map).to be_valid
+      FolioTransaction.gl_mappable_categories.each do |valid_category|
+        map = build(:hotel_general_ledger_map, hotel: build(:hotel), transaction_category: valid_category)
+        expect(map).to be_valid
+      end
 
       invalid_category = 'non_existent_category'
       map = build(:hotel_general_ledger_map, transaction_category: invalid_category)

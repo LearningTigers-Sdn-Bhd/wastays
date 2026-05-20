@@ -5,6 +5,7 @@ class HotelPortal::GeneralLedgerMapsController < HotelPortal::BaseController
   before_action :set_gl_map, only: %i[edit update]
 
   def index
+    Financials::EnsureDefaultGlMaps.call(current_hotel)
     @gl_maps = current_hotel.hotel_general_ledger_maps.order(:transaction_category)
   end
 
