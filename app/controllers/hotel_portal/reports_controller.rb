@@ -3,7 +3,7 @@ require "csv"
 class HotelPortal::ReportsController < HotelPortal::BaseController
   include FinancialFiltering
 
-  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy outstanding_balance arrivals_departures folio_ledger]
+  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy outstanding_balance arrivals_departures folio_ledger journal_batches]
   before_action :authorize_view_payouts!, only: %i[payouts]
 
   def index
@@ -280,6 +280,26 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
           filename: "folio-ledger-#{@start_date}-#{@end_date}.xls",
           type: "application/vnd.ms-excel",
           disposition: "attachment"
+      end
+    end
+  end
+
+  def journal_batches
+    @report_start_date, @report_end_date = parse_report_date_range
+    @batches = current_hotel.journal_batches
+                            .where(business_date: @report_start_date..@report_end_date)
+                            .includes(:entries)
+                            .order(business_date: :desc)
+
+    respond_to do |format|
+      format.html do
+        @paginated_batches = @batches.page(params[:page]).per(25)
+      end
+      format.csv do
+        csv = HotelPortal::Reports::JournalBatchCsvExportService.new(batches: @batches).generate
+        send_data csv,
+          filename: "journal-batches-#{@report_start_date}-#{@report_end_date}.csv",
+          type: "text/csv"
       end
     end
   end
