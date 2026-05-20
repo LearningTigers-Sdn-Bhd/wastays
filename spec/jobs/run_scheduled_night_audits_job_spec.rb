@@ -20,11 +20,11 @@ RSpec.describe RunScheduledNightAuditsJob, type: :job do
     live_audit = live_hotel.night_audits.find_by(business_date: business_date)
 
     expect(approved_audit).to be_present
-    expect(approved_audit.status).to eq("running")
+    expect(approved_audit.status).to eq("pending")
     expect(approved_audit.trigger_mode).to eq("scheduled")
 
     expect(live_audit).to be_present
-    expect(live_audit.status).to eq("running")
+    expect(live_audit.status).to eq("pending")
     expect(live_audit.trigger_mode).to eq("scheduled")
 
     expect(HotelOps::RunNightAuditJob).to have_received(:perform_later).with(approved_audit.id, nil)
@@ -77,5 +77,24 @@ RSpec.describe RunScheduledNightAuditsJob, type: :job do
     expect(yesterday_audit).to be_nil
     expect(day_before_yesterday_audit).to be_present
     expect(HotelOps::RunNightAuditJob).to have_received(:perform_later).with(day_before_yesterday_audit.id, nil)
+  end
+
+  it "re-enqueues blocked and failed audits but skips running and completed audits" do
+    hotel = create(:hotel, status: "live")
+    blocked_audit = create(:night_audit, hotel: hotel, business_date: business_date, status: "blocked")
+    failed_audit = create(:night_audit, hotel: hotel, business_date: business_date + 1.day, status: "failed")
+    running_audit = create(:night_audit, hotel: hotel, business_date: business_date + 2.days, status: "running")
+    completed_audit = create(:night_audit, hotel: hotel, business_date: business_date + 3.days, status: "completed")
+    allow(HotelOps::RunNightAuditJob).to receive(:perform_later)
+
+    described_class.perform_now(business_date)
+    described_class.perform_now(business_date + 1.day)
+    described_class.perform_now(business_date + 2.days)
+    described_class.perform_now(business_date + 3.days)
+
+    expect(HotelOps::RunNightAuditJob).to have_received(:perform_later).with(blocked_audit.id, nil)
+    expect(HotelOps::RunNightAuditJob).to have_received(:perform_later).with(failed_audit.id, nil)
+    expect(HotelOps::RunNightAuditJob).not_to have_received(:perform_later).with(running_audit.id, nil)
+    expect(HotelOps::RunNightAuditJob).not_to have_received(:perform_later).with(completed_audit.id, nil)
   end
 end

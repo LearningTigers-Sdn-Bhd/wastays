@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_19_232734) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_20_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -364,6 +364,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_19_232734) do
     t.bigint "created_by_hotel_id"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
+  end
+
+  create_table "hotel_business_dates", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.date "business_date", null: false
+    t.string "status", default: "open", null: false
+    t.datetime "opened_at"
+    t.datetime "audit_started_at"
+    t.datetime "blocked_at"
+    t.datetime "closed_at"
+    t.jsonb "blockers_snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "business_date", "status"], name: "idx_on_hotel_id_business_date_status_38d59d82f8"
+    t.index ["hotel_id", "business_date"], name: "index_hotel_business_dates_on_hotel_id_and_business_date", unique: true
+    t.index ["hotel_id", "status"], name: "index_hotel_business_dates_on_hotel_id_and_status"
+    t.index ["hotel_id"], name: "index_hotel_business_dates_on_hotel_id"
   end
 
   create_table "hotel_counters", force: :cascade do |t|
@@ -1032,6 +1049,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_19_232734) do
   add_foreign_key "folio_transactions", "folio_transactions", column: "reversal_of_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "voided_by_transaction_id"
   add_foreign_key "folio_transactions", "users"
+  add_foreign_key "hotel_business_dates", "hotels"
   add_foreign_key "hotel_counters", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotel_taxes", "hotels"

@@ -14,6 +14,9 @@ module HotelOps
       night_audit = @hotel.night_audits.find_or_initialize_by(business_date: @business_date)
       return Result.new(success?: false, error: "Night audit has already been completed for this date.", night_audit: night_audit) if night_audit.completed?
 
+      business_date, claim_error = claim_business_date
+      return Result.new(success?: false, error: claim_error, night_audit: night_audit) if claim_error
+
       night_audit.assign_attributes(
         status: "running",
         trigger_mode: @trigger_mode,
@@ -43,6 +46,7 @@ module HotelOps
             blocked_details: pre_evaluation[:blocked_details],
             exceptions: pre_evaluation[:exceptions]
           )
+          business_date.block_audit!(blockers: pre_evaluation[:blocked_details])
         end
 
         log_event(night_audit, "blocker_found", "Night audit process stopped before posting due to blockers")
@@ -64,13 +68,20 @@ module HotelOps
       ActiveRecord::Base.transaction do
         persist_financial_summary(night_audit, financial_totals)
 
+        final_status = blocked?(evaluation) ? "blocked" : "completed"
         night_audit.update!(
-          status: blocked?(evaluation) ? "blocked" : "completed",
+          status: final_status,
           completed_at: Time.current,
           summary: evaluation[:summary],
           blocked_details: evaluation[:blocked_details],
           exceptions: evaluation[:exceptions]
         )
+
+        if final_status == "completed"
+          business_date.complete_audit!
+        else
+          business_date.block_audit!(blockers: evaluation[:blocked_details])
+        end
       end
 
       final_status = night_audit.status
@@ -78,6 +89,7 @@ module HotelOps
 
       Result.new(success?: night_audit.completed?, night_audit: night_audit)
     rescue StandardError => e
+      block_business_date_after_failure(business_date, e.message) if defined?(business_date) && business_date
       night_audit = persist_failure(night_audit, e.message)
       Result.new(success?: false, night_audit: night_audit, error: e.message)
     end
@@ -114,6 +126,19 @@ module HotelOps
       HotelOps::CalculateBusinessDayFinancials.call(hotel: @hotel, business_date: @business_date)
     end
 
+    def claim_business_date
+      business_date = HotelBusinessDate.for_hotel_date!(hotel: @hotel, date: @business_date)
+      business_date.with_lock do
+        return [ nil, "Night audit is already running for this date." ] if business_date.audit_running?
+        if business_date.closed? || business_date.force_closed?
+          return [ nil, "Night audit has already been closed for this date." ]
+        end
+
+        business_date.start_audit!
+        [ business_date, nil ]
+      end
+    end
+
     def blocked?(evaluation)
       evaluation[:blocked_details].values.flatten.any?
     end
@@ -122,6 +147,15 @@ module HotelOps
       summary = night_audit.financial_summary || night_audit.build_financial_summary
       summary.assign_attributes(totals)
       summary.save!
+    end
+
+    def block_business_date_after_failure(business_date, error_message)
+      business_date.reload
+      return unless business_date.audit_running?
+
+      business_date.block_audit!(blockers: { "audit_failure" => [ { "message" => error_message } ] })
+    rescue StandardError => e
+      Rails.logger.error("Failed to mark business date blocked after night audit failure: #{e.message}")
     end
 
     def persist_failure(night_audit, error_message)

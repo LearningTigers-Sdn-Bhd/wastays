@@ -46,6 +46,7 @@ class Hotel < ApplicationRecord
   has_many :hotel_counters, dependent: :destroy
   has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy
+  has_many :hotel_business_dates, dependent: :destroy
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy

@@ -109,4 +109,17 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     expect(flash[:notice]).to eq("Night audit has been scheduled in the background. Please wait while it processes.")
     expect(NightAudit.last).to be_blocked
   end
+
+  it "does not enqueue another job for a pending audit" do
+    sign_in(user)
+    business_date = Date.new(2026, 5, 18)
+    night_audit = create(:night_audit, hotel: hotel, business_date: business_date, status: "pending")
+
+    expect do
+      post hotel_night_audits_path(hotel), params: { night_audit: { business_date: business_date.to_s } }
+    end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+
+    expect(response).to redirect_to(hotel_night_audit_path(hotel, night_audit))
+    expect(flash[:notice]).to eq("Night audit is already scheduled or running in the background.")
+  end
 end

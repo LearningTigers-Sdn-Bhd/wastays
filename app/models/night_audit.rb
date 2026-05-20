@@ -16,6 +16,10 @@ class NightAudit < ApplicationRecord
   scope :completed, -> { where(status: "completed") }
 
   def self.closed_for_date?(hotel_id, date)
+    if defined?(HotelBusinessDate) && HotelBusinessDate.closed_for?(hotel: hotel_id, date: date)
+      return true
+    end
+
     exists?(hotel_id: hotel_id, business_date: date, status: "completed")
   end
 

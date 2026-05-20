@@ -51,6 +51,7 @@ RSpec.describe HotelOps::RunNightAudit do
 
     expect(run_audit.success?).to be(true)
     expect(night_audit).to be_completed
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_closed
 
     logs = night_audit.night_audit_logs
     expect(logs.first.action_type).to eq("process_started")
@@ -124,6 +125,7 @@ RSpec.describe HotelOps::RunNightAudit do
 
     expect(result.success?).to be(false)
     expect(result.night_audit).to be_blocked
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
 
     log = result.night_audit.night_audit_logs.find_by(action_type: "blocker_found")
     expect(log.message).to include("Found 1 blockers of type: Due out not checked out")
@@ -189,6 +191,7 @@ RSpec.describe HotelOps::RunNightAudit do
 
     expect(result.success?).to be(false)
     expect(result.night_audit.blocked_details["missing_folio"].first["booking_id"]).to eq(booking.id)
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
   end
 
   it "blocks when an in-house booking folio is missing nightly charges" do
@@ -328,7 +331,28 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(result.success?).to be(false)
     expect(result.error).to eq("boom")
     expect(result.night_audit).to be_failed
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
     expect(result.night_audit.night_audit_logs.last.action_type).to eq("failed")
     expect(result.night_audit.night_audit_logs.last.metadata["error"]).to eq("boom")
+  end
+
+  it "does not claim a business date that is already audit_running" do
+    create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "audit_running")
+
+    result = run_audit
+
+    expect(result.success?).to be(false)
+    expect(result.error).to eq("Night audit is already running for this date.")
+    expect(result.night_audit).not_to be_persisted
+  end
+
+  it "does not claim a business date that is already closed" do
+    create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "closed")
+
+    result = run_audit
+
+    expect(result.success?).to be(false)
+    expect(result.error).to eq("Night audit has already been closed for this date.")
+    expect(result.night_audit).not_to be_persisted
   end
 end

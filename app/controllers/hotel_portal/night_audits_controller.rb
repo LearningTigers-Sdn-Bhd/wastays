@@ -19,15 +19,15 @@ module HotelPortal
         return
       end
 
-      if night_audit.status == "running"
-        redirect_to hotel_night_audit_path(current_hotel, night_audit), notice: "Night audit is already running in the background."
+      if night_audit.persisted? && %w[pending running].include?(night_audit.status)
+        redirect_to hotel_night_audit_path(current_hotel, night_audit), notice: "Night audit is already scheduled or running in the background."
         return
       end
 
       night_audit.assign_attributes(
-        status: "running",
+        status: "pending",
         trigger_mode: "manual",
-        started_at: Time.current,
+        started_at: nil,
         completed_at: nil,
         performed_by_user: current_user,
         notes: params.dig(:night_audit, :notes),

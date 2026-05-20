@@ -11,13 +11,19 @@ class RunScheduledNightAuditsJob < ApplicationJob
   private
 
   def run_for_hotel(hotel, business_date)
-    return if hotel.night_audits.exists?(business_date: business_date)
+    existing_audit = hotel.night_audits.find_by(business_date: business_date)
+    if existing_audit
+      return if existing_audit.completed? || existing_audit.running?
+
+      HotelOps::RunNightAuditJob.perform_later(existing_audit.id, nil)
+      return
+    end
 
     night_audit = hotel.night_audits.build(
       business_date: business_date,
-      status: "running",
+      status: "pending",
       trigger_mode: "scheduled",
-      started_at: Time.current,
+      started_at: nil,
       completed_at: nil,
       performed_by_user: nil,
       force_closed: false
