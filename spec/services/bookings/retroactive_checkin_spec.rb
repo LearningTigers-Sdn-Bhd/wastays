@@ -6,7 +6,7 @@ RSpec.describe "Retroactive Check-in", type: :service do
   let(:hotel) { create(:hotel) }
   let(:past_date) { 1.day.ago.to_date }
   let(:booking) { create(:booking, hotel: hotel, status: "confirmed", total_amount: 250.0, check_in: past_date, check_out: past_date + 1.day) }
-  let(:user) { create(:user) }
+  let(:user) { create(:user, role: "superadmin") }
   let(:timestamp) { past_date.to_time + 14.hours } # 2 PM yesterday
 
   before do

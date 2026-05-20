@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Bookings::TransitionStatus do
   let(:booking) { create(:booking, status: "confirmed") }
-  let(:user) { create(:user) }
+  let(:user) { create(:user, role: "superadmin") }
   let(:timestamp) { Time.current }
 
   describe "#call" do

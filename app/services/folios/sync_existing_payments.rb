@@ -28,6 +28,7 @@ module Folios
             description: "Advance deposit from booking quote payment via #{pt.gateway} (#{pt.external_reference})",
             posting_date: pt.captured_at&.to_date || pt.created_at.to_date,
             options: override_options.merge({
+              posting_source: "gateway_payment",
               metadata: {
                 payment_transaction_id: pt.id,
                 source: "booking_quote",

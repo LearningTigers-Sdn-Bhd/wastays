@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
   let(:hotel) { create(:hotel) }
-  let(:user) { create(:user) }
+  let(:user) { create(:user, role: "superadmin") }
   let(:past_date) { 1.day.ago.to_date }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", check_in: past_date, check_out: past_date + 1.day) }
   let(:folio) { create(:booking_folio, booking: booking) }

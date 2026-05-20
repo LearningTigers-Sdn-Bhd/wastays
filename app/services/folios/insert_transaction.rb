@@ -26,11 +26,8 @@ module Folios
           return failure("Folio is closed. Please provide an override flag to post to a closed folio.")
         end
 
-        if NightAudit.closed_for_date?(@booking_folio.booking.hotel_id, @posting_date)
-          unless @options[:override_night_audit]
-            return failure("The business date #{@posting_date} is already closed. Please provide an override flag to post to a closed date.")
-          end
-        end
+        guard_error = validate_business_date_posting
+        return failure(guard_error) if guard_error.present?
 
         transaction = @booking_folio.folio_transactions.build(
           amount: @amount,
@@ -68,12 +65,29 @@ module Folios
       nil
     end
 
+    def validate_business_date_posting
+      FinancialControls::PostingGuard.call!(
+        hotel: @booking_folio.booking.hotel,
+        business_date: @posting_date,
+        actor: @user,
+        posting_source: posting_source,
+        override: @options[:override_night_audit],
+        override_reason: @options[:correction_reason],
+        permission_context: @options[:permission_context] || @user,
+        blocker_resolution: @options[:blocker_resolution]
+      )
+      nil
+    rescue FinancialControls::PostingGuard::PostingBlocked => e
+      e.message
+    end
+
     def override_requested?
       @options[:override_closed_folio] || @options[:override_night_audit]
     end
 
     def transaction_metadata
       metadata = (@options[:metadata] || {}).merge(posted_by_user_id: @user&.id)
+      metadata[:posting_source] ||= @options[:posting_source] if @options[:posting_source].present?
       return metadata unless override_requested?
 
       metadata.merge(
@@ -83,6 +97,10 @@ module Folios
         override_reason: @options[:correction_reason].to_s,
         override_note: @options[:correction_note].to_s
       )
+    end
+
+    def posting_source
+      @options[:posting_source].presence || (@options[:metadata] || {})[:posting_source].presence || "staff"
     end
 
     def success(transaction)

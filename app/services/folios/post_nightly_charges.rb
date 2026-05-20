@@ -80,8 +80,8 @@ module Folios
         category: category,
         user: @user,
         description: description,
-        posting_date: @business_date,
-        options: @options.merge(metadata: metadata)
+          posting_date: @business_date,
+          options: @options.merge(posting_source: "night_audit", metadata: metadata)
       ).call
 
       return if result.success? || already_posted?(booking.booking_folio, metadata[:nightly_charge_key])

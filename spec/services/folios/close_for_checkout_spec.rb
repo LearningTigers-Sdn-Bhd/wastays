@@ -56,4 +56,18 @@ RSpec.describe Folios::CloseForCheckout do
     expect(result.error).to eq("Cannot check out with credit balance of MYR -50.00. Process refund or adjustment first.")
     expect(folio.reload.status).to eq("open")
   end
+
+  it "fails while the checkout business date is in night audit" do
+    folio = create(:booking_folio, booking: booking, status: "open")
+    create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+    create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100.0)
+    business_date = booking.hotel.business_date_for
+    create(:hotel_business_date, hotel: booking.hotel, business_date: business_date, status: "audit_running")
+
+    result = described_class.call(booking: booking, user: user)
+
+    expect(result.success?).to be(false)
+    expect(result.error).to include("currently in night audit")
+    expect(folio.reload.status).to eq("open")
+  end
 end

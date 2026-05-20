@@ -59,7 +59,7 @@ module Folios
 
     def merged_options
       metadata = (@options[:metadata] || {}).merge(refund_request_id: @refund_request.id)
-      @options.merge(metadata: metadata)
+      @options.merge(posting_source: @options[:posting_source] || "gateway_refund", metadata: metadata)
     end
 
     def success(transaction)

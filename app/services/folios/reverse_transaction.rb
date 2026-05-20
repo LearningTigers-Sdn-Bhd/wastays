@@ -82,7 +82,7 @@ module Folios
 
     def merged_options
       metadata = (@options[:metadata] || {}).merge(
-        posting_source: "folio_reversal",
+        posting_source: "reversal",
         reversed_transaction_id: @transaction.id,
         posted_by_user_id: @user&.id
       )
