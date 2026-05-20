@@ -40,6 +40,7 @@ RSpec.describe "HotelPortal::ReservationBoard::BoardBookings", type: :request do
   describe "POST /hotel/:hotel_id/reservation-board/bookings" do
     it "creates a booking and redirects to reservation board" do
       sign_in_with_permissions("manage_bookings")
+      create(:room_rate, room_type: room_type, date: Date.current, price: 100, currency: hotel.default_currency.presence || "MYR")
 
       booking_params = {
         guest_name: "Board Guest",

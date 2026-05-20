@@ -98,4 +98,86 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 0, 0 ])
     expect(Notifications::Dispatcher).not_to have_received(:new).with(event: :booking_confirmed, booking: result.booking)
   end
+
+  it "resolves an existing overbooked booking when inventory becomes available" do
+    existing = create(:booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "overbooked")
+    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    data = booking_data.merge(status: "confirmed", revision_number: 2)
+
+    result = described_class.new(booking_data: data).call
+
+    expect(result.success?).to be(true)
+    expect(existing.reload.status).to eq("confirmed")
+    expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 1, 1 ])
+  end
+
+  it "rejects channel cancellation for a completed booking" do
+    existing = create(:booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "completed")
+    data = booking_data.merge(status: "cancelled", revision_number: 2)
+
+    result = described_class.new(booking_data: data).call
+
+    expect(result.success?).to be(false)
+    expect(result.message).to include("Unsupported status transition from completed to cancelled")
+    expect(existing.reload.status).to eq("completed")
+  end
+
+  it "rejects channel revival for a cancelled booking" do
+    existing = create(:booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "cancelled")
+    data = booking_data.merge(status: "confirmed", revision_number: 2)
+
+    result = described_class.new(booking_data: data).call
+
+    expect(result.success?).to be(false)
+    expect(result.message).to include("Unsupported status transition from cancelled to confirmed")
+    expect(existing.reload.status).to eq("cancelled")
+  end
+
+  it "rolls back released inventory when an existing update is invalid" do
+    existing = create(:booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "confirmed")
+    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    room_type.room_inventories.update_all(quantity: 1)
+    data = booking_data.merge(guest_details: booking_data[:guest_details].merge(email: ""), revision_number: 2)
+
+    result = described_class.new(booking_data: data).call
+
+    expect(result.success?).to be(false)
+    expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 1, 1 ])
+  end
+
+  it "uses persisted dates when an existing modification omits dates" do
+    existing = create(:booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "confirmed")
+    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    data = booking_data.except(:check_in, :check_out).merge(total_amount: 250.0, revision_number: 2)
+
+    result = described_class.new(booking_data: data).call
+
+    expect(result.success?).to be(true)
+    expect(existing.reload.total_amount).to eq(250.0)
+  end
 end

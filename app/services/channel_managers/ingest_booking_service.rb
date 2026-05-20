@@ -4,6 +4,8 @@ require "ostruct"
 
 module ChannelManagers
   class IngestBookingService
+    IngestionFailure = Class.new(StandardError)
+
     def initialize(booking_data:)
       @data = booking_data
       @hotel = @data[:hotel]
@@ -37,7 +39,16 @@ module ChannelManagers
           return OpenStruct.new(success?: true, booking: booking, message: "Duplicate or older revision ignored")
         end
 
-        # 2. Release Old Inventory: If this is an existing active booking, release its current rooms before applying changes
+        incoming_status = resolved_status(effective_check_in, effective_check_out)
+
+        if is_existing_booking && previous_status != incoming_status
+          event = status_transition_event_for(previous_status, incoming_status)
+          return OpenStruct.new(success?: false, message: "Unsupported status transition from #{previous_status} to #{incoming_status}") unless event
+
+          booking.status_transition_event = event
+        end
+
+        # 2. Release Old Inventory: release before mutating the booking so old dates/rooms are restored.
         if is_existing_booking && inventory_held_status?(previous_status)
           Bookings::InventoryManager.new(booking).release
         end
@@ -50,7 +61,7 @@ module ChannelManagers
           guest_country: @data[:guest_details][:country],
           check_in: effective_check_in,
           check_out: effective_check_out,
-          status: @data[:status],
+          status: incoming_status,
           adults: @data[:adults] || 1,
           total_amount: @data[:total_amount],
           currency: @data[:currency],
@@ -60,11 +71,6 @@ module ChannelManagers
           revision_number: @data[:revision_number],
           payment_status: payment_status_for(booking)
         )
-
-        # 4. Handle Overbooking Logic
-        if booking.status != "cancelled" && inventory_insufficient?(booking)
-          booking.status = "overbooked"
-        end
 
         if booking.save
           sync_guest(booking)
@@ -87,9 +93,11 @@ module ChannelManagers
 
           OpenStruct.new(success?: true, booking: booking)
         else
-          OpenStruct.new(success?: false, message: booking.errors.full_messages.to_sentence)
+          raise IngestionFailure, booking.errors.full_messages.to_sentence
         end
       end
+    rescue IngestionFailure => e
+      OpenStruct.new(success?: false, message: e.message)
     rescue => e
       OpenStruct.new(success?: false, message: "Ingestion failed: #{e.message}")
     end
@@ -105,14 +113,21 @@ module ChannelManagers
         Booking.new(hotel: @hotel, channel_manager_reference: @data[:channel_manager_reference])
     end
 
-    def inventory_insufficient?(booking)
-      (@data[:check_in]..(@data[:check_out] - 1.day)).each do |date|
+    def inventory_insufficient?(check_in, check_out)
+      (check_in...check_out).each do |date|
         @data[:rooms].each do |room_item|
           inventory = room_item[:room_type].room_inventories.lock.find_by(date: date)
           return true if !inventory || inventory.quantity < room_item[:quantity]
         end
       end
       false
+    end
+
+    def resolved_status(check_in, check_out)
+      return @data[:status] if @data[:status] == "cancelled"
+      return "overbooked" if inventory_insufficient?(check_in, check_out)
+
+      @data[:status]
     end
 
     def release_inventory(rooms, check_in, check_out)
@@ -128,6 +143,21 @@ module ChannelManagers
 
     def inventory_held_status?(status)
       status.in?(%w[confirmed checked_in])
+    end
+
+    def status_transition_event_for(previous_status, new_status)
+      case [ previous_status, new_status ]
+      when [ "pending", "confirmed" ]
+        "confirm"
+      when [ "pending", "cancelled" ], [ "confirmed", "cancelled" ], [ "overbooked", "cancelled" ]
+        "cancel"
+      when [ "confirmed", "overbooked" ]
+        "mark_overbooked"
+      when [ "overbooked", "confirmed" ]
+        "resolve_overbooking"
+      else
+        nil
+      end
     end
 
     def payment_status_for(booking)

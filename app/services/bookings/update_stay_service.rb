@@ -16,6 +16,8 @@ module Bookings
     end
 
     def call
+      return OpenStruct.new(success?: false, errors: [ "Status cannot be changed through stay update." ]) if @params.key?(:status)
+
       failure_error = nil
       assigned_room_number = extract_assigned_room_number
       result = nil

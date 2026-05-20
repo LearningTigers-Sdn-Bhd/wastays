@@ -15,6 +15,8 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     end
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
+    create(:room_rate, room_type: room_type, date: Date.current, price: 100, currency: hotel.default_currency.presence || "MYR")
+    create(:room_rate, room_type: room_type, date: Date.current + 1.day, price: 100, currency: hotel.default_currency.presence || "MYR")
   end
 
   describe "GET /index" do
@@ -54,7 +56,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
 
   describe "GET /new" do
     it "returns http success" do
-      get "/hotel/#{hotel.id}/bookings/new"
+      get "/hotel/#{hotel.id}/bookings/new", headers: { "Turbo-Frame" => "offcanvas_drawer" }
       expect(response).to have_http_status(:success)
     end
   end

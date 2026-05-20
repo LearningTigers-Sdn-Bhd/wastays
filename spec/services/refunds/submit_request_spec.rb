@@ -34,7 +34,7 @@ RSpec.describe Refunds::SubmitRequest do
 
   it "resubmits rejected refund request" do
     create(:refund_request, booking: booking, status: "rejected", refund_amount: 100.0)
-    booking.update!(status: "cancelled")
+    booking.transition_status_to!("cancelled", event: "cancel")
 
     result = described_class.new(booking: booking, params: params).call
 

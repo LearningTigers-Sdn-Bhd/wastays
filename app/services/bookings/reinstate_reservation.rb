@@ -34,10 +34,13 @@ module Bookings
           Bookings::InventoryManager.new(@booking).reserve_by_dates(business_date, @booking.check_out)
 
           # 4. Transition status to checked_in
-          @booking.update!(
-            status: "checked_in",
-            checked_in_at: Time.current,
-            guest_registration_number: @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
+          @booking.transition_status_to!(
+            "checked_in",
+            event: "reinstate",
+            attributes: {
+              checked_in_at: Time.current,
+              guest_registration_number: @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
+            }
           )
 
           # 5. Initialize Folio if needed and process catch-up charges

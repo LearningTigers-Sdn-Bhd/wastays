@@ -43,7 +43,7 @@ module Bookings
 
           folio = Folios::InitializeForBooking.call(booking: booking, user: @user, lock: false)
           post_no_show_charges(booking, folio)
-          booking.update!(status: "no_show")
+          booking.transition_status_to!("no_show", event: "mark_no_show")
           Bookings::InventoryManager.new(booking).release_by_dates(@business_date + 1.day, booking.check_out)
           release_assigned_rooms_to_ready(booking)
           Bookings::RecordAuditLog.call(

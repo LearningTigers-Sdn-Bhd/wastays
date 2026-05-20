@@ -40,7 +40,7 @@ RSpec.describe Notifications::Dispatcher do
       channels: %w[email],
       settings: {}
     )
-    booking.update!(status: "completed", checked_out_at: Time.zone.local(2026, 5, 8, 16, 0))
+    booking.transition_status_to!("completed", event: "check_out", attributes: { checked_out_at: Time.zone.local(2026, 5, 8, 16, 0) })
 
     expect {
       described_class.new(event: :booking_completed, booking: booking).call
@@ -56,7 +56,7 @@ RSpec.describe Notifications::Dispatcher do
       channels: %w[whatsapp email],
       settings: { "stages" => %w[d2 d1] }
     )
-    booking.update!(status: "confirmed", check_in: Date.current + 5.days, check_out: Date.current + 6.days)
+    booking = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current + 5.days, check_out: Date.current + 6.days)
 
     expect {
       described_class.new(event: :booking_confirmed, booking: booking).call
@@ -74,7 +74,7 @@ RSpec.describe Notifications::Dispatcher do
       channels: %w[whatsapp email],
       settings: { "stages" => %w[d2 d1] }
     )
-    booking.update!(status: "confirmed", check_in: Date.current + 5.days, check_out: Date.current + 6.days)
+    booking = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current + 5.days, check_out: Date.current + 6.days)
 
     described_class.new(event: :booking_confirmed, booking: booking).call
     delivery = NotificationDelivery.where(booking: booking, notification_type: "pre_arrival_notification", status: "pending").first
@@ -102,7 +102,7 @@ RSpec.describe Notifications::Dispatcher do
         "quiet_hours" => { "enabled" => true, "start" => "22:00", "end" => "08:00" }
       }
     )
-    booking.update!(status: "confirmed", check_in: Date.current + 5.days, check_out: Date.current + 7.days)
+    booking = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current + 5.days, check_out: Date.current + 7.days)
 
     expect {
       described_class.new(event: :booking_confirmed, booking: booking).call
