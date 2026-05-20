@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rails_helper"
 
 RSpec.describe RunScheduledNightAuditsJob, type: :job do
@@ -10,75 +12,70 @@ RSpec.describe RunScheduledNightAuditsJob, type: :job do
     live_hotel = create(:hotel, status: "live")
     create(:hotel, status: "registered")
 
-    runner = instance_double(HotelOps::RunNightAudit, call: true)
-    allow(HotelOps::RunNightAudit).to receive(:new).and_return(runner)
+    allow(HotelOps::RunNightAuditJob).to receive(:perform_later)
 
     described_class.perform_now(business_date)
 
-    expect(HotelOps::RunNightAudit).to have_received(:new).with(
-      hotel: approved_hotel,
-      business_date: business_date,
-      performed_by_user: nil,
-      trigger_mode: "scheduled"
-    )
-    expect(HotelOps::RunNightAudit).to have_received(:new).with(
-      hotel: live_hotel,
-      business_date: business_date,
-      performed_by_user: nil,
-      trigger_mode: "scheduled"
-    )
-    expect(HotelOps::RunNightAudit).to have_received(:new).twice
+    approved_audit = approved_hotel.night_audits.find_by(business_date: business_date)
+    live_audit = live_hotel.night_audits.find_by(business_date: business_date)
+
+    expect(approved_audit).to be_present
+    expect(approved_audit.status).to eq("running")
+    expect(approved_audit.trigger_mode).to eq("scheduled")
+
+    expect(live_audit).to be_present
+    expect(live_audit.status).to eq("running")
+    expect(live_audit.trigger_mode).to eq("scheduled")
+
+    expect(HotelOps::RunNightAuditJob).to have_received(:perform_later).with(approved_audit.id, nil)
+    expect(HotelOps::RunNightAuditJob).to have_received(:perform_later).with(live_audit.id, nil)
   end
 
   it "continues when one hotel raises" do
     failing_hotel = create(:hotel, status: "approved")
     succeeding_hotel = create(:hotel, status: "live")
 
-    allow(HotelOps::RunNightAudit).to receive(:new) do |hotel:, **|
-      if hotel == failing_hotel
-        instance_double(HotelOps::RunNightAudit).tap do |runner|
-          allow(runner).to receive(:call).and_raise(StandardError, "boom")
-        end
+    allow_any_instance_of(NightAudit).to receive(:save).and_wrap_original do |original_method, *args|
+      instance = original_method.receiver
+      if instance.hotel_id == failing_hotel.id
+        raise StandardError, "boom"
       else
-        instance_double(HotelOps::RunNightAudit, call: true)
+        original_method.call(*args)
       end
     end
+    allow(HotelOps::RunNightAuditJob).to receive(:perform_later)
 
     expect { described_class.perform_now(business_date) }.not_to raise_error
-    expect(HotelOps::RunNightAudit).to have_received(:new).twice
+    expect(succeeding_hotel.night_audits.find_by(business_date: business_date)).to be_present
+    expect(HotelOps::RunNightAuditJob).to have_received(:perform_later).once
   end
 
-  it "uses each hotel's latest closable business date after business end" do
+  it "uses each hotel's latest closable business date after business end plus grace period" do
     hotel = create(:hotel, status: "live", time_zone: "Kuala Lumpur", business_starts_at: "08:00", business_ends_at: "02:00")
-    runner = instance_double(HotelOps::RunNightAudit, call: true)
-    allow(HotelOps::RunNightAudit).to receive(:new).and_return(runner)
+    allow(HotelOps::RunNightAuditJob).to receive(:perform_later)
 
-    travel_to(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 10)) do
+    travel_to(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 35)) do
       described_class.perform_now
     end
 
-    expect(HotelOps::RunNightAudit).to have_received(:new).with(
-      hotel: hotel,
-      business_date: Date.new(2026, 5, 18),
-      performed_by_user: nil,
-      trigger_mode: "scheduled"
-    )
+    audit = hotel.night_audits.find_by(business_date: Date.new(2026, 5, 18))
+    expect(audit).to be_present
+    expect(HotelOps::RunNightAuditJob).to have_received(:perform_later).with(audit.id, nil)
   end
 
-  it "does not close yesterday before hotel business end" do
+  it "does not close yesterday before hotel business end plus grace period" do
     hotel = create(:hotel, status: "live", time_zone: "Kuala Lumpur", business_starts_at: "08:00", business_ends_at: "02:00")
-    runner = instance_double(HotelOps::RunNightAudit, call: true)
-    allow(HotelOps::RunNightAudit).to receive(:new).and_return(runner)
+    allow(HotelOps::RunNightAuditJob).to receive(:perform_later)
 
-    travel_to(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 1, 59)) do
+    travel_to(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 25)) do
       described_class.perform_now
     end
 
-    expect(HotelOps::RunNightAudit).to have_received(:new).with(
-      hotel: hotel,
-      business_date: Date.new(2026, 5, 17),
-      performed_by_user: nil,
-      trigger_mode: "scheduled"
-    )
+    yesterday_audit = hotel.night_audits.find_by(business_date: Date.new(2026, 5, 18))
+    day_before_yesterday_audit = hotel.night_audits.find_by(business_date: Date.new(2026, 5, 17))
+    
+    expect(yesterday_audit).to be_nil
+    expect(day_before_yesterday_audit).to be_present
+    expect(HotelOps::RunNightAuditJob).to have_received(:perform_later).with(day_before_yesterday_audit.id, nil)
   end
 end

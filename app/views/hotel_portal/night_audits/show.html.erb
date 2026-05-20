@@ -1,3 +1,9 @@
+<% if @night_audit.status == "running" %>
+  <% content_for :head do %>
+    <meta http-equiv="refresh" content="5">
+  <% end %>
+<% end %>
+
 <% content_for :breadcrumbs do %>
   <div class="flex items-center gap-x-2">
     <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
@@ -12,6 +18,7 @@
   when "completed" then "border-emerald-200 bg-emerald-50 text-emerald-700"
   when "blocked" then "border-amber-200 bg-amber-50 text-amber-700"
   when "failed" then "border-red-200 bg-red-50 text-red-700"
+  when "running" then "border-blue-200 bg-blue-50 text-blue-700"
   else "border-slate-200 bg-slate-50 text-slate-700"
 end %>
 
@@ -31,6 +38,21 @@ end %>
       <%= link_to "Back to Night Audit", hotel_night_audits_path(current_hotel), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
     </div>
   </div>
+
+  <% if @night_audit.status == "running" %>
+    <div class="mx-4 md:mx-0 rounded-2xl border border-blue-200 bg-blue-50/50 p-6 shadow-sm flex items-center gap-4 animate-pulse">
+      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
+        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+      <div>
+        <h3 class="text-sm font-bold text-blue-950">Night Audit in Progress</h3>
+        <p class="text-xs font-medium text-blue-700 mt-1">Processing due-out checkouts, no-show candidates, and nightly room/tax charges in the background. This page will refresh automatically.</p>
+      </div>
+    </div>
+  <% end %>
 
   <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4 mx-4 md:mx-0">
     <div class="p-6 md:border-r md:border-slate-200 md:p-8">

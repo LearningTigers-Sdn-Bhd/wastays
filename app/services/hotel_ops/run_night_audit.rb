@@ -14,25 +14,26 @@ module HotelOps
       night_audit = @hotel.night_audits.find_or_initialize_by(business_date: @business_date)
       return Result.new(success?: false, error: "Night audit has already been completed for this date.", night_audit: night_audit) if night_audit.completed?
 
-      ActiveRecord::Base.transaction do
-        night_audit.assign_attributes(
-          status: "running",
-          trigger_mode: @trigger_mode,
-          started_at: Time.current,
-          completed_at: nil,
-          performed_by_user: @performed_by_user,
-          notes: @notes,
-          force_closed: false
-        )
-        night_audit.save!
+      night_audit.assign_attributes(
+        status: "running",
+        trigger_mode: @trigger_mode,
+        started_at: Time.current,
+        completed_at: nil,
+        performed_by_user: @performed_by_user,
+        notes: @notes,
+        force_closed: false
+      )
+      night_audit.save!
 
-        log_event(night_audit, "process_started", "Night audit process started for business date #{@business_date}")
+      log_event(night_audit, "process_started", "Night audit process started for business date #{@business_date}")
 
-        pre_evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :pre_close).call
+      pre_evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :pre_close).call
 
-        if blocked?(pre_evaluation)
-          log_blockers(night_audit, pre_evaluation[:blocked_details])
-          log_exceptions(night_audit, pre_evaluation[:exceptions])
+      if blocked?(pre_evaluation)
+        log_blockers(night_audit, pre_evaluation[:blocked_details])
+        log_exceptions(night_audit, pre_evaluation[:exceptions])
+
+        ActiveRecord::Base.transaction do
           persist_financial_summary(night_audit, calculate_financial_totals)
 
           night_audit.update!(
@@ -42,22 +43,25 @@ module HotelOps
             blocked_details: pre_evaluation[:blocked_details],
             exceptions: pre_evaluation[:exceptions]
           )
-
-          log_event(night_audit, "blocker_found", "Night audit process stopped before posting due to blockers")
-          next
         end
 
-        Bookings::ProcessNoShows.call(night_audit: night_audit, user: @performed_by_user)
-        Folios::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
+        log_event(night_audit, "blocker_found", "Night audit process stopped before posting due to blockers")
+        return Result.new(success?: night_audit.completed?, night_audit: night_audit)
+      end
 
-        # Use the evaluation service to get blockers and exceptions
-        evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :post_close).call
+      Bookings::ProcessNoShows.call(night_audit: night_audit, user: @performed_by_user)
+      Folios::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
 
-        log_blockers(night_audit, evaluation[:blocked_details])
-        log_exceptions(night_audit, evaluation[:exceptions])
+      # Use the evaluation service to get blockers and exceptions
+      evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :post_close).call
 
-        # Calculate and persist financial summary
-        financial_totals = calculate_financial_totals
+      log_blockers(night_audit, evaluation[:blocked_details])
+      log_exceptions(night_audit, evaluation[:exceptions])
+
+      # Calculate and persist financial summary
+      financial_totals = calculate_financial_totals
+
+      ActiveRecord::Base.transaction do
         persist_financial_summary(night_audit, financial_totals)
 
         night_audit.update!(
@@ -67,10 +71,10 @@ module HotelOps
           blocked_details: evaluation[:blocked_details],
           exceptions: evaluation[:exceptions]
         )
-
-        final_status = night_audit.status
-        log_event(night_audit, final_status == "completed" ? "completed" : "blocker_found", "Night audit process finished with status: #{final_status}")
       end
+
+      final_status = night_audit.status
+      log_event(night_audit, final_status == "completed" ? "completed" : "blocker_found", "Night audit process finished with status: #{final_status}")
 
       Result.new(success?: night_audit.completed?, night_audit: night_audit)
     rescue StandardError => e

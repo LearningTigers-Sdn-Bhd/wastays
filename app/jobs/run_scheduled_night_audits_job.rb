@@ -11,13 +11,23 @@ class RunScheduledNightAuditsJob < ApplicationJob
   private
 
   def run_for_hotel(hotel, business_date)
-    HotelOps::RunNightAudit.new(
-      hotel: hotel,
+    return if hotel.night_audits.exists?(business_date: business_date)
+
+    night_audit = hotel.night_audits.build(
       business_date: business_date,
+      status: "running",
+      trigger_mode: "scheduled",
+      started_at: Time.current,
+      completed_at: nil,
       performed_by_user: nil,
-      trigger_mode: "scheduled"
-    ).call
+      force_closed: false
+    )
+    if night_audit.save
+      HotelOps::RunNightAuditJob.perform_later(night_audit.id, nil)
+    else
+      Rails.logger.error("Scheduled night audit could not be created for Hotel #{hotel.id}: #{night_audit.errors.full_messages.join(', ')}")
+    end
   rescue StandardError => e
-    Rails.logger.error("Scheduled night audit failed for Hotel #{hotel.id}: #{e.message}")
+    Rails.logger.error("Scheduled night audit trigger failed for Hotel #{hotel.id}: #{e.message}")
   end
 end

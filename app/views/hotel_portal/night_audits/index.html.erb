@@ -9,7 +9,10 @@
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
   <div class="px-4 md:px-0 mt-5">
     <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Night Audit</h1>
-    <p class="mt-1 text-sm font-medium text-slate-600">Night audit runs automatically every day at 6:00 AM. Use manual run only when needed.</p>
+    <p class="mt-1 text-sm font-medium text-slate-600">
+      Night audit runs automatically 30 minutes after the hotel's business day ends (defined by <strong>Business Day Ends At</strong>). 
+      You can adjust this configuration in the <%= link_to "Hotel Settings", hotel_settings_path(current_hotel, tab: "general"), class: "underline font-semibold text-slate-900 hover:text-slate-700" %>.
+    </p>
   </div>
 
   <div class="px-4 md:px-0">

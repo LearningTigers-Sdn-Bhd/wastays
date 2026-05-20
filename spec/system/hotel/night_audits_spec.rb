@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Hotel night audits", type: :system do
+  include ActiveJob::TestHelper
+
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "hotel_staff", email: "frontdesk@example.com") }
   let(:hotel) { create(:hotel, account: account, status: "approved") }
@@ -49,12 +51,14 @@ RSpec.describe "Hotel night audits", type: :system do
     expect(page).to have_link("Night Audit", href: hotel_night_audits_path(hotel))
     expect(page).to have_field("Business Date", with: business_date.strftime("%Y-%m-%d"))
 
-    within("[data-testid='manual-night-audit-form']") do
-      fill_in "Notes", with: "Front desk close"
-      click_button "Run Audit"
+    perform_enqueued_jobs do
+      within("[data-testid='manual-night-audit-form']") do
+        fill_in "Notes", with: "Front desk close"
+        click_button "Run Audit"
+      end
     end
 
-    expect(page).to have_content("Night audit completed successfully.")
+    expect(page).to have_content("Night audit has been scheduled in the background. Please wait while it processes.")
     expect(page).to have_content("Night Audit #{business_date.strftime('%d %b %Y')}")
     expect(page).to have_content("Completed")
     expect(page).to have_content("Payment Summary")
@@ -74,12 +78,14 @@ RSpec.describe "Hotel night audits", type: :system do
 
     visit hotel_night_audits_path(hotel)
 
-    within("[data-testid='manual-night-audit-form']") do
-      fill_in "Business Date", with: today_kl.to_s
-      click_button "Run Audit"
+    perform_enqueued_jobs do
+      within("[data-testid='manual-night-audit-form']") do
+        fill_in "Business Date", with: today_kl.to_s
+        click_button "Run Audit"
+      end
     end
 
-    expect(page).to have_content("Night audit completed with blockers.")
+    expect(page).to have_content("Night audit has been scheduled in the background. Please wait while it processes.")
     expect(page).to have_content("Blocked Details")
     expect(page).to have_content("Aisha Tan")
     expect(page).to have_content("Due out today but still not checked out")

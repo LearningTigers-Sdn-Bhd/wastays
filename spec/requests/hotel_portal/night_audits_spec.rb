@@ -2,6 +2,7 @@ require "rails_helper"
 
 RSpec.describe "HotelPortal::NightAudits", type: :request do
   include ActiveSupport::Testing::TimeHelpers
+  include ActiveJob::TestHelper
 
   let(:account) { create(:account) }
   let(:hotel) do
@@ -36,17 +37,20 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
     business_date = today_kl - 1.day
 
-    post hotel_night_audits_path(hotel), params: {
-      night_audit: {
-        business_date: business_date.to_s,
-        notes: "Run now"
+    perform_enqueued_jobs do
+      post hotel_night_audits_path(hotel), params: {
+        night_audit: {
+          business_date: business_date.to_s,
+          notes: "Run now"
+        }
       }
-    }
+    end
 
     expect(response).to redirect_to(hotel_night_audit_path(hotel, NightAudit.last))
-    expect(flash[:notice]).to eq("Night audit completed successfully.")
+    expect(flash[:notice]).to eq("Night audit has been scheduled in the background. Please wait while it processes.")
     expect(NightAudit.last.business_date).to eq(business_date)
     expect(NightAudit.last.trigger_mode).to eq("manual")
+    expect(NightAudit.last).to be_completed
   end
 
   it "defaults manual business date to yesterday when omitted" do
@@ -56,7 +60,9 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     travel_to(kl_zone.local(2026, 5, 19, 10, 10)) do
       # At 10:10 AM on May 19, May 18 should be the latest closable date
       expect(hotel.latest_closable_business_date).to eq(Date.new(2026, 5, 18))
-      post hotel_night_audits_path(hotel), params: { night_audit: { notes: "Default run" } }
+      perform_enqueued_jobs do
+        post hotel_night_audits_path(hotel), params: { night_audit: { notes: "Default run" } }
+      end
     end
 
     expect(NightAudit.last.business_date).to eq(Date.new(2026, 5, 18))
@@ -91,14 +97,16 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
       checked_in_at: 1.day.ago)
 
     today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
-    post hotel_night_audits_path(hotel), params: {
-      night_audit: {
-        business_date: today_kl.to_s
+    perform_enqueued_jobs do
+      post hotel_night_audits_path(hotel), params: {
+        night_audit: {
+          business_date: today_kl.to_s
+        }
       }
-    }
+    end
 
     expect(response).to redirect_to(hotel_night_audit_path(hotel, NightAudit.last))
-    expect(flash[:alert]).to eq("Night audit completed with blockers.")
+    expect(flash[:notice]).to eq("Night audit has been scheduled in the background. Please wait while it processes.")
     expect(NightAudit.last).to be_blocked
   end
 end
