@@ -3,9 +3,9 @@ require 'rails_helper'
 RSpec.describe "HotelPortal::Reports", type: :request do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user) }
+  let(:role) { create(:role, account: hotel.account) }
 
   before do
-    role = create(:role, account: hotel.account)
     [ "view_reports", "view_payouts" ].each do |slug|
       permission = Permission.find_by(slug: slug) || create(:permission, name: slug.titleize, slug: slug)
       role.permissions << permission
@@ -302,6 +302,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get daily_revenue_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
+    end
+
+    it "requires view_reports permission" do
+      role.permissions.delete(Permission.find_by!(slug: "view_reports"))
+
+      get daily_revenue_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
     end
   end
 

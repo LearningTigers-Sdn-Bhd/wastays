@@ -2,7 +2,7 @@
 
 ## Status
 
-Completed foundation with category and staff-workflow gaps.
+Completed foundation with remaining category expansion and reporting gaps.
 
 ## Purpose
 
@@ -23,9 +23,16 @@ Stores immutable folio ledger entries for guest charges, credits, payments, refu
 - Posted amounts are signed according to transaction type and category rules.
 - Insertions pass through posting guard checks and record financial audit events.
 - Staff posting exists for operational folio actions.
+- Staff posting is split by granular permissions:
+  - `post_folio_charges` for manual charge postings.
+  - `post_folio_payments` for manual cash payment postings.
+  - `execute_folio_refunds` for manual refund postings.
+  - `post_folio_adjustments` for standard adjustments, discounts, and other adjustments.
+  - `post_folio_corrections` for correction postings and reversals.
+  - `post_folio_write_offs` for write-off postings.
+- The legacy `post_folio_transactions` permission is no longer used for authorization.
 
 ## Known Follow-Ups
 
 - Expand staff posting categories if operations require manual Room, Tax, F&B, and Other postings.
-- Add granular permissions for write-offs, refunds, corrections, and closed-date overrides.
 - Ensure every valid transaction category has a default and hotel-specific GL mapping path.

@@ -25,6 +25,8 @@ Turns closed business-day activity into financial summaries, journal batches, an
 
 - Successful night audit can create journal batches for accounting reconciliation.
 - Daily revenue, occupancy, outstanding balance, arrivals/departures, folio ledger, and journal batch exports exist.
+- `daily_revenue` is protected by `view_reports` authorization.
+- Journal batch creation fails fast when any included transaction is missing a GL code.
 - Journal batch CSV export supports external accounting workflows.
 
 ## Known Follow-Ups

@@ -8,7 +8,12 @@ This roadmap outlines the remaining priorities required to transition from a fun
 **Objective**: Introduce professional-grade financial oversight and fraud prevention.
 
 - **Permission Segregation**: 
-  - Moving away from broad "Financial" access to granular controls (e.g., separate permissions for "Post Write-Off", "Execute Refund", and "Date Override").
+  - Completed May 20, 2026: folio posting no longer uses the broad `post_folio_transactions` permission.
+  - Staff folio actions are now split into `post_folio_charges`, `post_folio_payments`, `execute_folio_refunds`, `post_folio_adjustments`, `post_folio_corrections`, and `post_folio_write_offs`.
+  - Closed business-date override remains separately controlled by `override_financial_date_lock`.
+- **Completed Financial Hardening**:
+  - Completed May 20, 2026: `daily_revenue` report requests now require `view_reports` permission.
+  - Completed May 20, 2026: journal batch creation fails fast when folio transactions are missing GL codes instead of excluding them from the batch.
 - **Financial Observability**: 
   - Automated alerts for "Unbalanced Folios" or "Audit Sync Lags."
   - Monitoring for excessive usage of closed-date overrides.

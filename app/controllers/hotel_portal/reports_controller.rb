@@ -3,7 +3,7 @@ require "csv"
 class HotelPortal::ReportsController < HotelPortal::BaseController
   include FinancialFiltering
 
-  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy outstanding_balance arrivals_departures folio_ledger journal_batches]
+  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue outstanding_balance arrivals_departures folio_ledger journal_batches]
   before_action :authorize_view_payouts!, only: %i[payouts]
 
   def index

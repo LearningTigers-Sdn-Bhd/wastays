@@ -20,4 +20,6 @@ This folder contains the operational documentation for booking lifecycle, folios
 
 ## Readiness Note
 
-The foundation is substantially implemented. Full operational readiness still depends on closing the items in `current-progress-roadmaps/`, especially granular financial permissions, financial observability, Manager Flash Report, Deposit Liability Report, blocker dashboard UX, late-checkout automation, and refund approval workflows.
+The foundation is substantially implemented. Full operational readiness still depends on closing the items in `current-progress-roadmaps/`, especially financial observability, Manager Flash Report, Deposit Liability Report, blocker dashboard UX, late-checkout automation, and refund approval workflows.
+
+Recent financial hardening completed on May 20, 2026: `daily_revenue` report access is covered by `view_reports`, and journal batch creation now fails fast when business-day folio transactions are missing GL codes instead of silently omitting them.

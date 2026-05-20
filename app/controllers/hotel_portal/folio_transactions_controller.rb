@@ -2,13 +2,25 @@
 
 module HotelPortal
   class FolioTransactionsController < BaseController
-    before_action :authorize_post_folio_transactions!
     before_action :set_booking
+
+    FOLIO_POSTING_PERMISSIONS = {
+      [ "charge", "other" ] => "post_folio_charges",
+      [ "payment", "cash" ] => "post_folio_payments",
+      [ "payment", "refund" ] => "execute_folio_refunds",
+      [ "adjustment", "adjustment" ] => "post_folio_adjustments",
+      [ "adjustment", "discount" ] => "post_folio_adjustments",
+      [ "adjustment", "other" ] => "post_folio_adjustments",
+      [ "adjustment", "correction" ] => "post_folio_corrections",
+      [ "adjustment", "write_off" ] => "post_folio_write_offs"
+    }.freeze
 
     def create
       unless @booking.booking_folio
         return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
       end
+
+      authorize_folio_permission!(permission_for_folio_posting) if staff_posting_category?
 
       result = Folios::PostStaffTransaction.call(
         folio: @booking.booking_folio,
@@ -31,6 +43,8 @@ module HotelPortal
       unless @booking.booking_folio
         return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
       end
+
+      authorize_folio_permission!("post_folio_corrections")
 
       transaction = @booking.booking_folio.folio_transactions.find(params[:id])
       result = Folios::ReverseTransaction.call(
@@ -59,8 +73,24 @@ module HotelPortal
       end
     end
 
-    def authorize_post_folio_transactions!
-      raise Pundit::NotAuthorizedError unless current_user.has_permission?("post_folio_transactions", hotel: current_hotel)
+    def authorize_folio_permission!(permission)
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?(permission, hotel: current_hotel)
+    end
+
+    def permission_for_folio_posting
+      FOLIO_POSTING_PERMISSIONS[folio_posting_key]
+    end
+
+    def staff_posting_category?
+      transaction_type, category = folio_posting_key
+      category.in?(Folios::PostStaffTransaction::ALLOWED_CATEGORIES.fetch(transaction_type, []))
+    end
+
+    def folio_posting_key
+      [
+        folio_transaction_params[:transaction_type].to_s,
+        folio_transaction_params[:category].to_s
+      ]
     end
 
     def set_booking

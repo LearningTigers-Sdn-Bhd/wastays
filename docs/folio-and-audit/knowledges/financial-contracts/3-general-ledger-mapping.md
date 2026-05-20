@@ -23,10 +23,10 @@ Maps folio transaction categories to accounting GL codes and supports hotel-spec
 
 - Hotels can manage GL mappings for supported financial categories.
 - Journal batches can be created from business-day financial activity.
+- Journal batch creation fails fast if any business-day folio transaction is missing a GL code.
 - Journal batch CSV export supports accounting reconciliation.
 
 ## Known Follow-Ups
 
 - Seed default mappings for every valid folio transaction category.
-- Update folio ledger export to use transaction or hotel-specific GL mappings instead of static codes.
 - Add tests that fail when a valid category lacks a default GL mapping.

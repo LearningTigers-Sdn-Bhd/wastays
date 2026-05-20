@@ -13,6 +13,7 @@ This document records the completed milestones from the Operational Maturation r
 - **Journal Batching**: 
   - Automated creation of Journal Batches during the Night Audit process.
   - Implemented CSV export for streamlined reconciliation with external accounting software.
+  - Journal batch creation now fails fast when business-day folio transactions are missing GL codes, preventing silent omission from accounting exports.
 
 ---
 
@@ -25,6 +26,7 @@ This document records the completed milestones from the Operational Maturation r
 - **Daily Revenue Reporting**:
   - Implementation of `DailyRevenueReport` with support for PDF, CSV, and Excel exports.
   - Revenue is broken down by category and department as specified.
+  - `daily_revenue` access is protected by the same `view_reports` authorization as the rest of the reports package.
 
 ---
 
@@ -49,3 +51,23 @@ This document records the completed milestones from the Operational Maturation r
 - **Concurrency Safety**:
   - Business-date creation and next-date opening reuse existing rows when safe.
   - Existing locked next dates cause a safe audit failure instead of being overwritten.
+
+---
+
+## 5. Granular Folio Financial Permissions
+**Status**: Completed May 20, 2026
+
+- **Broad Permission Replacement**:
+  - Replaced `post_folio_transactions` authorization with granular folio permissions.
+  - Existing production role grants are migrated to the new permission set and the legacy permission is removed.
+- **Permission Split**:
+  - `post_folio_charges` controls manual folio charges.
+  - `post_folio_payments` controls manual cash payments.
+  - `execute_folio_refunds` controls manual refund postings.
+  - `post_folio_adjustments` controls standard adjustments, discounts, and other adjustments.
+  - `post_folio_corrections` controls correction postings and transaction reversals.
+  - `post_folio_write_offs` controls write-off postings.
+- **Role Defaults**:
+  - Hotel Owner and General Manager receive the full granular folio permission set.
+  - Front Desk receives only charge and payment posting permissions by default.
+  - Closed-date override remains separately controlled by `override_financial_date_lock`.

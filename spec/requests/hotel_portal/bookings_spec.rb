@@ -3,14 +3,19 @@ require 'rails_helper'
 RSpec.describe "HotelPortal::Bookings", type: :request do
   let(:hotel) { create(:hotel, status: 'approved') }
   let(:user) { create(:user) }
+  let(:role) { create(:role, account: hotel.account) }
   let(:booking) { create(:booking, hotel: hotel) }
 
   before do
-    role = create(:role, account: hotel.account)
     role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings'))
     role.permissions << (Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings'))
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
+  end
+
+  def grant_permission(slug)
+    permission = Permission.find_or_create_by!(slug: slug) { |record| record.name = slug.humanize }
+    role.permissions << permission unless role.permissions.exists?(permission.id)
   end
 
   describe "GET /index" do
@@ -78,6 +83,33 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Broken AC")
       expect(response.body).to include("pending")
+    end
+
+    it "renders folio actions for matching granular permissions" do
+      grant_permission("post_folio_payments")
+      grant_permission("post_folio_charges")
+      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+
+      get folio_hotel_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Post Payment")
+      expect(response.body).to include("Post Charge")
+      expect(response.body).not_to include("Record Refund")
+      expect(response.body).not_to include("Post Adjustment")
+    end
+
+    it "filters folio adjustment categories by granular permission" do
+      grant_permission("post_folio_write_offs")
+      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+
+      get folio_hotel_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Post Adjustment")
+      expect(response.body).to include('value="write_off"')
+      expect(response.body).not_to include('value="correction"')
+      expect(response.body).not_to include('value="discount"')
     end
   end
 

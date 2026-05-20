@@ -27,9 +27,16 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     post reverse_hotel_booking_folio_transaction_path(hotel, booking, transaction), params: { folio_transaction: params }
   end
 
-  context "with post_folio_transactions permission" do
+  context "with granular folio permissions" do
     before do
-      grant_permission("post_folio_transactions")
+      %w[
+        post_folio_charges
+        post_folio_payments
+        execute_folio_refunds
+        post_folio_adjustments
+        post_folio_corrections
+        post_folio_write_offs
+      ].each { |slug| grant_permission(slug) }
       folio
     end
 
@@ -56,6 +63,14 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       transaction = folio.folio_transactions.payment.last
       expect(transaction.category).to eq("refund")
       expect(transaction.amount).to eq(-50.0)
+    end
+
+    it "posts a write-off adjustment" do
+      expect {
+        post_transaction(transaction_type: "adjustment", category: "write_off", amount: "50.00", description: "Manager write-off", posting_date: Date.current)
+      }.to change { folio.folio_transactions.adjustment.count }.by(1)
+
+      expect(folio.folio_transactions.last.category).to eq("write_off")
     end
 
     it "rejects disallowed manual charge categories" do
@@ -139,7 +154,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     end
   end
 
-  it "requires post_folio_transactions permission" do
+  it "requires the matching granular permission to post" do
     folio
 
     expect {
@@ -150,7 +165,19 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     expect(flash[:alert]).to eq("You are not authorized to perform this action.")
   end
 
-  it "requires post_folio_transactions permission to reverse" do
+  it "does not allow the legacy post_folio_transactions permission to post" do
+    grant_permission("post_folio_transactions")
+    folio
+
+    expect {
+      post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
+    }.not_to change(FolioTransaction, :count)
+
+    expect(response).to redirect_to(root_path)
+    expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+  end
+
+  it "requires post_folio_corrections permission to reverse" do
     folio
     transaction = create(:folio_transaction, booking_folio: folio)
 
@@ -162,8 +189,32 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     expect(flash[:alert]).to eq("You are not authorized to perform this action.")
   end
 
+  it "requires execute_folio_refunds permission for manual refunds" do
+    grant_permission("post_folio_payments")
+    folio
+
+    expect {
+      post_transaction(transaction_type: "payment", category: "refund", amount: "50.00", description: "Refund", posting_date: Date.current)
+    }.not_to change(FolioTransaction, :count)
+
+    expect(response).to redirect_to(root_path)
+    expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+  end
+
+  it "requires post_folio_write_offs permission for write-offs" do
+    grant_permission("post_folio_adjustments")
+    folio
+
+    expect {
+      post_transaction(transaction_type: "adjustment", category: "write_off", amount: "50.00", description: "Write-off", posting_date: Date.current)
+    }.not_to change(FolioTransaction, :count)
+
+    expect(response).to redirect_to(root_path)
+    expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+  end
+
   it "redirects with an error when the booking has no folio" do
-    grant_permission("post_folio_transactions")
+    grant_permission("post_folio_payments")
 
     post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
 

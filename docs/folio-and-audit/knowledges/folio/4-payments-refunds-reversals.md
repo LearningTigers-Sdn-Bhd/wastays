@@ -22,9 +22,10 @@ Keeps money movement auditable by recording gateway payments, manual payments, r
 - Refunds are recorded as folio transactions instead of mutating original payment entries.
 - Reversals create explicit reversing transactions and preserve the original transaction.
 - Reversal and refund actions flow through audit controls.
+- Manual refunds require `execute_folio_refunds`.
+- Reversals require `post_folio_corrections`.
 
 ## Known Follow-Ups
 
 - Add multi-stage approval for high-value refunds.
 - Link refund ledger entries to original payment gateway identifiers in staff-facing reconciliation views.
-- Add granular refund execution permissions.

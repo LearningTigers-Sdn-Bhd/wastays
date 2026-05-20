@@ -21,7 +21,12 @@ module Financials
         transactions = FolioTransaction.joins(:booking_folio)
                                        .where(booking_folios: { hotel_id: @hotel.id })
                                        .where(posting_date: @business_date)
-                                       .where.not(gl_code: nil)
+
+        missing_gl_count = transactions.where(gl_code: nil).count
+        if missing_gl_count.positive?
+          batch.errors.add(:base, "Cannot create journal batch: #{missing_gl_count} folio transactions are missing GL codes")
+          raise ActiveRecord::RecordInvalid, batch
+        end
 
         grouped = transactions.group(:gl_code, :transaction_type).sum(:amount)
 

@@ -104,5 +104,22 @@ RSpec.describe Financials::CreateJournalBatch, type: :service do
       expect(JournalBatch.count).to eq(1)
       expect(JournalBatchEntry.count).to eq(4)
     end
+
+    it 'fails when a transaction for the business date has no GL code' do
+      create(:folio_transaction,
+        booking_folio: folio,
+        transaction_type: 'charge',
+        category: 'accommodation',
+        amount: 50.0,
+        posting_date: business_date
+      ).update_column(:gl_code, nil)
+
+      expect {
+        described_class.call(hotel: hotel, business_date: business_date)
+      }.to raise_error(ActiveRecord::RecordInvalid, /missing GL codes/)
+
+      expect(JournalBatch.count).to eq(0)
+      expect(JournalBatchEntry.count).to eq(0)
+    end
   end
 end
