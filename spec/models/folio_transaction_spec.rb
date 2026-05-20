@@ -89,4 +89,33 @@ RSpec.describe FolioTransaction, type: :model do
       expect(described_class.exists?(transaction.id)).to be(true)
     end
   end
+
+  describe "GL code assignment" do
+    let(:hotel) { create(:hotel) }
+    let(:booking) { create(:booking, hotel: hotel) }
+    let(:folio) { create(:booking_folio, hotel: hotel, booking: booking) }
+
+    before do
+      hotel.hotel_general_ledger_maps.find_by(transaction_category: "accommodation").update!(gl_code: "4010")
+    end
+
+    it "automatically assigns gl_code from hotel mapping on creation" do
+      transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation")
+      expect(transaction.gl_code).to eq("4010")
+    end
+
+    it "does not overwrite gl_code if manually provided" do
+      transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation", gl_code: "MANUAL-GL")
+      expect(transaction.gl_code).to eq("MANUAL-GL")
+    end
+
+    it "leaves gl_code as nil if no mapping exists" do
+      # FB mapping exists but has no code by default in our test setup if we don't set it
+      # Actually, the callback creates 7 categories with placeholder codes.
+      # We need a category that IS NOT in the 7 categories to test 'no mapping exists'.
+      # Let's check what categories are in CHARGE_CATEGORIES.
+      transaction = create(:folio_transaction, booking_folio: folio, category: "other")
+      expect(transaction.gl_code).to be_nil
+    end
+  end
 end

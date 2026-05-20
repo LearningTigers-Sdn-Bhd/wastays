@@ -14,10 +14,13 @@ class FolioTransaction < ApplicationRecord
   belongs_to :user, optional: true
   belongs_to :reversal_of_transaction, class_name: "FolioTransaction", optional: true
   belongs_to :voided_by_transaction, class_name: "FolioTransaction", optional: true
+  has_many :financial_audit_events, dependent: :restrict_with_error
   has_one :reversal_transaction,
     class_name: "FolioTransaction",
     foreign_key: :reversal_of_transaction_id,
     inverse_of: :reversal_of_transaction
+
+  delegate :hotel, to: :booking_folio, allow_nil: true
 
   enum :transaction_type, {
     charge: "charge",
@@ -34,6 +37,7 @@ class FolioTransaction < ApplicationRecord
   validate :amount_sign_matches_transaction_type
   validate :reversal_reference_is_valid
 
+  before_validation :assign_gl_code, on: :create
   before_update :prevent_immutable_changes
   before_destroy :prevent_destroy
 
@@ -50,6 +54,13 @@ class FolioTransaction < ApplicationRecord
   end
 
   private
+
+  def assign_gl_code
+    return if gl_code.present? || category.blank? || hotel.blank?
+
+    mapping = hotel.hotel_general_ledger_maps.find_by(transaction_category: category)
+    self.gl_code = mapping&.gl_code
+  end
 
   def category_allowed_for_transaction_type
     return if transaction_type.blank? || category.blank?
