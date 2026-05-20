@@ -29,7 +29,7 @@ RSpec.describe Bookings::RecordAuditLog do
     end
 
     it "extracts values from previous_changes if not provided" do
-      booking.update(status: "confirmed") # This sets previous_changes
+      booking.transition_status_to!("confirmed", event: "confirm") # This sets previous_changes
 
       expect {
         described_class.call(auditable: booking, user: user)

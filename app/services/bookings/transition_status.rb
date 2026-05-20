@@ -76,10 +76,13 @@ module Bookings
             @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => room_number)
           end
 
-          @booking.update!(
-            status: "checked_in",
-            checked_in_at: @timestamp,
-            guest_registration_number: guest_reg
+          @booking.transition_status_to!(
+            "checked_in",
+            event: was_no_show ? "reinstate" : "check_in",
+            attributes: {
+              checked_in_at: @timestamp,
+              guest_registration_number: guest_reg
+            }
           )
 
           Folios::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
@@ -128,7 +131,7 @@ module Bookings
             next
           end
 
-          @booking.update!(status: "completed", checked_out_at: @timestamp)
+          @booking.transition_status_to!("completed", event: "check_out", attributes: { checked_out_at: @timestamp })
           Bookings::RecordAuditLog.call(
             auditable: @booking,
             user: @user,
@@ -173,7 +176,7 @@ module Bookings
           end
 
           previous_status = @booking.status
-          @booking.update!(status: "cancelled")
+          @booking.transition_status_to!("cancelled", event: "cancel")
           InventoryManager.new(@booking).release if release_inventory_on_cancel?(previous_status)
           Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "cancel")
           transitioned = true

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Booking < ApplicationRecord
+  include Bookings::StatusLifecycle
+
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
   belongs_to :payout_batch, optional: true
@@ -19,7 +21,7 @@ class Booking < ApplicationRecord
   has_many :notification_deliveries, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :nullify
-  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent
+  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :status_transition_event
 
   def guest_government_id
     @guest_government_id.presence ||
@@ -44,6 +46,7 @@ class Booking < ApplicationRecord
   ].freeze
 
   validates :status, presence: true, inclusion: { in: STATUSES }
+  validate :status_transition_must_be_allowed, if: :status_changed_on_persisted_record?
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
   validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_nil: true }
@@ -194,6 +197,13 @@ class Booking < ApplicationRecord
     booking_folio&.outstanding_balance || 0.0
   end
 
+  def transition_status_to!(new_status, event:, attributes: {})
+    self.status_transition_event = event
+    update!(attributes.merge(status: new_status))
+  ensure
+    self.status_transition_event = nil
+  end
+
   def tax_total
     Array(tax_lines).sum { |t| t["amount"].to_f }.round(2)
   end
@@ -234,6 +244,20 @@ class Booking < ApplicationRecord
   end
 
   private
+
+  def status_changed_on_persisted_record?
+    persisted? && will_save_change_to_status?
+  end
+
+  def status_transition_must_be_allowed
+    from = status_in_database
+    to = status
+    event = status_transition_event
+
+    return if Bookings::StatusLifecycle.valid_transition?(from: from, to: to, event: event)
+
+    errors.add(:status, Bookings::StatusLifecycle.transition_error(from: from, to: to, event: event))
+  end
 
   def format_number(number)
     return nil unless number

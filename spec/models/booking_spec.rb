@@ -62,6 +62,70 @@ RSpec.describe Booking, type: :model do
     end
   end
 
+  describe "status lifecycle" do
+    def expect_transition(from:, to:, event:)
+      booking = create(:booking, status: from)
+
+      expect {
+        booking.transition_status_to!(to, event: event)
+      }.to change { booking.reload.status }.from(from).to(to)
+    end
+
+    it "allows valid lifecycle transitions" do
+      expect_transition(from: "pending", to: "confirmed", event: "confirm")
+      expect_transition(from: "pending", to: "cancelled", event: "cancel")
+      expect_transition(from: "confirmed", to: "checked_in", event: "check_in")
+      expect_transition(from: "confirmed", to: "cancelled", event: "cancel")
+      expect_transition(from: "confirmed", to: "no_show", event: "mark_no_show")
+      expect_transition(from: "confirmed", to: "overbooked", event: "mark_overbooked")
+      expect_transition(from: "overbooked", to: "confirmed", event: "resolve_overbooking")
+      expect_transition(from: "overbooked", to: "cancelled", event: "cancel")
+      expect_transition(from: "checked_in", to: "completed", event: "check_out")
+      expect_transition(from: "no_show", to: "checked_in", event: "reinstate")
+    end
+
+    it "rejects direct persisted status updates without an event" do
+      booking = create(:booking, status: "confirmed")
+
+      expect(booking.update(status: "checked_in")).to be(false)
+      expect(booking.errors[:status]).to include("status transition event is required")
+      expect(booking.reload.status).to eq("confirmed")
+    end
+
+    it "rejects status changes with the wrong event" do
+      booking = create(:booking, status: "confirmed")
+      booking.status_transition_event = "check_out"
+
+      expect(booking.update(status: "completed")).to be(false)
+      expect(booking.errors[:status]).to include("cannot transition from confirmed to completed with event check_out")
+      expect(booking.reload.status).to eq("confirmed")
+    end
+
+    it "treats cancelled as a hard terminal status" do
+      booking = create(:booking, status: "cancelled")
+      booking.status_transition_event = "confirm"
+
+      expect(booking.update(status: "confirmed")).to be(false)
+      expect(booking.errors[:status]).to include("cancelled is a terminal status")
+      expect(booking.reload.status).to eq("cancelled")
+    end
+
+    it "treats completed as a hard terminal status" do
+      booking = create(:booking, status: "completed")
+      booking.status_transition_event = "check_in"
+
+      expect(booking.update(status: "checked_in")).to be(false)
+      expect(booking.errors[:status]).to include("completed is a terminal status")
+      expect(booking.reload.status).to eq("completed")
+    end
+
+    it "allows setting the initial status on create" do
+      booking = create(:booking, status: "completed")
+
+      expect(booking.reload.status).to eq("completed")
+    end
+  end
+
   describe "after_create_commit callbacks" do
     let(:hotel)     { create(:hotel) }
     let(:room_type) { create(:room_type, hotel: hotel) }

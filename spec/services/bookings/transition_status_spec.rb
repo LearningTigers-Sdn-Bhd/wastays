@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe Bookings::TransitionStatus do
   let(:booking) { create(:booking, status: "confirmed") }
+  let(:user) { create(:user) }
   let(:timestamp) { Time.current }
 
   describe "#call" do
@@ -90,6 +91,7 @@ RSpec.describe Bookings::TransitionStatus do
 
       it "repairs a checked-in booking with a missing folio without check-in side effects" do
         checked_in_at = 1.hour.ago
+        booking.status_transition_event = "check_in"
         booking.update!(status: "checked_in", checked_in_at: checked_in_at, guest_registration_number: 99)
         create(:booking_room, booking: booking, subtotal: 100.0)
         create(:night_audit, hotel: booking.hotel, business_date: booking.check_in, status: "completed")
@@ -110,6 +112,9 @@ RSpec.describe Bookings::TransitionStatus do
       end
 
       it "fails when a completed booking is checked in again" do
+        booking.status_transition_event = "check_in"
+        booking.update!(status: "checked_in")
+        booking.status_transition_event = "check_out"
         booking.update!(status: "completed")
 
         result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
@@ -120,6 +125,7 @@ RSpec.describe Bookings::TransitionStatus do
       end
 
       it "fails when a cancelled booking is checked in again" do
+        booking.status_transition_event = "cancel"
         booking.update!(status: "cancelled")
 
         result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
@@ -257,6 +263,7 @@ RSpec.describe Bookings::TransitionStatus do
       end
 
       it "does not release inventory again when already cancelled" do
+        booking.status_transition_event = "cancel"
         booking.update!(status: "cancelled")
 
         expect(Bookings::InventoryManager).not_to receive(:new)
@@ -268,6 +275,7 @@ RSpec.describe Bookings::TransitionStatus do
       end
 
       it "fails for checked-in bookings" do
+        booking.status_transition_event = "check_in"
         booking.update!(status: "checked_in")
 
         expect(Bookings::InventoryManager).not_to receive(:new)
@@ -306,6 +314,7 @@ RSpec.describe Bookings::TransitionStatus do
 
       context "when booking was marked as no_show" do
         before do
+          booking.status_transition_event = "mark_no_show"
           booking.update!(status: "no_show")
           # Create a night audit record and no-show penalties
           create(:night_audit, hotel: hotel, business_date: business_date, status: "completed")
@@ -324,7 +333,7 @@ RSpec.describe Bookings::TransitionStatus do
           expect(inventory_manager).to receive(:reserve_by_dates).with(business_date + 1.day, booking.check_out)
 
           options = { override_night_audit: true, reason: "Late arrival" }
-          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: nil, options: options)
+          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: user, options: options)
 
           expect {
             result = subject.call
@@ -353,7 +362,7 @@ RSpec.describe Bookings::TransitionStatus do
           create(:booking_room, booking: reused_booking, room_type: room_type, room_number: "101")
 
           options = { override_night_audit: true, reason: "Late arrival" }
-          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: nil, options: options)
+          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: user, options: options)
 
           result = subject.call
 
@@ -370,7 +379,7 @@ RSpec.describe Bookings::TransitionStatus do
 
         it "posts catch-up charges immediately" do
           options = { override_night_audit: true, reason: "Manual walk-in after audit" }
-          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: nil, options: options)
+          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: user, options: options)
 
           expect {
             result = subject.call

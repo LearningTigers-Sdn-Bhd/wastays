@@ -64,7 +64,7 @@ RSpec.describe "Retroactive Check-in", type: :service do
     expect(result.success?).to be(true), "Expected success but got error: #{result.error}"
     folio = booking.booking_folio
     expect(folio.folio_transactions.payment.count).to eq(1)
-    expect(folio.folio_transactions.payment.first.user).to be_nil
+    expect(folio.folio_transactions.payment.first.user).to eq(user)
     expect(folio.outstanding_balance).to eq(112.0) # 212 - 100
   end
 end
