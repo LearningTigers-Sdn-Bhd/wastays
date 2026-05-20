@@ -14,9 +14,9 @@ RSpec.describe HotelOps::SyncPricingRules do
         wk_start_date: "2026-05-01",
         wk_end_date: "2026-05-31",
         weekend_days: [ "5", "6", "0" ],
-        sc_price: "220",
-        sc_start_date: "2026-05-20",
-        sc_end_date: "2026-05-31",
+        school_holidays: [
+          { name: "Term Break", start_date: "2026-05-20", end_date: "2026-05-31", price: "220" }
+        ],
         wi_price: "250",
         wi_start_date: "2026-05-01",
         wi_end_date: "2026-05-31",
@@ -41,9 +41,7 @@ RSpec.describe HotelOps::SyncPricingRules do
         wk_start_date: nil,
         wk_end_date: nil,
         weekend_days: [],
-        sc_price: nil,
-        sc_start_date: nil,
-        sc_end_date: nil,
+        school_holidays: [],
         wi_price: nil,
         wi_start_date: nil,
         wi_end_date: nil,

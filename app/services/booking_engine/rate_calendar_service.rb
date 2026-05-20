@@ -16,8 +16,7 @@ module BookingEngine
       room_type_ids = @hotel.room_types.select(:id)
 
       # MIN price only over room types that are actually available that night
-      # We consider BOTH corporate_price and price
-      price_expression = "LEAST(price, COALESCE(corporate_price, price))"
+      price_expression = "price"
 
       rates = RoomRate
         .joins("INNER JOIN room_inventories ri

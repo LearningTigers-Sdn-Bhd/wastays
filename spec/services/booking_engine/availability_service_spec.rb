@@ -78,10 +78,10 @@ RSpec.describe BookingEngine::AvailabilityService do
       expect(service.calculate_total_price(room_type)).to eq(0)
     end
 
-    it "uses corporate_price automatically if available" do
+    it "ignores corporate_price even if available" do
       RoomRate.update_all(corporate_price: 80)
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
-      expect(service.calculate_total_price(room_type)).to eq(160.0) # 80 * 2 nights
+      expect(service.calculate_total_price(room_type)).to eq(200.0) # 100 * 2 nights
     end
   end
 end

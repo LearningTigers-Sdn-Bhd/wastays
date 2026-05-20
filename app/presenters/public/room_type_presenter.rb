@@ -26,10 +26,6 @@ module Public
       pricing_summary[:rate_plan_name].presence || "Best available rate"
     end
 
-    def partner_rate?
-      pricing_summary[:corporate_rate_applied]
-    end
-
     def details_json
       {
         name: name,

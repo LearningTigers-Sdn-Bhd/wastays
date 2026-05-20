@@ -3,7 +3,7 @@ module HotelOps
     ONLINE_PRIORITY = {
       gp: 1,
       wk: 2,
-      sc: 3,
+      sh: 3,
       ph: 4
     }.freeze
 
@@ -16,6 +16,7 @@ module HotelOps
     end
 
     def call
+      RoomRate.reset_column_information
       room_types = @hotel.room_types
       room_types = room_types.where(id: @room_type_ids) if @room_type_ids.present?
 
@@ -52,10 +53,12 @@ module HotelOps
         old_wi_price = rate.walk_in_price
         old_cr_price = rate.corporate_price
         old_ota_price = rate.ota_price
+        old_rule_type = rate.applied_rule_type
         old_currency = rate.currency
 
         # Fallback to base_price if no online rule applies but we are saving a rate record
         rate.price = online_winner&.dig(:price) || room_type.base_price
+        rate.applied_rule_type = online_winner&.dig(:tier)&.to_s || "base"
         rate.walk_in_price = walk_in_winner&.dig(:price)
         rate.corporate_price = corporate_winner&.dig(:price)
         rate.ota_price = ota_winner&.dig(:price)
@@ -63,14 +66,14 @@ module HotelOps
         rate.rate_plan = standard_plan if standard_plan
         rate.save!
 
-        next if old_price == rate.price && old_wi_price == rate.walk_in_price && old_cr_price == rate.corporate_price && old_ota_price == rate.ota_price && old_currency == rate.currency
+        next if old_price == rate.price && old_wi_price == rate.walk_in_price && old_cr_price == rate.corporate_price && old_ota_price == rate.ota_price && old_currency == rate.currency && old_rule_type == rate.applied_rule_type
 
         @hotel.inventory_audit_logs.create!(
           room_type: room_type,
           user: @user,
           action_type: "rate_update",
-          old_value: { date: date, price: old_price.to_f, walk_in_price: old_wi_price&.to_f, corporate_price: old_cr_price&.to_f, ota_price: old_ota_price&.to_f },
-          new_value: { date: date, price: rate.price&.to_f, walk_in_price: rate.walk_in_price&.to_f, corporate_price: rate.corporate_price&.to_f, ota_price: rate.ota_price&.to_f },
+          old_value: { date: date, price: old_price.to_f, walk_in_price: old_wi_price&.to_f, corporate_price: old_cr_price&.to_f, ota_price: old_ota_price&.to_f, rule_type: old_rule_type },
+          new_value: { date: date, price: rate.price&.to_f, walk_in_price: rate.walk_in_price&.to_f, corporate_price: rate.corporate_price&.to_f, ota_price: rate.ota_price&.to_f, rule_type: rate.applied_rule_type },
           metadata: {
             source: "pricing_rules",
             online_tier: online_winner&.dig(:tier)&.to_s,
@@ -115,7 +118,7 @@ module HotelOps
       {
         "general" => :gp,
         "weekends" => :wk,
-        "school_holiday" => :sc,
+        "school_holiday" => :sh,
         "public_holiday" => :ph,
         "walk_in" => :wi,
         "corporate_rate" => :cr,

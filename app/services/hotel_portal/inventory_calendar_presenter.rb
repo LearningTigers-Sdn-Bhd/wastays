@@ -26,6 +26,7 @@ module HotelPortal
     attr_reader :hotel, :start_date, :end_date, :display_currency
 
     def initialize(hotel:, start_date:, end_date:, display_currency:, room_type_id: nil, rate_plan_id: nil)
+      RoomRate.reset_column_information
       @hotel = hotel
       @start_date = start_date.to_date
       @end_date = end_date.to_date
@@ -293,6 +294,7 @@ module HotelPortal
         closed_to_arrival: rate&.closed_to_arrival? || false,
         closed_to_departure: rate&.closed_to_departure? || false,
         stop_sell: rate&.stop_sell? || false,
+        applied_rule_type: rate&.applied_rule_type,
         restriction_badges: restriction_badges(rate),
         restriction_compact: restriction_compact(rate)
       }

@@ -1,6 +1,6 @@
 module HotelOps
   class SyncPricingRules
-    def initialize(hotel:, gp_price:, gp_start_date:, gp_end_date:, wk_price:, wk_start_date:, wk_end_date:, weekend_days:, sc_price:, sc_start_date:, sc_end_date:, wi_price: nil, wi_start_date: nil, wi_end_date: nil, cr_price: nil, cr_start_date: nil, cr_end_date: nil, ota_price: nil, ota_start_date: nil, ota_end_date: nil, public_holidays:)
+    def initialize(hotel:, gp_price:, gp_start_date:, gp_end_date:, wk_price:, wk_start_date:, wk_end_date:, weekend_days:, school_holidays:, wi_price: nil, wi_start_date: nil, wi_end_date: nil, cr_price: nil, cr_start_date: nil, cr_end_date: nil, ota_price: nil, ota_start_date: nil, ota_end_date: nil, public_holidays:)
       @hotel = hotel
       @gp_price = decimal_or_nil(gp_price)
       @gp_start_date = date_or_nil(gp_start_date)
@@ -9,9 +9,7 @@ module HotelOps
       @wk_start_date = date_or_nil(wk_start_date)
       @wk_end_date = date_or_nil(wk_end_date) || @wk_start_date
       @weekend_days = Array(weekend_days).reject(&:blank?).map(&:to_i).uniq
-      @sc_price = decimal_or_nil(sc_price)
-      @sc_start_date = date_or_nil(sc_start_date)
-      @sc_end_date = date_or_nil(sc_end_date) || @sc_start_date
+      @school_holidays = Array(school_holidays)
       @wi_price = decimal_or_nil(wi_price)
       @wi_start_date = date_or_nil(wi_start_date)
       @wi_end_date = date_or_nil(wi_end_date) || @wi_start_date
@@ -89,25 +87,6 @@ module HotelOps
         }
       end
 
-      if @sc_price
-        if @sc_start_date.blank?
-          @errors[:base] << "School holiday requires a start date."
-          raise ArgumentError, "School holiday start date is required."
-        end
-        if @sc_end_date < @sc_start_date
-          @errors[:base] << "School holiday end date cannot be earlier than start date."
-          raise ArgumentError, "School holiday end date cannot be earlier than start date."
-        end
-
-        rows << {
-          rule_type: "school_holiday",
-          name: "School Holiday",
-          price: @sc_price,
-          start_date: @sc_start_date,
-          end_date: @sc_end_date
-        }
-      end
-
       if @wi_price
         if @wi_start_date.blank?
           @errors[:base] << "Walk-in pricing requires a start date."
@@ -165,8 +144,39 @@ module HotelOps
         }
       end
 
+      rows.concat(normalized_school_holiday_rows)
       rows.concat(normalized_public_holiday_rows)
       rows
+    end
+
+    def normalized_school_holiday_rows
+      @school_holidays.each_with_index.filter_map do |holiday, index|
+        row = holiday.to_h.symbolize_keys
+        name = row[:name].to_s.strip.presence || "School Holiday"
+        price = decimal_or_nil(row[:price])
+        start_date = date_or_nil(row[:start_date])
+        end_date = date_or_nil(row[:end_date]) || start_date
+
+        next if price.blank? && start_date.blank? && end_date.blank?
+
+        if price.blank? || start_date.blank?
+          @errors[:base] << "School holiday entries must include a price and start date."
+          raise ArgumentError, "School holiday entries must include a price and start date."
+        end
+
+        if end_date < start_date
+          @errors[:base] << "School holiday end date cannot be earlier than start date."
+          raise ArgumentError, "School holiday end date cannot be earlier than start date."
+        end
+
+        {
+          rule_type: "school_holiday",
+          name: name,
+          price: price,
+          start_date: start_date,
+          end_date: end_date
+        }
+      end
     end
 
     def normalized_public_holiday_rows

@@ -105,7 +105,7 @@
               </div>
             <% end %>
             
-            <div class="relative h-full" data-controller="dropdown">
+            <div class="relative h-full" data-controller="dropdown" data-dropdown-floating="true">
               <button type="button" 
                       data-action="click->dropdown#toggle"
                       class="flex h-full w-7 items-center justify-center rounded-md text-slate-400 hover:bg-white hover:text-slate-900 transition-all border border-transparent hover:border-slate-200">
@@ -284,7 +284,7 @@
                         </button>
                       <% else %>
                         <button type="button"
-                                class="min-h-[48px] sm:min-h-[54px] w-full bg-white px-1 sm:px-2 py-2 text-center transition hover:bg-slate-100"
+                                class="relative min-h-[48px] sm:min-h-[54px] w-full bg-white px-1 sm:px-2 py-2 text-center transition hover:bg-slate-100"
                                 data-testid="rate-cell-<%= row.room_type_id %>-<%= row.rate_plan_id %>-<%= date %>"
                                 data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
                                 data-mode="rates"
@@ -299,6 +299,20 @@
                                 data-closed-to-departure="<%= cell[:closed_to_departure] %>"
                                 data-stop-sell="<%= cell[:stop_sell] %>">
                           <div class="flex flex-col items-center justify-center min-h-[28px] sm:min-h-[32px]">
+                            <% if cell[:applied_rule_type].present? && cell[:applied_rule_type] != "base" %>
+                              <% 
+                                badge_class = case cell[:applied_rule_type]
+                                  when "ph" then "bg-amber-100 text-amber-700"
+                                  when "sh" then "bg-purple-100 text-purple-700"
+                                  when "wk" then "bg-blue-100 text-blue-700"
+                                  else "bg-slate-100 text-slate-700"
+                                end
+                              %>
+                              <span class="absolute top-0.5 right-0.5 text-[7px] font-black px-1 rounded-sm uppercase tracking-tighter <%= badge_class %>">
+                                <%= cell[:applied_rule_type] %>
+                              </span>
+                            <% end %>
+
                             <% if cell[:conversion_missing] %>
                               <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                             <% else %>

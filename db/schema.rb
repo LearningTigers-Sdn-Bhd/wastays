@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_19_014023) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_20_081336) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -370,6 +370,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_19_014023) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "corporate_entity_id"
+    t.jsonb "metadata"
     t.index ["corporate_entity_id"], name: "index_hotel_pricing_rules_on_corporate_entity_id"
     t.index ["hotel_id", "rule_type"], name: "index_hotel_pricing_rules_on_hotel_and_type"
     t.index ["hotel_id", "start_date", "end_date"], name: "index_hotel_pricing_rules_on_hotel_and_dates"
@@ -861,6 +862,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_19_014023) do
     t.decimal "walk_in_price", precision: 10, scale: 2
     t.decimal "corporate_price", precision: 10, scale: 2
     t.decimal "ota_price", precision: 10, scale: 2
+    t.string "applied_rule_type"
     t.index ["rate_plan_id"], name: "index_room_rates_on_rate_plan_id"
     t.index ["room_type_id", "rate_plan_id", "date", "currency"], name: "index_room_rates_on_rt_rp_date_curr", unique: true
     t.index ["room_type_id"], name: "index_room_rates_on_room_type_id"

@@ -128,9 +128,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       wk_start_date: pricing_params[:wk_start_date],
       wk_end_date: pricing_params[:wk_end_date],
       weekend_days: pricing_params[:weekend_days],
-      sc_price: pricing_params[:sc_price],
-      sc_start_date: pricing_params[:sc_start_date],
-      sc_end_date: pricing_params[:sc_end_date],
+      school_holidays: pricing_params[:school_holidays],
       wi_price: pricing_params[:wi_price],
       wi_start_date: pricing_params[:wi_start_date],
       wi_end_date: pricing_params[:wi_end_date],
@@ -291,6 +289,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :ota_end_date,
       room_type_ids: [],
       weekend_days: [],
+      school_holidays: [ :name, :price, :start_date, :end_date ],
       public_holidays: [ :name, :price, :start_date, :end_date ]
     )
   end

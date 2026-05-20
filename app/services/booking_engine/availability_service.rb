@@ -57,8 +57,6 @@ module BookingEngine
       option = lowest_pricing_option_for(room_type)
       return {} if option.blank?
 
-      corporate_rate_applied = option.nightly_rates.values.any? { |rate| rate.corporate_price.present? }
-
       {
         rate_plan: option.rate_plan,
         rate_plan_name: option.rate_plan&.name,
@@ -66,8 +64,7 @@ module BookingEngine
         total_price: option.total_price,
         nightly_price: option.nightly_price,
         nightly_rates: option.nightly_rates,
-        available_rate_plans: pricing_options_for(room_type).map(&:rate_plan).compact,
-        corporate_rate_applied: corporate_rate_applied
+        available_rate_plans: pricing_options_for(room_type).map(&:rate_plan).compact
       }
     end
 
@@ -144,8 +141,8 @@ module BookingEngine
         return nil if rate.min_stay.present? && nights < rate.min_stay
         return nil if rate.max_stay.present? && nights > rate.max_stay
 
-        # 2. Resolve Price (Corporate vs Standard)
-        rate.corporate_price.presence || rate.price
+        # 2. Resolve Price
+        rate.price
       else
         # 3. Fallback to base price if no specific rate record exists
         room_type.base_price.presence
