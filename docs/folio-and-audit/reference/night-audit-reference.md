@@ -45,8 +45,16 @@ For every occupied room:
 
 ### Step 5: Day Roll (Business Date Change)
 - Close current business date
-- Advance system date by 1 day
+- Open the next `HotelBusinessDate` in `open` state
 - All new transactions now post to new date
+- Record immutable audit events for the completed audit, closed date, and opened date
+
+Implementation guarantees:
+- The close/open transition is atomic with the successful audit completion transaction.
+- Blocked or failed audits leave the next business date unopened.
+- If the next business date already exists and is `open`, it is reused.
+- If the next business date already exists in a locked state (`audit_running`, `audit_blocked`, `closed`, or `force_closed`), the audit fails safely instead of overwriting that state.
+- Business-date rows are locked before their state is trusted, and duplicate-row races are retried through the existing unique hotel/date constraint.
 
 ### Step 6: Reconciliation & Reports
 - Revenue report (rooms, F&B, tax)
@@ -190,6 +198,8 @@ Wrong rate posted last night → manager needs to:
 | Never delete a posted charge | Audit trail — always use adjustments/rebates |
 | Each tax component is a separate line | Tax reporting requires breakdown |
 | Business date ≠ system clock | Night audit controls the date, not the server time |
+| Successful audit opens next date | New postings must land on the next operational day |
+| Failed or blocked audit does not advance date | Staff must resolve blockers before the hotel rolls forward |
 | Checkout day is not charged | Industry standard — only nights slept are billed |
 | Audit runs even if hotel is empty | The business day must roll regardless |
 | Rate plan is re-evaluated each night | Weekend/holiday rates may differ mid-stay |
