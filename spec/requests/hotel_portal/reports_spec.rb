@@ -377,6 +377,37 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
   end
 
+  describe "GET /managers_flash" do
+    let(:start_date) { Date.new(2026, 5, 6) }
+    let(:end_date) { Date.new(2026, 5, 7) }
+
+    it "renders the manager flash report for the selected range" do
+      room_type = create(:room_type, hotel: hotel, quantity: 10)
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
+      create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 400)
+
+      get managers_flash_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Manager Flash Report")
+      expect(response.body).to include("Total Revenue")
+    end
+
+    it "exports csv/xls/pdf" do
+      get managers_flash_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+
+      get managers_flash_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.ms-excel")
+
+      get managers_flash_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+    end
+  end
+
   describe "GET /breakdown" do
     it "exports xls and pdf" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))

@@ -3,7 +3,7 @@ require "csv"
 class HotelPortal::ReportsController < HotelPortal::BaseController
   include FinancialFiltering
 
-  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches]
+  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches]
   before_action :authorize_view_payouts!, only: %i[payouts]
 
   def index
@@ -183,6 +183,39 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
         pdf = HotelPortal::Reports::DailyRevenuePdfExportService.new(hotel: current_hotel, report: @report).generate
         send_data pdf,
           filename: "daily-revenue-#{@report.start_date}-#{@report.end_date}.pdf",
+          type: "application/pdf",
+          disposition: "attachment"
+      end
+    end
+  end
+
+  def managers_flash
+    @report_start_date, @report_end_date = parse_report_date_range
+    @report = HotelPortal::Reports::ManagersFlashReport.new(
+      hotel: current_hotel,
+      start_date: @report_start_date,
+      end_date: @report_end_date
+    ).call
+
+    respond_to do |format|
+      format.html
+      format.csv do
+        csv = HotelPortal::Reports::ManagersFlashCsvExportService.new(report: @report).generate
+        send_data csv,
+          filename: "managers-flash-#{@report.start_date}-#{@report.end_date}.csv",
+          type: "text/csv"
+      end
+      format.any(:xls) do
+        workbook = HotelPortal::Reports::ManagersFlashExcelExportService.new(report: @report).generate
+        send_data workbook,
+          filename: "managers-flash-#{@report.start_date}-#{@report.end_date}.xls",
+          type: "application/vnd.ms-excel",
+          disposition: "attachment"
+      end
+      format.pdf do
+        pdf = HotelPortal::Reports::ManagersFlashPdfExportService.new(hotel: current_hotel, report: @report).generate
+        send_data pdf,
+          filename: "managers-flash-#{@report.start_date}-#{@report.end_date}.pdf",
           type: "application/pdf",
           disposition: "attachment"
       end

@@ -299,11 +299,11 @@ Rails.application.routes.draw do
         get :arrivals_departures
         get :daily_occupancy
         get :daily_revenue
+        get :managers_flash
         get :outstanding_balance
         get :deposit_liability
         get :folio_ledger
-        get :journal_batches
-      end
+        get :journal_batches      end
     end
     resources :night_audits, only: [ :index, :show, :create ]
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
