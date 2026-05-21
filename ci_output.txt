@@ -1,0 +1,103 @@
+
+█╗    ██╗ █████╗ ███████╗████████╗ █████╗ ██╗   ██╗███████╗
+██║    ██║██╔══██╗██╔════╝╚══██╔══╝██╔══██╗╚██╗ ██╔╝██╔════╝
+██║ █╗ ██║███████║███████╗   ██║   ███████║ ╚████╔╝ ███████╗
+██║███╗██║██╔══██║╚════██║   ██║   ██╔══██║  ╚██╔╝  ╚════██║
+╚███╔███╔╝██║  ██║███████║   ██║   ██║  ██║   ██║   ███████║
+ ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚══════╝
+         ARCADE CI MODE Ready to eat bugs...
+
+╭─ 🧹 Rails Cache Clear
+│ ✓ Rails Cache Clear complete
+│ No output
+└──────────────────────────────────────────────
+
+╭─ 🔍 RuboCop
+│ ✓ RuboCop complete
+│ Inspecting 916 files
+│ ....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+│ 
+│ 916 files inspected, no offenses detected
+└──────────────────────────────────────────────
+
+╭─ 🔰 Brakeman
+│ ✓ Brakeman complete
+│ Brakeman v8.0.4
+│ Loading scanner...
+│ Scanning /root/Code/wastays
+│ Processing gems...
+│ Processing configuration...
+│ Finding files...
+│ Parsing files...
+│ Detecting file types...
+│ Processing initializers...
+│ Processing libraries...
+│ Processing routes...
+│ Processing templates...
+│ Processing data flow...
+│ Processing models...
+│ Processing controllers...
+│ Processing data flow...
+│ Indexing method calls...
+│ Running 79 checks in parallel...
+│ Generating report...
+│ 
+│ == Brakeman Report ==
+│ 
+│ Application Path: /root/Code/wastays
+│ Rails Version: 8.0.5
+│ Brakeman Version: 8.0.4
+│ Scan Date: 2026-05-21 08:58:47 +0800
+│ Duration: 13.987366719 seconds
+│ Checks Run: BasicAuth, BasicAuthTimingAttack, CSRFTokenForgeryCVE, ContentTag, CookieSerialization, CreateWith, CrossSiteScripting, DefaultRoutes, Deserialize, DetailedExceptions, DigestDoS, DynamicFinders, EOLRails, EOLRuby, EscapeFunction, Evaluation, Execute, FileAccess, FileDisclosure, FilterSkipping, ForgerySetting, HeaderDoS, I18nXSS, JRubyXML, JSONEncoding, JSONEntityEscape, JSONParsing, LinkTo, LinkToHref, MailTo, MassAssignment, MimeTypeDoS, ModelAttrAccessible, ModelAttributes, ModelSerialize, NestedAttributes, NestedAttributesBypass, NumberToCurrency, PageCachingCVE, Pathname, PermitAttributes, QuoteTableName, Ransack, Redirect, RegexDoS, Render, RenderDoS, RenderInline, RenderRCE, ResponseSplitting, RouteDoS, SQL, SQLCVEs, SSLVerify, SafeBufferManipulation, SanitizeConfigCve, SanitizeMethods, SelectTag, SelectVulnerability, Send, SendFile, SessionManipulation, SessionSettings, SimpleFormat, SingleQuotes, SkipBeforeFilter, SprocketsPathTraversal, StripTags, SymbolDoSCVE, TemplateInjection, TranslateBug, UnsafeReflection, UnsafeReflectionMethods, ValidationRegex, VerbConfusion, WeakRSAKey, WithoutProtection, XMLDoS, YAMLParsing
+│ 
+│ == Overview ==
+│ 
+│ Controllers: 93
+│ Models: 60
+│ Templates: 246
+│ Errors: 0
+│ Security Warnings: 0
+│ 
+│ == Warning Types ==
+│ 
+│ 
+│ No warnings found
+│ 
+└──────────────────────────────────────────────
+
+╭─ 💎 Bundle Audit
+│ ✓ Bundle Audit complete
+│ Updating ruby-advisory-db ...
+│ From https://github.com/rubysec/ruby-advisory-db
+│  * branch            master     -> FETCH_HEAD
+│ Already up to date.
+│ Updated ruby-advisory-db
+│ ruby-advisory-db:
+│   advisories:	1131 advisories
+│   last updated:	2026-05-19 04:00:02 -0400
+│   commit:	b75f47d3b0d4e4bfe6f6e62b5dba6d9746988ecc
+│ No vulnerabilities found
+└──────────────────────────────────────────────
+
+╭─ 📦 Importmap Audit
+│ 🕹️ 📦 Importmap Audit                   👻│ 🕹️ 📦 Importmap Audit                   ✦[K│ ✓ Importmap Audit complete
+│ Ignoring @floating-ui/utils/dom (vendor/javascript/@floating-ui--utils--dom.js) since no version is specified in the importmap
+│ No vulnerable packages found
+└──────────────────────────────────────────────
+
+╭─ 🎨 Tailwind Build
+│ ✓ Tailwind Build complete
+│ ≈ tailwindcss v4.2.1
+│ 
+│ Done in 1s
+└──────────────────────────────────────────────
+
+╭─ 🗄️ Parallel DB Setup
+│ ✓ Parallel DB Setup complete
+│ No output
+└──────────────────────────────────────────────
+
+╭─ 🧪 Parallel RSpec
+8 processes for 317 specs, ~ 39 specs per process
+..............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
