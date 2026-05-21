@@ -74,14 +74,19 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     room_type = current_hotel.room_types.find(params[:room_type_id])
     rate_plan = rate_plan_for(room_type, params[:rate_plan_id])
 
-    total = Bookings::CalculateStayPrice.new(
+    snapshot = Bookings::BuildFinancialSnapshot.new(
+      hotel: current_hotel,
       room_type: room_type,
       rate_plan: rate_plan,
       check_in: Date.parse(params[:check_in]),
-      check_out: Date.parse(params[:check_out])
+      check_out: Date.parse(params[:check_out]),
+      guest_country: params[:guest_country].presence || current_hotel.country
     ).call
+    total = snapshot.room_total + snapshot.tax_total
 
     render json: { total_amount: total }
+  rescue ArgumentError => e
+    render json: { error: e.message, total_amount: 0 }, status: :unprocessable_content
   end
 
   def rate_options
@@ -346,6 +351,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       options[:override_night_audit] = true
       options[:reason] = params[:retroactive_reason]
     end
+    options[:security_deposit] = security_deposit_options if collect_security_deposit?
 
     result = Bookings::TransitionStatus.new(
       booking: @booking,
@@ -401,6 +407,18 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       :rate_plan_id, :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
       booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ]
     )
+  end
+
+  def collect_security_deposit?
+    ActiveModel::Type::Boolean.new.cast(params[:collect_security_deposit]) && params[:security_deposit_amount].to_d.positive?
+  end
+
+  def security_deposit_options
+    {
+      amount: params[:security_deposit_amount],
+      payment_method: params[:security_deposit_payment_method],
+      external_reference: params[:security_deposit_reference]
+    }
   end
 
   def rate_plan_for(room_type, rate_plan_id)
