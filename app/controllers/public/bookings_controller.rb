@@ -10,7 +10,7 @@ class Public::BookingsController < ApplicationController
       document_status: "pending",
       signature_status: "pending"
     )
-    @qr_svg = build_qr_svg(@booking.confirmation_token)
+    @qr_data_url = Concierge::QrSvg.data_url(@booking.confirmation_token)
   end
 
   def receipt
@@ -41,20 +41,4 @@ class Public::BookingsController < ApplicationController
   end
 
   private
-
-  def build_qr_svg(token)
-    qr = RQRCode::QRCode.new(token)
-    svg = qr.as_svg(
-      color: "0a2e29",
-      shape_rendering: "crispEdges",
-      module_size: 6,
-      offset: 0,
-      viewbox: true,
-      standalone: true,
-      use_path: true
-    )
-    svg.gsub(/\s+(width|height)="[^"]*"/, "")
-       .sub(/<svg/, '<svg style="width:100%;height:100%;display:block;"')
-       .html_safe
-  end
 end

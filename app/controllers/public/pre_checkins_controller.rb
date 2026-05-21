@@ -64,6 +64,7 @@ class Public::PreCheckinsController < ApplicationController
       :guest_country,
       :guest_document_type,
       :guest_government_id,
+      :guest_home_address,
       :id_front,
       :id_back,
       :estimated_arrival_time

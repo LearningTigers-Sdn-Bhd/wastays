@@ -45,6 +45,7 @@ RSpec.configure do |config|
   ]
 
   config.include FactoryBot::Syntax::Methods
+  config.include ActiveSupport::Testing::TimeHelpers
 
   # If you're not using ActiveRecord, or you'd prefer not to run each of your
   # examples within a transaction, remove the following line or assign false
@@ -112,7 +113,8 @@ Capybara.register_driver :cuprite do |app|
     browser_options: { "no-sandbox" => nil, "disable-dev-shm-usage" => nil },
     headless: true,
     timeout: 60,
-    process_timeout: 120
+    process_timeout: 120,
+    pending_connection_errors: false
   )
 end
 

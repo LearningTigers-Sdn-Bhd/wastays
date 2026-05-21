@@ -1,0 +1,47 @@
+<% content_for :title, "Check In | #{@hotel.name}" %>
+
+<div data-mobile-view class="min-h-screen bg-landing-bg flex flex-col font-sans">
+
+  <%# Top nav %>
+  <div class="px-6 pt-8 pb-10">
+    <%= link_to concierge_home_path(@hotel.slug),
+          class: "w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center flex-shrink-0 shadow-lg shadow-brand-primary/20 active:scale-90 transition-transform" do %>
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/>
+      </svg>
+    <% end %>
+  </div>
+
+  <%# Header & Form %>
+  <div class="flex-1 px-8">
+    <div class="mb-10">
+      <h1 class="text-2xl font-black text-neutral-text-primary leading-tight">
+        Find booking <br>to check-in
+      </h1>
+      <p class="text-sm text-neutral-text-secondary mt-3 font-medium">
+        Enter your reservation number to start.
+      </p>
+    </div>
+
+    <%= render "public/concierge/shared/error_alert", message: @error %>
+
+    <%= form_with url: concierge_check_in_lookup_path(@hotel.slug), method: :post, class: "space-y-6" do %>
+      <div class="relative">
+        <%= text_field_tag :confirmation_token, params[:confirmation_token],
+              class: "w-full bg-white border-neutral-border/60 rounded-xl py-4 px-5 text-sm shadow-sm focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all placeholder:text-neutral-text-secondary/40",
+              placeholder: "Reservation Number *",
+              autocapitalize: "characters" %>
+      </div>
+
+      <%# Submit button positioned at the bottom %>
+      <div class="fixed bottom-0 left-0 right-0 p-6 bg-landing-bg">
+        <%= submit_tag "SEARCH",
+              class: "w-full bg-brand-primary text-white font-black py-5 rounded-2xl shadow-xl shadow-brand-primary/30 active:scale-[0.98] transition-all cursor-pointer tracking-widest text-sm" %>
+      </div>
+    <% end %>
+  </div>
+
+  <%# Spacing for fixed bottom button %>
+  <div class="h-28"></div>
+
+</div>
