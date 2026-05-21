@@ -5,6 +5,7 @@ module Public
         @policy = @hotel.property_policy
         @whatsapp_link = whatsapp_link
         @maps_link = maps_link
+        render "show_mobile" if mobile_request?
       end
 
       private

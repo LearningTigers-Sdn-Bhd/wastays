@@ -3,6 +3,7 @@ module Public
     class RequestsController < BaseController
       def new
         @booking = request_lookup_stage? ? current_concierge_booking : nil
+        render "new_mobile" if mobile_request?
       end
 
       def create
@@ -30,13 +31,14 @@ module Public
         else
           @error = result.message
           @booking = booking
-          render :new, status: :unprocessable_content
+          render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
         end
       end
 
       def success
         @booking = current_concierge_booking
-        redirect_to concierge_home_path(@hotel.slug) unless @booking
+        return redirect_to concierge_home_path(@hotel.slug) unless @booking
+        render "success_mobile" if mobile_request?
       end
 
       private
@@ -61,7 +63,7 @@ module Public
         else
           "Requests can only be submitted for active bookings."
         end
-        render :new, status: :unprocessable_content
+        render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
       end
     end
   end

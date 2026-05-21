@@ -288,6 +288,8 @@ Rails.application.routes.draw do
     patch "requests/:kind/:request_id/archive", to: "requests#archive_request", as: :archive_request
     patch "requests/:kind/:request_id/unarchive", to: "requests#unarchive_request", as: :unarchive_request
 
+    patch "checkout-requests/:id/complete", to: "checkout_requests#complete", as: :complete_checkout_request
+
     resources :room_locks, only: [ :create ] do
       collection do
         delete :release

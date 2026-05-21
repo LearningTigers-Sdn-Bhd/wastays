@@ -10,7 +10,7 @@ class Public::BookingsController < ApplicationController
       document_status: "pending",
       signature_status: "pending"
     )
-    @qr_svg = Concierge::QrSvg.for(@booking.confirmation_token).html_safe
+    @qr_data_url = Concierge::QrSvg.data_url(@booking.confirmation_token)
   end
 
   def receipt

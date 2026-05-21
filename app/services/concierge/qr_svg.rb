@@ -1,3 +1,5 @@
+require "base64"
+
 module Concierge
   class QrSvg
     def self.for(payload, color: "0a2e29", module_size: 6)
@@ -13,6 +15,11 @@ module Concierge
       )
       svg.gsub(/\s+(width|height)="[^"]*"/, "")
          .sub(/<svg/, '<svg style="width:100%;height:100%;display:block;"')
+    end
+
+    def self.data_url(payload, color: "0a2e29", module_size: 6)
+      svg = self.for(payload, color: color, module_size: module_size)
+      "data:image/svg+xml;base64,#{Base64.strict_encode64(svg)}"
     end
 
     def self.png(payload, size: 600)

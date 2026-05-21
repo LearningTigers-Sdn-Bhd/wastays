@@ -12,6 +12,16 @@ module Public
 
       private
 
+      # Skip the ApplicationController browser version check — the concierge
+      # page must be accessible from all browsers including older mobile Safari.
+      # allow_browser registers a lambda that calls the instance method allow_browser,
+      # so overriding the instance method here is the correct way to neutralise it.
+      def allow_browser(versions:, block:); end
+
+      def mobile_request?
+        request.user_agent.to_s =~ /Mobile|Android|iPhone/i
+      end
+
       def set_hotel
         @hotel = Hotel.friendly.find(params[:hotel_slug])
       rescue ActiveRecord::RecordNotFound

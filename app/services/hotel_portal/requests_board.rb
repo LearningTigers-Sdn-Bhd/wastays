@@ -20,7 +20,8 @@ module HotelPortal
           complaint: cards.select { |card| card[:bucket] == :complaint },
           completed: cards.select { |card| card[:bucket] == :completed }
                           .sort_by { |card| card[:completed_at] || Time.zone.at(0) }
-                          .reverse
+                          .reverse,
+          checkout: checkout_request_cards
         }
       end
     end
@@ -30,6 +31,31 @@ module HotelPortal
     end
 
     private
+
+    def checkout_request_cards
+      hotel.bookings
+           .joins(:check_out_requests)
+           .where(check_out_requests: { status: %w[pending acknowledged] })
+           .includes(:check_out_requests)
+           .order("check_out_requests.requested_at DESC")
+           .flat_map do |booking|
+             booking.check_out_requests.select { |r| r.status.in?(%w[pending acknowledged]) }.map do |req|
+               {
+                 kind: "checkout",
+                 bucket: :checkout,
+                 request_id: req.id,
+                 booking_id: booking.id,
+                 booking_token: booking.confirmation_token,
+                 guest_name: booking.guest_name,
+                 title: req.guest_notes.presence || "Checkout requested",
+                 requested_at: req.requested_at,
+                 status: req.status,
+                 complete_url: hotel_complete_checkout_request_path(hotel, req.id),
+                 booking_url: hotel_booking_path(hotel, booking)
+               }
+             end
+           end
+    end
 
     def request_cards
       @request_cards ||= build_request_cards

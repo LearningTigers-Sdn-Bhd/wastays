@@ -3,7 +3,9 @@ module Public
     class CheckInsController < BaseController
       before_action :load_booking_from_cookie, only: [ :check_in_now, :submit_check_in, :check_in_success ]
 
-      def new; end
+      def new
+        render "new_mobile" if mobile_request?
+      end
 
       def lookup
         booking = resolve_concierge_booking_from_params(
@@ -17,10 +19,10 @@ module Public
           redirect_to concierge_check_in_success_path(@hotel.slug)
         when "completed"
           @error = "This booking has already been checked out."
-          render :new, status: :unprocessable_content
+          render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
         when "cancelled"
           @error = "This booking has been cancelled."
-          render :new, status: :unprocessable_content
+          render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
         when "confirmed"
           if booking.pre_checkin&.completed? || past_check_in_time?(booking)
             set_concierge_booking_cookie(booking)
@@ -33,12 +35,13 @@ module Public
           end
         else
           @error = "This booking is not ready for check-in. Please see the front desk."
-          render :new, status: :unprocessable_content
+          render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
         end
       end
 
       def check_in_now
-        redirect_to concierge_check_in_path(@hotel.slug) unless @booking
+        return redirect_to concierge_check_in_path(@hotel.slug) unless @booking
+        render "check_in_now_mobile" if mobile_request?
       end
 
       def submit_check_in
@@ -47,7 +50,7 @@ module Public
         if needs_registration?
           unless save_guest_registration
             @error_code = :registration_error
-            render :check_in_now, status: :unprocessable_content
+            render(mobile_request? ? "check_in_now_mobile" : :check_in_now, status: :unprocessable_content)
             return
           end
         end
@@ -59,14 +62,15 @@ module Public
           redirect_to concierge_check_in_success_path(@hotel.slug)
         else
           @error_code = result.error_code
-          render :check_in_now, status: :unprocessable_content
+          render(mobile_request? ? "check_in_now_mobile" : :check_in_now, status: :unprocessable_content)
         end
       end
 
       def check_in_success
         @room_number = session.delete(:concierge_check_in_room) ||
                        @booking&.booking_rooms&.first&.room_number
-        redirect_to concierge_home_path(@hotel.slug) unless @booking
+        return redirect_to concierge_home_path(@hotel.slug) unless @booking
+        render "check_in_success_mobile" if mobile_request?
       end
 
       private
@@ -96,7 +100,7 @@ module Public
 
       def past_check_in_time?(booking)
         policy = booking.hotel.property_policy
-        return false if policy&.check_in_time.blank?
+        return true if policy&.check_in_time.blank?
         return false if Time.zone.today < booking.check_in.to_date
         return true if Time.zone.today > booking.check_in.to_date
 

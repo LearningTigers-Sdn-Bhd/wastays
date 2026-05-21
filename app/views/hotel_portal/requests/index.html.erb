@@ -25,6 +25,9 @@
         <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-100">
           Completed <%= @board_counts[:completed] %>
         </span>
+        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+          Checkouts <%= @board_counts[:checkout] %>
+        </span>
       </div>
 
       <%= link_to hotel_request_archive_path(current_hotel), class: "inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" do %>
@@ -53,7 +56,8 @@
   </div>
 
   <%= turbo_frame_tag "requests_board_results" do %>
-  <div class="grid gap-4 xl:grid-cols-3 xl:h-[calc(100vh-12rem)] xl:items-stretch px-4 md:px-0" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
+  <div class="grid gap-4 xl:grid-cols-4 xl:h-[calc(100vh-12rem)] xl:items-stretch px-4 md:px-0" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
+    <%# Standard request columns %>
     <% [
       [:housekeeping, "Housekeeping", "border-t-blue-500"],
       [:complaint, "Complaints", "border-t-rose-500"],
@@ -145,75 +149,75 @@
                 </div>
               </article>
 
-                <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(94vw,44rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-slate-900/60">
-                  <div class="flex flex-col overflow-hidden bg-white">
-                    <div class="flex items-center justify-between border-b border-slate-100 px-8 py-6">
-                      <div class="flex items-center gap-4">
-                        <span class="rounded-lg border px-3 py-1 text-[11px] font-black uppercase tracking-widest <%= kind_badge_class %>"><%= card[:kind] %></span>
-                        <h3 class="text-xl font-black text-slate-950"><%= card[:booking_token] %></h3>
-                      </div>
-                      <button type="button" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900" data-action="request-dialog#close">
-                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
+              <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(94vw,44rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-slate-900/60">
+                <div class="flex flex-col overflow-hidden bg-white">
+                  <div class="flex items-center justify-between border-b border-slate-100 px-8 py-6">
+                    <div class="flex items-center gap-4">
+                      <span class="rounded-lg border px-3 py-1 text-[11px] font-black uppercase tracking-widest <%= kind_badge_class %>"><%= card[:kind] %></span>
+                      <h3 class="text-xl font-black text-slate-950"><%= card[:booking_token] %></h3>
                     </div>
+                    <button type="button" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900" data-action="request-dialog#close">
+                      <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
 
-                    <div class="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">
-                      <div class="space-y-6 p-8">
-                        <div>
-                          <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Guest Details</label>
-                          <p class="mt-1 text-lg font-bold text-slate-900"><%= card[:guest_name] %></p>
-                        </div>
-                        <div>
-                          <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Status</label>
-                          <div class="mt-2 flex items-center gap-2">
-                            <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600"><%= card[:status] %></span>
-                          </div>
-                        </div>
-                        <div>
-                          <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Timeline</label>
-                          <div class="mt-3 space-y-2">
-                            <div class="flex items-center gap-3 text-sm">
-                              <span class="w-12 text-[10px] font-bold uppercase text-slate-400">Entry:</span>
-                              <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
-                            </div>
-                            <% if card[:completed_at].present? %>
-                              <div class="flex items-center gap-3 text-sm">
-                                <span class="w-12 text-[10px] font-bold uppercase text-emerald-500">Exit:</span>
-                                <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(card[:completed_at]) %></span>
-                              </div>
-                            <% end %>
-                          </div>
+                  <div class="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">
+                    <div class="space-y-6 p-8">
+                      <div>
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Guest Details</label>
+                        <p class="mt-1 text-lg font-bold text-slate-900"><%= card[:guest_name] %></p>
+                      </div>
+                      <div>
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Status</label>
+                        <div class="mt-2 flex items-center gap-2">
+                          <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600"><%= card[:status] %></span>
                         </div>
                       </div>
-
-                      <div class="space-y-6 bg-slate-50/40 p-8">
-                        <div>
-                          <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Request Body</label>
-                          <p class="mt-2 rounded-xl border border-slate-100 bg-white p-4 text-sm font-bold leading-relaxed text-slate-700 shadow-sm"><%= card[:title] %></p>
-                        </div>
-                        <div>
-                          <label class="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">Internal Staff Notes</label>
-                          <% if card[:internal_notes].any? %>
-                            <div class="space-y-3">
-                              <% card[:internal_notes].each do |note| %>
-                                <div class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-                                  <p class="whitespace-pre-wrap text-sm font-medium text-slate-800"><%= note["body"] %></p>
-                                </div>
-                              <% end %>
+                      <div>
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Timeline</label>
+                        <div class="mt-3 space-y-2">
+                          <div class="flex items-center gap-3 text-sm">
+                            <span class="w-12 text-[10px] font-bold uppercase text-slate-400">Entry:</span>
+                            <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
+                          </div>
+                          <% if card[:completed_at].present? %>
+                            <div class="flex items-center gap-3 text-sm">
+                              <span class="w-12 text-[10px] font-bold uppercase text-emerald-500">Exit:</span>
+                              <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(card[:completed_at]) %></span>
                             </div>
-                          <% else %>
-                            <p class="text-xs font-bold uppercase tracking-widest italic text-slate-300">No notes recorded</p>
                           <% end %>
                         </div>
                       </div>
                     </div>
 
-                    <div class="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-8 py-6">
-                      <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-slate-500 transition hover:text-slate-800" data-action="request-dialog#close">Close</button>
-                      <%= link_to "Full Booking Details", hotel_booking_path(current_hotel, card[:booking_token]), class: "rounded-xl bg-slate-950 px-6 py-2.5 text-sm font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-slate-800", data: { turbo: false } %>
+                    <div class="space-y-6 bg-slate-50/40 p-8">
+                      <div>
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Request Body</label>
+                        <p class="mt-2 rounded-xl border border-slate-100 bg-white p-4 text-sm font-bold leading-relaxed text-slate-700 shadow-sm"><%= card[:title] %></p>
+                      </div>
+                      <div>
+                        <label class="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">Internal Staff Notes</label>
+                        <% if card[:internal_notes].any? %>
+                          <div class="space-y-3">
+                            <% card[:internal_notes].each do |note| %>
+                              <div class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                                <p class="whitespace-pre-wrap text-sm font-medium text-slate-800"><%= note["body"] %></p>
+                              </div>
+                            <% end %>
+                          </div>
+                        <% else %>
+                          <p class="text-xs font-bold uppercase tracking-widest italic text-slate-300">No notes recorded</p>
+                        <% end %>
+                      </div>
                     </div>
                   </div>
-                </dialog>
+
+                  <div class="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-8 py-6">
+                    <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-slate-500 transition hover:text-slate-800" data-action="request-dialog#close">Close</button>
+                    <%= link_to "Full Booking Details", hotel_booking_path(current_hotel, card[:booking_token]), class: "rounded-xl bg-slate-950 px-6 py-2.5 text-sm font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-slate-800", data: { turbo: false } %>
+                  </div>
+                </div>
+              </dialog>
             <% end %>
           <% else %>
             <div class="flex flex-col items-center justify-center h-40 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50">
@@ -222,7 +226,7 @@
           <% end %>
         </div>
 
-        <% page_params = request.query_parameters.except(:housekeeping_page, :complaint_page, :completed_page) %>
+        <% page_params = request.query_parameters.except(:housekeeping_page, :complaint_page, :completed_page, :checkout_page) %>
         <div class="border-t border-slate-200 bg-white px-4 py-4 flex justify-center">
           <% if bucket_key == :housekeeping %>
             <%= paginate @board_columns[:housekeeping], param_name: :housekeeping_page, params: page_params %>
@@ -234,6 +238,59 @@
         </div>
       </section>
     <% end %>
+
+    <%# Checkout requests column %>
+    <section class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/40 border-t-4 border-t-amber-500">
+      <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 bg-white">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-900">Checkout Requests</h2>
+          <p class="text-[11px] font-medium text-slate-500"><%= pluralize(@board_counts[:checkout], "pending request") %></p>
+        </div>
+        <span class="inline-flex size-7 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-700">
+          <%= @board_columns[:checkout].size %>
+        </span>
+      </div>
+
+      <div class="flex-1 min-h-0 space-y-3 overflow-y-auto p-3 custom-scrollbar">
+        <% if @board_columns[:checkout].any? %>
+          <% @board_columns[:checkout].each do |card| %>
+            <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-amber-300 hover:shadow-md">
+              <div class="mb-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="rounded border border-amber-100 bg-amber-50 px-2 py-0.5 text-[9px] font-black uppercase text-amber-700">Checkout</span>
+                  <span class="font-mono text-[10px] font-bold tracking-tight text-slate-400"><%= card[:booking_token] %></span>
+                </div>
+                <span class="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600"><%= card[:status] %></span>
+              </div>
+
+              <p class="text-sm font-bold leading-snug text-slate-900 mb-4"><%= card[:title] %></p>
+
+              <div class="flex items-center justify-between border-t border-slate-50 pt-3">
+                <div class="flex flex-col">
+                  <span class="max-w-[140px] truncate text-xs font-bold text-slate-700"><%= card[:guest_name] %></span>
+                  <span class="text-[10px] font-medium uppercase tracking-tight text-slate-400"><%= card[:requested_at]&.strftime("%d %b, %H:%M") %></span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <%= button_to card[:complete_url], method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all hover:border-emerald-500 hover:bg-emerald-500 hover:text-white" do %>
+                    <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Complete
+                  <% end %>
+                </div>
+              </div>
+            </article>
+          <% end %>
+        <% else %>
+          <div class="flex flex-col items-center justify-center h-40 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-300">No checkout requests</p>
+          </div>
+        <% end %>
+      </div>
+
+      <% page_params = request.query_parameters.except(:housekeeping_page, :complaint_page, :completed_page, :checkout_page) %>
+      <div class="border-t border-slate-200 bg-white px-4 py-4 flex justify-center">
+        <%= paginate @board_columns[:checkout], param_name: :checkout_page, params: page_params %>
+      </div>
+    </section>
   </div>
   <% end %>
 </div>

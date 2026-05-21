@@ -23,6 +23,10 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
 
   describe "POST /concierge/:hotel_slug/check-in/lookup" do
     context "pre-checkin not completed" do
+      before do
+        hotel.create_property_policy!(check_in_time: "14:00", check_out_time: "12:00")
+      end
+
       it "redirects to pre-checkin form" do
         post concierge_check_in_lookup_path(hotel.slug),
              params: { confirmation_token: booking.confirmation_token }
@@ -124,21 +128,21 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       travel_to kl_zone.parse("#{Date.today} 16:00") do
         post concierge_check_in_lookup_path(hotel.slug),
              params: { confirmation_token: booking.confirmation_token }
-      end
-      create(:room_inventory, room_type: room_type, date: Date.today,
-             quantity: 1, status: "open", available_room_numbers: ["101"])
+        create(:room_inventory, room_type: room_type, date: Date.today,
+               quantity: 1, status: "open", available_room_numbers: [ "101" ])
 
-      post concierge_submit_check_in_path(hotel.slug), params: {
-        booking: {
-          guest_name: "Ahmad Zulkifli",
-          guest_email: "ahmad@example.com",
-          guest_phone: "+60123456789",
-          guest_country: "Malaysia",
-          guest_document_type: "ic",
-          guest_government_id: "900101011234",
-          guest_home_address: "No. 12, Jalan Ampang, 50450 KL"
+        post concierge_submit_check_in_path(hotel.slug), params: {
+          booking: {
+            guest_name: "Ahmad Zulkifli",
+            guest_email: "ahmad@example.com",
+            guest_phone: "+60123456789",
+            guest_country: "Malaysia",
+            guest_document_type: "ic",
+            guest_government_id: "900101011234",
+            guest_home_address: "No. 12, Jalan Ampang, 50450 KL"
+          }
         }
-      }
+      end
 
       expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
       expect(booking.reload.status).to eq("checked_in")
