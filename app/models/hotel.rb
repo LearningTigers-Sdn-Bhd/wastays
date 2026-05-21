@@ -42,6 +42,7 @@ class Hotel < ApplicationRecord
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
+  has_many :deposits, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :destroy
   has_many :hotel_counters, dependent: :destroy
   has_many :prospects, dependent: :destroy

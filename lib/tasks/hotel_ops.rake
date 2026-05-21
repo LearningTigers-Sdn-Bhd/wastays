@@ -52,6 +52,17 @@ namespace :hotel_ops do
       puts "Force cleaning #{FinancialAuditEvent.where(hotel_id: hotel.id).count} immutable audit events..."
       FinancialAuditEvent.where(hotel_id: hotel.id).delete_all
 
+      puts "Cleaning operational and audit logs..."
+      BookingAuditLog.where(hotel_id: hotel.id).delete_all
+      InventoryAuditLog.where(hotel_id: hotel.id).delete_all
+      RoomOperationalAuditLog.where(hotel_id: hotel.id).delete_all
+      NotificationDelivery.where(hotel_id: hotel.id).delete_all
+
+      # 1e. Clean Journal Batches
+      journal_batch_count = hotel.journal_batches.count
+      puts "Destroying #{journal_batch_count} journal batches..."
+      hotel.journal_batches.destroy_all
+
       # 2. Clean Night Audits
       night_audit_count = hotel.night_audits.count
       puts "Destroying #{night_audit_count} night audits..."
