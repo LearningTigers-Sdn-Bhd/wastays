@@ -1,7 +1,11 @@
 <%# frozen_string_literal: true %>
 
 <% if show_stay_modal %>
-  <div class="fixed inset-0 z-[200] bg-black/55 backdrop-blur-sm px-4 sm:px-6 flex items-center justify-center overflow-y-auto" role="dialog" aria-modal="true" onclick="if (event.target === this) { this.classList.add('hidden') }">
+  <div class="fixed inset-0 z-[200] bg-black/55 backdrop-blur-sm px-4 sm:px-6 flex items-center justify-center overflow-y-auto"
+       role="dialog"
+       aria-modal="true"
+       data-controller="hotel-search-bar"
+       data-action="click->hotel-search-bar#close">
     <div class="w-full max-w-xl my-6 rounded-2xl bg-white shadow-2xl border border-neutral-border p-6 sm:p-8" onclick="event.stopPropagation()">
       <h2 class="text-2xl font-extrabold text-neutral-text-primary mb-2">Select Your Stay Dates</h2>
       <p class="text-sm text-neutral-text-secondary mb-6">Choose your check-in and check-out dates to see accurate room availability and price.</p>
@@ -10,9 +14,7 @@
                     method: :get,
                     local: true,
                     class: "space-y-4",
-                    html: {
-                      onsubmit: "var params=new URLSearchParams(new FormData(this));window.location.replace(this.action+'?'+params.toString());return false;"
-                    } do |f| %>
+                    data: { action: "submit->hotel-search-bar#submit" } do |f| %>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <%= f.label :check_in, "Check-in", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
@@ -27,15 +29,15 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <%= f.label :adults, "Adults", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
-            <%= f.select :adults, options_for_select((1..8).map { |n| [n, n] }, adults), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            <%= f.select :adults, options_for_select(1..8, adults), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
           </div>
           <div>
             <%= f.label :children, "Children", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
-            <%= f.select :children, options_for_select((0..6).map { |n| [n, n] }, children), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            <%= f.select :children, options_for_select(0..6, children), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
           </div>
           <div>
             <%= f.label :room_count, "Rooms", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
-            <%= f.select :room_count, options_for_select((1..5).map { |n| [n, n] }, room_count), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
+            <%= f.select :room_count, options_for_select(1..5, room_count), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
           </div>
         </div>
 

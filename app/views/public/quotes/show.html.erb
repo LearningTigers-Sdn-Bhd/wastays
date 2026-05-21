@@ -13,7 +13,7 @@
         <span class="text-xs font-black uppercase tracking-widest">
           Hold expires in: 
           <span data-controller="countdown" data-countdown-expiry-value="<%= @quote.expires_at.iso8601 %>">
-            <%= ((@quote.expires_at - Time.current) / 60).to_i %>m
+            <%= quote_time_remaining(@quote.expires_at) %>
           </span>
         </span>
       </div>

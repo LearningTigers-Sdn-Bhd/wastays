@@ -25,6 +25,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     @room_types = current_hotel.room_types.order(:id)
     @calendar = build_calendar
     @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules(params[:room_type_ids])
+    @active_tab = params[:tab].presence || "calendar"
+    @active_subtab = params[:subtab].presence || "pricing"
   end
 
   def bulk_save_ari
@@ -159,6 +161,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @calendar = build_calendar
       @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_params(pricing_params)
       @pricing_form.errors = sync_result[:errors] || {}
+      @active_tab = params[:tab].presence || "calendar"
+      @active_subtab = params[:subtab].presence || "pricing"
       flash.now[:alert] = sync_result[:error] || "Error saving pricing rules."
       return render :index, status: :unprocessable_entity
     end
