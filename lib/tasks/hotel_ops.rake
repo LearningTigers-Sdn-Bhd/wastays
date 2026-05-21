@@ -68,6 +68,11 @@ namespace :hotel_ops do
       puts "Destroying #{night_audit_count} night audits..."
       hotel.night_audits.destroy_all
 
+      # 2b. Clean Business Dates
+      business_date_count = hotel.hotel_business_dates.count
+      puts "Destroying #{business_date_count} business dates..."
+      hotel.hotel_business_dates.destroy_all
+
       # 2. Clean Bookings
       booking_ids = hotel.bookings.pluck(:id)
       folio_ids = BookingFolio.where(booking_id: booking_ids).pluck(:id)
