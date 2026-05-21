@@ -337,7 +337,7 @@ module HotelPortal
       return "-" if price.blank?
       currency ||= display_currency
 
-      CurrencyFormatter.format(price, currency: currency)
+      CurrencyFormatter.format(price, currency: currency, symbol: false)
     end
 
     def special_tier_rate_plan_name?(name)
