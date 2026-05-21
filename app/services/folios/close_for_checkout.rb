@@ -4,6 +4,8 @@ require "ostruct"
 
 module Folios
   class CloseForCheckout
+    include NightlyChargeCalculation
+
     def self.call(booking:, user:, checked_out_at: Time.current)
       new(booking: booking, user: user, checked_out_at: checked_out_at).call
     end
@@ -28,7 +30,7 @@ module Folios
         missing_charges_error = validate_all_nights_posted(folio)
         return failure(missing_charges_error, folio: folio) if missing_charges_error.present?
 
-        balance = folio.outstanding_balance.to_d
+        balance = calculate_fresh_balance(folio)
         return failure("Cannot check out with outstanding balance of #{formatted_balance(balance)}.", folio: folio, balance: balance) if balance.positive?
         return failure("Cannot check out with credit balance of #{formatted_balance(balance)}. Process refund or adjustment first.", folio: folio, balance: balance) if balance.negative?
 
@@ -61,14 +63,44 @@ module Folios
 
       return if expected_dates.empty?
 
-      # Find missing dates for accommodation or tax
       missing_dates = expected_dates.select do |date|
-        !folio.folio_transactions.charge.where(category: %w[accommodation tax]).where("metadata->>'stay_date' = ?", date.iso8601).exists?
+        missing_accommodation_charge?(folio, date) || missing_tax_charge?(folio, date)
       end
 
       if missing_dates.any?
         "Missing nightly charges for: #{missing_dates.uniq.map { |d| d.strftime('%d %b') }.join(', ')}. Please ensure all nightly charges are posted before checkout."
       end
+    end
+
+    def missing_accommodation_charge?(folio, date)
+      expected_total = @booking.booking_rooms.to_a.sum { |room| nightly_room_amount(room, date) }
+      return false if expected_total.zero?
+
+      posted_charge_total(folio, "accommodation", date) != expected_total
+    end
+
+    def missing_tax_charge?(folio, date)
+      expected_total = tax_postings_for(@booking, date).sum { |tax_line| tax_line_amount(tax_line) }
+      return false unless expected_total.positive?
+
+      posted_charge_total(folio, "tax", date) != expected_total
+    end
+
+    def posted_charge_total(folio, category, date)
+      FolioTransaction.charge
+        .where(booking_folio_id: folio.id)
+        .where(category: category)
+        .where("metadata->>'stay_date' = ?", date.iso8601)
+        .sum(:amount)
+        .to_d
+    end
+
+    def calculate_fresh_balance(folio)
+      charges = FolioTransaction.charge.where(booking_folio_id: folio.id).sum(:amount)
+      payments = FolioTransaction.payment.where(booking_folio_id: folio.id).sum(:amount)
+      adjustments = FolioTransaction.adjustment.where(booking_folio_id: folio.id).sum(:amount)
+      
+      charges.to_d - payments.to_d + adjustments.to_d
     end
 
     def formatted_balance(balance)

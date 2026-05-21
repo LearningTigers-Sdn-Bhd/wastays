@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_21_000200) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_21_000300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -396,6 +396,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_21_000200) do
     t.datetime "posted_at"
     t.string "currency"
     t.string "gl_code"
+    t.index "booking_folio_id, ((metadata ->> 'early_checkout_charge_key'::text))", name: "index_folio_transactions_on_early_checkout_charge", unique: true, where: "(metadata ? 'early_checkout_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'nightly_charge_key'::text))", name: "index_folio_transactions_on_nightly_charge", unique: true, where: "(metadata ? 'nightly_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'no_show_charge_key'::text))", name: "index_folio_transactions_on_no_show_charge", unique: true, where: "(metadata ? 'no_show_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'payment_transaction_id'::text))", name: "index_folio_transactions_on_gateway_payment", unique: true, where: "(metadata ? 'payment_transaction_id'::text)"

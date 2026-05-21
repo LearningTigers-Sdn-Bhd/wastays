@@ -15,11 +15,17 @@ module Bookings
     def call
       case @status
       when "checked_in"
-        check_in
+        if @booking.status == "review_due_out"
+          simple_transition("checked_in", @options[:event] || "resolve_late_checkout")
+        else
+          check_in
+        end
       when "completed"
         check_out
       when "cancelled"
         cancel
+      when "review_due_out"
+        simple_transition("review_due_out", @options[:event] || "detect_late_checkout")
       else
         failure("Unsupported status transition: #{@status}")
       end
@@ -28,6 +34,24 @@ module Bookings
     end
 
     private
+
+    def simple_transition(new_status, event)
+      Booking.transaction do
+        @booking.with_lock do
+          @booking.reload
+          @booking.transition_status_to!(new_status, event: event)
+          Bookings::RecordAuditLog.call(
+            auditable: @booking,
+            user: @user,
+            action_type: "status_change",
+            metadata: { from: @booking.status_was, to: new_status, event: event, reason: @options[:reason] }
+          )
+        end
+      end
+      success
+    rescue ActiveRecord::RecordInvalid => e
+      failure(e.record.errors.full_messages.to_sentence)
+    end
 
     def check_in
       business_date = @booking.check_in.to_date
@@ -145,7 +169,7 @@ module Bookings
         @booking.with_lock do
           @booking.reload
 
-          unless @booking.checked_in?
+          unless @booking.checked_in? || @booking.status == "review_due_out"
             error = "Cannot check out booking with status #{@booking.status}"
             next
           end
@@ -174,9 +198,11 @@ module Bookings
 
       return failure(error) if error.present?
 
-      Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
-      Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
-      SendInvoiceEmailJob.perform_later(@booking.id)
+      unless @options[:defer_side_effects]
+        Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
+        Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
+        SendInvoiceEmailJob.perform_later(@booking.id)
+      end
 
       success
     rescue ActiveRecord::RecordInvalid => e

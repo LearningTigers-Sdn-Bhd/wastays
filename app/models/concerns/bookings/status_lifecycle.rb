@@ -18,7 +18,12 @@ module Bookings
         "cancel" => "cancelled"
       },
       "checked_in" => {
-        "check_out" => "completed"
+        "check_out" => "completed",
+        "detect_late_checkout" => "review_due_out"
+      },
+      "review_due_out" => {
+        "check_out" => "completed",
+        "resolve_late_checkout" => "checked_in"
       },
       "no_show" => {
         "reinstate" => "checked_in"

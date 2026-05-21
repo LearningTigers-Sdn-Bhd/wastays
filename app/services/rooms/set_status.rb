@@ -5,12 +5,13 @@ require "ostruct"
 module Rooms
   class SetStatus
     ALLOWED_TRANSITIONS = {
-      "ready" => %w[pending_cleaning out_of_service],
-      "pending_cleaning" => %w[preparing ready out_of_service],
+      "ready" => %w[pending_cleaning out_of_service late_checkout_detected],
+      "pending_cleaning" => %w[preparing ready out_of_service late_checkout_detected],
       "preparing" => %w[awaiting_inspection ready inspection_failed out_of_service],
       "awaiting_inspection" => %w[ready inspection_failed preparing out_of_service],
       "inspection_failed" => %w[preparing ready out_of_service],
-      "out_of_service" => %w[ready pending_cleaning]
+      "out_of_service" => %w[ready pending_cleaning],
+      "late_checkout_detected" => %w[pending_cleaning ready out_of_service]
     }.freeze
 
     def initialize(room_status:, status:, user:, reason: nil, booking: nil, event_type: "room_status_changed", metadata: {})
@@ -52,6 +53,15 @@ module Rooms
           reason: @reason,
           metadata: audit_metadata
         )
+
+        if @status == "late_checkout_detected" && (booking_to_transition = find_active_booking).present?
+          Bookings::TransitionStatus.new(
+            booking: booking_to_transition,
+            status: "review_due_out",
+            user: @user,
+            options: { event: "detect_late_checkout", reason: @reason }
+          ).call
+        end
       end
 
       success
@@ -60,6 +70,11 @@ module Rooms
     end
 
     private
+
+    def find_active_booking
+      @booking || @room_status.hotel.bookings.checked_in.joins(:booking_rooms)
+                             .find_by(booking_rooms: { room_number: @room_status.room_number })
+    end
 
     def allowed_transition?
       ALLOWED_TRANSITIONS.fetch(@room_status.status, []).include?(@status)

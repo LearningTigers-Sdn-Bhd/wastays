@@ -34,7 +34,7 @@ class Booking < ApplicationRecord
     @guest_government_id = value
   end
 
-  STATUSES = %w[pending confirmed checked_in cancelled completed overbooked no_show].freeze
+  STATUSES = %w[pending confirmed checked_in review_due_out cancelled completed overbooked no_show].freeze
   PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
