@@ -51,5 +51,24 @@ RSpec.describe "Public::PreCheckins", type: :request do
       expect(pre_checkin.metadata["estimated_arrival_time"]).to eq("15:30")
       expect(booking.reload.pre_checkin_status).to eq("completed")
     end
+
+    it "saves home address" do
+      patch pre_checkin_path(pre_checkin.token), params: {
+        booking: {
+          guest_name: "Aisha Tan",
+          guest_email: "aisha.tan@example.com",
+          guest_phone: "+60123456789",
+          guest_gender: "female",
+          guest_country: "Malaysia",
+          guest_document_type: "ic",
+          guest_government_id: "900101-10-1234",
+          guest_home_address: "No. 12, Jalan Ampang, 50450 Kuala Lumpur",
+          estimated_arrival_time: "15:30"
+        }
+      }
+
+      expect(response).to redirect_to(pre_checkin_path(pre_checkin.token))
+      expect(booking.reload.guest_home_address).to eq("No. 12, Jalan Ampang, 50450 Kuala Lumpur")
+    end
   end
 end

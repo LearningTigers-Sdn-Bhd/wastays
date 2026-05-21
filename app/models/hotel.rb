@@ -143,6 +143,10 @@ class Hotel < ApplicationRecord
     %w[approved live].include?(status)
   end
 
+  def concierge_available?
+    active? && concierge_enabled?
+  end
+
   def effective_payment_setting(gateway)
     # 1. Check hotel-level override
     setting = payment_settings.active.find_by(gateway: gateway)
