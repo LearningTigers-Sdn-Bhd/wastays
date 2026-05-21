@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_21_000300) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_21_131019) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -496,6 +496,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_21_000300) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_hotel_taxes_on_hotel_id"
+  end
+
+  create_table "hotel_team_configs", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "name"
+    t.text "description"
+    t.text "emails"
+    t.integer "frequency"
+    t.string "template_type"
+    t.datetime "last_alert_sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_hotel_team_configs_on_hotel_id"
   end
 
   create_table "hotels", force: :cascade do |t|
@@ -1168,6 +1181,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_21_000300) do
   add_foreign_key "hotel_general_ledger_maps", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotel_taxes", "hotels"
+  add_foreign_key "hotel_team_configs", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "users", column: "salesperson_id"
   add_foreign_key "housekeeping_requests", "bookings"

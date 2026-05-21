@@ -28,6 +28,9 @@ production:
   run_scheduled_night_audits:
     class: RunScheduledNightAuditsJob
     schedule: every 15 minutes
+  financial_observability:
+    class: FinancialObservabilityJob
+    schedule: every hour
 
 demo:
   release_expired_holds:
@@ -42,3 +45,6 @@ demo:
   run_scheduled_night_audits:
     class: RunScheduledNightAuditsJob
     schedule: every 15 minutes
+  financial_observability:
+    class: FinancialObservabilityJob
+    schedule: every hour
