@@ -45,6 +45,14 @@ end %>
             View Audit Packet
           <% end %>
         <% end %>
+        <% if @night_audit.blocked? %>
+          <%= link_to resolve_hotel_night_audit_path(current_hotel, @night_audit), class: "inline-flex items-center gap-2 rounded-xl bg-red-650 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700" do %>
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Resolve Blockers &rarr;
+          <% end %>
+        <% end %>
         <%= link_to "Back to Night Audit", hotel_night_audits_path(current_hotel), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
       </div>
     </div>

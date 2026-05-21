@@ -305,7 +305,12 @@ Rails.application.routes.draw do
         get :folio_ledger
         get :journal_batches      end
     end
-    resources :night_audits, only: [ :index, :show, :create ]
+    resources :night_audits, only: [ :index, :show, :create ] do
+      member do
+        get :resolve
+        get :blockers
+      end
+    end
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
         post :apply_pricing_rules

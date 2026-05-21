@@ -28,6 +28,24 @@ module HotelPortal
       end
     end
 
+    def resolve
+      @night_audit = current_hotel.night_audits.find(params[:id])
+      redirect_to hotel_night_audit_path(current_hotel, @night_audit), alert: "Night audit is not blocked." unless @night_audit.blocked?
+    end
+
+    def blockers
+      @night_audit = current_hotel.night_audits.find(params[:id])
+      result = HotelOps::EvaluateNightAudit.new(
+        hotel: current_hotel,
+        business_date: @night_audit.business_date
+      ).call
+
+      render json: {
+        blocked_details: result[:blocked_details],
+        exceptions: result[:exceptions]
+      }
+    end
+
     def create
       business_date = requested_business_date
 

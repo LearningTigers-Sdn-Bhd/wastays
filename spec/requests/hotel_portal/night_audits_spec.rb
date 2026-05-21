@@ -178,4 +178,51 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     expect(flash[:alert]).to include("cannot be audited yet")
     expect(NightAudit.where(hotel: hotel, business_date: Date.new(2026, 5, 21))).to be_empty
   end
+
+  describe "GET #resolve" do
+    let(:night_audit) { create(:night_audit, hotel: hotel, status: "blocked") }
+
+    it "renders the resolve page when the night audit is blocked" do
+      sign_in(user)
+      get resolve_hotel_night_audit_path(hotel, night_audit)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Resolve Audit Blockers")
+    end
+
+    it "redirects to show page when the night audit is not blocked" do
+      night_audit.update!(status: "completed")
+      sign_in(user)
+      get resolve_hotel_night_audit_path(hotel, night_audit)
+      expect(response).to redirect_to(hotel_night_audit_path(hotel, night_audit))
+      expect(flash[:alert]).to eq("Night audit is not blocked.")
+    end
+
+    it "blocks access without permission" do
+      role.permissions.delete(permission)
+      sign_in(user)
+      get resolve_hotel_night_audit_path(hotel, night_audit)
+      expect(response).to redirect_to(root_path)
+    end
+  end
+
+  describe "GET #blockers" do
+    let(:night_audit) { create(:night_audit, hotel: hotel, status: "blocked") }
+
+    it "returns the blockers as JSON" do
+      sign_in(user)
+      get blockers_hotel_night_audit_path(hotel, night_audit)
+      expect(response).to have_http_status(:ok)
+      json = JSON.parse(response.body)
+      expect(json).to have_key("blocked_details")
+      expect(json).to have_key("exceptions")
+    end
+
+    it "blocks access without permission" do
+      role.permissions.delete(permission)
+      sign_in(user)
+      get blockers_hotel_night_audit_path(hotel, night_audit)
+      expect(response).to redirect_to(root_path)
+    end
+  end
 end
+
