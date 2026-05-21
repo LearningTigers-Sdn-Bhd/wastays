@@ -13,11 +13,11 @@ class CurrencyFormatter
   end
 
   def format
-    return "#{currency} -" if amount.blank?
+    return "-" if amount.blank?
 
     number_to_currency(
       amount,
-      unit: "#{CurrencyCatalog.symbol_for(currency)} ",
+      unit: "",
       precision: CurrencyCatalog.precision_for(currency),
       delimiter: ","
     )

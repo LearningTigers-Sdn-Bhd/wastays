@@ -40,9 +40,7 @@ class Public::QuotesController < ApplicationController
     render json: {
       found: found,
       guest_details: found ? guest_lookup_payload(guest) : {},
-      quote_token: quote.token,
-      corporate_valid: true,
-      corporate_message: nil
+      quote_token: quote.token
     }
   end
 
