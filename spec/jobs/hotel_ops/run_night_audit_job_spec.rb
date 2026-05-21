@@ -14,7 +14,8 @@ RSpec.describe HotelOps::RunNightAuditJob, type: :job do
       business_date: night_audit.business_date,
       performed_by_user: user,
       trigger_mode: "manual",
-      notes: "Test notes"
+      notes: "Test notes",
+      allow_unclosable_date: false
     ).and_return(runner)
 
     expect(runner).to receive(:call)
@@ -30,11 +31,28 @@ RSpec.describe HotelOps::RunNightAuditJob, type: :job do
       business_date: scheduled_audit.business_date,
       performed_by_user: nil,
       trigger_mode: "scheduled",
-      notes: nil
+      notes: nil,
+      allow_unclosable_date: false
     ).and_return(runner)
 
     expect(runner).to receive(:call)
 
     described_class.perform_now(scheduled_audit.id, nil)
+  end
+
+  it "passes the development-only unclosable date override to the service" do
+    runner = instance_double(HotelOps::RunNightAudit)
+    expect(HotelOps::RunNightAudit).to receive(:new).with(
+      hotel: hotel,
+      business_date: night_audit.business_date,
+      performed_by_user: user,
+      trigger_mode: "manual",
+      notes: "Test notes",
+      allow_unclosable_date: true
+    ).and_return(runner)
+
+    expect(runner).to receive(:call)
+
+    described_class.perform_now(night_audit.id, user.id, allow_unclosable_date: true)
   end
 end

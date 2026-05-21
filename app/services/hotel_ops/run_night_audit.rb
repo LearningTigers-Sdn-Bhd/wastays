@@ -2,25 +2,24 @@ module HotelOps
   class RunNightAudit
     Result = Struct.new(:success?, :night_audit, :error, keyword_init: true)
 
-    def initialize(hotel:, business_date:, performed_by_user:, trigger_mode:, notes: nil)
+    def initialize(hotel:, business_date:, performed_by_user:, trigger_mode:, notes: nil, allow_unclosable_date: false)
       @hotel = hotel
       @business_date = business_date.to_date
       @performed_by_user = performed_by_user
       @trigger_mode = trigger_mode
       @notes = notes.to_s.strip.presence
+      @allow_unclosable_date = Rails.env.development? && allow_unclosable_date
     end
 
     def call
       night_audit = @hotel.night_audits.find_or_initialize_by(business_date: @business_date)
       return Result.new(success?: false, error: "Night audit has already been completed for this date.", night_audit: night_audit) if night_audit.completed?
 
-      unless @hotel.can_audit_date?(@business_date)
+      unless @allow_unclosable_date || @hotel.can_audit_date?(@business_date)
         window = @hotel.business_day_window_for(@business_date)
-        return Result.new(
-          success?: false,
-          error: "Business date #{@business_date} cannot be audited yet. The business day ends at #{window.end.strftime('%I:%M %p')}.",
-          night_audit: night_audit
-        )
+        error = "Business date #{@business_date} cannot be audited yet. The business day ends at #{window.end.strftime('%I:%M %p')}."
+        night_audit = persist_failure(night_audit, error) if night_audit.persisted? && night_audit.pending?
+        return Result.new(success?: false, error: error, night_audit: night_audit)
       end
 
       business_date, claim_error = claim_business_date

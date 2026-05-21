@@ -13,7 +13,14 @@ module HotelPortal
     end
 
     def create
-      night_audit = current_hotel.night_audits.find_or_initialize_by(business_date: requested_business_date)
+      business_date = requested_business_date
+
+      unless allow_unclosable_date? || current_hotel.can_audit_date?(business_date)
+        redirect_to hotel_night_audits_path(current_hotel), alert: unclosable_date_message(business_date)
+        return
+      end
+
+      night_audit = current_hotel.night_audits.find_or_initialize_by(business_date: business_date)
       if night_audit.completed?
         redirect_to hotel_night_audits_path(current_hotel), alert: "Night audit has already been completed for this date."
         return
@@ -35,7 +42,7 @@ module HotelPortal
       )
 
       if night_audit.save
-        HotelOps::RunNightAuditJob.perform_later(night_audit.id, current_user.id)
+        HotelOps::RunNightAuditJob.perform_later(night_audit.id, current_user.id, allow_unclosable_date: allow_unclosable_date?)
         redirect_to hotel_night_audit_path(current_hotel, night_audit), notice: "Night audit has been scheduled in the background. Please wait while it processes."
       else
         redirect_to hotel_night_audits_path(current_hotel), alert: "Night audit could not be created: #{night_audit.errors.full_messages.join(', ')}"
@@ -53,6 +60,17 @@ module HotelPortal
       raw_value.present? ? Date.parse(raw_value) : current_hotel.latest_closable_business_date
     rescue ArgumentError, TypeError
       current_hotel.latest_closable_business_date
+    end
+
+    def allow_unclosable_date?
+      Rails.env.development? && ActiveModel::Type::Boolean.new.cast(params.dig(:night_audit, :allow_unclosable_date))
+    end
+
+    def unclosable_date_message(business_date)
+      window = current_hotel.business_day_window_for(business_date)
+      latest = current_hotel.latest_closable_business_date
+
+      "Business date #{business_date.strftime('%d %b %Y')} cannot be audited yet. The business day ends at #{window.end.strftime('%d %b %Y, %I:%M %p')}. Latest closable date is #{latest.strftime('%d %b %Y')}."
     end
   end
 end

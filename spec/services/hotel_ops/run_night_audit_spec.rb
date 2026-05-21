@@ -416,6 +416,68 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(result.night_audit).not_to be_persisted
   end
 
+  it "marks an existing pending audit failed when the business date is not closable" do
+    unclosable_date = Date.new(2026, 5, 21)
+    kl_zone = Time.find_zone("Kuala Lumpur")
+    existing = create(:night_audit, hotel: hotel, business_date: unclosable_date, status: "pending", trigger_mode: "manual")
+
+    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+      result = described_class.new(
+        hotel: hotel,
+        business_date: unclosable_date,
+        performed_by_user: user,
+        trigger_mode: "manual"
+      ).call
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("cannot be audited yet")
+      expect(result.night_audit.id).to eq(existing.id)
+      expect(existing.reload).to be_failed
+      expect(existing.completed_at).to be_present
+      expect(existing.night_audit_logs.last.action_type).to eq("failed")
+    end
+  end
+
+  it "allows an unclosed business date when explicitly overridden" do
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("development"))
+
+    unclosable_date = Date.new(2026, 5, 21)
+    kl_zone = Time.find_zone("Kuala Lumpur")
+    audit_hotel = create(:hotel, account: account, time_zone: "Kuala Lumpur", business_starts_at: "08:00", business_ends_at: "02:00")
+
+    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+      result = described_class.new(
+        hotel: audit_hotel,
+        business_date: unclosable_date,
+        performed_by_user: user,
+        trigger_mode: "manual",
+        allow_unclosable_date: true
+      ).call
+
+      expect(result.success?).to be(true)
+      expect(result.night_audit).to be_completed
+      expect(audit_hotel.hotel_business_dates.find_by!(business_date: unclosable_date)).to be_closed
+    end
+  end
+
+  it "does not allow the unclosed business date override outside development" do
+    unclosable_date = Date.new(2026, 5, 21)
+    kl_zone = Time.find_zone("Kuala Lumpur")
+
+    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+      result = described_class.new(
+        hotel: hotel,
+        business_date: unclosable_date,
+        performed_by_user: user,
+        trigger_mode: "manual",
+        allow_unclosable_date: true
+      ).call
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("cannot be audited yet")
+    end
+  end
+
   it "does not claim a business date that is already closed" do
     create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "closed")
 

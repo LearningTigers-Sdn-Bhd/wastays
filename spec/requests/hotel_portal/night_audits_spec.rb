@@ -87,20 +87,19 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
 
   it "returns an alert redirect for a blocked audit" do
     sign_in(user)
-    today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
+    business_date = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current - 1.day }
     create(:booking,
       hotel: hotel,
       status: "checked_in",
       payment_status: "captured",
-      check_in: today_kl - 1.day,
-      check_out: today_kl,
+      check_in: business_date - 1.day,
+      check_out: business_date,
       checked_in_at: 1.day.ago)
 
-    today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
     perform_enqueued_jobs do
       post hotel_night_audits_path(hotel), params: {
         night_audit: {
-          business_date: today_kl.to_s
+          business_date: business_date.to_s
         }
       }
     end
@@ -121,5 +120,62 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
 
     expect(response).to redirect_to(hotel_night_audit_path(hotel, night_audit))
     expect(flash[:notice]).to eq("Night audit is already scheduled or running in the background.")
+  end
+
+  it "rejects an unclosable business date before enqueueing a manual audit" do
+    sign_in(user)
+    kl_zone = Time.find_zone("Kuala Lumpur")
+
+    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+      expect do
+        post hotel_night_audits_path(hotel), params: { night_audit: { business_date: Date.new(2026, 5, 21).to_s } }
+      end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+    end
+
+    expect(response).to redirect_to(hotel_night_audits_path(hotel))
+    expect(flash[:alert]).to include("cannot be audited yet")
+    expect(NightAudit.where(hotel: hotel, business_date: Date.new(2026, 5, 21))).to be_empty
+  end
+
+  it "allows a development-only manual audit for an unclosed business date" do
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("development"))
+
+    sign_in(user)
+    kl_zone = Time.find_zone("Kuala Lumpur")
+
+    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+      perform_enqueued_jobs do
+        post hotel_night_audits_path(hotel), params: {
+          night_audit: {
+            business_date: Date.new(2026, 5, 21).to_s,
+            allow_unclosable_date: "1"
+          }
+        }
+      end
+    end
+
+    expect(response).to redirect_to(hotel_night_audit_path(hotel, NightAudit.last))
+    expect(NightAudit.last.business_date).to eq(Date.new(2026, 5, 21))
+    expect(NightAudit.last).to be_completed
+  end
+
+  it "ignores the development-only override outside development" do
+    sign_in(user)
+    kl_zone = Time.find_zone("Kuala Lumpur")
+
+    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+      expect do
+        post hotel_night_audits_path(hotel), params: {
+          night_audit: {
+            business_date: Date.new(2026, 5, 21).to_s,
+            allow_unclosable_date: "1"
+          }
+        }
+      end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+    end
+
+    expect(response).to redirect_to(hotel_night_audits_path(hotel))
+    expect(flash[:alert]).to include("cannot be audited yet")
+    expect(NightAudit.where(hotel: hotel, business_date: Date.new(2026, 5, 21))).to be_empty
   end
 end

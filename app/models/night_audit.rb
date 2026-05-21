@@ -35,4 +35,8 @@ class NightAudit < ApplicationRecord
   def running?
     status == "running"
   end
+
+  def pending?
+    status == "pending"
+  end
 end
