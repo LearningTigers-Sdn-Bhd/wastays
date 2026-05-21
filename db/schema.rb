@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_20_070000) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_21_000200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -297,6 +297,33 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_20_070000) do
     t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
     t.index ["booking_id"], name: "index_complaint_requests_on_booking_id"
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
+  end
+
+  create_table "deposits", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "booking_id", null: false
+    t.bigint "booking_folio_id"
+    t.bigint "user_id"
+    t.string "hold_type", null: false
+    t.string "status", null: false
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.string "currency", null: false
+    t.string "payment_method"
+    t.string "external_reference"
+    t.string "gl_code"
+    t.datetime "collected_at"
+    t.datetime "authorized_at"
+    t.datetime "released_at"
+    t.datetime "forfeited_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_folio_id"], name: "index_deposits_on_booking_folio_id"
+    t.index ["booking_id"], name: "index_deposits_on_booking_id"
+    t.index ["gl_code"], name: "index_deposits_on_gl_code"
+    t.index ["hotel_id", "hold_type", "status"], name: "index_deposits_on_hotel_id_and_hold_type_and_status"
+    t.index ["hotel_id"], name: "index_deposits_on_hotel_id"
+    t.index ["user_id"], name: "index_deposits_on_user_id"
   end
 
   create_table "exchange_rates", force: :cascade do |t|
@@ -1118,6 +1145,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_20_070000) do
   add_foreign_key "bookings", "hotels"
   add_foreign_key "bookings", "payout_batches"
   add_foreign_key "complaint_requests", "bookings"
+  add_foreign_key "deposits", "booking_folios"
+  add_foreign_key "deposits", "bookings"
+  add_foreign_key "deposits", "hotels"
+  add_foreign_key "deposits", "users"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
   add_foreign_key "financial_audit_events", "booking_folios"
   add_foreign_key "financial_audit_events", "bookings"

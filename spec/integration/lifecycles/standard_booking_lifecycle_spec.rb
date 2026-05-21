@@ -14,13 +14,13 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
     user.user_hotel_accesses.create!(hotel: hotel, role: admin_role)
   end
 
-  describe "1. Fully Prepaid (Advance Deposit) Lifecycle" do
+  describe "1. Fully Prepaid (Booking Payment) Lifecycle" do
     it "flows from check-in to night audit to checkout seamlessly" do
       # Guest booked for 2 nights at 100/night = 200 total
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 2.days, total_amount: 200.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0, quantity: 1)
 
-      # 1. Advance Deposit (Simulate gateway payment sync)
+      # 1. Booking Payment (Simulate gateway payment sync)
       payment = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 20_000, captured_at: Time.current)
       Folios::RecordPaymentFromGateway.call(payment)
 
@@ -28,7 +28,7 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
       booking.transition_status_to!("checked_in", event: "check_in")
       folio = Folios::InitializeForBooking.call(booking: booking, user: user)
 
-      # Ensure advance deposit synced into folio
+      # Ensure booking payment synced into folio
       expect(folio.folio_transactions.payment.sum(:amount)).to eq(200.0)
       expect(folio.outstanding_balance).to eq(-200.0) # Credit balance
 

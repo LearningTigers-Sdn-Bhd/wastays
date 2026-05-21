@@ -2,7 +2,7 @@
 
 class FolioTransaction < ApplicationRecord
   CHARGE_CATEGORIES = %w[accommodation tax fb no_show_penalty other].freeze
-  PAYMENT_CATEGORIES = %w[gateway_payment cash refund advance_deposit].freeze
+  PAYMENT_CATEGORIES = %w[gateway_payment cash refund booking_payment].freeze
   ADJUSTMENT_CATEGORIES = %w[adjustment correction discount write_off other].freeze
   CATEGORIES_BY_TYPE = {
     "charge" => CHARGE_CATEGORIES,
@@ -10,7 +10,7 @@ class FolioTransaction < ApplicationRecord
     "adjustment" => ADJUSTMENT_CATEGORIES
   }.freeze
 
-  GL_MAPPABLE_CATEGORIES = CATEGORIES_BY_TYPE.values.flatten.uniq.freeze
+  GL_MAPPABLE_CATEGORIES = (CATEGORIES_BY_TYPE.values.flatten + %w[security_deposits]).uniq.freeze
 
   belongs_to :booking_folio
   belongs_to :user, optional: true

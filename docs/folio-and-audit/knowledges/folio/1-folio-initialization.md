@@ -19,8 +19,9 @@ Creates the guest financial ledger for a booking and applies existing captured p
 ## Rules Made So Far
 
 - Each booking can receive a folio for stay-related financial activity.
-- Captured booking payments are synchronized into the folio as `advance_deposit` transactions.
-- Advance-deposit transactions feed Deposit Liability reporting for unearned revenue visibility.
+- Captured booking payments are synchronized into the folio as `booking_payment` transactions.
+- Booking-payment transactions feed Deposit Liability reporting for unearned revenue visibility.
+- Actual security deposits are tracked separately in `deposits` with GL category `security_deposits` and do not reduce folio balances unless applied later.
 - Initialization is idempotent enough to avoid duplicate folio setup during normal check-in flows.
 
 ## Known Follow-Ups

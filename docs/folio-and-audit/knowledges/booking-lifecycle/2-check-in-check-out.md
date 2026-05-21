@@ -20,7 +20,8 @@ Connects stay transitions to folio opening, nightly charge validation, balance s
 ## Rules Made So Far
 
 - Check-in initializes the guest folio when needed.
-- Existing captured booking payments are synchronized into the folio as advance deposits.
+- Existing captured booking payments are synchronized into the folio as booking payments.
+- Optional collected security deposits can be recorded at check-in and are tracked separately from folio payments.
 - Checkout is blocked unless required nightly charges have been posted and the folio balance is settled.
 - Folio closure records an auditable financial event.
 

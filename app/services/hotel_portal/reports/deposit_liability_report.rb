@@ -28,7 +28,7 @@ module HotelPortal
               .where(bookings: { hotel_id: @hotel.id })
               .where(folio_transactions: {
                 transaction_type: "payment",
-                category: "advance_deposit",
+                category: "booking_payment",
                 posting_date: ..@as_of_date
               })
               .preload(:folio_transactions, booking: { booking_rooms: :room_type })
@@ -37,7 +37,7 @@ module HotelPortal
 
       def row_for(folio)
         transactions = folio.folio_transactions.select { |transaction| transaction.posting_date <= @as_of_date }
-        deposit_amount = sum_amount(transactions, transaction_type: "payment", category: "advance_deposit")
+        deposit_amount = sum_amount(transactions, transaction_type: "payment", category: "booking_payment")
         return if deposit_amount <= 0
 
         earned_amount = transactions.select { |transaction| transaction.charge? || transaction.adjustment? }.sum { |transaction| transaction.amount.to_d }
@@ -54,7 +54,7 @@ module HotelPortal
           stay_dates: stay_dates(booking),
           room_details: room_details(booking),
           folio_number: folio.folio_number,
-          advance_deposit_amount: deposit_amount.round(2),
+          booking_payment_amount: deposit_amount.round(2),
           earned_amount: earned_amount.round(2),
           refund_amount: refund_amount.round(2),
           remaining_liability: remaining_liability.round(2),
@@ -69,7 +69,7 @@ module HotelPortal
       end
 
       def latest_deposit_posting_date(transactions)
-        transactions.select { |transaction| transaction.payment? && transaction.category == "advance_deposit" }
+        transactions.select { |transaction| transaction.payment? && transaction.category == "booking_payment" }
                     .map(&:posting_date)
                     .max
       end
@@ -91,7 +91,7 @@ module HotelPortal
       def totals_for(rows)
         {
           booking_count: rows.size,
-          advance_deposit_amount: rows.sum { |row| row[:advance_deposit_amount].to_d },
+          booking_payment_amount: rows.sum { |row| row[:booking_payment_amount].to_d },
           earned_amount: rows.sum { |row| row[:earned_amount].to_d },
           refund_amount: rows.sum { |row| row[:refund_amount].to_d },
           remaining_liability: rows.sum { |row| row[:remaining_liability].to_d }

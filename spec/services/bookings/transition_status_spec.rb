@@ -62,6 +62,34 @@ RSpec.describe Bookings::TransitionStatus do
         expect(other_booking.reload.booking_folio.folio_number).to eq(1)
       end
 
+      it "optionally records a collected security deposit during check-in" do
+        result = described_class.new(
+          booking: booking,
+          status: "checked_in",
+          timestamp: timestamp,
+          user: user,
+          options: {
+            security_deposit: {
+              amount: "300.00",
+              payment_method: "cash",
+              external_reference: "DEP-1"
+            }
+          }
+        ).call
+
+        expect(result.success?).to be(true)
+        deposit = booking.reload.deposits.sole
+        expect(deposit.amount).to eq(300.0)
+        expect(deposit.status).to eq("collected")
+        expect(deposit.hold_type).to eq("security")
+        expect(deposit.booking_folio).to eq(booking.booking_folio)
+        expect(deposit.gl_code).to eq("2030")
+        expect(BookingAuditLog.last.metadata).to include(
+          "security_deposit_id" => deposit.id,
+          "security_deposit_amount" => "300.0"
+        )
+      end
+
       it "silently no-ops when the booking is already checked in" do
         create(:booking_room, booking: booking, subtotal: 100.0)
         first_result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call

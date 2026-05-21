@@ -28,14 +28,14 @@ RSpec.describe FolioTransaction, type: :model do
       expect(transaction.errors[:amount]).to include("must be positive for payment transactions")
     end
 
-    it "allows advance deposits as positive payment transactions" do
-      transaction = build(:folio_transaction, transaction_type: :payment, category: "advance_deposit", amount: 100.0)
+    it "allows booking payments as positive payment transactions" do
+      transaction = build(:folio_transaction, transaction_type: :payment, category: "booking_payment", amount: 100.0)
 
       expect(transaction).to be_valid
     end
 
-    it "requires advance deposits to be positive" do
-      transaction = build(:folio_transaction, transaction_type: :payment, category: "advance_deposit", amount: -100.0)
+    it "requires booking payments to be positive" do
+      transaction = build(:folio_transaction, transaction_type: :payment, category: "booking_payment", amount: -100.0)
 
       expect(transaction).not_to be_valid
       expect(transaction.errors[:amount]).to include("must be positive for payment transactions")

@@ -21,7 +21,7 @@ module HotelPortal
               row[:booking_status],
               row[:room_details],
               row[:folio_number],
-              money(row[:advance_deposit_amount]),
+              money(row[:booking_payment_amount]),
               money(row[:earned_amount]),
               money(row[:refund_amount]),
               money(row[:remaining_liability]),
@@ -29,14 +29,14 @@ module HotelPortal
             ]
           end
 
-          csv << [ "TOTAL", nil, nil, nil, nil, nil, money(@report.totals[:advance_deposit_amount]), money(@report.totals[:earned_amount]), money(@report.totals[:refund_amount]), money(@report.totals[:remaining_liability]), nil ]
+          csv << [ "TOTAL", nil, nil, nil, nil, nil, money(@report.totals[:booking_payment_amount]), money(@report.totals[:earned_amount]), money(@report.totals[:refund_amount]), money(@report.totals[:remaining_liability]), nil ]
         end
       end
 
       private
 
       def headers
-        [ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Advance Deposit", "Earned", "Refunds", "Remaining Liability", "Latest Deposit Date" ]
+        [ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Booking Payment", "Earned", "Refunds", "Remaining Liability", "Latest Payment Date" ]
       end
 
       def money(value)

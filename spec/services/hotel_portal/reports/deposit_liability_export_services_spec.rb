@@ -15,7 +15,7 @@ RSpec.describe "Deposit liability export services", type: :service do
           booking_status: "Confirmed",
           room_details: "1x Deluxe",
           folio_number: "F-101",
-          advance_deposit_amount: 300.to_d,
+          booking_payment_amount: 300.to_d,
           earned_amount: 100.to_d,
           refund_amount: 25.to_d,
           remaining_liability: 175.to_d,
@@ -24,7 +24,7 @@ RSpec.describe "Deposit liability export services", type: :service do
       ],
       totals: {
         booking_count: 1,
-        advance_deposit_amount: 300.to_d,
+        booking_payment_amount: 300.to_d,
         earned_amount: 100.to_d,
         refund_amount: 25.to_d,
         remaining_liability: 175.to_d
@@ -35,7 +35,7 @@ RSpec.describe "Deposit liability export services", type: :service do
   it "generates CSV with detail and total rows" do
     csv = HotelPortal::Reports::DepositLiabilityCsvExportService.new(report: report).generate
 
-    expect(csv).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Advance Deposit,Earned,Refunds,Remaining Liability,Latest Deposit Date")
+    expect(csv).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Booking Payment,Earned,Refunds,Remaining Liability,Latest Payment Date")
     expect(csv).to include("Export Guest")
     expect(csv).to include("TOTAL")
   end

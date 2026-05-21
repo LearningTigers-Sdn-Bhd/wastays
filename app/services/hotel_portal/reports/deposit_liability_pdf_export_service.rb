@@ -41,7 +41,7 @@ module HotelPortal
       def draw_summary(pdf)
         cards = [
           [ "Bookings", @report.totals[:booking_count].to_s ],
-          [ "Advance Deposits", money(@report.totals[:advance_deposit_amount]) ],
+          [ "Booking Payments", money(@report.totals[:booking_payment_amount]) ],
           [ "Earned", money(@report.totals[:earned_amount]) ],
           [ "Remaining Liability", money(@report.totals[:remaining_liability]) ]
         ]
@@ -84,7 +84,7 @@ module HotelPortal
             row[:stay_dates],
             row[:booking_status],
             row[:folio_number].to_s,
-            money(row[:advance_deposit_amount]),
+            money(row[:booking_payment_amount]),
             money(row[:earned_amount]),
             money(row[:remaining_liability])
           ]

@@ -49,6 +49,7 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(booking).to be_persisted
       expect(booking.status).to eq('confirmed')
       expect(booking.payment_status).to eq('captured')
+      expect(booking.total_amount).to eq(210.to_d)
       expect(booking.guest_gender).to eq('female')
       expect(booking.guest_document_type).to eq('passport')
       expect(booking.guest_country).to eq('Singapore')

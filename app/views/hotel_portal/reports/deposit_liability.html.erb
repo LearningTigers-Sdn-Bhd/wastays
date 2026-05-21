@@ -45,8 +45,8 @@
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @report.totals[:booking_count] %></h2>
     </div>
     <div class="bg-amber-50/50 p-6 md:border-r md:border-slate-200">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-amber-700">Advance Deposits</p>
-      <h2 class="text-2xl font-bold tabular-nums tracking-tight text-amber-900">MYR <%= number_with_precision(@report.totals[:advance_deposit_amount], precision: 2) %></h2>
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-amber-700">Booking Payments</p>
+      <h2 class="text-2xl font-bold tabular-nums tracking-tight text-amber-900">MYR <%= number_with_precision(@report.totals[:booking_payment_amount], precision: 2) %></h2>
     </div>
     <div class="p-6 md:border-r md:border-slate-200">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Earned</p>
@@ -63,7 +63,7 @@
   </div>
 
   <div class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-950">
-    This report only includes explicit <span class="font-bold">advance deposit</span> folio payments. Gateway, cash, pre-arrival, and pre-check-in activity are excluded unless posted as <span class="font-bold">advance_deposit</span>.
+    This report only includes explicit <span class="font-bold">booking payment</span> folio payments. Security deposits are tracked separately and do not reduce folio balances unless applied later.
   </div>
 
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -75,7 +75,7 @@
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Stay</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Rooms / Folio</th>
-            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Advance Deposit</th>
+            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Booking Payment</th>
             <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Earned</th>
             <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Refunds</th>
             <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Liability</th>
@@ -95,7 +95,7 @@
                   <p><%= row[:room_details] %></p>
                   <p class="text-xs text-slate-500">Folio: <%= row[:folio_number] %></p>
                 </td>
-                <td class="px-6 py-4 text-right text-sm font-semibold text-slate-900">MYR <%= number_with_precision(row[:advance_deposit_amount], precision: 2) %></td>
+                <td class="px-6 py-4 text-right text-sm font-semibold text-slate-900">MYR <%= number_with_precision(row[:booking_payment_amount], precision: 2) %></td>
                 <td class="px-6 py-4 text-right text-sm font-semibold text-slate-900">MYR <%= number_with_precision(row[:earned_amount], precision: 2) %></td>
                 <td class="px-6 py-4 text-right text-sm font-semibold text-slate-900">MYR <%= number_with_precision(row[:refund_amount], precision: 2) %></td>
                 <td class="px-6 py-4 text-right text-sm font-bold text-emerald-800">MYR <%= number_with_precision(row[:remaining_liability], precision: 2) %></td>

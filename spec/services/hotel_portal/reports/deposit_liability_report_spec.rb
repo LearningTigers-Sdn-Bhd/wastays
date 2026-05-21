@@ -8,10 +8,10 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityReport, type: :service do
   let(:as_of_date) { Date.new(2026, 5, 20) }
 
   describe "#call" do
-    it "reports explicit advance deposits that remain unearned" do
+    it "reports explicit booking payments that remain unearned" do
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 3.days, check_out: as_of_date + 5.days, guest_name: "Future Guest", confirmation_token: "WS-FUTURE")
       folio = create(:booking_folio, booking: booking, hotel: hotel, folio_number: "F-100")
-      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "advance_deposit", amount: 300, posting_date: as_of_date - 1.day)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 300, posting_date: as_of_date - 1.day)
 
       result = described_class.new(hotel: hotel, as_of_date: as_of_date).call
 
@@ -19,7 +19,7 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityReport, type: :service do
       expect(result.rows.first).to include(
         guest_name: "Future Guest",
         confirmation_token: "WS-FUTURE",
-        advance_deposit_amount: 300.to_d,
+        booking_payment_amount: 300.to_d,
         earned_amount: 0.to_d,
         refund_amount: 0.to_d,
         remaining_liability: 300.to_d
@@ -30,14 +30,14 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityReport, type: :service do
     it "reduces liability by earned charges and refunds" do
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: as_of_date - 1.day, check_out: as_of_date + 1.day)
       folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "advance_deposit", amount: 330, posting_date: as_of_date - 2.days)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 330, posting_date: as_of_date - 2.days)
       create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100, posting_date: as_of_date - 1.day)
       create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "tax", amount: 10, posting_date: as_of_date - 1.day)
       create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "refund", amount: -50, posting_date: as_of_date)
 
       row = described_class.new(hotel: hotel, as_of_date: as_of_date).call.rows.first
 
-      expect(row[:advance_deposit_amount]).to eq(330.to_d)
+      expect(row[:booking_payment_amount]).to eq(330.to_d)
       expect(row[:earned_amount]).to eq(110.to_d)
       expect(row[:refund_amount]).to eq(50.to_d)
       expect(row[:remaining_liability]).to eq(170.to_d)
@@ -46,7 +46,7 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityReport, type: :service do
     it "uses adjustments in the earned amount" do
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: as_of_date - 1.day, check_out: as_of_date + 1.day)
       folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "advance_deposit", amount: 250, posting_date: as_of_date - 2.days)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 250, posting_date: as_of_date - 2.days)
       create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100, posting_date: as_of_date - 1.day)
       create(:folio_transaction, booking_folio: folio, transaction_type: :adjustment, category: "discount", amount: -20, posting_date: as_of_date)
 
@@ -59,7 +59,7 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityReport, type: :service do
     it "excludes fully earned deposits" do
       booking = create(:booking, hotel: hotel, status: "completed", check_in: as_of_date - 2.days, check_out: as_of_date)
       folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "advance_deposit", amount: 100, posting_date: as_of_date - 3.days)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 100, posting_date: as_of_date - 3.days)
       create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100, posting_date: as_of_date - 2.days)
 
       result = described_class.new(hotel: hotel, as_of_date: as_of_date).call
@@ -79,10 +79,10 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityReport, type: :service do
       expect(result.rows).to be_empty
     end
 
-    it "ignores future-dated advance deposits" do
+    it "ignores future-dated booking payments" do
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 2.days, check_out: as_of_date + 3.days)
       folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "advance_deposit", amount: 300, posting_date: as_of_date + 1.day)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 300, posting_date: as_of_date + 1.day)
 
       result = described_class.new(hotel: hotel, as_of_date: as_of_date).call
 
@@ -92,12 +92,12 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityReport, type: :service do
     it "excludes transactions after the as-of date and other hotels" do
       included = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Included Guest")
       included_folio = create(:booking_folio, booking: included, hotel: hotel)
-      create(:folio_transaction, booking_folio: included_folio, transaction_type: :payment, category: "advance_deposit", amount: 100, posting_date: as_of_date)
+      create(:folio_transaction, booking_folio: included_folio, transaction_type: :payment, category: "booking_payment", amount: 100, posting_date: as_of_date)
       create(:folio_transaction, booking_folio: included_folio, transaction_type: :charge, category: "accommodation", amount: 90, posting_date: as_of_date + 1.day)
 
       other_booking = create(:booking, hotel: other_hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Other Hotel Guest")
       other_folio = create(:booking_folio, booking: other_booking, hotel: other_hotel)
-      create(:folio_transaction, booking_folio: other_folio, transaction_type: :payment, category: "advance_deposit", amount: 500, posting_date: as_of_date)
+      create(:folio_transaction, booking_folio: other_folio, transaction_type: :payment, category: "booking_payment", amount: 500, posting_date: as_of_date)
 
       result = described_class.new(hotel: hotel, as_of_date: as_of_date).call
 

@@ -4,6 +4,7 @@ class BookingFolio < ApplicationRecord
   belongs_to :hotel
   belongs_to :booking
   has_many :folio_transactions, dependent: :restrict_with_error
+  has_many :deposits, dependent: :restrict_with_error
   has_many :financial_audit_events, dependent: :restrict_with_error
 
   validates :folio_number, presence: true, uniqueness: { scope: :hotel_id }

@@ -23,7 +23,6 @@ module BookingEngine
         # 2. Create Booking from Quote snapshots
         margin_rate = @quote.hotel.effective_margin_rate
         margin_amount = (@quote.total_amount * (margin_rate / 100.0)).round(2)
-        net_amount = @quote.total_amount - margin_amount
 
         guest_country = normalize_country(@payment_details[:country])
         gender = @payment_details[:gender]&.downcase&.strip
@@ -45,6 +44,7 @@ module BookingEngine
         tax_lines = financial_snapshot.tax_lines
         tourism_tax = tax_lines.find { |tax| tax["type"].to_s == "tourism_tax" }
         tourism_tax_amount = tourism_tax ? tourism_tax["amount"].to_d : 0
+        payable_total = financial_snapshot.room_total + financial_snapshot.tax_total
 
         booking = Booking.new(
           booking_quote: @quote,
@@ -52,7 +52,7 @@ module BookingEngine
           guest_name: @payment_details[:guest_name], # From checkout form
           guest_email: @payment_details[:guest_email],
           guest_phone: @payment_details[:guest_phone],
-          total_amount: @quote.total_amount,
+          total_amount: payable_total,
           currency: @quote.currency,
           check_in: @quote.check_in,
           check_out: @quote.check_out,
@@ -64,7 +64,7 @@ module BookingEngine
           payment_status: "captured",
           margin_rate: margin_rate,
           margin_amount: margin_amount,
-          net_amount: net_amount,
+          net_amount: payable_total - margin_amount,
           guest_gender: gender,
           guest_country: guest_country,
           guest_document_type: document_type,

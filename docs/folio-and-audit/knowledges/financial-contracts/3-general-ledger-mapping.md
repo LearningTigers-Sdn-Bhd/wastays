@@ -44,9 +44,9 @@ Maps folio transaction categories to accounting GL codes and supports hotel-spec
 | `gateway_payment` | `1010` | Bank - Gateway | Electronic payments (credit/debit cards) processed automatically through external payment gateways like Stripe. |
 | `cash` | `1020` | Bank - Cash | Physical currency (bills and coins) collected in person at the front desk. |
 | `refund` | `1030` | Bank - Refunds | Outbound money returned to the guest, typically reversing a previous `gateway_payment` or `cash` transaction. |
-| `advance_deposit` | `2020` | Advance Deposit Liability | Pre-payments collected prior to a guest's arrival. This is held as a liability because the hotel owes the guest the service until the stay actually occurs. |
+| `booking_payment` | `2020` | Booking Payment Liability | Pre-payments collected for the booking before stay revenue is earned. |
+| `security_deposits` | `2030` | Security Deposit Liability | Actual check-in security deposits held separately from the guest folio until released or applied. |
 | `adjustment` | `5010` | Adjustments | Post-audit reductions to revenue, often due to guest complaints or service recovery efforts (e.g., reducing the room rate because the AC was broken). |
 | `correction` | `5020` | Corrections | Same-day fixes for human errors made before the night audit closes (e.g., voiding a charge accidentally posted to the wrong room). |
 | `discount` | `5030` | Discounts | Upfront percentage or fixed-amount price reductions applied proactively to standard rates. |
 | `write_off` | `5040` | Write-Offs | Unpaid guest folio balances that the hotel has deemed uncollectible (bad debt) and absorbs as a loss. |
-

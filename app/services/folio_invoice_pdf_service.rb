@@ -32,7 +32,7 @@ class FolioInvoicePdfService
     "gateway_payment" => "Payment",
     "cash"          => "Cash Payment",
     "refund"        => "Refund",
-    "advance_deposit" => "Advance Deposit"
+    "booking_payment" => "Booking Payment"
   }.freeze
 
   def initialize(booking)

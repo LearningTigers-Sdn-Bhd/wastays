@@ -125,7 +125,7 @@
               <%= f.label :guest_country, "Country", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
               <%= f.text_field :guest_country, placeholder: current_hotel.country.presence || "Malaysia",
                   class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
-                  data: { guest_autocomplete_target: "country", guest_change_confirmation_target: "country" } %>
+                  data: { guest_autocomplete_target: "country", guest_change_confirmation_target: "country", booking_calc_target: "guestCountry", action: "input->booking-calc#calculate" } %>
             </div>
             <div>
               <%= f.label :guest_gender, "Gender", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
@@ -259,12 +259,12 @@
       <!-- Payment Capture -->
       <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-controller="payment-toggle">
         <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
-          <h3 class="text-sm font-bold text-slate-900">Advance Payment</h3>
+          <h3 class="text-sm font-bold text-slate-900">Booking Payment</h3>
         </div>
         <div class="p-6 space-y-6">
           <label class="flex items-center justify-between gap-4">
             <span>
-              <span class="block text-sm font-bold text-slate-900">Record advance payment now</span>
+              <span class="block text-sm font-bold text-slate-900">Record booking payment now</span>
               <span class="mt-1 block text-xs font-medium text-slate-500">Enable payment method, amount, and receipt reference fields.</span>
             </span>
             <span class="relative inline-flex shrink-0 items-center">

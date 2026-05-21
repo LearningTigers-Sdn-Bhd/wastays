@@ -10,7 +10,7 @@ RSpec.describe Folios::InitializeForBooking do
     create(:booking_room, booking: booking, subtotal: 200.0)
   end
 
-  it "creates a folio with captured payments as advance deposits" do
+  it "creates a folio with captured payments as booking payments" do
     payment_transaction = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
 
     folio = described_class.call(booking: booking, user: user)
@@ -20,7 +20,7 @@ RSpec.describe Folios::InitializeForBooking do
     expect(folio.hotel).to eq(booking.hotel)
     expect(folio.folio_transactions.charge.count).to eq(0)
     payment = folio.folio_transactions.payment.sole
-    expect(payment.category).to eq("advance_deposit")
+    expect(payment.category).to eq("booking_payment")
     expect(payment.metadata["payment_transaction_id"]).to eq(payment_transaction.id)
     expect(folio.outstanding_balance).to eq(-100.0)
   end

@@ -191,7 +191,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
 
   describe "5. Overpayment & Refund at Checkout" do
     it "blocks checkout for credit balance and requires a refund" do
-      # 1. Guest pays 500 advance deposit for a long stay
+      # 1. Guest pays 500 booking payment for a long stay
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 5.days, total_amount: 500.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 500.0, quantity: 1)
 

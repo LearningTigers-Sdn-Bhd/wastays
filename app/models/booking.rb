@@ -14,6 +14,7 @@ class Booking < ApplicationRecord
   has_one :pre_checkin, dependent: :destroy
   has_one :refund_request, dependent: :destroy
   has_one :booking_folio, dependent: :destroy
+  has_many :deposits, dependent: :restrict_with_error
   has_one_attached :id_front
   has_one_attached :id_back
   has_many :housekeeping_requests, dependent: :destroy

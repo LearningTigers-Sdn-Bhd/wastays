@@ -8,19 +8,19 @@ RSpec.describe Folios::SyncExistingPayments do
   let(:user) { create(:user) }
   let(:open_date) { booking.hotel.business_date_for }
 
-  it "posts captured gateway payments as advance deposit system transactions" do
+  it "posts captured gateway payments as booking payment system transactions" do
     payment_transaction = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: open_date.noon)
 
     described_class.call(folio: folio, user: user)
 
     transaction = folio.folio_transactions.payment.sole
     expect(transaction.amount).to eq(100.0)
-    expect(transaction.category).to eq("advance_deposit")
-    expect(transaction.description).to include("Advance deposit")
+    expect(transaction.category).to eq("booking_payment")
+    expect(transaction.description).to include("Booking payment")
     expect(transaction.user).to be_nil
     expect(transaction.metadata["payment_transaction_id"]).to eq(payment_transaction.id)
     expect(transaction.metadata["source"]).to eq("booking_quote")
-    expect(transaction.metadata["applied_as"]).to eq("advance_deposit")
+    expect(transaction.metadata["applied_as"]).to eq("booking_payment")
   end
 
   it "skips non-captured payment transactions" do

@@ -40,7 +40,7 @@ module HotelPortal
         rows << spreadsheet_row([ "Metric", "Value" ])
         rows << spreadsheet_row([ "As Of Date", @report.as_of_date.iso8601 ])
         rows << spreadsheet_row([ "Bookings With Liability", @report.totals[:booking_count] ])
-        rows << spreadsheet_row([ "Advance Deposits", money(@report.totals[:advance_deposit_amount]) ])
+        rows << spreadsheet_row([ "Booking Payments", money(@report.totals[:booking_payment_amount]) ])
         rows << spreadsheet_row([ "Earned", money(@report.totals[:earned_amount]) ])
         rows << spreadsheet_row([ "Refunds", money(@report.totals[:refund_amount]) ])
         rows << spreadsheet_row([ "Remaining Liability", money(@report.totals[:remaining_liability]) ])
@@ -49,7 +49,7 @@ module HotelPortal
 
       def detail_rows
         rows = []
-        rows << spreadsheet_row([ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Advance Deposit", "Earned", "Refunds", "Remaining Liability", "Latest Deposit Date" ])
+        rows << spreadsheet_row([ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Booking Payment", "Earned", "Refunds", "Remaining Liability", "Latest Payment Date" ])
 
         @report.rows.each do |row|
           rows << spreadsheet_row([
@@ -59,7 +59,7 @@ module HotelPortal
             row[:booking_status],
             row[:room_details],
             row[:folio_number],
-            money(row[:advance_deposit_amount]),
+            money(row[:booking_payment_amount]),
             money(row[:earned_amount]),
             money(row[:refund_amount]),
             money(row[:remaining_liability]),

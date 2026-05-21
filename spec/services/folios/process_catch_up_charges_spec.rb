@@ -69,7 +69,7 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
       payment = create(:folio_transaction,
         booking_folio: folio_p,
         transaction_type: "payment",
-        category: "advance_deposit",
+          category: "booking_payment",
         amount: 25.0,
         metadata: { posting_source: "no_show" }
       )

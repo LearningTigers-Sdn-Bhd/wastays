@@ -63,7 +63,7 @@ RSpec.describe Bookings::ProcessNoShows do
     expect(booking.booking_folio.folio_transactions.charge.where(category: "tax").sole.amount).to eq(16.0)
   end
 
-  it "syncs captured payment as an advance deposit before posting penalty" do
+  it "syncs captured payment as a booking payment before posting penalty" do
     booking = create_no_show_candidate
     payment_transaction = create(:payment_transaction,
       booking: booking,
@@ -75,7 +75,7 @@ RSpec.describe Bookings::ProcessNoShows do
     described_class.call(night_audit: night_audit, user: user)
 
     payment = booking.booking_folio.folio_transactions.payment.sole
-    expect(payment.category).to eq("advance_deposit")
+    expect(payment.category).to eq("booking_payment")
     expect(payment.metadata["payment_transaction_id"]).to eq(payment_transaction.id)
     expect(booking.booking_folio.outstanding_balance).to eq(-220.0)
   end

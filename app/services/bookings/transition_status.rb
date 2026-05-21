@@ -87,6 +87,13 @@ module Bookings
 
           Folios::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
 
+          deposit_result = record_security_deposit_if_requested
+          unless deposit_result.success?
+            error = deposit_result.error
+            raise ActiveRecord::Rollback
+          end
+          @security_deposit = deposit_result.deposit
+
           if is_retroactive || was_no_show
             Folios::ProcessCatchUpCharges.call(booking: @booking, user: @user, is_reinstate: was_no_show)
           end
@@ -103,6 +110,10 @@ module Bookings
         metadata[:retroactive_checkin] = true
         metadata[:retroactive_reason] = @options[:reason]
       end
+      if @security_deposit.present?
+        metadata[:security_deposit_id] = @security_deposit.id
+        metadata[:security_deposit_amount] = @security_deposit.amount.to_d.to_s("F")
+      end
 
       Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "check_in", metadata: metadata)
       Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
@@ -110,6 +121,20 @@ module Bookings
       success
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
+    end
+
+    def record_security_deposit_if_requested
+      deposit_options = @options[:security_deposit]
+      return OpenStruct.new(success?: true) if deposit_options.blank?
+
+      Deposits::RecordSecurityDeposit.call(
+        booking: @booking,
+        folio: @booking.booking_folio,
+        user: @user,
+        amount: deposit_options[:amount],
+        payment_method: deposit_options[:payment_method],
+        external_reference: deposit_options[:external_reference]
+      )
     end
 
     def check_out

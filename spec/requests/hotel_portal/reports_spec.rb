@@ -279,7 +279,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "renders deposit liability report for selected as-of date" do
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Deposit Guest", confirmation_token: "WS-DEP")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "advance_deposit", amount: 250, posting_date: as_of_date - 1.day)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 250, posting_date: as_of_date - 1.day)
 
       ignored = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Gateway Guest", confirmation_token: "WS-GATEWAY")
       ignored_folio = create(:booking_folio, booking: ignored, hotel: hotel)
@@ -297,7 +297,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       other_hotel = create(:hotel)
       booking = create(:booking, hotel: other_hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Other Deposit Guest")
       folio = create(:booking_folio, booking: booking, hotel: other_hotel)
-      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "advance_deposit", amount: 250, posting_date: as_of_date - 1.day)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 250, posting_date: as_of_date - 1.day)
 
       get deposit_liability_hotel_reports_path(hotel), params: { as_of_date: as_of_date.to_s }
 
@@ -308,12 +308,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports csv/xls/pdf" do
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Export Deposit")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "advance_deposit", amount: 250, posting_date: as_of_date - 1.day)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 250, posting_date: as_of_date - 1.day)
 
       get deposit_liability_hotel_reports_path(hotel, format: :csv), params: { as_of_date: as_of_date.to_s }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
-      expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Advance Deposit,Earned,Refunds,Remaining Liability,Latest Deposit Date")
+      expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Booking Payment,Earned,Refunds,Remaining Liability,Latest Payment Date")
 
       get deposit_liability_hotel_reports_path(hotel, format: :xls), params: { as_of_date: as_of_date.to_s }
       expect(response).to have_http_status(:success)
