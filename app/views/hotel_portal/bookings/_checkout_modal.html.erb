@@ -58,6 +58,60 @@
             class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
       </div>
 
+      <% if Date.current < booking.check_out.to_date %>
+        <% nights = (booking.check_out.to_date - booking.check_in.to_date).to_i %>
+        <% suggested_penalty = nights.positive? ? (booking.total_amount.to_d / nights).round(2) : 0 %>
+        <div class="rounded-2xl border border-blue-100 bg-blue-50/50 p-5 space-y-4" 
+             data-controller="early-departure"
+             data-early-departure-base-amount-value="<%= suggested_penalty %>">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-sm font-bold text-blue-900">Early Departure Review</h4>
+              <p class="text-[11px] font-medium text-blue-700 mt-0.5">Scheduled: <%= booking.check_out.strftime("%d %b %Y") %></p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+              Early
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Apply Penalty?</label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 cursor-pointer has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50 transition-all shadow-sm">
+                <%= radio_button_tag :charge_penalty, "false", true, class: "sr-only", data: { action: "change->early-departure#updateUI", early_departure_target: "penaltyChoice" } %>
+                <span class="text-xs font-bold text-slate-600">No Penalty</span>
+              </label>
+              <label class="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 cursor-pointer has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50 transition-all shadow-sm">
+                <%= radio_button_tag :charge_penalty, "true", false, class: "sr-only", data: { action: "change->early-departure#updateUI", early_departure_target: "penaltyChoice" } %>
+                <span class="text-xs font-bold text-slate-600">Charge Penalty</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="hidden space-y-4 pt-3 border-t border-blue-100" data-early-departure-target="customFields">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Type</label>
+                <%= select_tag "early_departure[type]", options_for_select([["Fixed Amount", "amount"], ["Percentage (%)", "percentage"]], "amount"), 
+                    class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-bold text-slate-700 focus:border-slate-300 focus:outline-none shadow-sm",
+                    data: { action: "change->early-departure#updateCalculation" } %>
+              </div>
+              <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Value</label>
+                <%= number_field_tag "early_departure[value]", nil, step: 0.01, placeholder: "0.00",
+                    class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-bold text-slate-700 focus:border-slate-300 focus:outline-none shadow-sm",
+                    data: { action: "input->early-departure#updateCalculation" } %>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2">
+              <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Penalty</span>
+              <span class="text-sm font-black text-slate-900" data-early-departure-target="displayAmount"><%= currency %> 0.00</span>
+            </div>
+            <%= hidden_field_tag :penalty_amount, 0, data: { early_departure_target: "amountInput" } %>
+          </div>
+        </div>
+      <% end %>
+
       <div class="flex items-center justify-end gap-x-3 pt-2">
         <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
         <%= f.submit "Confirm Check-Out", class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>

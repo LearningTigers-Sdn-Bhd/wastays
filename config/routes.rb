@@ -253,12 +253,14 @@ Rails.application.routes.draw do
       end
       member do
         get  :folio
+        get  :checkout
         patch :move
         post :check_in
         post :check_out
         post :reinstate
         post :cancel
         post :add_guest
+        post :process_late_checkout
         get  :folio_invoice
         delete "guests/:guest_id", action: :remove_guest, as: :remove_guest
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings#complete_housekeeping_request", as: :complete_housekeeping_request

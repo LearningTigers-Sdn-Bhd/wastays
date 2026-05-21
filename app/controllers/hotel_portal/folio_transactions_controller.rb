@@ -66,7 +66,9 @@ module HotelPortal
     private
 
     def redirect_after_post(options = {})
-      if params[:redirect_to_folio] == "true"
+      if params[:redirect_to_checkout] == "true"
+        redirect_to checkout_hotel_booking_path(current_hotel, @booking), options
+      elsif params[:redirect_to_folio] == "true"
         redirect_to folio_hotel_booking_path(current_hotel, @booking), options
       else
         redirect_to hotel_booking_path(current_hotel, @booking), options

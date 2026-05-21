@@ -10,6 +10,9 @@
       <% if local_assigns[:redirect_to_folio] %>
         <%= hidden_field_tag "redirect_to_folio", "true" %>
       <% end %>
+      <% if local_assigns[:redirect_to_checkout] %>
+        <%= hidden_field_tag "redirect_to_checkout", "true" %>
+      <% end %>
       <% if category.present? %>
         <%= hidden_field_tag "folio_transaction[category]", category %>
       <% else %>
@@ -23,7 +26,7 @@
 
       <div>
         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Amount</label>
-        <%= number_field_tag "folio_transaction[amount]", nil, step: "0.01", min: (signed_amount ? nil : "0.01"), required: true, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        <%= number_field_tag "folio_transaction[amount]", local_assigns[:amount], step: "0.01", min: (signed_amount ? nil : "0.01"), required: true, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         <% if signed_amount %>
           <p class="mt-1 text-[11px] font-medium text-slate-500">Use a negative amount for discounts, write-offs, or rebates.</p>
         <% end %>

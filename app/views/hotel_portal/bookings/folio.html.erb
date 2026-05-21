@@ -41,115 +41,13 @@
   </div>
 
   <!-- Full-Width Outstanding Balance Banner -->
-  <div class="bg-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-200/50">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-8">
-      <div>
-        <div class="flex items-center gap-2 mb-4">
-          <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Outstanding Balance</h3>
-          <div class="size-5 rounded-lg bg-white/10 flex items-center justify-center text-slate-300">
-            <%= lucide_icon "credit-card", stroke_width: 2.5, class: "size-3" %>
-          </div>
-        </div>
-        <div class="flex items-baseline gap-2">
-          <span class="text-sm font-bold text-slate-400">MYR</span>
-          <span class="text-5xl font-black tracking-tight"><%= number_with_precision(@booking.booking_folio&.outstanding_balance || 0, precision: 2) %></span>
-        </div>
-      </div>
-      
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-12 md:pl-12 md:border-l border-slate-800">
-        <div>
-          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Folio Status</p>
-          <p class="text-lg font-black uppercase tracking-tight text-white"><%= @booking.booking_folio&.status || "N/A" %></p>
-        </div>
-        <div>
-          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Charges</p>
-          <p class="text-lg font-black text-white">MYR <%= number_with_precision(@booking.booking_folio&.total_charges || 0, precision: 2) %></p>
-        </div>
-        <div>
-          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Payments</p>
-          <p class="text-lg font-black text-emerald-400">MYR <%= number_with_precision(@booking.booking_folio&.total_payments || 0, precision: 2) %></p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <%= render "hotel_portal/bookings/folio_balance_summary", booking: @booking %>
 
   <!-- Financial Actions Toolbar -->
   <%= render "hotel_portal/bookings/folio_actions", booking: @booking, hotel: current_hotel, redirect_to_folio: true %>
 
   <!-- Detailed Transaction Ledger -->
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
-      <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Transaction Ledger</h3>
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-        <%= @booking.booking_folio&.folio_transactions&.count || 0 %> entries
-      </div>
-    </div>
-    <div class="p-0 overflow-x-auto">
-      <table class="w-full text-left text-sm">
-        <thead>
-          <tr class="bg-slate-50/50 border-b border-slate-200">
-            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">ID</th>
-            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Date</th>
-            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Description</th>
-            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">GL Code</th>
-            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Staff / Source</th>
-            <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px] text-right">Amount</th>
-            <th class="px-6 py-3"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <% if @booking.booking_folio&.folio_transactions&.any? %>
-            <% @booking.booking_folio.folio_transactions.order(posting_date: :asc, created_at: :asc).each do |tx| %>
-              <tr class="<%= "opacity-50 bg-slate-50/30" if tx.reversed? %>">
-                <td class="px-6 py-4 font-mono text-[10px] text-slate-400">#<%= tx.id.to_s.last(6) %></td>
-                <td class="px-6 py-4 text-slate-600 whitespace-nowrap font-medium text-[12px]"><%= tx.posting_date.strftime("%d %b %Y") %></td>
-                <td class="px-6 py-4">
-                  <div class="flex items-center gap-2">
-                    <p class="font-bold text-slate-900 <%= "line-through text-slate-400" if tx.reversed? %>"><%= tx.description %></p>
-                    <% if tx.reversed? %>
-                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-100 text-slate-500 uppercase tracking-tighter">REVERSED</span>
-                    <% elsif tx.reversal_of_transaction_id.present? %>
-                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-700 uppercase tracking-tighter">REVERSAL</span>
-                    <% end %>
-                  </div>
-                  <div class="flex items-center gap-2 mt-0.5">
-                    <span class="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-100 text-slate-500"><%= tx.transaction_type %></span>
-                    <span class="text-[9px] font-bold uppercase tracking-widest text-slate-400"><%= tx.category.tr("_", " ") %></span>
-                  </div>
-                </td>
-                <td class="px-6 py-4 font-mono text-[11px] text-slate-500"><%= tx.gl_code || "—" %></td>
-                <td class="px-6 py-4">
-                  <% if tx.user %>
-                    <p class="text-[12px] font-bold text-slate-700"><%= tx.user.name %></p>
-                    <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Manual</p>
-                  <% else %>
-                    <p class="text-[12px] font-bold text-slate-500">Night Audit</p>
-                    <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">System</p>
-                  <% end %>
-                </td>
-                <td class="px-6 py-4 text-right font-black <%= folio_transaction_amount_class(tx) %> <%= "line-through" if tx.reversed? %> text-[15px]">
-                  <%= folio_transaction_amount_label(tx) %>
-                </td>
-                <td class="px-6 py-4 text-right">
-                </td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr>
-              <td colspan="7" class="px-6 py-20 text-center">
-                <div class="flex flex-col items-center">
-                  <div class="size-12 rounded-full bg-slate-50 flex items-center justify-center mb-4 text-slate-300">
-                    <%= lucide_icon "circle-alert", stroke_width: 2, class: "size-6" %>
-                  </div>
-                  <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">No transactions recorded yet.</p>
-                </div>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <%= render "hotel_portal/bookings/folio_transaction_table", booking: @booking %>
 </div>
 
 <!-- Render Modals (reusing existing partial) -->

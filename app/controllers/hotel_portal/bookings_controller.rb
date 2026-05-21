@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require "ostruct"
+
 class HotelPortal::BookingsController < HotelPortal::BaseController
   before_action :authorize_view_bookings!, only: %i[index show availability rate_options stay_price folio_invoice]
-  before_action :authorize_manage_bookings!, only: %i[new create update check_in check_out cancel reinstate add_guest remove_guest]
+  before_action :authorize_manage_bookings!, only: %i[new create update checkout check_in check_out cancel reinstate add_guest remove_guest process_late_checkout]
 
   def index
     @all_bookings = current_hotel.bookings.recent_first.includes(:booking_folio)
@@ -149,6 +151,11 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
   end
 
+  def checkout
+    @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(params[:id])
+    @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+  end
+
   def update
     @booking = current_hotel.bookings.find(params[:id])
     result = Bookings::UpdateStayService.new(
@@ -204,7 +211,69 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def check_out
     timestamp = transition_timestamp(:checked_out_at)
-    transition_status("completed", timestamp, "Guest has been checked out.")
+    return check_out_from_sheet(timestamp) if params[:checkout_sheet] == "1"
+
+    @booking = current_hotel.bookings.find(params[:id])
+
+    if early_departure_checkout?(timestamp)
+      options = { timestamp: timestamp }
+      if params[:override_night_audit] == "1"
+        options[:override_night_audit] = true
+        options[:correction_reason] = params[:retroactive_reason]
+        options[:correction_note] = "Early departure override"
+      end
+
+      result = Bookings::ProcessEarlyDeparture.call(
+        booking: @booking,
+        user: current_user,
+        params: params.permit(:charge_penalty, :penalty_amount),
+        options: options
+      )
+
+      if result.success?
+        redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest has been checked out with early departure."
+      else
+        @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+        set_audit_logs
+        flash.now[:alert] = result.error
+        render :show, status: :unprocessable_content
+      end
+    else
+      transition_status("completed", timestamp, "Guest has been checked out.")
+    end
+  end
+
+  def process_late_checkout
+    @booking = current_hotel.bookings.find(params[:id])
+    should_charge = params[:penalty_type] != "none" && params[:amount].to_f > 0
+
+    if should_charge
+      result = Folios::PostPenaltyFee.call(
+        folio: @booking.booking_folio,
+        user: current_user,
+        category: "late_checkout_penalty",
+        amount: params[:amount],
+        description: "Late Checkout Penalty"
+      )
+
+      unless result.success?
+        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to apply late checkout penalty: #{result.error}"
+      end
+    end
+
+    if params[:after_action] == "checkout"
+      message = should_charge ? "Late checkout penalty applied and guest checked out." : "Late checkout resolved and guest checked out."
+      transition_status("completed", Time.current, message)
+    else
+      Bookings::TransitionStatus.new(
+        booking: @booking,
+        status: "checked_in",
+        user: current_user,
+        options: { event: "resolve_late_checkout" }
+      ).call
+      notice = should_charge ? "Late checkout penalty applied." : "Late checkout resolved without penalty."
+      redirect_to hotel_booking_path(current_hotel, @booking), notice: notice
+    end
   end
 
   def cancel
@@ -443,6 +512,146 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     params[attribute].presence || booking_params[attribute].presence
   end
 
+  def check_out_from_sheet(timestamp)
+    @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(params[:id])
+    error = nil
+
+    ActiveRecord::Base.transaction do
+      # 1. Handle Early Departure Penalty if applicable
+      if early_departure_checkout?(timestamp)
+        options = { timestamp: timestamp }
+        if params[:override_night_audit] == "1"
+          options[:override_night_audit] = true
+          options[:correction_reason] = params[:retroactive_reason]
+          options[:correction_note] = "Early departure override"
+        end
+
+        res = Bookings::ProcessEarlyDeparture.call(
+          booking: @booking,
+          user: current_user,
+          params: params.permit(:charge_penalty, :penalty_amount),
+          options: options.merge(defer_checkout: true, defer_side_effects: true)
+        )
+
+        if res.success?
+          @booking.reload
+        else
+          error = res.error
+          raise ActiveRecord::Rollback
+        end
+
+        @booking.association(:booking_folio).reset
+      end
+
+      settlement_result = post_checkout_settlement_payment
+      if settlement_result&.success? == false
+        error = settlement_result.error
+        raise ActiveRecord::Rollback
+      end
+
+      result = Bookings::TransitionStatus.new(
+        booking: @booking,
+        status: "completed",
+        timestamp: timestamp,
+        user: current_user,
+        options: { defer_side_effects: true }
+      ).call
+
+      unless result.success?
+        error = result.error
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    if error.present?
+      return render_checkout_sheet_error(error)
+    end
+
+    dispatch_checkout_side_effects
+    render_checkout_invoice_step
+  end
+
+  def post_checkout_settlement_payment
+    return if checkout_payment_amount.blank?
+    return OpenStruct.new(success?: true) if checkout_payment_amount.zero?
+
+    return OpenStruct.new(success?: false, error: "Booking has no folio.") unless @booking.booking_folio
+    raise Pundit::NotAuthorizedError unless current_user.has_permission?("post_folio_payments", hotel: current_hotel)
+    return OpenStruct.new(success?: false, error: "Checkout payment method is not supported.") unless checkout_payment_method == "cash"
+
+    balance = @booking.booking_folio.outstanding_balance.to_d
+    return OpenStruct.new(success?: false, error: "Checkout payment can only be posted for a positive outstanding balance.") unless balance.positive?
+    return OpenStruct.new(success?: false, error: "Checkout payment cannot exceed the outstanding balance.") if checkout_payment_amount > balance
+
+    Folios::PostStaffTransaction.call(
+      folio: @booking.booking_folio,
+      user: current_user,
+      transaction_type: "payment",
+      category: "cash",
+      amount: checkout_payment_amount,
+      description: checkout_payment_description,
+      posting_date: current_hotel.business_date_for(transition_timestamp(:checked_out_at).presence || Time.current)
+    )
+  end
+
+  def early_departure_checkout?(timestamp)
+    current_hotel.business_date_for(timestamp.presence || Time.current).to_date < @booking.check_out.to_date
+  end
+
+  def checkout_payment_amount
+    @checkout_payment_amount ||= params[:checkout_payment_amount].to_d
+  end
+
+  def checkout_payment_description
+    reference = params[:checkout_payment_reference].presence
+    [ "Checkout payment via Cash", reference && "Receipt #{reference}" ].compact.join(" - ")
+  end
+
+  def checkout_payment_method
+    params[:checkout_payment_method].presence || "cash"
+  end
+
+  def render_checkout_sheet_error(error)
+    @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+    @checkout_error = error
+    flash.now[:alert] = error
+
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.update(
+          "offcanvas_drawer",
+          partial: "hotel_portal/bookings/checkout_sheet",
+          locals: { booking: @booking, presenter: @presenter, hotel: current_hotel, checkout_error: error }
+        ), status: :unprocessable_content
+      end
+      format.html { render :checkout, status: :unprocessable_content }
+    end
+  end
+
+  def render_checkout_invoice_step
+    @booking.reload
+    @booking.association(:booking_folio).reset
+    @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(@booking.id)
+    @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.update(
+          "offcanvas_drawer",
+          partial: "hotel_portal/bookings/checkout_invoice_step",
+          locals: { booking: @booking, presenter: @presenter, hotel: current_hotel }
+        )
+      end
+      format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest has been checked out." }
+    end
+  end
+
+  def dispatch_checkout_side_effects
+    Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
+    Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
+    SendInvoiceEmailJob.perform_later(@booking.id)
+  end
+
   def reservation_board_request?
     params[:source] == "reservation_board" || request.referer&.include?("reservation-board")
   end
@@ -454,4 +663,5 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def authorize_manage_bookings!
     raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
   end
+
 end

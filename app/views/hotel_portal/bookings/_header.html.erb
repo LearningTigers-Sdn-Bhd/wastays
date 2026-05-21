@@ -36,12 +36,19 @@
             Reinstate Guest
           </button>
         <% elsif booking.status == 'checked_in' %>
-          <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('check-out-modal-show-<%= booking.id %>').showModal()">
+          <%= link_to checkout_hotel_booking_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
             Check Out Guest
-          </button>
+          <% end %>
           <button type="button" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" onclick="document.getElementById('check-in-modal-show-<%= booking.id %>').showModal()">
             Edit Check-In
           </button>
+        <% elsif booking.status == 'review_due_out' %>
+          <button type="button" class="inline-flex items-center rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700" onclick="document.getElementById('late-checkout-modal-show-<%= booking.id %>').showModal()">
+            Review Late Checkout
+          </button>
+          <%= link_to checkout_hotel_booking_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" do %>
+            Check Out Guest
+          <% end %>
         <% end %>
       <% end %>
     </div>
