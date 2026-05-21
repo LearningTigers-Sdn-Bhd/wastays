@@ -25,7 +25,8 @@ module HotelOps
         tax_revenue: transactions.where(category: "tax").sum(:amount),
         payments_total: transactions.where(transaction_type: "payment").where("amount > 0").sum(:amount),
         refunds_total: transactions.where(transaction_type: "payment").where("amount < 0").sum(:amount).abs,
-        no_show_penalties: transactions.where(category: "no_show_penalty").sum(:amount)
+        no_show_penalties: transactions.where(category: "no_show_penalty").sum(:amount),
+        adjustments_total: transactions.where(category: [ "adjustment", "discount", "correction", "write_off" ]).sum(:amount)
       }
     end
   end

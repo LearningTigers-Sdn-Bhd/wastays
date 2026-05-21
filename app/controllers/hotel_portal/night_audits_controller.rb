@@ -10,6 +10,22 @@ module HotelPortal
 
     def show
       @night_audit = current_hotel.night_audits.find(params[:id])
+
+      @adjustments = FolioTransaction.joins(booking_folio: :booking)
+        .where(bookings: { hotel_id: current_hotel.id })
+        .where(category: [ "adjustment", "discount", "correction", "write_off" ])
+        .where(created_at: current_hotel.business_day_window_for(@night_audit.business_date))
+        .includes(:user, booking_folio: :booking)
+        .order(:created_at)
+
+      respond_to do |format|
+        format.html
+        format.pdf do
+          pdf_content = HotelOps::AuditPacketPdfExportService.new(night_audit: @night_audit).generate
+          filename = "Audit_Packet_#{current_hotel.name.gsub(/\s+/, "_")}_#{@night_audit.business_date.to_s}.pdf"
+          send_data pdf_content, filename: filename, type: "application/pdf", disposition: "inline"
+        end
+      end
     end
 
     def create

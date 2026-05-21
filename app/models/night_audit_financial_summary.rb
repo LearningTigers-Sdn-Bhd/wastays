@@ -1,7 +1,7 @@
 class NightAuditFinancialSummary < ApplicationRecord
   belongs_to :night_audit
 
-  validates :room_revenue, :tax_revenue, :payments_total, :refunds_total, :no_show_penalties, presence: true, numericality: true
+  validates :room_revenue, :tax_revenue, :payments_total, :refunds_total, :no_show_penalties, :adjustments_total, presence: true, numericality: true
 
   def log_change(user:, previous_values:, new_values:, reason:)
     current_changelog = Array(changelog).dup

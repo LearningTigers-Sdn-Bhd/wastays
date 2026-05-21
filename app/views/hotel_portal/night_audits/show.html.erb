@@ -35,7 +35,18 @@ end %>
         </div>
         <p class="text-sm font-medium text-slate-600">Trigger: <%= @night_audit.trigger_mode.humanize %> · Performed by <%= @night_audit.performed_by_user&.name || "System" %></p>
       </div>
-      <%= link_to "Back to Night Audit", hotel_night_audits_path(current_hotel), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <% if @night_audit.completed? %>
+          <%= link_to hotel_night_audit_path(current_hotel, @night_audit, format: :pdf), target: "_blank", class: "inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800" do %>
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            View Audit Packet
+          <% end %>
+        <% end %>
+        <%= link_to "Back to Night Audit", hotel_night_audits_path(current_hotel), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
+      </div>
     </div>
   </div>
 
@@ -68,8 +79,8 @@ end %>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @night_audit.summary["checked_out_count"] || 0 %></h2>
     </div>
     <div class="p-6 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Warnings</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @night_audit.summary["warning_count"] || 0 %></h2>
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">In-House</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @night_audit.summary["in_house_count"] || 0 %></h2>
     </div>
   </div>
 
@@ -104,72 +115,138 @@ end %>
                 <p class="text-[11px] font-bold uppercase tracking-wider text-red-600 mb-2">Refunds Issued</p>
                 <p class="text-2xl font-bold text-red-700"><%= number_to_currency(financial_summary.refunds_total) %></p>
               </div>
-              <div class="rounded-2xl border border-slate-200 bg-slate-950 p-5">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Net Revenue</p>
-                <p class="text-2xl font-bold text-white"><%= number_to_currency(financial_summary.room_revenue + financial_summary.tax_revenue + financial_summary.no_show_penalties - financial_summary.refunds_total) %></p>
+              <div class="rounded-2xl border border-amber-100 bg-amber-50/50 p-5">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-amber-600 mb-2">Manual Adjustments</p>
+                <p class="text-2xl font-bold text-amber-700"><%= number_to_currency(financial_summary.adjustments_total) %></p>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-950 p-5 sm:col-span-2 lg:col-span-3">
+                <div class="flex items-center justify-between">
+                  <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Net Revenue</p>
+                  <p class="text-3xl font-bold text-white"><%= number_to_currency(financial_summary.room_revenue + financial_summary.tax_revenue + financial_summary.no_show_penalties - financial_summary.refunds_total) %></p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       <% end %>
 
+      <!-- Manual Adjustments Table -->
       <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950">Blocked Details</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Bookings that prevented the audit from completing.</p>
+          <h2 class="text-lg font-bold tracking-tight text-slate-950">Manual Adjustments & Voids</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Detailed record of staff interventions, rebates, and revenue corrections.</p>
         </div>
-        <div class="p-6 sm:p-8 space-y-6">
-          <% if blockers.values.flatten.any? %>
-            <% blockers.each do |label, rows| %>
-              <% next if rows.blank? %>
-              <div class="space-y-3">
-                <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-500"><%= label.humanize %></h3>
-                <% rows.each do |row| %>
-                  <div class="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
-                    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p class="text-sm font-bold text-slate-950"><%= row["guest_name"] %> <span class="text-slate-500">#<%= row["confirmation_token"] %></span></p>
-                        <p class="text-xs font-medium text-slate-600"><%= row["reason"] %></p>
-                      </div>
-                      <p class="text-xs font-semibold uppercase tracking-wider text-amber-700"><%= row["status"] %></p>
-                    </div>
-                  </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-slate-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Time</th>
+                <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Guest Name</th>
+                <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Category</th>
+                <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">User</th>
+                <th scope="col" class="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">Amount</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 bg-white">
+              <% if @adjustments.any? %>
+                <% @adjustments.each do |adj| %>
+                  <tr>
+                    <td class="whitespace-nowrap px-6 py-4 text-xs font-medium text-slate-600"><%= adj.created_at.strftime("%H:%M") %></td>
+                    <td class="px-6 py-4">
+                      <p class="text-xs font-bold text-slate-900"><%= adj.booking_folio.booking.guest_name %></p>
+                      <p class="text-[10px] font-medium text-slate-500">#<%= adj.booking_folio.booking.confirmation_token %></p>
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4">
+                      <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20"><%= adj.category.humanize %></span>
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4 text-xs font-medium text-slate-600"><%= adj.user&.name || "System" %></td>
+                    <td class="whitespace-nowrap px-6 py-4 text-right text-xs font-bold text-slate-900"><%= number_to_currency(adj.amount) %></td>
+                  </tr>
                 <% end %>
-              </div>
-            <% end %>
-          <% else %>
-            <p class="text-sm font-medium italic text-slate-500">No blocking exceptions were found.</p>
-          <% end %>
+              <% else %>
+                <tr>
+                  <td colspan="5" class="px-6 py-10 text-center text-xs font-medium italic text-slate-400">No manual adjustments recorded for this business date.</td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
         </div>
       </div>
 
+      <!-- Blocked Details Table -->
       <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950">Warnings</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Open request items preserved as warnings only.</p>
-        </div>
-        <div class="p-6 sm:p-8 space-y-6">
-          <% if warnings.values.flatten.any? %>
-            <% warnings.each do |label, rows| %>
-              <% next if rows.blank? %>
-              <div class="space-y-3">
-                <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-500"><%= label.humanize %></h3>
-                <% rows.each do |row| %>
-                  <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p class="text-sm font-bold text-slate-950"><%= row["guest_name"] %> <span class="text-slate-500">#<%= row["confirmation_token"] %></span></p>
-                        <p class="text-xs font-medium text-slate-600"><%= row["details"] %></p>
-                      </div>
-                      <p class="text-xs font-semibold uppercase tracking-wider text-slate-500"><%= row["status"] %></p>
-                    </div>
-                  </div>
+          <h2 class="text-lg font-bold tracking-tight text-slate-950">Audit Blockers</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Operational blockers identified during the audit process.</p>
+        </div>        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-red-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-red-700">Type</th>
+                <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-red-700">Guest / Confirmation</th>
+                <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-red-700">Reason</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 bg-white">
+              <% if blockers.values.flatten.any? %>
+                <% blockers.each do |label, rows| %>
+                  <% rows.each do |row| %>
+                    <tr>
+                      <td class="whitespace-nowrap px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= label.humanize %></td>
+                      <td class="px-6 py-4">
+                        <p class="text-xs font-bold text-slate-900"><%= row["guest_name"] %></p>
+                        <p class="text-[10px] font-medium text-slate-500">#<%= row["confirmation_token"] %></p>
+                      </td>
+                      <td class="px-6 py-4 text-xs font-medium text-slate-600"><%= row["reason"] %></td>
+                    </tr>
+                  <% end %>
                 <% end %>
-              </div>
-            <% end %>
-          <% else %>
-            <p class="text-sm font-medium italic text-slate-500">No warnings were captured for this audit.</p>
-          <% end %>
+              <% else %>
+                <tr>
+                  <td colspan="3" class="px-6 py-10 text-center text-xs font-medium italic text-slate-400">No audit blockers were recorded.</td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Warnings Table -->
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+          <h2 class="text-lg font-bold tracking-tight text-slate-950">Operational Warnings</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Open items preserved as warnings for management review.</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-amber-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-amber-700">Type</th>
+                <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-amber-700">Guest / Confirmation</th>
+                <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-amber-700">Details</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 bg-white">
+              <% if warnings.values.flatten.any? %>
+                <% warnings.each do |label, rows| %>
+                  <% rows.each do |row| %>
+                    <tr>
+                      <td class="whitespace-nowrap px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= label.humanize %></td>
+                      <td class="px-6 py-4">
+                        <p class="text-xs font-bold text-slate-900"><%= row["guest_name"] || "N/A" %></p>
+                        <p class="text-[10px] font-medium text-slate-500">#<%= row["confirmation_token"] || "N/A" %></p>
+                      </td>
+                      <td class="px-6 py-4 text-xs font-medium text-slate-600"><%= row["reason"] || row["details"] || "General exception" %></td>
+                    </tr>
+                  <% end %>
+                <% end %>
+              <% else %>
+                <tr>
+                  <td colspan="3" class="px-6 py-10 text-center text-xs font-medium italic text-slate-400">No operational exceptions were recorded.</td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -189,11 +266,11 @@ end %>
             <p class="mt-1 font-semibold text-slate-900"><%= @night_audit.completed_at&.strftime("%d %b %Y, %I:%M %p") || "-" %></p>
           </div>
           <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">In-House Count</p>
-            <p class="mt-1 font-semibold text-slate-900"><%= @night_audit.summary["in_house_count"] || 0 %></p>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Business Date</p>
+            <p class="mt-1 font-semibold text-slate-900"><%= @night_audit.business_date.strftime("%d %b %Y") %></p>
           </div>
           <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Payment Summary</p>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Payment Status Counts</p>
             <% payment_status_counts = @night_audit.summary.fetch("payment_status_counts", {}) %>
             <% if payment_status_counts.any? %>
               <div class="mt-2 space-y-2">
