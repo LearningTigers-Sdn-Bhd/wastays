@@ -28,13 +28,13 @@ Turns closed business-day activity into financial summaries, journal batches, an
 
 - Successful night audit can create journal batches for accounting reconciliation.
 - Daily revenue, occupancy, outstanding balance, deposit liability, arrivals/departures, folio ledger, and journal batch exports exist.
-- `daily_revenue` is protected by `view_reports` authorization.
+- Manager Flash Report (Occupancy, ADR, RevPAR, and Daily Revenue) implemented with optimized custom SQL queries and multi-format exports.
+- `daily_revenue` and `managers_flash` are protected by `view_reports` authorization.
 - Journal batch creation fails fast when any included transaction is missing a GL code.
 - Journal batch CSV export supports external accounting workflows.
 - Deposit Liability Report tracks unearned advance-deposit balances.
 
 ## Known Follow-Ups
 
-- Implement Manager Flash Report as a unified daily management view.
 - Generate a complete audit packet after close.
 - Align folio ledger export with hotel-specific GL mappings.

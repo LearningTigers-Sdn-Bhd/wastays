@@ -20,8 +20,10 @@ This folder contains the operational documentation for booking lifecycle, folios
 
 ## Readiness Note
 
-The foundation is substantially implemented. Full operational readiness still depends on closing the items in `current-progress-roadmaps/`, especially financial observability, Manager Flash Report, audit packet generation, blocker dashboard UX, late-checkout automation, and refund approval workflows.
+The foundation is substantially implemented. Full operational readiness still depends on closing the items in `current-progress-roadmaps/`, especially audit packet generation, blocker dashboard UX, and refund approval workflows.
 
 Recent financial hardening completed on May 20, 2026: `daily_revenue` report access is covered by `view_reports`, and journal batch creation now fails fast when business-day folio transactions are missing GL codes instead of silently omitting them.
 
 Recent no-show accounting hardening completed on May 21, 2026: no-show room penalties now post as `no_show_penalty`, no-show tax remains `tax`, and GL/report classification uses folio transaction category rather than metadata as the accounting source of truth.
+
+Recent operational maturation completed on May 22, 2026: Manager Flash Report implemented with optimized custom SQL for occupancy, ADR, RevPAR, and revenue. Early Departure workflows (truncation and penalty processing) are fully functional.

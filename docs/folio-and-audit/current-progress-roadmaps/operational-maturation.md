@@ -14,9 +14,9 @@ This roadmap outlines the remaining priorities required to transition from a fun
 - **Completed Financial Hardening**:
   - Completed May 20, 2026: `daily_revenue` report requests now require `view_reports` permission.
   - Completed May 20, 2026: journal batch creation fails fast when folio transactions are missing GL codes instead of excluding them from the batch.
-- **Financial Observability**: 
-  - Automated alerts for "Unbalanced Folios" or "Audit Sync Lags."
-  - Monitoring for excessive usage of closed-date overrides.
+- **Completed Financial Observability**:
+  - Completed May 21, 2026: Automated alerts for "Unbalanced Folios" or "Audit Sync Lags."
+  - Completed May 21, 2026: Monitoring for excessive usage of closed-date overrides.
 
 **Success Indicator**: Finance teams can identify and resolve ledger discrepancies within minutes of an alert triggering.
 
@@ -27,7 +27,7 @@ This roadmap outlines the remaining priorities required to transition from a fun
 
 - **Operational Exceptions**:
   - Completed May 21, 2026: Late Checkout "Alert Only" workflow. Triggered by housekeeping status, transitions booking to `review_due_out`. Front desk can then manually apply a penalty (calculated from current room rates + taxes) or waive it.
-  - "Early Departure" penalty processing and rate correction workflows.
+  - Completed May 22, 2026: "Early Departure" penalty processing and rate correction workflows via `Bookings::ProcessEarlyDeparture`.
 - **Refund Lifecycle**:
   - Multi-stage refund approval process for high-value transactions.
   - Direct linking of ledger entries to original payment gateway IDs for easier tracing.
@@ -40,7 +40,7 @@ This roadmap outlines the remaining priorities required to transition from a fun
 **Objective**: Provide actionable insights and a frictionless staff experience.
 
 - **Enterprise Report Package**: 
-  - "Manager's Flash Report" (Occupancy, ADR, RevPAR, and Daily Revenue).
+  - Completed May 22, 2026: "Manager's Flash Report" (Occupancy, ADR, RevPAR, and Daily Revenue) with PDF, Excel, and CSV exports.
   - Completed: "Deposit Liability Report" tracks unearned advance-deposit revenue.
   - Complete post-close audit packet containing daily summary, exceptions, and adjustments.
 - **UX & Validation Polish**:

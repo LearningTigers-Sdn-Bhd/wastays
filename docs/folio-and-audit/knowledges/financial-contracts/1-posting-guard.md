@@ -25,4 +25,4 @@ Centralizes whether a transaction can post to a business date based on date stat
 
 ## Known Follow-Ups
 
-- Add monitoring for excessive closed-date override use.
+- Add monitoring for excessive closed-date override use (Completed May 21, 2026 via Financial Observability).

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "rails-expert": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/rails-expert/SKILL.md",
+      "computedHash": "e67a8886ff2a11da8133188a0bc0b48b9df213c6fc4bac4cbdd1ddacabb628c1"
+    }
+  }
+}

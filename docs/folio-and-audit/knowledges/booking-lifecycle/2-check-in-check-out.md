@@ -24,8 +24,8 @@ Connects stay transitions to folio opening, nightly charge validation, balance s
 - Optional collected security deposits can be recorded at check-in and are tracked separately from folio payments.
 - Checkout is blocked unless required nightly charges have been posted and the folio balance is settled.
 - Folio closure records an auditable financial event.
+- Early Departure workflows truncate the stay and apply policy-driven penalties or refunds via `Bookings::ProcessEarlyDeparture`.
 
 ## Known Follow-Ups
 
 - Add richer staff guidance for blocked checkout scenarios.
-- Extend early departure handling to account for policy-driven penalties and refunds.

@@ -26,4 +26,3 @@ Maintains an immutable audit trail for money-impacting actions and business-date
 ## Known Follow-Ups
 
 - Add finance-facing observability for abnormal event patterns.
-- Add alerting for unbalanced folios, audit sync lag, and override abuse.
