@@ -119,7 +119,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
         delete destroy_public_holiday_rule_hotel_inventory_dashboards_path(hotel, id: holiday_rule.id)
       }.to change(HotelPricingRule, :count).by(-1)
 
-      expect(response).to redirect_to(hotel_inventory_index_path(hotel, tab: "advanced", subtab: "pricing"))
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, tab: "advanced", subtab: "pricing", anchor: "top"))
     end
   end
 
@@ -138,7 +138,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
         delete destroy_pricing_tier_rule_hotel_inventory_dashboards_path(hotel, rule_type: "general")
       }.to change(HotelPricingRule, :count).by(-1)
 
-      expect(response).to redirect_to(hotel_inventory_index_path(hotel, tab: "advanced", subtab: "pricing"))
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, tab: "advanced", subtab: "pricing", anchor: "top"))
       expect { tier_rule.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
   end
@@ -176,7 +176,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: "2026-05-20", tab: "advanced", subtab: "pricing"))
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: "2026-05-20", tab: "advanced", subtab: "pricing", anchor: "top"))
       expect(hotel.pricing_rules.find_by(rule_type: "walk_in").price.to_f).to eq(200.0)
     end
   end
@@ -195,7 +195,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: Date.current.to_s, tab: "advanced", subtab: "overrides"))
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: Date.current.to_s, tab: "advanced", subtab: "overrides", anchor: "top"))
 
       inventory = room_type.room_inventories.find_by(date: Date.current)
       expect(inventory.quantity).to eq(8)

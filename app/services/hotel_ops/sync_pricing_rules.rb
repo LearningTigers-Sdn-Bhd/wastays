@@ -30,6 +30,10 @@ module HotelOps
         raise ArgumentError, "At least one pricing rule is required."
       end
 
+      # Capture the current range before we delete anything
+      old_start = @hotel.pricing_rules.minimum(:start_date)
+      old_end = @hotel.pricing_rules.maximum(:end_date)
+
       ActiveRecord::Base.transaction do
         @hotel.pricing_rules.delete_all
 
@@ -38,7 +42,14 @@ module HotelOps
         end
       end
 
-      { success: true, apply_start_date: rows.map { |row| row[:start_date] }.compact.min, apply_end_date: rows.map { |row| row[:end_date] }.compact.max }
+      new_start = rows.map { |row| row[:start_date] }.compact.min
+      new_end = rows.map { |row| row[:end_date] }.compact.max
+
+      # The union of old and new ranges ensures we clean up moved/deleted rules
+      apply_start = [ old_start, new_start ].compact.min
+      apply_end = [ old_end, new_end ].compact.max
+
+      { success: true, apply_start_date: apply_start, apply_end_date: apply_end }
     rescue => e
       { success: false, error: e.message, errors: @errors || {} }
     end

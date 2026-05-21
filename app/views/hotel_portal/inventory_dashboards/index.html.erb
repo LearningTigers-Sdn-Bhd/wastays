@@ -8,7 +8,7 @@
   active_subtab = params[:subtab].presence || "pricing"
 %>
 
-<div class="mx-auto max-w-none space-y-6 pb-24 sm:pb-0" 
+<div id="top" class="mx-auto max-w-none space-y-6 pb-24 sm:pb-0" 
      data-controller="inventory-calendar inventory-row inventory-highlight"
      data-inventory-calendar-hotel-id-value="<%= current_hotel.id %>"
      data-inventory-calendar-batch-url-value="<%= batch_save_ari_hotel_inventory_dashboards_path(current_hotel) %>"

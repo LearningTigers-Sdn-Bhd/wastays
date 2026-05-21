@@ -33,22 +33,18 @@
         <label class="mb-2 block text-[10px] sm:text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Pricing Tiers to Update</label>
         <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
           <% 
-            any_rule_present = @pricing_form.general_rule.present? || 
-                               @pricing_form.weekends_rule.present? || 
-                               @pricing_form.school_holiday_rows.any?(&:persisted?) || 
-                               @pricing_form.walk_in_rule.present? || 
-                               @pricing_form.corporate_rule.present? || 
-                               @pricing_form.ota_rule.present? || 
-                               @pricing_form.public_holiday_rows.any?(&:persisted?)
+            # We default to unchecked as requested ("auto clear the pricing tiers selection")
+            # except when we are re-rendering after a submission (e.g. validation errors)
+            is_submission = params[:pricing_rule].present?
 
             tiers = [
-              ["General", "general", @pricing_form.general_rule.present? || !any_rule_present],
-              ["Weekends", "weekends", @pricing_form.weekends_rule.present?],
-              ["School Holiday", "school_holiday", @pricing_form.school_holiday_rows.any?(&:persisted?)],
-              ["Walk-in", "walk_in", @pricing_form.walk_in_rule.present?],
-              ["Corporate", "corporate_rate", @pricing_form.corporate_rule.present?],
-              ["OTA", "ota_rate", @pricing_form.ota_rule.present?],
-              ["Public Holiday", "public_holiday", @pricing_form.public_holiday_rows.any?(&:persisted?)]
+              ["General", "general", is_submission && @pricing_form.pricing_data[:gp_price].present?],
+              ["Weekends", "weekends", is_submission && @pricing_form.pricing_data[:wk_price].present?],
+              ["School Holiday", "school_holiday", is_submission && @pricing_form.school_holiday_rows.any? { |r| r.price.present? }],
+              ["Walk-in", "walk_in", is_submission && @pricing_form.pricing_data[:wi_price].present?],
+              ["Corporate", "corporate_rate", is_submission && @pricing_form.pricing_data[:cr_price].present?],
+              ["OTA", "ota_rate", is_submission && @pricing_form.pricing_data[:ota_price].present?],
+              ["Public Holiday", "public_holiday", is_submission && @pricing_form.public_holiday_rows.any? { |r| r.price.present? }]
             ]
           %>
           <% tiers.each do |label, tier, is_checked| %>
@@ -352,7 +348,8 @@
       </div>
 
       <div class="pt-4">
-        <%= f.submit "Apply Pricing Rules", class: "w-full sm:w-auto inline-flex items-center justify-center rounded-2xl bg-slate-900 px-8 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-slate-700 active:scale-[0.98]" %>
+        <%= f.submit "Apply Pricing Rules", 
+                     class: "w-full sm:w-auto inline-flex items-center justify-center rounded-2xl bg-slate-900 px-8 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-slate-700 active:scale-[0.98]" %>
       </div>
     <% end %>
   </div>

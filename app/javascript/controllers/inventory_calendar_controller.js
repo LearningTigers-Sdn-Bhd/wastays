@@ -78,6 +78,14 @@ export default class extends Controller {
     if (frame) {
       this.reapplyHighlightsHandler = () => {
         this.stagedChanges.forEach(change => this.highlightStagedCells(change))
+        
+        // Synchronized direct jump to top if anchor is in URL or success message is visible
+        const hasTopAnchor = window.location.href.includes("#top")
+        const hasFlashMessage = frame.querySelector('[data-controller="toast"]')
+        
+        if (hasTopAnchor || hasFlashMessage) {
+          this.scrollToTop()
+        }
       }
       frame.addEventListener("turbo:frame-load", this.reapplyHighlightsHandler)
     }
@@ -838,6 +846,15 @@ export default class extends Controller {
   closeSuccess(event) {
     if (event) event.preventDefault()
     this.successDialogTarget.close()
+  }
+
+  scrollToTop() {
+    const topEl = document.getElementById("top")
+    if (topEl) {
+      topEl.scrollIntoView({ behavior: "auto" })
+    } else {
+      window.scrollTo({ top: 0, behavior: "auto" })
+    }
   }
 
   markTouched(event) {

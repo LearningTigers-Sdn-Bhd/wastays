@@ -1,6 +1,14 @@
 module BookingEngine
   class AvailabilityService
-    PricingOption = Struct.new(:rate_plan, :currency, :total_price, :nightly_price, :nightly_rates, keyword_init: true)
+    PricingOption = Struct.new(:rate_plan, :currency, :total_price, :nightly_price, :nightly_rates, :winning_rule, keyword_init: true)
+
+    RULE_PRIORITY = {
+      "ph" => 5, # Public Holiday
+      "sh" => 4, # School Holiday
+      "wk" => 3, # Weekend
+      "gp" => 2, # General Pricing
+      "base" => 1 # Room Base Price
+    }.freeze
 
     attr_reader :params, :check_in, :check_out, :adults, :children, :room_count
 
@@ -57,9 +65,14 @@ module BookingEngine
       option = lowest_pricing_option_for(room_type)
       return {} if option.blank?
 
+      display_name = option.rate_plan&.name
+      if %w[wk sh ph].include?(option.winning_rule)
+        display_name = human_rule_name(option.winning_rule)
+      end
+
       {
         rate_plan: option.rate_plan,
-        rate_plan_name: option.rate_plan&.name,
+        rate_plan_name: display_name,
         currency: option.currency,
         total_price: option.total_price,
         nightly_price: option.nightly_price,
@@ -74,6 +87,15 @@ module BookingEngine
     end
 
     private
+
+    def human_rule_name(rule_type)
+      case rule_type
+      when "ph" then "Public Holiday Rate"
+      when "sh" then "School Holiday Rate"
+      when "wk" then "Weekend Rate"
+      else nil
+      end
+    end
 
     def parse_date(date_param)
       return date_param if date_param.is_a?(Date)
@@ -101,12 +123,15 @@ module BookingEngine
     end
 
     def lowest_pricing_option_for(room_type)
-      pricing_options_for(room_type).min_by(&:total_price)
+      # Prioritize by rule priority (e.g. PH > SH > WK > GP > Base)
+      # Then by total price (cheapest first)
+      pricing_options_for(room_type).sort_by { |opt|
+        [ -RULE_PRIORITY.fetch(opt.winning_rule, 0), opt.total_price ]
+      }.first
     end
 
     def candidate_rate_plans_for(room_type)
-      plans = room_type.rate_plans.order(:id).to_a
-      plans.presence || [ nil ]
+      [ nil ] + room_type.rate_plans.order(:id).to_a
     end
 
     def pricing_option_for(room_type, rate_plan)
@@ -116,11 +141,22 @@ module BookingEngine
       rates_by_date = scope.index_by(&:date)
 
       nightly_total = 0.to_d
+      winning_rule = "base"
+      highest_priority = 0
+
       stay_dates.each do |date|
-        price = nightly_price_for(date, rates_by_date[date], room_type)
+        rate = rates_by_date[date]
+        price = nightly_price_for(date, rate, room_type)
         return nil if price.nil? # Stay is restricted or unpriced on this date
 
         nightly_total += price
+
+        rule_type = rate&.applied_rule_type || "base"
+        priority = RULE_PRIORITY[rule_type] || 0
+        if priority > highest_priority
+          highest_priority = priority
+          winning_rule = rule_type
+        end
       end
 
       PricingOption.new(
@@ -128,7 +164,8 @@ module BookingEngine
         currency: currency,
         total_price: nightly_total * @room_count,
         nightly_price: nightly_total / nights,
-        nightly_rates: rates_by_date
+        nightly_rates: rates_by_date,
+        winning_rule: winning_rule
       )
     end
 

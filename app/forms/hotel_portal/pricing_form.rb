@@ -15,12 +15,20 @@ module HotelPortal
       @errors = {}
     end
 
-    def from_saved_rules
-      @general_rule = @hotel.pricing_rules.find_by(rule_type: "general")
-      @weekends_rule = @hotel.pricing_rules.find_by(rule_type: "weekends")
-      @walk_in_rule = @hotel.pricing_rules.find_by(rule_type: "walk_in")
-      @corporate_rule = @hotel.pricing_rules.find_by(rule_type: "corporate_rate")
-      @ota_rule = @hotel.pricing_rules.find_by(rule_type: "ota_rate")
+    def from_saved_rules(selected_ids = nil)
+      @selected_room_type_ids = if selected_ids.nil?
+        @room_types.map(&:id)
+      else
+        Array(selected_ids).reject(&:blank?).map(&:to_i)
+      end
+
+      # Load saved rules into pricing_data
+      rules = @hotel.pricing_rules.to_a
+      @general_rule = rules.find { |r| r.rule_type == "general" }
+      @weekends_rule = rules.find { |r| r.rule_type == "weekends" }
+      @walk_in_rule = rules.find { |r| r.rule_type == "walk_in" }
+      @corporate_rule = rules.find { |r| r.rule_type == "corporate_rate" }
+      @ota_rule = rules.find { |r| r.rule_type == "ota_rate" }
 
       @pricing_data = {
         gp_price: @general_rule&.price,
@@ -47,7 +55,6 @@ module HotelPortal
       @school_holiday_rows = @hotel.pricing_rules.where(rule_type: "school_holiday").order(:start_date, :name).map { |rule| row_from_record(rule) }
       @school_holiday_rows = [ HolidayFormRow.new(persisted?: false) ] if @school_holiday_rows.empty?
 
-      @selected_room_type_ids = @room_types.map(&:id)
       self
     end
 
