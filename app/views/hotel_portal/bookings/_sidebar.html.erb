@@ -16,6 +16,20 @@
         <%= presenter.pre_checkin_display_status.to_s.tr("_", " ") %>
       </span>
     </div>
+    <% if booking.tax_lines.present? %>
+      <div class="pt-4 border-t border-slate-100 space-y-2">
+        <div class="flex justify-between items-baseline">
+          <span class="text-xs font-medium text-slate-500">Room Subtotal</span>
+          <span class="text-sm font-medium text-slate-700">MYR <%= number_with_precision(booking.booking_rooms.sum(&:subtotal), precision: 2) %></span>
+        </div>
+        <% Array(booking.tax_lines).each do |tax| %>
+          <div class="flex justify-between items-baseline">
+            <span class="text-xs font-medium text-slate-500"><%= tax["name"] %></span>
+            <span class="text-sm font-medium text-slate-700">MYR <%= number_with_precision(tax["amount"], precision: 2) %></span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
     <div class="pt-4 border-t border-slate-100 flex justify-between items-baseline">
       <span class="text-xs font-bold text-slate-900 uppercase">Total Paid</span>
       <span class="text-xl font-bold text-slate-900">MYR <%= number_with_precision(booking.total_amount, precision: 2) %></span>

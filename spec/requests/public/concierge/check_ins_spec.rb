@@ -22,15 +22,19 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
   end
 
   describe "POST /concierge/:hotel_slug/check-in/lookup" do
+    let(:kl_zone) { Time.find_zone("Kuala Lumpur") }
+
     context "pre-checkin not completed" do
       before do
         hotel.create_property_policy!(check_in_time: "14:00", check_out_time: "12:00")
       end
 
       it "redirects to pre-checkin form" do
-        post concierge_check_in_lookup_path(hotel.slug),
-             params: { confirmation_token: booking.confirmation_token }
-        expect(response).to redirect_to(pre_checkin_path(booking.reload.pre_checkin.token))
+        travel_to kl_zone.parse("#{Date.today} 09:00") do
+          post concierge_check_in_lookup_path(hotel.slug),
+               params: { confirmation_token: booking.confirmation_token }
+          expect(response).to redirect_to(pre_checkin_path(booking.reload.pre_checkin.token))
+        end
       end
     end
 
