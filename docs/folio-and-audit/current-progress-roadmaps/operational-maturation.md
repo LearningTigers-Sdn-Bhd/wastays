@@ -28,9 +28,6 @@ This roadmap outlines the remaining priorities required to transition from a fun
 - **Operational Exceptions**:
   - Completed May 21, 2026: Late Checkout "Alert Only" workflow. Triggered by housekeeping status, transitions booking to `review_due_out`. Front desk can then manually apply a penalty (calculated from current room rates + taxes) or waive it.
   - Completed May 22, 2026: "Early Departure" penalty processing and rate correction workflows via `Bookings::ProcessEarlyDeparture`.
-- **Refund Lifecycle**:
-  - Multi-stage refund approval process for high-value transactions.
-  - Direct linking of ledger entries to original payment gateway IDs for easier tracing.
 
 **Success Indicator**: Zero manual adjustments required for common guest exceptions (late checkouts, stay extensions).
 
@@ -47,3 +44,12 @@ This roadmap outlines the remaining priorities required to transition from a fun
   - Real-time "Blocker Dashboard" that guides staff through resolving night audit exceptions.
 
 **Success Indicator**: Management can view a complete "Audit Packet" (Daily Summary, Adjustments, Blockers) immediately after the night audit closes via a high-fidelity PDF preview. Audit Packet sections are separated by page for professional archival.
+
+---
+
+## 4. Next / Unplanned (Deferred)
+**Objective**: Future operational enhancements deferred to subsequent phases.
+
+- **Refund Lifecycle**:
+  - Multi-stage refund approval process for high-value transactions.
+  - Direct linking of ledger entries to original payment gateway IDs for easier tracing.

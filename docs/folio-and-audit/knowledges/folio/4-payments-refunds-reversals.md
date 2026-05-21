@@ -2,7 +2,7 @@
 
 ## Status
 
-Mostly completed foundation; refund approval workflow remains current-progress work.
+Mostly completed foundation; refund approval workflow is deferred to a future unplanned phase.
 
 ## Purpose
 
@@ -25,7 +25,7 @@ Keeps money movement auditable by recording gateway payments, manual payments, r
 - Manual refunds require `execute_folio_refunds`.
 - Reversals require `post_folio_corrections`.
 
-## Known Follow-Ups
+## Known Follow-Ups (Deferred / Unplanned)
 
 - Add multi-stage approval for high-value refunds.
 - Link refund ledger entries to original payment gateway identifiers in staff-facing reconciliation views.
