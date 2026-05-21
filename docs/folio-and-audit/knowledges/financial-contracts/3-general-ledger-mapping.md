@@ -31,3 +31,22 @@ Maps folio transaction categories to accounting GL codes and supports hotel-spec
 ## Known Follow-Ups
 
 - Align folio ledger export fallback behavior with hotel-specific GL mappings so export issues fail visibly instead of using generic fallback codes.
+
+## Default GL Mappings
+
+| Transaction Category | GL Code | System Description | Detailed Explanation |
+| :--- | :--- | :--- | :--- |
+| `accommodation` | `4010` | Room Revenue | Nightly room rates, room upgrades, and standard stay charges applied to guest folios. |
+| `tax` | `2010` | Tax Liabilities | State, local, and occupancy taxes collected from guests that the hotel owes to the government. |
+| `fb` | `4020` | Food & Beverage Revenue | Charges from hotel restaurants, bars, room service, or minibar consumption. |
+| `no_show_penalty` | `4030` | No-Show Penalty Revenue | Fees captured when a guest fails to arrive for a guaranteed reservation. Kept separate from `accommodation` to avoid skewing average daily rate (ADR) and occupancy metrics. |
+| `other` | `4090` | Other Revenue | Miscellaneous ancillary services like parking, spa, laundry, or pet fees. |
+| `gateway_payment` | `1010` | Bank - Gateway | Electronic payments (credit/debit cards) processed automatically through external payment gateways like Stripe. |
+| `cash` | `1020` | Bank - Cash | Physical currency (bills and coins) collected in person at the front desk. |
+| `refund` | `1030` | Bank - Refunds | Outbound money returned to the guest, typically reversing a previous `gateway_payment` or `cash` transaction. |
+| `advance_deposit` | `2020` | Advance Deposit Liability | Pre-payments collected prior to a guest's arrival. This is held as a liability because the hotel owes the guest the service until the stay actually occurs. |
+| `adjustment` | `5010` | Adjustments | Post-audit reductions to revenue, often due to guest complaints or service recovery efforts (e.g., reducing the room rate because the AC was broken). |
+| `correction` | `5020` | Corrections | Same-day fixes for human errors made before the night audit closes (e.g., voiding a charge accidentally posted to the wrong room). |
+| `discount` | `5030` | Discounts | Upfront percentage or fixed-amount price reductions applied proactively to standard rates. |
+| `write_off` | `5040` | Write-Offs | Unpaid guest folio balances that the hotel has deemed uncollectible (bad debt) and absorbs as a loss. |
+

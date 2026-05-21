@@ -322,7 +322,7 @@ RSpec.describe Bookings::TransitionStatus do
           create(:folio_transaction,
                  booking_folio: folio,
                  transaction_type: :charge,
-                 category: :accommodation,
+                 category: :no_show_penalty,
                  amount: 100.0,
                  metadata: { "posting_source" => "no_show" })
         end

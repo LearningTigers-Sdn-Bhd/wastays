@@ -199,9 +199,13 @@ class Hotel < ApplicationRecord
     date
   end
 
-  def date_closed?(date)
+  def date_closed?(date, reference_time = Time.current)
     date = date.to_date
-    current_biz_date = business_date_for
+
+    # If a completed audit exists, it's definitely closed regardless of time windows
+    return true if NightAudit.exists?(hotel_id: id, business_date: date, status: "completed")
+
+    current_biz_date = business_date_for(reference_time)
 
     # Strictly closed if it's more than 1 day behind the current active business date
     return true if date < current_biz_date - 1.day

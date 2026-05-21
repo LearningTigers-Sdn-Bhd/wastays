@@ -110,10 +110,7 @@ RSpec.describe FolioTransaction, type: :model do
     end
 
     it "leaves gl_code as nil if no mapping exists" do
-      # FB mapping exists but has no code by default in our test setup if we don't set it
-      # Actually, the callback creates 7 categories with placeholder codes.
-      # We need a category that IS NOT in the 7 categories to test 'no mapping exists'.
-      # Let's check what categories are in CHARGE_CATEGORIES.
+      hotel.hotel_general_ledger_maps.where(transaction_category: "other").delete_all
       transaction = create(:folio_transaction, booking_folio: folio, category: "other")
       expect(transaction.gl_code).to be_nil
     end
