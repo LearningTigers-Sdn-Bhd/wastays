@@ -72,4 +72,37 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
     expect(result[:no_show_penalties]).to eq(50.0)
     expect(result[:room_revenue]).to eq(0.0)
   end
+
+  it "uses category as the no-show accounting source of truth" do
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: booking)
+
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_type: "charge",
+      category: "accommodation",
+      amount: 100.0,
+      metadata: { stay_date: business_date.iso8601 }
+    )
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_type: "charge",
+      category: "no_show_penalty",
+      amount: 50.0,
+      metadata: { stay_date: business_date.iso8601, posting_source: "no_show" }
+    )
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_type: "charge",
+      category: "tax",
+      amount: 5.0,
+      metadata: { stay_date: business_date.iso8601, posting_source: "no_show" }
+    )
+
+    result = described_class.call(hotel: hotel, business_date: business_date)
+
+    expect(result[:room_revenue]).to eq(100.0)
+    expect(result[:tax_revenue]).to eq(5.0)
+    expect(result[:no_show_penalties]).to eq(50.0)
+  end
 end

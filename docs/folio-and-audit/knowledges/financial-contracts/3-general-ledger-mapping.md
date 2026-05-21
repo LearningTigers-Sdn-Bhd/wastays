@@ -2,7 +2,7 @@
 
 ## Status
 
-Partially completed.
+Completed foundation with remaining export alignment work.
 
 ## Purpose
 
@@ -22,11 +22,12 @@ Maps folio transaction categories to accounting GL codes and supports hotel-spec
 ## Rules Made So Far
 
 - Hotels can manage GL mappings for supported financial categories.
+- Default GL mappings exist for every valid folio transaction category.
 - Journal batches can be created from business-day financial activity.
 - Journal batch creation fails fast if any business-day folio transaction is missing a GL code.
 - Journal batch CSV export supports accounting reconciliation.
+- `no_show_penalty` maps separately from accommodation revenue for deterministic no-show accounting.
 
 ## Known Follow-Ups
 
-- Seed default mappings for every valid folio transaction category.
-- Add tests that fail when a valid category lacks a default GL mapping.
+- Align folio ledger export fallback behavior with hotel-specific GL mappings so export issues fail visibly instead of using generic fallback codes.

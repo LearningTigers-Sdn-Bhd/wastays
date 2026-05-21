@@ -41,7 +41,8 @@ This roadmap outlines the remaining priorities required to transition from a fun
 
 - **Enterprise Report Package**: 
   - "Manager's Flash Report" (Occupancy, ADR, RevPAR, and Daily Revenue).
-  - "Deposit Liability Report" to track unearned revenue.
+  - Completed: "Deposit Liability Report" tracks unearned advance-deposit revenue.
+  - Complete post-close audit packet containing daily summary, exceptions, and adjustments.
 - **UX & Validation Polish**:
   - Real-time "Blocker Dashboard" that guides staff through resolving night audit exceptions.
 

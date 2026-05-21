@@ -20,16 +20,12 @@ module HotelOps
         .where("metadata->>'stay_date' = ? OR (transaction_type = 'payment' AND folio_transactions.created_at >= ? AND folio_transactions.created_at < ?)",
                @business_date.iso8601, window.begin, window.end)
 
-      # Identify no-shows via metadata or category
-      no_show_penalties_query = transactions.where("metadata->>'posting_source' = ? OR category = ?", "no_show", "no_show_penalty")
-      no_show_ids = no_show_penalties_query.select(:id)
-
       {
-        room_revenue: transactions.where(category: "accommodation").where.not(id: no_show_ids).sum(:amount),
-        tax_revenue: transactions.where(category: "tax").where.not(id: no_show_ids).sum(:amount),
+        room_revenue: transactions.where(category: "accommodation").sum(:amount),
+        tax_revenue: transactions.where(category: "tax").sum(:amount),
         payments_total: transactions.where(transaction_type: "payment").where("amount > 0").sum(:amount),
         refunds_total: transactions.where(transaction_type: "payment").where("amount < 0").sum(:amount).abs,
-        no_show_penalties: no_show_penalties_query.sum(:amount)
+        no_show_penalties: transactions.where(category: "no_show_penalty").sum(:amount)
       }
     end
   end

@@ -10,6 +10,7 @@ RSpec.describe Financials::CreateJournalBatch, type: :service do
     # Set up GL mappings
     hotel.hotel_general_ledger_maps.find_by(transaction_category: 'accommodation').update!(gl_code: 'REV-ROOM')
     hotel.hotel_general_ledger_maps.find_by(transaction_category: 'tax').update!(gl_code: 'TAX-LIAB')
+    hotel.hotel_general_ledger_maps.find_by(transaction_category: 'no_show_penalty').update!(gl_code: 'REV-NOSHOW')
     hotel.hotel_general_ledger_maps.find_by(transaction_category: 'gateway_payment').update!(gl_code: 'BANK-GATEWAY')
     hotel.hotel_general_ledger_maps.find_by(transaction_category: 'adjustment').update!(gl_code: 'ADJ-WRITE')
 
@@ -120,6 +121,26 @@ RSpec.describe Financials::CreateJournalBatch, type: :service do
 
       expect(JournalBatch.count).to eq(0)
       expect(JournalBatchEntry.count).to eq(0)
+    end
+
+    it 'keeps no-show penalty revenue separate from room revenue' do
+      create(:folio_transaction,
+        booking_folio: folio,
+        transaction_type: 'charge',
+        category: 'no_show_penalty',
+        amount: 75.0,
+        posting_date: business_date,
+        metadata: { posting_source: 'no_show' }
+      )
+
+      batch = described_class.call(hotel: hotel, business_date: business_date)
+
+      room_entry = batch.entries.find_by!(gl_code: 'REV-ROOM')
+      no_show_entry = batch.entries.find_by!(gl_code: 'REV-NOSHOW')
+
+      expect(room_entry.credit_amount).to eq(200.0)
+      expect(no_show_entry.credit_amount).to eq(75.0)
+      expect(no_show_entry.debit_amount).to eq(0)
     end
   end
 end

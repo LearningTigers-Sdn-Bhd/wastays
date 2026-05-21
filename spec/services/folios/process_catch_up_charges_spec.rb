@@ -66,6 +66,13 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
         amount: 50.0,
         metadata: { posting_source: "no_show" }
       )
+      payment = create(:folio_transaction,
+        booking_folio: folio_p,
+        transaction_type: "payment",
+        category: "advance_deposit",
+        amount: 25.0,
+        metadata: { posting_source: "no_show" }
+      )
 
       # Test default reversal
       described_class.call(booking: booking_p, user: user)
@@ -73,6 +80,8 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
       reversal = folio_p.folio_transactions.adjustment.where("metadata->>'reversed_transaction_id' = ?", penalty.id.to_s).last
       expect(reversal).to be_present
       expect(reversal.description).to include("Auto-reversal of no-show penalty")
+      payment_reversal = folio_p.folio_transactions.adjustment.where("metadata->>'reversed_transaction_id' = ?", payment.id.to_s).last
+      expect(payment_reversal).to be_nil
 
       # Test reinstate reversal
       penalty2 = create(:folio_transaction,

@@ -41,7 +41,7 @@ module Bookings
           booking.reload
           next unless no_show_eligible?(booking)
 
-          folio = Folios::InitializeForBooking.call(booking: booking, user: @user, lock: false)
+          folio = Folios::InitializeForBooking.call(booking: booking, user: @user, options: { posting_source: "no_show" }, lock: false)
           post_no_show_charges(booking, folio)
           booking.transition_status_to!("no_show", event: "mark_no_show")
           Bookings::InventoryManager.new(booking).release_by_dates(@business_date + 1.day, booking.check_out)
@@ -163,9 +163,9 @@ module Bookings
         insert_charge!(
           folio: folio,
           amount: amount,
-          category: "accommodation",
+          category: "no_show_penalty",
           description: "No-show room penalty - #{@business_date}",
-          metadata: no_show_metadata(booking, "accommodation", booking_room.id).merge(
+          metadata: no_show_metadata(booking, "no_show_penalty", booking_room.id).merge(
             rate_source: nightly_rate_snapshot_for(booking_room, @business_date).present? ? "nightly_rate_snapshot" : "legacy_subtotal_average",
             nightly_rate_snapshot: nightly_rate_snapshot_for(booking_room, @business_date)
           )

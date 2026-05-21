@@ -181,8 +181,8 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       # - New Day 1 charge posted at 150.0 (catch-up)
       folio = booking.booking_folio
       expect(folio.folio_transactions.adjustment.where(category: "correction").sum(:amount)).to eq(-100.0)
-      # Catch-up charge is 150.0. Penalty is 100.0.
-      expect(folio.folio_transactions.charge.where(category: "accommodation").sum(:amount)).to eq(250.0)
+      expect(folio.folio_transactions.charge.where(category: "no_show_penalty").sum(:amount)).to eq(100.0)
+      expect(folio.folio_transactions.charge.where(category: "accommodation").sum(:amount)).to eq(150.0)
 
       # Net debt after Day 1 is now 150.0
       expect(folio.outstanding_balance).to eq(150.0)
@@ -195,7 +195,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 5.days, total_amount: 500.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 500.0, quantity: 1)
 
-      payment = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 50_000, captured_at: Time.current)
+      payment = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 50_000, captured_at: business_date.noon)
       Folios::RecordPaymentFromGateway.call(payment)
 
       booking.transition_status_to!("checked_in", event: "check_in")

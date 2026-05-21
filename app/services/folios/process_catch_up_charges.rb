@@ -28,7 +28,10 @@ module Folios
     private
 
     def reverse_no_show_penalties
-      @folio.folio_transactions.where("metadata->>'posting_source' = ?", "no_show").find_each do |penalty|
+      @folio.folio_transactions.charge
+        .where(category: %w[no_show_penalty tax])
+        .where("metadata->>'posting_source' = ?", "no_show")
+        .find_each do |penalty|
         # Avoid double-reversing if already corrected
         next if already_corrected?(penalty)
 

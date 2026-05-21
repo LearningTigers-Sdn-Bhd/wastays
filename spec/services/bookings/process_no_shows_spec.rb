@@ -36,7 +36,9 @@ RSpec.describe Bookings::ProcessNoShows do
     folio = booking.booking_folio
     expect(folio).to be_present
     expect(folio.status).to eq("open")
-    expect(folio.folio_transactions.charge.where(category: "accommodation").sole.amount).to eq(100.0)
+    penalty = folio.folio_transactions.charge.where(category: "no_show_penalty").sole
+    expect(penalty.amount).to eq(100.0)
+    expect(penalty.gl_code).to eq(hotel.hotel_general_ledger_maps.find_by!(transaction_category: "no_show_penalty").gl_code)
     expect(folio.folio_transactions.charge.where(category: "tax").sole.amount).to eq(10.0)
     expect(folio.outstanding_balance).to eq(110.0)
   end
@@ -57,13 +59,18 @@ RSpec.describe Bookings::ProcessNoShows do
 
     described_class.call(night_audit: night_audit, user: user)
 
-    expect(booking.booking_folio.folio_transactions.charge.where(category: "accommodation").sole.amount).to eq(200.0)
+    expect(booking.booking_folio.folio_transactions.charge.where(category: "no_show_penalty").sole.amount).to eq(200.0)
     expect(booking.booking_folio.folio_transactions.charge.where(category: "tax").sole.amount).to eq(16.0)
   end
 
   it "syncs captured payment as an advance deposit before posting penalty" do
     booking = create_no_show_candidate
-    payment_transaction = create(:payment_transaction, booking: booking, booking_quote: booking.booking_quote, status: "captured", amount_subunits: 33_000)
+    payment_transaction = create(:payment_transaction,
+      booking: booking,
+      booking_quote: booking.booking_quote,
+      status: "captured",
+      amount_subunits: 33_000,
+      captured_at: business_date.noon)
 
     described_class.call(night_audit: night_audit, user: user)
 

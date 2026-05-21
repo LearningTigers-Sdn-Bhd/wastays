@@ -28,7 +28,7 @@ module Folios
             description: "Advance deposit from booking quote payment via #{pt.gateway} (#{pt.external_reference})",
             posting_date: pt.captured_at&.to_date || pt.created_at.to_date,
             options: override_options.merge({
-              posting_source: "gateway_payment",
+              posting_source: payment_posting_source,
               metadata: {
                 payment_transaction_id: pt.id,
                 source: "booking_quote",
@@ -57,6 +57,10 @@ module Folios
 
     def posting_user
       @options[:override_night_audit] ? @user : nil
+    end
+
+    def payment_posting_source
+      @options[:posting_source].presence || "gateway_payment"
     end
 
     def already_recorded?(pt)

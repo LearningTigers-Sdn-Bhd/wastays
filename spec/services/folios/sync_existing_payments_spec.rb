@@ -6,9 +6,10 @@ RSpec.describe Folios::SyncExistingPayments do
   let(:booking) { create(:booking) }
   let(:folio) { create(:booking_folio, booking: booking) }
   let(:user) { create(:user) }
+  let(:open_date) { booking.hotel.business_date_for }
 
   it "posts captured gateway payments as advance deposit system transactions" do
-    payment_transaction = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
+    payment_transaction = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: open_date.noon)
 
     described_class.call(folio: folio, user: user)
 
@@ -31,7 +32,7 @@ RSpec.describe Folios::SyncExistingPayments do
   end
 
   it "does not post the same payment twice" do
-    create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
+    create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: open_date.noon)
 
     described_class.call(folio: folio, user: user)
 
@@ -41,7 +42,7 @@ RSpec.describe Folios::SyncExistingPayments do
   end
 
   it "raises when a payment transaction cannot be inserted" do
-    create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
+    create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: open_date.noon)
     failed_result = OpenStruct.new(success?: false, error: "posting blocked")
     insert_service = instance_double(Folios::InsertTransaction, call: failed_result)
     allow(Folios::InsertTransaction).to receive(:new).and_return(insert_service)
@@ -49,5 +50,17 @@ RSpec.describe Folios::SyncExistingPayments do
     expect {
       described_class.call(folio: folio, user: user)
     }.to raise_error(RuntimeError, /posting blocked/)
+  end
+
+  it "can post captured payments as no-show owned transactions during night audit" do
+    payment_transaction = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: open_date.noon)
+    night_audit = booking.hotel.night_audits.create!(business_date: open_date, status: "running", trigger_mode: "manual")
+    HotelBusinessDate.for_hotel_date!(hotel: booking.hotel, date: open_date).start_audit!
+
+    described_class.call(folio: folio, user: user, options: { posting_source: "no_show" })
+
+    transaction = folio.folio_transactions.payment.sole
+    expect(transaction.metadata["payment_transaction_id"]).to eq(payment_transaction.id)
+    expect(transaction.metadata["posting_source"]).to eq("no_show")
   end
 end
