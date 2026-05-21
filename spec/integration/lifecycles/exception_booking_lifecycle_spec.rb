@@ -62,24 +62,32 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
     it "truncates a long stay and settles the folio correctly" do
       # Guest booked for 5 nights
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 5.days, total_amount: 500.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 500.0, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 500.0, quantity: 1, nightly_rate_snapshot: {
+        business_date.iso8601 => { "price" => 100.0 },
+        (business_date + 1.day).iso8601 => { "price" => 100.0 },
+        (business_date + 2.days).iso8601 => { "price" => 100.0 },
+        (business_date + 3.days).iso8601 => { "price" => 100.0 },
+        (business_date + 4.days).iso8601 => { "price" => 100.0 }
+      })
 
       booking.transition_status_to!("checked_in", event: "check_in")
       folio = Folios::InitializeForBooking.call(booking: booking, user: user)
 
       # Night 1
-      audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "completed", trigger_mode: "manual")
+      audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
       biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
       biz_date_record.start_audit!
       Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
+      audit_day_1.update!(status: "completed")
       biz_date_record.complete_audit!
 
       # Night 2
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 1.day)
-      audit_day_2 = hotel.night_audits.create!(business_date: business_date + 1.day, status: "completed", trigger_mode: "manual")
+      audit_day_2 = hotel.night_audits.create!(business_date: business_date + 1.day, status: "running", trigger_mode: "manual")
       biz_date_record_2 = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date + 1.day)
       biz_date_record_2.start_audit!
       Folios::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
+      audit_day_2.update!(status: "completed")
       biz_date_record_2.complete_audit!
 
       # Day 3 morning: Guest needs to leave early.
@@ -95,7 +103,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       ).call
 
       # Checkout should succeed because all expected dates (Day 1, Day 2) have charges!
-      result = Folios::CloseForCheckout.call(booking: booking, user: user)
+      result = Folios::CloseForCheckout.call(booking: booking, user: user, checked_out_at: business_date + 2.days)
       expect(result.success?).to be(true)
       expect(folio.reload.status).to eq("closed")
     end
@@ -193,7 +201,13 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
     it "blocks checkout for credit balance and requires a refund" do
       # 1. Guest pays 500 booking payment for a long stay
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 5.days, total_amount: 500.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 500.0, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 500.0, quantity: 1, nightly_rate_snapshot: {
+        business_date.iso8601 => { "price" => 100.0 },
+        (business_date + 1.day).iso8601 => { "price" => 100.0 },
+        (business_date + 2.days).iso8601 => { "price" => 100.0 },
+        (business_date + 3.days).iso8601 => { "price" => 100.0 },
+        (business_date + 4.days).iso8601 => { "price" => 100.0 }
+      })
 
       payment = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 50_000, captured_at: business_date.noon)
       Folios::RecordPaymentFromGateway.call(payment)
@@ -205,10 +219,11 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       [ 0, 1 ].each do |offset|
         date = business_date + offset.days
         allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(date)
-        audit = hotel.night_audits.create!(business_date: date, status: "completed", trigger_mode: "manual")
+        audit = hotel.night_audits.create!(business_date: date, status: "running", trigger_mode: "manual")
         biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: date)
         biz_date_record.start_audit!
         Folios::PostNightlyCharges.call(night_audit: audit, user: user)
+        audit.update!(status: "completed")
         biz_date_record.complete_audit!
       end
 
@@ -220,7 +235,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       expect(folio.outstanding_balance).to eq(-300.0)
 
       # 4. Attempt checkout -> Blocked
-      result = Folios::CloseForCheckout.call(booking: booking, user: user)
+      result = Folios::CloseForCheckout.call(booking: booking, user: user, checked_out_at: business_date + 2.days)
       expect(result.success?).to be(false)
       expect(result.error).to include("credit balance")
 
@@ -231,7 +246,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
 
       # 6. Checkout now succeeds
       expect(folio.outstanding_balance).to eq(0.0)
-      result2 = Folios::CloseForCheckout.call(booking: booking, user: user)
+      result2 = Folios::CloseForCheckout.call(booking: booking, user: user, checked_out_at: business_date + 2.days)
       expect(result2.success?).to be(true)
     end
   end
@@ -262,6 +277,76 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       # 4. Finalize audit
       biz_date_record.complete_audit!
       expect(biz_date_record.status).to eq("closed")
+    end
+  end
+
+  describe "7. Late Checkout Lifecycle" do
+    it "transitions booking to review_due_out via housekeeping and applies penalty" do
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 1.day, total_amount: 100.0)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, quantity: 1, room_number: "101")
+      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+
+      # 1. Housekeeper detects guest still in room
+      Rooms::SetStatus.new(room_status: room_status, status: "late_checkout_detected", user: user).call
+      expect(booking.reload.status).to eq("review_due_out")
+
+      # 2. Front desk reviews and applies penalty (e.g. 50.0)
+      result = Folios::PostPenaltyFee.call(
+        folio: folio, user: user, category: "late_checkout_penalty", amount: 50.0
+      )
+      expect(result).to be_success
+      expect(folio.reload.outstanding_balance).to eq(50.0)
+
+      # 3. Resolve and keep in-house
+      res = Bookings::TransitionStatus.new(booking: booking, status: "checked_in", user: user, options: { event: "resolve_late_checkout" }).call
+      expect(res).to be_success
+      expect(booking.reload.status).to eq("checked_in")
+    end
+  end
+
+  describe "8. Early Departure with Penalty Lifecycle" do
+    it "truncates stay and applies penalty in one service call" do
+      # 3 night stay @ 100/night
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 3.days, total_amount: 300.0)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 300.0, quantity: 1, nightly_rate_snapshot: {
+        business_date.iso8601 => { "price" => 100.0 },
+        (business_date + 1.day).iso8601 => { "price" => 100.0 },
+        (business_date + 2.days).iso8601 => { "price" => 100.0 }
+      })
+      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+
+      # Day 1 audit posts 100
+      audit = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
+      HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date).start_audit!
+      Folios::PostNightlyCharges.call(night_audit: audit, user: user)
+      audit.update!(status: "completed")
+      HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date).complete_audit!
+
+      # Day 2 morning: Guest leaves. Front desk applies 100 penalty.
+      # We need to override because the business date business_date is closed.
+      allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 1.day)
+      
+      # Guest pays 400.0 (100 stay + 200 forfeited unused nights + 100 manual penalty)
+      Folios::InsertTransaction.new(
+        booking_folio: folio, amount: 400.0, transaction_type: :payment, category: "cash", user: user,
+        description: "Payment for early departure", posting_date: business_date + 1.day
+      ).call
+
+      result = Bookings::ProcessEarlyDeparture.call(
+        booking: booking, 
+        user: user, 
+        params: { charge_penalty: "1", penalty_amount: "100.0" },
+        options: { override_night_audit: true, correction_reason: "Early departure", correction_note: "Test", timestamp: business_date + 1.day }
+      )
+      
+      expect(result).to be_success
+      booking.reload
+      expect(booking.status).to eq("completed")
+      expect(booking.check_out.to_date).to eq(business_date + 1.day)
+      
+      # 100 (Day 1) + 200 (forfeited unused nights) + 100 (Penalty) = 400 total charges
+      expect(folio.reload.folio_transactions.charge.sum(:amount)).to eq(400.0)
     end
   end
 end

@@ -19,11 +19,12 @@ Controls reservation state changes so bookings move through explicit PMS states 
 
 ## Rules Made So Far
 
-- Bookings use explicit statuses such as `pending`, `confirmed`, `checked_in`, `cancelled`, `completed`, `overbooked`, and `no_show`.
+- Bookings use explicit statuses such as `pending`, `confirmed`, `checked_in`, `review_due_out`, `cancelled`, `completed`, `overbooked`, and `no_show`.
 - Status changes are constrained through lifecycle rules instead of free-form updates.
 - Lifecycle services centralize changes that have side effects, such as check-in, checkout, cancellation, reinstatement, and no-show processing.
+- `review_due_out` is an operational state triggered when a room is detected as occupied past the checkout time, acting as a late checkout alert for the front desk.
 
 ## Known Follow-Ups
 
-- Expand operational exception workflows for late checkout, early departure penalties, and rate corrections.
+- Expand operational exception workflows for early departure penalties and rate corrections.
 - Keep lifecycle changes tied to financial posting rules when a transition affects folio balances.

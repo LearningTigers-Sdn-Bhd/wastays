@@ -63,17 +63,26 @@ module Bookings
       rates = @room_type.room_rates.where(date: stay_dates, currency: currency)
       rates = @rate_plan.present? ? rates.where(rate_plan: @rate_plan) : rates.where(rate_plan_id: nil)
       rates_by_date = rates.index_by(&:date)
-      missing_dates = stay_dates - rates_by_date.keys
-      raise ArgumentError, "Missing room rates for #{missing_dates.map(&:iso8601).join(', ')}." if missing_dates.any?
 
       snapshot = stay_dates.index_with do |date|
-        rate = rates_by_date.fetch(date)
-        rate.as_json.merge(
-          "room_rate_id" => rate.id,
-          "source" => "room_rate",
-          "price" => rate.price.to_d.to_s("F"),
-          "currency" => rate.currency
-        )
+        rate = rates_by_date[date]
+        if rate.present?
+          rate.as_json.merge(
+            "room_rate_id" => rate.id,
+            "source" => "room_rate",
+            "price" => rate.price.to_d.to_s("F"),
+            "currency" => rate.currency
+          )
+        else
+          {
+            "date" => date.iso8601,
+            "price" => @room_type.base_price.to_d.to_s("F"),
+            "currency" => currency,
+            "rate_plan_id" => @rate_plan&.id,
+            "room_type_id" => @room_type.id,
+            "source" => "base_price_fallback"
+          }
+        end
       end.transform_keys(&:iso8601)
 
       total = stay_dates.sum { |date| snapshot.dig(date.iso8601, "price").to_d * @quantity }

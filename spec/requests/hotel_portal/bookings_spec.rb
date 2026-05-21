@@ -128,6 +128,32 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     end
   end
 
+  describe "GET /checkout" do
+    it "renders the checkout sheet in the offcanvas frame" do
+      grant_permission("execute_folio_refunds")
+      booking.update!(check_out: Date.current + 1.day)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      room_type = create(:room_type, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 140.0)
+
+      get checkout_hotel_booking_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
+      expect(response.body).to include("Step 1 of 2")
+      expect(response.body).to include("Complete Checkout")
+      expect(response.body).to include("Record Refund")
+      expect(response.body).not_to include("Post Charges")
+      expect(response.body).not_to include("Post Payment")
+      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).to include("Pending")
+      expect(response.body).to include("This projected line will be posted when checkout is completed.")
+      expect(response.body).to include("Early checkout charge - Night 1")
+    end
+  end
+
   describe "POST /create" do
     let(:room_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: [ "101", "102" ], base_price: 100) }
     let(:booking_params) do
@@ -240,6 +266,180 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("Cannot check out with outstanding balance")
       expect(booking.reload.status).to eq("checked_in")
       expect(folio.reload.status).to eq("open")
+    end
+
+    it "posts checkout settlement and returns the invoice step in the same sheet" do
+      grant_permission("post_folio_payments")
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "100.00",
+          checkout_payment_reference: "RCPT-1"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Checkout Complete")
+      expect(response.body).to include("Download as PDF")
+      expect(booking.reload.status).to eq("completed")
+      expect(folio.reload.status).to eq("closed")
+      expect(folio.folio_transactions.payment.last.description).to include("RCPT-1")
+    end
+
+    it "posts early departure penalty before checkout-sheet settlement" do
+      grant_permission("post_folio_payments")
+      booking.update!(check_out: Date.current + 2.days)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          charge_penalty: "1",
+          penalty_amount: "50.00",
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "150.00",
+          checkout_payment_reference: "RCPT-ED"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Checkout Complete")
+      expect(booking.reload.status).to eq("completed")
+      expect(booking.check_out.to_date).to eq(Date.current)
+      expect(folio.reload.status).to eq("closed")
+      expect(folio.folio_transactions.charge.find_by(category: "early_departure_penalty").amount).to eq(50.0)
+      expect(folio.folio_transactions.payment.last.description).to include("RCPT-ED")
+    end
+
+    it "truncates checkout-sheet early departure without requiring a penalty" do
+      grant_permission("post_folio_payments")
+      booking.update!(check_out: Date.current + 2.days)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "100.00",
+          checkout_payment_reference: "RCPT-NO-PENALTY"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:success)
+      expect(booking.reload.status).to eq("completed")
+      expect(booking.check_out.to_date).to eq(Date.current)
+      expect(folio.reload.status).to eq("closed")
+      expect(folio.folio_transactions.charge.where(category: "early_departure_penalty")).to be_empty
+    end
+
+    it "posts early checkout charges for prepaid unused nights and closes the folio" do
+      booking.update!(check_in: Date.current, check_out: Date.current + 1.day, total_amount: 932.40)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      room_type = create(:room_type, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 932.40)
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 932.40)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Checkout Complete")
+      expect(booking.reload.status).to eq("completed")
+      expect(booking.check_out.to_date).to eq(Date.current)
+      expect(folio.reload.status).to eq("closed")
+      expect(folio.folio_transactions.charge.find_by(description: "Early checkout charge - Night 1").amount).to eq(932.40)
+      expect(folio.outstanding_balance).to eq(0)
+    end
+
+    it "rolls back early departure penalty and truncation when checkout validation fails" do
+      grant_permission("post_folio_payments")
+      booking.update!(check_in: 1.day.ago.to_date, check_out: Date.current + 1.day)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      create(:booking_room, booking: booking, subtotal: 200.0)
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      original_check_out = booking.check_out
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          charge_penalty: "1",
+          penalty_amount: "50.00",
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "50.00",
+          checkout_payment_reference: "RCPT-ROLLBACK"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Missing nightly charges for")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(booking.check_out).to eq(original_check_out)
+      expect(folio.reload.status).to eq("open")
+      expect(folio.folio_transactions).to be_empty
+    end
+
+    it "rolls back checkout settlement when checkout validation fails" do
+      grant_permission("post_folio_payments")
+      booking.update!(check_in: 1.day.ago.to_date, check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      create(:booking_room, booking: booking, subtotal: 100.0)
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "100.00",
+          checkout_payment_reference: "RCPT-FAIL"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Missing nightly charges for")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(folio.reload.status).to eq("open")
+      expect(folio.folio_transactions.payment).to be_empty
+    end
+
+    it "rejects unsupported checkout payment methods" do
+      grant_permission("post_folio_payments")
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_payment_method: "credit_card",
+          checkout_payment_amount: "100.00"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Checkout payment method is not supported")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(folio.folio_transactions.payment).to be_empty
     end
   end
 

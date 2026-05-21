@@ -16,6 +16,8 @@ module Financials
         "tax" => { code: "2010", desc: "Tax Liabilities" },
         "fb" => { code: "4020", desc: "Food & Beverage Revenue" },
         "no_show_penalty" => { code: "4030", desc: "No-Show Penalty Revenue" },
+        "late_checkout_penalty" => { code: "4031", desc: "Late Checkout Penalty Revenue" },
+        "early_departure_penalty" => { code: "4032", desc: "Early Departure Penalty Revenue" },
         "other" => { code: "4090", desc: "Other Revenue" },
         "gateway_payment" => { code: "1010", desc: "Bank - Gateway" },
         "cash" => { code: "1020", desc: "Bank - Cash" },

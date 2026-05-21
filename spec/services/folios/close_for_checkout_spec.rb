@@ -87,10 +87,11 @@ RSpec.describe Folios::CloseForCheckout do
 
   context "with past nights" do
     let(:check_in) { 2.days.ago.to_date }
-    let(:booking) { create(:booking, status: "checked_in", check_in: check_in, check_out: Date.current + 1.day) }
+    let(:booking) { create(:booking, status: "checked_in", check_in: check_in, check_out: Date.current) }
 
     it "fails when nightly charges are missing for past nights" do
       folio = create(:booking_folio, booking: booking, status: "open")
+      create(:booking_room, booking: booking, subtotal: 200.0)
       # Post one charge but not the other
       create(:folio_transaction,
         booking_folio: folio,
@@ -111,6 +112,7 @@ RSpec.describe Folios::CloseForCheckout do
 
     it "succeeds when all past nights have charges with stay_date metadata" do
       folio = create(:booking_folio, booking: booking, status: "open")
+      create(:booking_room, booking: booking, subtotal: 200.0)
 
       # Night 1
       create(:folio_transaction,
@@ -129,6 +131,71 @@ RSpec.describe Folios::CloseForCheckout do
       result = described_class.call(booking: booking, user: user)
       expect(result.success?).to be(true)
       expect(folio.reload.status).to eq("closed")
+    end
+
+    it "fails when accommodation is posted but expected tax is missing" do
+      booking.update!(tax_lines: [ { "name" => "SST", "amount" => "20.00", "type" => "sst" } ])
+      folio = create(:booking_folio, booking: booking, status: "open")
+      create(:booking_room, booking: booking, subtotal: 200.0)
+
+      [ check_in, 1.day.ago.to_date ].each do |stay_date|
+        create(:folio_transaction,
+          booking_folio: folio,
+          transaction_type: :charge,
+          category: "accommodation",
+          amount: 100.0,
+          metadata: { stay_date: stay_date.iso8601 })
+      end
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 200.0)
+
+      result = described_class.call(booking: booking, user: user)
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("Missing nightly charges for")
+      expect(folio.reload.status).to eq("open")
+    end
+
+    it "fails when tax is posted but expected accommodation is missing" do
+      booking.update!(tax_lines: [ { "name" => "SST", "amount" => "20.00", "type" => "sst" } ])
+      folio = create(:booking_folio, booking: booking, status: "open")
+      create(:booking_room, booking: booking, subtotal: 200.0)
+
+      [ check_in, 1.day.ago.to_date ].each do |stay_date|
+        create(:folio_transaction,
+          booking_folio: folio,
+          transaction_type: :charge,
+          category: "tax",
+          amount: 10.0,
+          metadata: { stay_date: stay_date.iso8601 })
+      end
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 20.0)
+
+      result = described_class.call(booking: booking, user: user)
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("Missing nightly charges for")
+      expect(folio.reload.status).to eq("open")
+    end
+
+    it "fails when accommodation is under-posted" do
+      folio = create(:booking_folio, booking: booking, status: "open")
+      create(:booking_room, booking: booking, subtotal: 200.0)
+
+      [ check_in, 1.day.ago.to_date ].each do |stay_date|
+        create(:folio_transaction,
+          booking_folio: folio,
+          transaction_type: :charge,
+          category: "accommodation",
+          amount: 99.0,
+          metadata: { stay_date: stay_date.iso8601 })
+      end
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 198.0)
+
+      result = described_class.call(booking: booking, user: user)
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("Missing nightly charges for")
+      expect(folio.reload.status).to eq("open")
     end
   end
 end

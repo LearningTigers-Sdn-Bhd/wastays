@@ -26,7 +26,7 @@ This roadmap outlines the remaining priorities required to transition from a fun
 **Objective**: Handle complex operational edge cases with accuracy and ease.
 
 - **Operational Exceptions**:
-  - Automated "Late Checkout Fee" workflows triggered by housekeeping status.
+  - Completed May 21, 2026: Late Checkout "Alert Only" workflow. Triggered by housekeeping status, transitions booking to `review_due_out`. Front desk can then manually apply a penalty (calculated from current room rates + taxes) or waive it.
   - "Early Departure" penalty processing and rate correction workflows.
 - **Refund Lifecycle**:
   - Multi-stage refund approval process for high-value transactions.
