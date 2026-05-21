@@ -42,8 +42,8 @@ This roadmap outlines the remaining priorities required to transition from a fun
 - **Enterprise Report Package**: 
   - Completed May 22, 2026: "Manager's Flash Report" (Occupancy, ADR, RevPAR, and Daily Revenue) with PDF, Excel, and CSV exports.
   - Completed: "Deposit Liability Report" tracks unearned advance-deposit revenue.
-  - Complete post-close audit packet containing daily summary, exceptions, and adjustments.
+  - Completed May 22, 2026: Multi-page post-close Audit Packet PDF containing daily financial summary, itemized manual adjustments, and audit blockers.
 - **UX & Validation Polish**:
   - Real-time "Blocker Dashboard" that guides staff through resolving night audit exceptions.
 
-**Success Indicator**: Management can view a complete "Audit Packet" (Daily Summary, Exceptions, Adjustments) immediately after the night audit closes.
+**Success Indicator**: Management can view a complete "Audit Packet" (Daily Summary, Adjustments, Blockers) immediately after the night audit closes via a high-fidelity PDF preview. Audit Packet sections are separated by page for professional archival.

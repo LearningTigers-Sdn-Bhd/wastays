@@ -51,4 +51,5 @@ These metrics represent the **actual money posted to folios** on that specific b
 
 ## Known Follow-Ups
 
-- Bundle this report into the post-close "Audit Packet" once the generation service is implemented.
+- Align folio ledger export fallback behavior with hotel-specific GL mappings.
+- Implement the "Blocker Dashboard" UX for interactive exception resolution.
