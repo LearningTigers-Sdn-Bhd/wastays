@@ -68,8 +68,14 @@ RSpec.describe "hotel_ops rake tasks" do
 
     it "prefills 25 realistic bookings for Malaysian and foreign guests with correct folios and statuses" do
       # Set up room types with room numbers for the hotel to support cycling assignment
-      create(:room_type, hotel: hotel, name: "Garden Prestige Suite", base_price: 740.0, room_numbers: ["101", "102", "103", "104", "105", "106", "107", "108"], quantity: 8)
-      create(:room_type, hotel: hotel, name: "Skyline Queen Deluxe", base_price: 560.0, room_numbers: ["201", "202", "203", "204", "205", "206", "207", "208", "209", "210"], quantity: 10)
+      create(:room_type, hotel: hotel, name: "Garden Prestige Suite", base_price: 740.0, room_numbers: [ "101", "102", "103", "104", "105", "106", "107", "108" ], quantity: 8)
+      create(:room_type, hotel: hotel, name: "Skyline Queen Deluxe", base_price: 560.0, room_numbers: [ "201", "202", "203", "204", "205", "206", "207", "208", "209", "210" ], quantity: 10)
+
+      # Create a superadmin user on the hotel's account — this becomes hotel.account.users.first
+      # (the acting_user resolved by the rake task). Superadmin bypasses all PostingGuard
+      # permission checks, including override_financial_date_lock.
+      superadmin = create(:user, role: "superadmin", account: hotel.account)
+      superadmin.user_hotel_accesses.create!(hotel: hotel, role: create(:role, name: "Admin", slug: "admin", account: hotel.account))
 
       # Stub environments and validation methods to allow past night audits to process in test environment
       allow(Rails.env).to receive(:development?).and_return(true)
@@ -83,7 +89,7 @@ RSpec.describe "hotel_ops rake tasks" do
       expect(Guest.count).to eq(25)
 
       # 2. Verify country and document distribution
-      countries = ["Malaysia", "Japan", "South Korea", "Hong Kong", "Indonesia"]
+      countries = [ "Malaysia", "Japan", "South Korea", "Hong Kong", "Indonesia" ]
       countries.each do |country|
         guests_in_country = Guest.where(country: country)
         expect(guests_in_country.count).to eq(5)
@@ -113,24 +119,31 @@ RSpec.describe "hotel_ops rake tasks" do
         expect(folio.status).to eq("closed")
         expect(folio.outstanding_balance.to_f).to eq(0.0)
 
-        # Verify it has transactions
+        # Verify folio transactions \u2014 booking was pre-paid at creation time.
+        # At check-in, SyncExistingPayments syncs the PaymentTransaction(gateway: 'manual')
+        # into the folio as category: 'booking_payment'.
         txs = folio.folio_transactions
         expect(txs.where(transaction_type: "charge", category: "accommodation").count).to be > 0
         expect(txs.where(transaction_type: "charge", category: "tax").count).to be > 0
-        expect(txs.where(transaction_type: "payment", category: "cash").count).to eq(1)
+        # Booking payment synced from the manual PaymentTransaction at check-in
+        expect(txs.where(transaction_type: "payment", category: "booking_payment").count).to eq(1)
+        # Confirm the underlying PaymentTransaction record (gateway: 'manual') exists on the booking
+        expect(booking.payment_transactions.captured.where(gateway: "manual").count).to eq(1)
       end
 
       # 5. Verify no_show folios
+      # Pre-paid bookings have a booking_payment FolioTransaction synced at no-show processing.
+      # The folio will have: no_show_charge charge + tax charges + booking_payment payment.
       no_show_bookings = hotel.bookings.where(status: "no_show")
       no_show_bookings.each do |booking|
         folio = booking.booking_folio
         txs = folio.folio_transactions
 
-        # Should have a no_show_penalty charge and tax charges, but no payments or accommodation charges
-        expect(txs.where(category: "no_show_penalty").count).to eq(1)
+        expect(txs.where(category: "no_show_charge").count).to eq(1)
         expect(txs.where(category: "tax").count).to be > 0
         expect(txs.where(category: "accommodation")).to be_empty
-        expect(txs.where(transaction_type: "payment")).to be_empty
+        # Booking was pre-paid so booking_payment is synced into the folio
+        expect(txs.where(transaction_type: "payment", category: "booking_payment").count).to eq(1)
       end
 
       # 6. Verify review_due_out (late checkout) folios
@@ -139,11 +152,12 @@ RSpec.describe "hotel_ops rake tasks" do
         folio = booking.booking_folio
         txs = folio.folio_transactions
 
-        # Should have accommodation, tax, and late_checkout_penalty charges
+        # Should have accommodation, tax, and late_checkout_charge charges
         expect(txs.where(category: "accommodation").count).to be > 0
         expect(txs.where(category: "tax").count).to be > 0
-        expect(txs.where(category: "late_checkout_penalty").count).to eq(1)
-        expect(txs.where(transaction_type: "payment")).to be_empty
+        expect(txs.where(category: "late_checkout_charge").count).to eq(1)
+        # Booking was pre-paid so booking_payment is synced into the folio
+        expect(txs.where(transaction_type: "payment", category: "booking_payment").count).to eq(1)
       end
 
       # 7. Verify the final business date is Date.current and status is open

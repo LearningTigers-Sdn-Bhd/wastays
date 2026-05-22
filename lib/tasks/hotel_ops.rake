@@ -320,7 +320,12 @@ def booking_scenario_state(hotel)
     tourism_tax_item = snapshot.tax_lines.find { |tax| tax["type"].to_s == "tourism_tax" }
     tourism_tax_amount = tourism_tax_item ? tourism_tax_item["amount"].to_d : 0.to_d
 
-    # Create the confirmed booking
+    total_amount = snapshot.room_total + snapshot.tax_total
+
+    # Create the confirmed booking — mirrors CreateManualBooking with record_payment: true
+    # payment_status: 'captured' + PaymentTransaction at booking time so that when
+    # check-in runs Folios::InitializeForBooking -> SyncExistingPayments, the folio
+    # immediately shows the correct credit balance.
     booking = hotel.bookings.new(
       check_in: check_in,
       check_out: check_out,
@@ -331,14 +336,30 @@ def booking_scenario_state(hotel)
       adults: 2,
       children: 0,
       currency: hotel.default_currency || "MYR",
-      total_amount: snapshot.room_total + snapshot.tax_total,
+      total_amount: total_amount,
       tax_lines: snapshot.tax_lines,
       tax_posting_snapshot: snapshot.tax_posting_snapshot,
       tourism_tax_amount: tourism_tax_amount,
       tourism_tax_applied: tourism_tax_amount.positive?,
-      payment_status: "pending",
+      payment_status: "captured",
       status: "confirmed"
     )
+
+    # Build the payment transaction in-memory so it's saved atomically with the booking.
+    # captured_at is set to tomorrow so SyncExistingPayments always posts the booking_payment
+    # FolioTransaction to a business date that has NOT yet been audited, avoiding PostingGuard
+    # conflicts regardless of which day in the 5-day simulation the check-in falls on.
+    booking.payment_transactions.build(
+      gateway: "manual",
+      payment_method: "cash",
+      amount_subunits: (total_amount * 100).to_i,
+      currency: hotel.default_currency || "MYR",
+      status: "captured",
+      captured_at: (Date.current + 1.day).beginning_of_day,
+      event_source: "manual_booking",
+      metadata: { simulation: true }
+    )
+
     booking.save!
 
     booking.booking_guests.create!(guest: guest, is_primary: true)
@@ -381,10 +402,15 @@ def booking_scenario_state(hotel)
         booking: booking,
         status: "checked_in",
         timestamp: check_in_time,
-        user: acting_user
+        user: acting_user,
+        # override_night_audit: true lets SyncExistingPayments post the booking_payment
+        # FolioTransaction even if the business date has already been rolled over by night audit.
+        # system_posting is a fallback for test environments where acting_user may be nil.
+        options: { override_night_audit: true, reason: "Simulation seeding", system_posting: system_posting }
       ).call
       raise "Failed to check in booking #{booking.id}: #{result.error}" unless result.success?
     end
+
 
     # 2b. Check-outs and late checkout transitions
     hotel.bookings.where(check_out: date).each do |booking|
@@ -403,50 +429,25 @@ def booking_scenario_state(hotel)
         ).call
         raise "Failed to transition booking #{booking.id} to review_due_out: #{result.error}" unless result.success?
 
-        # Step 2: Post late checkout penalty via Folios::PostPenaltyFee
-        #   (mirrors exception_booking_lifecycle_spec #7: Folios::PostPenaltyFee.call)
-        penalty_result = Folios::PostPenaltyFee.call(
+        # Step 2: Post late checkout charge via Folios::PostCategoryCharge
+        #   (mirrors exception_booking_lifecycle_spec #7: Folios::PostCategoryCharge.call)
+        charge_result = Folios::PostCategoryCharge.call(
           folio: booking.booking_folio,
           user: acting_user,
-          category: "late_checkout_penalty",
+          category: "late_checkout_charge",
           amount: 50.0,
-          description: "Late Checkout Penalty Fee",
+          description: "Late Checkout Charge",
           options: { system_posting: system_posting }
         )
-        raise "Failed to post late checkout penalty for booking #{booking.id}: #{penalty_result.error}" unless penalty_result.success?
+        raise "Failed to post late checkout charge for booking #{booking.id}: #{charge_result.error}" unless charge_result.success?
 
       elsif booking.status == "checked_in"
         # --- Regular Checkout ---
+        # The booking was pre-paid at creation time (PaymentTransaction gateway: 'manual').
+        # SyncExistingPayments already synced that payment into the folio on check-in,
+        # so no additional payment posting is needed here — just close the folio.
         check_out_time = zone.local(date.year, date.month, date.day, 11, 0, 0)
         folio = booking.booking_folio
-
-        # Step 1: Settle any outstanding balance via Folios::InsertTransaction
-        #   (mirrors standard_booking_lifecycle_spec #2: cash settlement before CloseForCheckout)
-        #   Requires override_night_audit: true + correction reason/note because
-        #   the business date may already be closed after the night audit rollover.
-        balance = folio.folio_transactions.charge.sum(:amount).to_d -
-                  folio.folio_transactions.payment.sum(:amount).to_d +
-                  folio.folio_transactions.adjustment.sum(:amount).to_d
-
-        if balance.positive?
-          payment_result = Folios::InsertTransaction.new(
-            booking_folio: folio,
-            amount: balance,
-            transaction_type: :payment,
-            category: "cash",
-            user: acting_user,
-            description: "Cash Payment at Checkout",
-            posting_date: date,
-            options: {
-              override_night_audit: true,
-              system_posting: system_posting,
-              correction_reason: "Simulation seeding",
-              correction_note: "Automated cash settlement during realtime_state simulation",
-              posting_source: "checkout"
-            }
-          ).call
-          raise "Failed to post cash payment for booking #{booking.id}: #{payment_result.error}" unless payment_result.success?
-        end
 
         # Step 2: Close folio and complete booking via Bookings::TransitionStatus
         #   (internally calls Folios::CloseForCheckout + booking.transition_status_to!)
