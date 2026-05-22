@@ -22,38 +22,23 @@
 <% title_class = comfortable_mode ? "text-xl sm:text-2xl" : "text-lg sm:text-xl" %>
 <% subtitle_class = comfortable_mode ? "text-sm" : "text-[11px]" %>
 <% summary_padding = comfortable_mode ? "px-4 py-3" : "px-3 py-2" %>
-<% summary_gap = comfortable_mode ? "gap-3" : "gap-2" %>
-<% chip_text_class = comfortable_mode ? "text-[11px]" : "text-[9px]" %>
 <% room_number_class = comfortable_mode ? "text-xl" : "text-base" %>
 <% rate_text_class = comfortable_mode ? "text-[13px]" : "text-[11px]" %>
 <% currency_text_class = comfortable_mode ? "text-[11px]" : "text-[9px]" %>
-<% booking_name_class = comfortable_mode ? "text-sm" : "text-xs" %>
-<% booking_amount_class = comfortable_mode ? "text-[10px]" : "text-[9px]" %>
-<% booking_badge_class = comfortable_mode ? "text-[8px]" : "text-[7.5px]" %>
-<% booking_status_class = comfortable_mode ? "text-[9px]" : "text-[8px]" %>
-<% booking_meta_class = comfortable_mode ? "mt-0 space-y-0" : "mt-0 flex items-center gap-1.5" %>
-<% row_min_base = comfortable_mode ? 80 : 64 %>
-<% block_step = comfortable_mode ? 48 : 40 %>
-<% block_top = comfortable_mode ? 6 : 4 %>
+<% row_min_base = comfortable_mode ? 40 : 40 %>
+<% block_step = 0 %>
+<% block_top = 0 %>
 <% block_left_pad = comfortable_mode ? 6 : 4 %>
 
 <% booking_styles = {
   "pending" => "border-amber-200 bg-amber-50 text-amber-700",
   "confirmed" => "border-blue-200 bg-blue-50 text-blue-700",
   "checked_in" => "border-violet-200 bg-violet-50 text-violet-700",
+  "review_due_out" => "border-orange-200 bg-orange-50 text-orange-700",
   "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
   "cancelled" => "border-slate-300 bg-slate-100 text-slate-600",
+  "no_show" => "border-rose-200 bg-rose-50 text-rose-700",
   "not_ready" => "border-red-200 bg-red-50 text-red-700"
-} %>
-
-<% status_icons = {
-  "all" => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-3.5"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>',
-  "pending" => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-3.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-  "confirmed" => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-3.5"><path d="M20 6 9 17l-5-5"/></svg>',
-  "checked_in" => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-3.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>',
-  "completed" => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-3.5"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
-  "cancelled" => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-3.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-  "not_ready" => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-3.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
 } %>
 
 <div class="max-w-[1600px] mx-auto pb-20">
@@ -89,7 +74,6 @@
 
         <%= render "hotel_portal/reservation_board/partials/legend",
                    booking_styles: booking_styles,
-                   status_icons: status_icons,
                    reservation_board: @reservation_board %>
       </div>
     </div>
@@ -115,15 +99,11 @@
                     <div class="sticky left-0 z-20 bg-slate-100 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
                       <div class="flex items-center justify-between gap-2 opacity-0 <%= summary_padding %> pointer-events-none">
                         <span class="truncate whitespace-nowrap font-black text-slate-800"><%= group[:room_type].name %></span>
-                        <svg class="size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                          <path d="m9 6 6 6-6 6"/>
-                        </svg>
+                        <%= lucide_icon "chevron-right", stroke_width: 2.25, class: "size-4 shrink-0 text-slate-500" %>
                       </div>
                       <div class="absolute inset-y-0 left-0 w-max min-w-full flex items-center justify-between gap-4 <%= summary_padding %> pointer-events-auto">
                         <span class="whitespace-nowrap font-black text-slate-800"><%= group[:room_type].name %></span>
-                        <svg class="size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                          <path d="m9 6 6 6-6 6"/>
-                        </svg>
+                        <%= lucide_icon "chevron-right", stroke_width: 2.25, class: "size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" %>
                       </div>
                     </div>
                     <div style="grid-column: 2 / -1;" class="bg-slate-100 border-r border-slate-200"></div>
@@ -146,11 +126,6 @@
                              block_top: block_top,
                              booking_styles: booking_styles,
                              visible_end_exclusive: visible_end_exclusive,
-                             booking_name_class: booking_name_class,
-                             booking_amount_class: booking_amount_class,
-                             booking_badge_class: booking_badge_class,
-                             booking_status_class: booking_status_class,
-                             booking_meta_class: booking_meta_class,
                              current_hotel: current_hotel,
                              rate_text_class: rate_text_class,
                              currency_text_class: currency_text_class %>
@@ -165,6 +140,5 @@
 <% end %>
 
   <%= render "hotel_portal/reservation_board/partials/action_modal", current_hotel: current_hotel %>
-  <%= render "hotel_portal/reservation_board/partials/booking_context_menu" %>
+  <%= render "shared/offcanvas_drawer" %>
 </div>
-

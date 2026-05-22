@@ -1,4 +1,4 @@
-<%= turbo_frame_tag "reservation_board_check_in_content" do %>
+<%= turbo_frame_tag "offcanvas_drawer" do %>
   <div class="flex flex-col h-full">
     <%= form_with model: @booking, url: check_in_hotel_booking_path(current_hotel, @booking), method: :post,
         class: "flex flex-col h-full" do |f| %>
@@ -8,7 +8,7 @@
       <%= render "hotel_portal/reservation_board/partials/content_header",
                  title: (@booking.checked_in? ? "Edit Check-In" : "Confirm Check-In"),
                  subtitle: "Set check-in time and assign rooms for #{@booking.guest_name}.",
-                 icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>' %>
+                 icon: lucide_icon("log-in", stroke_width: 2.5, class: "size-5") %>
 
       <%# Modal Content %>
       <div class="flex-1 p-6 space-y-6">
@@ -42,7 +42,7 @@
           <div class="mt-4 pt-4 border-t border-slate-100">
             <div class="flex gap-3">
               <div class="flex-shrink-0 mt-0.5">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-500"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                <%= lucide_icon "triangle-alert", stroke_width: 2, class: "size-4 text-orange-500" %>
               </div>
               <div class="flex-1">
                 <h4 class="text-xs font-bold text-slate-900">Backdated Check-in</h4>

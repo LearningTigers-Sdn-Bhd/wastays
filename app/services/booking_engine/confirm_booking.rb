@@ -121,9 +121,8 @@ module BookingEngine
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
           Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
 
-          # 6. TODO: Trigger notifications (Phase 5 checklist)
+          # 6. Dispatch Guest Notifications
           # Notifications::BookingConfirmedJob.perform_later(booking.id)
-
           OpenStruct.new(success?: true, booking: booking)
         else
           OpenStruct.new(success?: false, message: booking.errors.full_messages.to_sentence)

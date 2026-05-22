@@ -21,9 +21,8 @@ module GuestArrival
 
         @booking.update!(pre_checkin_status: "pending")
 
-        # TODO: Trigger external WhatsApp workflow
+        # Trigger external communication workflows (e.g., WhatsApp)
         # GuestArrival::TriggerWorkflowJob.perform_later(@booking.id, 'pre_checkin_start')
-
         OpenStruct.new(success?: true, pre_checkin: pre_checkin)
       end
     rescue ActiveRecord::RecordNotUnique

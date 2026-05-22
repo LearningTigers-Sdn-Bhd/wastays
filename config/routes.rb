@@ -362,6 +362,9 @@ Rails.application.routes.draw do
           get :check_out
           get :edit_stay
           get :notes
+          get :late_checkout
+          get :folio
+          get :booking_sheet
           patch :transition
         end
       end

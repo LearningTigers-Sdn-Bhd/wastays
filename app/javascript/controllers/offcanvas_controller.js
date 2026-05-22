@@ -61,15 +61,20 @@ export default class extends Controller {
   }
 
   applyVariant(variant) {
-    this.currentVariant = variant === "fullscreen-bottom" ? "fullscreen-bottom" : "right"
+    this.currentVariant = ["fullscreen-bottom", "compact-right"].includes(variant) ? variant : "right"
 
     this.panelTarget.classList.remove(
-      "inset-y-0", "right-0", "sm:w-[600px]", "md:w-[800px]", "lg:w-[1000px]", "translate-x-full", "translate-x-0",
+      "inset-y-0", "right-0",
+      "sm:w-[600px]", "md:w-[800px]", "lg:w-[1000px]",
+      "sm:w-[480px]", "md:w-[520px]", "lg:w-[560px]",
+      "translate-x-full", "translate-x-0",
       "inset-x-0", "bottom-0", "h-screen", "translate-y-full", "translate-y-0"
     )
 
     if (this.currentVariant === "fullscreen-bottom") {
       this.panelTarget.classList.add("inset-x-0", "bottom-0", "h-screen", "w-full", "translate-y-full")
+    } else if (this.currentVariant === "compact-right") {
+      this.panelTarget.classList.add("inset-y-0", "right-0", "w-full", "sm:w-[480px]", "md:w-[520px]", "lg:w-[560px]", "translate-x-full")
     } else {
       this.panelTarget.classList.add("inset-y-0", "right-0", "w-full", "sm:w-[600px]", "md:w-[800px]", "lg:w-[1000px]", "translate-x-full")
     }

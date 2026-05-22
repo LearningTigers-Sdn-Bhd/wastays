@@ -35,6 +35,14 @@ module HotelPortal
         @booking = current_hotel.bookings.find(params[:id])
         @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
         set_audit_logs
+        render :show_page
+      end
+
+      def booking_sheet
+        @booking = current_hotel.bookings.includes(booking_rooms: :room_type).find(params[:id])
+        @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+        @room_types = current_hotel.room_types.order(:name)
+        @notes = @booking.booking_notes.includes(:user).order(created_at: :desc)
       end
 
       def check_in
@@ -44,6 +52,7 @@ module HotelPortal
 
       def check_out
         @booking = current_hotel.bookings.find(params[:id])
+        @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
       end
 
       def edit_stay
@@ -57,6 +66,16 @@ module HotelPortal
         @notes = @booking.booking_notes.includes(:user).order(created_at: :desc)
       end
 
+      def late_checkout
+        @booking = current_hotel.bookings.find(params[:id])
+        @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+      end
+
+      def folio
+        @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(params[:id])
+        @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+      end
+
       def update
         @booking = current_hotel.bookings.find(params[:id])
 
@@ -68,7 +87,6 @@ module HotelPortal
               @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
               set_audit_logs
               render turbo_stream: [
-                turbo_stream.replace("reservation_board_booking_sheet_content", template: "hotel_portal/reservation_board/board_bookings/show"),
                 turbo_stream.action(:reload, "reservation_board"),
                 turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "notice", value: "Booking updated successfully." })
               ]
@@ -78,8 +96,7 @@ module HotelPortal
         else
           @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
           @room_types = current_hotel.room_types.order(:name)
-          set_audit_logs
-          render :show, status: :unprocessable_content
+          render :edit_stay, status: :unprocessable_content
         end
       end
 
