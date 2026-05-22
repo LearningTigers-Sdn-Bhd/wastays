@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_21_002824) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_20_081336) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -582,6 +582,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_21_002824) do
     t.index ["hotel_id"], name: "index_onboarding_sessions_on_hotel_id"
   end
 
+  create_table "partners", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "name", null: false
+    t.string "code", null: false
+    t.string "domain"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_partners_on_hotel_id"
+  end
+
   create_table "payment_settings", force: :cascade do |t|
     t.string "settable_type"
     t.bigint "settable_id"
@@ -1053,6 +1063,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_21_002824) do
   add_foreign_key "notification_deliveries", "bookings"
   add_foreign_key "notification_deliveries", "hotels"
   add_foreign_key "onboarding_sessions", "hotels"
+  add_foreign_key "partners", "hotels"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
   add_foreign_key "payout_batches", "hotels"
