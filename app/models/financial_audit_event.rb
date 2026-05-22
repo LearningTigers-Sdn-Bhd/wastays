@@ -10,10 +10,12 @@ class FinancialAuditEvent < ApplicationRecord
     night_audit_started
     night_audit_blocked
     night_audit_completed
+    night_audit_force_rolled
     night_audit_failed
     business_date_audit_started
     business_date_audit_blocked
     business_date_closed
+    business_date_force_closed
     business_date_opened
   ].freeze
 

@@ -11,7 +11,7 @@ module Folios
       @category = category.to_s
       @user = user
       @description = description
-      @posting_date = posting_date || Time.current.to_date
+      @posting_date = posting_date || @booking_folio.hotel.business_date_for(Time.current)
       @options = options
     end
 
@@ -21,6 +21,9 @@ module Folios
 
         override_error = validate_override_context
         return failure(override_error) if override_error.present?
+
+        permission_error = validate_staff_permission
+        return failure(permission_error) if permission_error.present?
 
         if @booking_folio.status == "closed" && !@options[:override_closed_folio]
           return failure("Folio is closed. Please provide an override flag to post to a closed folio.")
@@ -66,6 +69,23 @@ module Folios
       nil
     end
 
+    def validate_staff_permission
+      return if @options[:system_posting] || @user.nil?
+      return if %w[night_audit no_show].include?(posting_source)
+
+      permission = if @options[:reversal_of_transaction].present?
+                     "post_folio_corrections"
+      else
+                     FolioTransaction.permission_for(@transaction_type, @category)
+      end
+
+      return if permission.blank?
+      return if @user.respond_to?(:superadmin?) && @user.superadmin?
+      return if @user.respond_to?(:has_permission?) && @user.has_permission?(permission, hotel: @booking_folio.hotel)
+
+      "You do not have permission to post this transaction (#{permission})."
+    end
+
     def validate_business_date_posting
       FinancialControls::PostingGuard.call!(
         hotel: @booking_folio.booking.hotel,
@@ -75,7 +95,8 @@ module Folios
         override: @options[:override_night_audit],
         override_reason: @options[:correction_reason],
         permission_context: @options[:permission_context] || @user,
-        blocker_resolution: @options[:blocker_resolution]
+        blocker_resolution: @options[:blocker_resolution],
+        system_posting: !!@options[:system_posting]
       )
       nil
     rescue FinancialControls::PostingGuard::PostingBlocked => e

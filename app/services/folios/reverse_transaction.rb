@@ -58,10 +58,7 @@ module Folios
     private
 
     def reversal_amount
-      return -@transaction.amount if @transaction.charge? || @transaction.adjustment?
-      return -@transaction.amount if @transaction.payment? && @transaction.amount.positive?
-
-      @transaction.amount
+      -@transaction.amount
     end
 
     def reversal_transaction_type

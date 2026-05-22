@@ -12,6 +12,23 @@ class FolioTransaction < ApplicationRecord
 
   GL_MAPPABLE_CATEGORIES = (CATEGORIES_BY_TYPE.values.flatten + %w[security_deposits]).uniq.freeze
 
+  PERMISSION_MAPPING = {
+    "charge" => "post_folio_charges",
+    "payment" => {
+      "cash" => "post_folio_payments",
+      "refund" => "execute_folio_refunds",
+      "gateway_payment" => "post_folio_payments",
+      "booking_payment" => "post_folio_payments"
+    },
+    "adjustment" => {
+      "adjustment" => "post_folio_adjustments",
+      "discount" => "post_folio_adjustments",
+      "correction" => "post_folio_corrections",
+      "write_off" => "post_folio_write_offs",
+      "other" => "post_folio_adjustments"
+    }
+  }.freeze
+
   belongs_to :booking_folio
   belongs_to :user, optional: true
   belongs_to :reversal_of_transaction, class_name: "FolioTransaction", optional: true
@@ -53,6 +70,13 @@ class FolioTransaction < ApplicationRecord
 
   def self.gl_mappable_categories
     GL_MAPPABLE_CATEGORIES
+  end
+
+  def self.permission_for(transaction_type, category)
+    mapping = PERMISSION_MAPPING[transaction_type.to_s]
+    return mapping if mapping.is_a?(String)
+
+    mapping&.[](category.to_s)
   end
 
   def reversed?

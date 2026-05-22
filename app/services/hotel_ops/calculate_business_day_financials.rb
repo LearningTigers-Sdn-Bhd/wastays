@@ -12,13 +12,10 @@ module HotelOps
     end
 
     def call
-      window = @hotel.business_day_window_for(@business_date)
-
-      # Query FolioTransaction for the business date
+      # Query FolioTransaction for the business date using posting_date as the source of truth
       transactions = FolioTransaction.joins(booking_folio: :booking)
         .where(bookings: { hotel_id: @hotel.id })
-        .where("metadata->>'stay_date' = ? OR (transaction_type = 'payment' AND folio_transactions.created_at >= ? AND folio_transactions.created_at < ?)",
-               @business_date.iso8601, window.begin, window.end)
+        .where(posting_date: @business_date)
 
       {
         room_revenue: transactions.where(category: "accommodation").sum(:amount),

@@ -44,10 +44,19 @@ class HotelBusinessDate < ApplicationRecord
   end
 
   def complete_audit!
-    transition!(to: "closed", from: %w[audit_running]) do
+    transition!(to: "closed", from: %w[audit_running audit_blocked]) do
       self.closed_at = Time.current
       self.blockers_snapshot = {}
       self.blocked_at = nil
+    end
+  end
+
+  def force_close!
+    transition!(to: "force_closed", from: %w[audit_running audit_blocked]) do
+      self.closed_at = Time.current
+      self.blockers_snapshot ||= {}
+      self.blocked_at = nil
+      record_force_close_audit_event!
     end
   end
 
@@ -91,6 +100,19 @@ class HotelBusinessDate < ApplicationRecord
   end
 
   private
+
+  def record_force_close_audit_event!
+    FinancialControls::AuditEventRecorder.call!(
+      hotel: hotel,
+      business_date: business_date,
+      event_type: "business_date_force_closed",
+      source: "system",
+      metadata: {
+        reason: "Manual force roll initiated",
+        blockers_at_time_of_roll: blockers_snapshot
+      }
+    )
+  end
 
   def create_next_business_date!(next_date)
     self.class.transaction(requires_new: true) do

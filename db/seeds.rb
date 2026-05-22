@@ -151,13 +151,14 @@ platform_permissions = [
   { name: 'Manage GL Mappings', slug: 'manage_general_ledger_maps' },
   { name: 'View Reports', slug: 'view_reports' },
   { name: 'View Payouts', slug: 'view_payouts' },
-  { name: 'Manage Requests', slug: 'manage_requests' }
+  { name: 'Manage Requests', slug: 'manage_requests' },
+  { name: 'Manage Concierge', slug: 'manage_concierge' }
 ]
 
 role_templates = [
   { name: 'Hotel Owner', slug: 'hotel_owner', permissions: platform_permissions.map { |p| p[:slug] } },
   { name: 'General Manager', slug: 'general_manager', permissions: platform_permissions.map { |p| p[:slug] }.reject { |s| s == 'manage_account' } },
-  { name: 'Front Desk', slug: 'front_desk', permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit manage_room_status post_charges post_folio_charges post_folio_payments manage_requests] },
+  { name: 'Front Desk', slug: 'front_desk', permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit manage_room_status post_charges post_folio_charges post_folio_payments manage_requests manage_concierge] },
   { name: 'Housekeeper', slug: 'housekeeper', permissions: %w[manage_room_status manage_requests] }
 ]
 

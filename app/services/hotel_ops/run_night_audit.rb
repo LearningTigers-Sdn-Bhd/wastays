@@ -2,13 +2,14 @@ module HotelOps
   class RunNightAudit
     Result = Struct.new(:success?, :night_audit, :error, keyword_init: true)
 
-    def initialize(hotel:, business_date:, performed_by_user:, trigger_mode:, notes: nil, allow_unclosable_date: false)
+    def initialize(hotel:, business_date:, performed_by_user:, trigger_mode:, notes: nil, allow_unclosable_date: false, force_roll: false)
       @hotel = hotel
       @business_date = business_date.to_date
       @performed_by_user = performed_by_user
       @trigger_mode = trigger_mode
       @notes = notes.to_s.strip.presence
       @allow_unclosable_date = Rails.env.development? && allow_unclosable_date
+      @force_roll = force_roll
     end
 
     def call
@@ -32,7 +33,7 @@ module HotelOps
         completed_at: nil,
         performed_by_user: @performed_by_user,
         notes: @notes,
-        force_closed: false
+        force_closed: @force_roll
       )
       night_audit.save!
 
@@ -42,7 +43,7 @@ module HotelOps
 
       pre_evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :pre_close).call
 
-      if blocked?(pre_evaluation)
+      if blocked?(pre_evaluation) && !@force_roll
         log_blockers(night_audit, pre_evaluation[:blocked_details])
         log_exceptions(night_audit, pre_evaluation[:exceptions])
 
@@ -82,20 +83,32 @@ module HotelOps
       ActiveRecord::Base.transaction do
         persist_financial_summary(night_audit, financial_totals)
 
-        final_status = blocked?(evaluation) ? "blocked" : "completed"
+        is_blocked = blocked?(evaluation)
+        final_status = (is_blocked && !@force_roll) ? "blocked" : "completed"
+
         night_audit.update!(
           status: final_status,
           completed_at: Time.current,
           summary: evaluation[:summary],
           blocked_details: evaluation[:blocked_details],
-          exceptions: evaluation[:exceptions]
+          exceptions: evaluation[:exceptions],
+          force_closed: @force_roll && is_blocked
         )
 
         if final_status == "completed"
-          business_date.complete_audit!
+          if @force_roll && is_blocked
+            business_date.force_close!
+          else
+            business_date.complete_audit!
+          end
+
           next_business_date = business_date.open_next_business_date!
           Financials::CreateJournalBatch.call(hotel: @hotel, business_date: @business_date)
-          persist_night_audit_event!(night_audit, business_date, "night_audit_completed", "Night audit completed", financial_totals: financial_totals)
+
+          event_type = @force_roll && is_blocked ? "night_audit_force_rolled" : "night_audit_completed"
+          reason = @force_roll && is_blocked ? "Night audit force-rolled with blockers" : "Night audit completed"
+
+          persist_night_audit_event!(night_audit, business_date, event_type, reason, financial_totals: financial_totals)
           persist_night_audit_event!(night_audit, business_date, "business_date_closed", "Business date moved to closed")
           persist_night_audit_event!(night_audit, next_business_date, "business_date_opened", "Next business date opened after night audit", opened_business_date: next_business_date.business_date)
         else

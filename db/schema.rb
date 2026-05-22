@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_22_140002) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_22_140003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -225,9 +225,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_22_140002) do
     t.string "pre_checkin_status"
     t.string "guarantee_method"
     t.string "deposit_status"
-    t.decimal "margin_amount"
-    t.decimal "net_amount"
-    t.decimal "margin_rate"
+    t.decimal "margin_amount", precision: 15, scale: 2
+    t.decimal "net_amount", precision: 15, scale: 2
+    t.decimal "margin_rate", precision: 10, scale: 4
     t.datetime "checked_in_at"
     t.datetime "checked_out_at"
     t.string "guest_gender"
@@ -250,6 +250,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_22_140002) do
     t.text "internal_notes"
     t.decimal "manual_rate_override"
     t.jsonb "tax_posting_snapshot", default: {}, null: false
+    t.string "guest_home_address"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id_unique", unique: true, where: "(booking_quote_id IS NOT NULL)"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
@@ -278,6 +279,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_22_140002) do
     t.index ["mappable_type", "mappable_id"], name: "index_channel_mappings_on_mappable"
     t.index ["provider", "external_id"], name: "index_channel_mappings_on_provider_and_external_id", unique: true
     t.index ["provider", "mappable_type", "mappable_id"], name: "idx_channel_mappings_provider_mappable", unique: true
+  end
+
+  create_table "check_out_requests", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "requested_at", null: false
+    t.datetime "acknowledged_at"
+    t.bigint "acknowledged_by_user_id"
+    t.text "guest_notes"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["acknowledged_by_user_id"], name: "index_check_out_requests_on_acknowledged_by_user_id"
+    t.index ["booking_id", "requested_at"], name: "index_check_out_requests_on_booking_id_and_requested_at"
+    t.index ["booking_id", "status"], name: "index_check_out_requests_on_booking_id_and_status"
+    t.index ["booking_id"], name: "index_check_out_requests_on_booking_id"
   end
 
   create_table "complaint_requests", force: :cascade do |t|
@@ -481,6 +498,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_22_140002) do
     t.integer "weekdays", default: [], null: false, array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "metadata"
     t.index ["hotel_id", "rule_type"], name: "index_hotel_pricing_rules_on_hotel_and_type"
     t.index ["hotel_id", "start_date", "end_date"], name: "index_hotel_pricing_rules_on_hotel_and_dates"
     t.index ["hotel_id"], name: "index_hotel_pricing_rules_on_hotel_id"
@@ -544,6 +562,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_22_140002) do
     t.time "business_starts_at", default: "2000-01-01 08:00:00", null: false
     t.time "business_ends_at", default: "2000-01-01 02:00:00", null: false
     t.integer "arrival_grace_period", default: 7200, null: false
+    t.string "contact_phone"
+    t.string "contact_email"
+    t.string "whatsapp_number"
+    t.boolean "concierge_enabled", default: true, null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
@@ -1010,6 +1032,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_22_140002) do
     t.boolean "closed_to_arrival"
     t.boolean "closed_to_departure"
     t.boolean "stop_sell"
+    t.decimal "walk_in_price", precision: 10, scale: 2
+    t.decimal "ota_price", precision: 10, scale: 2
+    t.string "applied_rule_type"
+    t.decimal "corporate_price", precision: 10, scale: 2
     t.index ["rate_plan_id"], name: "index_room_rates_on_rate_plan_id"
     t.index ["room_type_id", "rate_plan_id", "date", "currency"], name: "index_room_rates_on_rt_rp_date_curr", unique: true
     t.index ["room_type_id"], name: "index_room_rates_on_room_type_id"
@@ -1159,6 +1185,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_22_140002) do
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "hotels"
   add_foreign_key "bookings", "payout_batches"
+  add_foreign_key "check_out_requests", "bookings"
+  add_foreign_key "check_out_requests", "users", column: "acknowledged_by_user_id"
   add_foreign_key "complaint_requests", "bookings"
   add_foreign_key "deposits", "booking_folios"
   add_foreign_key "deposits", "bookings"

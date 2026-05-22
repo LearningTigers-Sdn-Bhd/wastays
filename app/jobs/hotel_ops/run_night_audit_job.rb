@@ -9,6 +9,7 @@ module HotelOps
       performed_by_user = User.find_by(id: performed_by_user_id)
       options = options.with_indifferent_access
       allow_unclosable_date = ActiveModel::Type::Boolean.new.cast(options[:allow_unclosable_date]) || false
+      force_roll = ActiveModel::Type::Boolean.new.cast(options[:force_roll]) || false
 
       HotelOps::RunNightAudit.new(
         hotel: night_audit.hotel,
@@ -16,7 +17,8 @@ module HotelOps
         performed_by_user: performed_by_user,
         trigger_mode: night_audit.trigger_mode,
         notes: night_audit.notes,
-        allow_unclosable_date: allow_unclosable_date
+        allow_unclosable_date: allow_unclosable_date,
+        force_roll: force_roll
       ).call
     end
   end

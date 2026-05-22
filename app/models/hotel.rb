@@ -152,6 +152,10 @@ class Hotel < ApplicationRecord
     %w[approved live].include?(status)
   end
 
+  def concierge_available?
+    active? && concierge_enabled?
+  end
+
   def hotel_time_zone
     Time.find_zone(time_zone.presence || User::DEFAULT_TIME_ZONE) || Time.zone
   end
@@ -170,7 +174,6 @@ class Hotel < ApplicationRecord
 
   def business_starts_at=(value)
     if value.is_a?(String) && value.present?
-      # Parse as UTC to preserve the intended wall-clock hour/minute
       write_attribute(:business_starts_at, Time.find_zone("UTC").parse(value))
     else
       super
@@ -183,7 +186,6 @@ class Hotel < ApplicationRecord
 
   def business_ends_at=(value)
     if value.is_a?(String) && value.present?
-      # Parse as UTC to preserve the intended wall-clock hour/minute
       write_attribute(:business_ends_at, Time.find_zone("UTC").parse(value))
     else
       super
@@ -203,21 +205,17 @@ class Hotel < ApplicationRecord
   def date_closed?(date, reference_time = Time.current)
     date = date.to_date
 
-    # If a completed audit exists, it's definitely closed regardless of time windows
     return true if NightAudit.exists?(hotel_id: id, business_date: date, status: "completed")
 
     current_biz_date = business_date_for(reference_time)
 
-    # Strictly closed if it's more than 1 day behind the current active business date
     return true if date < current_biz_date - 1.day
 
-    # If it's "yesterday" relative to the business date, it's only closed if night audit finished
     if date == current_biz_date - 1.day
       return true if defined?(HotelBusinessDate) && HotelBusinessDate.closed_for?(hotel: id, date: date)
       return NightAudit.exists?(hotel_id: id, business_date: date, status: "completed")
     end
 
-    # Also respect explicit HotelBusinessDate status for current/future dates
     return true if defined?(HotelBusinessDate) && HotelBusinessDate.closed_for?(hotel: id, date: date)
 
     false
@@ -227,10 +225,8 @@ class Hotel < ApplicationRecord
     local_time = time.in_time_zone(hotel_time_zone)
     window = business_day_window_for(business_date)
 
-    # Cannot audit if the business day window has not ended yet
     return false if local_time < window.end
 
-    # Optional: add a small buffer (e.g. 5 minutes) to ensure last-minute transactions are processed
     local_time >= window.end + 5.minutes
   end
 
@@ -238,11 +234,9 @@ class Hotel < ApplicationRecord
     local_time = time.in_time_zone(hotel_time_zone)
     current_biz_date = business_date_for(local_time)
 
-    # Candidate date is the day before the current active business date
     candidate = current_biz_date - 1.day
     candidate_end = business_day_window_for(candidate).end
 
-    # Safe to close if local time is at least 30 minutes after candidate's business day end
     if local_time >= candidate_end + 30.minutes
       candidate
     else
