@@ -48,6 +48,10 @@ class Public::HotelsController < ApplicationController
                                     .sort_by { |category, _|
                                       hotel_sort_order.index(category) || hotel_sort_order.size
                                     }
+
+    # Decorate for view
+    @hotel = Public::HotelPresenter.new(@hotel, view_context)
+    @room_types = @room_types.map { |rt| Public::RoomTypePresenter.new(rt, @hotel, @availability_service, view_context) }
   end
 
   def rate_calendar

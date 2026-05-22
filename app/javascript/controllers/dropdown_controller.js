@@ -55,11 +55,18 @@ export default class extends Controller {
   startTracking() {
     window.addEventListener("scroll", this.boundPositionFloatingMenu, true)
     window.addEventListener("resize", this.boundPositionFloatingMenu)
+    // Also track scroll on the immediate parent in case it's a scrollable container (like the currency tab bar)
+    if (this.element.parentElement) {
+      this.element.parentElement.addEventListener("scroll", this.boundPositionFloatingMenu)
+    }
   }
 
   stopTracking() {
     window.removeEventListener("scroll", this.boundPositionFloatingMenu, true)
     window.removeEventListener("resize", this.boundPositionFloatingMenu)
+    if (this.element.parentElement) {
+      this.element.parentElement.removeEventListener("scroll", this.boundPositionFloatingMenu)
+    }
   }
 
   isFloatingDropdown() {
@@ -92,8 +99,9 @@ export default class extends Controller {
     }
 
     const maxLeft = window.innerWidth - menuWidth - viewportPadding
-    // Align menu's right edge with trigger's right edge, then clamp to viewport.
-    const preferredLeft = rect.right - menuWidth
+    // Center the menu relative to the toggle button
+    const toggleCenter = rect.left + (rect.width / 2)
+    const preferredLeft = toggleCenter - (menuWidth / 2)
     const left = Math.min(Math.max(viewportPadding, preferredLeft), maxLeft)
 
     this.menuTarget.style.position = "fixed"

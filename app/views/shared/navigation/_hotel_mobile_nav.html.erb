@@ -1,5 +1,5 @@
 <!-- Preline CMS-style Hotel Mobile Bottom Nav -->
-<div class="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-layer-line bg-layer shadow-lg pb-safe">
+<div class="lg:hidden fixed inset-x-0 bottom-0 z-100 border-t border-layer-line bg-layer shadow-lg pb-safe">
   <nav class="flex items-center justify-around py-2.5 text-[11px] font-medium text-muted-foreground">
     <a href="<%= hotel_dashboard_path(current_hotel) %>" class="flex flex-col items-center gap-y-1 px-2 py-1 rounded-lg transition-colors <%= current_page?(hotel_dashboard_path(current_hotel)) ? 'text-sidebar-nav-active-text' : 'hover:text-neutral-text-primary' %>">
       <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>

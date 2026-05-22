@@ -1,0 +1,69 @@
+<%# frozen_string_literal: true %>
+
+<div class="card overflow-hidden group hover:shadow-xl transition-all duration-300">
+  <div class="flex flex-col md:flex-row">
+    <div class="md:w-80 lg:w-96 h-64 md:h-auto relative overflow-hidden cursor-pointer"
+         data-action="click->room-details#open"
+         data-room-details="<%= room_type.details_json %>">
+
+      <% if room_type.photo_url %>
+        <%= image_tag room_type.photo_url, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
+      <% else %>
+        <div class="absolute inset-0 bg-neutral-bg flex items-center justify-center">
+          <svg class="w-12 h-12 text-neutral-border" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
+        </div>
+      <% end %>
+    </div>
+    <div class="flex-1 p-6 flex flex-col justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-neutral-text-primary mb-2"><%= room_type.name %></h3>
+        <p class="text-sm text-neutral-text-secondary line-clamp-2 mb-4"><%= room_type.description %></p>
+        
+        <div class="flex flex-wrap gap-y-2 gap-x-4 mb-6">
+          <div class="flex items-center gap-x-1.5 text-xs font-bold text-neutral-text-secondary uppercase tracking-wider">
+            <svg class="w-3.5 h-3.5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            Up to <%= room_type.max_adults %> Adults
+          </div>
+          <% if room_type.max_children.to_i > 0 %>
+            <div class="flex items-center gap-x-1.5 text-xs font-bold text-neutral-text-secondary uppercase tracking-wider">
+              <svg class="w-3.5 h-3.5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <%= room_type.max_children %> Children
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-end border-t border-neutral-border pt-4">
+        <div>
+          <% if search_ready %>
+            <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest mb-1">Total for Stay</p>
+            
+            <p class="text-2xl font-black text-neutral-text-primary">
+              <%= room_type.display_total_price(display_currency) %>
+            </p>
+            <p class="text-[10px] text-neutral-text-secondary italic">
+              <%= room_type.rate_plan_name %> · charged in <%= room_type.pricing_summary[:currency] %><%= display_currency != room_type.pricing_summary[:currency] ? " · estimate" : "" %>
+            </p>
+            <% else %>
+            <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest">Total for Stay</p>
+            <p class="text-sm font-bold text-neutral-text-secondary">Select dates to see price</p>
+            <% end %>
+            </div>
+
+            <%= form_with url: quotes_path, method: :post do |f| %>
+            <%= f.hidden_field :hotel_id, value: hotel.id %>
+            <%= f.hidden_field :room_type_id, value: room_type.id %>
+            <%= f.hidden_field :check_in, value: check_in&.to_s %>
+            <%= f.hidden_field :check_out, value: check_out&.to_s %>
+            <%= f.hidden_field :adults, value: adults %>
+            <%= f.hidden_field :children, value: children %>
+            <%= f.hidden_field :room_count, value: room_count %>
+            <%= f.hidden_field :display_currency, value: display_currency %>
+
+            <%= f.submit "Reserve Now",                       disabled: !search_ready,
+                       class: "btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 shadow-lg shadow-brand-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

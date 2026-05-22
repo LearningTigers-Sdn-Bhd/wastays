@@ -37,10 +37,11 @@ module Bookings
       end
 
       # 2. Calculate accurate total amount from Grid Rates
-      booking.total_amount = (booking.check_in..(booking.check_out - 1.day)).sum do |date|
-        rate = room_type.room_rates.find_by(date: date)
-        rate&.price || room_type.base_price
-      end
+      booking.total_amount = Bookings::CalculateStayPrice.new(
+        room_type: room_type,
+        check_in: booking.check_in,
+        check_out: booking.check_out
+      ).call
 
       booking.status = "confirmed"
       booking.payment_status = "captured"

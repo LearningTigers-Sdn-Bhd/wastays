@@ -1,0 +1,356 @@
+<div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+  <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <h3 class="text-sm font-black tracking-tight text-slate-950">Batch Pricing Rules</h3>
+        <p class="mt-0.5 text-xs font-medium text-slate-600">
+          <% if @last_pricing_applied_at.present? %>
+            Last applied <%= time_ago_in_words(@last_pricing_applied_at) %> ago.
+          <% else %>
+            No pricing rule batch has been applied yet.
+          <% end %>
+        </p>
+      </div>
+      <%= render "shared/components/badge", label: "Advanced Workflow", color_key: "indigo" %>
+    </div>
+  </div>
+
+  <div class="px-4 py-5 sm:px-6 sm:py-6" data-controller="pricing-sections">
+    <%= form_with scope: :pricing_rule, url: apply_pricing_rules_hotel_inventory_dashboards_path(current_hotel), local: true, class: "space-y-6 text-xs" do |f| %>
+      <div>
+        <label class="mb-2 block text-[10px] sm:text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Target Room Categories</label>
+        <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4 md:grid-cols-2 xl:grid-cols-3">
+          <% @room_types.each do |rt| %>
+            <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+              <%= f.check_box :room_type_ids, { multiple: true, checked: @pricing_form.selected_room_type_ids.include?(rt.id), class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0" }, rt.id, nil %>
+              <span class="truncate"><%= rt.name %></span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div>
+        <label class="mb-2 block text-[10px] sm:text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Pricing Tiers to Update</label>
+        <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
+          <% 
+            # We default to unchecked as requested ("auto clear the pricing tiers selection")
+            # except when we are re-rendering after a submission (e.g. validation errors)
+            is_submission = params[:pricing_rule].present?
+
+            tiers = [
+              ["General", "general", is_submission && @pricing_form.pricing_data[:gp_price].present?],
+              ["Weekends", "weekends", is_submission && @pricing_form.pricing_data[:wk_price].present?],
+              ["School Holiday", "school_holiday", is_submission && @pricing_form.school_holiday_rows.any? { |r| r.price.present? }],
+              ["Walk-in", "walk_in", is_submission && @pricing_form.pricing_data[:wi_price].present?],
+              ["Corporate", "corporate_rate", is_submission && @pricing_form.pricing_data[:cr_price].present?],
+              ["OTA", "ota_rate", is_submission && @pricing_form.pricing_data[:ota_price].present?],
+              ["Public Holiday", "public_holiday", is_submission && @pricing_form.public_holiday_rows.any? { |r| r.price.present? }]
+            ]
+          %>
+          <% tiers.each do |label, tier, is_checked| %>
+            <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+              <input type="checkbox" data-tier="<%= tier %>" data-action="change->pricing-sections#toggle" <%= 'checked' if is_checked %> class="size-4 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0">
+              <span class="truncate"><%= label %></span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="grid gap-4 sm:gap-6 xl:grid-cols-2">
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-pricing-sections-target="section" data-tier="general">
+          <div class="mb-4 flex items-center justify-between">
+            <h4 class="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-slate-900">General Pricing</h4>
+            <% if @pricing_form.general_rule.present? %>
+              <%= link_to "Remove",
+                          destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "general", start_date: @start_date),
+                          data: { turbo_method: :delete, turbo_confirm: "Remove General pricing?" },
+                          class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700" %>
+            <% end %>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+              <%= f.date_field :gp_start_date, value: @pricing_form.pricing_data[:gp_start_date], class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+              <%= f.date_field :gp_end_date, value: @pricing_form.pricing_data[:gp_end_date], class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            </div>
+          </div>
+          <div class="mt-4">
+            <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+            <%= f.number_field :gp_price, value: @pricing_form.pricing_data[:gp_price], step: 0.01, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-pricing-sections-target="section" data-tier="weekends">
+          <div class="mb-4 flex items-center justify-between">
+            <h4 class="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-slate-900">Weekend Pricing</h4>
+            <% if @pricing_form.weekends_rule.present? %>
+              <%= link_to "Remove",
+                          destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "weekends", start_date: @start_date),
+                          data: { turbo_method: :delete, turbo_confirm: "Remove Weekends pricing?" },
+                          class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700" %>
+            <% end %>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+              <%= f.date_field :wk_start_date, value: @pricing_form.pricing_data[:wk_start_date], class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+              <%= f.date_field :wk_end_date, value: @pricing_form.pricing_data[:wk_end_date], class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            </div>
+          </div>
+          <div class="mt-4">
+            <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+            <%= f.number_field :wk_price, value: @pricing_form.pricing_data[:wk_price], step: 0.01, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+          </div>
+          <div class="mt-4 grid grid-cols-4 gap-2">
+            <% inventory_weekday_options.each do |label, value| %>
+              <% input_id = "weekend_day_#{value}" %>
+              <label for="<%= input_id %>" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-1 py-1.5 sm:px-2 sm:py-2 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                <%= check_box_tag "pricing_rule[weekend_days][]", value, @pricing_form.weekend_days.include?(value), id: input_id, class: "me-1.5 size-3 rounded border-slate-300 text-slate-900 focus:ring-0 focus:ring-offset-0" %>
+                <%= label %>
+              </label>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-pricing-sections-target="section" data-tier="walk_in">
+          <div class="mb-4 flex items-center justify-between">
+            <h4 class="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-slate-900">Walk-in Rate</h4>
+            <% if @pricing_form.walk_in_rule.present? %>
+              <%= link_to "Remove",
+                          destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "walk_in", start_date: @start_date),
+                          data: { turbo_method: :delete, turbo_confirm: "Remove Walk-in pricing?" },
+                          class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700" %>
+            <% end %>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+              <%= f.date_field :wi_start_date, value: @pricing_form.pricing_data[:wi_start_date], class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+              <%= f.date_field :wi_end_date, value: @pricing_form.pricing_data[:wi_end_date], class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            </div>
+          </div>
+          <div class="mt-4">
+            <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+            <%= f.number_field :wi_price, value: @pricing_form.pricing_data[:wi_price], step: 0.01, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-pricing-sections-target="section" data-tier="corporate_rate">
+          <div class="mb-4 flex items-center justify-between">
+            <h4 class="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-slate-900">Corporate Rate</h4>
+            <% if @pricing_form.corporate_rule.present? %>
+              <%= link_to "Remove",
+                          destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "corporate_rate", start_date: @start_date),
+                          data: { turbo_method: :delete, turbo_confirm: "Remove Corporate pricing?" },
+                          class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700" %>
+            <% end %>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+              <%= f.date_field :cr_start_date, value: @pricing_form.pricing_data[:cr_start_date], class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+              <%= f.date_field :cr_end_date, value: @pricing_form.pricing_data[:cr_end_date], class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            </div>
+          </div>
+          <div class="mt-4">
+            <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+            <%= f.number_field :cr_price, value: @pricing_form.pricing_data[:cr_price], step: 0.01, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-pricing-sections-target="section" data-tier="ota_rate">
+          <div class="mb-4 flex items-center justify-between">
+            <h4 class="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-slate-900">OTA Rate</h4>
+            <% if @pricing_form.ota_rule.present? %>
+              <%= link_to "Remove",
+                          destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "ota_rate", start_date: @start_date),
+                          data: { turbo_method: :delete, turbo_confirm: "Remove OTA pricing?" },
+                          class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700" %>
+            <% end %>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+              <%= f.date_field :ota_start_date, value: @pricing_form.pricing_data[:ota_start_date], class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+              <%= f.date_field :ota_end_date, value: @pricing_form.pricing_data[:ota_end_date], class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            </div>
+          </div>
+          <div class="mt-4">
+            <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+            <%= f.number_field :ota_price, value: @pricing_form.pricing_data[:ota_price], step: 0.01, class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 xl:col-span-2" data-controller="public-holiday-rules" data-pricing-sections-target="section" data-tier="school_holiday">
+          <div class="mb-4 flex items-center justify-between">
+            <h4 class="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-slate-900">School Holiday Pricing</h4>
+            <button type="button" data-action="public-holiday-rules#add" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50">Add Holiday</button>
+          </div>
+          <div data-public-holiday-rules-target="container" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <% @pricing_form.school_holiday_rows.each_with_index do |holiday, index| %>
+              <div data-public-holiday-row class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                  <span class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500"><%= holiday.persisted? ? "Saved" : "New" %></span>
+                  <% if holiday.persisted? %>
+                    <%= link_to "Remove",
+                                destroy_pricing_tier_rule_hotel_inventory_dashboards_path(current_hotel, rule_type: "school_holiday", id: holiday.id, start_date: @start_date),
+                                data: { turbo_method: :delete, turbo_confirm: "Remove #{holiday.name}?" },
+                                class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700" %>
+                  <% else %>
+                    <button type="button" data-action="public-holiday-rules#remove" class="rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700">Remove</button>
+                  <% end %>
+                </div>
+                <div class="space-y-4">
+                  <div>
+                    <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Holiday Name</label>
+                    <input type="text" name="pricing_rule[school_holidays][][name]" value="<%= holiday&.name %>" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                  </div>
+                  <div class="grid gap-3 grid-cols-2">
+                    <div>
+                      <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+                      <input type="date" name="pricing_rule[school_holidays][][start_date]" value="<%= holiday&.start_date %>" class="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                    </div>
+                    <div>
+                      <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+                      <input type="date" name="pricing_rule[school_holidays][][end_date]" value="<%= holiday&.end_date %>" class="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                    </div>
+                  </div>
+                  <div>
+                    <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+                    <input type="number" step="0.01" name="pricing_rule[school_holidays][][price]" value="<%= holiday&.price %>" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <template data-public-holiday-rules-target="template">
+            <div data-public-holiday-row class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div class="mb-3 flex items-center justify-end">
+                <button type="button" data-action="public-holiday-rules#remove" class="rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700">Remove</button>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Holiday Name</label>
+                  <input type="text" name="pricing_rule[school_holidays][][name]" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                </div>
+                <div class="grid gap-3 grid-cols-2">
+                  <div>
+                    <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+                    <input type="date" name="pricing_rule[school_holidays][][start_date]" class="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                  </div>
+                  <div>
+                    <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+                    <input type="date" name="pricing_rule[school_holidays][][end_date]" class="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                  </div>
+                </div>
+                <div>
+                  <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+                  <input type="number" step="0.01" name="pricing_rule[school_holidays][][price]" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 xl:col-span-2" data-controller="public-holiday-rules" data-pricing-sections-target="section" data-tier="public_holiday">
+          <div class="mb-4 flex items-center justify-between">
+            <h4 class="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-slate-900">Public Holiday Pricing</h4>
+            <button type="button" data-action="public-holiday-rules#add" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50">Add Holiday</button>
+          </div>
+          <div data-public-holiday-rules-target="container" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <% @pricing_form.public_holiday_rows.each_with_index do |holiday, index| %>
+              <div data-public-holiday-row class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                  <span class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500"><%= holiday.persisted? ? "Saved" : "New" %></span>
+                  <% if holiday.persisted? %>
+                    <%= link_to "Remove",
+                                destroy_public_holiday_rule_hotel_inventory_dashboards_path(current_hotel, id: holiday.id, start_date: @start_date),
+                                data: { turbo_method: :delete, turbo_confirm: "Remove #{holiday.name}?" },
+                                class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700" %>
+                  <% else %>
+                    <button type="button" data-action="public-holiday-rules#remove" class="rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700">Remove</button>
+                  <% end %>
+                </div>
+                <div class="space-y-4">
+                  <div>
+                    <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Holiday Name</label>
+                    <input type="text" name="pricing_rule[public_holidays][][name]" value="<%= holiday&.name %>" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                  </div>
+                  <div class="grid gap-3 grid-cols-2">
+                    <div>
+                      <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+                      <input type="date" name="pricing_rule[public_holidays][][start_date]" value="<%= holiday&.start_date %>" class="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                    </div>
+                    <div>
+                      <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+                      <input type="date" name="pricing_rule[public_holidays][][end_date]" value="<%= holiday&.end_date %>" class="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                    </div>
+                  </div>
+                  <div>
+                    <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+                    <input type="number" step="0.01" name="pricing_rule[public_holidays][][price]" value="<%= holiday&.price %>" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                  </div>
+                </div>
+                <% if @pricing_form.errors.dig(:public_holidays, index).present? %>
+                  <p class="mt-2 text-xs font-medium text-red-600"><%= @pricing_form.errors.dig(:public_holidays, index) %></p>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+          <% if @pricing_form.errors[:base].present? %>
+            <p class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700"><%= @pricing_form.errors[:base].join(" ") %></p>
+          <% end %>
+
+          <template data-public-holiday-rules-target="template">
+            <div data-public-holiday-row class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div class="mb-3 flex items-center justify-end">
+                <button type="button" data-action="public-holiday-rules#remove" class="rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-red-700">Remove</button>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Holiday Name</label>
+                  <input type="text" name="pricing_rule[public_holidays][][name]" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                </div>
+                <div class="grid gap-3 grid-cols-2">
+                  <div>
+                    <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Start</label>
+                    <input type="date" name="pricing_rule[public_holidays][][start_date]" class="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                  </div>
+                  <div>
+                    <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">End</label>
+                    <input type="date" name="pricing_rule[public_holidays][][end_date]" class="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                  </div>
+                </div>
+                <div>
+                  <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Price</label>
+                  <input type="number" step="0.01" name="pricing_rule[public_holidays][][price]" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0">
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="pt-4">
+        <%= f.submit "Apply Pricing Rules", 
+                     class: "w-full sm:w-auto inline-flex items-center justify-center rounded-2xl bg-slate-900 px-8 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-slate-700 active:scale-[0.98]" %>
+      </div>
+    <% end %>
+  </div>
+</div>

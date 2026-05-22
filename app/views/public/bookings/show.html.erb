@@ -119,13 +119,13 @@
           </div>
           <div class="md:hidden">
             <div class="mx-auto w-36 h-36 bg-white rounded-2xl overflow-hidden border-2 border-neutral-border shadow-sm p-3">
-              <%= @qr_svg %>
+              <%= image_tag @qr_data_url, alt: "Booking QR code", class: "w-full h-full block" %>
             </div>
             <p class="mt-2 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-text-secondary">Scan at check-in</p>
           </div>
           <div class="hidden md:block">
             <div class="w-40 h-40 bg-white rounded-2xl overflow-hidden border-2 border-neutral-border shadow-sm p-3">
-              <%= @qr_svg %>
+              <%= image_tag @qr_data_url, alt: "Booking QR code", class: "w-full h-full block" %>
             </div>
             <p class="mt-2 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-text-secondary">Scan at check-in</p>
           </div>

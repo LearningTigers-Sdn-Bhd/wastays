@@ -3,21 +3,28 @@
 class CurrencyFormatter
   include ActiveSupport::NumberHelper
 
-  def self.format(amount, currency:)
-    new(amount, currency: currency).format
+  def self.format(amount, currency:, symbol: true)
+    new(amount, currency: currency, symbol: symbol).format
   end
 
-  def initialize(amount, currency:)
+  def initialize(amount, currency:, symbol: true)
     @amount = amount
     @currency = CurrencyCatalog.normalize(currency)
+    @symbol = symbol
   end
 
   def format
-    return "#{currency} -" if amount.blank?
+    return "-" if amount.blank?
+
+    unit = ""
+    if @symbol
+      symbol_str = CurrencyCatalog.symbol_for(currency)
+      unit = "#{symbol_str} " if symbol_str.present?
+    end
 
     number_to_currency(
       amount,
-      unit: "#{CurrencyCatalog.symbol_for(currency)} ",
+      unit: unit,
       precision: CurrencyCatalog.precision_for(currency),
       delimiter: ","
     )

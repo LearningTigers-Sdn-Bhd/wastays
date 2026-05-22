@@ -20,7 +20,8 @@ module HotelPortal
           complaint: cards.select { |card| card[:bucket] == :complaint },
           completed: cards.select { |card| card[:bucket] == :completed }
                           .sort_by { |card| card[:completed_at] || Time.zone.at(0) }
-                          .reverse
+                          .reverse,
+          checkout: checkout_request_cards
         }
       end
     end
@@ -30,6 +31,31 @@ module HotelPortal
     end
 
     private
+
+    def checkout_request_cards
+      hotel.bookings
+           .joins(:check_out_requests)
+           .where(check_out_requests: { status: %w[pending acknowledged] })
+           .includes(:check_out_requests)
+           .order("check_out_requests.requested_at DESC")
+           .flat_map do |booking|
+             booking.check_out_requests.select { |r| r.status.in?(%w[pending acknowledged]) }.map do |req|
+               {
+                 kind: "checkout",
+                 bucket: :checkout,
+                 request_id: req.id,
+                 booking_id: booking.id,
+                 booking_token: booking.confirmation_token,
+                 guest_name: booking.guest_name,
+                 title: req.guest_notes.presence || "Checkout requested",
+                 requested_at: req.requested_at,
+                 status: req.status,
+                 complete_url: hotel_complete_checkout_request_path(hotel, req.id),
+                 booking_url: hotel_booking_path(hotel, booking)
+               }
+             end
+           end
+    end
 
     def request_cards
       @request_cards ||= build_request_cards
@@ -84,41 +110,29 @@ module HotelPortal
         requested_at_raw: request.display_requested_at,
         status: request.status,
         completed_at: request.completed_at,
+        source: request.metadata&.dig("source"),
         internal_notes: request.respond_to?(:internal_notes_list) ? request.internal_notes_list : [],
         archive_url: hotel_archive_request_path(hotel, kind: kind, request_id: request.id),
         update_url: hotel_request_status_path(hotel, kind: kind, request_id: request.id),
         booking_url: hotel_booking_path(hotel, booking, tab: "requests")
       }
     end
-def search_match?(card)
-  query = params[:q].to_s.strip.downcase
-  return true if query.blank?
 
-  # Map query to potential statuses if it matches a group name
-  status_aliases = []
-  if "pending".include?(query)
-    status_aliases += %w[pending in_progress failed]
-  end
-  if "completed".include?(query) || "resolved".include?(query)
-    status_aliases += %w[completed resolved]
-  end
-  if "cancelled".include?(query)
-    status_aliases << "cancelled"
-  end
+    def search_match?(card)
+      query = params[:q].to_s.strip.downcase
+      return true if query.blank?
 
-  searchable_values = [
-    card[:guest_name],
-    card[:booking_token],
-    card[:title],
-    card[:status],
-    card[:kind]
-  ]
+      searchable_values = [
+        card[:guest_name],
+        card[:booking_token],
+        card[:title],
+        card[:status],
+        card[:kind]
+      ]
 
-  # Check if query matches any searchable value OR if the card status matches a status alias
-  searchable_values.compact.any? { |value| value.to_s.downcase.include?(query) } ||
-    status_aliases.include?(card[:status].to_s)
-end
-
+      searchable_values.compact.any? { |value| value.to_s.downcase.include?(query) } ||
+        matching_status_aliases(query).include?(card[:status].to_s)
+    end
 
     def status_match?(card)
       status = params[:status].to_s
@@ -177,6 +191,14 @@ end
       return false if completed_at.blank?
 
       completed_at >= 7.days.ago
+    end
+
+    def matching_status_aliases(query)
+      aliases = []
+      aliases += %w[pending in_progress failed] if "pending".include?(query)
+      aliases += %w[completed resolved] if "completed".include?(query) || "resolved".include?(query)
+      aliases << "cancelled" if "cancelled".include?(query)
+      aliases
     end
   end
 end

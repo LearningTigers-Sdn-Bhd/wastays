@@ -1,0 +1,20 @@
+<div class="flex justify-end mb-6">
+  <%= link_to back_path, class: "inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-text-secondary hover:text-brand-primary transition-colors" do %>
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+    <%= back_label %>
+  <% end %>
+</div>
+
+<div class="flex items-center gap-x-3 mb-8">
+  <span class="w-6 h-px bg-brand-primary/30"></span>
+  <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary"><%= eyebrow %></span>
+  <span class="flex-1 h-px bg-neutral-border<%= local_assigns[:divider_suffix] %>"></span>
+</div>
+
+<h2 class="text-3xl font-serif text-neutral-text-primary mb-2">
+  <%= title_prefix %><% if local_assigns[:title_accent].present? %> <span class="italic text-brand-primary"><%= title_accent %></span><% end %>
+</h2>
+
+<% if local_assigns[:subtitle].present? %>
+  <p class="text-sm text-neutral-text-secondary mb-8"><%= subtitle %></p>
+<% end %>

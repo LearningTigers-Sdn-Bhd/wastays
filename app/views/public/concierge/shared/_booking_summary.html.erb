@@ -1,0 +1,16 @@
+<div class="bg-white rounded-2xl border border-neutral-border shadow-sm p-4 sm:p-5 <%= local_assigns[:wrapper_class] %>">
+  <% if local_assigns[:label].present? %>
+    <p class="text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2"><%= label %></p>
+  <% end %>
+  <p class="font-black text-neutral-text-primary"><%= booking.guest_name %></p>
+  <p class="text-xs font-mono text-neutral-text-secondary"><%= booking.confirmation_token %></p>
+  <% concierge_room_details(booking).each do |room_detail| %>
+    <p class="text-xs text-neutral-text-secondary mt-1"><%= room_detail %></p>
+  <% end %>
+
+  <% if local_assigns[:meta_lines].present? %>
+    <% meta_lines.each do |line| %>
+      <p class="text-xs text-neutral-text-secondary mt-1"><%= line %></p>
+    <% end %>
+  <% end %>
+</div>

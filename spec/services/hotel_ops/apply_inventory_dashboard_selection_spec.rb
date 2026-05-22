@@ -200,5 +200,84 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
         sync_restrictions: false
       )
     end
+
+    it "updates only the corporate price when only corporate tier is selected" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      rate_plan = create(:rate_plan, room_type: room_type, name: "Standard Plan")
+      # Pre-create a rate record with some standard price
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ "tier_corporate_#{room_type.id}" ],
+          apply_rates: "1",
+          price: "200.00",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(true)
+      rate = rate_plan.room_rates.find_by(date: start_date, currency: "MYR")
+      expect(rate.corporate_price.to_f).to eq(200.0)
+      expect(rate.price.to_f).to eq(150.0) # Standard price should REMAIN unchanged
+    end
+
+    it "updates only the standard price when only standard plan is selected" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      rate_plan = create(:rate_plan, room_type: room_type, name: "Standard Plan")
+      # Pre-create a rate record with some corporate price
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150, corporate_price: 200)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
+          apply_rates: "1",
+          price: "180.00",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(true)
+      rate = rate_plan.room_rates.find_by(date: start_date, currency: "MYR")
+      expect(rate.price.to_f).to eq(180.0)
+      expect(rate.corporate_price.to_f).to eq(200.0) # Corporate price should REMAIN unchanged
+    end
+
+    it "updates only the ota price when only ota tier is selected" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      rate_plan = create(:rate_plan, room_type: room_type, name: "Standard Plan")
+      # Pre-create a rate record with standard and corporate prices
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150, corporate_price: 200)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ "tier_ota_#{room_type.id}" ],
+          apply_rates: "1",
+          price: "250.00",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(true)
+      rate = rate_plan.room_rates.find_by(date: start_date, currency: "MYR")
+      expect(rate.ota_price.to_f).to eq(250.0)
+      expect(rate.price.to_f).to eq(150.0)
+      expect(rate.corporate_price.to_f).to eq(200.0)
+    end
   end
 end

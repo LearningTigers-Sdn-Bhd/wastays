@@ -33,7 +33,8 @@ export default class extends Controller {
   open() {
     this.optionsTarget.classList.remove("hidden")
     this.inputTarget.focus()
-    this.filter()
+    this.inputTarget.select()
+    this.filter({ forceShowAll: true })
     
     // Position dropdown to ensure it's visible
     this.positionDropdown()
@@ -52,8 +53,8 @@ export default class extends Controller {
     }
   }
 
-  filter() {
-    const query = this.inputTarget.value.toLowerCase()
+  filter(options = {}) {
+    const query = options.forceShowAll ? "" : this.inputTarget.value.toLowerCase()
     let visibleCount = 0
 
     this.optionTargets.forEach(option => {

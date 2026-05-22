@@ -13,9 +13,21 @@ module BookingEngine
     def call
       validate!
       dates = (@start_date..@end_date).to_a
-      room_type_ids = @hotel.room_types.select(:id)
+      room_types = @hotel.room_types
+      room_type_ids = room_types.pluck(:id)
+
+      # Determine if partner/corporate logic is available
+      partner = @hotel.respond_to?(:partners) && @partner_code.present? ? @hotel.partners.find_by(code: @partner_code) : nil
 
       # MIN price only over room types that are actually available that night
+      # We prefer explicit RoomRate prices over the room_type base_price fallback
+      # if a record exists.
+      price_expression = if partner.present?
+        "LEAST(price, COALESCE(corporate_price, price))"
+      else
+        "price"
+      end
+
       rates = RoomRate
         .joins("INNER JOIN room_inventories ri
                 ON ri.room_type_id = room_rates.room_type_id
@@ -24,7 +36,7 @@ module BookingEngine
         .where(ri: { status: "open" })
         .where("ri.quantity >= ?", @room_count)
         .group("room_rates.date")
-        .minimum(:price)
+        .minimum(price_expression)
 
       inventories = RoomInventory
         .where(room_type_id: room_type_ids, date: dates, status: "open")
@@ -38,9 +50,31 @@ module BookingEngine
         .pluck(:currency)
         .first || @hotel.property_policy&.currency || "MYR"
 
+      # Pre-calculate which dates have ANY available room type inventory
+      # This handles cases where a date has inventory but NO RoomRate record yet
+      dates_with_inventory = RoomInventory
+        .where(room_type_id: room_type_ids, date: dates, status: "open")
+        .where("quantity >= ?", @room_count)
+        .pluck(:date).uniq
+
+      # Find the minimum base price of room types that have inventory but NO RoomRate for specific dates
+      # This is a bit complex to do in one query, so we'll handle it during mapping.
+      base_prices_by_room_type = room_types.where("max_adults >= ?", @room_count).pluck(:id, :base_price).to_h
+
       days = dates.map do |d|
         rooms_left = inventories[d].to_i
+
+        # If we have an explicit rate from RoomRate, use it (it wins over base_price)
         price = rates[d]
+
+        # If no explicit rate but we have inventory, use the min base price of available room types
+        if price.nil? && dates_with_inventory.include?(d)
+          # We need to know which room types have inventory on this date but no rate
+          # For simplicity and performance, we'll use the global min_base_price as the fallback
+          # but only if no explicit rates were found for any room type on this date.
+          price = base_prices_by_room_type.values.min
+        end
+
         Day.new(
           date: d,
           min_price: price&.to_f,

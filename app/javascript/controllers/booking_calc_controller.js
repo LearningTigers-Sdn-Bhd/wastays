@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["checkIn", "checkOut", "roomType", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer"]
+  static targets = ["checkIn", "checkOut", "roomType", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer", "corporateRate"]
   static values = { availabilityUrl: String, priceUrl: String, bookingId: String, excludeBookingId: String }
 
   connect() {
@@ -128,7 +128,8 @@ export default class extends Controller {
 
     try {
       this.displayTotalTarget.textContent = "Calculating..."
-      const url = `${this.priceUrlValue}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}`
+      const corporateRate = this.hasCorporateRateTarget && this.corporateRateTarget.checked
+      const url = `${this.priceUrlValue}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}&corporate_rate=${corporateRate}`
       const response = await fetch(url)
       const data = await response.json()
       this.updateDisplay(parseFloat(data.total_amount || 0))
