@@ -15,7 +15,7 @@ RSpec.describe "Operational Exceptions", type: :system do
       permission = Permission.find_or_create_by!(slug: slug) { |p| p.name = slug.titleize }
       role.permissions << permission
     end
-    
+
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
     visit login_path
@@ -25,10 +25,10 @@ RSpec.describe "Operational Exceptions", type: :system do
   end
 
   describe "Late Checkout" do
-    it "allows front desk to review and apply a late checkout penalty" do
+    it "allows front desk to review and apply a late checkout charge" do
       # Set business date to today
       travel_to Time.zone.local(2026, 5, 21, 10, 0, 0)
-      
+
       booking = create(:booking, hotel: hotel, status: "review_due_out", guest_name: "John Doe", check_in: 1.day.ago, check_out: Date.current, total_amount: 100.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, quantity: 1, nightly_rate_snapshot: { 1.day.ago.to_date.iso8601 => { "price" => 100.0 } })
       folio = Folios::InitializeForBooking.call(booking: booking, user: user)
@@ -38,30 +38,30 @@ RSpec.describe "Operational Exceptions", type: :system do
       expect(page).to have_content("Review Late Checkout")
       click_button "Review Late Checkout"
 
-      expect(page).to have_content("Standard Rate")
-      
-      # Select custom penalty
-      find("label", text: "Custom Penalty").click
-      
+      expect(page).to have_content("Standard Charge")
+
+      # Select custom charge
+      find("label", text: "Custom Charge").click
+
       # Wait for custom section to appear
       expect(page).to have_selector("[data-late-checkout-target='customSection']", visible: true)
-      
+
       # Fill in the custom value
       find("[data-late-checkout-target='customValue']").set("75.00")
 
-      expect(page).to have_content("Calculated Penalty: MYR 75.00")
+      expect(page).to have_content("Calculated Charge: MYR 75.00")
 
       find("label", text: "Apply & Keep In-House").click
       click_button "Process Late Checkout"
 
-      expect(page).to have_content("Late checkout penalty applied.")
+      expect(page).to have_content("Late checkout charge applied.")
       expect(booking.reload.status).to eq("checked_in")
       expect(folio.reload.outstanding_balance).to eq(75.0)
     end
   end
 
   describe "Early Departure" do
-    it "shows early departure review in checkout modal and applies penalty" do
+    it "shows early departure review in checkout modal and applies charge" do
       travel_to Time.zone.local(2026, 5, 21, 10, 0, 0)
       business_date = hotel.business_date_for
 
@@ -82,41 +82,38 @@ RSpec.describe "Operational Exceptions", type: :system do
       audit.update!(status: "completed")
       HotelBusinessDate.for_hotel_date!(hotel: hotel, date: 1.day.ago.to_date).complete_audit!
 
-      # Pay the 100 (stay) + 150 (penalty) = 250
-      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 250.0, user: user, posting_date: business_date)
+      # Pay the full 550: 100 (stay) + 300 (early checkout charges) + 150 (penalty)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 550.0, user: user, posting_date: business_date)
 
       visit hotel_booking_path(hotel, booking)
-      
+
       # Click Check Out Guest - using the link with turbo_frame
       click_link "Check Out Guest"
 
       # Wait for content to appear (even if cuprite thinks it's non-visible)
       expect(page).to have_selector("h3", text: "Early Departure Review", visible: :all, wait: 10)
 
-      # Select Charge Penalty
-      find("input[name='charge_penalty'][value='true']", visible: :all).trigger("click")
+      # Select Apply Charge
+      find("input[name='apply_charge'][value='true']", visible: :all).trigger("click")
 
       expect(page).to have_selector("[data-early-departure-target='customFields']", visible: :all)
 
       # Fill in details
       find("[name='early_departure[value]']", visible: :all).set("150.00")
-      
-      click_button "Complete Checkout", visible: :all
 
-      # Debug output
-      # puts "PAGE TEXT AFTER CLICK: #{page.text(:all)}"
+      click_button "Complete Checkout", visible: :all
 
       # In offcanvas flow, it shows the invoice step instead of a flash notice
       expect(page).to have_selector("*", text: /Checkout Complete/i, visible: :all, wait: 10)
-      
+
       # Use a more robust check for balance
       page_text = page.text(:all).upcase
       expect(page_text).to include("FINAL BALANCE")
       expect(page_text).to include("MYR 0.00")
-      
+
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(business_date)
-      expect(folio.reload.folio_transactions.charge.find_by(category: "early_departure_penalty").amount).to eq(150.0)
+      expect(folio.reload.folio_transactions.charge.find_by(category: "early_departure_charge").amount).to eq(150.0)
     end
   end
 end

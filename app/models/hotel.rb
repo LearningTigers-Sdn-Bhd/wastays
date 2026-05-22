@@ -217,7 +217,9 @@ class Hotel < ApplicationRecord
       return NightAudit.exists?(hotel_id: id, business_date: date, status: "completed")
     end
 
-    # Current business date or future dates are never "closed" in this context
+    # Also respect explicit HotelBusinessDate status for current/future dates
+    return true if defined?(HotelBusinessDate) && HotelBusinessDate.closed_for?(hotel: id, date: date)
+
     false
   end
 

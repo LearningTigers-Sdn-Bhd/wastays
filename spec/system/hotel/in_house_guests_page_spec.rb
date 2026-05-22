@@ -18,7 +18,7 @@ RSpec.describe "Hotel in-house guests page", type: :system do
       guest_email: "aisha.tan@example.com",
       guest_phone: "+60123456789",
       check_in: Date.current,
-      check_out: Date.current + 1.day,
+      check_out: Date.current,
       checked_in_at: Time.current,
       checked_out_at: nil,
       created_at: 1.day.ago
