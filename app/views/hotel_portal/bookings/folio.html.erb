@@ -41,14 +41,14 @@
   </div>
 
   <!-- Full-Width Outstanding Balance Banner -->
-  <%= render "hotel_portal/bookings/folio_balance_summary", booking: @booking %>
+  <%= render "hotel_portal/bookings/folio/folio_balance_summary", booking: @booking %>
 
   <!-- Financial Actions Toolbar -->
-  <%= render "hotel_portal/bookings/folio_actions", booking: @booking, hotel: current_hotel, redirect_to_folio: true %>
+  <%= render "hotel_portal/bookings/folio/folio_actions", booking: @booking, hotel: current_hotel, redirect_to_folio: true %>
 
   <!-- Detailed Transaction Ledger -->
-  <%= render "hotel_portal/bookings/folio_transaction_table", booking: @booking %>
+  <%= render "hotel_portal/bookings/folio/folio_transaction_table", booking: @booking %>
 </div>
 
 <!-- Render Modals (reusing existing partial) -->
-<%= render "hotel_portal/bookings/action_modals", booking: @booking, presenter: @presenter %>
+<%= render "hotel_portal/bookings/show/modals/action_modals", booking: @booking, presenter: @presenter %>

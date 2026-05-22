@@ -181,4 +181,30 @@
     </div>
   </div>
 
+  <% if current_user.has_permission?("override_financial_date_lock", hotel: current_hotel) %>
+    <!-- FORCE ROLL DANGER ZONE -->
+    <div class="max-w-4xl mx-auto pt-12">
+      <div class="rounded-2xl border-2 border-dashed border-red-200 bg-red-50/30 p-8 text-center">
+        <div class="inline-flex items-center justify-center rounded-full bg-red-100 p-3 text-red-600 mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-red-950">Manager Escape Hatch: Force Roll</h3>
+        <p class="mt-2 text-sm font-medium text-red-800 max-w-md mx-auto mb-6">
+          If these blockers cannot be resolved immediately and you must advance the business day for operational continuity, you can force-roll the audit.
+        </p>
+        
+        <%= form_with url: hotel_night_audits_path(current_hotel), method: :post, scope: :night_audit do |f| %>
+          <%= f.hidden_field :business_date, value: @night_audit.business_date %>
+          <%= f.hidden_field :force_roll, value: "1" %>
+          <%= f.hidden_field :notes, value: "Force roll initiated from Blocker Dashboard (Resolve page)" %>
+          <%= f.submit "I Understand the Risks, Force Roll Now", 
+              class: "inline-flex items-center justify-center rounded-xl bg-red-600 px-8 py-3 text-sm font-black text-white shadow-lg transition hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98]",
+              data: { turbo_confirm: "CRITICAL ACTION: This will close the business date #{@night_audit.business_date.strftime('%d %b %Y')} and open the next date WITHOUT resolving blockers. This action is immutable and will be recorded in the financial audit ledger. Do you want to proceed?" } %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
 </div>

@@ -13,7 +13,7 @@
   </div>
 
   <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-    <%= form_with url: hotel_request_archive_path(current_hotel), method: :get, local: true, data: { controller: "auto-submit", turbo_frame: "request_archive_results" }, class: "grid gap-4 md:grid-cols-4" do |f| %>
+    <%= form_with url: hotel_request_archive_path(current_hotel), method: :get, data: { controller: "auto-submit", turbo_frame: "request_archive_results" }, class: "grid gap-4 md:grid-cols-4" do |f| %>
       <div>
         <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Search</label>
         <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500", placeholder: "Guest, booking, request...", data: { action: "input->auto-submit#submit" } %>
@@ -45,129 +45,129 @@
         <h2 class="text-lg font-semibold text-gray-800">Every Request</h2>
       </div>
 
-    <% if @archive_rows.any? %>
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-white">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Type</th>
-              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Request</th>
-              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Guest</th>
-              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Requested At</th>
-              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Completed At</th>
-              <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">Action</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 bg-white">
-            <% @archive_rows.each do |row| %>
+      <% if @archive_rows.any? %>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-white">
               <tr>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:kind_class] %>">
-                    <%= row[:kind].titleize %>
-                  </span>
-                </td>
-                <td class="px-6 py-4">
-                  <div class="space-y-1">
-                    <button
-                      type="button"
-                      class="text-left text-sm font-semibold text-gray-800 hover:text-blue-600"
-                      onclick="document.getElementById('request-detail-modal-<%= row[:kind] %>-<%= row[:request_id] %>').showModal()"
-                    >
-                      <%= row[:title] %>
-                    </button>
-                    <p class="text-xs text-gray-500">Booking: <%= row[:booking_token] %></p>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><%= row[:guest_name] %></td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:status_class] %>">
-                    <%= row[:status].titleize %>
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-600">
-                  <%= display_housekeeping_datetime(row[:requested_at]) %>
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-600">
-                  <%= row[:completed_at].present? ? display_housekeeping_datetime(row[:completed_at]) : "-" %>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right">
-                  <div class="flex items-center justify-end gap-2">
-                    <% unless row[:status] == "cancelled" %>
-                      <%= link_to "Open", row[:booking_url], class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
-                    <% end %>
-                    <%= button_to row[:archive_action], row[:archive_url], method: :patch, class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
-                  </div>
-                </td>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Type</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Request</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Guest</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Requested At</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Completed At</th>
+                <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">Action</th>
               </tr>
-              <dialog id="request-detail-modal-<%= row[:kind] %>-<%= row[:request_id] %>" class="fixed inset-0 m-auto w-[min(92vw,48rem)] rounded-2xl p-0 backdrop:bg-black/40" onclick="if(event.target===this){this.close()}">
-                <div class="rounded-2xl bg-white shadow-2xl">
-                  <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-                    <div>
-                      <h3 class="text-lg font-semibold text-gray-800">Request Details</h3>
-                      <p class="text-sm text-gray-500"><%= row[:booking_token] %></p>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+              <% @archive_rows.each do |row| %>
+                <tr data-controller="request-dialog">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:kind_class] %>">
+                      <%= row[:kind].titleize %>
+                    </span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="space-y-1">
+                      <button
+                        type="button"
+                        class="text-left text-sm font-semibold text-gray-800 hover:text-blue-600"
+                        data-action="request-dialog#open"
+                      >
+                        <%= row[:title] %>
+                      </button>
+                      <p class="text-xs text-gray-500">Booking: <%= row[:booking_token] %></p>
                     </div>
-                    <button type="button" class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50" onclick="this.closest('dialog').close()">X</button>
-                  </div>
-                  <div class="grid gap-5 px-6 py-6 md:grid-cols-2">
-                    <div class="space-y-4">
-                      <div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Type</p>
-                        <p class="mt-1 text-sm font-semibold text-gray-800"><%= row[:kind].titleize %></p>
-                      </div>
-                      <div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Guest</p>
-                        <p class="mt-1 text-sm text-gray-800"><%= row[:guest_name] %></p>
-                      </div>
-                      <div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Requested At</p>
-                        <p class="mt-1 text-sm text-gray-800"><%= display_housekeeping_datetime(row[:requested_at]) %></p>
-                      </div>
-                      <div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Completed At</p>
-                        <p class="mt-1 text-sm text-gray-800"><%= row[:completed_at].present? ? display_housekeeping_datetime(row[:completed_at]) : "-" %></p>
-                      </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><%= row[:guest_name] %></td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:status_class] %>">
+                      <%= row[:status].titleize %>
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-600">
+                    <%= display_housekeeping_datetime(row[:requested_at]) %>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-600">
+                    <%= row[:completed_at].present? ? display_housekeeping_datetime(row[:completed_at]) : "-" %>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right">
+                    <div class="flex items-center justify-end gap-2">
+                      <% unless row[:status] == "cancelled" %>
+                        <%= link_to "Open", row[:booking_url], class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
+                      <% end %>
+                      <%= button_to row[:archive_action], row[:archive_url], method: :patch, class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
                     </div>
-                    <div class="space-y-4">
-                      <div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Requests</p>
-                        <p class="mt-1 text-sm leading-relaxed text-gray-800"><%= row[:title] %></p>
-                      </div>
-                      <div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Status</p>
-                        <span class="mt-1 inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:status_class] %>">
-                          <%= row[:status].titleize %>
-                        </span>
-                      </div>
-                      <div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Internal Notes</p>
-                        <% if row[:internal_notes].any? %>
-                          <div class="mt-2 space-y-2">
-                            <% row[:internal_notes].each do |note| %>
-                              <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                <p class="text-sm text-gray-800 whitespace-pre-wrap"><%= note["body"] %></p>
-                              </div>
-                            <% end %>
+                    <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(92vw,48rem)] rounded-2xl p-0 backdrop:bg-black/40">
+                      <div class="rounded-2xl bg-white shadow-2xl">
+                        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                          <div>
+                            <h3 class="text-lg font-semibold text-gray-800">Request Details</h3>
+                            <p class="text-sm text-gray-500"><%= row[:booking_token] %></p>
                           </div>
-                        <% else %>
-                          <p class="mt-1 text-sm text-gray-500">No internal notes.</p>
-                        <% end %>
+                          <button type="button" class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50" data-action="request-dialog#close">X</button>
+                        </div>
+                        <div class="grid gap-5 px-6 py-6 text-left md:grid-cols-2">
+                          <div class="space-y-4">
+                            <div>
+                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Type</p>
+                              <p class="mt-1 text-sm font-semibold text-gray-800"><%= row[:kind].titleize %></p>
+                            </div>
+                            <div>
+                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Guest</p>
+                              <p class="mt-1 text-sm text-gray-800"><%= row[:guest_name] %></p>
+                            </div>
+                            <div>
+                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Requested At</p>
+                              <p class="mt-1 text-sm text-gray-800"><%= display_housekeeping_datetime(row[:requested_at]) %></p>
+                            </div>
+                            <div>
+                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Completed At</p>
+                              <p class="mt-1 text-sm text-gray-800"><%= row[:completed_at].present? ? display_housekeeping_datetime(row[:completed_at]) : "-" %></p>
+                            </div>
+                          </div>
+                          <div class="space-y-4">
+                            <div>
+                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Requests</p>
+                              <p class="mt-1 text-sm leading-relaxed text-gray-800"><%= row[:title] %></p>
+                            </div>
+                            <div>
+                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Status</p>
+                              <span class="mt-1 inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:status_class] %>">
+                                <%= row[:status].titleize %>
+                              </span>
+                            </div>
+                            <div>
+                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Internal Notes</p>
+                              <% if row[:internal_notes].any? %>
+                                <div class="mt-2 space-y-2">
+                                  <% row[:internal_notes].each do |note| %>
+                                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                      <p class="whitespace-pre-wrap text-sm text-gray-800"><%= note["body"] %></p>
+                                    </div>
+                                  <% end %>
+                                </div>
+                              <% else %>
+                                <p class="mt-1 text-sm text-gray-500">No internal notes.</p>
+                              <% end %>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </dialog>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="p-8 text-sm text-gray-500">No requests match your filters.</div>
-    <% end %>
+                    </dialog>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="p-8 text-sm text-gray-500">No requests match your filters.</div>
+      <% end %>
 
-    <div class="px-6 py-5 border-t border-gray-200 bg-gray-50/50 flex justify-center">
-      <%= paginate @archive_rows %>
+      <div class="flex justify-center border-t border-gray-200 bg-gray-50/50 px-6 py-5">
+        <%= paginate @archive_rows %>
+      </div>
     </div>
-  </div>
   <% end %>
 </div>

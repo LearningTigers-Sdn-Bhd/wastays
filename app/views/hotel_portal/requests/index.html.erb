@@ -25,6 +25,9 @@
         <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-100">
           Completed <%= @board_counts[:completed] %>
         </span>
+        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+          Checkouts <%= @board_counts[:checkout] %>
+        </span>
       </div>
 
       <%= link_to hotel_request_archive_path(current_hotel), class: "inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" do %>
@@ -34,8 +37,8 @@
     </div>
   </div>
 
-  <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm mx-4 md:mx-0">
-    <%= form_with url: hotel_requests_path(current_hotel), method: :get, local: true, data: { controller: "auto-submit", turbo_frame: "requests_board_results" }, class: "grid gap-4 md:grid-cols-[1fr_200px_auto]" do |f| %>
+  <div class="mx-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:mx-0">
+    <%= form_with url: hotel_requests_path(current_hotel), method: :get, data: { controller: "auto-submit", turbo_frame: "requests_board_results" }, class: "grid gap-4 md:grid-cols-[1fr_200px_auto]" do |f| %>
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
           <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -53,7 +56,8 @@
   </div>
 
   <%= turbo_frame_tag "requests_board_results" do %>
-  <div class="grid gap-4 xl:grid-cols-3 xl:h-[calc(100vh-12rem)] xl:items-stretch px-4 md:px-0" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
+  <div class="grid gap-4 xl:grid-cols-4 xl:h-[calc(100vh-12rem)] xl:items-stretch px-4 md:px-0" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
+    <%# Standard request columns %>
     <% [
       [:housekeeping, "Housekeeping", "border-t-blue-500"],
       [:complaint, "Complaints", "border-t-rose-500"],
@@ -91,6 +95,7 @@
               <% status_class = card[:kind] == "housekeeping" ? housekeeping_status_class(card[:status]) : complaint_status_class(card[:status]) %>
               <% kind_badge_class = card[:kind] == "housekeeping" ? "border-blue-100 bg-blue-50 text-blue-700" : "border-rose-100 bg-rose-50 text-rose-700" %>
               <article
+                data-controller="request-dialog"
                 draggable="true"
                 data-requests-board-target="card"
                 data-request-kind="<%= card[:kind] %>"
@@ -100,14 +105,17 @@
                 data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd"
                 class="group cursor-grab rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md active:cursor-grabbing"
               >
-                <div class="flex items-center justify-between mb-3">
+                <div class="mb-3 flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded border <%= kind_badge_class %>">
+                    <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= kind_badge_class %>">
                       <%= card[:kind] %>
                     </span>
-                    <span class="text-[10px] font-bold text-slate-400 font-mono tracking-tight"><%= card[:booking_token] %></span>
+                    <% if card[:source] == "concierge_page" %>
+                      <span class="rounded border border-brand-primary/30 bg-brand-primary/10 px-2 py-0.5 text-[9px] font-black uppercase text-brand-primary">Concierge</span>
+                    <% end %>
+                    <span class="font-mono text-[10px] font-bold tracking-tight text-slate-400"><%= card[:booking_token] %></span>
                   </div>
-                  <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-100">
+                  <span class="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600">
                     <%= card[:status] %>
                   </span>
                 </div>
@@ -115,24 +123,24 @@
                 <button
                   type="button"
                   class="block w-full text-left"
-                  onclick="document.getElementById('request-board-modal-<%= card[:kind] %>-<%= card[:request_id] %>').showModal()"
+                  data-action="request-dialog#open"
                 >
-                  <p class="text-sm font-bold text-slate-900 leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors"><%= card[:title] %></p>
+                  <p class="line-clamp-2 text-sm font-bold leading-snug text-slate-900 transition-colors group-hover:text-blue-600"><%= card[:title] %></p>
                 </button>
 
-                <div class="mt-4 flex items-center justify-between pt-3 border-t border-slate-50">
+                <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
                   <div class="flex flex-col">
-                    <span class="text-xs font-bold text-slate-700 truncate max-w-[140px]"><%= card[:guest_name] %></span>
-                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-tight"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
+                    <span class="max-w-[140px] truncate text-xs font-bold text-slate-700"><%= card[:guest_name] %></span>
+                    <span class="text-[10px] font-medium uppercase tracking-tight text-slate-400"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
                   </div>
                   <div class="flex items-center gap-2">
                     <% if bucket_key == :completed %>
-                      <%= button_to card[:archive_url], method: :patch, class: "size-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all shadow-sm", title: "Archive Request" do %>
+                      <%= button_to card[:archive_url], method: :patch, class: "flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 shadow-sm transition-all hover:border-slate-900 hover:text-slate-900", title: "Archive Request" do %>
                         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
                       <% end %>
                     <% else %>
                       <% target_status = card[:kind] == "housekeeping" ? "completed" : "resolved" %>
-                      <%= button_to card[:update_url], params: { status: target_status }, method: :patch, class: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all text-[10px] font-black uppercase tracking-wider shadow-sm", title: "Mark as Done" do %>
+                      <%= button_to card[:update_url], params: { status: target_status }, method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all hover:border-emerald-500 hover:bg-emerald-500 hover:text-white", title: "Mark as Done" do %>
                         <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         Done
                       <% end %>
@@ -141,20 +149,20 @@
                 </div>
               </article>
 
-              <dialog id="request-board-modal-<%= card[:kind] %>-<%= card[:request_id] %>" class="fixed inset-0 m-auto w-[min(94vw,44rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-slate-900/60" onclick="if(event.target===this){this.close()}">
-                <div class="bg-white overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+              <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(94vw,44rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-slate-900/60">
+                <div class="flex flex-col overflow-hidden bg-white">
                   <div class="flex items-center justify-between border-b border-slate-100 px-8 py-6">
                     <div class="flex items-center gap-4">
-                      <span class="px-3 py-1 rounded-lg border text-[11px] font-black uppercase tracking-widest <%= kind_badge_class %>"><%= card[:kind] %></span>
+                      <span class="rounded-lg border px-3 py-1 text-[11px] font-black uppercase tracking-widest <%= kind_badge_class %>"><%= card[:kind] %></span>
                       <h3 class="text-xl font-black text-slate-950"><%= card[:booking_token] %></h3>
                     </div>
-                    <button type="button" class="size-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition" onclick="this.closest('dialog').close()">
+                    <button type="button" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900" data-action="request-dialog#close">
                       <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     </button>
                   </div>
-                  
-                  <div class="grid divide-y md:divide-y-0 md:divide-x divide-slate-100 md:grid-cols-2">
-                    <div class="p-8 space-y-6">
+
+                  <div class="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">
+                    <div class="space-y-6 p-8">
                       <div>
                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Guest Details</label>
                         <p class="mt-1 text-lg font-bold text-slate-900"><%= card[:guest_name] %></p>
@@ -162,51 +170,51 @@
                       <div>
                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Status</label>
                         <div class="mt-2 flex items-center gap-2">
-                          <span class="px-3 py-1 rounded-lg bg-slate-100 text-[10px] font-black text-slate-600 uppercase tracking-wider border border-slate-200"><%= card[:status] %></span>
+                          <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600"><%= card[:status] %></span>
                         </div>
                       </div>
                       <div>
                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Timeline</label>
                         <div class="mt-3 space-y-2">
                           <div class="flex items-center gap-3 text-sm">
-                            <span class="text-slate-400 font-bold uppercase text-[10px] w-12">Entry:</span>
-                            <span class="text-slate-900 font-bold"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
+                            <span class="w-12 text-[10px] font-bold uppercase text-slate-400">Entry:</span>
+                            <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
                           </div>
                           <% if card[:completed_at].present? %>
                             <div class="flex items-center gap-3 text-sm">
-                              <span class="text-emerald-500 font-bold uppercase text-[10px] w-12">Exit:</span>
-                              <span class="text-slate-900 font-bold"><%= display_housekeeping_datetime(card[:completed_at]) %></span>
+                              <span class="w-12 text-[10px] font-bold uppercase text-emerald-500">Exit:</span>
+                              <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(card[:completed_at]) %></span>
                             </div>
                           <% end %>
                         </div>
                       </div>
                     </div>
 
-                    <div class="p-8 space-y-6 bg-slate-50/40">
+                    <div class="space-y-6 bg-slate-50/40 p-8">
                       <div>
                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Request Body</label>
-                        <p class="mt-2 text-sm leading-relaxed font-bold text-slate-700 bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><%= card[:title] %></p>
+                        <p class="mt-2 rounded-xl border border-slate-100 bg-white p-4 text-sm font-bold leading-relaxed text-slate-700 shadow-sm"><%= card[:title] %></p>
                       </div>
                       <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Internal Staff Notes</label>
+                        <label class="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">Internal Staff Notes</label>
                         <% if card[:internal_notes].any? %>
                           <div class="space-y-3">
                             <% card[:internal_notes].each do |note| %>
                               <div class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-                                <p class="text-sm text-slate-800 font-medium whitespace-pre-wrap"><%= note["body"] %></p>
+                                <p class="whitespace-pre-wrap text-sm font-medium text-slate-800"><%= note["body"] %></p>
                               </div>
                             <% end %>
                           </div>
                         <% else %>
-                          <p class="text-xs font-bold text-slate-300 uppercase tracking-widest italic">No notes recorded</p>
+                          <p class="text-xs font-bold uppercase tracking-widest italic text-slate-300">No notes recorded</p>
                         <% end %>
                       </div>
                     </div>
                   </div>
-                  
-                  <div class="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                    <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition" onclick="this.closest('dialog').close()">Close</button>
-                    <%= link_to "Full Booking Details", hotel_booking_path(current_hotel, card[:booking_token]), class: "px-6 py-2.5 text-sm font-black uppercase tracking-widest bg-slate-950 text-white rounded-xl hover:bg-slate-800 transition shadow-lg", data: { turbo: false } %>
+
+                  <div class="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-8 py-6">
+                    <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-slate-500 transition hover:text-slate-800" data-action="request-dialog#close">Close</button>
+                    <%= link_to "Full Booking Details", hotel_booking_path(current_hotel, card[:booking_token]), class: "rounded-xl bg-slate-950 px-6 py-2.5 text-sm font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-slate-800", data: { turbo: false } %>
                   </div>
                 </div>
               </dialog>
@@ -218,7 +226,7 @@
           <% end %>
         </div>
 
-        <% page_params = request.query_parameters.except(:housekeeping_page, :complaint_page, :completed_page) %>
+        <% page_params = request.query_parameters.except(:housekeeping_page, :complaint_page, :completed_page, :checkout_page) %>
         <div class="border-t border-slate-200 bg-white px-4 py-4 flex justify-center">
           <% if bucket_key == :housekeeping %>
             <%= paginate @board_columns[:housekeeping], param_name: :housekeeping_page, params: page_params %>
@@ -230,6 +238,59 @@
         </div>
       </section>
     <% end %>
+
+    <%# Checkout requests column %>
+    <section class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/40 border-t-4 border-t-amber-500">
+      <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 bg-white">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-900">Checkout Requests</h2>
+          <p class="text-[11px] font-medium text-slate-500"><%= pluralize(@board_counts[:checkout], "pending request") %></p>
+        </div>
+        <span class="inline-flex size-7 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-700">
+          <%= @board_columns[:checkout].size %>
+        </span>
+      </div>
+
+      <div class="flex-1 min-h-0 space-y-3 overflow-y-auto p-3 custom-scrollbar">
+        <% if @board_columns[:checkout].any? %>
+          <% @board_columns[:checkout].each do |card| %>
+            <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-amber-300 hover:shadow-md">
+              <div class="mb-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="rounded border border-amber-100 bg-amber-50 px-2 py-0.5 text-[9px] font-black uppercase text-amber-700">Checkout</span>
+                  <span class="font-mono text-[10px] font-bold tracking-tight text-slate-400"><%= card[:booking_token] %></span>
+                </div>
+                <span class="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600"><%= card[:status] %></span>
+              </div>
+
+              <p class="text-sm font-bold leading-snug text-slate-900 mb-4"><%= card[:title] %></p>
+
+              <div class="flex items-center justify-between border-t border-slate-50 pt-3">
+                <div class="flex flex-col">
+                  <span class="max-w-[140px] truncate text-xs font-bold text-slate-700"><%= card[:guest_name] %></span>
+                  <span class="text-[10px] font-medium uppercase tracking-tight text-slate-400"><%= card[:requested_at]&.strftime("%d %b, %H:%M") %></span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <%= button_to card[:complete_url], method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all hover:border-emerald-500 hover:bg-emerald-500 hover:text-white" do %>
+                    <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Complete
+                  <% end %>
+                </div>
+              </div>
+            </article>
+          <% end %>
+        <% else %>
+          <div class="flex flex-col items-center justify-center h-40 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-300">No checkout requests</p>
+          </div>
+        <% end %>
+      </div>
+
+      <% page_params = request.query_parameters.except(:housekeeping_page, :complaint_page, :completed_page, :checkout_page) %>
+      <div class="border-t border-slate-200 bg-white px-4 py-4 flex justify-center">
+        <%= paginate @board_columns[:checkout], param_name: :checkout_page, params: page_params %>
+      </div>
+    </section>
   </div>
   <% end %>
 </div>

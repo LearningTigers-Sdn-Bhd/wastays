@@ -256,7 +256,7 @@
 
                   <!-- Internal Notes -->
                   <div id="booking_notes_panel">
-                    <%= render "hotel_portal/bookings/internal_notes", booking: @booking %>
+                    <%= render "hotel_portal/bookings/show/internal_notes", booking: @booking %>
                   </div>
                 </div>
               </div>
@@ -357,7 +357,7 @@
               </div>
 
               <div data-booking-tabs-target="panel" data-tab-panel="history" class="space-y-8 hidden animate-in fade-in duration-300">
-                <%= render "hotel_portal/bookings/audit_history", audit_logs: @audit_logs %>
+                <%= render "hotel_portal/bookings/show/audit_history", audit_logs: @audit_logs %>
               </div>
             </div>
           </div>
@@ -383,6 +383,20 @@
                     <%= pc_status.to_s.tr("_", " ") %>
                   </span>
                 </div>
+                <% if @booking.tax_lines.present? %>
+                  <div class="pt-6 border-t border-slate-100 space-y-3">
+                    <div class="flex justify-between items-baseline">
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Room Subtotal</span>
+                      <span class="text-sm font-bold text-slate-700">MYR <%= number_with_precision(@booking.booking_rooms.sum(&:subtotal), precision: 2) %></span>
+                    </div>
+                    <% Array(@booking.tax_lines).each do |tax| %>
+                      <div class="flex justify-between items-baseline">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]"><%= tax["name"] %></span>
+                        <span class="text-sm font-bold text-slate-700">MYR <%= number_with_precision(tax["amount"], precision: 2) %></span>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
                 <div class="pt-6 border-t border-slate-100">
                   <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Total Paid</span>
                   <p class="text-2xl font-black text-slate-900 mt-1">MYR <%= number_with_precision(@booking.total_amount, precision: 2) %></p>

@@ -46,25 +46,40 @@
 
         <% if blockers.values.flatten.any? %>
           <div class="rounded-2xl border border-red-200 bg-red-50 p-6">
-            <div class="flex items-start gap-4">
-              <div class="shrink-0 rounded-full bg-red-100 p-2 text-red-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div>
-                <h3 class="text-sm font-bold text-red-950">Audit Blocked</h3>
-                <p class="mt-1 text-sm font-medium text-red-800">The following issues must be resolved before the night audit can complete successfully.</p>
-                <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                  <% blockers.each do |label, rows| %>
-                    <% next if rows.blank? %>
-                    <div class="text-xs">
-                      <p class="font-bold text-red-900 mb-1"><%= label.humanize %></p>
-                      <p class="font-medium text-red-800"><%= rows.count %> items requiring attention</p>
-                    </div>
-                  <% end %>
+            <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
+              <div class="flex items-start gap-4">
+                <div class="shrink-0 rounded-full bg-red-100 p-2 text-red-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-red-950">Audit Blocked</h3>
+                  <p class="mt-1 text-sm font-medium text-red-800">The following issues must be resolved before the night audit can complete successfully.</p>
+                  <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    <% blockers.each do |label, rows| %>
+                      <% next if rows.blank? %>
+                      <div class="text-xs">
+                        <p class="font-bold text-red-900 mb-1"><%= label.humanize %></p>
+                        <p class="font-medium text-red-800"><%= rows.count %> items requiring attention</p>
+                      </div>
+                    <% end %>
+                  </div>
                 </div>
               </div>
+
+              <% if current_user.has_permission?("override_financial_date_lock", hotel: current_hotel) %>
+                <div class="shrink-0">
+                  <%= form_with url: hotel_night_audits_path(current_hotel), method: :post, scope: :night_audit do |f| %>
+                    <%= f.hidden_field :business_date, value: @suggested_business_date %>
+                    <%= f.hidden_field :force_roll, value: "1" %>
+                    <%= f.hidden_field :notes, value: "Force roll from index dashboard alert" %>
+                    <%= f.submit "Force Roll &rarr;".html_safe, 
+                        class: "inline-flex items-center justify-center rounded-xl bg-red-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 whitespace-nowrap",
+                        data: { turbo_confirm: "FORCE ROLL WARNING: This will advance the business date to #{@suggested_business_date + 1.day} WITHOUT resolving the listed blockers. Financial discrepancies may occur. Are you sure you want to proceed?" } %>
+                  <% end %>
+                </div>
+              <% end %>
             </div>
           </div>
         <% else %>
@@ -94,7 +109,7 @@
       </div>
       <div class="p-6 sm:p-8">
         <div class="space-y-6">
-          <%= form_with url: hotel_night_audits_path(current_hotel), method: :post, scope: :night_audit, class: "grid gap-4 lg:grid-cols-[220px,1fr,180px] lg:items-end", data: { testid: "manual-night-audit-form" } do |f| %>
+          <%= form_with url: hotel_night_audits_path(current_hotel), method: :post, scope: :night_audit, class: "grid gap-4 lg:grid-cols-[220px,1fr,auto,auto] lg:items-end", data: { testid: "manual-night-audit-form" } do |f| %>
             <div>
               <%= f.label :business_date, "Business Date", class: "block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2" %>
               <%= f.date_field :business_date, value: @suggested_business_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
@@ -104,8 +119,20 @@
               <%= f.text_field :notes, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", placeholder: "Optional note for this run" %>
             </div>
             <div>
-              <%= f.submit "Run Audit", class: "inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+              <%= f.submit "Run Audit", class: "inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 whitespace-nowrap" %>
             </div>
+            <% if current_user.has_permission?("override_financial_date_lock", hotel: current_hotel) %>
+              <div>
+                <%= f.hidden_field :force_roll, value: "0", id: "force_roll_hidden" %>
+                <button type="submit" 
+                        name="night_audit[force_roll]" 
+                        value="1" 
+                        class="inline-flex w-full items-center justify-center rounded-xl border-2 border-red-600 bg-white px-6 py-2.5 text-sm font-bold text-red-600 shadow-sm transition hover:bg-red-50 whitespace-nowrap"
+                        data-turbo-confirm="FORCE ROLL WARNING: This will advance the business date for the selected day WITHOUT resolving blockers. Financial discrepancies may occur. Are you sure you want to proceed?">
+                  Force Roll
+                </button>
+              </div>
+            <% end %>
           <% end %>
 
           <% if Rails.env.development? %>

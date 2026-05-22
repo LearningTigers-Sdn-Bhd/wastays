@@ -139,7 +139,7 @@
     <% end %>
 
     <% if flash.any? %>
-      <div class="fixed bottom-6 right-6 z-[200] flex flex-col gap-y-3 pointer-events-none">
+      <div class="fixed top-20 right-6 z-[200] flex flex-col gap-y-3 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-300">
         <% flash.each do |key, value| %>
           <div data-controller="toast"
                class="pointer-events-auto flex items-start gap-x-3 w-80 bg-white rounded-2xl shadow-xl shadow-black/10 border border-neutral-border/60 px-4 py-3.5 transition-all duration-250"
@@ -154,12 +154,8 @@
               </div>
             <% end %>
             <div class="flex-1 min-w-0 pt-0.5">
-              <p class="text-sm font-semibold text-neutral-text-primary"><%= key == 'alert' ? 'Something went wrong' : 'Success' %></p>
-              <p class="text-xs text-neutral-text-secondary mt-0.5 leading-relaxed"><%= value %></p>
+              <p class="text-sm font-semibold text-neutral-text-primary"><%= value %></p>
             </div>
-            <button data-action="click->toast#dismiss" class="flex-none text-neutral-text-secondary hover:text-neutral-text-primary transition-colors mt-0.5 focus:outline-none">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
           </div>
         <% end %>
       </div>
@@ -173,7 +169,7 @@
                                 (controller_name == "legal_pages" && %w[privacy_policy terms_and_conditions].include?(action_name)) %>
     <% unless hide_mobile_bottom_nav %>
       <!-- Mobile Bottom Nav (Phase 4 requirement) -->
-      <div class="sm:hidden sticky bottom-0 z-50 w-full bg-white/95 backdrop-blur-md border-t border-neutral-border pb-safe">
+      <div class="sm:hidden fixed bottom-0 left-0 right-0 z-[150] w-full bg-white/95 backdrop-blur-md border-t border-neutral-border pb-safe">
         <nav class="flex items-center justify-around py-3 px-4">
           <a href="<%= root_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>

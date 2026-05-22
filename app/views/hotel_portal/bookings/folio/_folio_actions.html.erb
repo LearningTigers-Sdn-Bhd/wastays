@@ -27,7 +27,7 @@
   </div>
 
   <% if can_post_payment %>
-    <%= render "hotel_portal/bookings/folio_transaction_modal",
+    <%= render "hotel_portal/bookings/folio/modals/folio_transaction_modal",
         booking: booking,
         hotel: hotel,
         modal_id: "folio-payment-modal-#{booking.id}",
@@ -41,7 +41,7 @@
   <% end %>
 
   <% if can_post_charge %>
-    <%= render "hotel_portal/bookings/folio_transaction_modal",
+    <%= render "hotel_portal/bookings/folio/modals/folio_transaction_modal",
         booking: booking,
         hotel: hotel,
         modal_id: "folio-charge-modal-#{booking.id}",
@@ -55,7 +55,7 @@
   <% end %>
 
   <% if can_post_adjustment %>
-    <%= render "hotel_portal/bookings/folio_transaction_modal",
+    <%= render "hotel_portal/bookings/folio/modals/folio_transaction_modal",
         booking: booking,
         hotel: hotel,
         modal_id: "folio-adjustment-modal-#{booking.id}",
@@ -70,7 +70,7 @@
   <% end %>
 
   <% if can_execute_refund %>
-    <%= render "hotel_portal/bookings/folio_transaction_modal",
+    <%= render "hotel_portal/bookings/folio/modals/folio_transaction_modal",
         booking: booking,
         hotel: hotel,
         modal_id: "folio-refund-modal-#{booking.id}",
