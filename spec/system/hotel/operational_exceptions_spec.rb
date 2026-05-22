@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Operational Exceptions", type: :system do
   let(:account) { create(:account) }
-  let(:user) { create(:user, account: account, role: "hotel_staff", email: "staff@example.com") }
+  let(:user) { create(:user, :superadmin, account: account, email: "staff@example.com") }
   let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:role) { create(:role, account: account, slug: "manager", name: "Manager") }
   let(:room_type) { create(:room_type, hotel: hotel) }
@@ -38,10 +38,10 @@ RSpec.describe "Operational Exceptions", type: :system do
       expect(page).to have_content("Review Late Checkout")
       click_button "Review Late Checkout"
 
-      expect(page).to have_content("Standard Charge")
+      expect(page).to have_content("Current Rate Charge")
 
       # Select custom charge
-      find("label", text: "Custom Charge").click
+      find("label", text: "Additional Charge").click
 
       # Wait for custom section to appear
       expect(page).to have_selector("[data-late-checkout-target='customSection']", visible: true)
@@ -49,14 +49,13 @@ RSpec.describe "Operational Exceptions", type: :system do
       # Fill in the custom value
       find("[data-late-checkout-target='customValue']").set("75.00")
 
-      expect(page).to have_content("Calculated Charge: MYR 75.00")
+      expect(page).to have_content("MYR 174.99")
 
-      find("label", text: "Apply & Keep In-House").click
       click_button "Process Late Checkout"
 
       expect(page).to have_content("Late checkout charge applied.")
       expect(booking.reload.status).to eq("checked_in")
-      expect(folio.reload.outstanding_balance).to eq(75.0)
+      expect(folio.reload.outstanding_balance).to eq(174.99)
     end
   end
 

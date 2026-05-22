@@ -9,6 +9,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
   before do
     role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings'))
     role.permissions << (Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings'))
+    role.permissions << (Permission.find_by(slug: 'post_folio_charges') || create(:permission, slug: 'post_folio_charges'))
+    role.permissions << (Permission.find_by(slug: 'post_folio_payments') || create(:permission, slug: 'post_folio_payments'))
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
   end
@@ -440,6 +442,50 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("Checkout payment method is not supported")
       expect(booking.reload.status).to eq("checked_in")
       expect(folio.folio_transactions.payment).to be_empty
+    end
+  end
+
+  describe "POST /process_late_checkout" do
+    let!(:folio) { create(:booking_folio, booking: booking, hotel: hotel, status: "open") }
+    let(:new_checkout_date) { (booking.check_out + 1.day) }
+    let(:new_checkout_param) { new_checkout_date.strftime("%Y-%m-%dT14:00") }
+
+    before do
+      grant_permission("post_folio_charges")
+    end
+
+    it "updates the checkout period and applies the charge" do
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/process_late_checkout", params: {
+        charge_type: "charge",
+        amount: "150.00",
+        check_out: new_checkout_param
+      }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:notice]).to include("Late checkout charge applied")
+
+      booking.reload
+      expect(booking.check_out.to_date).to eq(new_checkout_date.to_date)
+      expect(booking.status).to eq("checked_in")
+      expect(folio.folio_transactions.where(category: "late_checkout_charge").sum(:amount)).to eq(150.0)
+    end
+
+    it "resolves late checkout without charge" do
+      booking.transition_status_to!("checked_in", event: "check_in")
+      booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/process_late_checkout", params: {
+        charge_type: "none",
+        check_out: new_checkout_param
+      }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:notice]).to include("Late checkout resolved without charge")
+
+      booking.reload
+      expect(booking.status).to eq("checked_in")
+      expect(booking.check_out.to_date).to eq(new_checkout_date.to_date)
+      expect(folio.folio_transactions.where(category: "late_checkout_charge").count).to eq(0)
     end
   end
 

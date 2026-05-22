@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Folios::PostEarlyCheckoutCharges do
   let(:hotel) { create(:hotel) }
-  let(:user) { create(:user) }
+  let(:user) { create(:user, :superadmin) }
   let(:room_type) { create(:room_type, hotel: hotel) }
   let(:departure_date) { Date.current }
   let(:original_check_out) { Date.current + 2.days }

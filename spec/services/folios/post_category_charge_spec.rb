@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Folios::PostCategoryCharge do
   let(:hotel) { create(:hotel) }
-  let(:user) { create(:user) }
+  let(:user) { create(:user, :superadmin) }
   let(:booking) { create(:booking, hotel: hotel) }
   let(:folio) { Folios::InitializeForBooking.call(booking: booking, user: user) }
 

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe HotelOps::RecalculateNightAuditSummary, type: :service do
   let(:hotel) { create(:hotel) }
-  let(:user) { create(:user) }
+  let(:user) { create(:user, :superadmin) }
   let(:business_date) { 1.day.ago.to_date }
   let!(:night_audit) { create(:night_audit, hotel: hotel, business_date: business_date, status: "completed") }
   let!(:summary) { create(:night_audit_financial_summary, night_audit: night_audit, room_revenue: 100.0) }
@@ -18,6 +18,7 @@ RSpec.describe HotelOps::RecalculateNightAuditSummary, type: :service do
       transaction_type: "charge",
       category: "accommodation",
       amount: 100.0,
+      posting_date: business_date,
       metadata: { stay_date: business_date.iso8601 }
     )
   end
@@ -31,6 +32,7 @@ RSpec.describe HotelOps::RecalculateNightAuditSummary, type: :service do
       transaction_type: "charge",
       category: "accommodation",
       amount: 50.0,
+      posting_date: business_date,
       metadata: { stay_date: business_date.iso8601 }
     )
 

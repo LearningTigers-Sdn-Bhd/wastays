@@ -115,6 +115,21 @@ RSpec.describe HotelBusinessDate, type: :model do
     expect(record.blocked_at).to be_nil
   end
 
+  it "transitions from audit_running to force_closed and records an audit event" do
+    record = create(:hotel_business_date, status: "audit_running", blockers_snapshot: { "blocked" => true })
+
+    expect {
+      record.force_close!
+    }.to change(FinancialAuditEvent, :count).by(1)
+
+    expect(record.status).to eq("force_closed")
+    expect(record.closed_at).to be_present
+
+    event = FinancialAuditEvent.last
+    expect(event.event_type).to eq("business_date_force_closed")
+    expect(event.metadata).to include("reason" => "Manual force roll initiated")
+  end
+
   it "rejects invalid transitions" do
     record = create(:hotel_business_date, status: "closed")
 

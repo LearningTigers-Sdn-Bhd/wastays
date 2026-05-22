@@ -94,9 +94,30 @@ RSpec.describe FinancialControls::PostingGuard do
     expect { guard_call(override: true) }.to raise_error(described_class::OverrideReasonRequired)
   end
 
-  it "blocks force-closed dates" do
+  it "blocks force-closed dates without override" do
     create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "force_closed")
 
-    expect { guard_call(override: true, override_reason: "Approved correction") }.to raise_error(described_class::PostingBlocked, /force-closed/)
+    expect { guard_call }.to raise_error(described_class::PostingBlocked, /force-closed/)
+  end
+
+  it "allows force-closed date override with permission and reason" do
+    create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "force_closed")
+
+    expect(guard_call(override: true, override_reason: "Approved correction")).to be(true)
+  end
+
+  it "allows system-level override on a closed date without a user" do
+    create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "closed")
+
+    expect(
+      described_class.call!(
+        hotel: hotel,
+        business_date: business_date,
+        actor: nil,
+        posting_source: "sync",
+        override: true,
+        override_reason: "System sync"
+      )
+    ).to be(true)
   end
 end

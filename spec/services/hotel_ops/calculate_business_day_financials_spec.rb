@@ -6,7 +6,7 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
   let(:hotel) { create(:hotel) }
   let(:business_date) { 1.day.ago.to_date }
 
-  it "calculates correct financial totals for a business date" do
+  it "calculates correct financial totals for a business date based on posting_date" do
     booking = create(:booking, hotel: hotel)
     folio = create(:booking_folio, booking: booking)
 
@@ -16,7 +16,7 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
       transaction_type: "charge",
       category: "accommodation",
       amount: 100.0,
-      metadata: { stay_date: business_date.iso8601 }
+      posting_date: business_date
     )
 
     # Tax charge for the date
@@ -25,26 +25,25 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
       transaction_type: "charge",
       category: "tax",
       amount: 10.0,
-      metadata: { stay_date: business_date.iso8601 }
+      posting_date: business_date
     )
 
-    # Payment within the business window
-    window = hotel.business_day_window_for(business_date)
+    # Payment for the business date
     create(:folio_transaction,
       booking_folio: folio,
       transaction_type: "payment",
       category: "gateway_payment",
       amount: 110.0,
-      created_at: window.begin + 1.hour
+      posting_date: business_date
     )
 
-    # Payment OUTSIDE the business window (should not be included)
+    # Payment for DIFFERENT business date (should not be included)
     create(:folio_transaction,
       booking_folio: folio,
       transaction_type: "payment",
       category: "gateway_payment",
       amount: 50.0,
-      created_at: window.end + 1.hour
+      posting_date: business_date + 1.day
     )
 
     result = described_class.call(hotel: hotel, business_date: business_date)
@@ -53,6 +52,36 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
     expect(result[:tax_revenue]).to eq(10.0)
     expect(result[:payments_total]).to eq(110.0)
     expect(result[:no_show_charges]).to eq(0.0)
+  end
+
+  it "ignores created_at window and uses posting_date" do
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: booking)
+    window = hotel.business_day_window_for(business_date)
+
+    # Posted to business_date but created OUTSIDE window
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_type: "payment",
+      category: "gateway_payment",
+      amount: 100.0,
+      posting_date: business_date,
+      created_at: window.end + 1.hour
+    )
+
+    # Posted to NEXT business_date but created INSIDE window
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_type: "payment",
+      category: "gateway_payment",
+      amount: 50.0,
+      posting_date: business_date + 1.day,
+      created_at: window.begin + 1.hour
+    )
+
+    result = described_class.call(hotel: hotel, business_date: business_date)
+
+    expect(result[:payments_total]).to eq(100.0)
   end
 
   it "identifies no-show charges correctly" do
@@ -64,7 +93,7 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
       transaction_type: "charge",
       category: "no_show_charge",
       amount: 50.0,
-      metadata: { stay_date: business_date.iso8601 }
+      posting_date: business_date
     )
 
     result = described_class.call(hotel: hotel, business_date: business_date)
@@ -82,21 +111,21 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
       transaction_type: "charge",
       category: "accommodation",
       amount: 100.0,
-      metadata: { stay_date: business_date.iso8601 }
+      posting_date: business_date
     )
     create(:folio_transaction,
       booking_folio: folio,
       transaction_type: "charge",
       category: "no_show_charge",
       amount: 50.0,
-      metadata: { stay_date: business_date.iso8601, posting_source: "no_show" }
+      posting_date: business_date
     )
     create(:folio_transaction,
       booking_folio: folio,
       transaction_type: "charge",
       category: "tax",
       amount: 5.0,
-      metadata: { stay_date: business_date.iso8601, posting_source: "no_show" }
+      posting_date: business_date
     )
 
     result = described_class.call(hotel: hotel, business_date: business_date)

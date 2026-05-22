@@ -71,16 +71,18 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     expect(report.totals[:room_revenue]).to eq(0)
   end
 
-  it "ignores non-revenue categories (e.g., F&B or Payments)" do
+  it "includes all charge categories (e.g., F&B) in revenue" do
     booking = create(:booking, hotel: hotel)
     folio = create(:booking_folio, booking: booking, hotel: hotel)
     create(:folio_transaction, booking_folio: folio, category: "fb", amount: 50, posting_date: start_date)
+    create(:folio_transaction, booking_folio: folio, category: "no_show_charge", amount: 75, posting_date: start_date)
     create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 100, posting_date: start_date)
 
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
     expect(report.totals[:room_revenue]).to eq(0)
-    expect(report.totals[:total_revenue]).to eq(0)
-    expect(report.totals[:booking_count]).to eq(0)
+    expect(report.totals[:other_revenue]).to eq(125.to_d)
+    expect(report.totals[:total_revenue]).to eq(125.to_d)
+    expect(report.totals[:booking_count]).to eq(1)
   end
 end

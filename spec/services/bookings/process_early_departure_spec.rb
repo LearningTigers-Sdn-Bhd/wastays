@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Bookings::ProcessEarlyDeparture do
   let(:hotel) { create(:hotel) }
-  let(:user) { create(:user) }
+  let(:user) { create(:user, :superadmin) }
   let(:room_type) { create(:room_type, hotel: hotel, quantity: 10) }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", check_in: Date.current, check_out: Date.current + 3.days) }
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type, quantity: 1) }
@@ -49,8 +49,8 @@ RSpec.describe Bookings::ProcessEarlyDeparture do
   end
 
   it "fails if booking is not checked in" do
-    booking.update_columns(status: "confirmed")
-    result = described_class.call(booking: booking, user: user)
+    confirmed = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current, check_out: Date.current + 3.days)
+    result = described_class.call(booking: confirmed, user: user)
 
     expect(result).not_to be_success
     expect(result.error).to eq("Booking is not checked in.")

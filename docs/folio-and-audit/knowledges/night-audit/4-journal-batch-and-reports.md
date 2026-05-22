@@ -29,6 +29,7 @@ Turns closed business-day activity into financial summaries, journal batches, an
 - Successful night audit can create journal batches for accounting reconciliation.
 - Daily revenue, occupancy, outstanding balance, deposit liability, arrivals/departures, folio ledger, and journal batch exports exist.
 - Manager Flash Report (Occupancy, ADR, RevPAR, and Daily Revenue) implemented with optimized custom SQL queries and multi-format exports.
+- Financial selection logic is harmonized across Audit Summaries and Journal Batches using the `posting_date` column as the single source of truth.
 - Completed May 22, 2026: Multi-page Audit Packet (PDF) implements the official daily financial artifact. It aggregates the Daily Financial Summary, itemized Manual Adjustments, and Audit Blockers/Warnings.
 - Financial Summary now includes `adjustments_total` for explicit tracking of staff-initiated rebates and revenue corrections.
 - `daily_revenue`, `managers_flash`, and the audit packet PDF are protected by `view_reports` and `manage_night_audit` authorizations.

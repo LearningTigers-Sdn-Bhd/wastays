@@ -23,7 +23,8 @@ Coordinates the nightly close process: evaluate blockers, post earned charges, p
 - Successful audits post nightly room and tax charges.
 - Successful audits process no-show reservations.
 - Successful audits persist financial summaries and audit events.
-- Failed or blocked audits do not open the next business date.
+- Failed or blocked audits do not open the next business date unless a "Force Roll" is initiated.
+- "Force Roll" bypasses blockers to advance the business date and is recorded as `night_audit_force_rolled`.
 
 ## Known Follow-Ups
 

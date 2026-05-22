@@ -49,6 +49,29 @@ RSpec.describe Folios::InsertTransaction do
         expect(result.transaction.user).to be_nil
       end
 
+      it "defaults the posting_date to the hotel's business date" do
+        # Setup: Hotel business day hasn't rolled, so calendar date is 10th but business date is 9th
+        calendar_time = Time.zone.local(2026, 5, 10, 1, 0) # 1 AM on May 10
+        business_date_9th = Date.new(2026, 5, 9)
+        create(:hotel_business_date, hotel: hotel, business_date: business_date_9th, status: "open")
+
+        allow(Time).to receive(:current).and_return(calendar_time)
+        allow(hotel).to receive(:business_date_for).with(calendar_time).and_return(business_date_9th)
+
+        result = described_class.new(
+          booking_folio: folio,
+          amount: 100.0,
+          transaction_type: :charge,
+          category: "fb",
+          user: user,
+          description: "Late night snack"
+        ).call
+
+        expect(result.error).to be_nil if !result.success?
+        expect(result.success?).to be true
+        expect(result.transaction.posting_date).to eq(business_date_9th)
+      end
+
       it "rolls back the transaction if audit event recording fails" do
         allow(FinancialControls::AuditEventRecorder).to receive(:call!).and_raise("Audit event failed")
 
@@ -112,6 +135,68 @@ RSpec.describe Folios::InsertTransaction do
         expect(result.success?).to be true
         expect(folio.outstanding_balance).to eq(50.0)
         expect(FinancialAuditEvent.last.event_type).to eq("closed_date_override_posted")
+      end
+
+      it "fails if the user lacks the required granular permission" do
+        regular_user = create(:user) # No permissions by default
+
+        result = described_class.new(
+          booking_folio: folio,
+          amount: 50.0,
+          transaction_type: :charge,
+          category: "fb",
+          user: regular_user,
+          description: "Unauthorized Breakfast"
+        ).call
+
+        expect(result.success?).to be false
+        expect(result.error).to include("post_folio_charges")
+      end
+
+      it "allows reversals only with post_folio_corrections permission" do
+        regular_user = create(:user)
+        # Grant only charge permission, but not correction
+        role = create(:role, account: hotel.account)
+        permission = Permission.find_or_create_by!(slug: "post_folio_charges", name: "Post Folio Charges")
+        role.role_permissions.create!(permission: permission)
+        UserHotelAccess.create!(user: regular_user, hotel: hotel, role: role)
+
+        tx = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100)
+
+        result = described_class.new(
+          booking_folio: folio,
+          amount: -100.0,
+          transaction_type: :adjustment,
+          category: "correction",
+          user: regular_user,
+          description: "Unauthorized Correction",
+          options: { reversal_of_transaction: tx }
+        ).call
+
+        expect(result.success?).to be false
+        expect(result.error).to include("post_folio_corrections")
+      end
+
+      it "succeeds for system transactions without a user if override is passed" do
+        result = described_class.new(
+          booking_folio: folio,
+          amount: 50.0,
+          transaction_type: :payment,
+          category: "gateway_payment",
+          user: nil,
+          description: "Late sync payment",
+          posting_date: closed_date,
+          options: {
+            system_posting: true,
+            override_night_audit: true,
+            correction_reason: "system_sync",
+            correction_note: "Automated payment sync."
+          }
+        ).call
+
+        expect(result.error).to be_nil if !result.success?
+        expect(result.success?).to be true
+        expect(result.transaction.user).to be_nil
       end
     end
 

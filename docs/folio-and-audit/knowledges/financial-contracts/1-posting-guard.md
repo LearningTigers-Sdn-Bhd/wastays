@@ -17,11 +17,12 @@ Centralizes whether a transaction can post to a business date based on date stat
 
 ## Rules Made So Far
 
-- Normal postings are blocked for closed or protected business dates.
-- Authorized closed-date overrides require explicit permission and audit reason.
+- Normal postings are blocked for closed, force-closed, or protected business dates.
+- Authorized closed-date and force-closed overrides require explicit permission and audit reason.
 - Folio insertion paths use the guard before committing financial activity.
-- Staff folio postings are authorized with granular permissions before reaching the posting guard.
+- Staff folio postings are authorized with granular permissions at the service layer before reaching the posting guard.
 - Closed business-date override remains separately controlled by `override_financial_date_lock`.
+- System-level sources (e.g., `sync`, `night_audit`, `automated_task`) can bypass user-level authorization for closed dates to support automated retroactive processing.
 
 ## Known Follow-Ups
 

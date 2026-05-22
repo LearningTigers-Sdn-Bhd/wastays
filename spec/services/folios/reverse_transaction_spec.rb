@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Folios::ReverseTransaction, type: :service do
-  let(:user) { create(:user) }
+  let(:user) { create(:user, :superadmin) }
   let(:folio) { create(:booking_folio) }
 
   it "creates a negative adjustment for a charge reversal" do
@@ -48,6 +48,25 @@ RSpec.describe Folios::ReverseTransaction, type: :service do
       transaction_type: "payment",
       category: "refund",
       amount: -80.to_d,
+      reversal_of_transaction: transaction
+    )
+  end
+
+  it "creates a positive charge/correction for a refund (negative payment) reversal" do
+    transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "refund", amount: -50)
+
+    result = described_class.call(
+      transaction: transaction,
+      user: user,
+      correction_reason: "Refund error",
+      correction_note: "Duplicate refund"
+    )
+
+    expect(result).to be_success
+    expect(result.transaction).to have_attributes(
+      transaction_type: "adjustment",
+      category: "correction",
+      amount: 50.to_d,
       reversal_of_transaction: transaction
     )
   end

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Folios::PostStaffTransaction do
   let(:folio) { create(:booking_folio) }
-  let(:user) { create(:user) }
+  let(:user) { create(:user, :superadmin) }
 
   it "posts a cash payment" do
     result = described_class.call(

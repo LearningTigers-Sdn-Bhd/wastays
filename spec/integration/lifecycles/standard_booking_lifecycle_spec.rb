@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Standard Booking Lifecycles", type: :integration do
   let(:hotel) { create(:hotel) }
-  let(:user) { create(:user) }
+  let(:user) { create(:user, :superadmin) }
   let(:room_type) { create(:room_type, hotel: hotel) }
   let(:business_date) { hotel.business_date_for }
 

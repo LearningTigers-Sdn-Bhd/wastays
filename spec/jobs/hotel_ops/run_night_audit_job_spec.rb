@@ -15,7 +15,8 @@ RSpec.describe HotelOps::RunNightAuditJob, type: :job do
       performed_by_user: user,
       trigger_mode: "manual",
       notes: "Test notes",
-      allow_unclosable_date: false
+      allow_unclosable_date: false,
+      force_roll: false
     ).and_return(runner)
 
     expect(runner).to receive(:call)
@@ -32,7 +33,8 @@ RSpec.describe HotelOps::RunNightAuditJob, type: :job do
       performed_by_user: nil,
       trigger_mode: "scheduled",
       notes: nil,
-      allow_unclosable_date: false
+      allow_unclosable_date: false,
+      force_roll: false
     ).and_return(runner)
 
     expect(runner).to receive(:call)
@@ -48,7 +50,8 @@ RSpec.describe HotelOps::RunNightAuditJob, type: :job do
       performed_by_user: user,
       trigger_mode: "manual",
       notes: "Test notes",
-      allow_unclosable_date: true
+      allow_unclosable_date: true,
+      force_roll: false
     ).and_return(runner)
 
     expect(runner).to receive(:call)

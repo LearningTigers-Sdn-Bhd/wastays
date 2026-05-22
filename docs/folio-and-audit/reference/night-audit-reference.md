@@ -49,9 +49,16 @@ For every occupied room:
 - All new transactions now post to new date
 - Record immutable audit events for the completed audit, closed date, and opened date
 
+**Force Roll Escape Hatch:**
+If critical blockers cannot be resolved immediately, an authorized user (with `override_financial_date_lock`) can initiate a "Force Roll." This action:
+- Moves the current date to `force_closed`.
+- Marks the night audit as completed but with `force_closed: true`.
+- Atomically opens the next `HotelBusinessDate`.
+- Records a `night_audit_force_rolled` event in the financial ledger.
+
 Implementation guarantees:
 - The close/open transition is atomic with the successful audit completion transaction.
-- Blocked or failed audits leave the next business date unopened.
+- Blocked or failed audits leave the next business date unopened unless force-rolled.
 - If the next business date already exists and is `open`, it is reused.
 - If the next business date already exists in a locked state (`audit_running`, `audit_blocked`, `closed`, or `force_closed`), the audit fails safely instead of overwriting that state.
 - Business-date rows are locked before their state is trusted, and duplicate-row races are retried through the existing unique hotel/date constraint.

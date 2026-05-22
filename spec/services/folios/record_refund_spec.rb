@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Folios::RecordRefund do
   let(:booking) { create(:booking, status: "cancelled") }
   let(:refund_request) { create(:refund_request, booking: booking, status: "approved", refund_amount: 160.0) }
-  let(:user) { create(:user) }
+  let(:user) { create(:user, :superadmin) }
 
   it "succeeds without posting when the booking has no folio" do
     result = described_class.call(refund_request: refund_request, user: user)

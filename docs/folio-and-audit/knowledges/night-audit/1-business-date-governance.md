@@ -18,9 +18,11 @@ Uses hotel business dates as the financial clock, decoupled from server time, so
 
 ## Rules Made So Far
 
-- Business dates move through states such as `open`, `audit_running`, `audit_blocked`, and `closed`.
-- Closed or running audit dates are protected from normal posting.
+- Business dates move through states such as `open`, `audit_running`, `audit_blocked`, `closed`, and `force_closed`.
+- Closed, force-closed, or running audit dates are protected from normal posting.
 - Night audit closes the audited date and opens or reuses the next open business date atomically.
+- "Force Roll" allows an authorized manager to move a date from `audit_running` or `audit_blocked` to `force_closed` to ensure operational continuity.
+- Manual "Force Roll" transitions are explicitly recorded as `business_date_force_closed` financial audit events for full traceability.
 - Locked or unsafe next-date states cause safe audit failure instead of state overwrite.
 
 ## Known Follow-Ups

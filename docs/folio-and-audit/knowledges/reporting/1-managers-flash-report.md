@@ -47,7 +47,8 @@ These metrics represent the **actual money posted to folios** on that specific b
 | :--- | :--- | :--- |
 | **Room Revenue** | The total amount of `accommodation` charges (and related adjustments) posted to folios. | `SUM(Folio Transactions where category = 'accommodation')` |
 | **Tax** | Total taxes (VAT, City Tax, etc.) collected on the business date. | `SUM(Folio Transactions where category = 'tax')` |
-| **Total Revenue** | The sum of all room and tax revenue posted to the property's ledger. | `Room Revenue + Tax` |
+| **Other Revenue** | All ancillary charges (F&B, No-Show, Late Checkout, etc.) posted to folios. | `SUM(Folio Transactions where category NOT IN ('accommodation', 'tax'))` |
+| **Total Revenue** | The sum of all room, tax, and other revenue posted to the property's ledger. | `Room Revenue + Tax + Other Revenue` |
 
 ## Known Follow-Ups
 
