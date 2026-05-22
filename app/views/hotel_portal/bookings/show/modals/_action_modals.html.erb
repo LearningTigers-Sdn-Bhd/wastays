@@ -18,7 +18,7 @@
           <label class="flex items-start justify-between gap-4">
             <span>
               <span class="block text-sm font-bold text-slate-900">Collect security deposit</span>
-              <span class="mt-1 block text-xs font-medium text-slate-500">Optional MVP cash/manual deposit. This is tracked separately from folio booking payments.</span>
+              <span class="mt-1 block text-xs font-medium text-slate-500">Record a manual security deposit (e.g., cash, card authorization). This is tracked independently from the guest folio.</span>
             </span>
             <%= check_box_tag :collect_security_deposit, "1", false, class: "mt-1 rounded border-slate-300 text-slate-900 focus:ring-slate-900" %>
           </label>
@@ -108,7 +108,7 @@
     <h3 class="text-lg font-bold text-slate-900">Confirm Check-Out</h3>
     <p class="text-sm text-slate-500 mt-1">Set check-out time for <%= booking.guest_name %>.</p>
 
-    <%= form_with url: check_out_hotel_booking_path(current_hotel, booking), method: :post, local: true, class: "mt-6 space-y-4" do |f| %>
+    <%= form_with url: check_out_hotel_booking_path(current_hotel, booking), method: :post, class: "mt-6 space-y-4" do |f| %>
       <div>
         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-out Date & Time</label>
         <%= f.datetime_local_field :checked_out_at,
