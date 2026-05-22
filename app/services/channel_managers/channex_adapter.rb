@@ -417,8 +417,9 @@ module ChannelManagers
               rate_plan_id: ext_rp_id
             }
 
-            if final_sync_rates && rate&.price
-              val_data[:rate] = format("%.2f", rate.price.to_f)
+            if final_sync_rates
+              ota_price = rate&.ota_price.presence || rate&.price
+              val_data[:rate] = format("%.2f", ota_price.to_f) if ota_price
             end
 
             if final_sync_restrictions

@@ -97,6 +97,11 @@ module HotelPortal
           "quiet_hours" => { "enabled" => true, "start" => "22:00", "end" => "08:00" }
         )
 
+        if @active_settings_tab == "tax"
+          @hotel_taxes = @hotel.hotel_taxes.order(:name)
+          @hotel_tax   = @hotel.hotel_taxes.build
+        end
+
         @settings = {
           hotel_status: @hotel.status.humanize,
           onboarding_stage: onboarding_stage(@hotel),

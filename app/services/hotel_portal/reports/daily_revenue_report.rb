@@ -21,14 +21,16 @@ module HotelPortal
 
       def call
         # Query transactions within the date range for the hotel
-        # Include accommodation and tax categories, plus adjustments that reverse them
+        # Include all charge categories and tax, plus adjustments that reverse them
+        charge_categories = FolioTransaction::CHARGE_CATEGORIES
         transactions = FolioTransaction.joins(booking_folio: :booking)
                          .left_outer_joins(:reversal_of_transaction)
                          .where(bookings: { hotel_id: @hotel.id })
                          .where(posting_date: @start_date..@end_date)
                          .where(
-                           "folio_transactions.category IN ('accommodation', 'tax') OR " \
-                           "(folio_transactions.transaction_type = 'adjustment' AND reversal_of_transactions_folio_transactions.category IN ('accommodation', 'tax'))"
+                           "folio_transactions.category IN (?) OR " \
+                           "(folio_transactions.transaction_type = 'adjustment' AND reversal_of_transactions_folio_transactions.category IN (?))",
+                           charge_categories, charge_categories
                          )
                          .select(
                            "folio_transactions.*",
@@ -37,8 +39,8 @@ module HotelPortal
                            "reversal_of_transactions_folio_transactions.category as reversed_category"
                          )
 
-        daily_stats = Hash.new { |h, k| h[k] = { booking_ids: Set.new, room_revenue: 0.to_d, tax_amount: 0.to_d } }
-        source_stats = Hash.new { |h, k| h[k] = { booking_ids: Set.new, room_revenue: 0.to_d, tax_amount: 0.to_d } }
+        daily_stats = Hash.new { |h, k| h[k] = { booking_ids: Set.new, room_revenue: 0.to_d, tax_amount: 0.to_d, other_revenue: 0.to_d } }
+        source_stats = Hash.new { |h, k| h[k] = { booking_ids: Set.new, room_revenue: 0.to_d, tax_amount: 0.to_d, other_revenue: 0.to_d } }
 
         transactions.each do |tx|
           date = tx.posting_date
@@ -46,15 +48,20 @@ module HotelPortal
           amount = tx.amount.to_d
           category = tx.transaction_type == "adjustment" ? tx.reversed_category : tx.category
 
-          if category == "accommodation"
+          case category
+          when "accommodation"
             daily_stats[date][:room_revenue] += amount
             source_stats[source][:room_revenue] += amount
-            daily_stats[date][:booking_ids] << tx.booking_id
-            source_stats[source][:booking_ids] << tx.booking_id
-          elsif category == "tax"
+          when "tax"
             daily_stats[date][:tax_amount] += amount
             source_stats[source][:tax_amount] += amount
+          else
+            daily_stats[date][:other_revenue] += amount
+            source_stats[source][:other_revenue] += amount
           end
+
+          daily_stats[date][:booking_ids] << tx.booking_id
+          source_stats[source][:booking_ids] << tx.booking_id
         end
 
         rows = (@start_date..@end_date).map do |date|
@@ -64,7 +71,8 @@ module HotelPortal
             booking_count: stats[:booking_ids].size,
             room_revenue: stats[:room_revenue].round(2),
             tax_amount: stats[:tax_amount].round(2),
-            total_revenue: (stats[:room_revenue] + stats[:tax_amount]).round(2)
+            other_revenue: stats[:other_revenue].round(2),
+            total_revenue: (stats[:room_revenue] + stats[:tax_amount] + stats[:other_revenue]).round(2)
           }
         end
 
@@ -74,12 +82,14 @@ module HotelPortal
             booking_count: stats[:booking_ids].size,
             room_revenue: stats[:room_revenue].round(2),
             tax_amount: stats[:tax_amount].round(2),
-            total_revenue: (stats[:room_revenue] + stats[:tax_amount]).round(2)
+            other_revenue: stats[:other_revenue].round(2),
+            total_revenue: (stats[:room_revenue] + stats[:tax_amount] + stats[:other_revenue]).round(2)
           }
         end.sort_by { |row| -row[:total_revenue] }
 
         room_revenue = rows.sum { |r| r[:room_revenue] }
         tax_amount = rows.sum { |r| r[:tax_amount] }
+        other_revenue = rows.sum { |r| r[:other_revenue] }
         total_booking_ids = transactions.map(&:booking_id).uniq.size
 
         Result.new(
@@ -89,7 +99,8 @@ module HotelPortal
             booking_count: total_booking_ids,
             room_revenue: room_revenue,
             tax_amount: tax_amount,
-            total_revenue: room_revenue + tax_amount
+            other_revenue: other_revenue,
+            total_revenue: room_revenue + tax_amount + other_revenue
           },
           rows: rows,
           source_rows: source_rows

@@ -12,7 +12,7 @@ class HotelPortal::HotelTaxesController < HotelPortal::BaseController
   def create
     @hotel_tax = current_hotel.hotel_taxes.build(tax_params)
     if @hotel_tax.save
-      redirect_to hotel_hotel_taxes_path(current_hotel), notice: "Tax added."
+      redirect_to hotel_settings_path(current_hotel, tab: "tax"), notice: "Tax added."
     else
       @hotel_taxes = current_hotel.hotel_taxes.order(:name)
       render :index, status: :unprocessable_entity
@@ -21,7 +21,7 @@ class HotelPortal::HotelTaxesController < HotelPortal::BaseController
 
   def update
     if @hotel_tax.update(tax_params)
-      redirect_to hotel_hotel_taxes_path(current_hotel), notice: "Tax updated."
+      redirect_to hotel_settings_path(current_hotel, tab: "tax"), notice: "Tax updated."
     else
       @hotel_taxes = current_hotel.hotel_taxes.order(:name)
       @hotel_tax_edit = @hotel_tax
@@ -31,7 +31,7 @@ class HotelPortal::HotelTaxesController < HotelPortal::BaseController
 
   def destroy
     @hotel_tax.destroy
-    redirect_to hotel_hotel_taxes_path(current_hotel), notice: "Tax removed."
+    redirect_to hotel_settings_path(current_hotel, tab: "tax"), notice: "Tax removed."
   end
 
   private

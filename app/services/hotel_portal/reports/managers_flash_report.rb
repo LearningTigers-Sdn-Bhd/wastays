@@ -38,7 +38,7 @@ module HotelPortal
 
         dates.map do |date|
           occ = occupancy_data[date] || { rooms_sold: 0, rooms_available: 0, booking_revenue: 0.to_d }
-          rev = revenue_data[date] || { room_revenue: 0.to_d, tax_amount: 0.to_d }
+          rev = revenue_data[date] || { room_revenue: 0.to_d, tax_amount: 0.to_d, other_revenue: 0.to_d }
 
           rooms_sold = occ[:rooms_sold]
           rooms_available = occ[:rooms_available]
@@ -48,6 +48,7 @@ module HotelPortal
           booking_revenue = occ[:booking_revenue]
           room_revenue = rev[:room_revenue]
           tax_amount = rev[:tax_amount]
+          other_revenue = rev[:other_revenue]
 
           {
             date: date,
@@ -59,7 +60,8 @@ module HotelPortal
             booking_revenue: booking_revenue,
             room_revenue: room_revenue,
             tax_amount: tax_amount,
-            total_revenue: room_revenue + tax_amount
+            other_revenue: other_revenue,
+            total_revenue: room_revenue + tax_amount + other_revenue
           }
         end
       end
@@ -138,34 +140,42 @@ module HotelPortal
       def fetch_revenue_data
         # This query calculates posted revenue from FolioTransactions
         # Logic matches DailyRevenueReport: posting_date in range
-        sql = <<-SQL
-          SELECT#{' '}
-            ft.posting_date,
-            SUM(CASE WHEN (ft.category = 'accommodation' OR (ft.transaction_type = 'adjustment' AND rft.category = 'accommodation')) THEN ft.amount ELSE 0 END) as room_revenue,
-            SUM(CASE WHEN (ft.category = 'tax' OR (ft.transaction_type = 'adjustment' AND rft.category = 'tax')) THEN ft.amount ELSE 0 END) as tax_amount
-          FROM folio_transactions ft
-          INNER JOIN booking_folios bf ON bf.id = ft.booking_folio_id
-          INNER JOIN bookings b ON b.id = bf.booking_id
-          LEFT JOIN folio_transactions rft ON rft.id = ft.reversal_of_transaction_id
-          WHERE b.hotel_id = ?
-            AND ft.posting_date BETWEEN ? AND ?
-            AND (
-              ft.category IN ('accommodation', 'tax') OR#{' '}
-              (ft.transaction_type = 'adjustment' AND rft.category IN ('accommodation', 'tax'))
-            )
-          GROUP BY ft.posting_date
-        SQL
+        charge_categories = FolioTransaction::CHARGE_CATEGORIES
+        transactions = FolioTransaction.joins(booking_folio: :booking)
+                         .left_outer_joins(:reversal_of_transaction)
+                         .where(bookings: { hotel_id: @hotel.id })
+                         .where(posting_date: @start_date..@end_date)
+                         .where(
+                           "folio_transactions.category IN (?) OR " \
+                           "(folio_transactions.transaction_type = 'adjustment' AND reversal_of_transactions_folio_transactions.category IN (?))",
+                           charge_categories, charge_categories
+                         )
+                         .select(
+                           "folio_transactions.posting_date",
+                           "folio_transactions.amount",
+                           "folio_transactions.category",
+                           "folio_transactions.transaction_type",
+                           "reversal_of_transactions_folio_transactions.category as reversed_category"
+                         )
 
-        ActiveRecord::Base.connection.execute(
-          ActiveRecord::Base.sanitize_sql_array([ sql, @hotel.id, @start_date, @end_date ])
-        ).each_with_object({}) do |row, h|
-          date = row["posting_date"]
-          date = Date.parse(date) if date.is_a?(String)
-          h[date.to_date] = {
-            room_revenue: row["room_revenue"].to_d,
-            tax_amount: row["tax_amount"].to_d
-          }
+        revenue_by_date = Hash.new { |h, k| h[k] = { room_revenue: 0.to_d, tax_amount: 0.to_d, other_revenue: 0.to_d } }
+
+        transactions.each do |tx|
+          date = tx.posting_date.to_date
+          amount = tx.amount.to_d
+          category = tx.transaction_type == "adjustment" ? tx.reversed_category : tx.category
+
+          case category
+          when "accommodation"
+            revenue_by_date[date][:room_revenue] += amount
+          when "tax"
+            revenue_by_date[date][:tax_amount] += amount
+          else
+            revenue_by_date[date][:other_revenue] += amount
+          end
         end
+
+        revenue_by_date
       end
 
       def calculate_totals(rows)
@@ -173,6 +183,7 @@ module HotelPortal
         rooms_available = rows.sum { |r| r[:rooms_available] }
         room_revenue = rows.sum { |r| r[:room_revenue] }
         tax_amount = rows.sum { |r| r[:tax_amount] }
+        other_revenue = rows.sum { |r| r[:other_revenue] }
 
         # For ADR/RevPAR we use the sum of daily booking_revenue (prorated subtotals)
         # but for Total Revenue we use the sum of posted folio room_revenue + tax.
@@ -187,7 +198,8 @@ module HotelPortal
           revpar: ratio(total_booking_revenue, rooms_available),
           room_revenue: room_revenue,
           tax_amount: tax_amount,
-          total_revenue: room_revenue + tax_amount
+          other_revenue: other_revenue,
+          total_revenue: room_revenue + tax_amount + other_revenue
         }
       end
 

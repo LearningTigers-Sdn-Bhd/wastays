@@ -20,8 +20,6 @@ module HotelPortal
         return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
       end
 
-      authorize_folio_permission!(permission_for_folio_posting) if staff_posting_category?
-
       result = Folios::PostStaffTransaction.call(
         folio: @booking.booking_folio,
         user: current_user,
@@ -43,8 +41,6 @@ module HotelPortal
       unless @booking.booking_folio
         return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
       end
-
-      authorize_folio_permission!("post_folio_corrections")
 
       transaction = @booking.booking_folio.folio_transactions.find(params[:id])
       result = Folios::ReverseTransaction.call(
@@ -73,26 +69,6 @@ module HotelPortal
       else
         redirect_to hotel_booking_path(current_hotel, @booking), options
       end
-    end
-
-    def authorize_folio_permission!(permission)
-      raise Pundit::NotAuthorizedError unless current_user.has_permission?(permission, hotel: current_hotel)
-    end
-
-    def permission_for_folio_posting
-      FOLIO_POSTING_PERMISSIONS[folio_posting_key]
-    end
-
-    def staff_posting_category?
-      transaction_type, category = folio_posting_key
-      category.in?(Folios::PostStaffTransaction::ALLOWED_CATEGORIES.fetch(transaction_type, []))
-    end
-
-    def folio_posting_key
-      [
-        folio_transaction_params[:transaction_type].to_s,
-        folio_transaction_params[:category].to_s
-      ]
     end
 
     def set_booking

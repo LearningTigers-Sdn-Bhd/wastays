@@ -48,6 +48,12 @@ module HotelPortal
 
     def create
       business_date = requested_business_date
+      force_roll = ActiveModel::Type::Boolean.new.cast(params.dig(:night_audit, :force_roll)) || false
+
+      if force_roll && !current_user.has_permission?("override_financial_date_lock", hotel: current_hotel)
+        redirect_to hotel_night_audits_path(current_hotel), alert: "You do not have permission to force-roll the night audit."
+        return
+      end
 
       unless allow_unclosable_date? || current_hotel.can_audit_date?(business_date)
         redirect_to hotel_night_audits_path(current_hotel), alert: unclosable_date_message(business_date)
@@ -55,7 +61,7 @@ module HotelPortal
       end
 
       night_audit = current_hotel.night_audits.find_or_initialize_by(business_date: business_date)
-      if night_audit.completed?
+      if night_audit.completed? && !force_roll
         redirect_to hotel_night_audits_path(current_hotel), alert: "Night audit has already been completed for this date."
         return
       end
@@ -72,11 +78,16 @@ module HotelPortal
         completed_at: nil,
         performed_by_user: current_user,
         notes: params.dig(:night_audit, :notes),
-        force_closed: false
+        force_closed: force_roll
       )
 
       if night_audit.save
-        HotelOps::RunNightAuditJob.perform_later(night_audit.id, current_user.id, allow_unclosable_date: allow_unclosable_date?)
+        HotelOps::RunNightAuditJob.perform_later(
+          night_audit.id,
+          current_user.id,
+          allow_unclosable_date: allow_unclosable_date?,
+          force_roll: force_roll
+        )
         redirect_to hotel_night_audit_path(current_hotel, night_audit), notice: "Night audit has been scheduled in the background. Please wait while it processes."
       else
         redirect_to hotel_night_audits_path(current_hotel), alert: "Night audit could not be created: #{night_audit.errors.full_messages.join(', ')}"

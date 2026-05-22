@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["checkIn", "checkOut", "roomType", "guestCountry", "ratePlanSelect", "restrictionCheckbox", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput", "rateOverrideFlag"]
+  static targets = ["checkIn", "checkOut", "roomType", "guestCountry", "ratePlanSelect", "restrictionCheckbox", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput", "rateOverrideFlag", "corporateRate"]
   static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, bookingId: String, excludeBookingId: String }
 
   connect() {
@@ -200,6 +200,9 @@ export default class extends Controller {
       }
       if (this.hasGuestCountryTarget && this.guestCountryTarget.value) {
         params.set("guest_country", this.guestCountryTarget.value)
+      }
+      if (this.hasCorporateRateTarget) {
+        params.set("corporate_rate", this.corporateRateTarget.checked)
       }
 
       const url = `${this.priceUrlValue}?${params}`

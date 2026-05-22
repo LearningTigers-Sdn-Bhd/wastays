@@ -4,7 +4,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   def index
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
-    @start_date = (params[:start_date] || Date.today).to_date
+    @start_date = (params[:start_date] || Date.current).to_date
     @end_date = @start_date + 13.days
     @view_mode = "combined"
 
@@ -24,7 +24,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
     @room_types = current_hotel.room_types.order(:id)
     @calendar = build_calendar
-    @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules
+    @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules(params[:room_type_ids])
+    @active_tab = params[:tab].presence || "calendar"
+    @active_subtab = params[:subtab].presence || "pricing"
   end
 
   def bulk_save_ari
@@ -97,97 +99,22 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       u.permit(
         :start_date, :end_date, :apply_inventory, :apply_rates, :apply_restrictions,
         :quantity, :status, :price, :currency, :min_stay, :max_stay,
-        :closed_to_arrival, :closed_to_departure, :stop_sell,
+        :closed_to_arrival, :closed_to_departure, :stop_sell, :mode,
         room_type_ids: [], rate_plan_ids: [], modified_fields: []
       ).to_h.symbolize_keys
     end
 
-    errors = []
-    min_date = nil
-    max_date = nil
-    sync_availability = false
-    sync_rates = false
-    sync_restrictions = false
-    room_type_windows = {}
-    rate_plan_windows = {}
-    rate_plan_fields = {}
+    result = HotelOps::ProcessBatchUpdates.new(
+      hotel: current_hotel,
+      updates: staged_updates,
+      user: current_user
+    ).call
 
-    begin
-      ActiveRecord::Base.transaction do
-        Thread.current[:skip_ari_sync] = true
-
-        staged_updates.each do |selection|
-          # Track the overall date range and sync types for a single final sync
-          s_date = selection[:start_date]&.to_date
-          e_date = selection[:end_date]&.to_date
-
-          # Guard against missing dates
-          next unless s_date && e_date
-
-          min_date = [ min_date, s_date ].compact.min
-          max_date = [ max_date, e_date ].compact.max
-
-          sync_availability ||= cast_boolean(selection[:apply_inventory])
-          sync_rates ||= cast_boolean(selection[:apply_rates])
-          sync_restrictions ||= cast_boolean(selection[:apply_restrictions])
-
-          Array(selection[:room_type_ids]).each do |id|
-            win = room_type_windows[id.to_s] || { "min" => s_date.to_s, "max" => e_date.to_s }
-            win["min"] = [ win["min"].to_date, s_date ].min.to_s
-            win["max"] = [ win["max"].to_date, e_date ].max.to_s
-            room_type_windows[id.to_s] = win
-          end
-
-          Array(selection[:rate_plan_ids]).each do |id|
-            win = rate_plan_windows[id.to_s] || { "min" => s_date.to_s, "max" => e_date.to_s }
-            win["min"] = [ win["min"].to_date, s_date ].min.to_s
-            win["max"] = [ win["max"].to_date, e_date ].max.to_s
-            rate_plan_windows[id.to_s] = win
-
-            # Track which fields were modified for this rate plan
-            rate_plan_fields[id.to_s] ||= Set.new
-            rate_plan_fields[id.to_s].merge(Array(selection[:modified_fields]))
-          end
-
-          result = HotelOps::ApplyInventoryDashboardSelection.new(
-            hotel: current_hotel,
-            selection: selection,
-            user: current_user,
-            skip_sync: true
-          ).call
-
-          unless result[:success]
-            errors << result[:error]
-            raise ActiveRecord::Rollback
-          end
-        end
-
-        # Trigger a single sync job covering the entire updated range with granular ID windows
-        if current_hotel.preferred_channel_manager.present? && min_date && max_date
-          ChannelManagers::SyncJob.perform_later(
-            current_hotel.id,
-            min_date,
-            max_date,
-            sync_availability: sync_availability,
-            sync_rates: sync_rates,
-            sync_restrictions: sync_restrictions,
-            room_type_ids: room_type_windows,
-            rate_plan_ids: rate_plan_windows,
-            rate_plan_fields: rate_plan_fields.transform_values(&:to_a)
-          )
-        end
-      end
-    rescue => e
-      Rails.logger.error "Batch ARI Sync Failed: #{e.message}\n#{e.backtrace.first(10).join("\n")}"
-      errors << "Unexpected error: #{e.message}"
-    ensure
-      Thread.current[:skip_ari_sync] = nil
-    end
-
-    if errors.empty?
-      render json: { success: true, message: "All changes synced successfully." }
+    if result[:success]
+      flash[:notice] = result[:message]
+      render json: { success: true, message: result[:message] }
     else
-      render json: { success: false, error: errors.join(", ") }, status: :unprocessable_entity
+      render json: { success: false, error: result[:error] }, status: :unprocessable_entity
     end
   end
 
@@ -203,14 +130,21 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       wk_start_date: pricing_params[:wk_start_date],
       wk_end_date: pricing_params[:wk_end_date],
       weekend_days: pricing_params[:weekend_days],
-      sc_price: pricing_params[:sc_price],
-      sc_start_date: pricing_params[:sc_start_date],
-      sc_end_date: pricing_params[:sc_end_date],
+      school_holidays: pricing_params[:school_holidays],
+      wi_price: pricing_params[:wi_price],
+      wi_start_date: pricing_params[:wi_start_date],
+      wi_end_date: pricing_params[:wi_end_date],
+      cr_price: pricing_params[:cr_price],
+      cr_start_date: pricing_params[:cr_start_date],
+      cr_end_date: pricing_params[:cr_end_date],
+      ota_price: pricing_params[:ota_price],
+      ota_start_date: pricing_params[:ota_start_date],
+      ota_end_date: pricing_params[:ota_end_date],
       public_holidays: pricing_params[:public_holidays]
     ).call
 
     unless sync_result[:success]
-      @start_date = Date.today
+      @start_date = Date.current
       @end_date = @start_date + 13.days
       @view_mode = "combined"
       @room_types = current_hotel.room_types.order(:id)
@@ -227,6 +161,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @calendar = build_calendar
       @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_params(pricing_params)
       @pricing_form.errors = sync_result[:errors] || {}
+      @active_tab = params[:tab].presence || "calendar"
+      @active_subtab = params[:subtab].presence || "pricing"
       flash.now[:alert] = sync_result[:error] || "Error saving pricing rules."
       return render :index, status: :unprocessable_entity
     end
@@ -243,9 +179,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     ).call
 
     if result[:success]
-      redirect_to hotel_inventory_index_path(current_hotel, start_date: apply_start_date), notice: "Pricing rules applied successfully."
+      redirect_to hotel_inventory_index_path(current_hotel, start_date: apply_start_date, tab: "advanced", subtab: "pricing", anchor: "top"), notice: "Pricing rules applied successfully."
     else
-      redirect_to hotel_inventory_index_path(current_hotel), alert: "Error applying pricing rules: #{result[:error]}"
+      redirect_to hotel_inventory_index_path(current_hotel, tab: "advanced", subtab: "pricing", anchor: "top"), alert: "Error applying pricing rules: #{result[:error]}"
     end
   end
 
@@ -264,9 +200,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     ).call
 
     if result[:success]
-      redirect_to hotel_inventory_index_path(current_hotel, start_date: availability_params[:start_date]), notice: "Availability override applied successfully."
+      redirect_to hotel_inventory_index_path(current_hotel, start_date: availability_params[:start_date], tab: "advanced", subtab: "overrides", anchor: "top"), notice: "Availability override applied successfully."
     else
-      redirect_to hotel_inventory_index_path(current_hotel), alert: "Error applying availability override: #{result[:error]}"
+      redirect_to hotel_inventory_index_path(current_hotel, tab: "advanced", subtab: "overrides", anchor: "top"), alert: "Error applying availability override: #{result[:error]}"
     end
   end
 
@@ -286,21 +222,21 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       user: current_user
     ).call
 
-    redirect_to hotel_inventory_index_path(current_hotel, start_date: params[:start_date]), notice: "Public holiday removed successfully."
+    redirect_to hotel_inventory_index_path(current_hotel, start_date: params[:start_date], tab: "advanced", subtab: "pricing", anchor: "top"), notice: "Public holiday removed successfully."
   rescue ActiveRecord::RecordNotFound
-    redirect_to hotel_inventory_index_path(current_hotel), alert: "Public holiday rule not found."
+    redirect_to hotel_inventory_index_path(current_hotel, tab: "advanced", subtab: "pricing", anchor: "top"), alert: "Public holiday rule not found."
   end
 
   def destroy_pricing_tier_rule
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
     rule_type = params[:rule_type].to_s
-    unless %w[general weekends school_holiday].include?(rule_type)
-      return redirect_to hotel_inventory_index_path(current_hotel), alert: "Unsupported pricing tier."
+    unless %w[general weekends school_holiday walk_in corporate_rate ota_rate].include?(rule_type)
+      return redirect_to hotel_inventory_index_path(current_hotel, tab: "advanced", subtab: "pricing", anchor: "top"), alert: "Unsupported pricing tier."
     end
 
     pricing_rule = current_hotel.pricing_rules.find_by(rule_type: rule_type)
-    return redirect_to(hotel_inventory_index_path(current_hotel), alert: "Pricing tier not found.") if pricing_rule.blank?
+    return redirect_to(hotel_inventory_index_path(current_hotel, tab: "advanced", subtab: "pricing", anchor: "top"), alert: "Pricing tier not found.") if pricing_rule.blank?
 
     affected_start_date = pricing_rule.start_date
     affected_end_date = pricing_rule.end_date
@@ -314,7 +250,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       user: current_user
     ).call
 
-    redirect_to hotel_inventory_index_path(current_hotel, start_date: params[:start_date]), notice: "#{rule_type.humanize} pricing removed successfully."
+    redirect_to hotel_inventory_index_path(current_hotel, start_date: params[:start_date], tab: "advanced", subtab: "pricing", anchor: "top"), notice: "#{rule_type.humanize} pricing removed successfully."
   end
 
   private
@@ -346,8 +282,18 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :sc_price,
       :sc_start_date,
       :sc_end_date,
+      :wi_price,
+      :wi_start_date,
+      :wi_end_date,
+      :cr_price,
+      :cr_start_date,
+      :cr_end_date,
+      :ota_price,
+      :ota_start_date,
+      :ota_end_date,
       room_type_ids: [],
       weekend_days: [],
+      school_holidays: [ :name, :price, :start_date, :end_date ],
       public_holidays: [ :name, :price, :start_date, :end_date ]
     )
   end
@@ -394,8 +340,10 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       start_date: params[:start_date] || permitted_selection[:start_date],
       view_currencies: params[:view_currencies] || permitted_selection[:view_currencies],
       room_type_id: Array(permitted_selection[:room_type_ids]).reject(&:blank?).first || params[:room_type_id],
-      rate_plan_id: Array(permitted_selection[:rate_plan_ids]).reject(&:blank?).first || params[:rate_plan_id]
-    }
+      rate_plan_id: Array(permitted_selection[:rate_plan_ids]).reject(&:blank?).first || params[:rate_plan_id],
+      tab: params[:tab],
+      subtab: params[:subtab]
+    }.compact
   end
 
   def selected_room_type_id
