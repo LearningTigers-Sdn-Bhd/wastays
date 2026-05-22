@@ -10,7 +10,12 @@
       <!-- Hold Timer -->
       <div class="inline-flex items-center gap-x-2 bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-status-error">
         <svg class="w-4 h-4 animate-pulse" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span class="text-xs font-black uppercase tracking-widest">Hold expires in: <span id="countdown"><%= ((@quote.expires_at - Time.current) / 60).to_i %>m</span></span>
+        <span class="text-xs font-black uppercase tracking-widest">
+          Hold expires in: 
+          <span data-controller="countdown" data-countdown-expiry-value="<%= @quote.expires_at.iso8601 %>">
+            <%= quote_time_remaining(@quote.expires_at) %>
+          </span>
+        </span>
       </div>
     </div>
   </div>
@@ -36,12 +41,22 @@
       </div>
     </div>
 
-    <%= form_with url: verify_payment_path, method: :post, class: "max-w-[85rem] mx-auto", id: "payment-checkout-form", data: { checkout_session_url: checkout_payment_session_path, guest_lookup_url: guest_lookup_quote_path(@quote.token), payment_ready: @payment_ready } do |f| %>
+    <%= form_with url: verify_payment_path, method: :post, class: "max-w-[85rem] mx-auto", id: "payment-checkout-form",
+                  data: {
+                    controller: "checkout-details checkout-payment",
+                    checkout_details_lookup_url_value: guest_lookup_quote_path(@quote.token),
+                    checkout_details_countries_value: country_options.to_json,
+                    checkout_payment_session_url_value: checkout_payment_session_path,
+                    checkout_payment_hotel_name_value: @hotel.name,
+                    checkout_payment_quote_token_value: @quote.token,
+                    checkout_payment_ready_value: @payment_ready,
+                    action: "submit->checkout-payment#submit"
+                  } do |f| %>
       <%= f.hidden_field :quote_token, value: @quote.token %>
       <%= f.hidden_field :gateway, value: @payment_gateway %>
-      <%= f.hidden_field "payment_response[razorpay_payment_id]", value: "", data: { razorpay_payment_id: true } %>
-      <%= f.hidden_field "payment_response[razorpay_order_id]", value: "", data: { razorpay_order_id: true } %>
-      <%= f.hidden_field "payment_response[razorpay_signature]", value: "", data: { razorpay_signature: true } %>
+      <%= f.hidden_field "payment_response[razorpay_payment_id]", value: "", data: { checkout_payment_target: "paymentIdField" } %>
+      <%= f.hidden_field "payment_response[razorpay_order_id]", value: "", data: { checkout_payment_target: "orderIdField" } %>
+      <%= f.hidden_field "payment_response[razorpay_signature]", value: "", data: { checkout_payment_target: "signatureField" } %>
       
       <div class="grid lg:grid-cols-12 gap-8">
         <!-- Forms Area -->
@@ -62,19 +77,25 @@
                                   required: true,
                                   placeholder: "john@example.com",
                                   class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
-                                  data: { guest_email: true } %>
+                                  data: {
+                                    checkout_details_target: "emailInput",
+                                    checkout_payment_target: "emailField",
+                                    action: "input->checkout-details#handleEmailInput keydown->checkout-details#handleEmailKeydown"
+                                  } %>
               </div>
               <div class="sm:col-span-3">
-                <button type="button" class="btn btn-secondary w-full py-3 text-sm font-black" data-email-lookup-button>
+                <button type="button" class="btn btn-secondary w-full py-3 text-sm font-black"
+                        data-checkout-details-target="lookupButton"
+                        data-action="click->checkout-details#lookup">
                   Continue
                 </button>
               </div>
             </div>
-            <p class="text-xs text-neutral-text-secondary mt-2" data-email-lookup-feedback>
+            <p class="text-xs text-neutral-text-secondary mt-2" data-checkout-details-target="feedback">
               Enter your email first. We will auto-fill your details if we find a previous booking.
             </p>
 
-            <div data-guest-details-panel class="mt-6 opacity-60 pointer-events-none transition">
+            <div data-checkout-details-target="detailsPanel" class="mt-6 opacity-60 pointer-events-none transition">
               <div class="grid sm:grid-cols-3 gap-6">
                 <div class="sm:col-span-2">
                   <label for="name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Full Name (as per ID/Passport)</label>
@@ -84,7 +105,7 @@
                                    required: true,
                                    placeholder: "John Doe",
                                    class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
-                                   data: { guest_field: "name" },
+                                   data: { checkout_details_target: "field", checkout_payment_target: "nameField", guest_field: "name" },
                                    disabled: true %>
                 </div>
                 <div>
@@ -94,11 +115,11 @@
                                { prompt: "Select gender" },
                                { required: true,
                                  class: "form-select w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
-                                 data: { guest_field: "gender" },
+                                 data: { checkout_details_target: "field", guest_field: "gender" },
                                  disabled: true } %>
                 </div>
               </div>
-              <div class="grid sm:grid-cols-2 gap-6 mt-6" data-country-flow>
+              <div class="grid sm:grid-cols-2 gap-6 mt-6">
                 <div>
                   <label for="phone" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">WhatsApp Number</label>
                   <%= f.telephone_field "guest_details[phone]",
@@ -107,10 +128,10 @@
                                        required: true,
                                        placeholder: "+60 12-345 6789",
                                        class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
-                                       data: { guest_field: "phone" },
+                                       data: { checkout_details_target: "field", checkout_payment_target: "phoneField", guest_field: "phone" },
                                        disabled: true %>
                 </div>
-                <div class="relative" data-country-dropdown data-countries="<%= country_options.to_json %>">
+                <div class="relative">
                   <label for="country" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Country (passport)</label>
                   <%= f.text_field "guest_details[country]",
                                    id: "country",
@@ -119,10 +140,16 @@
                                    placeholder: "Start typing to search",
                                    autocomplete: "off",
                                    inputmode: "search",
-                                   data: { country_select: true, country_input: true, guest_field: "country" },
+                                   data: {
+                                     checkout_details_target: "countryInput field",
+                                     guest_field: "country",
+                                     action: "input->checkout-details#handleCountryInput focus->checkout-details#handleCountryFocus blur->checkout-details#handleCountryBlur"
+                                   },
                                    disabled: true %>
                   <p class="text-[10px] text-neutral-text-secondary mt-2">Start typing to select a country, then choose the document type.</p>
-                  <div class="absolute z-20 mt-2 w-full rounded-xl border border-neutral-200 bg-white shadow-lg max-h-56 overflow-auto hidden" data-country-menu></div>
+                  <div class="absolute z-20 mt-2 w-full rounded-xl border border-neutral-200 bg-white shadow-lg max-h-56 overflow-auto hidden"
+                       data-checkout-details-target="countryMenu"
+                       data-action="mousedown->checkout-details#selectCountry click->checkout-details#selectCountry"></div>
                 </div>
                 <div>
                   <label for="document_type" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Document Type</label>
@@ -130,17 +157,21 @@
                                options_for_select([["MyKad / IC", "ic"], ["Passport", "passport"]]),
                                { required: true, prompt: "Select document type" },
                                class: "form-select w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
-                               data: { document_select: true, guest_field: "document_type" },
+                               data: {
+                                 checkout_details_target: "documentSelect field",
+                                 guest_field: "document_type",
+                                 action: "change->checkout-details#handleDocumentChange"
+                               },
                                disabled: true %>
                 </div>
-                <div data-document-field class="hidden">
-                  <label for="government_id" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" data-document-label>IC / Passport Number</label>
+                <div data-checkout-details-target="documentField" class="hidden">
+                  <label for="government_id" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" data-checkout-details-target="documentLabel">IC / Passport Number</label>
                   <%= f.text_field "guest_details[government_id]",
                                    id: "government_id",
                                    required: true,
                                    class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
                                    placeholder: "Enter document number",
-                                   data: { document_input: true, guest_field: "government_id" },
+                                   data: { checkout_details_target: "documentInput field", guest_field: "government_id" },
                                    disabled: true %>
                 </div>
               </div>
@@ -151,258 +182,6 @@
               </p>
             <% end %>
           </div>
-          <script>
-            (function() {
-              const form = document.getElementById('payment-checkout-form');
-              const container = document.querySelector('[data-country-flow]');
-              if (!container || !form) return;
-
-              const countryInput = container.querySelector('[data-country-select]');
-              const documentSelect = container.querySelector('[data-document-select]');
-              const documentInput = container.querySelector('[data-document-input]');
-              const documentLabel = container.querySelector('[data-document-label]');
-              const documentField = container.querySelector('[data-document-field]');
-              const countryDropdown = container.querySelector('[data-country-dropdown]');
-              const countryMenu = container.querySelector('[data-country-menu]');
-              const countryInputField = container.querySelector('[data-country-input]');
-              const emailInput = form.querySelector('[data-guest-email]');
-              const lookupButton = form.querySelector('[data-email-lookup-button]');
-              const feedback = form.querySelector('[data-email-lookup-feedback]');
-              const guestDetailsPanel = form.querySelector('[data-guest-details-panel]');
-              const guestFields = form.querySelectorAll('[data-guest-field]');
-              const countryList = countryDropdown ? JSON.parse(countryDropdown.dataset.countries || '[]') : [];
-              let documentManuallySet = false;
-              let detailsUnlocked = false;
-              let lookupInProgress = false;
-              let lastLookupEmail = '';
-
-              const setFeedback = (message, tone = 'neutral') => {
-                if (!feedback) return;
-                feedback.textContent = message;
-                feedback.classList.remove('text-neutral-text-secondary', 'text-status-success', 'text-status-error');
-                if (tone === 'success') {
-                  feedback.classList.add('text-status-success');
-                } else if (tone === 'error') {
-                  feedback.classList.add('text-status-error');
-                } else {
-                  feedback.classList.add('text-neutral-text-secondary');
-                }
-              };
-
-              const setDetailsUnlocked = (unlocked) => {
-                detailsUnlocked = unlocked;
-                if (guestDetailsPanel) {
-                  guestDetailsPanel.classList.toggle('opacity-60', !unlocked);
-                  guestDetailsPanel.classList.toggle('pointer-events-none', !unlocked);
-                }
-                guestFields.forEach((field) => {
-                  field.disabled = !unlocked;
-                });
-                if (!unlocked) {
-                  if (countryMenu) countryMenu.classList.add('hidden');
-                  if (documentField) documentField.classList.add('hidden');
-                }
-                updateEnabled();
-              };
-
-              const clearGuestFields = () => {
-                guestFields.forEach((field) => {
-                  if (!field.dataset.guestField) return;
-                  field.value = '';
-                });
-                documentManuallySet = false;
-                updateLabel();
-              };
-
-              const applyGuestDetails = (guestDetails) => {
-                guestFields.forEach((field) => {
-                  const key = field.dataset.guestField;
-                  if (!key || !Object.prototype.hasOwnProperty.call(guestDetails, key)) return;
-                  const value = guestDetails[key];
-                  field.value = value || '';
-                });
-                documentManuallySet = !!documentSelect?.value;
-                updateLabel();
-              };
-
-              const normalizedEmail = () => emailInput?.value?.trim().toLowerCase() || '';
-
-              const lookupGuestByEmail = async () => {
-                const email = normalizedEmail();
-                if (!email || !form.dataset.guestLookupUrl || lookupInProgress) return;
-
-                lookupInProgress = true;
-                if (lookupButton) lookupButton.disabled = true;
-                setFeedback('Checking your email...');
-
-                try {
-                  const response = await fetch(`${form.dataset.guestLookupUrl}?email=${encodeURIComponent(email)}`, {
-                    headers: { Accept: 'application/json' }
-                  });
-
-                  const payload = await response.json();
-                  setDetailsUnlocked(true);
-                  lastLookupEmail = email;
-
-                  if (payload.found) {
-                    applyGuestDetails(payload.guest_details || {});
-                    setFeedback('Welcome back! We found your saved details.', 'success');
-                  } else {
-                    clearGuestFields();
-                    setFeedback('New email detected. Please fill in your details below.');
-                  }
-                } catch (error) {
-                  setDetailsUnlocked(true);
-                  clearGuestFields();
-                  setFeedback('Unable to check email right now. Please fill in your details manually.', 'error');
-                } finally {
-                  lookupInProgress = false;
-                  if (lookupButton) lookupButton.disabled = false;
-                  updateEnabled();
-                  autoSelectDocumentType();
-                }
-              };
-
-              const updateEnabled = () => {
-                if (!detailsUnlocked) {
-                  if (documentSelect) documentSelect.disabled = true;
-                  if (documentInput) documentInput.disabled = true;
-                  if (documentField) documentField.classList.add('hidden');
-                  return;
-                }
-                const hasCountry = countryInput && countryInput.value.trim().length > 0;
-                if (documentSelect) documentSelect.disabled = !hasCountry;
-                if (!hasCountry && documentSelect) {
-                  documentSelect.value = '';
-                  documentManuallySet = false;
-                }
-                const hasDocumentType = hasCountry && documentSelect && documentSelect.value;
-                if (documentInput) documentInput.disabled = !hasDocumentType;
-                if (documentField) {
-                  documentField.classList.toggle('hidden', !hasDocumentType);
-                }
-              };
-
-              const autoSelectDocumentType = () => {
-                if (!countryInput || !documentSelect) return;
-                const country = countryInput.value.trim().toLowerCase();
-                if (!country) return;
-                if (documentManuallySet && documentSelect.value) return;
-                const isMalaysia = ['malaysia', 'my', 'mys'].includes(country);
-                documentSelect.value = isMalaysia ? 'ic' : 'passport';
-                updateLabel();
-                updateEnabled();
-              };
-
-              const updateLabel = () => {
-                if (!documentLabel || !documentSelect) return;
-                if (!documentSelect.value) {
-                  documentLabel.textContent = 'IC / Passport Number';
-                  return;
-                }
-                const label = documentSelect.value === 'ic' ? 'IC Number' : 'Passport Number';
-                documentLabel.textContent = label;
-              };
-
-              const renderCountryOptions = (query) => {
-                if (!countryMenu || !countryInputField) return;
-                const normalized = query.trim().toLowerCase();
-                const matches = normalized
-                  ? countryList.filter((country) => country.toLowerCase().includes(normalized))
-                  : countryList;
-                const limited = matches.slice(0, 12);
-                countryMenu.innerHTML = limited
-                  .map((country) => `<button type="button" class="w-full px-3 py-2 text-left text-sm text-neutral-text-primary hover:bg-neutral-100" data-country-option="${country}">${country}</button>`)
-                  .join('');
-                countryMenu.classList.toggle('hidden', limited.length === 0);
-              };
-
-              const closeCountryMenu = () => {
-                if (countryMenu) countryMenu.classList.add('hidden');
-              };
-
-              const applyCountrySelection = (option) => {
-                if (!option || !countryInputField) return;
-                countryInputField.value = option.dataset.countryOption || '';
-                closeCountryMenu();
-                updateEnabled();
-                autoSelectDocumentType();
-              };
-
-              if (countryInputField) {
-                countryInputField.addEventListener('input', (event) => {
-                  renderCountryOptions(event.target.value);
-                  updateEnabled();
-                  autoSelectDocumentType();
-                });
-                countryInputField.addEventListener('focus', (event) => {
-                  renderCountryOptions(event.target.value);
-                });
-                countryInputField.addEventListener('blur', () => {
-                  setTimeout(closeCountryMenu, 120);
-                });
-              }
-
-              if (countryMenu) {
-                countryMenu.addEventListener('mousedown', (event) => {
-                  const option = event.target.closest('[data-country-option]');
-                  if (!option) return;
-                  // Select before input blur hides the dropdown.
-                  event.preventDefault();
-                  applyCountrySelection(option);
-                });
-
-                countryMenu.addEventListener('click', (event) => {
-                  const option = event.target.closest('[data-country-option]');
-                  if (!option) return;
-                  applyCountrySelection(option);
-                });
-              }
-
-              if (countryInput) {
-                countryInput.addEventListener('input', updateEnabled);
-              }
-              if (documentSelect) {
-                documentSelect.addEventListener('change', () => {
-                  documentManuallySet = true;
-                  updateEnabled();
-                  updateLabel();
-                });
-              }
-
-              if (emailInput) {
-                emailInput.addEventListener('input', () => {
-                  const email = normalizedEmail();
-                  if (email !== lastLookupEmail) {
-                    setDetailsUnlocked(false);
-                    setFeedback('Enter your email first. We will auto-fill your details if we find a previous booking.');
-                  }
-                });
-              }
-
-              if (lookupButton) {
-                lookupButton.addEventListener('click', () => {
-                  lookupGuestByEmail();
-                });
-              }
-
-              if (emailInput) {
-                emailInput.addEventListener('keydown', (event) => {
-                  if (event.key !== 'Enter') return;
-                  event.preventDefault();
-                  lookupGuestByEmail();
-                });
-              }
-
-              updateEnabled();
-              updateLabel();
-              setDetailsUnlocked(false);
-
-              if (normalizedEmail()) {
-                lookupGuestByEmail();
-              }
-            })();
-          </script>
 
           <!-- Payment Selection -->
           <div class="card p-6 md:p-8">
@@ -468,7 +247,7 @@
                         class: "btn btn-secondary min-w-[220px] px-12 py-4 text-base font-black text-center" %>
             <%= f.submit "Confirm & Pay Now",
                          class: "btn btn-gradient min-w-[220px] px-12 py-4 text-base font-black disabled:cursor-not-allowed disabled:opacity-60",
-                         data: { checkout_submit: true },
+                         data: { checkout_payment_target: "submitButton" },
                          disabled: !@payment_ready %>
           </div>
         </div>
@@ -558,126 +337,3 @@
 </div>
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script>
-  (function() {
-    const form = document.getElementById("payment-checkout-form");
-    if (!form) return;
-
-    const submitButton = form.querySelector("[data-checkout-submit]");
-    const checkoutSessionUrl = form.dataset.checkoutSessionUrl;
-    const paymentReady = form.dataset.paymentReady === "true";
-    const paymentIdField = form.querySelector("[data-razorpay-payment-id]");
-    const orderIdField = form.querySelector("[data-razorpay-order-id]");
-    const signatureField = form.querySelector("[data-razorpay-signature]");
-
-    if (!submitButton || !checkoutSessionUrl) return;
-
-    let submittingToServer = false;
-
-    form.addEventListener("submit", async function(event) {
-      if (submittingToServer) return;
-      if (!paymentReady) return;
-
-      event.preventDefault();
-      submitButton.disabled = true;
-      const originalLabel = submitButton.value;
-      submitButton.value = "Opening secure checkout...";
-
-      const formData = new FormData(form);
-
-      try {
-        const response = await fetch(checkoutSessionUrl, {
-          method: "POST",
-          headers: {
-            "X-CSRF-Token": document.querySelector("meta[name='csrf-token']").content
-          },
-          body: formData
-        });
-
-        let session = {};
-        try {
-          session = await response.json();
-        } catch (_jsonError) {
-          throw new Error("Unable to initialize payment right now. Please try again.");
-        }
-        if (!response.ok) throw new Error(session.error || "Unable to initialize checkout.");
-
-        if (session.checkout_url) {
-          window.location.href = session.checkout_url;
-          return;
-        }
-
-        if (!session.key_id || !session.order_id) {
-          throw new Error("Unsupported checkout session payload.");
-        }
-        if (!window.Razorpay) {
-          throw new Error("Payment service is temporarily unavailable. Please refresh and try again.");
-        }
-
-        const options = {
-          key: session.key_id,
-          amount: session.amount,
-          currency: session.currency,
-          name: "<%= j @hotel.name %>",
-          description: session.description,
-          order_id: session.order_id,
-          callback_url: session.callback_url,
-          redirect: true,
-          handler: function(paymentResponse) {
-            paymentIdField.value = paymentResponse.razorpay_payment_id || "";
-            orderIdField.value = paymentResponse.razorpay_order_id || "";
-            signatureField.value = paymentResponse.razorpay_signature || "";
-            submittingToServer = true;
-            form.requestSubmit();
-          },
-          prefill: {
-            name: form.querySelector("#name")?.value || "",
-            email: form.querySelector("#email")?.value || "",
-            contact: form.querySelector("#phone")?.value || ""
-          },
-          notes: {
-            quote_token: formData.get("quote_token")
-          },
-          theme: {
-            color: "#d32f2f"
-          }
-        };
-
-        const razorpay = new window.Razorpay(options);
-        razorpay.on("payment.failed", function() {
-          submitButton.disabled = false;
-          submitButton.value = originalLabel;
-        });
-        razorpay.open();
-      } catch (error) {
-        alert(error.message || "Unable to start payment. Please try again.");
-        submitButton.disabled = false;
-        submitButton.value = originalLabel;
-      }
-    });
-  })();
-</script>
-
-<script>
-  (function() {
-    const expiryTime = new Date("<%= @quote.expires_at.iso8601 %>").getTime();
-    const countdownElement = document.getElementById('countdown');
-
-    const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = expiryTime - now;
-
-      if (distance < 0) {
-        clearInterval(timer);
-        countdownElement.innerHTML = "Expired";
-        window.location.reload();
-        return;
-      }
-
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-      countdownElement.innerHTML = minutes + "m " + seconds + "s";
-    }, 1000);
-  })();
-</script>

@@ -32,6 +32,19 @@ export default class extends Controller {
     this._syncDisplay()
   }
 
+  submit(event) {
+    event.preventDefault()
+    const form = event.currentTarget
+    const params = new URLSearchParams(new FormData(form))
+    window.location.replace(`${form.action}?${params.toString()}`)
+  }
+
+  close(event) {
+    if (event.target === this.element) {
+      this.element.classList.add("hidden")
+    }
+  }
+
   _syncDisplay() {
     const adults = Number(this.adultsCountTarget.textContent.trim())
     const children = Number(this.childrenCountTarget.textContent.trim())

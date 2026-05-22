@@ -25,7 +25,8 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(page).to have_content("Rates & Availability")
       expect(page).to have_css("[data-testid='inventory-calendar-grid']")
       expect(page).to have_button("Bulk Edit")
-      expect(page).to have_content("Advanced Pricing & Overrides")
+      expect(page).to have_content("Pricing Rules")
+      expect(page).to have_content("Availability Overrides")
     end
 
     it "renders rate rows with room-type filtering in toolbar" do
@@ -45,7 +46,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(response).to have_http_status(:success)
 
       page = Capybara.string(response.body)
-      expect(page).to have_css("[data-testid='rate-cell-#{deluxe.id}-#{deluxe_plan.id}-#{Date.current}']", text: "RM 320")
+      expect(page).to have_css("[data-testid='rate-cell-#{deluxe.id}-#{deluxe_plan.id}-#{Date.current}']", text: "320")
       expect(page).not_to have_css("[data-testid^='rate-cell-#{twin.id}-']")
       expect(page).to have_select("room_type_id", selected: "Deluxe Room")
       expect(page).not_to have_select("rate_plan_id")
@@ -118,7 +119,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
         delete destroy_public_holiday_rule_hotel_inventory_dashboards_path(hotel, id: holiday_rule.id)
       }.to change(HotelPricingRule, :count).by(-1)
 
-      expect(response).to redirect_to(hotel_inventory_index_path(hotel))
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, tab: "advanced", subtab: "pricing", anchor: "top"))
     end
   end
 
@@ -137,7 +138,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
         delete destroy_pricing_tier_rule_hotel_inventory_dashboards_path(hotel, rule_type: "general")
       }.to change(HotelPricingRule, :count).by(-1)
 
-      expect(response).to redirect_to(hotel_inventory_index_path(hotel))
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, tab: "advanced", subtab: "pricing", anchor: "top"))
       expect { tier_rule.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
   end
@@ -159,6 +160,25 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Public holiday entries must include name, date, and price.")
     end
+
+    it "saves walk-in pricing rules successfully" do
+      room_type = create(:room_type, hotel: hotel)
+
+      post apply_pricing_rules_hotel_inventory_dashboards_path(hotel), params: {
+        pricing_rule: {
+          room_type_ids: [ room_type.id ],
+          gp_price: "150",
+          gp_start_date: "2026-05-20",
+          gp_end_date: "2026-06-02",
+          wi_price: "200",
+          wi_start_date: "2026-05-20",
+          wi_end_date: "2026-06-02"
+        }
+      }
+
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: "2026-05-20", tab: "advanced", subtab: "pricing", anchor: "top"))
+      expect(hotel.pricing_rules.find_by(rule_type: "walk_in").price.to_f).to eq(200.0)
+    end
   end
 
   describe "POST /apply_availability_override" do
@@ -175,7 +195,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: Date.current.to_s))
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, start_date: Date.current.to_s, tab: "advanced", subtab: "overrides", anchor: "top"))
 
       inventory = room_type.room_inventories.find_by(date: Date.current)
       expect(inventory.quantity).to eq(8)

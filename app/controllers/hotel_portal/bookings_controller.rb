@@ -71,7 +71,8 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     total = Bookings::CalculateStayPrice.new(
       room_type: room_type,
       check_in: Date.parse(params[:check_in]),
-      check_out: Date.parse(params[:check_out])
+      check_out: Date.parse(params[:check_out]),
+      corporate_rate: params[:corporate_rate] == "true"
     ).call
 
     render json: { total_amount: total }

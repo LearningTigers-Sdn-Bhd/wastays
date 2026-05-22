@@ -322,7 +322,11 @@ export default class extends Controller {
     if (this.loadedRanges.some(r => r.from <= startISO && r.to >= endISO)) return
 
     try {
-      const params = new URLSearchParams({ start_date: startISO, end_date: endISO, room_count: this.roomCountValue })
+      const params = new URLSearchParams({
+        start_date: startISO,
+        end_date: endISO,
+        room_count: this.roomCountValue
+      })
       const res    = await fetch(`${this.urlValue}?${params}`, { headers: { Accept: "application/json" } })
       if (!res.ok) throw new Error("rate_calendar fetch failed")
       const data = await res.json()

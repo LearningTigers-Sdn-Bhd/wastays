@@ -51,7 +51,7 @@ module HotelOps
     end
 
     def rate_plan_ids
-      @rate_plan_ids ||= Array(selection[:rate_plan_ids]).reject(&:blank?).map(&:to_i)
+      @rate_plan_ids ||= Array(selection[:rate_plan_ids]).reject(&:blank?).map { |id| id.to_s.match?(/^\d+$/) ? id.to_i : id.to_s }
     end
 
     def room_types
@@ -150,61 +150,110 @@ module HotelOps
     end
 
     def apply_rates_to(room_type)
-      rate_plans_for(room_type).find_each do |rate_plan|
-        # Ensure rate plan currency follows the requested currency when applying rates
-        if apply_rates? && rate_plan.currency != currency
-          rate_plan.update!(currency: currency)
+      # 1. Handle Standard Rate Plans
+      real_rate_plan_ids = rate_plan_ids.select { |id| id.is_a?(Integer) }
+
+      # If the user specifically selected rate plans (could be virtual tiers or standard ones),
+      # we should only update standard plans if they are explicitly in the selection.
+      # If NOTHING was selected (rate_plan_ids.empty?), then we default to updating all standard plans.
+      if rate_plan_ids.empty? || real_rate_plan_ids.any?
+        rate_plans_to_update = room_type.rate_plans
+        rate_plans_to_update = rate_plans_to_update.where(id: real_rate_plan_ids) if real_rate_plan_ids.any?
+
+        rate_plans_to_update.find_each do |rate_plan|
+          update_rates_for_plan(room_type, rate_plan, tier: nil)
+        end
+      end
+
+      # 2. Handle Virtual Pricing Tiers (Walk-in, Corporate, OTA)
+      # These are stored on the room's master (first) rate plan
+      master_plan = room_type.rate_plans.sort_by(&:id).first
+      return if master_plan.blank?
+
+      virtual_tier_keys = rate_plan_ids.select { |id| id.is_a?(String) && id.start_with?("tier_") }
+      virtual_tier_keys.each do |key|
+        # Virtual ID format: tier_[tier_type]_[room_type_id]
+        parts = key.split("_")
+
+        # Ensure we only process tiers for the current room_type
+        next unless parts.last.to_i == room_type.id
+
+        tier_type = if parts[1] == "walk" then :walk_in
+        elsif parts[1] == "corporate" then :corporate
+        elsif parts[1] == "ota" then :ota
         end
 
-        (start_date..end_date).each do |date|
-          target_currencies_for(rate_plan, date).each do |target_currency|
-            rate = rate_plan.room_rates.find_or_initialize_by(date: date, currency: target_currency)
-            rate.room_type = room_type
-            old_values = {
-              price: rate.price&.to_f,
+        update_rates_for_plan(room_type, master_plan, tier: tier_type) if tier_type
+      end
+    end
+
+    def update_rates_for_plan(room_type, rate_plan, tier: nil)
+      # Ensure rate plan currency follows the requested currency when applying rates
+      if apply_rates? && rate_plan.currency != currency
+        rate_plan.update!(currency: currency)
+      end
+
+      (start_date..end_date).each do |date|
+        target_currencies_for(rate_plan, date).each do |target_currency|
+          rate = rate_plan.room_rates.find_or_initialize_by(date: date, currency: target_currency)
+          rate.room_type = room_type
+          old_values = {
+            price: rate.price&.to_f,
+            walk_in_price: rate.walk_in_price&.to_f,
+            corporate_price: rate.corporate_price&.to_f,
+            ota_price: rate.ota_price&.to_f,
+            min_stay: rate.min_stay,
+            max_stay: rate.max_stay,
+            closed_to_arrival: rate.closed_to_arrival,
+            closed_to_departure: rate.closed_to_departure,
+            stop_sell: rate.stop_sell
+          }
+
+          # Apply price update.
+          should_apply_price = apply_rates? && target_currency == currency
+          if should_apply_price
+            case tier
+            when :walk_in then rate.walk_in_price = price
+            when :corporate then rate.corporate_price = price
+            when :ota then rate.ota_price = price
+            else rate.price = price
+            end
+          end
+
+          if apply_restrictions?
+            rate.min_stay = restriction_values[:min_stay]
+            rate.max_stay = restriction_values[:max_stay]
+            rate.closed_to_arrival = restriction_values[:closed_to_arrival]
+            rate.closed_to_departure = restriction_values[:closed_to_departure]
+            rate.stop_sell = restriction_values[:stop_sell]
+          end
+          rate.price ||= room_type.base_price if target_currency == hotel.default_currency
+          next if rate.price.blank?
+          rate.save!
+
+          next unless changed_rate?(old_values, rate)
+
+          hotel.inventory_audit_logs.create!(
+            room_type: room_type,
+            user: user,
+            action_type: "rate_update",
+            old_value: old_values.merge(date: date, rate_plan_id: rate_plan.id, currency: target_currency),
+            new_value: {
+              date: date,
+              rate_plan_id: rate_plan.id,
+              currency: target_currency,
+              price: rate.price.to_f,
+              walk_in_price: rate.walk_in_price&.to_f,
+              corporate_price: rate.corporate_price&.to_f,
+              ota_price: rate.ota_price&.to_f,
               min_stay: rate.min_stay,
               max_stay: rate.max_stay,
               closed_to_arrival: rate.closed_to_arrival,
               closed_to_departure: rate.closed_to_departure,
               stop_sell: rate.stop_sell
-            }
-
-            # Apply price update.
-            should_apply_price = apply_rates? && target_currency == currency
-            rate.price = price if should_apply_price
-
-            if apply_restrictions?
-              rate.min_stay = restriction_values[:min_stay]
-              rate.max_stay = restriction_values[:max_stay]
-              rate.closed_to_arrival = restriction_values[:closed_to_arrival]
-              rate.closed_to_departure = restriction_values[:closed_to_departure]
-              rate.stop_sell = restriction_values[:stop_sell]
-            end
-            rate.price ||= room_type.base_price if target_currency == hotel.default_currency
-            next if rate.price.blank?
-            rate.save!
-
-            next unless changed_rate?(old_values, rate)
-
-            hotel.inventory_audit_logs.create!(
-              room_type: room_type,
-              user: user,
-              action_type: "rate_update",
-              old_value: old_values.merge(date: date, rate_plan_id: rate_plan.id, currency: target_currency),
-              new_value: {
-                date: date,
-                rate_plan_id: rate_plan.id,
-                currency: target_currency,
-                price: rate.price.to_f,
-                min_stay: rate.min_stay,
-                max_stay: rate.max_stay,
-                closed_to_arrival: rate.closed_to_arrival,
-                closed_to_departure: rate.closed_to_departure,
-                stop_sell: rate.stop_sell
-              },
-              metadata: { source: "inventory_dashboard_selection" }
-            )
-          end
+            },
+            metadata: { source: "inventory_dashboard_selection", rate_tier: tier || "online" }
+          )
         end
       end
     end
@@ -250,6 +299,9 @@ module HotelOps
 
     def changed_rate?(old_values, rate)
       old_values[:price] != rate.price.to_f ||
+        old_values[:walk_in_price] != rate.walk_in_price&.to_f ||
+        old_values[:corporate_price] != rate.corporate_price&.to_f ||
+        old_values[:ota_price] != rate.ota_price&.to_f ||
         old_values[:min_stay] != rate.min_stay ||
         old_values[:max_stay] != rate.max_stay ||
         old_values[:closed_to_arrival] != rate.closed_to_arrival ||

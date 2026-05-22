@@ -58,5 +58,30 @@ RSpec.describe BookingEngine::AvailabilityService do
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
       expect(service.calculate_total_price(room_type)).to eq(200.0) # 100 * 2 nights
     end
+
+    it "falls back to room_type.base_price if RoomRate is missing" do
+      RoomRate.delete_all
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
+      expect(service.calculate_total_price(room_type)).to eq(200.0) # 100 (base) * 2 nights
+    end
+
+    it "fails if both RoomRate and base_price are missing" do
+      RoomRate.delete_all
+      room_type.update_columns(base_price: nil)
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
+      expect(service.calculate_total_price(room_type)).to eq(0)
+    end
+
+    it "respects stop_sell even if base_price exists" do
+      RoomRate.first.update!(stop_sell: true)
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
+      expect(service.calculate_total_price(room_type)).to eq(0)
+    end
+
+    it "ignores corporate_price even if available" do
+      RoomRate.update_all(corporate_price: 80)
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
+      expect(service.calculate_total_price(room_type)).to eq(200.0) # 100 * 2 nights
+    end
   end
 end

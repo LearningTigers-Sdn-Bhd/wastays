@@ -8,14 +8,25 @@ module HotelPortal
       def room_type_id = room_type.id
       def rate_plan_id = rate_plan&.id
       def label = room_type.name
-      def sublabel = rate_plan&.name
+      def sublabel
+        case kind
+        when :walk_in then "Walk-in Rate"
+        when :corporate then "Corporate Rate"
+        when :ota then "OTA Rate"
+        else rate_plan&.name
+        end
+      end
       def inventory_row? = kind == :availability
       def rate_row? = kind == :rate
+      def walk_in_row? = kind == :walk_in
+      def corporate_row? = kind == :corporate
+      def ota_row? = kind == :ota
     end
 
     attr_reader :hotel, :start_date, :end_date, :display_currency
 
     def initialize(hotel:, start_date:, end_date:, display_currency:, room_type_id: nil, rate_plan_id: nil)
+      RoomRate.reset_column_information
       @hotel = hotel
       @start_date = start_date.to_date
       @end_date = end_date.to_date
@@ -31,11 +42,16 @@ module HotelPortal
     def rows
       @rows ||= visible_room_types.flat_map do |room_type|
         inventory_row = Row.new(key: "room-#{room_type.id}-inventory", kind: :availability, room_type: room_type)
+
+        walk_in_row = Row.new(key: "room-#{room_type.id}-walk-in", kind: :walk_in, room_type: room_type)
+        corporate_row = Row.new(key: "room-#{room_type.id}-corporate", kind: :corporate, room_type: room_type)
+        ota_row = Row.new(key: "room-#{room_type.id}-ota", kind: :ota, room_type: room_type)
+
         rate_rows = rate_plans_for(room_type).map do |rate_plan|
           Row.new(key: "room-#{room_type.id}-rate-#{rate_plan.id}", kind: :rate, room_type: room_type, rate_plan: rate_plan)
         end
 
-        [ inventory_row ] + rate_rows
+        [ inventory_row ] + rate_rows + [ walk_in_row, corporate_row, ota_row ]
       end
     end
 
@@ -45,17 +61,27 @@ module HotelPortal
 
     def rate_plan_options
       @rate_plan_options ||= hotel.room_types.includes(:rate_plans).order(:id).flat_map do |room_type|
-        room_type.rate_plans.order(:id).map do |rate_plan|
+        room_type.rate_plans.order(:id).reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }.map do |rate_plan|
           [ "#{room_type.name} - #{rate_plan.name}", rate_plan.id ]
         end
       end
     end
 
     def rate_plan_options_struct
-      @rate_plan_options_struct ||= hotel.room_types.includes(:rate_plans).order(:id).flat_map do |room_type|
-        room_type.rate_plans.order(:id).map do |rate_plan|
-          OpenStruct.new(label: "#{room_type.name} - #{rate_plan.name}", id: rate_plan.id, room_type_id: room_type.id)
+      @rate_plan_options_struct ||= visible_room_types.flat_map do |room_type|
+        # Standard Rate Plans
+        plans = room_type.rate_plans.order(:id).reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }.map do |rate_plan|
+          OpenStruct.new(label: "#{room_type.name} - #{rate_plan.name}", id: rate_plan.id, room_type_id: room_type.id, kind: :standard)
         end
+
+        # Virtual Pricing Tiers (locked to master plan logic)
+        tiers = [
+          OpenStruct.new(label: "#{room_type.name} - Walk-in Rate", id: "tier_walk_in_#{room_type.id}", room_type_id: room_type.id, kind: :tier),
+          OpenStruct.new(label: "#{room_type.name} - Corporate Rate", id: "tier_corporate_#{room_type.id}", room_type_id: room_type.id, kind: :tier),
+          OpenStruct.new(label: "#{room_type.name} - OTA Rate", id: "tier_ota_#{room_type.id}", room_type_id: room_type.id, kind: :tier)
+        ]
+
+        plans + tiers
       end
     end
 
@@ -78,6 +104,12 @@ module HotelPortal
     def cell_for(row, date)
       if row.inventory_row?
         inventory_cell(row.room_type, date)
+      elsif row.walk_in_row?
+        tier_cell(row.room_type, date, :walk_in)
+      elsif row.corporate_row?
+        tier_cell(row.room_type, date, :corporate)
+      elsif row.ota_row?
+        tier_cell(row.room_type, date, :ota)
       else
         rate_cell(row.room_type, row.rate_plan, date)
       end
@@ -90,6 +122,62 @@ module HotelPortal
     end
 
     private
+
+    def has_walk_in_rates?(room_type)
+      rate_plans_for(room_type).any? do |rp|
+        rates_by_rate_plan[rp.id]&.values&.any? { |r| r.walk_in_price.present? }
+      end
+    end
+
+    def has_corporate_rates?(room_type)
+      rate_plans_for(room_type).any? do |rp|
+        rates_by_rate_plan[rp.id]&.values&.any? { |r| r.corporate_price.present? }
+      end
+    end
+
+    def has_ota_rates?(room_type)
+      rate_plans_for(room_type).any? do |rp|
+        rates_by_rate_plan[rp.id]&.values&.any? { |r| r.ota_price.present? }
+      end
+    end
+
+    def tier_cell(room_type, date, tier_type)
+      # Tiers are tied to the first rate plan in our current implementation
+      rate_plan = room_type.rate_plans.sort_by(&:id).first
+      return { date: date } if rate_plan.blank?
+
+      rate = rates_by_rate_plan.dig(rate_plan.id, date)
+
+      actual_price = case tier_type
+      when :walk_in then rate&.walk_in_price
+      when :corporate then rate&.corporate_price
+      when :ota then rate&.ota_price
+      end
+
+      price = actual_price.presence || rate&.price || room_type.base_price
+      native_currency = default_currency
+
+      display_conversion = display_conversion_for(price, from: native_currency)
+      conversion_missing = price.present? && display_currency != native_currency && display_conversion.nil?
+
+      display_price = display_conversion&.amount || price
+      formatted_currency = (display_conversion.present? || conversion_missing) ? display_currency : native_currency
+
+      {
+        date: date,
+        price: actual_price, # Original set price
+        rate_plan_id: rate_plan.id,
+        rate_tier: tier_type,
+        formatted_price: format_price(display_price, formatted_currency),
+        currency: native_currency,
+        display_currency: formatted_currency,
+        estimated: display_conversion.present? && native_currency != formatted_currency,
+        conversion_missing: conversion_missing,
+        is_modified: actual_price.present?,
+        restriction_badges: [],
+        restriction_compact: nil
+      }
+    end
 
     def sold_counts_by_room_type
       @sold_counts_by_room_type ||= begin
@@ -126,6 +214,7 @@ module HotelPortal
 
     def rate_plans_for(room_type)
       plans = room_type.rate_plans.sort_by(&:id)
+      plans = plans.reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }
       plans = plans.select { |rate_plan| rate_plan.id == selected_rate_plan_id } if selected_rate_plan_id.present?
       plans
     end
@@ -138,7 +227,9 @@ module HotelPortal
 
     def rates_by_rate_plan
       @rates_by_rate_plan ||= visible_room_types.each_with_object({}) do |room_type, memo|
-        rate_plans_for(room_type).each do |rate_plan|
+        # We load ALL rate plans for visible room types to ensure master data (OTA/Corporate/Walk-in)
+        # is always available even if the UI is currently filtered to a specific plan.
+        room_type.rate_plans.each do |rate_plan|
           memo[rate_plan.id] = rate_plan.room_rates.where(date: start_date..end_date, currency: default_currency).index_by(&:date)
         end
       end
@@ -203,6 +294,7 @@ module HotelPortal
         closed_to_arrival: rate&.closed_to_arrival? || false,
         closed_to_departure: rate&.closed_to_departure? || false,
         stop_sell: rate&.stop_sell? || false,
+        applied_rule_type: rate&.applied_rule_type,
         restriction_badges: restriction_badges(rate),
         restriction_compact: restriction_compact(rate)
       }
@@ -245,7 +337,12 @@ module HotelPortal
       return "-" if price.blank?
       currency ||= display_currency
 
-      CurrencyFormatter.format(price, currency: currency)
+      CurrencyFormatter.format(price, currency: currency, symbol: false)
+    end
+
+    def special_tier_rate_plan_name?(name)
+      normalized = name.to_s.strip.downcase
+      normalized.in?([ "walk-in rate", "walk in rate", "walk-in", "walk in", "corporate rate", "corporate", "ota rate", "ota" ])
     end
   end
 end
