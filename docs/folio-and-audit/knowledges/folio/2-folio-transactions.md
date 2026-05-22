@@ -31,7 +31,7 @@ Stores immutable folio ledger entries for guest charges, credits, payments, refu
   - `post_folio_corrections` for correction postings and reversals.
   - `post_folio_write_offs` for write-off postings.
 - The legacy `post_folio_transactions` permission is no longer used for authorization.
-- Valid folio categories are covered by default GL mappings, including `no_show_penalty`, `late_checkout_penalty`, and `early_departure_penalty`.
+- Valid folio categories are covered by default GL mappings, including `no_show_charge`, `late_checkout_charge`, and `early_departure_charge`.
 
 ## Known Follow-Ups
 

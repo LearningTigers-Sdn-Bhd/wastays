@@ -99,7 +99,7 @@ module Folios
       charges = FolioTransaction.charge.where(booking_folio_id: folio.id).sum(:amount)
       payments = FolioTransaction.payment.where(booking_folio_id: folio.id).sum(:amount)
       adjustments = FolioTransaction.adjustment.where(booking_folio_id: folio.id).sum(:amount)
-      
+
       charges.to_d - payments.to_d + adjustments.to_d
     end
 

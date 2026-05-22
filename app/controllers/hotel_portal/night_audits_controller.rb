@@ -22,7 +22,7 @@ module HotelPortal
         format.html
         format.pdf do
           pdf_content = HotelOps::AuditPacketPdfExportService.new(night_audit: @night_audit).generate
-          filename = "Audit_Packet_#{current_hotel.name.gsub(/\s+/, "_")}_#{@night_audit.business_date.to_s}.pdf"
+          filename = "Audit_Packet_#{current_hotel.name.gsub(/\s+/, "_")}_#{@night_audit.business_date}.pdf"
           send_data pdf_content, filename: filename, type: "application/pdf", disposition: "inline"
         end
       end

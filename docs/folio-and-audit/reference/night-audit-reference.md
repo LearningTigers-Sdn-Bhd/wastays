@@ -40,7 +40,7 @@ For every occupied room:
 
 ### Step 4: No-Show Processing
 - Identify reservations that didn't arrive
-- Apply no-show penalty charge
+- Apply no-show charge
 - Release room back to inventory
 
 ### Step 5: Day Roll (Business Date Change)
@@ -174,9 +174,9 @@ Guest checks out at 3pm (cutoff was 11am)
 ```
 Guest never arrives
 ├── Night audit flags reservation at end of day
-├── No-show penalty posted (usually 1 night + tax)
+├── No-show charge posted (usually 1 night + tax)
 ├── Room released back to inventory
-└── A folio may still be created to hold the penalty charge
+└── A folio may still be created to hold the charge
 ```
 
 ### Rate Correction After Audit

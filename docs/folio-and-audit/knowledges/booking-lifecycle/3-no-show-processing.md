@@ -6,7 +6,7 @@ Completed for core folio/accounting classification.
 
 ## Purpose
 
-Processes reservations that did not arrive by night audit, applies penalties, and releases operational availability.
+Processes reservations that did not arrive by night audit, applies charges, and releases operational availability.
 
 ## Key Files
 
@@ -19,11 +19,11 @@ Processes reservations that did not arrive by night audit, applies penalties, an
 ## Rules Made So Far
 
 - Night audit can identify and process no-show bookings.
-- No-show processing creates folio postings for penalty-related room and tax amounts.
-- No-show room penalties post as `no_show_penalty`; no-show tax posts as `tax`.
+- No-show processing creates folio postings for charge-related room and tax amounts.
+- No-show room charges post as `no_show_charge`; no-show tax posts as `tax`.
 - `posting_source: no_show` is operational metadata and not the accounting classifier.
 - No-show postings are protected by the same folio insertion and audit controls as other money-impacting activity.
-- GL mapping and reports use the folio transaction category as the source of truth for no-show penalties.
+- GL mapping and reports use the folio transaction category as the source of truth for no-show charges.
 
 ## Known Follow-Ups
 

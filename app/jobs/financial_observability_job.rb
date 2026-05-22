@@ -8,7 +8,7 @@ class FinancialObservabilityJob < ApplicationJob
       next unless alert_due?(config)
 
       anomalies = FinancialControls::EvaluateAnomalies.call(config.hotel)
-      
+
       # Only send if there are actual anomalies to report
       if report_worthy?(anomalies)
         FinanceAlertMailer.daily_digest(config, anomalies).deliver_now
@@ -21,13 +21,13 @@ class FinancialObservabilityJob < ApplicationJob
 
   def alert_due?(config)
     return true if config.last_alert_sent_at.nil?
-    
+
     Time.current >= config.last_alert_sent_at + config.frequency.seconds
   end
 
   def report_worthy?(anomalies)
-    anomalies[:unbalanced_folios].any? || 
-      anomalies[:audit_sync_lags].any? || 
+    anomalies[:unbalanced_folios].any? ||
+      anomalies[:audit_sync_lags].any? ||
       anomalies[:override_abuse].present?
   end
 end

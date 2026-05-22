@@ -26,8 +26,8 @@ This roadmap outlines the remaining priorities required to transition from a fun
 **Objective**: Handle complex operational edge cases with accuracy and ease.
 
 - **Operational Exceptions**:
-  - Completed May 21, 2026: Late Checkout "Alert Only" workflow. Triggered by housekeeping status, transitions booking to `review_due_out`. Front desk can then manually apply a penalty (calculated from current room rates + taxes) or waive it.
-  - Completed May 22, 2026: "Early Departure" penalty processing and rate correction workflows via `Bookings::ProcessEarlyDeparture`.
+  - Completed May 21, 2026: Late Checkout "Alert Only" workflow. Triggered by housekeeping status, transitions booking to `review_due_out`. Front desk can then manually apply a charge (calculated from current room rates + taxes) or waive it.
+  - Completed May 22, 2026: "Early Departure" charge processing and rate correction workflows via `Bookings::ProcessEarlyDeparture`.
 
 **Success Indicator**: Zero manual adjustments required for common guest exceptions (late checkouts, stay extensions).
 

@@ -26,7 +26,7 @@ Maps folio transaction categories to accounting GL codes and supports hotel-spec
 - Journal batches can be created from business-day financial activity.
 - Journal batch creation fails fast if any business-day folio transaction is missing a GL code.
 - Journal batch CSV export supports accounting reconciliation.
-- `no_show_penalty` maps separately from accommodation revenue for deterministic no-show accounting.
+- `no_show_charge` maps separately from accommodation revenue for deterministic no-show accounting.
 
 ## Known Follow-Ups
 
@@ -39,7 +39,7 @@ Maps folio transaction categories to accounting GL codes and supports hotel-spec
 | `accommodation` | `4010` | Room Revenue | Nightly room rates, room upgrades, and standard stay charges applied to guest folios. |
 | `tax` | `2010` | Tax Liabilities | State, local, and occupancy taxes collected from guests that the hotel owes to the government. |
 | `fb` | `4020` | Food & Beverage Revenue | Charges from hotel restaurants, bars, room service, or minibar consumption. |
-| `no_show_penalty` | `4030` | No-Show Penalty Revenue | Fees captured when a guest fails to arrive for a guaranteed reservation. Kept separate from `accommodation` to avoid skewing average daily rate (ADR) and occupancy metrics. |
+| `no_show_charge` | `4030` | No-Show Charge Revenue | Fees captured when a guest fails to arrive for a guaranteed reservation. Kept separate from `accommodation` to avoid skewing average daily rate (ADR) and occupancy metrics. |
 | `other` | `4090` | Other Revenue | Miscellaneous ancillary services like parking, spa, laundry, or pet fees. |
 | `gateway_payment` | `1010` | Bank - Gateway | Electronic payments (credit/debit cards) processed automatically through external payment gateways like Stripe. |
 | `cash` | `1020` | Bank - Cash | Physical currency (bills and coins) collected in person at the front desk. |

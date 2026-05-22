@@ -24,8 +24,8 @@ The foundation is substantially implemented. Full operational readiness still de
 
 Recent financial hardening completed on May 20, 2026: `daily_revenue` report access is covered by `view_reports`, and journal batch creation now fails fast when business-day folio transactions are missing GL codes instead of silently omitting them.
 
-Recent no-show accounting hardening completed on May 21, 2026: no-show room penalties now post as `no_show_penalty`, no-show tax remains `tax`, and GL/report classification uses folio transaction category rather than metadata as the accounting source of truth.
+Recent no-show accounting hardening completed on May 21, 2026: no-show room charges now post as `no_show_charge`, no-show tax remains `tax`, and GL/report classification uses folio transaction category rather than metadata as the accounting source of truth.
 
-Recent operational maturation completed on May 22, 2026: Manager Flash Report implemented with optimized custom SQL for occupancy, ADR, RevPAR, and revenue. Early Departure workflows (truncation and penalty processing) are fully functional.
+Recent operational maturation completed on May 22, 2026: Manager Flash Report implemented with optimized custom SQL for occupancy, ADR, RevPAR, and revenue. Early Departure workflows (truncation and charge processing) are fully functional.
 
 Recent reporting excellence completed on May 22, 2026: Multi-page Audit Packet implemented as a high-fidelity PDF preview, aggregating the daily financial summary, manual adjustments, and audit blockers into a single uneditable artifact. `adjustments_total` added to financial summaries for explicit staff-intervention tracking.

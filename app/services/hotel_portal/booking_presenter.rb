@@ -176,7 +176,7 @@ module HotelPortal
 
       today = Time.current.to_date
       rate = room_type.room_rates.find_by(date: today)&.price || room_type.base_price
-      
+
       base_amount = (rate.to_d * quantity).round(2)
 
       applicable_taxes = hotel.hotel_taxes.enabled.to_a
