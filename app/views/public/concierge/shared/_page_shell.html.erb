@@ -1,0 +1,9 @@
+<div class="bg-landing-bg min-h-screen flex flex-col md:flex-row">
+  <%= render "public/concierge/shared/left_panel" %>
+
+  <div class="<%= local_assigns.fetch(:content_class, 'flex-1 flex items-start justify-center px-4 pt-20 pb-20 sm:px-6 md:pt-28') %>">
+    <div class="<%= local_assigns.fetch(:container_class, 'w-full max-w-3xl') %>">
+      <%= yield %>
+    </div>
+  </div>
+</div>

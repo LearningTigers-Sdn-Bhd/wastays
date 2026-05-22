@@ -1,0 +1,21 @@
+<%
+  # Params: label, color_key (indigo, amber, slate)
+  
+  color_classes = {
+    "indigo" => "bg-indigo-100 text-indigo-600",
+    "amber" => "bg-amber-100 text-amber-700",
+    "slate" => "bg-slate-100 text-slate-500"
+  }[color_key] || "bg-slate-100 text-slate-500"
+
+  # Stacking logic: if label has 2 words, insert a responsive break tag
+  words = label.to_s.split(" ")
+  has_stacking = words.length == 2
+%>
+
+<span class="inline-flex items-center justify-center text-center leading-tight rounded-full <%= color_classes %> px-3 py-1.5 sm:px-2.5 sm:py-1 text-[9px] font-black uppercase tracking-[0.12em]">
+  <% if has_stacking %>
+    <%= words[0] %><br class="sm:hidden"> <%= words[1] %>
+  <% else %>
+    <%= label %>
+  <% end %>
+</span>

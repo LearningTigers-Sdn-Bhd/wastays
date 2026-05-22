@@ -1,0 +1,79 @@
+<%# frozen_string_literal: true %>
+
+<% if hotel.photos.attached? %>
+  <div id="hotel-photo-gallery" 
+       class="hidden fixed inset-0 z-[120] bg-gray-900/70 backdrop-blur-sm p-0 sm:px-6 sm:pb-6 lg:px-10 lg:pb-10 flex items-start justify-center pt-4 sm:pt-10 lg:pt-8 transition-opacity" 
+       data-gallery-toggle-target="panel"
+       data-action="click->gallery-toggle#hide">
+    
+    <div class="relative w-full h-[94vh] sm:h-[84vh] max-w-7xl overflow-hidden rounded-none sm:rounded-3xl bg-white shadow-2xl flex flex-col" 
+         data-action="click->gallery-toggle#stop">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between gap-4 border-b border-neutral-border px-5 py-4 sm:px-8 sm:py-6 shrink-0 bg-white z-20">
+        <div class="flex items-center gap-x-4">
+          <button type="button" 
+                  data-gallery-toggle-target="backButton"
+                  data-action="click->gallery-toggle#closeViewer"
+                  class="hidden h-9 w-9 flex items-center justify-center rounded-full bg-neutral-bg text-neutral-text-primary hover:bg-neutral-border transition-colors">
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <h2 class="text-xl font-extrabold text-neutral-text-primary">
+            <span data-gallery-toggle-target="headerTitle">Hotel Photos</span>
+          </h2>
+        </div>
+
+        <button type="button" data-action="click->gallery-toggle#hide" class="h-10 w-10 flex items-center justify-center rounded-full border border-neutral-border text-neutral-text-secondary hover:bg-neutral-bg hover:text-neutral-text-primary transition-colors">
+          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="flex-grow overflow-hidden relative flex flex-col">
+        <!-- Grid Mode Content -->
+        <div data-gallery-toggle-target="grid" class="h-full overflow-y-auto p-5 sm:p-8">
+          <div class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+            <% hotel.ordered_photo_attachments.each_with_index do |photo, index| %>
+              <div class="aspect-[4/3] overflow-hidden rounded-2xl border border-neutral-border bg-neutral-bg cursor-pointer group"
+                   data-action="click->gallery-toggle#openViewer"
+                   data-index="<%= index %>">
+                <%= image_tag photo, class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Viewer Mode Content -->
+        <div data-gallery-toggle-target="viewer" class="hidden h-full flex flex-col bg-neutral-900">
+          <!-- Main Display Area -->
+          <div class="flex-grow flex items-center justify-center relative overflow-hidden"
+               data-action="touchstart->gallery-toggle#touchStart touchmove->gallery-toggle#touchMove touchend->gallery-toggle#touchEnd">
+            
+            <img data-gallery-toggle-target="backdropImage" src="" class="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-40">
+            
+            <button type="button" data-action="click->gallery-toggle#prev" class="absolute left-4 z-20 h-12 w-12 flex items-center justify-center rounded-xl bg-white/95 text-blue-600 shadow-md hover:bg-white transition-colors">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+
+            <img data-gallery-toggle-target="lightboxImage" src="" class="relative z-10 max-w-full max-h-full object-contain">
+
+            <button type="button" data-action="click->gallery-toggle#next" class="absolute right-4 z-20 h-12 w-12 flex items-center justify-center rounded-xl bg-white/95 text-blue-600 shadow-md hover:bg-white transition-colors">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </button>
+
+            <div data-gallery-toggle-target="viewerCounter" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-20 rounded-full bg-black/45 px-3 py-1 text-sm font-semibold text-white">
+              <span data-gallery-toggle-target="indexDisplay">1</span> / <%= hotel.photos.count %>
+            </div>
+          </div>
+
+          <!-- Thumbnails Strip -->
+          <div class="bg-black/50 backdrop-blur-md p-4 sm:p-5 border-t border-white/5 overflow-x-auto shrink-0">
+            <div data-gallery-toggle-target="thumbnails" class="flex gap-3 justify-center min-w-max mx-auto pb-1">
+              <!-- Thumbnails rendered by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>
