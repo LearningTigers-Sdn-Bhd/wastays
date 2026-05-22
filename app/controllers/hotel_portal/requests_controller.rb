@@ -8,7 +8,8 @@ class HotelPortal::RequestsController < HotelPortal::BaseController
     @board_columns = {
       housekeeping: Kaminari.paginate_array(@board_columns[:housekeeping]).page(params[:housekeeping_page]).per(25),
       complaint: Kaminari.paginate_array(@board_columns[:complaint]).page(params[:complaint_page]).per(25),
-      completed: Kaminari.paginate_array(@board_columns[:completed]).page(params[:completed_page]).per(25)
+      completed: Kaminari.paginate_array(@board_columns[:completed]).page(params[:completed_page]).per(25),
+      checkout: Kaminari.paginate_array(@board_columns[:checkout]).page(params[:checkout_page]).per(25)
     }
   end
 

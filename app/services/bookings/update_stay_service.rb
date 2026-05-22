@@ -32,12 +32,20 @@ module Bookings
             # Release old inventory
             InventoryManager.new(@booking).release
 
+            new_total = CalculateStayPrice.new(
+              room_type: new_room_type,
+              check_in: @params[:check_in].presence ? Date.parse(@params[:check_in].to_s) : @booking.check_in,
+              check_out: @params[:check_out].presence ? Date.parse(@params[:check_out].to_s) : @booking.check_out
+            ).call
+
             # Update or replace the booking room
             current_room.update!(
               room_type: new_room_type,
               room_type_snapshot: new_room_type.as_json,
-              subtotal: new_room_type.base_price * (@booking.check_out - @booking.check_in).to_i
+              subtotal: new_total
             )
+
+            @booking.total_amount = new_total
           end
         end
 
@@ -90,6 +98,22 @@ module Bookings
 
           # 4. If dates changed or room type changed, sync inventory
           if dates_changed || @room_type_id.present?
+            # Recalculate price if dates changed but room type stayed the same
+            if dates_changed && @room_type_id.blank?
+              room_type_id = @booking.booking_rooms.first&.room_type_id
+              if room_type_id.present?
+                room_type = @hotel.room_types.find(room_type_id)
+                new_total = CalculateStayPrice.new(
+                  room_type: room_type,
+                  check_in: @booking.check_in,
+                  check_out: @booking.check_out
+                ).call
+
+                @booking.booking_rooms.first.update!(subtotal: new_total)
+                @booking.update_columns(total_amount: new_total)
+              end
+            end
+
             # If only dates changed but not room type, we still need to release and re-deduct
             # Note: if room type changed, we already released old ones above.
             # But release_by_dates is safer if only dates changed.

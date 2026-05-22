@@ -105,7 +105,7 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
     render turbo_stream: [
       turbo_stream.replace(
         "booking_notes_panel",
-        partial: "hotel_portal/bookings/internal_notes",
+        partial: "hotel_portal/bookings/show/internal_notes",
         locals: { booking: @booking }
       ),
       turbo_stream.append(

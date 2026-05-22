@@ -2,11 +2,12 @@
 
 module Bookings
   class CalculateStayPrice
-    def initialize(room_type:, check_in:, check_out:, rate_plan: nil)
+    def initialize(room_type:, check_in:, check_out:, rate_plan: nil, corporate_rate: false)
       @room_type = room_type
       @check_in = check_in
       @check_out = check_out
       @rate_plan = rate_plan
+      @corporate_rate = corporate_rate
     end
 
     def call
@@ -14,7 +15,11 @@ module Bookings
 
       (@check_in..(@check_out - 1.day)).sum do |date|
         rate = room_rate_for(date)
-        rate&.price || @room_type.base_price
+        if @corporate_rate
+          rate&.corporate_price || rate&.price || @room_type.base_price
+        else
+          rate&.walk_in_price || rate&.price || @room_type.base_price
+        end
       end
     end
 

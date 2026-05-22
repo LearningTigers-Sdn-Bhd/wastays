@@ -37,14 +37,19 @@ export default class extends Controller {
     const chargeToggle = this.toggleRadioTargets.find(r => r.checked).value
     if (chargeToggle === "none") return
 
+    const selectedType = this.typeRadioTargets.find(r => r.checked).value
     const type = this.customTypeTarget.value
     const value = parseFloat(this.customValueTarget.value) || 0
-    let finalAmount = 0
+    let finalAmount = this.baseAmountValue
 
-    if (type === "percentage") {
-      finalAmount = this.baseAmountValue * (value / 100)
-    } else {
-      finalAmount = value
+    if (selectedType === "custom") {
+      let adjustment = 0
+      if (type === "percentage") {
+        adjustment = this.baseAmountValue * (value / 100)
+      } else {
+        adjustment = value
+      }
+      finalAmount += adjustment
     }
 
     this.amountInputTarget.value = finalAmount.toFixed(2)

@@ -245,6 +245,13 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def process_late_checkout
     @booking = current_hotel.bookings.find(params[:id])
+
+    if params[:check_out].present?
+      unless @booking.update(check_out: params[:check_out])
+        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to update checkout period: #{@booking.errors.full_messages.to_sentence}"
+      end
+    end
+
     should_charge = params[:charge_type] != "none" && params[:amount].to_f > 0
 
     if should_charge
@@ -261,19 +268,15 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       end
     end
 
-    if params[:after_action] == "checkout"
-      message = should_charge ? "Late checkout charge applied and guest checked out." : "Late checkout resolved and guest checked out."
-      transition_status("completed", Time.current, message)
-    else
-      Bookings::TransitionStatus.new(
-        booking: @booking,
-        status: "checked_in",
-        user: current_user,
-        options: { event: "resolve_late_checkout" }
-      ).call
-      notice = should_charge ? "Late checkout charge applied." : "Late checkout resolved without charge."
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: notice
-    end
+    Bookings::TransitionStatus.new(
+      booking: @booking,
+      status: "checked_in",
+      user: current_user,
+      options: { event: "resolve_late_checkout" }
+    ).call
+
+    notice = should_charge ? "Late checkout charge applied." : "Late checkout resolved without charge."
+    redirect_to hotel_booking_path(current_hotel, @booking), notice: notice
   end
 
   def cancel
