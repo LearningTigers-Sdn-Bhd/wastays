@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_21_135928) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_22_140002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -637,7 +637,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_21_135928) do
     t.decimal "tax_revenue", precision: 12, scale: 2, default: "0.0", null: false
     t.decimal "payments_total", precision: 12, scale: 2, default: "0.0", null: false
     t.decimal "refunds_total", precision: 12, scale: 2, default: "0.0", null: false
-    t.decimal "no_show_penalties", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "no_show_charges", precision: 12, scale: 2, default: "0.0", null: false
     t.jsonb "changelog", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

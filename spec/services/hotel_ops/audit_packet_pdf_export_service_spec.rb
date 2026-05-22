@@ -19,7 +19,7 @@ RSpec.describe HotelOps::AuditPacketPdfExportService do
            night_audit: night_audit,
            room_revenue: 1000.to_d,
            tax_revenue: 100.to_d,
-           no_show_penalties: 50.to_d,
+            no_show_charges: 50.to_d,
            payments_total: 1150.to_d,
            refunds_total: 0.to_d,
            adjustments_total: -10.to_d)

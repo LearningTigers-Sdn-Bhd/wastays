@@ -291,13 +291,15 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.booking.booking_rooms.first.rate_plan).to eq(rate_plan)
   end
 
-  it "rejects manual bookings when a required room rate is missing" do
+  it "falls back to base_price when no room rate exists for a date" do
     params.merge!(check_in: Date.current, check_out: Date.current + 2.days)
 
     result = subject.call
 
-    expect(result.success?).to be false
-    expect(result.errors).to include("Missing room rates for #{(Date.current + 1.day).iso8601}.")
+    expect(result.success?).to be true
+    snapshot = result.booking.booking_rooms.first.nightly_rate_snapshot
+    expect(snapshot[(Date.current + 1.day).iso8601]["source"]).to eq("base_price_fallback")
+    expect(snapshot[(Date.current + 1.day).iso8601]["price"]).to eq(room_type.base_price.to_d.to_s("F"))
   end
 
   it "distributes a manual override total across the nightly snapshot" do

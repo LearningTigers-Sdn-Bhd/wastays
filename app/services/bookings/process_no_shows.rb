@@ -163,9 +163,9 @@ module Bookings
         insert_charge!(
           folio: folio,
           amount: amount,
-          category: "no_show_penalty",
-          description: "No-show room penalty - #{@business_date}",
-          metadata: no_show_metadata(booking, "no_show_penalty", booking_room.id).merge(
+          category: "no_show_charge",
+          description: "No-show room charge - #{@business_date}",
+          metadata: no_show_metadata(booking, "no_show_charge", booking_room.id).merge(
             rate_source: nightly_rate_snapshot_for(booking_room, @business_date).present? ? "nightly_rate_snapshot" : "legacy_subtotal_average",
             nightly_rate_snapshot: nightly_rate_snapshot_for(booking_room, @business_date)
           )
@@ -180,7 +180,7 @@ module Bookings
           folio: folio,
           amount: amount,
           category: "tax",
-          description: "No-show tax penalty: #{tax_line_name(tax_line)} - #{@business_date}",
+          description: "No-show tax charge: #{tax_line_name(tax_line)} - #{@business_date}",
           metadata: no_show_metadata(booking, "tax", tax_line_identity(tax_line, index)).merge(tax_line: tax_line)
         )
       end
@@ -216,7 +216,7 @@ module Bookings
         stay_date: @business_date.iso8601,
         booking_id: booking.id,
         charge_kind: charge_kind,
-        no_show_charge_key: [ booking.id, @business_date.iso8601, "no_show_penalty", charge_kind, identity ].join(":")
+        no_show_charge_key: [ booking.id, @business_date.iso8601, "no_show_charge", charge_kind, identity ].join(":")
       }
     end
   end

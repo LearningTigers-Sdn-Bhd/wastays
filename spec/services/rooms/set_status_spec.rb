@@ -53,7 +53,7 @@ RSpec.describe Rooms::SetStatus do
 
     expect(result).to be_success
     expect(booking.reload.status).to eq("review_due_out")
-    
+
     log = BookingAuditLog.last
     expect(log.auditable).to eq(booking)
     expect(log.action_type).to eq("status_change")

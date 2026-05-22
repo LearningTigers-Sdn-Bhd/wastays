@@ -6,16 +6,16 @@ RSpec.describe FinanceAlertMailer, type: :mailer do
     let(:config) { create(:hotel_team_config, hotel: hotel, emails: "finance@budapest.com") }
     let(:anomalies) do
       {
-        unbalanced_folios: [{ confirmation_token: "WS-123", guest_name: "Gustave", balance: 150.0 }],
-        audit_sync_lags: [{ business_date: Date.yesterday, status: "open", lag_days: 1 }],
-        override_abuse: { count: 10, latest_actors: ["Zero"] }
+        unbalanced_folios: [ { confirmation_token: "WS-123", guest_name: "Gustave", balance: 150.0 } ],
+        audit_sync_lags: [ { business_date: Date.yesterday, status: "open", lag_days: 1 } ],
+        override_abuse: { count: 10, latest_actors: [ "Zero" ] }
       }
     end
     let(:mail) { described_class.daily_digest(config, anomalies) }
 
     it "renders the headers" do
       expect(mail.subject).to include("Daily Observability Digest - Grand Budapest")
-      expect(mail.to).to eq(["finance@budapest.com"])
+      expect(mail.to).to eq([ "finance@budapest.com" ])
     end
 
     it "renders the body" do

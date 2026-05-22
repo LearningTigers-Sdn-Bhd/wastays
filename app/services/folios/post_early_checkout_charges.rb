@@ -99,7 +99,7 @@ module Folios
 
       {
         amount: amount,
-        category: "early_departure_penalty",
+        category: "early_departure_charge",
         description: "Early checkout charge - Night #{night_number}",
         date: date,
         key: idempotency_key(date, "accommodation")

@@ -52,24 +52,24 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
     expect(result[:room_revenue]).to eq(100.0)
     expect(result[:tax_revenue]).to eq(10.0)
     expect(result[:payments_total]).to eq(110.0)
-    expect(result[:no_show_penalties]).to eq(0.0)
+    expect(result[:no_show_charges]).to eq(0.0)
   end
 
-  it "identifies no-show penalties correctly" do
+  it "identifies no-show charges correctly" do
     booking = create(:booking, hotel: hotel)
     folio = create(:booking_folio, booking: booking)
 
     create(:folio_transaction,
       booking_folio: folio,
       transaction_type: "charge",
-      category: "no_show_penalty",
+      category: "no_show_charge",
       amount: 50.0,
       metadata: { stay_date: business_date.iso8601 }
     )
 
     result = described_class.call(hotel: hotel, business_date: business_date)
 
-    expect(result[:no_show_penalties]).to eq(50.0)
+    expect(result[:no_show_charges]).to eq(50.0)
     expect(result[:room_revenue]).to eq(0.0)
   end
 
@@ -87,7 +87,7 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
     create(:folio_transaction,
       booking_folio: folio,
       transaction_type: "charge",
-      category: "no_show_penalty",
+      category: "no_show_charge",
       amount: 50.0,
       metadata: { stay_date: business_date.iso8601, posting_source: "no_show" }
     )
@@ -103,6 +103,6 @@ RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
 
     expect(result[:room_revenue]).to eq(100.0)
     expect(result[:tax_revenue]).to eq(5.0)
-    expect(result[:no_show_penalties]).to eq(50.0)
+    expect(result[:no_show_charges]).to eq(50.0)
   end
 end

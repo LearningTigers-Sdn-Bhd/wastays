@@ -292,7 +292,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(folio.folio_transactions.payment.last.description).to include("RCPT-1")
     end
 
-    it "posts early departure penalty before checkout-sheet settlement" do
+    it "posts early departure charge before checkout-sheet settlement" do
       grant_permission("post_folio_payments")
       booking.update!(check_out: Date.current + 2.days)
       booking.transition_status_to!("checked_in", event: "check_in")
@@ -303,8 +303,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         params: {
           checkout_sheet: "1",
           checked_out_at: Time.current.to_s,
-          charge_penalty: "1",
-          penalty_amount: "50.00",
+          apply_charge: "1",
+          charge_amount: "50.00",
           checkout_payment_method: "cash",
           checkout_payment_amount: "150.00",
           checkout_payment_reference: "RCPT-ED"
@@ -316,11 +316,11 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(Date.current)
       expect(folio.reload.status).to eq("closed")
-      expect(folio.folio_transactions.charge.find_by(category: "early_departure_penalty").amount).to eq(50.0)
+      expect(folio.folio_transactions.charge.find_by(category: "early_departure_charge").amount).to eq(50.0)
       expect(folio.folio_transactions.payment.last.description).to include("RCPT-ED")
     end
 
-    it "truncates checkout-sheet early departure without requiring a penalty" do
+    it "truncates checkout-sheet early departure without requiring a charge" do
       grant_permission("post_folio_payments")
       booking.update!(check_out: Date.current + 2.days)
       booking.transition_status_to!("checked_in", event: "check_in")
@@ -341,7 +341,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(Date.current)
       expect(folio.reload.status).to eq("closed")
-      expect(folio.folio_transactions.charge.where(category: "early_departure_penalty")).to be_empty
+      expect(folio.folio_transactions.charge.where(category: "early_departure_charge")).to be_empty
     end
 
     it "posts early checkout charges for prepaid unused nights and closes the folio" do
@@ -368,7 +368,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(folio.outstanding_balance).to eq(0)
     end
 
-    it "rolls back early departure penalty and truncation when checkout validation fails" do
+    it "rolls back early departure charge and truncation when checkout validation fails" do
       grant_permission("post_folio_payments")
       booking.update!(check_in: 1.day.ago.to_date, check_out: Date.current + 1.day)
       booking.transition_status_to!("checked_in", event: "check_in")
@@ -380,8 +380,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         params: {
           checkout_sheet: "1",
           checked_out_at: Time.current.to_s,
-          charge_penalty: "1",
-          penalty_amount: "50.00",
+          apply_charge: "1",
+          charge_amount: "50.00",
           checkout_payment_method: "cash",
           checkout_payment_amount: "50.00",
           checkout_payment_reference: "RCPT-ROLLBACK"

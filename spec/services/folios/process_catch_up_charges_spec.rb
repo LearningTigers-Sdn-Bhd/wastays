@@ -55,14 +55,14 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
       expect(tax_charge.description).to include("Reinstate Tax")
     end
 
-    it "reverses existing no-show penalties with specific descriptions" do
+    it "reverses existing no-show charges with specific descriptions" do
       booking_p = create(:booking, hotel: hotel, status: "checked_in", check_in: past_date, check_out: past_date + 1.day)
       folio_p = create(:booking_folio, booking: booking_p)
 
-      penalty = create(:folio_transaction,
+      charge = create(:folio_transaction,
         booking_folio: folio_p,
         transaction_type: "charge",
-        category: "no_show_penalty",
+        category: "no_show_charge",
         amount: 50.0,
         metadata: { posting_source: "no_show" }
       )
@@ -77,26 +77,26 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
       # Test default reversal
       described_class.call(booking: booking_p, user: user)
       folio_p.reload
-      reversal = folio_p.folio_transactions.adjustment.where("metadata->>'reversed_transaction_id' = ?", penalty.id.to_s).last
+      reversal = folio_p.folio_transactions.adjustment.where("metadata->>'reversed_transaction_id' = ?", charge.id.to_s).last
       expect(reversal).to be_present
-      expect(reversal.description).to include("Auto-reversal of no-show penalty")
+      expect(reversal.description).to include("Auto-reversal of no-show charge")
       payment_reversal = folio_p.folio_transactions.adjustment.where("metadata->>'reversed_transaction_id' = ?", payment.id.to_s).last
       expect(payment_reversal).to be_nil
 
       # Test reinstate reversal
-      penalty2 = create(:folio_transaction,
+      charge2 = create(:folio_transaction,
         booking_folio: folio_p,
         transaction_type: "charge",
-        category: "no_show_penalty",
+        category: "no_show_charge",
         amount: 50.0,
         metadata: { posting_source: "no_show" }
       )
       described_class.call(booking: booking_p, user: user, is_reinstate: true)
       folio_p.reload
-      reversal2 = folio_p.folio_transactions.adjustment.where("metadata->>'reversed_transaction_id' = ?", penalty2.id.to_s)
+      reversal2 = folio_p.folio_transactions.adjustment.where("metadata->>'reversed_transaction_id' = ?", charge2.id.to_s)
                                                   .where("metadata->>'is_reinstate' = ?", "true").last
       expect(reversal2).to be_present
-      expect(reversal2.description).to eq("Void Penalty: Reinstated Reservation")
+      expect(reversal2.description).to eq("Void Charge: Reinstated Reservation")
     end
   end
 

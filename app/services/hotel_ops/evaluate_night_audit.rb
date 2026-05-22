@@ -75,7 +75,7 @@ module HotelOps
     end
 
     def due_out_not_checked_out
-      @due_out_not_checked_out ||= hotel_bookings.where(check_out: @business_date).where(status: ["checked_in", "review_due_out"])
+      @due_out_not_checked_out ||= hotel_bookings.where(check_out: @business_date).where(status: [ "checked_in", "review_due_out" ])
     end
 
     def checked_in_missing_timestamp

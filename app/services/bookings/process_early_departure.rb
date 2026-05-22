@@ -33,10 +33,10 @@ module Bookings
             raise ActiveRecord::Rollback
           end
 
-          if charge_penalty?
-            penalty_result = post_penalty
-            unless penalty_result.success?
-              result = penalty_result
+          if assess_charge?
+            charge_result = post_charge
+            unless charge_result.success?
+              result = charge_result
               raise ActiveRecord::Rollback
             end
           end
@@ -77,8 +77,8 @@ module Bookings
 
     private
 
-    def charge_penalty?
-      @params[:charge_penalty] == "1" || @params[:charge_penalty] == "true"
+    def assess_charge?
+      @params[:apply_charge] == "1" || @params[:apply_charge] == "true"
     end
 
     def defer_checkout?
@@ -113,16 +113,16 @@ module Bookings
       )
     end
 
-    def post_penalty
-      amount = @params[:penalty_amount].to_d
-      return failure("Penalty amount must be greater than zero.") unless amount.positive?
+    def post_charge
+      amount = @params[:charge_amount].to_d
+      return failure("Charge amount must be greater than zero.") unless amount.positive?
 
-      Folios::PostPenaltyFee.call(
+      Folios::PostCategoryCharge.call(
         folio: @booking.booking_folio,
         user: @user,
-        category: "early_departure_penalty",
+        category: "early_departure_charge",
         amount: amount,
-        description: "Early Departure Penalty",
+        description: "Early Departure Charge",
         options: @options
       )
     end

@@ -17,34 +17,34 @@ RSpec.describe Bookings::ProcessEarlyDeparture do
   end
 
   it "truncates the check_out date and completes checkout" do
-    result = described_class.call(booking: booking, user: user, params: { charge_penalty: "false" })
+    result = described_class.call(booking: booking, user: user, params: { apply_charge: "false" })
 
     expect(result).to be_success
     expect(booking.reload.check_out.to_date).to eq(Date.current)
     expect(booking.status).to eq("completed")
   end
 
-  it "posts a penalty if requested" do
+  it "posts a charge if requested" do
     result = described_class.call(
       booking: booking,
       user: user,
-      params: { charge_penalty: "true", penalty_amount: "150.0" }
+      params: { apply_charge: "true", charge_amount: "150.0" }
     )
 
     expect(result).to be_success
     expect(booking.reload.status).to eq("completed")
-    expect(folio.folio_transactions.charge.find_by(description: "Early Departure Penalty").amount).to eq(150.0)
+    expect(folio.folio_transactions.charge.find_by(description: "Early Departure Charge").amount).to eq(150.0)
   end
 
-  it "fails if penalty amount is invalid" do
+  it "fails if charge amount is invalid" do
     result = described_class.call(
       booking: booking,
       user: user,
-      params: { charge_penalty: "true", penalty_amount: "-10" }
+      params: { apply_charge: "true", charge_amount: "-10" }
     )
 
     expect(result).not_to be_success
-    expect(result.error).to include("Penalty amount must be greater than zero")
+    expect(result.error).to include("Charge amount must be greater than zero")
     expect(booking.reload.status).to eq("checked_in")
   end
 
@@ -65,7 +65,7 @@ RSpec.describe Bookings::ProcessEarlyDeparture do
 
     allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(future_date)
 
-    result = described_class.call(booking: booking, user: user, params: { charge_penalty: "false" })
+    result = described_class.call(booking: booking, user: user, params: { apply_charge: "false" })
 
     expect(result).to be_success
     expect(room_type.room_inventories.find_by(date: Date.current).quantity).to eq(9)
@@ -83,7 +83,7 @@ RSpec.describe Bookings::ProcessEarlyDeparture do
     result = described_class.call(
       booking: booking,
       user: user,
-      params: { charge_penalty: "false" },
+      params: { apply_charge: "false" },
       options: { timestamp: timestamp }
     )
 
@@ -94,7 +94,7 @@ RSpec.describe Bookings::ProcessEarlyDeparture do
   it "fails when the resolved departure date does not shorten the stay" do
     allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(booking.check_out.to_date)
 
-    result = described_class.call(booking: booking, user: user, params: { charge_penalty: "false" })
+    result = described_class.call(booking: booking, user: user, params: { apply_charge: "false" })
 
     expect(result).not_to be_success
     expect(result.error).to eq("Booking is not eligible for early departure.")
@@ -105,7 +105,7 @@ RSpec.describe Bookings::ProcessEarlyDeparture do
     result = described_class.call(
       booking: booking,
       user: user,
-      params: { charge_penalty: "false" },
+      params: { apply_charge: "false" },
       options: { defer_checkout: true }
     )
 

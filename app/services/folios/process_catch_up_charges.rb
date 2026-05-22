@@ -20,44 +20,43 @@ module Folios
       return unless @folio
 
       @folio.with_lock do
-        reverse_no_show_penalties
+        reverse_no_show_charges
         post_missing_nightly_charges
       end
     end
 
     private
 
-    def reverse_no_show_penalties
+    def reverse_no_show_charges
       @folio.folio_transactions.charge
-        .where(category: %w[no_show_penalty tax])
+        .where(category: %w[no_show_charge tax])
         .where("metadata->>'posting_source' = ?", "no_show")
-        .find_each do |penalty|
-        # Avoid double-reversing if already corrected
-        next if already_corrected?(penalty)
+        .find_each do |charge_record|
+        next if already_corrected?(charge_record)
 
-        description = @is_reinstate ? "Void Penalty: Reinstated Reservation" : "Auto-reversal of no-show penalty: #{penalty.description}"
+        description = @is_reinstate ? "Void Charge: Reinstated Reservation" : "Auto-reversal of no-show charge: #{charge_record.description}"
 
         result = Folios::InsertTransaction.new(
           booking_folio: @folio,
-          amount: -penalty.amount, # Negative adjustment to zero it out
+          amount: -charge_record.amount,
           transaction_type: :adjustment,
           category: :correction,
           user: @user,
           description: description,
-          posting_date: penalty.posting_date,
+          posting_date: charge_record.posting_date,
           options: {
             override_night_audit: true,
             correction_reason: "late_checkin_correction",
             correction_note: description,
             metadata: {
               source: "late_checkin_correction",
-              reversed_transaction_id: penalty.id,
+              reversed_transaction_id: charge_record.id,
               is_reinstate: @is_reinstate
             }
           }
         ).call
 
-        raise "Failed to reverse no-show penalty: #{result.error}" unless result.success?
+        raise "Failed to reverse no-show charge: #{result.error}" unless result.success?
       end
     end
 
@@ -159,9 +158,9 @@ module Folios
       end
     end
 
-    def already_corrected?(penalty)
+    def already_corrected?(charge_record)
       @folio.folio_transactions.adjustment
-        .where("metadata->>'reversed_transaction_id' = ?", penalty.id.to_s)
+        .where("metadata->>'reversed_transaction_id' = ?", charge_record.id.to_s)
         .exists?
     end
 

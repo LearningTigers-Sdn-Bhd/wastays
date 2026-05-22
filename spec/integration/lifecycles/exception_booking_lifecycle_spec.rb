@@ -17,7 +17,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
   end
 
   describe "1. No Show and Reinstatement Lifecycle" do
-    it "marks a guest no-show, applies penalty, then reinstates them the next day with catch-up charges" do
+    it "marks a guest no-show, applies charge, then reinstates them the next day with catch-up charges" do
       # Guest booked for 2 nights at 100/night
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 2.days, total_amount: 200.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0, quantity: 1, room_number: "101")
@@ -37,7 +37,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       expect(booking.status).to eq("no_show")
 
       folio = booking.booking_folio
-      expect(folio.folio_transactions.charge.sum(:amount)).to eq(100.0) # 1 night penalty posted
+      expect(folio.folio_transactions.charge.sum(:amount)).to eq(100.0) # 1 night charge posted
 
       # 2. Next Day: Guest arrives at 10 AM, claiming flight delay. Reinstatement!
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 1.day)
@@ -45,12 +45,12 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       # Reinstate booking
       booking.transition_status_to!("checked_in", event: "reinstate")
 
-      # Process catch up charges (Reverse penalty, post Day 1 as an actual room charge)
+      # Process catch up charges (Reverse charge, post Day 1 as an actual room charge)
       Folios::ProcessCatchUpCharges.call(booking: booking, user: user, is_reinstate: true)
 
-      # Verify: The penalty should be reversed (-100 adjustment), and an actual charge (+100) posted.
+      # Verify: The charge should be reversed (-100 adjustment), and an actual charge (+100) posted.
       expect(folio.folio_transactions.adjustment.sum(:amount)).to eq(-100.0)
-      # Penalty(100) + Reinstated Room Charge(100) = 200 total charge amount.
+      # Charge(100) + Reinstated Room Charge(100) = 200 total charge amount.
       expect(folio.folio_transactions.charge.sum(:amount)).to eq(200.0)
 
       # Total balance should still be 100.0
@@ -163,7 +163,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       biz_date_record.complete_audit!
 
       expect(booking.reload.status).to eq("no_show")
-      expect(booking.booking_folio.folio_transactions.charge.sum(:amount)).to eq(100.0) # Penalty (1 night)
+      expect(booking.booking_folio.folio_transactions.charge.sum(:amount)).to eq(100.0) # Charge (1 night)
 
       # 3. Day 2 Morning: Guest arrives. Original room type is full.
       # Staff changes booking to Deluxe Room (150/night)
@@ -185,11 +185,11 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       Folios::ProcessCatchUpCharges.call(booking: booking, user: user, is_reinstate: true)
 
       # Verify:
-      # - Original 100.0 penalty reversed (adjustment of -100)
+      # - Original 100.0 charge reversed (adjustment of -100)
       # - New Day 1 charge posted at 150.0 (catch-up)
       folio = booking.booking_folio
       expect(folio.folio_transactions.adjustment.where(category: "correction").sum(:amount)).to eq(-100.0)
-      expect(folio.folio_transactions.charge.where(category: "no_show_penalty").sum(:amount)).to eq(100.0)
+      expect(folio.folio_transactions.charge.where(category: "no_show_charge").sum(:amount)).to eq(100.0)
       expect(folio.folio_transactions.charge.where(category: "accommodation").sum(:amount)).to eq(150.0)
 
       # Net debt after Day 1 is now 150.0
@@ -281,7 +281,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
   end
 
   describe "7. Late Checkout Lifecycle" do
-    it "transitions booking to review_due_out via housekeeping and applies penalty" do
+    it "transitions booking to review_due_out via housekeeping and applies charge" do
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 1.day, total_amount: 100.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, quantity: 1, room_number: "101")
       folio = Folios::InitializeForBooking.call(booking: booking, user: user)
@@ -291,9 +291,9 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       Rooms::SetStatus.new(room_status: room_status, status: "late_checkout_detected", user: user).call
       expect(booking.reload.status).to eq("review_due_out")
 
-      # 2. Front desk reviews and applies penalty (e.g. 50.0)
-      result = Folios::PostPenaltyFee.call(
-        folio: folio, user: user, category: "late_checkout_penalty", amount: 50.0
+      # 2. Front desk reviews and applies charge (e.g. 50.0)
+      result = Folios::PostCategoryCharge.call(
+        folio: folio, user: user, category: "late_checkout_charge", amount: 50.0
       )
       expect(result).to be_success
       expect(folio.reload.outstanding_balance).to eq(50.0)
@@ -306,7 +306,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
   end
 
   describe "8. Early Departure with Penalty Lifecycle" do
-    it "truncates stay and applies penalty in one service call" do
+    it "truncates stay and applies charge in one service call" do
       # 3 night stay @ 100/night
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 3.days, total_amount: 300.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 300.0, quantity: 1, nightly_rate_snapshot: {
@@ -323,29 +323,29 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       audit.update!(status: "completed")
       HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date).complete_audit!
 
-      # Day 2 morning: Guest leaves. Front desk applies 100 penalty.
+      # Day 2 morning: Guest leaves. Front desk applies 100 charge.
       # We need to override because the business date business_date is closed.
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 1.day)
-      
-      # Guest pays 400.0 (100 stay + 200 forfeited unused nights + 100 manual penalty)
+
+      # Guest pays 400.0 (100 stay + 200 forfeited unused nights + 100 manual charge)
       Folios::InsertTransaction.new(
         booking_folio: folio, amount: 400.0, transaction_type: :payment, category: "cash", user: user,
         description: "Payment for early departure", posting_date: business_date + 1.day
       ).call
 
       result = Bookings::ProcessEarlyDeparture.call(
-        booking: booking, 
-        user: user, 
-        params: { charge_penalty: "1", penalty_amount: "100.0" },
+        booking: booking,
+        user: user,
+        params: { apply_charge: "1", charge_amount: "100.0" },
         options: { override_night_audit: true, correction_reason: "Early departure", correction_note: "Test", timestamp: business_date + 1.day }
       )
-      
+
       expect(result).to be_success
       booking.reload
       expect(booking.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(business_date + 1.day)
-      
-      # 100 (Day 1) + 200 (forfeited unused nights) + 100 (Penalty) = 400 total charges
+
+      # 100 (Day 1) + 200 (forfeited unused nights) + 100 (Charge) = 400 total charges
       expect(folio.reload.folio_transactions.charge.sum(:amount)).to eq(400.0)
     end
   end

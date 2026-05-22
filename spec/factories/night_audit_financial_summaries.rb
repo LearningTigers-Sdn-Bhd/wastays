@@ -5,7 +5,7 @@ FactoryBot.define do
     tax_revenue { "0.0" }
     payments_total { "0.0" }
     refunds_total { "0.0" }
-    no_show_penalties { "0.0" }
+    no_show_charges { "0.0" }
     changelog { [] }
   end
 end

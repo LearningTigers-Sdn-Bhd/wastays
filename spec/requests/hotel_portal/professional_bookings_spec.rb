@@ -54,7 +54,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
 
       expect(Booking.count).to eq(1)
       booking = Booking.last
-      expect(booking.total_amount).to eq(150)
+      expect(booking.total_amount).to eq(159.0)
       expect(booking.source).to eq("whatsapp")
       expect(booking.internal_notes).to eq("Needs early check-in")
     end

@@ -225,4 +225,3 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     end
   end
 end
-

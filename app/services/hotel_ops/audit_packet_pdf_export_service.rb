@@ -18,12 +18,12 @@ module HotelOps
       # Page 1: Daily Summary
       draw_header(pdf)
       draw_daily_summary(pdf)
-      
+
       # Page 2: Manual Adjustments
       pdf.start_new_page
       draw_header(pdf)
       draw_adjustments(pdf)
-      
+
       # Page 3: Audit Exceptions & Blockers
       pdf.start_new_page
       draw_header(pdf)
@@ -38,12 +38,12 @@ module HotelOps
 
     def draw_header(pdf)
       logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-      
-      pdf.bounding_box([0, pdf.cursor], width: pdf.bounds.width) do
+
+      pdf.bounding_box([ 0, pdf.cursor ], width: pdf.bounds.width) do
         if File.exist?(logo_path)
-          pdf.image logo_path, at: [pdf.bounds.right - 140, pdf.bounds.top], width: 140
+          pdf.image logo_path, at: [ pdf.bounds.right - 140, pdf.bounds.top ], width: 140
         else
-          pdf.text_box "WAStays", at: [pdf.bounds.right - 140, pdf.bounds.top], width: 140, align: :right, size: 14, style: :bold, color: "0F172A"
+          pdf.text_box "WAStays", at: [ pdf.bounds.right - 140, pdf.bounds.top ], width: 140, align: :right, size: 14, style: :bold, color: "0F172A"
         end
 
         pdf.text "Night Audit Packet", size: 24, style: :bold, color: "0F172A"
@@ -53,7 +53,7 @@ module HotelOps
         pdf.text "Business Date: #{@business_date.strftime('%d %b %Y')}", size: 10, color: "64748B"
         pdf.text "Audit Completed: #{@night_audit.completed_at&.strftime('%d %b %Y %H:%M:%S %Z') || 'N/A'}", size: 9, color: "94A3B8"
       end
-      
+
       pdf.move_down 36
     end
 
@@ -65,8 +65,8 @@ module HotelOps
         [ "Metric", "Amount" ],
         [ "Room Revenue", money(@summary.room_revenue) ],
         [ "Tax Revenue", money(@summary.tax_revenue) ],
-        [ "No-Show Penalties", money(@summary.no_show_penalties) ],
-        [ "Total Revenue", money(@summary.room_revenue + @summary.tax_revenue + @summary.no_show_penalties) ],
+        [ "No-Show Charges", money(@summary.no_show_charges) ],
+        [ "Total Revenue", money(@summary.room_revenue + @summary.tax_revenue + @summary.no_show_charges) ],
         [ "", "" ],
         [ "Payments Received", money(@summary.payments_total) ],
         [ "Refunds Issued", money(@summary.refunds_total) ],
@@ -75,12 +75,12 @@ module HotelOps
         [ "Total Manual Adjustments", money(@summary.adjustments_total) ]
       ]
 
-      pdf.table(data, width: pdf.bounds.width, cell_style: { border_color: "E2E8F0", border_width: 0.5, padding: [8, 12], size: 10, text_color: "334155" }) do
-        cells.borders = [:top, :bottom]
+      pdf.table(data, width: pdf.bounds.width, cell_style: { border_color: "E2E8F0", border_width: 0.5, padding: [ 8, 12 ], size: 10, text_color: "334155" }) do
+        cells.borders = [ :top, :bottom ]
         row(0).font_style = :bold
         row(0).background_color = "F8FAFC"
         row(0).text_color = "0F172A"
-        row(0).borders = [:bottom]
+        row(0).borders = [ :bottom ]
         row(0).border_width = 1.5
         column(1).align = :right
         row(4).font_style = :bold
@@ -96,7 +96,7 @@ module HotelOps
         row(10).font_style = :bold
         row(10).text_color = "9A3412"
         row(10).background_color = "FFFBEB"
-        row(10).borders = [:top, :bottom]
+        row(10).borders = [ :top, :bottom ]
         row(10).border_color = "FDE68A"
       end
 
@@ -133,8 +133,8 @@ module HotelOps
         end
       end
 
-      pdf.table(data, width: pdf.bounds.width, cell_style: { border_color: "F1F5F9", border_width: 0.5, padding: [8, 8], size: 9, text_color: "475569" }) do
-        cells.borders = [:bottom]
+      pdf.table(data, width: pdf.bounds.width, cell_style: { border_color: "F1F5F9", border_width: 0.5, padding: [ 8, 8 ], size: 9, text_color: "475569" }) do
+        cells.borders = [ :bottom ]
         row(0).font_style = :bold
         row(0).background_color = "F8FAFC"
         row(0).text_color = "0F172A"
@@ -159,7 +159,7 @@ module HotelOps
       # Render Blockers Table
       pdf.text "Audit Blockers", size: 11, style: :bold, color: "DC2626"
       pdf.move_down 6
-      
+
       blocker_data = [ [ "Type", "Guest / Confirmation", "Reason" ] ]
       if blockers.any? { |_, items| items.any? }
         blockers.each do |type, items|
@@ -167,7 +167,7 @@ module HotelOps
             blocker_data << [
               type.humanize,
               "#{item['guest_name']} (#{item['confirmation_token']})",
-              item['reason']
+              item["reason"]
             ]
           end
         end
@@ -175,8 +175,8 @@ module HotelOps
         blocker_data << [ { content: "No critical audit blockers were recorded.", colspan: 3, align: :center, font_style: :italic, text_color: "94A3B8" } ]
       end
 
-      pdf.table(blocker_data, width: pdf.bounds.width, cell_style: { border_color: "FEE2E2", border_width: 0.5, padding: [8, 8], size: 9, text_color: "475569" }) do
-        cells.borders = [:bottom]
+      pdf.table(blocker_data, width: pdf.bounds.width, cell_style: { border_color: "FEE2E2", border_width: 0.5, padding: [ 8, 8 ], size: 9, text_color: "475569" }) do
+        cells.borders = [ :bottom ]
         row(0).font_style = :bold
         row(0).background_color = "FEF2F2"
         row(0).text_color = "991B1B"
@@ -197,7 +197,7 @@ module HotelOps
             exception_data << [
               type.humanize,
               "#{item['guest_name'] || 'N/A'} (#{item['confirmation_token'] || 'N/A'})",
-              item['reason'] || item['details'] || "General exception"
+              item["reason"] || item["details"] || "General exception"
             ]
           end
         end
@@ -205,8 +205,8 @@ module HotelOps
         exception_data << [ { content: "No operational warnings were recorded.", colspan: 3, align: :center, font_style: :italic, text_color: "94A3B8" } ]
       end
 
-      pdf.table(exception_data, width: pdf.bounds.width, cell_style: { border_color: "FEF3C7", border_width: 0.5, padding: [8, 8], size: 9, text_color: "475569" }) do
-        cells.borders = [:bottom]
+      pdf.table(exception_data, width: pdf.bounds.width, cell_style: { border_color: "FEF3C7", border_width: 0.5, padding: [ 8, 8 ], size: 9, text_color: "475569" }) do
+        cells.borders = [ :bottom ]
         row(0).font_style = :bold
         row(0).background_color = "FFFBEB"
         row(0).text_color = "92400E"

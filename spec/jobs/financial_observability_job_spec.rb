@@ -9,7 +9,7 @@ RSpec.describe FinancialObservabilityJob, type: :job do
       before do
         # Simulate an anomaly so report_worthy? is true
         allow(FinancialControls::EvaluateAnomalies).to receive(:call).and_return({
-          unbalanced_folios: [{ id: 1 }],
+          unbalanced_folios: [ { id: 1 } ],
           audit_sync_lags: [],
           override_abuse: nil
         })
@@ -19,13 +19,13 @@ RSpec.describe FinancialObservabilityJob, type: :job do
         expect {
           described_class.new.perform
         }.to change { ActionMailer::Base.deliveries.count }.by(1)
-        
+
         expect(config.reload.last_alert_sent_at).to be_present
       end
 
       it "throttles based on frequency" do
         described_class.new.perform
-        
+
         # Second run immediately should not send another email
         expect {
           described_class.new.perform

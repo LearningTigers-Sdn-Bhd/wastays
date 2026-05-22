@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["reviewSection", "penaltyChoice", "customFields", "amountInput", "displayAmount"]
+  static targets = ["reviewSection", "chargeChoice", "customFields", "amountInput", "displayAmount"]
   static values = {
     baseAmount: Number,
     currency: { type: String, default: "MYR" }
@@ -12,7 +12,7 @@ export default class extends Controller {
   }
 
   updateUI() {
-    const choice = this.penaltyChoiceTargets.find(r => r.checked).value
+    const choice = this.chargeChoiceTargets.find(r => r.checked).value
     
     if (choice === "true") {
       this.customFieldsTarget.classList.remove("hidden")

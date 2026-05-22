@@ -24,7 +24,7 @@ RSpec.describe Bookings::ProcessNoShows do
     booking
   end
 
-  it "marks confirmed arrivals as no-show and posts first-night penalties" do
+  it "marks confirmed arrivals as no-show and posts first-night charges" do
     booking = create_no_show_candidate
 
     result = described_class.call(night_audit: night_audit, user: user)
@@ -36,14 +36,14 @@ RSpec.describe Bookings::ProcessNoShows do
     folio = booking.booking_folio
     expect(folio).to be_present
     expect(folio.status).to eq("open")
-    penalty = folio.folio_transactions.charge.where(category: "no_show_penalty").sole
-    expect(penalty.amount).to eq(100.0)
-    expect(penalty.gl_code).to eq(hotel.hotel_general_ledger_maps.find_by!(transaction_category: "no_show_penalty").gl_code)
+    charge = folio.folio_transactions.charge.where(category: "no_show_charge").sole
+    expect(charge.amount).to eq(100.0)
+    expect(charge.gl_code).to eq(hotel.hotel_general_ledger_maps.find_by!(transaction_category: "no_show_charge").gl_code)
     expect(folio.folio_transactions.charge.where(category: "tax").sole.amount).to eq(10.0)
     expect(folio.outstanding_balance).to eq(110.0)
   end
 
-  it "uses first-night room and tax snapshots for no-show penalties" do
+  it "uses first-night room and tax snapshots for no-show charges" do
     booking = create_no_show_candidate(
       tax_lines: [],
       tax_posting_snapshot: {
@@ -59,11 +59,11 @@ RSpec.describe Bookings::ProcessNoShows do
 
     described_class.call(night_audit: night_audit, user: user)
 
-    expect(booking.booking_folio.folio_transactions.charge.where(category: "no_show_penalty").sole.amount).to eq(200.0)
+    expect(booking.booking_folio.folio_transactions.charge.where(category: "no_show_charge").sole.amount).to eq(200.0)
     expect(booking.booking_folio.folio_transactions.charge.where(category: "tax").sole.amount).to eq(16.0)
   end
 
-  it "syncs captured payment as a booking payment before posting penalty" do
+  it "syncs captured payment as a booking payment before posting charge" do
     booking = create_no_show_candidate
     payment_transaction = create(:payment_transaction,
       booking: booking,

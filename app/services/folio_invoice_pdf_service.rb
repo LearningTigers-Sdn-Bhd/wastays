@@ -23,7 +23,7 @@ class FolioInvoicePdfService
     "accommodation" => "Room Charge",
     "tax"           => "Tax",
     "fb"            => "Food & Beverage",
-    "no_show_penalty" => "No-Show Penalty",
+    "no_show_charge" => "No-Show Charge",
     "other"         => "Other Charge",
     "adjustment"    => "Adjustment",
     "correction"    => "Correction",

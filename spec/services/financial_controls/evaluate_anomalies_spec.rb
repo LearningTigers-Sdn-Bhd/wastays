@@ -16,10 +16,10 @@ RSpec.describe FinancialControls::EvaluateAnomalies do
       it "detects closed bookings with non-zero balances" do
         booking = create(:booking, hotel: hotel, status: "completed")
         folio = create(:booking_folio, booking: booking, hotel: hotel, status: "closed")
-        
+
         # Manually inject a transaction to create a balance
         create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100.0)
-        
+
         report = service.call
         expect(report[:unbalanced_folios].count).to eq(1)
         expect(report[:unbalanced_folios].first[:confirmation_token]).to eq(booking.confirmation_token)
@@ -30,7 +30,7 @@ RSpec.describe FinancialControls::EvaluateAnomalies do
         booking = create(:booking, hotel: hotel, status: "completed")
         create(:booking_folio, booking: booking, hotel: hotel, status: "closed")
         # Balance is 0
-        
+
         report = service.call
         expect(report[:unbalanced_folios]).to be_empty
       end
@@ -40,7 +40,7 @@ RSpec.describe FinancialControls::EvaluateAnomalies do
       it "detects old business dates that are not closed" do
         old_date = 5.days.ago.to_date
         create(:hotel_business_date, hotel: hotel, business_date: old_date, status: "open")
-        
+
         report = service.call
         expect(report[:audit_sync_lags].count).to eq(1)
         expect(report[:audit_sync_lags].first[:business_date]).to eq(old_date)
@@ -48,7 +48,7 @@ RSpec.describe FinancialControls::EvaluateAnomalies do
 
       it "ignores recently opened dates" do
         create(:hotel_business_date, hotel: hotel, business_date: Date.current, status: "open")
-        
+
         report = service.call
         expect(report[:audit_sync_lags]).to be_empty
       end
@@ -59,7 +59,7 @@ RSpec.describe FinancialControls::EvaluateAnomalies do
         6.times do
           create(:financial_audit_event, hotel: hotel, event_type: "closed_date_override_posted", occurred_at: Time.current)
         end
-        
+
         report = service.call
         expect(report[:override_abuse][:count]).to eq(6)
       end
@@ -68,7 +68,7 @@ RSpec.describe FinancialControls::EvaluateAnomalies do
         3.times do
           create(:financial_audit_event, hotel: hotel, event_type: "closed_date_override_posted", occurred_at: Time.current)
         end
-        
+
         report = service.call
         expect(report[:override_abuse]).to be_nil
       end

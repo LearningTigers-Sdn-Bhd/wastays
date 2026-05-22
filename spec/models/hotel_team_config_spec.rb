@@ -7,7 +7,7 @@ RSpec.describe HotelTeamConfig, type: :model do
 
   describe "validations" do
     subject { build(:hotel_team_config) }
-    
+
     it { is_expected.to validate_presence_of(:name) }
     it { is_expected.to validate_presence_of(:template_type) }
     it { is_expected.to validate_numericality_of(:frequency).only_integer.is_greater_than(0).allow_nil }

@@ -3,8 +3,8 @@
 require "ostruct"
 
 module Folios
-  class PostPenaltyFee
-    ALLOWED_CATEGORIES = %w[late_checkout_penalty early_departure_penalty].freeze
+  class PostCategoryCharge
+    ALLOWED_CATEGORIES = %w[late_checkout_charge early_departure_charge].freeze
 
     def self.call(folio:, user:, category:, amount:, description: nil, metadata: {}, options: {})
       new(folio: folio, user: user, category: category, amount: amount, description: description, metadata: metadata, options: options).call
@@ -21,8 +21,8 @@ module Folios
     end
 
     def call
-      return failure("Invalid penalty category: #{@category}") unless ALLOWED_CATEGORIES.include?(@category)
-      return failure("Penalty amount must be greater than zero") unless @amount.positive?
+      return failure("Invalid charge category: #{@category}") unless ALLOWED_CATEGORIES.include?(@category)
+      return failure("Charge amount must be greater than zero") unless @amount.positive?
 
       Folios::InsertTransaction.new(
         booking_folio: @folio,
@@ -33,8 +33,8 @@ module Folios
         description: @description,
         options: @options.merge(
           metadata: @metadata.merge(
-            posting_source: "penalty_service",
-            penalty_type: @category
+            posting_source: "charge_service",
+            charge_type: @category
           )
         )
       ).call

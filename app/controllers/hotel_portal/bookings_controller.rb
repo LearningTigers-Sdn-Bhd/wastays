@@ -226,7 +226,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       result = Bookings::ProcessEarlyDeparture.call(
         booking: @booking,
         user: current_user,
-        params: params.permit(:charge_penalty, :penalty_amount),
+        params: params.permit(:apply_charge, :charge_amount),
         options: options
       )
 
@@ -245,24 +245,24 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def process_late_checkout
     @booking = current_hotel.bookings.find(params[:id])
-    should_charge = params[:penalty_type] != "none" && params[:amount].to_f > 0
+    should_charge = params[:charge_type] != "none" && params[:amount].to_f > 0
 
     if should_charge
-      result = Folios::PostPenaltyFee.call(
+      result = Folios::PostCategoryCharge.call(
         folio: @booking.booking_folio,
         user: current_user,
-        category: "late_checkout_penalty",
+        category: "late_checkout_charge",
         amount: params[:amount],
-        description: "Late Checkout Penalty"
+        description: "Late Checkout Charge"
       )
 
       unless result.success?
-        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to apply late checkout penalty: #{result.error}"
+        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to apply late checkout charge: #{result.error}"
       end
     end
 
     if params[:after_action] == "checkout"
-      message = should_charge ? "Late checkout penalty applied and guest checked out." : "Late checkout resolved and guest checked out."
+      message = should_charge ? "Late checkout charge applied and guest checked out." : "Late checkout resolved and guest checked out."
       transition_status("completed", Time.current, message)
     else
       Bookings::TransitionStatus.new(
@@ -271,7 +271,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
         user: current_user,
         options: { event: "resolve_late_checkout" }
       ).call
-      notice = should_charge ? "Late checkout penalty applied." : "Late checkout resolved without penalty."
+      notice = should_charge ? "Late checkout charge applied." : "Late checkout resolved without charge."
       redirect_to hotel_booking_path(current_hotel, @booking), notice: notice
     end
   end
@@ -529,7 +529,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
         res = Bookings::ProcessEarlyDeparture.call(
           booking: @booking,
           user: current_user,
-          params: params.permit(:charge_penalty, :penalty_amount),
+          params: params.permit(:apply_charge, :charge_amount),
           options: options.merge(defer_checkout: true, defer_side_effects: true)
         )
 
@@ -663,5 +663,4 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def authorize_manage_bookings!
     raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
   end
-
 end

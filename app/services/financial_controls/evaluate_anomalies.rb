@@ -49,7 +49,7 @@ module FinancialControls
       # Find business dates that are not closed and are more than 2 days old
       threshold_date = 2.days.ago.to_date
       @hotel.hotel_business_dates
-            .where.not(status: ["closed", "force_closed"])
+            .where.not(status: [ "closed", "force_closed" ])
             .where("business_date < ?", threshold_date)
             .order(business_date: :asc)
             .map do |bd|
@@ -66,7 +66,7 @@ module FinancialControls
       overrides = @hotel.financial_audit_events
                         .where(event_type: "closed_date_override_posted")
                         .where("occurred_at >= ?", 24.hours.ago)
-      
+
       return nil if overrides.count <= 5
 
       {
