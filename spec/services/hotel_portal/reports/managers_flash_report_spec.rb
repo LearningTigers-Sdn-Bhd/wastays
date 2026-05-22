@@ -25,12 +25,12 @@ RSpec.describe HotelPortal::Reports::ManagersFlashReport, type: :service do
 
       # Adjustment on end_date
       tx_to_adjust = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: end_date)
-      create(:folio_transaction, 
-        booking_folio: folio, 
-        transaction_type: "adjustment", 
+      create(:folio_transaction,
+        booking_folio: folio,
+        transaction_type: "adjustment",
         category: "adjustment",
-        amount: -50, 
-        posting_date: end_date, 
+        amount: -50,
+        posting_date: end_date,
         reversal_of_transaction: tx_to_adjust
       )
 
@@ -42,7 +42,7 @@ RSpec.describe HotelPortal::Reports::ManagersFlashReport, type: :service do
       result = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
       expect(result.rows.size).to eq(2)
-      
+
       # Day 1 (start_date)
       day1 = result.rows[0]
       expect(day1[:date]).to eq(start_date)
@@ -74,9 +74,9 @@ RSpec.describe HotelPortal::Reports::ManagersFlashReport, type: :service do
 
     it "handles zero availability and zero sales gracefully" do
       create(:room_type, hotel: hotel, quantity: 0)
-      
+
       result = described_class.new(hotel: hotel, start_date: start_date, end_date: start_date).call
-      
+
       expect(result.rows.first[:occupancy_rate]).to eq(0)
       expect(result.rows.first[:adr]).to eq(0)
       expect(result.rows.first[:revpar]).to eq(0)
