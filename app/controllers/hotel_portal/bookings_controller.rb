@@ -82,7 +82,8 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       rate_plan: rate_plan,
       check_in: Date.parse(params[:check_in]),
       check_out: Date.parse(params[:check_out]),
-      guest_country: params[:guest_country].presence || current_hotel.country
+      guest_country: params[:guest_country].presence || current_hotel.country,
+      corporate_rate: params[:corporate_rate] == "true"
     ).call
     total = snapshot.room_total + snapshot.tax_total
 

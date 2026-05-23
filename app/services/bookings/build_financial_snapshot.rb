@@ -4,7 +4,7 @@ require "ostruct"
 
 module Bookings
   class BuildFinancialSnapshot
-    def initialize(hotel:, check_in:, check_out:, guest_country:, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil)
+    def initialize(hotel:, check_in:, check_out:, guest_country:, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false)
       @hotel = hotel
       @check_in = check_in.to_date
       @check_out = check_out.to_date
