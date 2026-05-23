@@ -4,7 +4,9 @@ export default class extends Controller {
   static targets = ["tab", "panel"]
 
   connect() {
-    this.activate(this.tabTargets[0]?.dataset.tabName || "booking-details")
+    const urlParams = new URLSearchParams(window.location.search)
+    const activeTab = urlParams.get("tab") || this.tabTargets[0]?.dataset.tabName || "booking-details"
+    this.activate(activeTab)
   }
 
   switch(event) {

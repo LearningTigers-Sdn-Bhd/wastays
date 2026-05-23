@@ -11,8 +11,10 @@ RSpec.configure do |config|
     # Common Hotel Amenities
     [
       { name: "Free WiFi", slug: "wifi", category: "Services", amenity_type: "hotel" },
-      { name: "Swimming Pool", slug: "pool", category: "Facilities", amenity_type: "hotel" },
-      { name: "Gym", slug: "gym", category: "Facilities", amenity_type: "hotel" }
+      { name: "Swimming Pool", slug: "swimming_pool", category: "Facilities", amenity_type: "hotel" },
+      { name: "Fitness Center", slug: "fitness_center", category: "Facilities", amenity_type: "hotel" },
+      { name: "Spa & Wellness Centre", slug: "spa_wellness_centre", category: "Facilities", amenity_type: "hotel" },
+      { name: "Laundry", slug: "laundry", category: "Facilities", amenity_type: "hotel" }
     ].each do |attr|
       amenity = Amenity.find_or_initialize_by(slug: attr[:slug], amenity_type: attr[:amenity_type])
       amenity.update!(

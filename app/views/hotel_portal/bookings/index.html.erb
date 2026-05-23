@@ -21,7 +21,9 @@
       <% end %>
 
       <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-        <%= link_to new_hotel_booking_path(current_hotel), class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
+        <%= link_to new_hotel_booking_path(current_hotel),
+            data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" },
+            class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
           <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
           Add New Booking
         <% end %>

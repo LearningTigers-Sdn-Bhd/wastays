@@ -252,6 +252,7 @@ Rails.application.routes.draw do
       patch :reactivate, on: :member
     end
     resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions"
+    resources :general_ledger_maps, only: [ :index, :edit, :update ], path: "general-ledger-mappings"
 
     resources :room_types do
       member do
@@ -264,21 +265,30 @@ Rails.application.routes.draw do
     resources :bookings, only: [ :index, :show, :update, :new, :create ] do
       collection do
         get :availability
+        get :rate_options
         get :stay_price
         post :sync
       end
       member do
+        get  :folio
+        get  :checkout
         patch :move
         post :check_in
         post :check_out
+        post :reinstate
         post :cancel
         post :add_guest
+        post :process_late_checkout
+        get  :folio_invoice
         delete "guests/:guest_id", action: :remove_guest, as: :remove_guest
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings#complete_housekeeping_request", as: :complete_housekeeping_request
         patch "complaint_requests/:complaint_request_id", to: "bookings#update_complaint_request", as: :update_complaint_request
         post "complaint_requests/:complaint_request_id/resolve", to: "bookings#resolve_complaint_request", as: :resolve_complaint_request
       end
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
+      resources :folio_transactions, only: [ :create ] do
+        post :reverse, on: :member
+      end
     end
 
     get "requests", to: "requests#index", as: :requests
@@ -309,10 +319,18 @@ Rails.application.routes.draw do
         get :arrivals_departures
         get :daily_occupancy
         get :daily_revenue
+        get :managers_flash
         get :outstanding_balance
+        get :deposit_liability
+        get :folio_ledger
+        get :journal_batches      end
+    end
+    resources :night_audits, only: [ :index, :show, :create ] do
+      member do
+        get :resolve
+        get :blockers
       end
     end
-    resources :night_audits, only: [ :index, :show, :create ]
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
         post :apply_pricing_rules
@@ -324,7 +342,9 @@ Rails.application.routes.draw do
       end
     end
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
-    resources :guests, only: [ :index, :show, :new, :create, :edit, :update, :destroy ]
+    resources :guests, only: [ :index, :show, :new, :create, :edit, :update, :destroy ] do
+      get :search, on: :collection
+    end
     resources :in_house_guests, only: [ :index ]
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings
@@ -342,6 +362,9 @@ Rails.application.routes.draw do
           get :check_out
           get :edit_stay
           get :notes
+          get :late_checkout
+          get :folio
+          get :booking_sheet
           patch :transition
         end
       end

@@ -1,0 +1,30 @@
+# Folio: Nightly Charges
+
+## Status
+
+Completed foundation.
+
+## Purpose
+
+Posts room revenue and tax by business date during night audit instead of charging the full stay upfront.
+
+## Key Files
+
+- `app/services/folios/post_nightly_charges.rb`
+- `app/services/folios/nightly_charge_calculation.rb`
+- `app/services/hotel_ops/run_night_audit.rb`
+- `app/models/hotel_tax.rb`
+- `spec/services/folios/post_nightly_charges_spec.rb`
+- `spec/services/folios/nightly_charge_calculation_spec.rb`
+
+## Rules Made So Far
+
+- Nightly charges are posted for occupied nights, not checkout day.
+- Accommodation and tax are posted as separate folio lines.
+- Duplicate nightly postings for the same booking and business date are prevented.
+- Nightly postings are run as part of the night audit close flow.
+
+## Known Follow-Ups
+
+- Extend package posting if rate plans include bundled items such as breakfast or parking.
+- Confirm tax component granularity is sufficient for each supported jurisdiction.

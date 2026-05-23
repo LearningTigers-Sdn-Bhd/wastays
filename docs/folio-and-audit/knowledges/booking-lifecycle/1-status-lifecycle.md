@@ -1,0 +1,30 @@
+# Booking Lifecycle: Status Lifecycle
+
+## Status
+
+Completed foundation, with remaining operational exception workflows tracked in current progress roadmaps.
+
+## Purpose
+
+Controls reservation state changes so bookings move through explicit PMS states instead of ad hoc status updates.
+
+## Key Files
+
+- `app/models/booking.rb`
+- `app/models/concerns/bookings/status_lifecycle.rb`
+- `app/services/bookings/transition_status.rb`
+- `app/controllers/hotel_portal/bookings_controller.rb`
+- `spec/integration/lifecycles/standard_booking_lifecycle_spec.rb`
+- `spec/integration/lifecycles/exception_booking_lifecycle_spec.rb`
+
+## Rules Made So Far
+
+- Bookings use explicit statuses such as `pending`, `confirmed`, `checked_in`, `review_due_out`, `cancelled`, `completed`, `overbooked`, and `no_show`.
+- Status changes are constrained through lifecycle rules instead of free-form updates.
+- Lifecycle services centralize changes that have side effects, such as check-in, checkout, cancellation, reinstatement, and no-show processing.
+- `review_due_out` is an operational state triggered when a room is detected as occupied past the checkout time. The front desk can resolve this via an "Approve/Reject" flow that supports applying combined charges (room rate + custom adjustment) and directly updating the booking's checkout date/time.
+
+## Known Follow-Ups
+
+- Expand operational exception workflows for early departure penalties and rate corrections.
+- Keep lifecycle changes tied to financial posting rules when a transition affects folio balances.

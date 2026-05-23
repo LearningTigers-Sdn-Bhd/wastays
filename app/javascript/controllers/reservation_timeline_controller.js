@@ -9,14 +9,6 @@ export default class extends Controller {
     this.canDrag = false
   }
 
-  openNewBookingModal(event) {
-    event.preventDefault()
-    const url = event.currentTarget.href
-    const frameId = event.currentTarget.dataset.turboFrame || "reservation_board_booking_sheet_content"
-    const modalEvent = new CustomEvent("reservation-board:open-modal", { detail: { url, frameId } })
-    window.dispatchEvent(modalEvent)
-  }
-
   onDragHandleMouseDown(event) {
     this.canDrag = true
   }

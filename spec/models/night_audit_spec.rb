@@ -30,4 +30,19 @@ RSpec.describe NightAudit, type: :model do
     expect(described_class.recent_first.first).to eq(newer)
     expect(described_class.recent_first.last).to eq(older)
   end
+
+  describe ".closed_for_date?" do
+    it "uses hotel business dates as the closed-date source of truth" do
+      hotel = create(:hotel)
+      create(:hotel_business_date, hotel: hotel, business_date: Date.current, status: "closed")
+
+      expect(described_class.closed_for_date?(hotel.id, Date.current)).to be(true)
+    end
+
+    it "falls back to completed night audits when no hotel business date exists" do
+      night_audit = create(:night_audit, status: "completed")
+
+      expect(described_class.closed_for_date?(night_audit.hotel_id, night_audit.business_date)).to be(true)
+    end
+  end
 end

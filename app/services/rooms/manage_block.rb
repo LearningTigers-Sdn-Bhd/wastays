@@ -16,7 +16,7 @@ module Rooms
       @block.user = @user
 
       if @block.save
-        sync_room_status if @block.active_on?(Date.current)
+        sync_room_status if @block.active_on?(@hotel.business_date_for)
         sync_inventory(@block.start_date, @block.end_date)
         success(@block)
       else
@@ -27,12 +27,12 @@ module Rooms
     def update
       return failure("Block not found") unless @block
 
-      was_active_today = @block.active_on?(Date.current)
+      was_active_today = @block.active_on?(@hotel.business_date_for)
       old_start = @block.start_date
       old_end = @block.end_date
 
       if @block.update(@params)
-        is_active_today = @block.active_on?(Date.current)
+        is_active_today = @block.active_on?(@hotel.business_date_for)
 
         if is_active_today
           sync_room_status
@@ -58,7 +58,7 @@ module Rooms
       room_number = @block.room_number
       start_date = @block.start_date
       end_date = @block.end_date
-      was_active_today = @block.active_on?(Date.current)
+      was_active_today = @block.active_on?(@hotel.business_date_for)
 
       if @block.destroy
         sync_room_status_on_removal(room_type, room_number, target_status: "ready") if was_active_today
@@ -72,7 +72,7 @@ module Rooms
     def finish
       return failure("Block not found") unless @block
 
-      was_active_today = @block.active_on?(Date.current)
+      was_active_today = @block.active_on?(@hotel.business_date_for)
       start_date = @block.start_date
       end_date = @block.end_date
 
@@ -118,7 +118,7 @@ module Rooms
 
     def sync_room_status_on_removal(room_type, room_number, target_status: "ready")
       # Check if there are other active blocks for this room today (excluding the one we just finished/removed)
-      other_blocks = @hotel.room_blocks.active_on(Date.current)
+      other_blocks = @hotel.room_blocks.active_on(@hotel.business_date_for)
                            .where(room_type: room_type, room_number: room_number)
                            .where.not(id: @block&.id)
 

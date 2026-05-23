@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Booking < ApplicationRecord
+  include Bookings::StatusLifecycle
+
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
   belongs_to :payout_batch, optional: true
@@ -11,6 +13,8 @@ class Booking < ApplicationRecord
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
   has_one :refund_request, dependent: :destroy
+  has_one :booking_folio, dependent: :destroy
+  has_many :deposits, dependent: :restrict_with_error
   has_one_attached :id_front
   has_one_attached :id_back
   has_many :housekeeping_requests, dependent: :destroy
@@ -19,7 +23,7 @@ class Booking < ApplicationRecord
   has_many :notification_deliveries, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :nullify
-  attr_accessor :estimated_arrival_time
+  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :status_transition_event
 
   def guest_government_id
     @guest_government_id.presence ||
@@ -31,8 +35,8 @@ class Booking < ApplicationRecord
     @guest_government_id = value
   end
 
-  STATUSES = %w[pending confirmed checked_in cancelled completed overbooked].freeze
-  PAYMENT_STATUSES = %w[pending authorized captured failed refunded].freeze
+  STATUSES = %w[pending confirmed checked_in review_due_out cancelled completed overbooked no_show].freeze
+  PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
   PRE_CHECKIN_STATUSES = %w[not_started pending in_progress completed failed].freeze
@@ -44,6 +48,7 @@ class Booking < ApplicationRecord
   ].freeze
 
   validates :status, presence: true, inclusion: { in: STATUSES }
+  validate :status_transition_must_be_allowed, if: :status_changed_on_persisted_record?
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
   validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_nil: true }
@@ -64,8 +69,9 @@ class Booking < ApplicationRecord
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
+  scope :no_show, -> { where(status: "no_show") }
   scope :active, -> { where(status: [ "confirmed", "checked_in" ]) }
-  scope :revenue_generating, -> { where(status: [ "confirmed", "checked_in", "completed" ]) }
+  scope :revenue_generating, -> { where(status: [ "confirmed", "checked_in", "completed", "no_show" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
 
   scope :search, ->(query) {
@@ -89,10 +95,20 @@ class Booking < ApplicationRecord
     base = base_scope || revenue_generating
     base = base.created_between(start_date, end_date).search(query)
 
+    # Reconcile to FolioTransaction SSOT
+    transactions = FolioTransaction.joins(booking_folio: :booking)
+                                   .where(bookings: { id: base.select(:id) })
+                                   .where(transaction_type: %w[charge adjustment])
+
+    total_gross = transactions.sum(:amount)
+    # Proportional margin calculation based on booking snapshots
+    total_margin = base.sum("COALESCE(margin_amount, 0)")
+    total_net = total_gross - total_margin
+
     {
-      total_revenue: base.sum(:total_amount) || 0,
-      total_margin: base.sum("COALESCE(margin_amount, 0)"),
-      total_net: base.sum("COALESCE(net_amount, 0)"),
+      total_revenue: total_gross,
+      total_margin: total_margin,
+      total_net: total_net,
       booking_count: base.count,
       active_hotels_count: base.distinct.count(:hotel_id)
     }
@@ -100,24 +116,36 @@ class Booking < ApplicationRecord
 
   def self.daily_analytics(start_date, end_date, query: nil, base_scope: nil)
     base = base_scope || revenue_generating
-    base.created_between(start_date, end_date)
-      .search(query)
-      .group_by { |booking| booking.created_at.to_date }
+    base = base.created_between(start_date, end_date).search(query).includes(booking_folio: :folio_transactions)
+
+    base.group_by { |booking| booking.created_at.to_date }
       .sort
       .map do |date, bookings|
+        # Sum gross from transactions for these specific bookings
+        gross = FolioTransaction.joins(booking_folio: :booking)
+                                .where(bookings: { id: bookings.map(&:id) })
+                                .where(transaction_type: %w[charge adjustment])
+                                .sum(:amount)
+        margin = bookings.sum { |b| b.margin_amount || 0 }
         {
           date: date,
           booking_count: bookings.count,
-          revenue: bookings.sum(&:total_amount),
-          margin: bookings.sum { |b| b.margin_amount || 0 },
-          net: bookings.sum { |b| b.net_amount || 0 }
+          revenue: gross,
+          margin: margin,
+          net: gross - margin
         }
       end
   end
 
   def self.daily_revenue_data(bookings)
+    # Reconcile to ledger
     bookings.group_by { |b| b.created_at.to_date }
-            .transform_values { |bs| bs.sum(&:total_amount) }
+            .transform_values do |bs|
+              FolioTransaction.joins(booking_folio: :booking)
+                              .where(bookings: { id: bs.map(&:id) })
+                              .where(transaction_type: %w[charge adjustment])
+                              .sum(:amount)
+            end
             .sort.to_h
   end
   def self.last_friday
@@ -178,6 +206,9 @@ class Booking < ApplicationRecord
     pre_checkin_status.presence || pre_checkin&.status.presence || "not_started"
   end
 
+  delegate :folio_number, to: :booking_folio, allow_nil: true
+  delegate :invoice_number, to: :booking_folio, allow_nil: true
+
   def pre_checkin_completed?
     pre_checkin_display_status == "completed"
   end
@@ -187,10 +218,14 @@ class Booking < ApplicationRecord
   end
 
   def folio_outstanding_balance
-    # total_amount = room charges pre-paid at booking (tax tracked separately but also pre-paid)
-    # Outstanding balance = only unpaid extra charges (F&B, room service, etc.)
-    # Will be non-zero once Single Itemised Folio (extra charges) is built.
-    0.0
+    booking_folio&.outstanding_balance || 0.0
+  end
+
+  def transition_status_to!(new_status, event:, attributes: {})
+    self.status_transition_event = event
+    update!(attributes.merge(status: new_status))
+  ensure
+    self.status_transition_event = nil
   end
 
   def tax_total
@@ -213,6 +248,10 @@ class Booking < ApplicationRecord
     format_number(folio_number)
   end
 
+  def formatted_invoice_number
+    format_number(invoice_number)
+  end
+
   def formatted_guest_registration_number
     format_number(guest_registration_number)
   end
@@ -229,6 +268,20 @@ class Booking < ApplicationRecord
   end
 
   private
+
+  def status_changed_on_persisted_record?
+    persisted? && will_save_change_to_status?
+  end
+
+  def status_transition_must_be_allowed
+    from = status_in_database
+    to = status
+    event = status_transition_event
+
+    return if Bookings::StatusLifecycle.valid_transition?(from: from, to: to, event: event)
+
+    errors.add(:status, Bookings::StatusLifecycle.transition_error(from: from, to: to, event: event))
+  end
 
   def format_number(number)
     return nil unless number

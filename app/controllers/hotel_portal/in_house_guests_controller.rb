@@ -4,7 +4,7 @@ class HotelPortal::InHouseGuestsController < HotelPortal::BaseController
     @room_assignment = params[:room_assignment].to_s
 
     base_scope = current_hotel.bookings
-                              .checked_in
+                              .where(status: [ "checked_in", "review_due_out" ])
                               .where.not(checked_in_at: nil)
                               .where(checked_out_at: nil)
 

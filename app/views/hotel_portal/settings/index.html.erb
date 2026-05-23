@@ -36,7 +36,7 @@
       </nav>
 
       <% if @active_settings_tab == "general" %>
-      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Hotel Settings</h2>
           <p class="mt-1 text-sm font-medium text-slate-600">Control check-in/out timings and currency.</p>
@@ -179,6 +179,92 @@
               </div>
             </div>
 
+            <div class="grid gap-4 md:grid-cols-3 mt-6">
+              <div data-controller="time-picker" class="relative">
+                <%= f.label :business_starts_at, "Business Day Starts At", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <div class="relative">
+                  <input type="text" 
+                         data-time-picker-target="input"
+                         data-action="click->time-picker#toggle"
+                         class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 cursor-pointer"
+                         readonly
+                         value="<%= @hotel.business_starts_at&.strftime("%I:%M %p") %>">
+                  <%= f.hidden_field :business_starts_at, value: @hotel.business_starts_at&.strftime("%H:%M"), data: { time_picker_target: "hiddenInput" } %>
+                  
+                  <div data-time-picker-target="dropdown" class="absolute z-[100] hidden w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 mt-1">
+                    <div class="flex h-[240px]">
+                      <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1">
+                        <% (1..12).each do |h| %>
+                          <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= h %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors">
+                            <%= h %>
+                          </button>
+                        <% end %>
+                      </div>
+                      <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1 bg-slate-50/10">
+                        <% (0..59).each do |m| %>
+                          <button type="button" data-time-picker-target="minute" data-action="click->time-picker#selectMinute" data-value="<%= m %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors">
+                            <%= m.to_s.rjust(2, '0') %>
+                          </button>
+                        <% end %>
+                      </div>
+                      <div class="flex-1 p-1 bg-slate-50/30 flex flex-col justify-center gap-1">
+                        <% ["AM", "PM"].each do |p| %>
+                          <button type="button" data-time-picker-target="period" data-action="click->time-picker#selectPeriod" data-value="<%= p %>" class="w-full rounded-lg py-3 text-center text-xs font-bold transition-colors">
+                            <%= p %>
+                          </button>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div data-controller="time-picker" class="relative">
+                <%= f.label :business_ends_at, "Business Day Ends At", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <div class="relative">
+                  <input type="text" 
+                         data-time-picker-target="input"
+                         data-action="click->time-picker#toggle"
+                         class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 cursor-pointer"
+                         readonly
+                         value="<%= @hotel.business_ends_at&.strftime("%I:%M %p") %>">
+                  <%= f.hidden_field :business_ends_at, value: @hotel.business_ends_at&.strftime("%H:%M"), data: { time_picker_target: "hiddenInput" } %>
+                  
+                  <div data-time-picker-target="dropdown" class="absolute z-[100] hidden w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 mt-1">
+                    <div class="flex h-[240px]">
+                      <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1">
+                        <% (1..12).each do |h| %>
+                          <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= h %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors">
+                            <%= h %>
+                          </button>
+                        <% end %>
+                      </div>
+                      <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1 bg-slate-50/10">
+                        <% (0..59).each do |m| %>
+                          <button type="button" data-time-picker-target="minute" data-action="click->time-picker#selectMinute" data-value="<%= m %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors">
+                            <%= m.to_s.rjust(2, '0') %>
+                          </button>
+                        <% end %>
+                      </div>
+                      <div class="flex-1 p-1 bg-slate-50/30 flex flex-col justify-center gap-1">
+                        <% ["AM", "PM"].each do |p| %>
+                          <button type="button" data-time-picker-target="period" data-action="click->time-picker#selectPeriod" data-value="<%= p %>" class="w-full rounded-lg py-3 text-center text-xs font-bold transition-colors">
+                            <%= p %>
+                          </button>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <%= f.label :arrival_grace_period_hours, "Arrival Grace Period (Hours)", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <%= f.number_field :arrival_grace_period_hours, min: 0, step: 1, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                <p class="mt-1 text-[10px] font-medium text-slate-400 italic">Grace period after business hours before marking as No-Show.</p>
+              </div>
+            </div>
+
             <div class="flex justify-end border-t border-slate-200 pt-4">
               <%= f.submit "Save Settings", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
             </div>
@@ -189,7 +275,7 @@
 
       <% if @active_settings_tab == "tax" %>
       <!-- Tax Configuration Card -->
-      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Tax Configuration</h2>
           <p class="mt-1 text-sm font-medium text-slate-600">Configure taxes applied to bookings. These appear as separate line items on invoices and receipts.</p>
@@ -401,7 +487,7 @@
       <% end %>
 
       <% if @active_settings_tab == "ai" %>
-      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">AI Concierge Configuration</h2>
           <p class="mt-1 text-sm font-medium text-slate-600">Configure AI providers and keys for automated assistance.</p>
@@ -462,7 +548,7 @@
       <% end %>
 
       <% if @active_settings_tab == "notifications" %>
-      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Communication & Notifications</h2>
           <p class="mt-1 text-sm font-medium text-slate-600">Configure guest notification automations and channels.</p>
@@ -628,7 +714,7 @@
       <% end %>
 
       <% if @active_settings_tab == "banking" && current_user.has_permission?("manage_account") %>
-        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
             <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Banking Details</h2>
             <p class="mt-1 text-sm font-medium text-slate-600">Shared account banking details for payout and settlement.</p>

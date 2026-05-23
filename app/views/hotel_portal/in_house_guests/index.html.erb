@@ -82,7 +82,12 @@
               <tr class="align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
                 <td class="px-6 py-4 sm:px-8">
                   <div class="flex flex-col gap-1.5">
-                    <span class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></span>
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></span>
+                      <% if booking.status == "review_due_out" %>
+                        <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 uppercase tracking-wider">Late</span>
+                      <% end %>
+                    </div>
                     <span class="text-xs font-mono text-slate-500"><%= booking.confirmation_token %></span>
                   </div>
                 </td>
@@ -154,7 +159,11 @@
                   <p class="mt-1 text-sm font-semibold text-slate-900"><%= booking.guest_name %></p>
                   <p class="mt-1 text-xs font-mono text-slate-500"><%= booking.confirmation_token %></p>
                 </div>
-                <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">Checked in</span>
+                <% if booking.status == "review_due_out" %>
+                  <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">Late Checkout</span>
+                <% else %>
+                  <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">Checked in</span>
+                <% end %>
               </div>
 
               <dl class="mt-4 space-y-3 text-sm">

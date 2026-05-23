@@ -38,14 +38,21 @@ module DemoSeeds
     { name: "Export Audit Logs", slug: "export_audit_logs" },
     { name: "Manage Night Audit", slug: "manage_night_audit" },
     { name: "Manage Users", slug: "manage_users" },
+    { name: "Post Folio Charges", slug: "post_folio_charges" },
+    { name: "Post Folio Payments", slug: "post_folio_payments" },
+    { name: "Execute Folio Refunds", slug: "execute_folio_refunds" },
+    { name: "Post Folio Adjustments", slug: "post_folio_adjustments" },
+    { name: "Post Folio Corrections", slug: "post_folio_corrections" },
+    { name: "Post Folio Write-Offs", slug: "post_folio_write_offs" },
+    { name: "Manage GL Mappings", slug: "manage_general_ledger_maps" },
     { name: "View Reports", slug: "view_reports" },
     { name: "View Payouts", slug: "view_payouts" }
   ].freeze
 
   ROLE_TEMPLATES = [
-    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit view_reports view_payouts] },
-    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit view_reports view_payouts] },
-    { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit] },
+    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit post_folio_charges post_folio_payments execute_folio_refunds post_folio_adjustments post_folio_corrections post_folio_write_offs manage_general_ledger_maps view_reports view_payouts] },
+    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit post_folio_charges post_folio_payments execute_folio_refunds post_folio_adjustments post_folio_corrections post_folio_write_offs manage_general_ledger_maps view_reports view_payouts] },
+    { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit post_folio_charges post_folio_payments] },
     { name: "Reservation Staff", slug: "reservation_staff", permissions: %w[view_bookings manage_bookings view_guest_phone] }
   ].freeze
 
@@ -1188,7 +1195,13 @@ module DemoSeeds
       )
     end
 
+    ensure_default_gl_maps(hotel)
+
     hotel
+  end
+
+  def ensure_default_gl_maps(hotel)
+    Financials::EnsureDefaultGlMaps.call(hotel)
   end
 
   def add_hotel_access(user, hotel, role)

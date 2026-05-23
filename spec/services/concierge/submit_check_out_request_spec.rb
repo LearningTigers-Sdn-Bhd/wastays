@@ -12,8 +12,8 @@ RSpec.describe Concierge::SubmitCheckOutRequest do
   end
 
   it "fails for a non-checked-in booking" do
-    booking.update!(status: "confirmed")
-    result = described_class.new(booking: booking).call
+    confirmed = create(:booking, hotel: hotel, status: "confirmed")
+    result = described_class.new(booking: confirmed).call
     expect(result.success?).to be false
   end
 

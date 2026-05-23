@@ -3,28 +3,94 @@ module HotelPortal
     before_action :authorize_night_audit_access!
 
     def index
-      @suggested_business_date = Date.current - 1.day
+      @suggested_business_date = current_hotel.latest_closable_business_date
       @night_audits = current_hotel.night_audits.recent_first.page(params[:page]).per(25)
+      @pre_audit_evaluation = HotelOps::EvaluateNightAudit.new(hotel: current_hotel, business_date: @suggested_business_date).call
     end
 
     def show
       @night_audit = current_hotel.night_audits.find(params[:id])
+
+      @adjustments = FolioTransaction.joins(booking_folio: :booking)
+        .where(bookings: { hotel_id: current_hotel.id })
+        .where(category: [ "adjustment", "discount", "correction", "write_off" ])
+        .where(created_at: current_hotel.business_day_window_for(@night_audit.business_date))
+        .includes(:user, booking_folio: :booking)
+        .order(:created_at)
+
+      respond_to do |format|
+        format.html
+        format.pdf do
+          pdf_content = HotelOps::AuditPacketPdfExportService.new(night_audit: @night_audit).generate
+          filename = "Audit_Packet_#{current_hotel.name.gsub(/\s+/, "_")}_#{@night_audit.business_date}.pdf"
+          send_data pdf_content, filename: filename, type: "application/pdf", disposition: "inline"
+        end
+      end
+    end
+
+    def resolve
+      @night_audit = current_hotel.night_audits.find(params[:id])
+      redirect_to hotel_night_audit_path(current_hotel, @night_audit), alert: "Night audit is not blocked." unless @night_audit.blocked?
+    end
+
+    def blockers
+      @night_audit = current_hotel.night_audits.find(params[:id])
+      result = HotelOps::EvaluateNightAudit.new(
+        hotel: current_hotel,
+        business_date: @night_audit.business_date
+      ).call
+
+      render json: {
+        blocked_details: result[:blocked_details],
+        exceptions: result[:exceptions]
+      }
     end
 
     def create
-      result = HotelOps::RunNightAudit.new(
-        hotel: current_hotel,
-        business_date: requested_business_date,
-        performed_by_user: current_user,
-        trigger_mode: "manual",
-        notes: params.dig(:night_audit, :notes)
-      ).call
+      business_date = requested_business_date
+      force_roll = ActiveModel::Type::Boolean.new.cast(params.dig(:night_audit, :force_roll)) || false
 
-      if result.night_audit.present?
-        flash[result.success? ? :notice : :alert] = result.success? ? "Night audit completed successfully." : (result.error || "Night audit completed with blockers.")
-        redirect_to hotel_night_audit_path(current_hotel, result.night_audit)
+      if force_roll && !current_user.has_permission?("override_financial_date_lock", hotel: current_hotel)
+        redirect_to hotel_night_audits_path(current_hotel), alert: "You do not have permission to force-roll the night audit."
+        return
+      end
+
+      unless allow_unclosable_date? || current_hotel.can_audit_date?(business_date)
+        redirect_to hotel_night_audits_path(current_hotel), alert: unclosable_date_message(business_date)
+        return
+      end
+
+      night_audit = current_hotel.night_audits.find_or_initialize_by(business_date: business_date)
+      if night_audit.completed? && !force_roll
+        redirect_to hotel_night_audits_path(current_hotel), alert: "Night audit has already been completed for this date."
+        return
+      end
+
+      if night_audit.persisted? && %w[pending running].include?(night_audit.status)
+        redirect_to hotel_night_audit_path(current_hotel, night_audit), notice: "Night audit is already scheduled or running in the background."
+        return
+      end
+
+      night_audit.assign_attributes(
+        status: "pending",
+        trigger_mode: "manual",
+        started_at: nil,
+        completed_at: nil,
+        performed_by_user: current_user,
+        notes: params.dig(:night_audit, :notes),
+        force_closed: force_roll
+      )
+
+      if night_audit.save
+        HotelOps::RunNightAuditJob.perform_later(
+          night_audit.id,
+          current_user.id,
+          allow_unclosable_date: allow_unclosable_date?,
+          force_roll: force_roll
+        )
+        redirect_to hotel_night_audit_path(current_hotel, night_audit), notice: "Night audit has been scheduled in the background. Please wait while it processes."
       else
-        redirect_to hotel_night_audits_path(current_hotel), alert: result.error || "Night audit could not be created."
+        redirect_to hotel_night_audits_path(current_hotel), alert: "Night audit could not be created: #{night_audit.errors.full_messages.join(', ')}"
       end
     end
 
@@ -36,9 +102,20 @@ module HotelPortal
 
     def requested_business_date
       raw_value = params.dig(:night_audit, :business_date)
-      raw_value.present? ? Date.parse(raw_value) : Date.current - 1.day
+      raw_value.present? ? Date.parse(raw_value) : current_hotel.latest_closable_business_date
     rescue ArgumentError, TypeError
-      Date.current - 1.day
+      current_hotel.latest_closable_business_date
+    end
+
+    def allow_unclosable_date?
+      Rails.env.development? && ActiveModel::Type::Boolean.new.cast(params.dig(:night_audit, :allow_unclosable_date))
+    end
+
+    def unclosable_date_message(business_date)
+      window = current_hotel.business_day_window_for(business_date)
+      latest = current_hotel.latest_closable_business_date
+
+      "Business date #{business_date.strftime('%d %b %Y')} cannot be audited yet. The business day ends at #{window.end.strftime('%d %b %Y, %I:%M %p')}. Latest closable date is #{latest.strftime('%d %b %Y')}."
     end
   end
 end

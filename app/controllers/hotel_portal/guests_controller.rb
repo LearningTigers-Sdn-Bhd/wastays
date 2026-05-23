@@ -5,7 +5,7 @@ module HotelPortal
     helper_method :safe_guest_attr, :guest_stays_count, :guest_currency_totals
 
     before_action :authorize_view_bookings!, only: %i[index show]
-    before_action :authorize_manage_bookings!, only: %i[new create edit update destroy]
+    before_action :authorize_manage_bookings!, only: %i[search new create edit update destroy]
     before_action :set_guest, only: [ :show, :edit, :update, :destroy ]
 
     def index
@@ -25,6 +25,11 @@ module HotelPortal
       stats = Guests::StatsService.new(hotel: current_hotel, guest_ids: @guests.map(&:id)).call
       @guest_stays_count = stats[:stays_count]
       @guest_currency_totals = stats[:currency_totals]
+    end
+
+    def search
+      @guests = Guests::GuestQuery.new(hotel: current_hotel, params: { query: params[:q] }).call.limit(10)
+      render json: @guests.as_json(only: [ :id, :name, :email, :phone, :country, :gender, :document_type, :government_id ])
     end
 
     def show

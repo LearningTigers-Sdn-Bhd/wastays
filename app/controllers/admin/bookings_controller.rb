@@ -3,7 +3,7 @@ module Admin
     before_action :set_booking, only: [ :show, :receipt, :invoice ]
 
     def index
-      @all_bookings = Booking.all.order(created_at: :desc)
+      @all_bookings = Booking.all.includes(:hotel, :booking_folio).order(created_at: :desc)
 
       # Apply filters
       if params[:status].present? && params[:status] != "All Status"
@@ -42,7 +42,7 @@ module Admin
     private
 
     def set_booking
-      @booking = Booking.find(params[:id])
+      @booking = Booking.includes(:booking_folio).find(params[:id])
     end
   end
 end

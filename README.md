@@ -1,4 +1,4 @@
-# WAStays MVP
+# WAStays PMS
 
 WAStays is a modern hotel platform for small and budget hotels across Malaysia and Southeast Asia. This application provides a full-stack solution for hotel onboarding, inventory management, public booking, and guest arrival workflows.
 

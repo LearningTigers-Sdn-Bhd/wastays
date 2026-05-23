@@ -3,14 +3,21 @@ require 'rails_helper'
 RSpec.describe "HotelPortal::Bookings", type: :request do
   let(:hotel) { create(:hotel, status: 'approved') }
   let(:user) { create(:user) }
+  let(:role) { create(:role, account: hotel.account) }
   let(:booking) { create(:booking, hotel: hotel) }
 
   before do
-    role = create(:role, account: hotel.account)
     role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings'))
     role.permissions << (Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings'))
+    role.permissions << (Permission.find_by(slug: 'post_folio_charges') || create(:permission, slug: 'post_folio_charges'))
+    role.permissions << (Permission.find_by(slug: 'post_folio_payments') || create(:permission, slug: 'post_folio_payments'))
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
+  end
+
+  def grant_permission(slug)
+    permission = Permission.find_or_create_by!(slug: slug) { |record| record.name = slug.humanize }
+    role.permissions << permission unless role.permissions.exists?(permission.id)
   end
 
   describe "GET /index" do
@@ -44,6 +51,22 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     end
   end
 
+  describe "GET /new" do
+    it "redirects direct page requests to the bookings index" do
+      get "/hotel/#{hotel.id}/bookings/new"
+
+      expect(response).to redirect_to(hotel_bookings_path(hotel))
+    end
+
+    it "renders the offcanvas frame for turbo frame requests" do
+      get "/hotel/#{hotel.id}/bookings/new", headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
+      expect(response.body).to include("Add New Booking")
+    end
+  end
+
   describe "GET /show" do
     it "returns http success" do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
@@ -63,12 +86,117 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("Broken AC")
       expect(response.body).to include("pending")
     end
+
+    it "renders folio actions for matching granular permissions" do
+      grant_permission("post_folio_payments")
+      grant_permission("post_folio_charges")
+      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+
+      get folio_hotel_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Post Payment")
+      expect(response.body).to include("Post Charge")
+      expect(response.body).not_to include("Record Refund")
+      expect(response.body).not_to include("Post Adjustment")
+    end
+
+    it "filters folio adjustment categories by granular permission" do
+      grant_permission("post_folio_write_offs")
+      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+
+      get folio_hotel_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Post Adjustment")
+      expect(response.body).to include('value="write_off"')
+      expect(response.body).not_to include('value="correction"')
+      expect(response.body).not_to include('value="discount"')
+    end
   end
 
   describe "PATCH /update" do
     it "redirects within the hotel path" do
       patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: { booking: { status: "confirmed" } }
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    end
+
+    it "does not change lifecycle status through booking params" do
+      patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: { booking: { status: "checked_in", guest_name: "Updated Guest" } }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(booking.reload.status).to eq("confirmed")
+      expect(booking.guest_name).to eq("Updated Guest")
+    end
+  end
+
+  describe "GET /checkout" do
+    it "renders the checkout sheet in the offcanvas frame" do
+      grant_permission("execute_folio_refunds")
+      booking.update!(check_out: Date.current + 1.day)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      room_type = create(:room_type, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 140.0)
+
+      get checkout_hotel_booking_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
+      expect(response.body).to include("Step 1 of 2")
+      expect(response.body).to include("Complete Checkout")
+      expect(response.body).to include("Record Refund")
+      expect(response.body).not_to include("Post Charges")
+      expect(response.body).not_to include("Post Payment")
+      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).to include("Pending")
+      expect(response.body).to include("This projected line will be posted when checkout is completed.")
+      expect(response.body).to include("Early checkout charge - Night 1")
+    end
+  end
+
+  describe "POST /create" do
+    let(:room_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: [ "101", "102" ], base_price: 100) }
+    let(:booking_params) do
+      {
+        guest_name: "Manual Guest",
+        guest_email: "manual@example.com",
+        guest_phone: "+60123456789",
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 1.day).to_s,
+        room_type_id: room_type.id,
+        room_number: "101",
+        adults: 2,
+        children: 0
+      }
+    end
+
+    before do
+      dispatcher = instance_double(Notifications::Dispatcher, call: [])
+      allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
+      create(:room_rate, room_type: room_type, date: Date.current, price: 100, currency: hotel.default_currency.presence || "MYR")
+    end
+
+    it "returns a turbo redirect action for offcanvas submits" do
+      post "/hotel/#{hotel.id}/bookings",
+           params: { booking: booking_params },
+           headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('action="redirect"')
+      expect(response.body).to include(hotel_booking_path(hotel, Booking.last))
+    end
+
+    it "renders validation errors inside the offcanvas frame" do
+      post "/hotel/#{hotel.id}/bookings",
+           params: { booking: booking_params.merge(guest_name: "") },
+           headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
+      expect(response.body).to include("Guest name can&#39;t be blank")
     end
   end
 
@@ -80,6 +208,18 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(booking.reload.checked_in_at).to be_present
     end
 
+    it "checks in when the timestamp is submitted through booking params" do
+      checked_in_at = "2026-05-18T13:08"
+      expected_checked_in_at = Time.find_zone!(user.time_zone).parse(checked_in_at)
+
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
+           params: { booking: { checked_in_at: checked_in_at } }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(booking.reload.status).to eq("checked_in")
+      expect(booking.checked_in_at.to_i).to eq(expected_checked_in_at.to_i)
+    end
+
     it "returns turbo stream reload when requested from reservation board" do
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
            params: { checked_in_at: Time.current.to_s },
@@ -88,15 +228,260 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="reload"')
     end
+
+    it "renders the booking show page on turbo failures outside the reservation board" do
+      booking = create(:booking, hotel: hotel, status: "pending")
+
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
+           params: { checked_in_at: Time.current.to_s },
+           headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Cannot check in booking with status pending")
+      expect(response.body).to include("Stay & Room Details")
+    end
   end
 
   describe "POST /check_out" do
-    it "updates the booking status and redirects within the hotel path" do
-      booking.update!(status: 'checked_in')
+    it "updates the booking status and redirects to the booking page with checkout_success" do
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100.0)
+
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out", params: { checked_out_at: Time.current.to_s }
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking, checkout_success: true))
       expect(booking.reload.status).to eq("completed")
       expect(booking.reload.checked_out_at).to be_present
+      expect(folio.reload.status).to eq("closed")
+    end
+
+    it "does not check out when the folio is unsettled" do
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out", params: { checked_out_at: Time.current.to_s }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Cannot check out with outstanding balance")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(folio.reload.status).to eq("open")
+    end
+
+    it "posts checkout settlement and redirects to the booking page with checkout_success" do
+      grant_permission("post_folio_payments")
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "100.00",
+          checkout_payment_reference: "RCPT-1"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking, checkout_success: true))
+      expect(booking.reload.status).to eq("completed")
+      expect(folio.reload.status).to eq("closed")
+      expect(folio.folio_transactions.payment.last.description).to include("RCPT-1")
+    end
+
+    it "posts early departure charge before checkout-sheet settlement and redirects" do
+      grant_permission("post_folio_payments")
+      booking.update!(check_out: Date.current + 2.days)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          apply_charge: "1",
+          charge_amount: "50.00",
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "150.00",
+          checkout_payment_reference: "RCPT-ED"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking, checkout_success: true))
+      expect(booking.reload.status).to eq("completed")
+      expect(booking.check_out.to_date).to eq(Date.current)
+      expect(folio.reload.status).to eq("closed")
+      expect(folio.folio_transactions.charge.find_by(category: "early_departure_charge").amount).to eq(50.0)
+      expect(folio.folio_transactions.payment.last.description).to include("RCPT-ED")
+    end
+
+    it "truncates checkout-sheet early departure without requiring a charge and redirects" do
+      grant_permission("post_folio_payments")
+      booking.update!(check_out: Date.current + 2.days)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "100.00",
+          checkout_payment_reference: "RCPT-NO-PENALTY"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking, checkout_success: true))
+      expect(booking.reload.status).to eq("completed")
+      expect(booking.check_out.to_date).to eq(Date.current)
+      expect(folio.reload.status).to eq("closed")
+      expect(folio.folio_transactions.charge.where(category: "early_departure_charge")).to be_empty
+    end
+
+    it "posts early checkout charges for prepaid unused nights, closes the folio and redirects" do
+      booking.update!(check_in: Date.current, check_out: Date.current + 1.day, total_amount: 932.40)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      room_type = create(:room_type, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 932.40)
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 932.40)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking, checkout_success: true))
+      expect(booking.reload.status).to eq("completed")
+      expect(booking.check_out.to_date).to eq(Date.current)
+      expect(folio.reload.status).to eq("closed")
+      expect(folio.folio_transactions.charge.find_by(description: "Early checkout charge - Night 1").amount).to eq(932.40)
+      expect(folio.outstanding_balance).to eq(0)
+    end
+
+    it "rolls back early departure charge and truncation when checkout validation fails" do
+      grant_permission("post_folio_payments")
+      booking.update!(check_in: 1.day.ago.to_date, check_out: Date.current + 1.day)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      create(:booking_room, booking: booking, subtotal: 200.0)
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      original_check_out = booking.check_out
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          apply_charge: "1",
+          charge_amount: "50.00",
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "50.00",
+          checkout_payment_reference: "RCPT-ROLLBACK"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Missing nightly charges for")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(booking.check_out).to eq(original_check_out)
+      expect(folio.reload.status).to eq("open")
+      expect(folio.folio_transactions).to be_empty
+    end
+
+    it "rolls back checkout settlement when checkout validation fails" do
+      grant_permission("post_folio_payments")
+      booking.update!(check_in: 1.day.ago.to_date, check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      create(:booking_room, booking: booking, subtotal: 100.0)
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "100.00",
+          checkout_payment_reference: "RCPT-FAIL"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Missing nightly charges for")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(folio.reload.status).to eq("open")
+      expect(folio.folio_transactions.payment).to be_empty
+    end
+
+    it "rejects unsupported checkout payment methods" do
+      grant_permission("post_folio_payments")
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_payment_method: "credit_card",
+          checkout_payment_amount: "100.00"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Checkout payment method is not supported")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(folio.folio_transactions.payment).to be_empty
+    end
+  end
+
+  describe "POST /process_late_checkout" do
+    let!(:folio) { create(:booking_folio, booking: booking, hotel: hotel, status: "open") }
+    let(:new_checkout_date) { (booking.check_out + 1.day) }
+    let(:new_checkout_param) { new_checkout_date.strftime("%Y-%m-%dT14:00") }
+
+    before do
+      grant_permission("post_folio_charges")
+    end
+
+    it "updates the checkout period and applies the charge" do
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/process_late_checkout", params: {
+        charge_type: "charge",
+        amount: "150.00",
+        check_out: new_checkout_param
+      }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:notice]).to include("Late checkout charge applied")
+
+      booking.reload
+      expect(booking.check_out.to_date).to eq(new_checkout_date.to_date)
+      expect(booking.status).to eq("checked_in")
+      expect(folio.folio_transactions.where(category: "late_checkout_charge").sum(:amount)).to eq(150.0)
+    end
+
+    it "resolves late checkout without charge" do
+      booking.transition_status_to!("checked_in", event: "check_in")
+      booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/process_late_checkout", params: {
+        charge_type: "none",
+        check_out: new_checkout_param
+      }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:notice]).to include("Late checkout resolved without charge")
+
+      booking.reload
+      expect(booking.status).to eq("checked_in")
+      expect(booking.check_out.to_date).to eq(new_checkout_date.to_date)
+      expect(folio.folio_transactions.where(category: "late_checkout_charge").count).to eq(0)
     end
   end
 
@@ -126,6 +511,87 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(JSON.parse(response.body)).to eq({ "total_amount" => 0 })
+    end
+
+    it "uses the selected rate plan and falls back to base price for missing nightly rates" do
+      rate_plan = create(:rate_plan, room_type: room_type)
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 150)
+
+      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+        room_type_id: room_type.id,
+        rate_plan_id: rate_plan.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)["total_amount"].to_d).to eq(250.to_d)
+    end
+
+    it "falls back to base pricing when the selected rate plan is stale" do
+      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+        room_type_id: room_type.id,
+        rate_plan_id: 999_999,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)["total_amount"].to_d).to eq(200.to_d)
+    end
+  end
+
+  describe "GET /rate_options" do
+    let(:room_type) { create(:room_type, hotel: hotel, base_price: 100) }
+
+    it "returns rate plans for the selected room type" do
+      rate_plan = create(:rate_plan, room_type: room_type, name: "Flexible Rate")
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 125)
+
+      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 1.day).to_s
+      }
+
+      expect(response).to have_http_status(:success)
+      option = JSON.parse(response.body)["rate_options"].first
+      expect(option).to include("id" => rate_plan.id, "name" => "Flexible Rate", "currency" => "MYR")
+      expect(option["total_amount"].to_d).to eq(125.to_d)
+    end
+
+    it "ignores stop-sell restrictions unless staff chooses to respect them" do
+      rate_plan = create(:rate_plan, room_type: room_type, name: "OTA Rate")
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 125, stop_sell: true)
+
+      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 1.day).to_s
+      }
+
+      expect(JSON.parse(response.body)["rate_options"].map { |option| option["id"] }).to include(rate_plan.id)
+
+      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 1.day).to_s,
+        apply_stop_sell_restriction: "1"
+      }
+
+      expect(JSON.parse(response.body)["rate_options"].map { |option| option["id"] }).not_to include(rate_plan.id)
+    end
+
+    it "returns a base rate option when no rate plans exist" do
+      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s
+      }
+
+      option = JSON.parse(response.body)["rate_options"].first
+      expect(option).to include("id" => nil, "name" => "Base Rate", "currency" => "MYR")
+      expect(option["total_amount"].to_d).to eq(200.to_d)
     end
   end
 

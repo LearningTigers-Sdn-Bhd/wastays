@@ -8,6 +8,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
   before do
     role = create(:role, account: hotel.account)
     role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings'))
+    role.permissions << (Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings'))
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
   end
@@ -113,6 +114,36 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("All Countries")
       expect(body_text).to include("Ravi Menon")
       expect(body_text).not_to include("Aisha Tan")
+    end
+  end
+
+  describe "GET /search" do
+    it "returns guest identity fields for booking autocomplete" do
+      guest = Guest.create!(
+        name: "Nur Aina",
+        email: "aina@example.com",
+        phone: "+60121112222",
+        government_id: "P123456",
+        country: "Malaysia",
+        gender: "female",
+        document_type: "passport",
+        created_by_hotel: hotel
+      )
+
+      get search_hotel_guests_path(hotel), params: { q: "Nur" }
+
+      expect(response).to have_http_status(:success)
+      result = JSON.parse(response.body).first
+      expect(result).to include(
+        "id" => guest.id,
+        "name" => "Nur Aina",
+        "email" => "aina@example.com",
+        "phone" => "+60121112222",
+        "country" => "Malaysia",
+        "gender" => "female",
+        "document_type" => "passport",
+        "government_id" => "p123456"
+      )
     end
   end
 
