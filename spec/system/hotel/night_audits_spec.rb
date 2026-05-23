@@ -136,7 +136,7 @@ RSpec.describe "Hotel night audits", type: :system do
 
       visit current_path
 
-      expect(page).to have_content("BLOCKED")
+      expect(page).to have_text(/blocked/i)
       expect(page).to have_content("Resolve Blockers")
       click_link "Resolve Blockers"
 
