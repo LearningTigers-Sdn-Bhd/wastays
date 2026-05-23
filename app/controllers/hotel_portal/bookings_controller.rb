@@ -232,7 +232,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       )
 
       if result.success?
-        redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest has been checked out with early departure."
+        redirect_to hotel_booking_path(current_hotel, @booking, checkout_success: true), notice: "Guest has been checked out with early departure."
       else
         @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
         set_audit_logs
@@ -572,7 +572,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     end
 
     dispatch_checkout_side_effects
-    render_checkout_invoice_step
+    redirect_to hotel_booking_path(current_hotel, @booking, checkout_success: true), notice: "Guest has been checked out."
   end
 
   def post_checkout_settlement_payment

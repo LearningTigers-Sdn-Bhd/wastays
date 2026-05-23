@@ -33,7 +33,7 @@
 
       <%= render "hotel_portal/bookings/folio/folio_balance_summary", booking: booking, projected_lines: early_checkout_lines %>
 
-      <%= form_with url: check_out_hotel_booking_path(hotel, booking), method: :post, class: "grid gap-6 xl:grid-cols-[420px_1fr]", data: { turbo: true } do |f| %>
+      <%= form_with url: check_out_hotel_booking_path(hotel, booking), method: :post, class: "grid gap-6 xl:grid-cols-[420px_1fr]", data: { turbo_frame: "_top" } do |f| %>
         <%= hidden_field_tag :checkout_sheet, "1" %>
 
         <div class="space-y-6">

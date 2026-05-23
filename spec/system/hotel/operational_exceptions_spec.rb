@@ -98,17 +98,20 @@ RSpec.describe "Operational Exceptions", type: :system do
       expect(page).to have_selector("[data-early-departure-target='customFields']", visible: :all)
 
       # Fill in details
-      find("[name='early_departure[value]']", visible: :all).set("150.00")
+      input = find("[name='early_departure[value]']", visible: :all)
+      input.set("150.00")
+      input.send_keys(:tab) # trigger blur/change to ensure stimulus updates balance
 
-      click_button "Complete Checkout", visible: :all
+      # Wait a moment for any Stimulus JS calculations to update the form state (e.g. disabling/enabling the complete button)
+      # We know the outstanding balance should become 0.00 after the 150.00 penalty is added.
+      expect(page).to have_selector("*", text: "MYR 0.00", visible: :all, wait: 5)
 
-      # In offcanvas flow, it shows the invoice step instead of a flash notice
-      expect(page).to have_selector("*", text: /Checkout Complete/i, visible: :all, wait: 10)
+      # Submit the form via Capybara's native click (no visible: all) after scrolling it into view
+      page.execute_script("document.querySelector('input[value=\"Complete Checkout\"]').scrollIntoView({block: 'center'})")
+      click_button "Complete Checkout"
 
-      # Use a more robust check for balance
-      page_text = page.text(:all).upcase
-      expect(page_text).to include("FINAL BALANCE")
-      expect(page_text).to include("MYR 0.00")
+      # After checkout, redirects to show page with flash notice
+      expect(page).to have_content("Guest has been checked out.")
 
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(business_date)

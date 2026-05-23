@@ -243,7 +243,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
   end
 
   describe "POST /check_out" do
-    it "updates the booking status and redirects within the hotel path" do
+    it "updates the booking status and redirects to the booking page with checkout_success" do
       booking.transition_status_to!("checked_in", event: "check_in")
       folio = create(:booking_folio, booking: booking, status: "open")
       create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
@@ -251,7 +251,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out", params: { checked_out_at: Time.current.to_s }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking, checkout_success: true))
       expect(booking.reload.status).to eq("completed")
       expect(booking.reload.checked_out_at).to be_present
       expect(folio.reload.status).to eq("closed")
@@ -270,7 +270,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(folio.reload.status).to eq("open")
     end
 
-    it "posts checkout settlement and returns the invoice step in the same sheet" do
+    it "posts checkout settlement and redirects to the booking page with checkout_success" do
       grant_permission("post_folio_payments")
       booking.transition_status_to!("checked_in", event: "check_in")
       folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
@@ -286,15 +286,13 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Checkout Complete")
-      expect(response.body).to include("Download as PDF")
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking, checkout_success: true))
       expect(booking.reload.status).to eq("completed")
       expect(folio.reload.status).to eq("closed")
       expect(folio.folio_transactions.payment.last.description).to include("RCPT-1")
     end
 
-    it "posts early departure charge before checkout-sheet settlement" do
+    it "posts early departure charge before checkout-sheet settlement and redirects" do
       grant_permission("post_folio_payments")
       booking.update!(check_out: Date.current + 2.days)
       booking.transition_status_to!("checked_in", event: "check_in")
@@ -313,8 +311,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Checkout Complete")
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking, checkout_success: true))
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(Date.current)
       expect(folio.reload.status).to eq("closed")
@@ -322,7 +319,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(folio.folio_transactions.payment.last.description).to include("RCPT-ED")
     end
 
-    it "truncates checkout-sheet early departure without requiring a charge" do
+    it "truncates checkout-sheet early departure without requiring a charge and redirects" do
       grant_permission("post_folio_payments")
       booking.update!(check_out: Date.current + 2.days)
       booking.transition_status_to!("checked_in", event: "check_in")
@@ -339,14 +336,14 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
-      expect(response).to have_http_status(:success)
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking, checkout_success: true))
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(Date.current)
       expect(folio.reload.status).to eq("closed")
       expect(folio.folio_transactions.charge.where(category: "early_departure_charge")).to be_empty
     end
 
-    it "posts early checkout charges for prepaid unused nights and closes the folio" do
+    it "posts early checkout charges for prepaid unused nights, closes the folio and redirects" do
       booking.update!(check_in: Date.current, check_out: Date.current + 1.day, total_amount: 932.40)
       booking.transition_status_to!("checked_in", event: "check_in")
       room_type = create(:room_type, hotel: hotel)
@@ -361,8 +358,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Checkout Complete")
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking, checkout_success: true))
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(Date.current)
       expect(folio.reload.status).to eq("closed")
