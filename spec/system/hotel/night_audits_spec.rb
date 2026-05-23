@@ -125,12 +125,16 @@ RSpec.describe "Hotel night audits", type: :system do
 
       visit hotel_night_audits_path(hotel)
 
-      perform_enqueued_jobs do
-        within("[data-testid='manual-night-audit-form']") do
-          fill_in "Business Date", with: business_date.to_s
-          click_button "Run Audit"
-        end
+      within("[data-testid='manual-night-audit-form']") do
+        fill_in "Business Date", with: business_date.to_s
+        click_button "Run Audit"
       end
+
+      expect(page).to have_content("Night Audit #{business_date.strftime('%d %b %Y')}")
+
+      perform_enqueued_jobs
+
+      visit current_path
 
       expect(page).to have_content("BLOCKED")
       expect(page).to have_content("Resolve Blockers")
