@@ -12,7 +12,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(slots: { "target_month" => 8, "target_year" => 2026, "month_segment" => "mid", "days" => 3, "nights" => 2 })
     )
 
-    result = described_class.new(hotel: hotel, message: "mid august", phone: "+60123456789", identity_mode: :known_contact).call
+    result = described_class.new(hotel: hotel, message: "mid august", phone: "+60123456789").call
 
     expect(result).to be_success
     expect(result.payload[:reply_message]).to include("How many days and nights")
@@ -24,7 +24,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(slots: { "target_month" => 5, "target_year" => 2026, "month_segment" => "early", "adults" => 2, "children" => 0 })
     )
 
-    result = described_class.new(hotel: hotel, message: "hello, is there any booking for 2 adults", phone: "+60123456789", identity_mode: :known_contact).call
+    result = described_class.new(hotel: hotel, message: "hello, is there any booking for 2 adults", phone: "+60123456789").call
 
     expect(result).to be_success
     expect(result.payload[:reply_message]).to include("what dates or month")
@@ -36,7 +36,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(intent: "greeting", conversation_signals: { "end_conversation" => true })
     )
 
-    result = described_class.new(hotel: hotel, message: "hello", phone: "+60123456789", identity_mode: :known_contact).call
+    result = described_class.new(hotel: hotel, message: "hello", phone: "+60123456789").call
 
     expect(result.payload[:reply_message]).to include("Hello, welcome to")
     expect(result.payload[:reply_message]).not_to include("No problem, please let me know if you need anything.")
@@ -45,7 +45,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
   it "returns an internal server error when orchestration fails unexpectedly" do
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_raise(StandardError, "boom")
 
-    result = described_class.new(hotel: hotel, message: "hello", phone: "+60123456789", identity_mode: :known_contact).call
+    result = described_class.new(hotel: hotel, message: "hello", phone: "+60123456789").call
 
     expect(result).not_to be_success
     expect(result.status).to eq(:internal_server_error)
@@ -56,16 +56,16 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(slots: { "target_month" => 8 })
     )
-    described_class.new(hotel: hotel, message: "book in august", phone: "+60123456789", identity_mode: :known_contact).call
+    described_class.new(hotel: hotel, message: "book in august", phone: "+60123456789").call
 
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(intent: "greeting")
     )
 
-    prompt = described_class.new(hotel: hotel, message: "stop", phone: "+60123456789", identity_mode: :known_contact).call
+    prompt = described_class.new(hotel: hotel, message: "stop", phone: "+60123456789").call
     expect(prompt.payload[:reply_message]).to include("do you want to cancel")
 
-    finish = described_class.new(hotel: hotel, message: "stop", phone: "+60123456789", identity_mode: :known_contact).call
+    finish = described_class.new(hotel: hotel, message: "stop", phone: "+60123456789").call
     expect(finish.payload[:reply_message]).to eq("No problem, please let me know if you need anything.")
   end
 
@@ -80,12 +80,12 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       end
     end
 
-    result = described_class.new(hotel: hotel, message: "can i book for early june? for 2 people", phone: "+60123456789", identity_mode: :known_contact).call
+    result = described_class.new(hotel: hotel, message: "can i book for early june? for 2 people", phone: "+60123456789").call
 
     expect(result).to be_success
     expect(result.payload[:reply_message]).to include("How many days and nights")
 
-    follow_up = described_class.new(hotel: hotel, message: "2 days 1 night", phone: "+60123456789", identity_mode: :known_contact).call
+    follow_up = described_class.new(hotel: hotel, message: "2 days 1 night", phone: "+60123456789").call
     expect(follow_up.payload[:reply_message]).to include("For 2 people")
   end
 
@@ -94,7 +94,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(slots: { "target_month" => 6, "target_year" => 2026, "month_segment" => "early", "days" => 4, "nights" => 3 })
     )
 
-    result = described_class.new(hotel: hotel, message: "early june for 4 days", phone: "+60123456789", identity_mode: :known_contact).call
+    result = described_class.new(hotel: hotel, message: "early june for 4 days", phone: "+60123456789").call
 
     expect(result).to be_success
     expect(result.payload[:reply_message]).to include("How many guests")
@@ -105,7 +105,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(slots: { "party_size_total" => 1 })
     )
 
-    result = described_class.new(hotel: hotel, message: "i want to book", phone: "+60123456789", identity_mode: :known_contact).call
+    result = described_class.new(hotel: hotel, message: "i want to book", phone: "+60123456789").call
 
     # TransitionPolicy should ask for timing first, but we want to check that party_size_total didn't leak into state
     # Actually, let's check the persisted state or the response payload if possible.
@@ -120,14 +120,14 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(slots: { "target_month" => 7, "target_year" => 2026, "month_segment" => "early" })
     )
 
-    follow_up = described_class.new(hotel: hotel, message: "early july", phone: "+60123456789", identity_mode: :known_contact).call
+    follow_up = described_class.new(hotel: hotel, message: "early july", phone: "+60123456789").call
     expect(follow_up.payload[:reply_message]).to include("How many days and nights")
 
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(slots: { "days" => 3, "nights" => 2 })
     )
 
-    days_reply = described_class.new(hotel: hotel, message: "3 days", phone: "+60123456789", identity_mode: :known_contact).call
+    days_reply = described_class.new(hotel: hotel, message: "3 days", phone: "+60123456789").call
     expect(days_reply.payload[:reply_message]).to include("How many guests") # Not "For 1 people"
   end
 
@@ -136,13 +136,13 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(slots: { "target_month" => 7, "target_year" => 2026, "party_size_total" => 1 })
     )
-    described_class.new(hotel: hotel, message: "book for 1 person in july", phone: "+60123456789", identity_mode: :known_contact).call
+    described_class.new(hotel: hotel, message: "book for 1 person in july", phone: "+60123456789").call
 
     # 2. Ask to end the conversation
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(intent: "greeting", slots: {})
     )
-    end_reply = described_class.new(hotel: hotel, message: "nevermind", phone: "+60123456789", identity_mode: :known_contact).call
+    end_reply = described_class.new(hotel: hotel, message: "nevermind", phone: "+60123456789").call
     expect(end_reply.payload[:reply_message]).to eq("Dear guest, do you want to cancel your booking quotation attempt?")
 
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
@@ -152,26 +152,26 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(intent: "confirmation", slots: { "confirmation" => "no" })
     )
-    no_reply = described_class.new(hotel: hotel, message: "no", phone: "+60123456789", identity_mode: :known_contact).call
+    no_reply = described_class.new(hotel: hotel, message: "no", phone: "+60123456789").call
     expect(no_reply.payload[:reply_message]).to eq("No problem, please let me know if you need anything.")
 
     # 4. Ask again and confirm the end prompt, then reactivate with a greeting/booking request
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(intent: "greeting", slots: {})
     )
-    second_prompt = described_class.new(hotel: hotel, message: "nevermind", phone: "+60123456789", identity_mode: :known_contact).call
+    second_prompt = described_class.new(hotel: hotel, message: "nevermind", phone: "+60123456789").call
     expect(second_prompt.payload[:reply_message]).to eq("Dear guest, do you want to cancel your booking quotation attempt?")
 
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(intent: "confirmation", slots: { "confirmation" => "yes" })
     )
-    yes_reply = described_class.new(hotel: hotel, message: "yes", phone: "+60123456789", identity_mode: :known_contact).call
+    yes_reply = described_class.new(hotel: hotel, message: "yes", phone: "+60123456789").call
     expect(yes_reply.payload[:reply_message]).to include("let me know if you need anything")
 
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(slots: {}) # No slots, just "can i book"
     )
-    reactivation_reply = described_class.new(hotel: hotel, message: "hello, can i make booking", phone: "+60123456789", identity_mode: :known_contact).call
+    reactivation_reply = described_class.new(hotel: hotel, message: "hello, can i make booking", phone: "+60123456789").call
 
     # It should ask for timing because the previous branch (with July) was archived
     expect(reactivation_reply.payload[:reply_message]).to include("what dates or month")
@@ -232,7 +232,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       name == "generate_booking_url" ? fake_generate_tool : original_fetch.bind_call(registry, name)
     end
 
-    info_reply = described_class.new(hotel: hotel, message: "what time is check in?", phone: "+60123456789", identity_mode: :known_contact).call
+    info_reply = described_class.new(hotel: hotel, message: "what time is check in?", phone: "+60123456789").call
     state_after_info = prospect.reload.prospect_conversation_state
 
     expect(info_reply.payload[:reply_message]).to be_present
@@ -241,7 +241,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     expect(state_after_info.slots_payload).not_to have_key("active")
     expect(state_after_info.slots_payload).not_to have_key("paused_flows")
 
-    confirm_reply = described_class.new(hotel: hotel, message: "yes", phone: "+60123456789", identity_mode: :known_contact).call
+    confirm_reply = described_class.new(hotel: hotel, message: "yes", phone: "+60123456789").call
 
     expect(confirm_reply.payload[:reply_message]).to include("Quotation link")
     expect(confirm_reply.payload[:reply_message]).to include("https://example.test/quotes/token")
@@ -261,9 +261,9 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       end
     end
 
-    first_reply = described_class.new(hotel: hotel, message: "i would like to make reservation on next month", phone: "+60123456789", identity_mode: :known_contact).call
-    info_reply = described_class.new(hotel: hotel, message: "may i know is there swimming pool", phone: "+60123456789", identity_mode: :known_contact).call
-    resume_reply = described_class.new(hotel: hotel, message: "ok, i want to book on 23 june", phone: "+60123456789", identity_mode: :known_contact).call
+    first_reply = described_class.new(hotel: hotel, message: "i would like to make reservation on next month", phone: "+60123456789").call
+    info_reply = described_class.new(hotel: hotel, message: "may i know is there swimming pool", phone: "+60123456789").call
+    resume_reply = described_class.new(hotel: hotel, message: "ok, i want to book on 23 june", phone: "+60123456789").call
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
     expect(first_reply.payload[:reply_message]).to include("exact check-in date")
@@ -315,7 +315,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(intent: "booking_search", slots: {})
     )
 
-    result = described_class.new(hotel: hotel, message: "Deluxe Room", phone: "+60123456789", identity_mode: :known_contact).call
+    result = described_class.new(hotel: hotel, message: "Deluxe Room", phone: "+60123456789").call
     state = prospect.reload.prospect_conversation_state
 
     expect(result.payload[:reply_message]).to include("I found multiple options under Deluxe Room")
@@ -339,7 +339,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(intent: "room_information", topic: "room_information", slots: { "room_type_name" => nil }, tool_hints: [ "get_room_type_details" ])
     )
 
-    result = described_class.new(hotel: hotel, message: "available facilities?", phone: "+60123456789", identity_mode: :known_contact).call
+    result = described_class.new(hotel: hotel, message: "available facilities?", phone: "+60123456789").call
     state = prospect.reload.prospect_conversation_state
 
     expect(result.payload[:reply_message]).to include("Hotel amenities: Free WiFi, Swimming Pool")
@@ -354,7 +354,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(intent: "room_information", topic: "room_information", slots: { "room_type_name" => "Deluxe Room" }, tool_hints: [ "get_room_type_details" ])
     )
 
-    result = described_class.new(hotel: hotel, message: "what amenities does deluxe room have?", phone: "+60123456789", identity_mode: :known_contact).call
+    result = described_class.new(hotel: hotel, message: "what amenities does deluxe room have?", phone: "+60123456789").call
 
     expect(result.payload[:reply_message]).to include("Here are the details for Deluxe Room")
     expect(result.payload[:reply_message]).to include("Amenities: Free WiFi, Air Conditioning")
