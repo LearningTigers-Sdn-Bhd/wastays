@@ -1,5 +1,6 @@
 require "ruby_llm"
 require "ruby_llm/schema"
+require "json"
 
 module AiConciergeV3
   module Agents
@@ -43,6 +44,8 @@ module AiConciergeV3
       @today = today
     end
 
+    LLM_TIMEOUT = 30
+
     def call
       context = RubyLLM.context do |config|
         case hotel.ai_provider_name
@@ -62,13 +65,53 @@ module AiConciergeV3
         provider: hotel.ai_concierge_provider
       )
 
-      response = chat.with_schema(InterpretationSchema).ask(prompt)
-      response.content
+      response = Timeout.timeout(LLM_TIMEOUT) do
+        if hotel.ai_concierge_structured_output_supported?
+          chat.with_schema(InterpretationSchema).ask(prompt)
+        else
+          chat.ask(prompt)
+        end
+      end
+      content = response&.content || raise("Empty response from LLM")
+
+      if hotel.ai_concierge_structured_output_supported?
+        content
+      else
+        parse_fallback_response(content)
+      end
+    rescue Timeout::Error
+      raise "LLM request timed out after #{LLM_TIMEOUT}s"
     end
 
     private
 
     attr_reader :hotel, :message, :conversation_summary, :today
+
+    def parse_fallback_response(raw)
+      parsed = JSON.parse(raw.to_s)
+      return parsed if Schemas::InterpretationSchema.new.valid?(parsed)
+
+      default_interpretation
+    rescue JSON::ParserError
+      default_interpretation
+    end
+
+    def default_interpretation
+      {
+        "intent" => "greeting",
+        "topic" => "general",
+        "confidence" => 0,
+        "slots" => {},
+        "tool_hints" => [],
+        "conversation_signals" => {
+          "is_reset" => false,
+          "is_resume" => false,
+          "is_correction" => false,
+          "starts_new_booking_branch" => false,
+          "end_conversation" => false
+        }
+      }
+    end
 
     def prompt
       <<~PROMPT

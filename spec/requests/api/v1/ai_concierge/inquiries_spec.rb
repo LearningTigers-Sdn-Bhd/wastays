@@ -15,6 +15,39 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
   end
 
   describe "POST /api/v1/hotels/:hotel_id/ai_concierge/inquiries" do
+    it "returns 401 without authorization" do
+      post path, params: { message: "Hello", phone: phone }.to_json, headers: { "Content-Type" => "application/json" }
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(parsed_body["error"]).to include("Unauthorized")
+    end
+
+    it "returns 403 for a hotel not owned by the API key" do
+      other_hotel = create(:hotel)
+      other_path = "/api/v1/hotels/#{other_hotel.id}/ai_concierge/inquiries"
+
+      post other_path, params: { message: "Hello", phone: phone }.to_json, headers: headers
+
+      expect(response).to have_http_status(:forbidden)
+      expect(parsed_body["error"]).to include("Forbidden")
+    end
+
+    it "returns 422 when message is blank" do
+      post path, params: { message: "", phone: phone }.to_json, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(parsed_body["error"]).to eq("Message is required")
+    end
+
+    it "returns 422 when message exceeds max length" do
+      long_message = "x" * 2001
+
+      post path, params: { message: long_message, phone: phone }.to_json, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(parsed_body["error"]).to eq("Message is too long (max 2000 characters)")
+    end
+
     it "answers hotel policy questions" do
       hotel.update!(policy: [
         {

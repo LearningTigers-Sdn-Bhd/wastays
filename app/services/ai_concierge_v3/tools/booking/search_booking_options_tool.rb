@@ -23,12 +23,49 @@ module AiConciergeV3
         end
 
         def call
+          return [] if target_month <= 0 || target_year <= 0 || target_month > 12
+
+          preload_availability
           grouped_options.first(MAX_ROOM_TYPES)
         end
 
         private
 
         attr_reader :hotel, :target_month, :target_year, :month_segment, :check_in, :check_out, :adults, :children, :room_count, :nights
+
+        def preload_availability
+          all_check_ins = candidate_check_in_days
+          @preloaded = false
+          return if all_check_ins.empty?
+
+          max_check_out = all_check_ins.max + nights.days
+          min_check_in = all_check_ins.min
+          room_type_ids = hotel.room_types.pluck(:id)
+
+          @inventories_by_type = RoomInventory
+            .where(room_type_id: room_type_ids, date: min_check_in...max_check_out)
+            .group_by(&:room_type_id)
+
+          @rates_by_type = RoomRate
+            .where(room_type_id: room_type_ids, date: min_check_in...max_check_out)
+            .group_by(&:room_type_id)
+
+          @preloaded = true
+        end
+
+        def inventories_for(room_type, stay_dates)
+          return room_type.room_inventories.where(date: stay_dates) unless @preloaded
+
+          invs = @inventories_by_type[room_type.id] || []
+          invs.select { |inv| stay_dates.include?(inv.date) }
+        end
+
+        def rates_for(room_type, stay_dates)
+          return room_type.room_rates.where(date: stay_dates) unless @preloaded
+
+          rates = @rates_by_type[room_type.id] || []
+          rates.select { |rate| stay_dates.include?(rate.date) }
+        end
 
         def grouped_options
           hotel.room_types.order(:id).each_with_object([]) do |room_type, groups|
@@ -133,19 +170,20 @@ module AiConciergeV3
           stay_dates = (check_in...check_out).to_a
           return false if stay_dates.empty?
 
-          inventories = room_type.room_inventories.where(date: stay_dates)
-          return false unless inventories.count == stay_dates.count
+          inventories = inventories_for(room_type, stay_dates)
+          return false unless inventories.size == stay_dates.size
           return false unless inventories.all? { |inv| inv.status == "open" && inv.quantity >= room_count }
 
-          rates = room_type.room_rates.where(date: stay_dates)
-          return false unless rates.count == stay_dates.count
+          rates = rates_for(room_type, stay_dates)
+          return false unless rates.size == stay_dates.size
 
           true
         end
 
         def build_option(room_type, check_in:, check_out:)
           stay_dates = (check_in...check_out).to_a
-          total_price = room_type.room_rates.where(date: stay_dates).sum(:price) * room_count
+          rates = rates_for(room_type, stay_dates)
+          total_price = rates.sum { |r| r.price.to_d } * room_count
 
           {
             "room_type_id" => room_type.id,
@@ -154,7 +192,7 @@ module AiConciergeV3
             "check_out" => check_out.iso8601,
             "nights" => (check_out - check_in).to_i,
             "total_price" => total_price,
-            "currency" => room_type.room_rates.where(date: check_in...check_out).first&.currency || "MYR",
+            "currency" => rates.first&.currency || "MYR",
             "adults" => adults,
             "children" => children,
             "room_count" => room_count

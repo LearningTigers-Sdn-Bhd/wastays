@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_22_140003) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_25_110203) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -866,6 +866,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_22_140003) do
     t.integer "reset_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
     t.index ["active_topic"], name: "index_prospect_conversation_states_on_active_topic"
     t.index ["flow_status"], name: "index_prospect_conversation_states_on_flow_status"
     t.index ["prospect_id"], name: "index_prospect_conversation_states_on_prospect_id", unique: true
