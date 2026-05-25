@@ -237,23 +237,23 @@ class Booking < ApplicationRecord
   end
 
   def formatted_reservation_number
-    format_number(reservation_number)
+    format_number(reservation_number, type_code: 1)
   end
 
   def formatted_receipt_number
-    format_number(receipt_number)
+    format_number(receipt_number, type_code: 5)
   end
 
   def formatted_folio_number
-    format_number(folio_number)
+    format_number(folio_number, type_code: 3)
   end
 
   def formatted_invoice_number
-    format_number(invoice_number)
+    format_number(invoice_number, type_code: 3)
   end
 
   def formatted_guest_registration_number
-    format_number(guest_registration_number)
+    format_number(guest_registration_number, type_code: 2)
   end
 
   def room_numbers
@@ -283,10 +283,13 @@ class Booking < ApplicationRecord
     errors.add(:status, Bookings::StatusLifecycle.transition_error(from: from, to: to, event: event))
   end
 
-  def format_number(number)
+  DOCUMENT_NUMBER_PAD_LENGTH = 7
+
+  def format_number(number, type_code:)
     return nil unless number
     prefix = hotel&.hotel_prefix.presence || "WS"
-    "#{prefix}-#{number}"
+    padded = number.to_s.rjust(DOCUMENT_NUMBER_PAD_LENGTH, "0")
+    "#{prefix}-#{type_code}#{padded}"
   end
 
   def set_payout_status
