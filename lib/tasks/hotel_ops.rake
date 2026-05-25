@@ -1,4 +1,23 @@
 namespace :hotel_ops do
+  desc "Clear all AI Concierge data for a specific hotel (prospects and their conversation states/messages)"
+  task :clear_ai_concierge, [ :hotel_name ] => :environment do |_, args|
+    hotel = find_hotel(args[:hotel_name])
+    next unless hotel
+
+    puts "!!! WARNING: This will PERMANENTLY DELETE AI Concierge data for '#{hotel.name}' !!!"
+    puts "  - All prospects and their conversation states/messages"
+    puts "Starting in 5 seconds... (Press Ctrl+C to abort)"
+    5.times do |i|
+      print "#{5 - i}... "
+      sleep 1
+    end
+    puts "\nProceeding..."
+
+    delete_ai_concierge_data(hotel)
+
+    puts "\nSUCCESS: AI Concierge data for '#{hotel.name}' has been cleared."
+  end
+
   desc "Clean state for a specific hotel (delete bookings/night audits, reset rates to base, recalibrate statuses)"
   task :clean_state, [ :hotel_name ] => :environment do |_, args|
     hotel_name = args[:hotel_name]
@@ -54,6 +73,29 @@ namespace :hotel_ops do
     booking_scenario_state(hotel)
 
     puts "\nSUCCESS: '#{hotel.name}' has been recalibrated and simulation scenario loaded."
+  end
+end
+
+def find_hotel(hotel_name)
+  if hotel_name.blank?
+    puts "Error: Please provide a hotel name. Usage: bin/rake hotel_ops:task['Hotel Name']"
+    return nil
+  end
+
+  hotel = Hotel.where("name ILIKE ?", hotel_name).first
+  if hotel.nil?
+    puts "Error: Hotel '#{hotel_name}' not found."
+    return nil
+  end
+
+  hotel
+end
+
+def delete_ai_concierge_data(hotel)
+  ActiveRecord::Base.transaction do
+    prospect_count = hotel.prospects.count
+    puts "Deleting #{prospect_count} prospects with their conversation states and messages..."
+    hotel.prospects.destroy_all
   end
 end
 
@@ -219,7 +261,19 @@ def clean_hotel_state_records(hotel)
       end
     end
 
-    # 5. Trigger Sync if needed
+    # 5. Clean AI Concierge data
+    delete_ai_concierge_data(hotel)
+
+    # 5b. Recalibrate Nearby Attractions
+    puts "Recalibrating nearby attractions..."
+    hotel.nearby_attractions.destroy_all
+    hotel.nearby_attractions.create!([
+      { name: "City Centre", description: "Explore the vibrant city centre with shops, restaurants, and cultural landmarks.", address: "City Centre", city: hotel.city, country: hotel.country },
+      { name: "Local Market", description: "Experience local life and find unique souvenirs at the bustling market.", address: "Market Street", city: hotel.city, country: hotel.country },
+      { name: "City Park", description: "Enjoy a relaxing day surrounded by nature.", address: "Park Avenue", city: hotel.city, country: hotel.country }
+    ])
+
+    # 7. Trigger Sync if needed
     if hotel.preferred_channel_manager.present?
       puts "Triggering Channel Manager Sync..."
       ChannelManagers::SyncJob.perform_later(hotel.id, start_date, end_date)
