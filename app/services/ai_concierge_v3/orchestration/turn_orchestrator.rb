@@ -1,10 +1,10 @@
 module AiConciergeV3
   module Orchestration
     class TurnOrchestrator
-    class ProspectNotFoundError < StandardError; end
     END_CONVERSATION_MESSAGE = "No problem, please let me know if you need anything.".freeze
+    MAX_TURNS = 50
 
-    def initialize(hotel:, message:, phone: nil, prospect_public_id: nil, identity_mode: nil)
+    def initialize(hotel:, message:, phone: nil, prospect_public_id: nil)
       @hotel = hotel
       @message = message.to_s.strip
       @phone = phone.to_s.strip.presence
@@ -15,8 +15,15 @@ module AiConciergeV3
     def call
       prospect = resolve_prospect
       conversation_state = load_conversation_state(prospect)
-      reactivate_state!(conversation_state)
-      record_inbound_message(prospect)
+
+      ActiveRecord::Base.transaction do
+        reactivate_state!(conversation_state)
+        record_inbound_message(prospect)
+      end
+
+      if max_turns_exceeded?(conversation_state)
+        return Result.success(payload: turn_limit_reached_response(prospect, conversation_state))
+      end
 
       interpretation = Agents::InterpreterAgent.new(
         hotel: hotel,
@@ -77,8 +84,10 @@ module AiConciergeV3
       )
 
       Result.success(payload: response)
-    rescue ProspectNotFoundError => e
+    rescue AiConciergeV3::ProspectNotFoundError => e
       Result.failure(error: e.message, status: :not_found)
+    rescue ActiveRecord::StaleObjectError
+      Result.failure(error: "This conversation was updated by another request. Please try again.", status: :conflict)
     rescue StandardError => e
       Rails.logger.error("AiConciergeV3::TurnOrchestrator error: #{e.class}: #{e.message}")
       Rails.logger.error(e.backtrace.join("\n")) if e.backtrace
@@ -93,22 +102,28 @@ module AiConciergeV3
       return resolve_prospect_by_phone if phone.present?
 
       prospect = hotel.prospects.find_by(public_id: prospect_public_id)
-      raise ProspectNotFoundError, "Prospect not found" unless prospect
+      raise AiConciergeV3::ProspectNotFoundError, "Prospect not found" unless prospect
 
       prospect
     end
 
     def resolve_prospect_by_phone
       guest = PhoneIdentity.find_guest(phone)
-      hotel.prospects.lookup_by_phone(phone).first || hotel.prospects.create!(
-        phone_number: PhoneIdentity.canonical(phone),
+      existing = hotel.prospects.lookup_by_phone(phone).first
+      return existing if existing
+
+      canonical_phone = PhoneIdentity.canonical(phone)
+      raise AiConciergeV3::ProspectNotFoundError, "Invalid phone number format" if canonical_phone.blank?
+
+      hotel.prospects.create!(
+        phone_number: canonical_phone,
         guest: guest,
         name: guest&.name
       )
     end
 
     def load_conversation_state(prospect)
-      prospect.prospect_conversation_state || prospect.create_prospect_conversation_state!
+      prospect.prospect_conversation_state || ProspectConversationState.create_or_find_by!(prospect: prospect)
     end
 
     def reactivate_state!(conversation_state)
@@ -288,8 +303,10 @@ module AiConciergeV3
     def build_and_persist_response(prospect:, conversation_state:, interpretation:, slots_payload:, reply_type:, active_topic:, active_flow:, pending_question:, action_name:, extra_context: {}, flow_status: nil, end_reason: nil)
       messenger_context = { reply_type: reply_type }.merge(extra_context)
       reply_message = Agents::MessengerAgent.new(hotel: hotel, context: messenger_context).call.fetch("reply_message")
-      persist_state(conversation_state, slots_payload:, interpretation:, active_topic:, active_flow:, pending_question:, action_name:, flow_status:, end_reason:)
-      record_outbound_message(prospect, reply_message)
+      ActiveRecord::Base.transaction do
+        persist_state(conversation_state, slots_payload:, interpretation:, active_topic:, active_flow:, pending_question:, action_name:, flow_status:, end_reason:)
+        record_outbound_message(prospect, reply_message)
+      end
       ResponsePayloadBuilder.new(reply_message: reply_message, needs_human_support: false, action_name: action_name, prospect_public_id: prospect.public_id).call
     end
 
@@ -331,7 +348,7 @@ module AiConciergeV3
     end
 
     def empty_branch
-      State::SlotMerger.new(active_branch: nil, slots: {}, pending_question: nil, message: nil).send(:default_branch)
+      State::SlotMerger.empty_branch
     end
 
     def explicit_end_request?
@@ -345,6 +362,27 @@ module AiConciergeV3
 
     def end_confirmation_yes?(interpretation)
       interpretation["intent"].to_s == "confirmation" && interpretation.dig("slots", "confirmation") != "no"
+    end
+
+    def max_turns_exceeded?(conversation_state)
+      conversation_state.slots_payload.dig("conversation", "turn_count").to_i >= MAX_TURNS
+    end
+
+    def turn_limit_reached_response(prospect, conversation_state)
+      reply = "I've reached my limit for this conversation. Please contact the hotel directly for further assistance."
+      persist_state(
+        conversation_state,
+        slots_payload: conversation_state.slots_payload,
+        interpretation: { "intent" => "end_conversation" },
+        active_topic: nil,
+        active_flow: nil,
+        pending_question: nil,
+        action_name: nil,
+        flow_status: "ended",
+        end_reason: "max_turns_exceeded"
+      )
+      record_outbound_message(prospect, reply)
+      ResponsePayloadBuilder.new(reply_message: reply, needs_human_support: true, action_name: nil, prospect_public_id: prospect.public_id).call
     end
 
     def end_confirmation_mode(conversation_state)

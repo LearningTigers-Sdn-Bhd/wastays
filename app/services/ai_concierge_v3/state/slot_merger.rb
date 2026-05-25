@@ -5,8 +5,31 @@ module AiConciergeV3
     TIMING_KEYS = %w[target_month target_year month_segment check_in check_out nights days].freeze
     PARTY_KEYS = %w[party_size_total adults children room_count].freeze
 
+    def self.empty_branch
+      {
+        "branch_id" => SecureRandom.uuid,
+        "target_month" => nil,
+        "target_year" => nil,
+        "month_segment" => nil,
+        "check_in" => nil,
+        "check_out" => nil,
+        "nights" => nil,
+        "days" => nil,
+        "room_count" => 1,
+        "party_size_total" => nil,
+        "adults" => nil,
+        "children" => nil,
+        "clarification_needed" => nil,
+        "suggested_options" => [],
+        "suggestion_set_version" => 0,
+        "pending_selection" => nil,
+        "confirmation_candidate" => nil,
+        "selected_option" => nil
+      }
+    end
+
     def initialize(active_branch:, slots:, pending_question:, message:)
-      @active_branch = active_branch.is_a?(Hash) ? active_branch.deep_dup : default_branch
+      @active_branch = active_branch.is_a?(Hash) ? active_branch.deep_dup : self.class.empty_branch
       @slots = slots.is_a?(Hash) ? slots : {}
       @pending_question = pending_question
       @message = message.to_s
@@ -102,7 +125,8 @@ module AiConciergeV3
     end
 
     def clear_downstream!(branch)
-      DOWNSTREAM_KEYS.each { |key| branch[key] = default_branch[key] }
+      empty = self.class.empty_branch
+      DOWNSTREAM_KEYS.each { |key| branch[key] = empty[key] }
     end
 
     def total_party_size(branch)
@@ -130,26 +154,7 @@ module AiConciergeV3
     end
 
     def default_branch
-      {
-        "branch_id" => SecureRandom.uuid,
-        "target_month" => nil,
-        "target_year" => nil,
-        "month_segment" => nil,
-        "check_in" => nil,
-        "check_out" => nil,
-        "nights" => nil,
-        "days" => nil,
-        "room_count" => 1,
-        "party_size_total" => nil,
-        "adults" => nil,
-        "children" => nil,
-        "clarification_needed" => nil,
-        "suggested_options" => [],
-        "suggestion_set_version" => 0,
-        "pending_selection" => nil,
-        "confirmation_candidate" => nil,
-        "selected_option" => nil
-      }
+      self.class.empty_branch
     end
     end
   end
