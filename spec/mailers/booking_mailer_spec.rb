@@ -9,7 +9,7 @@ RSpec.describe BookingMailer, type: :mailer do
       guest_name: "Aisha Rahman",
       guest_email: "aisha@example.com",
       guest_phone: "+60123456789",
-      confirmation_token: "WS-MAILTEST",
+      confirmation_token: "MAIL2A",
       total_amount: 300.0,
       currency: "MYR",
       payment_status: "captured",
@@ -37,11 +37,11 @@ RSpec.describe BookingMailer, type: :mailer do
   end
 
   it "includes the confirmation token in the subject" do
-    expect(mail.subject).to include("WS-MAILTEST")
+    expect(mail.subject).to include("MAIL2A")
   end
 
   it "attaches the invoice PDF with correct filename" do
-    pdf_attachment = mail.attachments.find { |a| a.filename == "wastays-invoice-WS-MAILTEST.pdf" }
+    pdf_attachment = mail.attachments.find { |a| a.filename == "wastays-invoice-MAIL2A.pdf" }
     expect(pdf_attachment).not_to be_nil
     expect(pdf_attachment.content_type).to include("application/pdf")
   end

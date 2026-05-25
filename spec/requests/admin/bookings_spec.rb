@@ -12,7 +12,7 @@ RSpec.describe 'Admin::Bookings', type: :request do
       :booking,
       hotel: hotel,
       booking_quote: create(:booking_quote, hotel: hotel, token: "tok_#{token}_booking"),
-      confirmation_token: 'WS-FBBPGNAT',
+      confirmation_token: 'FBBP4A',
       guest_name: 'Tom Becker',
       guest_email: 'tom.becker@example.com',
       guest_phone: '+60192223344',
@@ -40,14 +40,14 @@ RSpec.describe 'Admin::Bookings', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('Back to All Bookings')
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Booking WS-FBBPGNAT')
+      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Booking FBBP4A')
       expect(response.body).to include('class="mt-2 text-sm font-medium text-slate-600 sm:text-base">Review booking details, guest information, and payment status for this reservation.')
       expect(response.body).to include('Review booking details, guest information, and payment status for this reservation.')
       expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">')
       expect(response.body).to include('Stay & Room Details')
       expect(response.body).to include('Room 101')
       expect(response.body).to include('class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Status Summary')
-      expect(response.body).to include('Booking WS-FBBPGNAT')
+      expect(response.body).to include('Booking FBBP4A')
       expect(response.body).to include("Hotel: #{hotel.name}")
     end
 

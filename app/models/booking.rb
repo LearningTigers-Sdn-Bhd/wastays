@@ -305,8 +305,19 @@ class Booking < ApplicationRecord
     SendInvoiceEmailJob.perform_later(id)
   end
 
+  CONFIRMATION_TOKEN_CHARSET = (("A".."Z").to_a + ("2".."9").to_a - %w[I O L]).freeze
+  CONFIRMATION_TOKEN_LENGTH = 6
+
   def generate_confirmation_token
-    self.confirmation_token ||= "WS-#{SecureRandom.alphanumeric(8).upcase}"
+    return if confirmation_token.present?
+
+    loop do
+      candidate = Array.new(CONFIRMATION_TOKEN_LENGTH) { CONFIRMATION_TOKEN_CHARSET.sample }.join
+      next if Booking.exists?(confirmation_token: candidate)
+
+      self.confirmation_token = candidate
+      break
+    end
   end
 
   def normalize_guest_data
