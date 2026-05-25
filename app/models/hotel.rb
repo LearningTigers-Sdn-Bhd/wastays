@@ -66,7 +66,10 @@ class Hotel < ApplicationRecord
   after_create :ensure_default_gl_maps
 
   validates :name, presence: true
-  validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true
+  validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
+                           length: { in: 3..6 },
+                           format: { with: /\A[A-Z0-9]+\z/, message: "must be uppercase letters and numbers only" },
+                           if: -> { hotel_prefix.present? }
 
   before_validation :normalize_default_currency
   before_create :assign_hotel_prefix
@@ -528,9 +531,11 @@ class Hotel < ApplicationRecord
     self.hotel_prefix = generate_unique_prefix
   end
 
+  PREFIX_MIN_LENGTH = 3
+  PREFIX_MAX_LENGTH = 4
+
   def generate_unique_prefix
-    # Build base from initials of each word
-    base = name.to_s.scan(/\b\w/).join.upcase.first(4).presence || name.to_s.upcase.first(2)
+    base = build_prefix_base
     candidate = base
     counter = 2
     while Hotel.exists?(hotel_prefix: candidate)
@@ -538,6 +543,24 @@ class Hotel < ApplicationRecord
       counter += 1
     end
     candidate
+  end
+
+  def build_prefix_base
+    cleaned = name.to_s.upcase.gsub(/[^A-Z\s]/, "").strip
+    words = cleaned.split(/\s+/).reject(&:empty?)
+    return "WS" if words.empty?
+
+    base =
+      if words.length >= PREFIX_MIN_LENGTH
+        words.map { |w| w[0] }.join.first(PREFIX_MAX_LENGTH)
+      elsif words.length == 2
+        first, last = words
+        "#{first[0]}#{first[1] || last[1] || 'X'}#{last[0]}"
+      else
+        words.first.first(PREFIX_MAX_LENGTH)
+      end
+
+    base.length >= PREFIX_MIN_LENGTH ? base : base.ljust(PREFIX_MIN_LENGTH, "X")
   end
 
   def saved_changes_to_synced_attributes?

@@ -18,6 +18,9 @@
         <% if booking.folio_number %>
           <span class="text-xs text-slate-500">Folio No. <span class="font-semibold text-slate-700"><%= booking.formatted_folio_number %></span></span>
         <% end %>
+        <% if booking.invoice_number %>
+          <span class="text-xs text-slate-500">Invoice No. <span class="font-semibold text-slate-700"><%= booking.formatted_invoice_number %></span></span>
+        <% end %>
         <% if booking.guest_registration_number %>
           <span class="text-xs text-slate-500">Guest Reg. No. <span class="font-semibold text-slate-700"><%= booking.formatted_guest_registration_number %></span></span>
         <% end %>

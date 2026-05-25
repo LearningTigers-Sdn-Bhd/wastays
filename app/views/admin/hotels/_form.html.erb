@@ -37,8 +37,8 @@
 
           <div>
             <label for="hotel_prefix" class="mb-2 block text-sm font-medium text-slate-700">Hotel Prefix</label>
-            <%= f.text_field :hotel_prefix, placeholder: "e.g. SH", maxlength: 6, class: input_classes %>
-            <p class="mt-1 text-xs text-slate-400">Used to prefix receipt, folio, and reservation numbers (e.g. SH-1). Must be unique.</p>
+            <%= f.text_field :hotel_prefix, placeholder: "e.g. SPH", maxlength: 6, minlength: 3, class: input_classes %>
+            <p class="mt-1 text-xs text-slate-400">3-6 uppercase letters/numbers. Prefixes receipt, folio, invoice, reservation, and guest registration numbers (e.g. SPH-10000001). Must be unique.</p>
           </div>
 
           <div class="sm:col-span-2">

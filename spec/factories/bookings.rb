@@ -2,7 +2,6 @@ FactoryBot.define do
   factory :booking do
     association :hotel
     association :booking_quote
-    sequence(:confirmation_token) { |n| "WS-#{SecureRandom.alphanumeric(8).upcase}" }
     status { "confirmed" }
     total_amount { 200.0 }
     currency { "MYR" }
