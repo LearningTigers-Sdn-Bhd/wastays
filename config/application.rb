@@ -31,5 +31,6 @@ module Wastays
     config.eager_load_paths << Rails.root.join("app/presenters")
 
     config.middleware.use ObservationDeckMiddleware
+    config.middleware.use Rack::Attack
   end
 end
