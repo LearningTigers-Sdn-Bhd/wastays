@@ -59,7 +59,7 @@ namespace :room_statuses do
 
       Rooms::SetStatus.new(
         room_status: room_status,
-        status: "pending_cleaning",
+        status: "dirty",
         user: nil, # System action
         reason: "Maintenance block expired",
         event_type: "room_block_removed_auto_status"

@@ -8,7 +8,7 @@ RSpec.describe Rooms::SetStatus do
   let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101" ]) }
 
   it "updates a room status and writes an audit log" do
-    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
     result = described_class.new(
       room_status: room_status,
@@ -24,23 +24,37 @@ RSpec.describe Rooms::SetStatus do
 
     log = RoomOperationalAuditLog.last
     expect(log.event_type).to eq("room_status_changed")
-    expect(log.old_status).to eq("pending_cleaning")
+    expect(log.old_status).to eq("dirty")
     expect(log.new_status).to eq("preparing")
     expect(log.reason).to eq("Housekeeping started")
   end
 
+  it "allows ready status to change to dirty" do
+    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
+
+    result = described_class.new(
+      room_status: room_status,
+      status: "dirty",
+      user: user,
+      reason: "Room became dirty"
+    ).call
+
+    expect(result).to be_success
+    expect(room_status.reload.status).to eq("dirty")
+  end
+
   it "rejects unsupported transitions" do
-    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
     result = described_class.new(room_status: room_status, status: "inspection_failed", user: user).call
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Cannot change room 101 from pending_cleaning to inspection_failed.")
-    expect(room_status.reload.status).to eq("pending_cleaning")
+    expect(result.error).to eq("Cannot change room 101 from dirty to inspection_failed.")
+    expect(room_status.reload.status).to eq("dirty")
   end
 
   it "transitions associated booking to review_due_out when status is late_checkout_detected" do
-    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
     booking = create(:booking, hotel: hotel, status: "checked_in")
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
 

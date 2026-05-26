@@ -27,8 +27,8 @@ RSpec.describe Bookings::AssignRoom do
     expect(log.auditable).to eq(booking.booking_rooms.first)
   end
 
-  it "blocks pending_cleaning rooms for normal users" do
-    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+  it "blocks dirty rooms for normal users" do
+    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
     result = described_class.new(booking: booking, room_number: "101", user: user).call
 
@@ -42,7 +42,7 @@ RSpec.describe Bookings::AssignRoom do
     role = create(:role, account: hotel.account)
     create(:role_permission, role: role, permission: permission)
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
-    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
     result = described_class.new(
       booking: booking,

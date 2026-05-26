@@ -71,7 +71,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "returns http success" do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101", room_type_snapshot: { "name" => room_type.name }, quantity: 1, subtotal: booking.total_amount)
-      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
       get "/hotel/#{hotel.id}/bookings/#{booking.id}"
       expect(response).to have_http_status(:success)
@@ -599,7 +599,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101", "102" ]) }
 
     it "returns room options including disabled non-ready rooms" do
-      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
       get "/hotel/#{hotel.id}/bookings/availability", params: {
         room_type_id: room_type.id,

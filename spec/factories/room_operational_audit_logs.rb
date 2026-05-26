@@ -5,7 +5,7 @@ FactoryBot.define do
     association :user
     room_number { "101" }
     event_type { "room_status_changed" }
-    old_status { "pending_cleaning" }
+    old_status { "dirty" }
     new_status { "ready" }
     reason { "Room inspected" }
     metadata { { "source" => "spec" } }

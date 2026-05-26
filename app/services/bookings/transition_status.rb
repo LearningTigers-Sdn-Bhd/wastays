@@ -192,7 +192,7 @@ module Bookings
               outstanding_balance: close_result.balance.to_s
             }
           )
-          mark_assigned_rooms_pending_cleaning
+          mark_assigned_rooms_dirty
         end
       end
 
@@ -253,7 +253,7 @@ module Bookings
       previous_status.in?(%w[pending confirmed])
     end
 
-    def mark_assigned_rooms_pending_cleaning
+    def mark_assigned_rooms_dirty
       @booking.booking_rooms.includes(:room_type).where.not(room_number: [ nil, "" ]).find_each do |booking_room|
         room_status = RoomStatus.find_or_create_by!(
           hotel: @booking.hotel,
@@ -263,10 +263,10 @@ module Bookings
 
         Rooms::SetStatus.new(
           room_status: room_status,
-          status: "pending_cleaning",
+          status: "dirty",
           user: @user,
           booking: @booking,
-          event_type: "checkout_marked_pending_cleaning",
+          event_type: "checkout_marked_dirty",
           reason: "Guest checked out",
           metadata: { "booking_id" => @booking.id }
         ).call

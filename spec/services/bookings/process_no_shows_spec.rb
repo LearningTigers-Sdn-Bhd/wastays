@@ -160,7 +160,7 @@ RSpec.describe Bookings::ProcessNoShows do
   it "releases assigned no-show rooms to ready after the no-show is persisted" do
     booking = create_no_show_candidate
     booking.booking_rooms.sole.update!(room_number: "101")
-    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
     expect {
       described_class.call(night_audit: night_audit, user: user)
@@ -188,7 +188,7 @@ RSpec.describe Bookings::ProcessNoShows do
   it "allows a released no-show room to be assigned to another booking" do
     booking = create_no_show_candidate
     booking.booking_rooms.sole.update!(room_number: "101")
-    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
     next_booking = create_no_show_candidate(check_in: business_date + 1.day, check_out: business_date + 2.days)
 
     described_class.call(night_audit: night_audit, user: user)

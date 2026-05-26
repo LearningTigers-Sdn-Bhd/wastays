@@ -5,13 +5,13 @@ require "ostruct"
 module Rooms
   class SetStatus
     ALLOWED_TRANSITIONS = {
-      "ready" => %w[pending_cleaning out_of_service late_checkout_detected],
-      "pending_cleaning" => %w[preparing ready out_of_service late_checkout_detected],
+      "ready" => %w[dirty out_of_service late_checkout_detected],
+      "dirty" => %w[preparing ready out_of_service late_checkout_detected],
       "preparing" => %w[awaiting_inspection ready inspection_failed out_of_service],
       "awaiting_inspection" => %w[ready inspection_failed preparing out_of_service],
       "inspection_failed" => %w[preparing ready out_of_service],
-      "out_of_service" => %w[ready pending_cleaning],
-      "late_checkout_detected" => %w[pending_cleaning ready out_of_service]
+      "out_of_service" => %w[ready dirty],
+      "late_checkout_detected" => %w[dirty ready out_of_service]
     }.freeze
 
     def initialize(room_status:, status:, user:, reason: nil, booking: nil, event_type: "room_status_changed", metadata: {})

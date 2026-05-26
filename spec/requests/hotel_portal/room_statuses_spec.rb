@@ -12,7 +12,7 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
   let(:role) { create(:role, account: hotel.account, slug: "front_desk", name: "Front Desk") }
 
   def room_status_for(room_number: "101")
-    create(:room_status, hotel: hotel, room_type: room_type, room_number: room_number, status: "pending_cleaning")
+    create(:room_status, hotel: hotel, room_type: room_type, room_number: room_number, status: "dirty")
   end
 
   def grant_manage_room_status
@@ -66,7 +66,7 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
 
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to include("not authorized")
-      expect(room_status.reload.status).to eq("pending_cleaning")
+      expect(room_status.reload.status).to eq("dirty")
     end
 
     it "blocks account-level manage_room_status permission without hotel-scoped access" do
@@ -81,7 +81,7 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
 
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to include("not authorized")
-      expect(room_status.reload.status).to eq("pending_cleaning")
+      expect(room_status.reload.status).to eq("dirty")
     end
   end
 end

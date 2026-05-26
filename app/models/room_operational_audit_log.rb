@@ -3,7 +3,7 @@
 class RoomOperationalAuditLog < ApplicationRecord
   EVENT_TYPES = %w[
     room_status_changed
-    checkout_marked_pending_cleaning
+    checkout_marked_dirty
     assignment_override
     room_blocked_auto_status
     room_block_removed_auto_status

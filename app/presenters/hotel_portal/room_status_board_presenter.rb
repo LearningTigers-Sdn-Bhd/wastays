@@ -116,7 +116,7 @@ module HotelPortal
         "all" => "border-slate-300 bg-slate-100 text-slate-700",
         "ready" => "border-emerald-200 bg-emerald-50 text-emerald-700",
         "occupied" => "border-sky-200 bg-sky-50 text-sky-700",
-        "pending_cleaning" => "border-orange-200 bg-orange-50 text-orange-700",
+        "dirty" => "border-orange-200 bg-orange-50 text-orange-700",
         "preparing" => "border-blue-200 bg-blue-50 text-blue-700",
         "awaiting_inspection" => "border-indigo-200 bg-indigo-50 text-indigo-700",
         "inspection_failed" => "border-rose-200 bg-rose-50 text-rose-700",
@@ -140,7 +140,7 @@ module HotelPortal
         '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>'.html_safe
       when "occupied"
         '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>'.html_safe
-      when "pending_cleaning"
+      when "dirty"
         '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'.html_safe
       when "preparing"
         '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" /></svg>'.html_safe
