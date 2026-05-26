@@ -2,6 +2,7 @@
 
 module HotelPortal
   class UsersController < HotelPortal::BaseController
+    include StaffAssignableRoles
     before_action :authorize_manage_users!
     before_action :set_hotel_access, only: %i[update destroy reactivate]
 
@@ -56,7 +57,8 @@ module HotelPortal
     end
 
     def update
-      role = assignable_role(params[:role_id])
+      role_id = params[:role_id] || params.dig(:user_hotel_access, :role_id)
+      role = assignable_role(role_id)
 
       unless role
         redirect_to hotel_users_path(current_hotel), alert: "Selected role cannot be assigned."
@@ -93,16 +95,6 @@ module HotelPortal
 
     def set_hotel_access
       @hotel_access = current_hotel.user_hotel_accesses.find(params[:id])
-    end
-
-    def assignable_roles
-      @assignable_roles ||= current_hotel.account.roles.includes(:permissions).order(:name).select do |role|
-        role.permissions.none? { |permission| permission.slug == "manage_account" } || current_user.has_permission?("manage_account")
-      end
-    end
-
-    def assignable_role(role_id)
-      assignable_roles.find { |role| role.id.to_s == role_id.to_s }
     end
   end
 end
