@@ -77,7 +77,12 @@ module HotelPortal
           return false unless HousekeepingRequest::STATUSES.include?(target_status)
 
           completed_at = target_status == "completed" ? (record.completed_at || Time.current) : nil
-          record.update(status: target_status, completed_at: completed_at)
+          if record.update(status: target_status, completed_at: completed_at)
+            mark_booking_rooms_cleaning(record) if target_status == "in_progress"
+            true
+          else
+            false
+          end
         when "complaint"
           return false unless ComplaintRequest::STATUSES.include?(target_status)
 
@@ -85,6 +90,28 @@ module HotelPortal
           record.update(status: target_status, completed_at: completed_at)
         else
           false
+        end
+      end
+
+      def mark_booking_rooms_cleaning(record)
+        return unless record.booking
+
+        record.booking.booking_rooms.includes(:room_type).where.not(room_number: [ nil, "" ]).find_each do |booking_room|
+          room_status = RoomStatus.find_or_create_by!(
+            hotel: record.booking.hotel,
+            room_type: booking_room.room_type,
+            room_number: booking_room.room_number
+          )
+
+          result = Rooms::SetStatus.new(
+            room_status: room_status,
+            status: "cleaning",
+            user: nil,
+            booking: record.booking,
+            event_type: "housekeeping_request_dispatched",
+            reason: record.request_details,
+            metadata: { "housekeeping_request_id" => record.id }
+          ).call
         end
       end
     end

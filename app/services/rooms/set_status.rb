@@ -5,7 +5,7 @@ require "ostruct"
 module Rooms
   class SetStatus
     ALLOWED_TRANSITIONS = {
-      "ready" => %w[dirty out_of_service late_checkout_detected],
+      "ready" => %w[dirty out_of_service late_checkout_detected cleaning],
       "dirty" => %w[cleaning ready out_of_service late_checkout_detected],
       "cleaning" => %w[awaiting_inspection ready inspection_failed out_of_service],
       "awaiting_inspection" => %w[ready inspection_failed cleaning out_of_service],
@@ -28,7 +28,6 @@ module Rooms
       return success if @room_status.status == @status
       return failure("Unsupported room status: #{@status}.") unless RoomStatus::STATUSES.include?(@status)
       return failure(transition_error) unless allowed_transition?
-      return failure("A note is required to mark the room as ready.") if @status == "ready" && @reason.blank?
 
       old_status = @room_status.status
 

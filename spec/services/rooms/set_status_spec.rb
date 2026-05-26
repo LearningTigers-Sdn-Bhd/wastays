@@ -74,4 +74,18 @@ RSpec.describe Rooms::SetStatus do
     expect(log.metadata["to"]).to eq("review_due_out")
     expect(log.metadata["event"]).to eq("detect_late_checkout")
   end
+
+  it "allows marking a room as ready without a note" do
+    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "cleaning")
+
+    result = described_class.new(
+      room_status: room_status,
+      status: "ready",
+      user: user,
+      reason: ""
+    ).call
+
+    expect(result).to be_success
+    expect(room_status.reload.status).to eq("ready")
+  end
 end

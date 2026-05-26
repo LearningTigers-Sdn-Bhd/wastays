@@ -64,8 +64,22 @@ module Rooms
           hash[date] = status_for(room_type, room_number, date, room_bookings, room_blocks)
         end,
         blocks: booking_blocks_for(room_type, room_number, room_bookings),
-        maintenance_blocks: maintenance_blocks_for(room_type, room_number, room_blocks)
+        maintenance_blocks: maintenance_blocks_for(room_type, room_number, room_blocks),
+        housekeeping_requests: housekeeping_requests_for(room_bookings)
       }
+    end
+
+    def housekeeping_requests_for(room_bookings)
+      room_bookings.flat_map do |booking|
+        booking.housekeeping_requests.select { |r| r.archived_at.nil? && r.status == "in_progress" }.map do |req|
+          {
+            id: req.id,
+            details: req.request_details,
+            status: req.status,
+            requested_at: req.display_requested_at
+          }
+        end
+      end
     end
 
     def status_for(room_type, room_number, date, room_bookings, room_blocks = [])
@@ -124,7 +138,7 @@ module Rooms
 
     def bookings_scope
       @hotel.bookings
-        .includes(:booking_rooms)
+        .includes(:booking_rooms, :housekeeping_requests)
         .where(status: %w[confirmed checked_in completed])
         .joins(:booking_rooms)
         .where("bookings.check_in < ? AND bookings.check_out > ?", dates.last + 1.day, @start_date)
