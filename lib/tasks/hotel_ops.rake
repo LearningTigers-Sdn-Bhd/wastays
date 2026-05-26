@@ -1,4 +1,53 @@
 namespace :hotel_ops do
+  desc "Migrate existing hotel.faq and hotel.policy JSONB data to hotel_knowledge_documents and chunks"
+  task migrate_knowledges: :environment do
+    Hotel.find_each do |hotel|
+      migrated = 0
+
+      # FAQ sections → one document per section, one chunk per Q&A pair
+      Array(hotel.faq).each do |section|
+        doc = hotel.knowledge_documents.create!(
+          title: section["section_name"].presence || "FAQ",
+          source_type: "text",
+          category: "faq",
+          language: "en",
+          embedding_status: "pending",
+          tags: [],
+          effective_date: nil,
+          content: nil
+        )
+        Array(section["items"]).each_with_index do |item, idx|
+          q = item["question"].presence
+          a = item["answer"].presence
+          content = [ ("Q: #{q}" if q), ("A: #{a}" if a) ].compact.join("\n")
+          doc.chunks.create!(content: content, chunk_index: idx) if content.present?
+        end
+        migrated += 1
+      end
+
+      # Policy items → one document per item, one chunk
+      Array(hotel.policy).each do |item|
+        title = item["title"].presence || "Policy"
+        content = [ title, item["content"].presence ].compact.join(": ")
+        doc = hotel.knowledge_documents.create!(
+          title: title,
+          source_type: "text",
+          category: "policy",
+          language: "en",
+          embedding_status: "pending",
+          tags: [],
+          effective_date: nil,
+          content: content
+        )
+        doc.chunks.create!(content: content, chunk_index: 0)
+        migrated += 1
+      end
+
+      puts "Migrated #{migrated} documents for hotel #{hotel.id}" if migrated > 0
+    end
+  end
+
+  desc "Clear all AI Concierge data for a specific hotel (prospects and their conversation states/messages)"
   desc "Clear all AI Concierge data for a specific hotel (prospects and their conversation states/messages)"
   task :clear_ai_concierge, [ :hotel_name ] => :environment do |_, args|
     hotel = find_hotel(args[:hotel_name])

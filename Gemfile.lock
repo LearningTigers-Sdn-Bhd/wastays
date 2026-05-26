@@ -322,6 +322,8 @@ GEM
     multi_xml (0.8.1)
       bigdecimal (>= 3.1, < 5)
     multipart-post (2.4.1)
+    neighbor (0.6.0)
+      activerecord (>= 7.1)
     net-http (0.9.1)
       uri (>= 0.11.1)
     net-imap (0.6.4)
@@ -642,6 +644,7 @@ DEPENDENCIES
   kaminari (~> 1.2)
   letter_opener_web
   lucide-rails
+  neighbor (~> 0.3)
   nokogiri (>= 1.19.3)
   openssl (~> 3.1.2)
   parallel_tests

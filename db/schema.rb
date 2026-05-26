@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_25_110203) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_26_062829) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "vector"
 
   create_table "accounts", force: :cascade do |t|
     t.string "name"
@@ -488,6 +489,37 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_25_110203) do
     t.index ["hotel_id"], name: "index_hotel_general_ledger_maps_on_hotel_id"
   end
 
+  create_table "hotel_knowledge_chunks", force: :cascade do |t|
+    t.bigint "hotel_knowledge_document_id", null: false
+    t.text "content", null: false
+    t.column "embedding", "vector(1536)"
+    t.integer "chunk_index", null: false
+    t.integer "token_count"
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_knowledge_document_id", "chunk_index"], name: "idx_knowledge_chunks_on_document_and_index", unique: true
+    t.index ["hotel_knowledge_document_id"], name: "ix_hotel_knowledge_chunks_on_hotel_knowledge_document_id"
+  end
+
+  create_table "hotel_knowledge_documents", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "title", null: false
+    t.string "source_type", null: false
+    t.string "category", null: false
+    t.string "language", default: "en", null: false
+    t.string "embedding_status", default: "pending", null: false
+    t.text "tags", default: [], array: true
+    t.integer "version", default: 1, null: false
+    t.date "effective_date"
+    t.text "content"
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "category"], name: "index_hotel_knowledge_documents_on_hotel_id_and_category"
+    t.index ["hotel_id"], name: "index_hotel_knowledge_documents_on_hotel_id"
+  end
+
   create_table "hotel_pricing_rules", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.string "rule_type", null: false
@@ -554,8 +586,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_25_110203) do
     t.jsonb "amenities", default: [], null: false
     t.string "slug", null: false
     t.string "ai_concierge_tone", default: "basic", null: false
-    t.jsonb "faq", default: [], null: false
-    t.jsonb "policy", default: [], null: false
     t.boolean "sst_enabled", default: false, null: false
     t.string "hotel_prefix"
     t.string "time_zone"
@@ -1209,6 +1239,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_25_110203) do
   add_foreign_key "hotel_business_dates", "hotels"
   add_foreign_key "hotel_counters", "hotels"
   add_foreign_key "hotel_general_ledger_maps", "hotels"
+  add_foreign_key "hotel_knowledge_chunks", "hotel_knowledge_documents"
+  add_foreign_key "hotel_knowledge_documents", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotel_taxes", "hotels"
   add_foreign_key "hotel_team_configs", "hotels"
