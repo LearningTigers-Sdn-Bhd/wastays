@@ -1,0 +1,170 @@
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <%= link_to kb_index_path, class: "text-sm font-medium text-slate-600 hover:text-blue-600" do %><%= controller_name.humanize.titleize %><% end %>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900"><%= @document.title %></span>
+  </div>
+<% end %>
+
+<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+  <div class="px-4 md:px-0">
+    <div class="mt-5 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl"><%= @document.title %></h1>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 capitalize"><%= @document.category %></span>
+          <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 capitalize"><%= @document.source_type %></span>
+          <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 uppercase"><%= @document.language %></span>
+          <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize
+            <%= @document.embedding_status == "indexed" ? "bg-emerald-50 text-emerald-700" :
+               @document.embedding_status == "failed" ? "bg-red-50 text-red-700" :
+               "bg-amber-50 text-amber-700" %>"><%= @document.embedding_status %></span>
+          <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">v<%= @document.version %></span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <%= link_to kb_edit_path(@document), class: "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50" do %>
+          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          Edit
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-0">
+    <div class="lg:col-span-2 space-y-6">
+      <% if @document.category == "faq" && @document.metadata&.dig("qa_pairs").present? %>
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 px-6 py-4">
+            <h2 class="text-sm font-bold text-slate-900">Questions & Answers</h2>
+          </div>
+          <div class="divide-y divide-slate-100">
+            <% qa_list = @document.metadata["qa_pairs"] %>
+            <% qa_list = qa_list.values if qa_list.is_a?(Hash) %>
+            <% Array(qa_list).each_with_index do |pair, idx| %>
+              <% next unless pair.is_a?(Hash) %>
+              <div class="px-6 py-4">
+                <div class="mb-3">
+                  <span class="inline-flex items-center justify-center size-5 rounded-full bg-blue-100 text-[10px] font-bold text-blue-700">Q<%= idx + 1 %></span>
+                  <p class="mt-2 text-sm font-semibold text-slate-900"><%= pair["question"] %></p>
+                </div>
+                <div>
+                  <span class="inline-flex items-center justify-center size-5 rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">A</span>
+                  <p class="mt-2 text-sm text-slate-700 whitespace-pre-wrap"><%= pair["answer"] %></p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% elsif @document.content.present? %>
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 px-6 py-4">
+            <h2 class="text-sm font-bold text-slate-900">Content</h2>
+          </div>
+          <div class="px-6 py-4">
+            <pre class="whitespace-pre-wrap text-sm text-slate-700 font-mono"><%= @document.content %></pre>
+          </div>
+        </div>
+      <% end %>
+
+      <% if @document.file.attached? %>
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 px-6 py-4">
+            <h2 class="text-sm font-bold text-slate-900">Attached File</h2>
+          </div>
+          <div class="px-6 py-4">
+            <%= link_to url_for(@document.file), target: "_blank", class: "inline-flex items-center gap-2 text-sm text-blue-600 hover:underline" do %>
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+              <%= @document.file.filename %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 px-6 py-4">
+          <h2 class="text-sm font-bold text-slate-900">Chunks (<%= @chunks.count %>)</h2>
+        </div>
+        <% if @chunks.any? %>
+          <div class="divide-y divide-slate-100">
+            <% @chunks.each do |chunk| %>
+              <div class="px-6 py-4">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold text-slate-500">Chunk #<%= chunk.chunk_index %></span>
+                  <span class="text-xs text-slate-400"><%= chunk.token_count %> tokens</span>
+                </div>
+                <pre class="whitespace-pre-wrap text-sm text-slate-700 font-mono"><%= chunk.content %></pre>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="px-6 py-8 text-center">
+            <p class="text-sm text-slate-500">No chunks created yet. Chunks are generated when embeddings are processed.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="space-y-6">
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 px-6 py-4">
+          <h2 class="text-sm font-bold text-slate-900">Details</h2>
+        </div>
+        <dl class="divide-y divide-slate-100">
+          <div class="px-6 py-3 flex items-center justify-between">
+            <dt class="text-sm text-slate-500">Category</dt>
+            <dd class="text-sm font-semibold text-slate-900 capitalize"><%= @document.category %></dd>
+          </div>
+          <div class="px-6 py-3 flex items-center justify-between">
+            <dt class="text-sm text-slate-500">Source</dt>
+            <dd class="text-sm font-semibold text-slate-900 capitalize"><%= @document.source_type %></dd>
+          </div>
+          <div class="px-6 py-3 flex items-center justify-between">
+            <dt class="text-sm text-slate-500">Language</dt>
+            <dd class="text-sm font-semibold text-slate-900 uppercase"><%= @document.language %></dd>
+          </div>
+          <div class="px-6 py-3 flex items-center justify-between">
+            <dt class="text-sm text-slate-500">Version</dt>
+            <dd class="text-sm font-semibold text-slate-900"><%= @document.version %></dd>
+          </div>
+          <div class="px-6 py-3 flex items-center justify-between">
+            <dt class="text-sm text-slate-500">Effective Date</dt>
+            <dd class="text-sm font-semibold text-slate-900"><%= @document.effective_date&.to_fs(:long) || "Forever" %></dd>
+          </div>
+          <div class="px-6 py-3 flex items-center justify-between">
+            <dt class="text-sm text-slate-500">Embedding Status</dt>
+            <dd><span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize
+              <%= @document.embedding_status == "indexed" ? "bg-emerald-50 text-emerald-700" :
+                 @document.embedding_status == "failed" ? "bg-red-50 text-red-700" :
+                 "bg-amber-50 text-amber-700" %>"><%= @document.embedding_status %></span></dd>
+          </div>
+          <div class="px-6 py-3 flex items-center justify-between">
+            <dt class="text-sm text-slate-500">Tags</dt>
+            <dd class="text-sm font-semibold text-slate-900">
+              <% if @document.tags.any? %>
+                <div class="flex flex-wrap gap-1 justify-end">
+                  <% @document.tags.each do |tag| %>
+                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"><%= tag %></span>
+                  <% end %>
+                </div>
+              <% else %>
+                <span class="text-slate-400">—</span>
+              <% end %>
+            </dd>
+          </div>
+          <div class="px-6 py-3 flex items-center justify-between">
+            <dt class="text-sm text-slate-500">Created</dt>
+            <dd class="text-sm text-slate-700"><%= @document.created_at.to_fs(:short) %></dd>
+          </div>
+          <div class="px-6 py-3 flex items-center justify-between">
+            <dt class="text-sm text-slate-500">Updated</dt>
+            <dd class="text-sm text-slate-700"><%= @document.updated_at.to_fs(:short) %></dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
