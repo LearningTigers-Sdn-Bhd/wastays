@@ -3,7 +3,7 @@
   room_status_id = room.dig(:status, :room_status_id)
   failure_note = room.dig(:status, :notes).to_s.strip
   can_manage = current_user.has_permission?("manage_room_status", hotel: current_hotel)
-  has_actions = ["ready", "dirty", "preparing", "inspection_failed", "awaiting_inspection"].include?(status)
+  has_actions = ["ready", "dirty", "cleaning", "inspection_failed", "awaiting_inspection"].include?(status)
   room_type = room[:room_type]
 %>
 <div class="grid border-b border-slate-100" style="grid-template-columns: <%= presenter.grid_template_columns %>; min-height: <%= presenter.row_min_height(room) %>px;">

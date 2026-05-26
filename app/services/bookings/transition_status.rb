@@ -267,7 +267,7 @@ module Bookings
           user: @user,
           booking: @booking,
           event_type: "checkout_marked_dirty",
-          reason: "Guest checked out",
+          reason: nil,
           metadata: { "booking_id" => @booking.id }
         ).call
       end

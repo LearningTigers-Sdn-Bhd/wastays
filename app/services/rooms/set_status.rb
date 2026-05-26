@@ -6,10 +6,10 @@ module Rooms
   class SetStatus
     ALLOWED_TRANSITIONS = {
       "ready" => %w[dirty out_of_service late_checkout_detected],
-      "dirty" => %w[preparing ready out_of_service late_checkout_detected],
-      "preparing" => %w[awaiting_inspection ready inspection_failed out_of_service],
-      "awaiting_inspection" => %w[ready inspection_failed preparing out_of_service],
-      "inspection_failed" => %w[preparing ready out_of_service],
+      "dirty" => %w[cleaning ready out_of_service late_checkout_detected],
+      "cleaning" => %w[awaiting_inspection ready inspection_failed out_of_service],
+      "awaiting_inspection" => %w[ready inspection_failed cleaning out_of_service],
+      "inspection_failed" => %w[cleaning ready out_of_service],
       "out_of_service" => %w[ready dirty],
       "late_checkout_detected" => %w[dirty ready out_of_service]
     }.freeze
@@ -28,17 +28,16 @@ module Rooms
       return success if @room_status.status == @status
       return failure("Unsupported room status: #{@status}.") unless RoomStatus::STATUSES.include?(@status)
       return failure(transition_error) unless allowed_transition?
+      return failure("A note is required to mark the room as ready.") if @status == "ready" && @reason.blank?
 
       old_status = @room_status.status
 
       RoomStatus.transaction do
-        new_notes = (@status == "ready") ? nil : (@reason.presence || @room_status.notes)
-
         @room_status.update!(
           status: @status,
           last_changed_by: @user,
           last_changed_at: Time.current,
-          notes: new_notes
+          notes: @reason.presence || @room_status.notes
         )
 
         RoomOperationalAuditLog.create!(

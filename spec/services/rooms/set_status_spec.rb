@@ -12,20 +12,20 @@ RSpec.describe Rooms::SetStatus do
 
     result = described_class.new(
       room_status: room_status,
-      status: "preparing",
+      status: "cleaning",
       user: user,
       reason: "Housekeeping started"
     ).call
 
     expect(result).to be_success
-    expect(room_status.reload.status).to eq("preparing")
+    expect(room_status.reload.status).to eq("cleaning")
     expect(room_status.last_changed_by).to eq(user)
     expect(room_status.last_changed_at).to be_present
 
     log = RoomOperationalAuditLog.last
     expect(log.event_type).to eq("room_status_changed")
     expect(log.old_status).to eq("dirty")
-    expect(log.new_status).to eq("preparing")
+    expect(log.new_status).to eq("cleaning")
     expect(log.reason).to eq("Housekeeping started")
   end
 

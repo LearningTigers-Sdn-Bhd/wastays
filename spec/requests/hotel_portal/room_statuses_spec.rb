@@ -30,14 +30,14 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
       room_status = room_status_for
 
       patch hotel_room_status_path(hotel, room_status), params: {
-        room_status: { status: "preparing", notes: "Started cleaning" },
+        room_status: { status: "cleaning", notes: "Started cleaning" },
         start_date: Date.new(2026, 5, 7).to_s,
         days: 21,
         layout: "compact"
       }
 
       expect(response).to redirect_to(hotel_room_status_board_path(hotel, start_date: "2026-05-07", days: "21", layout: "compact"))
-      expect(room_status.reload.status).to eq("preparing")
+      expect(room_status.reload.status).to eq("cleaning")
     end
 
     it "saves inspection failed notes" do
@@ -76,7 +76,7 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
       room_status = room_status_for
 
       patch hotel_room_status_path(hotel, room_status), params: {
-        room_status: { status: "preparing" }
+        room_status: { status: "cleaning" }
       }
 
       expect(response).to redirect_to(root_path)

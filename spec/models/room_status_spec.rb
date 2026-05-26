@@ -41,7 +41,7 @@ RSpec.describe RoomStatus, type: :model do
 
     expect(described_class.new(hotel: hotel, room_type: room_type, room_number: "101", status: "ready")).to be_assignable
     expect(described_class.new(hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")).not_to be_assignable
-    expect(described_class.new(hotel: hotel, room_type: room_type, room_number: "101", status: "preparing")).not_to be_assignable
+    expect(described_class.new(hotel: hotel, room_type: room_type, room_number: "101", status: "cleaning")).not_to be_assignable
     expect(described_class.new(hotel: hotel, room_type: room_type, room_number: "101", status: "inspection_failed")).not_to be_assignable
     expect(described_class.new(hotel: hotel, room_type: room_type, room_number: "101", status: "out_of_service")).not_to be_assignable
   end
