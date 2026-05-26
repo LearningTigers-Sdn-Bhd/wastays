@@ -614,7 +614,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(body["available_rooms"]).not_to include("101")
       option_101 = body["room_options"].find { |opt| opt["room_number"] == "101" }
       expect(option_101["selectable"]).to be(false)
-      expect(option_101["label"]).to eq("101 (Pending Cleaning)")
+      expect(option_101["label"]).to eq("101 (Dirty)")
     end
 
     it "includes the current booking's assigned room when exclude_booking_id is provided" do

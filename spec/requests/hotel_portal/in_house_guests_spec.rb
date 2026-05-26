@@ -229,9 +229,9 @@ RSpec.describe "HotelPortal::InHouseGuests", type: :request do
 
       expect(response).to have_http_status(:success)
       # in_house_booking and newer_in_house_booking from let/before are also in-house (total 4)
-      expect(response.body).to include("Total in-house guests")
+      expect(response.body).to include("In-House Now")
       expect(response.body).to include("4")
-      expect(response.body).to include("Check-outs today")
+      expect(response.body).to include("Check-outs Today")
       expect(response.body).to include("1")
     end
 

@@ -82,7 +82,7 @@ RSpec.describe Bookings::AvailableRoomNumbers do
       ready_option = options.find { |opt| opt[:room_number] == "102" }
 
       expect(dirty_option[:selectable]).to be(false)
-      expect(dirty_option[:label]).to eq("101 (Pending Cleaning)")
+      expect(dirty_option[:label]).to eq("101 (Dirty)")
       expect(ready_option[:selectable]).to be(true)
     end
   end

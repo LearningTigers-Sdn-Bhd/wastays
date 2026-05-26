@@ -29,10 +29,10 @@ module Rooms
 
     def physical_status
       return "out_of_service" if blocked?
-      
+
       status = persisted_status&.status || "ready"
       return status if %w[cleaning dirty awaiting_inspection inspection_failed].include?(status)
-      
+
       return "occupied" if occupied_stay?
       status
     end

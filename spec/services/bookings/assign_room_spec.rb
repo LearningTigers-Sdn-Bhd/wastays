@@ -33,7 +33,7 @@ RSpec.describe Bookings::AssignRoom do
     result = described_class.new(booking: booking, room_number: "101", user: user).call
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Room 101 is Pending Cleaning and cannot be assigned until it is ready.")
+    expect(result.error).to eq("Room 101 is Dirty and cannot be assigned until it is ready.")
     expect(booking.booking_rooms.first.reload.room_number).to be_nil
   end
 

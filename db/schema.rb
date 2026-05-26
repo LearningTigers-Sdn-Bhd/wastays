@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_26_014152) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_26_061807) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -20,6 +20,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_26_014152) do
     t.string "status"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "pre_suspension_status"
     t.index ["slug"], name: "index_accounts_on_slug"
   end
 
@@ -594,6 +595,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_26_014152) do
     t.time "business_starts_at", default: "2000-01-01 08:00:00", null: false
     t.time "business_ends_at", default: "2000-01-01 02:00:00", null: false
     t.integer "arrival_grace_period", default: 7200, null: false
+    t.string "pre_suspension_status"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
@@ -602,7 +604,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_26_014152) do
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
-    t.bigint "booking_id", null: false
+    t.bigint "booking_id"
     t.string "external_id"
     t.datetime "requested_at", null: false
     t.text "request_details", null: false
@@ -613,11 +615,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_26_014152) do
     t.datetime "updated_at", null: false
     t.jsonb "internal_notes", default: []
     t.datetime "archived_at"
+    t.bigint "hotel_id"
+    t.bigint "room_type_id"
+    t.string "room_number"
     t.index ["booking_id", "archived_at"], name: "index_housekeeping_requests_on_booking_id_and_archived_at"
     t.index ["booking_id", "requested_at"], name: "index_housekeeping_requests_on_booking_id_and_requested_at"
     t.index ["booking_id", "status"], name: "index_housekeeping_requests_on_booking_id_and_status"
     t.index ["booking_id"], name: "index_housekeeping_requests_on_booking_id"
     t.index ["external_id"], name: "index_housekeeping_requests_on_external_id", unique: true
+    t.index ["hotel_id", "room_number"], name: "index_housekeeping_requests_on_hotel_id_and_room_number"
+    t.index ["hotel_id", "status"], name: "index_housekeeping_requests_on_hotel_id_and_status"
+    t.index ["hotel_id"], name: "index_housekeeping_requests_on_hotel_id"
+    t.index ["room_type_id"], name: "index_housekeeping_requests_on_room_type_id"
   end
 
   create_table "inventory_audit_logs", force: :cascade do |t|
@@ -1277,6 +1286,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_26_014152) do
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "users", column: "salesperson_id"
   add_foreign_key "housekeeping_requests", "bookings"
+  add_foreign_key "housekeeping_requests", "hotels"
+  add_foreign_key "housekeeping_requests", "room_types"
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
