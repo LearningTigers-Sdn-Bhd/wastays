@@ -9,6 +9,7 @@ class HotelPortal::InHouseGuestsController < HotelPortal::BaseController
                               .where(checked_out_at: nil)
 
     @in_house_count = base_scope.count
+    @check_outs_today_count = base_scope.where(check_out: Date.current).count
 
     in_house_scope = base_scope.includes(:booking_rooms, :guests, :booking_guests)
 
