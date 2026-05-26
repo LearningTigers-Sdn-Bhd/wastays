@@ -81,7 +81,11 @@ module AiConciergeV3
         return "" unless group.is_a?(Hash)
 
         lines = Array(group["options"]).map do |option|
-          "#{option['position']}. *#{format_option_price(option['currency'], option['total_price'])}* : Check-in *#{format_full_date(option['check_in'])}* - Check-out *#{format_full_date(option['check_out'])}*"
+          date_line = "  Option #{option['position']}: #{format_full_date(option['check_in'])} - #{format_full_date(option['check_out'])} (#{option['nights']} #{'night'.pluralize(option['nights'].to_i)})"
+          rate_lines = Array(option["rate_plans"]).map do |rp|
+            "    • #{format_option_price(rp['currency'], rp['total_price'])} (#{rp['name']})"
+          end
+          rate_lines.present? ? [ date_line, rate_lines.join("\n") ].join("\n") : date_line
         end
 
         [ "*#{group['room_type_name']}*", lines.join("\n") ].join("\n")

@@ -64,6 +64,18 @@ module AiConciergeV3
         )
       when :option_selection
         handle_option_selection(conversation_state: conversation_state, active_branch: active_branch)
+      when :ask_rate_plan
+        selected_option = active_branch["selected_option"] || active_branch["confirmation_candidate"]
+        rate_plans = Array(selected_option&.dig("rate_plans"))
+        booking_response(
+          conversation_state: conversation_state,
+          active_branch: active_branch,
+          reply_type: :ask_rate_plan,
+          pending_question: "rate_plan_selection",
+          extra_context: { selected_option: selected_option, rate_plans: rate_plans }
+        )
+      when :rate_plan_selection
+        handle_rate_plan_selection(conversation_state: conversation_state, active_branch: active_branch)
       when :confirmation_yes
         handle_confirmation_yes(conversation_state: conversation_state, active_branch: active_branch)
       when :confirmation_no
@@ -168,6 +180,7 @@ module AiConciergeV3
         return :ask_party_split if interpretation["intent"] == "confirmation"
       end
 
+      return :rate_plan_selection if pending_question == "rate_plan_selection"
       return :confirmation_yes if confirmation_yes?
       return :confirmation_no if confirmation_no?
       return :option_selection if interpretation["intent"] == "option_selection"
@@ -242,8 +255,24 @@ module AiConciergeV3
       ).call
 
       if result["success"]
-        active_branch["confirmation_candidate"] = result["selected_option"]
-        active_branch["selected_option"] = result["selected_option"]
+        selected_option = result["selected_option"]
+        rate_plans = Array(selected_option["rate_plans"])
+
+        if rate_plans.size > 1
+          active_branch["selected_option"] = selected_option
+          active_branch["pending_selection"] = nil
+          return booking_response(
+            conversation_state: conversation_state,
+            active_branch: active_branch,
+            reply_type: :ask_rate_plan,
+            pending_question: "rate_plan_selection",
+            extra_context: { selected_option: selected_option, rate_plans: rate_plans }
+          )
+        end
+
+        selected_option["selected_rate_plan"] = rate_plans.first if rate_plans.any?
+        active_branch["confirmation_candidate"] = selected_option
+        active_branch["selected_option"] = selected_option
         active_branch["pending_selection"] = nil
         return booking_response(
           conversation_state: conversation_state,
@@ -268,7 +297,13 @@ module AiConciergeV3
       selected_option = active_branch["confirmation_candidate"] || active_branch["selected_option"]
       return booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :invalid_selection, pending_question: "select_option") unless selected_option
 
-      result = tool_registry.fetch("generate_booking_url").new(hotel: hotel, selected_option: selected_option, guest_phone: phone || prospect.phone_number).call
+      selected_rate_plan = selected_option&.dig("selected_rate_plan") || {}
+      result = tool_registry.fetch("generate_booking_url").new(
+        hotel: hotel,
+        selected_option: selected_option,
+        guest_phone: phone || prospect.phone_number,
+        rate_plan_id: selected_rate_plan["rate_plan_id"]
+      ).call
       return { direct_payload: MessageBuilders::FallbackBuilder.new(message: result["error"]).call } unless result["success"]
 
       active_branch["selected_option"] = selected_option
@@ -287,6 +322,44 @@ module AiConciergeV3
         flow_status: "ended",
         end_reason: "booking_url_generated"
       )
+    end
+
+    def handle_rate_plan_selection(conversation_state: self.conversation_state, active_branch: self.active_branch)
+      rate_plan_name = interpretation.dig("slots", "rate_plan_name")
+      selected_option = active_branch["selected_option"]
+      rate_plans = Array(selected_option&.dig("rate_plans"))
+      matched = find_matching_rate_plan(rate_plan_name, rate_plans)
+
+      if matched
+        active_branch["selected_rate_plan_id"] = matched["rate_plan_id"]
+        active_branch["selected_rate_plan_name"] = matched["name"]
+        selected_option["selected_rate_plan"] = matched
+        active_branch["confirmation_candidate"] = selected_option
+        active_branch["pending_selection"] = nil
+        return booking_response(
+          conversation_state: conversation_state,
+          active_branch: active_branch,
+          reply_type: :ask_confirmation,
+          pending_question: "confirm_selection",
+          extra_context: { selected_option: selected_option }
+        )
+      end
+
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: active_branch,
+        reply_type: :ask_rate_plan,
+        pending_question: "rate_plan_selection",
+        extra_context: { selected_option: selected_option, rate_plans: rate_plans }
+      )
+    end
+
+    def find_matching_rate_plan(name, rate_plans)
+      return rate_plans.first if rate_plans.one?
+      return nil if name.blank?
+
+      normalized = name.to_s.downcase.squish
+      rate_plans.find { |rp| rp["name"].to_s.downcase.include?(normalized) || normalized.include?(rp["name"].to_s.downcase) }
     end
 
     def resolve_selection_follow_up(conversation_state:, interpretation:, active_branch:, pending_question:)
@@ -449,7 +522,7 @@ module AiConciergeV3
     end
 
     def slot_collection_resume?(resumed)
-      %w[booking_timing specific_timing duration guest_count party_split].include?(resumed&.dig("pending_question"))
+      %w[booking_timing specific_timing duration guest_count party_split rate_plan_selection].include?(resumed&.dig("pending_question"))
     end
 
     def informational_intent?(intent)

@@ -61,8 +61,8 @@ module BookingEngine
       available_room_types
     end
 
-    def pricing_summary_for(room_type)
-      option = lowest_pricing_option_for(room_type)
+    def pricing_summary_for(room_type, rate_plan: nil)
+      option = rate_plan.present? ? pricing_option_for(room_type, rate_plan) : lowest_pricing_option_for(room_type)
       return {} if option.blank?
 
       display_name = option.rate_plan&.name

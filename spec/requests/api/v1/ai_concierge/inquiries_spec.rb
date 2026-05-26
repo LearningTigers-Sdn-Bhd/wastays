@@ -187,8 +187,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
-      expect(parsed_body["reply_message"]).to include("1. *RM")
-      expect(parsed_body["reply_message"]).to include("Check-in *1 August 2026* - Check-out *3 August 2026*")
+      expect(parsed_body["reply_message"]).to include("  Option 1: 1 August 2026 - 3 August 2026 (2 nights)")
       expect(parsed_body["reply_message"]).to include('Reply with the room type name and option number or date you want, for example: "Ocean Villa King option 1" or "Executive Penthouse on May 21"')
     end
 
@@ -335,7 +334,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Executive Penthouse")
       expect(parsed_body["reply_message"]).to include("I found multiple options under Executive Penthouse:")
-      expect(parsed_body["reply_message"]).to include("1. *RM")
+      expect(parsed_body["reply_message"]).to include("  Option 1:")
       expect(parsed_body["reply_message"]).to include("Please tell me the option number you want.")
     end
 

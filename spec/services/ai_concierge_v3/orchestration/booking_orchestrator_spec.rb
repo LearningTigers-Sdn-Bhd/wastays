@@ -91,8 +91,8 @@ RSpec.describe AiConciergeV3::Orchestration::BookingOrchestrator do
   end
 
   it "returns a safe fallback when booking url generation fails without a completion payload" do
-    failure_tool = Class.new do
-      def initialize(hotel:, selected_option:, guest_phone:); end
+      failure_tool = Class.new do
+        def initialize(hotel:, selected_option:, guest_phone:, rate_plan_id: nil); end
 
       def call
         { "success" => false, "error" => "Unable to generate quote right now." }

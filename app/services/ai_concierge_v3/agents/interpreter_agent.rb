@@ -24,6 +24,7 @@ module AiConciergeV3
         string :check_in
         string :check_out
         string :room_type_name
+        string :rate_plan_name
       end
       array :tool_hints do
         string enum: [ "search_booking_options", "select_booking_option", "generate_booking_url", "get_hotel_policy", "get_booking_context", "get_general_hotel_info", "get_hotel_faq", "get_nearby_attractions", "get_room_type_details" ]
@@ -152,6 +153,13 @@ module AiConciergeV3
         - Only set room_type_name when the user explicitly names or clearly refers to a room type.
         - If the user asks a vague room question without a room name, leave room_type_name null.
         - Never invent or normalize a room type name that was not clearly implied by the message.
+
+        RATE PLAN EXTRACTION RULES:
+        - If SUMMARY.booking_task.pending_question is "rate_plan_selection" and the user names a rate plan type such as "Standard Rate", "Non-Refundable", "the cheaper one", or "the standard one", extract the full rate plan name into rate_plan_name.
+        - Only set rate_plan_name when the user is choosing a rate plan. Leave it null otherwise.
+        - Match the full rate plan name as shown in the summary's rate plan options.
+        - EXAMPLE: "standard rate" -> rate_plan_name="Standard Rate".
+        - EXAMPLE: "the cheaper one" or "non refundable" -> rate_plan_name="Non-Refundable Rate" (use the exact name from the available rate plans in the summary).
 
         BOOKING VS INFORMATION CONTRAST RULES:
         - If the user asks about hotel amenities/facilities, prefer hotel_information.

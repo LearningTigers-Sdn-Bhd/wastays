@@ -47,6 +47,7 @@ module AiConciergeV3
             .group_by(&:room_type_id)
 
           @rates_by_type = RoomRate
+            .includes(:rate_plan)
             .where(room_type_id: room_type_ids, date: min_check_in...max_check_out)
             .group_by(&:room_type_id)
 
@@ -175,7 +176,7 @@ module AiConciergeV3
           return false unless inventories.all? { |inv| inv.status == "open" && inv.quantity >= room_count }
 
           rates = rates_for(room_type, stay_dates)
-          return false unless rates.size == stay_dates.size
+          return false unless rates.map(&:date).uniq.size == stay_dates.size
 
           true
         end
@@ -183,7 +184,8 @@ module AiConciergeV3
         def build_option(room_type, check_in:, check_out:)
           stay_dates = (check_in...check_out).to_a
           rates = rates_for(room_type, stay_dates)
-          total_price = rates.sum { |r| r.price.to_d } * room_count
+          rate_plans = build_rate_plans(rates, stay_dates)
+          cheapest = rate_plans.min_by { |rp| rp["total_price"] } || {}
 
           {
             "room_type_id" => room_type.id,
@@ -191,12 +193,26 @@ module AiConciergeV3
             "check_in" => check_in.iso8601,
             "check_out" => check_out.iso8601,
             "nights" => (check_out - check_in).to_i,
-            "total_price" => total_price,
-            "currency" => rates.first&.currency || "MYR",
+            "total_price" => cheapest["total_price"] || 0,
+            "currency" => cheapest["currency"] || rates.first&.currency || "MYR",
+            "rate_plans" => rate_plans,
             "adults" => adults,
             "children" => children,
             "room_count" => room_count
           }
+        end
+
+        def build_rate_plans(rates, stay_dates)
+          rates.group_by(&:rate_plan_id).filter_map do |rate_plan_id, plan_rates|
+            plan_by_date = plan_rates.group_by(&:date)
+            next unless stay_dates.all? { |d| plan_by_date.key?(d) }
+
+            total = plan_rates.sum { |r| r.price.to_d } * room_count
+            currency = plan_rates.first&.currency || "MYR"
+            name = plan_rates.first&.rate_plan&.name || "Standard Rate"
+
+            { "rate_plan_id" => rate_plan_id, "name" => name, "total_price" => total, "currency" => currency }
+          end
         end
 
         def parse_date(value)

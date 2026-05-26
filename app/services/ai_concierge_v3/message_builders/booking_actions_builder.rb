@@ -20,6 +20,7 @@ module AiConciergeV3
         booking_link_ready
         no_options
         ask_specific_timing
+        ask_rate_plan
         confirm_to_end_conversation
         end_conversation_declined
       ].freeze
@@ -62,6 +63,8 @@ module AiConciergeV3
           booking_link_ready_message
         when :no_options
           no_options_message
+        when :ask_rate_plan
+          ask_rate_plan_message
         when :confirm_to_end_conversation
           confirm_to_end_conversation_message
         when :end_conversation_declined
@@ -122,6 +125,7 @@ module AiConciergeV3
 
       def ask_confirmation_message
         option = context[:selected_option] || {}
+        rate_plan = option["selected_rate_plan"] || {}
         room = hotel.room_types.find_by(id: option["room_type_id"])
         description = room&.description.presence || "No description available."
         amenity_lines = Array(room&.amenities).map do |a_id|
@@ -129,8 +133,12 @@ module AiConciergeV3
           "- #{name}" if name.present?
         end.compact
 
+        price = rate_plan["total_price"].presence || option["total_price"]
+        currency = rate_plan["currency"].presence || option["currency"]
+        rate_plan_suffix = rate_plan["name"].present? ? " (#{rate_plan['name']})" : ""
+
         [
-          "Would you like to confirm your quotation for this room start from #{format_full_date(option['check_in'])} until #{format_full_date(option['check_out'])} for #{format_price(option['currency'], option['total_price'])}.",
+          "Would you like to confirm your quotation for this room start from #{format_full_date(option['check_in'])} until #{format_full_date(option['check_out'])} for #{format_price(currency, price)}#{rate_plan_suffix}.",
           "",
           "*#{option['room_type_name']}*",
           description,
@@ -177,6 +185,22 @@ module AiConciergeV3
       def no_options_message
         label = context[:month_label].presence || "those dates"
         "Sorry, I couldn't find any rooms available for #{label}. If you want, send another date or month and I'll check again."
+      end
+
+      def ask_rate_plan_message
+        option = context[:selected_option] || {}
+        rate_plans = Array(context[:rate_plans])
+
+        date_range = "#{format_full_date(option['check_in'])} - #{format_full_date(option['check_out'])}"
+        rate_lines = rate_plans.each_with_index.map do |rp, i|
+          "#{i + 1}. #{format_option_price(rp['currency'], rp['total_price'])} (#{rp['name']})"
+        end
+
+        [
+          "For #{option['room_type_name']} on #{date_range}, which rate plan would you like?",
+          rate_lines.join("\n"),
+          "Please reply with the rate plan name or number."
+        ].join("\n\n")
       end
 
       def confirm_to_end_conversation_message

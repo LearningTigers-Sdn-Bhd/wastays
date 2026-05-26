@@ -2,12 +2,13 @@ module AiConciergeV3
   module Tools
     module Booking
       class GenerateBookingUrlTool
-        def initialize(hotel:, selected_option:, guest_phone: nil, guest_name: nil, guest_email: nil)
+        def initialize(hotel:, selected_option:, guest_phone: nil, guest_name: nil, guest_email: nil, rate_plan_id: nil)
           @hotel = hotel
           @selected_option = selected_option
           @guest_phone = guest_phone
           @guest_name = guest_name
           @guest_email = guest_email
+          @rate_plan_id = rate_plan_id
         end
 
         def call
@@ -21,7 +22,8 @@ module AiConciergeV3
             room_count: selected_option["room_count"],
             guest_phone: guest_phone,
             guest_name: guest_name,
-            guest_email: guest_email
+            guest_email: guest_email,
+            rate_plan_id: rate_plan_id
           ).call
 
           return ({ "success" => false, "error" => result.message }) unless result.success?
@@ -38,7 +40,7 @@ module AiConciergeV3
 
         private
 
-        attr_reader :hotel, :selected_option, :guest_phone, :guest_name, :guest_email
+        attr_reader :hotel, :selected_option, :guest_phone, :guest_name, :guest_email, :rate_plan_id
 
         def default_host
           host_options = Rails.application.config.action_mailer.default_url_options || {}

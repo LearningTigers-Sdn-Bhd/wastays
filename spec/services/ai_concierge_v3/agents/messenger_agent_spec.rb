@@ -18,16 +18,16 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
         {
           "room_type_name" => "Garden Prestige Suite",
           "options" => [
-            { "position" => 1, "check_in" => "2026-08-03", "check_out" => "2026-08-05", "currency" => "MYR", "total_price" => 520.0 },
-            { "position" => 2, "check_in" => "2026-08-04", "check_out" => "2026-08-06", "currency" => "USD", "total_price" => 120.0 }
+            { "position" => 1, "check_in" => "2026-08-03", "check_out" => "2026-08-05", "nights" => 2, "currency" => "MYR", "total_price" => 520.0 },
+            { "position" => 2, "check_in" => "2026-08-04", "check_out" => "2026-08-06", "nights" => 2, "currency" => "USD", "total_price" => 120.0 }
           ]
         }
       ]
     }).call
 
     expect(result["reply_message"]).to include("*Garden Prestige Suite*")
-    expect(result["reply_message"]).to include("1. *RM 520.00* : Check-in *3 August 2026* - Check-out *5 August 2026*")
-    expect(result["reply_message"]).to include("2. *USD 120.00* : Check-in *4 August 2026* - Check-out *6 August 2026*")
+    expect(result["reply_message"]).to include("  Option 1: 3 August 2026 - 5 August 2026 (2 nights)")
+    expect(result["reply_message"]).to include("  Option 2: 4 August 2026 - 6 August 2026 (2 nights)")
     expect(result["reply_message"]).to include('Reply with the room type name and option number or date you want, for example: "Ocean Villa King option 1" or "Executive Penthouse on May 21"')
     expect(result["reply_message"]).to include("You may visit this link for more details:")
   end
@@ -39,16 +39,16 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
       room_options: {
         "room_type_name" => "Executive Penthouse",
         "options" => [
-          { "position" => 1, "check_in" => "2026-08-03", "check_out" => "2026-08-05", "currency" => "MYR", "total_price" => 520.0 },
-          { "position" => 2, "check_in" => "2026-08-04", "check_out" => "2026-08-06", "currency" => "MYR", "total_price" => 540.0 }
+          { "position" => 1, "check_in" => "2026-08-03", "check_out" => "2026-08-05", "nights" => 2, "currency" => "MYR", "total_price" => 520.0 },
+          { "position" => 2, "check_in" => "2026-08-04", "check_out" => "2026-08-06", "nights" => 2, "currency" => "MYR", "total_price" => 540.0 }
         ]
       }
     }).call
 
     expect(result["reply_message"]).to include("I found multiple options under Executive Penthouse:")
     expect(result["reply_message"]).to include("*Executive Penthouse*")
-    expect(result["reply_message"]).to include("1. *RM 520.00* : Check-in *3 August 2026* - Check-out *5 August 2026*")
-    expect(result["reply_message"]).to include("Please tell me the option number you want.")
+    expect(result["reply_message"]).to include("  Option 1: 3 August 2026 - 5 August 2026 (2 nights)")
+    expect(result["reply_message"]).to include("  Option 2: 4 August 2026 - 6 August 2026 (2 nights)")
   end
 
   it "renders confirmation with yes and no prompt" do

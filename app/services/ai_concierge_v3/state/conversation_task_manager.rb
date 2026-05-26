@@ -198,6 +198,8 @@ module AiConciergeV3
         "waiting_for_option_selection"
       when "confirm_selection"
         "waiting_for_confirmation"
+      when "rate_plan_selection"
+        "waiting_for_rate_plan_selection"
       when nil, ""
         "idle"
       else
@@ -263,7 +265,9 @@ module AiConciergeV3
         "suggestion_set_version" => 0,
         "pending_selection" => nil,
         "confirmation_candidate" => nil,
-        "selected_option" => nil
+        "selected_option" => nil,
+        "selected_rate_plan_id" => nil,
+        "selected_rate_plan_name" => nil
       }
     end
     end

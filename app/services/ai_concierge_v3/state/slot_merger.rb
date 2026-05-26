@@ -24,7 +24,9 @@ module AiConciergeV3
         "suggestion_set_version" => 0,
         "pending_selection" => nil,
         "confirmation_candidate" => nil,
-        "selected_option" => nil
+        "selected_option" => nil,
+        "selected_rate_plan_id" => nil,
+        "selected_rate_plan_name" => nil
       }
     end
 
