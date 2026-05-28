@@ -4,10 +4,10 @@ class Public::PreCheckinsController < ApplicationController
   before_action :set_pre_checkin
   before_action :set_booking
   before_action :set_hotel
+  before_action :set_presenter, only: [ :show, :update ]
   before_action :prepare_form_values, only: :show
 
   def show
-    @presenter = Public::PreCheckinPresenter.new(@pre_checkin)
   end
 
   def update
@@ -50,6 +50,10 @@ class Public::PreCheckinsController < ApplicationController
     @hotel = @booking.hotel
   end
 
+  def set_presenter
+    @presenter = Public::PreCheckinPresenter.new(@pre_checkin)
+  end
+
   def prepare_form_values(arrival_time = nil, government_id = nil)
     metadata = @pre_checkin.metadata || {}
     @booking.estimated_arrival_time = arrival_time.presence || metadata["estimated_arrival_time"].presence
@@ -67,6 +71,7 @@ class Public::PreCheckinsController < ApplicationController
       :guest_home_address,
       :id_front,
       :id_back,
+      :signature,
       :estimated_arrival_time
     )
   end

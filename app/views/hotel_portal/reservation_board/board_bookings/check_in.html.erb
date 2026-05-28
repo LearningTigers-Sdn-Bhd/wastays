@@ -12,25 +12,19 @@
 
       <%# Modal Content %>
       <div class="flex-1 p-6 space-y-6">
-        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
-          <div>
-            <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest">Guarantee Method</span>
-            <div class="mt-1 flex items-center gap-2">
-              <%= lucide_icon "shield-check", stroke_width: 2.5, class: "size-4 text-slate-500" %>
-              <span class="text-sm font-bold text-slate-700"><%= (@booking.guarantee_method || 'none').titleize %></span>
-            </div>
-          </div>
-          <div class="text-right">
-            <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</span>
-            <span class="mt-1 inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 uppercase tracking-tight"><%= @booking.status %></span>
-          </div>
-        </div>
-
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
           <%= f.datetime_local_field :checked_in_at,
               value: (@booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"),
               class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Guarantee Method</label>
+          <%= f.select :guarantee_method,
+              Booking::GUARANTEE_METHODS.map { |m| [m.titleize, m] },
+              { prompt: "Select Method" },
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
 
         <div class="space-y-3">

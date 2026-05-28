@@ -478,6 +478,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       :record_payment, :payment_method, :payment_amount, :payment_reference,
       :id_front, :id_back, :source, :internal_notes, :manual_rate_override, :existing_guest_id,
       :rate_plan_id, :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
+      :guarantee_method,
       booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ]
     )
   end

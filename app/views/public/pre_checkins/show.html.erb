@@ -148,6 +148,25 @@
               </div>
             </section>
 
+            <section class="space-y-4 mt-8">
+              <div>
+                <h2 class="text-sm font-black uppercase tracking-widest text-neutral-text-primary">Guest Signature</h2>
+                <p class="mt-1 text-xs text-neutral-text-secondary">Please provide your signature below to confirm your check-in details.</p>
+              </div>
+
+              <div data-controller="signature" class="space-y-2">
+                <div class="rounded-xl border border-neutral-border bg-white p-2">
+                  <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
+                </div>
+                <div class="flex justify-end">
+                  <button type="button" data-action="click->signature#clear" class="text-xs font-bold uppercase tracking-widest text-brand-primary hover:underline">
+                    Clear Signature
+                  </button>
+                </div>
+                <%= f.hidden_field :signature, data: { signature_target: "input" }, required: true %>
+              </div>
+            </section>
+
             <div class="rounded-xl border border-neutral-border bg-neutral-bg p-4 mt-8">
               <label class="flex items-start gap-3 text-sm text-neutral-text-secondary">
                 <input type="checkbox" required autocomplete="off" class="mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary">

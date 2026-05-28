@@ -1,5 +1,6 @@
 class PreCheckin < ApplicationRecord
   belongs_to :booking
+  has_one_attached :signature
 
   validates :status, presence: true
   validates :token, presence: true, uniqueness: true
