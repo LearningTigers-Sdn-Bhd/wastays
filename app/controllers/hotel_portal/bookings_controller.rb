@@ -416,10 +416,11 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def transition_status(status, timestamp, success_notice)
     @booking = current_hotel.bookings.find(params[:id])
 
-    # Apply nested attributes (like room assignment) if provided in the form
-    @booking.assign_attributes(booking_params.except(:checked_in_at, :checked_out_at)) if params[:booking].present?
-
     options = {}
+    if params[:booking].present?
+      options[:attributes] = booking_params.except(:checked_in_at, :checked_out_at)
+    end
+
     if params[:override_night_audit] == "1"
       options[:override_night_audit] = true
       options[:reason] = params[:retroactive_reason]
