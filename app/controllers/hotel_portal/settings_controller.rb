@@ -203,6 +203,7 @@ module HotelPortal
 
     def hotel_params
       params.require(:hotel).permit(
+        :star_rating,
         :default_currency,
         :time_zone,
         :tourism_tax_enabled,

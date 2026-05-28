@@ -33,9 +33,17 @@
         <section>
           <h3 class="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Basic Info</h3>
           <div class="grid gap-5 md:grid-cols-2">
-            <div class="md:col-span-2">
+            <div>
               <%= f.label :name, "Hotel Name", class: "mb-2 block text-sm font-medium text-slate-900" %>
               <%= f.text_field :name, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 focus:border-slate-400 focus:ring-slate-300", required: true %>
+            </div>
+
+            <div>
+              <label for="star_rating" class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-900">
+                <svg class="size-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321 1.012l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.386a.562.562 0 0 1-.84.61L12.5 17.77a.563.563 0 0 0-.5 0l-4.517 2.794a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557L3.542 10.41a.562.562 0 0 1 .321-1.012l5.518-.442a.563.563 0 0 0 .475-.345z"/></svg>
+                Star Rating
+              </label>
+              <%= f.select :star_rating, (1..5).map { |rating| ["#{rating} #{'★' * rating}", rating] }, { include_blank: "Select Rating" }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-slate-300 cursor-pointer" %>
             </div>
 
             <div class="md:col-span-2">
