@@ -66,16 +66,16 @@
         <% end %>
       </div>
 
-      <!-- Table -->
       <div class="overflow-x-auto">
         <table class="min-w-full table-fixed">
           <colgroup>
+            <col class="w-[15%]">
             <col class="w-[20%]">
-            <col class="w-[25%]">
-            <col class="w-[15%]">
             <col class="w-[13%]">
-            <col class="w-[12%]">
-            <col class="w-[15%]">
+            <col class="w-[13%]">
+            <col class="w-[13%]">
+            <col class="w-[13%]">
+            <col class="w-[13%]">
           </colgroup>
           <thead class="bg-slate-100">
             <tr>
@@ -83,6 +83,7 @@
               <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Guest Name</th>
               <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
               <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Gross Price</th>
+              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Taxes</th>
               <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Margin</th>
               <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Net Payout</th>
             </tr>
@@ -91,7 +92,7 @@
             <% if @grouped_bookings.any? %>
               <% @grouped_bookings.each do |date, bookings| %>
                 <tr class="bg-slate-50/80">
-                  <td colspan="6" class="px-6 py-2.5 sm:px-8 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                  <td colspan="7" class="px-6 py-2.5 sm:px-8 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
                     <%= date.strftime("%d %b %Y") %>
                   </td>
                 </tr>
@@ -111,6 +112,9 @@
                     <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-slate-600">
                       RM <%= number_with_precision(booking.total_amount, precision: 2) %>
                     </td>
+                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-slate-500">
+                      <%= number_with_precision(booking.tax_total, precision: 2) %>
+                    </td>
                     <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-red-500">
                       - <%= number_with_precision(booking.margin_amount || 0, precision: 2) %>
                     </td>
@@ -122,7 +126,7 @@
               <% end %>
             <% else %>
               <tr>
-                <td colspan="6" class="px-6 py-20 text-center sm:px-8">
+                <td colspan="7" class="px-6 py-20 text-center sm:px-8">
                   <p class="text-sm font-medium text-slate-500 italic">No bookings found for the selected criteria.</p>
                 </td>
               </tr>

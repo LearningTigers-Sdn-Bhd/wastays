@@ -17,11 +17,12 @@ module HotelPortal
 
       def generate_csv
         CSV.generate(headers: true) do |csv|
-          csv << [ "Booking Ref", "Guest Name", "Status", "Check In", "Check Out", "Gross", "Margin", "Net", "Currency" ]
+          csv << [ "Booking Ref", "Guest Name", "Status", "Check In", "Check Out", "Gross", "Taxes", "Margin", "Net", "Currency" ]
           @bookings.each do |booking|
             gross = booking.booking_folio&.folio_transactions&.select { |t| t.charge? || t.adjustment? }&.sum(&:amount) || 0.to_d
+            taxes = booking.tax_total || 0.to_d
             margin = booking.margin_amount || 0.to_d
-            csv << [ booking.confirmation_token, booking.guest_name, booking.status, booking.check_in, booking.check_out, money(gross), money(margin), money(gross - margin), booking.currency ]
+            csv << [ booking.confirmation_token, booking.guest_name, booking.status, booking.check_in, booking.check_out, money(gross), money(taxes), money(margin), money(gross - margin), booking.currency ]
           end
         end
       end
@@ -45,8 +46,8 @@ module HotelPortal
         pdf.text "#{@start_date.strftime('%d %b %Y')} - #{@end_date.strftime('%d %b %Y')}", size: 10
         pdf.move_down 12
 
-        table_rows = [ [ "Booking Ref", "Guest", "Status", "Gross", "Margin", "Net" ] ] + @bookings.map do |b|
-          [ b.confirmation_token, b.guest_name, b.status, money(b.total_amount), money(b.margin_amount), money(b.net_amount) ]
+        table_rows = [ [ "Booking Ref", "Guest", "Status", "Gross", "Taxes", "Margin", "Net" ] ] + @bookings.map do |b|
+          [ b.confirmation_token, b.guest_name, b.status, money(b.total_amount), money(b.tax_total), money(b.margin_amount), money(b.net_amount) ]
         end
         pdf.table(table_rows, width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }) { row(0).font_style = :bold }
         pdf.render
@@ -56,11 +57,12 @@ module HotelPortal
 
       def rows
         result = []
-        result << row([ "Booking Ref", "Guest Name", "Status", "Check In", "Check Out", "Gross", "Margin", "Net", "Currency" ])
+        result << row([ "Booking Ref", "Guest Name", "Status", "Check In", "Check Out", "Gross", "Taxes", "Margin", "Net", "Currency" ])
         @bookings.each do |b|
           gross = b.booking_folio&.folio_transactions&.select { |t| t.charge? || t.adjustment? }&.sum(&:amount) || 0.to_d
+          taxes = b.tax_total || 0.to_d
           margin = b.margin_amount || 0.to_d
-          result << row([ b.confirmation_token, b.guest_name, b.status, b.check_in, b.check_out, money(gross), money(margin), money(gross - margin), b.currency ])
+          result << row([ b.confirmation_token, b.guest_name, b.status, b.check_in, b.check_out, money(gross), money(taxes), money(margin), money(gross - margin), b.currency ])
         end
         result.join("\n")
       end
