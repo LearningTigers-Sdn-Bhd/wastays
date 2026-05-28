@@ -4,8 +4,23 @@
   <div class="p-6 bg-white" onclick="event.stopPropagation()" data-controller="scanner">
     <h3 class="text-lg font-bold text-slate-900"><%= booking.checked_in? ? "Edit Check-In" : "Confirm Check-In" %></h3>
     <p class="text-sm text-slate-500 mt-1">Set check-in time and assign rooms for <%= booking.guest_name %>.</p>
+
+    <div class="mt-6 flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+      <div>
+        <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest">Guarantee Method</span>
+        <div class="mt-1 flex items-center gap-2">
+          <svg class="w-4 h-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.744c0 5.052 3.823 9.213 8.722 9.637.85.073 1.711.11 2.578.11 8.598 0 15.598-6.999 15.598-15.598 0-.113-.001-.225-.004-.337A11.996 11.996 0 0112 2.714z" /></svg>
+          <span class="text-sm font-bold text-slate-700"><%= (booking.guarantee_method || 'none').titleize %></span>
+        </div>
+      </div>
+      <div class="text-right">
+        <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</span>
+        <span class="mt-1 inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 uppercase"><%= booking.status %></span>
+      </div>
+    </div>
+
     <%= form_with model: booking, url: check_in_hotel_booking_path(current_hotel, booking), method: :post, 
-        class: "mt-6 space-y-4" do |f| %>
+        class: "mt-4 space-y-4" do |f| %>
       <div>
         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
         <%= f.datetime_local_field :checked_in_at,
