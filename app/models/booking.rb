@@ -25,6 +25,10 @@ class Booking < ApplicationRecord
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time, :signature, :existing_guest_id, :guest_update_intent, :status_transition_event
 
+  def room_type_summary
+    booking_rooms.includes(:room_type).map { |br| br.room_type.name }.uniq.to_sentence
+  end
+
   def guest_government_id
     @guest_government_id.presence ||
       pre_checkin&.metadata&.dig("guest_government_id").presence ||
