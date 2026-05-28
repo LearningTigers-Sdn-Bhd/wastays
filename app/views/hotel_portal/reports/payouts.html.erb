@@ -106,6 +106,7 @@
                     <tr>
                       <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Booking Reference</th>
                       <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Checkout Date</th>
+                      <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
                       <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Net Payout</th>
                     </tr>
                   </thead>
@@ -119,6 +120,11 @@
                           <td class="px-6 py-4 text-sm text-slate-600 font-medium">
                             <%= booking.checked_out_at&.strftime("%d %b %Y, %I:%M %p") %>
                           </td>
+                          <td class="px-6 py-4">
+                            <span class="inline-flex items-center gap-x-1.5 py-1 px-2 rounded-lg text-xs font-bold border <%= payout_status_class(booking.payout_status) %>">
+                              <%= booking.payout_status.titleize %>
+                            </span>
+                          </td>
                           <td class="px-6 py-4 text-right whitespace-nowrap sm:px-8">
                             <span class="text-sm font-bold text-slate-900">RM <%= number_with_precision(booking.net_amount, precision: 2) %></span>
                           </td>
@@ -126,7 +132,7 @@
                       <% end %>
                     <% else %>
                       <tr>
-                        <td colspan="3" class="px-6 py-20 text-center text-sm font-medium text-slate-500 italic">
+                        <td colspan="4" class="px-6 py-20 text-center text-sm font-medium text-slate-500 italic">
                           No completed bookings in the current cycle yet.
                         </td>
                       </tr>
@@ -188,6 +194,7 @@
                     <tr>
                       <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Period</th>
                       <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Settled At</th>
+                      <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
                       <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Platform Reference</th>
                       <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Net Amount</th>
                       <th scope="col" class="px-6 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Receipt</th>
@@ -204,6 +211,11 @@
                           </td>
                           <td class="px-6 py-4 text-sm text-slate-600 font-medium">
                             <%= batch.payout_at&.strftime("%d %b %Y") || "Pending" %>
+                          </td>
+                          <td class="px-6 py-4">
+                            <span class="inline-flex items-center gap-x-1.5 py-1 px-2 rounded-lg text-xs font-bold border <%= payout_status_class(batch.status) %>">
+                              <%= batch.status.titleize %>
+                            </span>
                           </td>
                           <td class="px-6 py-4 text-sm font-mono text-slate-500">
                             <%= batch.payout_reference.presence || "—" %>
@@ -225,7 +237,7 @@
                       <% end %>
                     <% else %>
                       <tr>
-                        <td colspan="5" class="px-6 py-20 text-center text-sm font-medium text-slate-500 italic">No settlement history found for this criteria.</td>
+                        <td colspan="6" class="px-6 py-20 text-center text-sm font-medium text-slate-500 italic">No settlement history found for this criteria.</td>
                       </tr>
                     <% end %>
                   </tbody>
