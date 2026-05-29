@@ -9,7 +9,8 @@ module AiConciergeV3
 
         def call
           policy = hotel.property_policy
-          hotel_policy_text = format_policy(hotel.policy)
+          documents = hotel.knowledge_documents.where(category: "policy").includes(:chunks)
+          hotel_policy_text = format_documents(documents)
 
           {
             "success" => hotel_policy_text.present? || policy.present?,
@@ -26,24 +27,14 @@ module AiConciergeV3
 
         attr_reader :hotel, :policy_topic
 
-        def format_policy(items)
-          Array(items).filter_map do |item|
-            next unless item.is_a?(Hash)
+        def format_documents(documents)
+          documents.filter_map do |doc|
+            title = doc.title.presence
+            chunks = doc.chunks.order(:chunk_index).map(&:content)
+            next if chunks.empty?
 
-            title = value_for(item, "title").to_s.strip
-            content = value_for(item, "content").to_s.strip
-            next if title.blank? && content.blank?
-
-            if title.present? && content.present?
-              "#{title}: #{content}"
-            else
-              title.presence || content
-            end
+            ([ title ] + chunks).compact.join("\n")
           end.join("\n\n")
-        end
-
-        def value_for(hash, key)
-          hash[key].presence || hash[key.to_sym].presence
         end
       end
     end

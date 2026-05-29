@@ -7,7 +7,8 @@ module AiConciergeV3
         end
 
         def call
-          faq_text = format_faq(hotel.faq)
+          documents = hotel.knowledge_documents.where(category: "faq").includes(:chunks)
+          faq_text = format_documents(documents)
 
           {
             "success" => faq_text.present?,
@@ -20,36 +21,14 @@ module AiConciergeV3
 
         attr_reader :hotel
 
-        def format_faq(sections)
-          Array(sections).filter_map do |section|
-            next unless section.is_a?(Hash)
+        def format_documents(documents)
+          documents.filter_map do |doc|
+            title = doc.title.presence
+            chunks = doc.chunks.order(:chunk_index).map(&:content)
+            next if chunks.empty?
 
-            section_name = value_for(section, "section_name")
-            lines = Array(value_for(section, "items")).filter_map do |item|
-              next unless item.is_a?(Hash)
-
-              question = value_for(item, "question")
-              answer = value_for(item, "answer")
-              next if question.blank? && answer.blank?
-
-              if question.present? && answer.present?
-                "- Q: #{question}\n  A: #{answer}"
-              elsif question.present?
-                "- Q: #{question}"
-              else
-                "- A: #{answer}"
-              end
-            end
-
-            next if section_name.blank? && lines.empty?
-            next lines.join("\n\n") if section_name.blank?
-
-            ([ section_name ] + lines).join("\n")
+            ([ title ] + chunks).compact.join("\n")
           end.join("\n\n")
-        end
-
-        def value_for(hash, key)
-          hash[key].presence || hash[key.to_sym].presence
         end
       end
     end
