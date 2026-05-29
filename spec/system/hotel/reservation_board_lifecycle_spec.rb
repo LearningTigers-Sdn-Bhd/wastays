@@ -79,7 +79,7 @@ RSpec.describe "Reservation Board Booking Lifecycle", type: :system do
     end
 
     # Now we are in the native dialog modal
-    within "dialog#check-in-modal-show-#{@booking.id}" do
+    within "dialog#check-in-modal-#{@booking.id}" do
       expect(page).to have_content(/Confirm Check-In/i)
       click_button "Confirm Check In"
     end
