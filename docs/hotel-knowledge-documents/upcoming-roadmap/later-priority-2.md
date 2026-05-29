@@ -1,6 +1,6 @@
-# Later Priority 2 (Implemented in V3.2)
+# Later Priority 2 (Implemented in V1.2)
 
-> All items below were implemented as part of **V3.2 — AI Embedding Pipeline**. See `completed-roadmap/v3-embedding-pipeline.md` and `knowledges/05-embeddings-pipeline.md`.
+> All items below were implemented as part of **V1.2 — AI Embedding Pipeline**. See `completed-roadmap/v1-embedding-pipeline.md` and `knowledges/05-embeddings-pipeline.md`.
 
 ---
 

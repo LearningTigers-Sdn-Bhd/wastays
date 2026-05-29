@@ -2,7 +2,7 @@
 
 ## Overview
 
-The embedding pipeline processes knowledge documents into vector embeddings for semantic search. Implemented in V3.2.
+The embedding pipeline processes knowledge documents into vector embeddings for semantic search. Implemented in V1.2.
 
 ## Architecture
 

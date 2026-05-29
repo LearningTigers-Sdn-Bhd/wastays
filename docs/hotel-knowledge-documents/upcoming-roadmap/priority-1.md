@@ -1,6 +1,6 @@
 # Priority 1 — Embedding Pipeline & Tool Migration
 
-## Completed (V3.2)
+## Completed (V1.2)
 - Chunking service for PDF uploads (section-based + fixed-token fallback) ✓
 - Embedding generation pipeline (background job, provider choice, chunk size strategy) ✓
 - Vector index created on `hotel_knowledge_chunks.embedding` (IVFFlat) ✓

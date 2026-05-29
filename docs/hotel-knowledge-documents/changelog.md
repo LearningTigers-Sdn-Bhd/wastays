@@ -1,4 +1,4 @@
-# V3.2 — AI Embedding Pipeline (Current)
+# V1.2 — AI Embedding Pipeline (Current)
 
 ## Changes
 - Added `pdf-reader` gem for PDF text extraction
