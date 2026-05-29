@@ -1,9 +1,12 @@
+# frozen_string_literal: true
+
 module HotelPortal
   class SettingsController < HotelPortal::BaseController
     SETTINGS_TABS = %w[general tax ai notifications banking].freeze
 
     before_action :set_account
     before_action :set_hotel
+    before_action :authorize_settings_access!, only: [ :index, :edit ]
 
     def index
       load_settings
@@ -31,6 +34,13 @@ module HotelPortal
 
     private
 
+    def authorize_settings_access!
+      has_profile_perm = current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
+      has_account_perm = current_user.has_permission?("manage_account")
+
+      raise Pundit::NotAuthorizedError unless has_profile_perm || has_account_perm
+    end
+
     def set_account
       @account = current_user.account
     end
@@ -43,6 +53,13 @@ module HotelPortal
 
     def load_settings
       @active_settings_tab = active_settings_tab
+
+      # Enforce tab-level authorization
+      if @active_settings_tab == "banking"
+        raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_account")
+      else
+        raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
+      end
 
       if @hotel
         @property_policy ||= @hotel.property_policy || @hotel.build_property_policy
@@ -351,7 +368,10 @@ module HotelPortal
       requested_tab = params[:tab].to_s
       return requested_tab if SETTINGS_TABS.include?(requested_tab)
 
-      settings_tab_for_form
+      default_tab = settings_tab_for_form
+      return default_tab if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
+
+      "banking"
     end
 
     def settings_tab_for_form
