@@ -49,17 +49,13 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     end
 
     it "answers hotel policy questions" do
-      hotel.update!(policy: [
-        {
-          "title" => "Quiet Hours",
-          "content" => "Quiet hours start at 10 PM."
-        }
-      ])
+      doc = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Quiet Hours")
+      create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Quiet hours start at 10 PM.")
 
       post path, params: { message: "What is the policy of this hotel?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to eq("Welcome to #{hotel.name}! Quiet Hours: Quiet hours start at 10 PM.")
+      expect(parsed_body["reply_message"]).to eq("Welcome to #{hotel.name}! Quiet Hours\nQuiet hours start at 10 PM.")
       expect(parsed_body["needs_human_support"]).to be(false)
       expect(parsed_body["action_name"]).to be_nil
       expect(parsed_body["prospect_public_id"]).to be_present
@@ -82,22 +78,13 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     end
 
     it "answers hotel faq questions" do
-      hotel.update!(faq: [
-        {
-          "section_name" => "General",
-          "items" => [
-            {
-              "question" => "What time is breakfast?",
-              "answer" => "Breakfast is served daily from 7 AM to 10 AM."
-            }
-          ]
-        }
-      ])
+      doc = create(:hotel_knowledge_document, hotel: hotel, category: "faq", title: "General")
+      create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Q: What time is breakfast?\nA: Breakfast is served daily from 7 AM to 10 AM.")
 
       post path, params: { message: "Do you have an faq?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to eq("General\n- Q: What time is breakfast?\n  A: Breakfast is served daily from 7 AM to 10 AM.")
+      expect(parsed_body["reply_message"]).to eq("General\nQ: What time is breakfast?\nA: Breakfast is served daily from 7 AM to 10 AM.")
     end
 
     it "returns the full nearby attractions list" do

@@ -50,7 +50,8 @@ RSpec.describe AiConciergeV3::Orchestration::LibrarianOrchestrator do
   end
 
   it "returns a hotel faq domain result" do
-    hotel.update!(faq: [ { "section_name" => "General", "items" => [ { "question" => "Breakfast?", "answer" => "From 7 AM." } ] } ])
+    doc = create(:hotel_knowledge_document, hotel: hotel, category: "faq", title: "General")
+    create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Q: Breakfast?\nA: From 7 AM.")
 
     result = described_class.new(
       hotel: hotel,

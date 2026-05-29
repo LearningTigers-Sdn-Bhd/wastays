@@ -1,20 +1,19 @@
 require "rails_helper"
 
 RSpec.describe AiConciergeV3::Tools::HotelInformation::GetHotelPolicyTool do
-  it "returns hotel policy text when present" do
-    hotel = create(:hotel, :with_ai_concierge, policy: [
-      {
-        "title" => "Pets",
-        "content" => "Pets are not allowed."
-      }
-    ])
-    create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "12:00", cancellation_policy: "24 hours")
+  it "returns hotel policy text from knowledge documents with property policy fallback" do
+    hotel = create(:hotel, :with_ai_concierge)
+    doc = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Pets")
+    create(:hotel_knowledge_chunk, document: doc, chunk_index: 0,
+           content: "Pets are not allowed.")
+    create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "12:00",
+           cancellation_policy: "24 hours")
 
     result = described_class.new(hotel: hotel, policy_topic: "hotel_policy").call
 
     expect(result).to include(
       "success" => true,
-      "policy_text" => "Pets: Pets are not allowed.",
+      "policy_text" => "Pets\nPets are not allowed.",
       "check_in_time" => "15:00",
       "check_out_time" => "12:00",
       "cancellation_policy" => "24 hours",
@@ -22,9 +21,30 @@ RSpec.describe AiConciergeV3::Tools::HotelInformation::GetHotelPolicyTool do
     )
   end
 
-  it "falls back to structured property policy facts when hotel policy is blank" do
+  it "joins multiple policy documents" do
     hotel = create(:hotel, :with_ai_concierge)
-    create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "12:00", cancellation_policy: "24 hours")
+    doc1 = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Pets")
+    create(:hotel_knowledge_chunk, document: doc1, chunk_index: 0,
+           content: "Pets are not allowed.")
+    doc2 = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Smoking")
+    create(:hotel_knowledge_chunk, document: doc2, chunk_index: 0,
+           content: "Smoking is not allowed in the rooms.")
+
+    result = described_class.new(hotel: hotel, policy_topic: "hotel_policy").call
+
+    expect(result["policy_text"]).to eq([
+      "Pets",
+      "Pets are not allowed.",
+      "",
+      "Smoking",
+      "Smoking is not allowed in the rooms."
+    ].join("\n"))
+  end
+
+  it "falls back to structured property policy when no knowledge documents exist" do
+    hotel = create(:hotel, :with_ai_concierge)
+    create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "12:00",
+           cancellation_policy: "24 hours")
 
     result = described_class.new(hotel: hotel, policy_topic: "hotel_policy").call
 
@@ -38,7 +58,7 @@ RSpec.describe AiConciergeV3::Tools::HotelInformation::GetHotelPolicyTool do
     )
   end
 
-  it "returns an unavailable payload when both hotel policy and property policy are missing" do
+  it "returns an unavailable payload when both are missing" do
     hotel = create(:hotel, :with_ai_concierge)
 
     result = described_class.new(hotel: hotel, policy_topic: "hotel_policy").call
@@ -53,25 +73,16 @@ RSpec.describe AiConciergeV3::Tools::HotelInformation::GetHotelPolicyTool do
     )
   end
 
-  it "ignores malformed entries and supports symbol keys" do
-    hotel = create(:hotel, :with_ai_concierge, policy: [
-      "invalid",
-      {
-        title: "Smoking",
-        content: "Smoking is not allowed in the rooms."
-      },
-      {
-        "title" => "",
-        "content" => ""
-      }
-    ])
+  it "ignores documents without chunks" do
+    hotel = create(:hotel, :with_ai_concierge)
+    create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Empty")
 
     result = described_class.new(hotel: hotel, policy_topic: "hotel_policy").call
 
     expect(result).to include(
-      "success" => true,
-      "policy_text" => "Smoking: Smoking is not allowed in the rooms.",
-      "source" => "hotel_policy"
+      "success" => false,
+      "policy_text" => nil,
+      "source" => "property_policy"
     )
   end
 end
