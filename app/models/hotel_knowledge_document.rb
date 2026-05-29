@@ -20,7 +20,7 @@ class HotelKnowledgeDocument < ApplicationRecord
   validates :category, inclusion: { in: %w[policy faq general_info] }
   validates :embedding_status, inclusion: { in: %w[pending indexed failed] }
 
-  after_commit :enqueue_embedding_generation, on: [:create, :update]
+  after_commit :enqueue_embedding_generation, on: [ :create, :update ]
 
   private
 

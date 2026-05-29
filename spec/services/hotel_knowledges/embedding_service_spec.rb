@@ -9,8 +9,8 @@ RSpec.describe HotelKnowledges::EmbeddingService do
 
   describe "#call" do
     context "with an array of texts" do
-      let(:texts) { ["Hello world", "Second text"] }
-      let(:mock_vectors) { [[0.1] * 1536, [0.2] * 1536] }
+      let(:texts) { [ "Hello world", "Second text" ] }
+      let(:mock_vectors) { [ [ 0.1 ] * 1536, [ 0.2 ] * 1536 ] }
       let(:mock_response) { instance_double(RubyLLM::Embedding, vectors: mock_vectors) }
 
       before do
@@ -36,7 +36,7 @@ RSpec.describe HotelKnowledges::EmbeddingService do
 
     context "with a single text" do
       let(:texts) { "Just one string" }
-      let(:mock_vectors) { [[0.5] * 1536] }
+      let(:mock_vectors) { [ [ 0.5 ] * 1536 ] }
       let(:mock_response) { instance_double(RubyLLM::Embedding, vectors: mock_vectors) }
 
       before do
@@ -62,12 +62,12 @@ RSpec.describe HotelKnowledges::EmbeddingService do
       before do
         allow(AppConfig).to receive(:get).with("openai_api_key").and_return("sk-app-config-key")
         allow(RubyLLM::Embedding).to receive(:embed).and_return(
-          instance_double(RubyLLM::Embedding, vectors: [[0.1] * 1536])
+          instance_double(RubyLLM::Embedding, vectors: [ [ 0.1 ] * 1536 ])
         )
       end
 
       it "falls back to AppConfig key" do
-        service.call(["test"])
+        service.call([ "test" ])
         expect(RubyLLM::Embedding).to have_received(:embed)
       end
     end
@@ -80,7 +80,7 @@ RSpec.describe HotelKnowledges::EmbeddingService do
       end
 
       it "raises EmbeddingError" do
-        expect { service.call(["test"]) }.to raise_error(HotelKnowledges::EmbeddingError, /No OpenAI API key/)
+        expect { service.call([ "test" ]) }.to raise_error(HotelKnowledges::EmbeddingError, /No OpenAI API key/)
       end
     end
 
@@ -90,13 +90,13 @@ RSpec.describe HotelKnowledges::EmbeddingService do
       end
 
       it "wraps the error in EmbeddingError" do
-        expect { service.call(["test"]) }.to raise_error(HotelKnowledges::EmbeddingError, /API error/)
+        expect { service.call([ "test" ]) }.to raise_error(HotelKnowledges::EmbeddingError, /API error/)
       end
     end
 
     context "with batch processing" do
       let(:texts) { ("a".."z").to_a }
-      let(:mock_vectors) { [[0.1] * 1536] * 20 }
+      let(:mock_vectors) { [ [ 0.1 ] * 1536 ] * 20 }
       let(:mock_response) { instance_double(RubyLLM::Embedding, vectors: mock_vectors) }
 
       before do

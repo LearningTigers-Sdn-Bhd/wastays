@@ -10,7 +10,7 @@ RSpec.describe HotelKnowledges::KnowledgeIngestionService do
   describe "#call" do
     before do
       allow(HotelKnowledges::EmbeddingService).to receive_message_chain(:new, :call) do |texts|
-        texts.map { |t| [0.1] * 1536 }
+        texts.map { |t| [ 0.1 ] * 1536 }
       end
     end
 

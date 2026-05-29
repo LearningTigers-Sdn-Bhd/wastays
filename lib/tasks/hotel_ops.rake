@@ -405,7 +405,7 @@ def clean_hotel_state_records(hotel)
     puts "Seeded #{hotel.knowledge_documents.count} knowledge documents."
 
     # 7. Generate embeddings for pending knowledge documents (opt-in: EMBED=true)
-    if ENV['EMBED'] == 'true' && hotel.ai_concierge_enabled?
+    if ENV["EMBED"] == "true" && hotel.ai_concierge_enabled?
       pending_docs = hotel.knowledge_documents.where(embedding_status: "pending")
       if pending_docs.any?
         puts "Enqueuing embedding generation for #{pending_docs.count} knowledge documents..."

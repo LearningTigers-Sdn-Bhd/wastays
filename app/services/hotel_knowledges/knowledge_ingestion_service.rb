@@ -50,9 +50,9 @@ module HotelKnowledges
     def build_chunks
       text = if @document.source_type == "pdf"
                parse_pdf_text
-             else
+      else
                @document.content.to_s
-             end
+      end
 
       ChunkingService.new(text, source_type: @document.source_type).call
     end

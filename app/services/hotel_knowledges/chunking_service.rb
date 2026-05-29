@@ -15,7 +15,7 @@ module HotelKnowledges
 
       if @source_type == "pdf"
         chunks = section_based_split
-        chunks = chunks.flat_map { |s| token_count(s) > MAX_TOKENS ? fixed_token_split_for(s) : [s] }
+        chunks = chunks.flat_map { |s| token_count(s) > MAX_TOKENS ? fixed_token_split_for(s) : [ s ] }
         chunks = fixed_token_split if chunks.empty?
       else
         chunks = text_split
@@ -41,7 +41,7 @@ module HotelKnowledges
 
     def text_split
       if token_count(@text) <= MAX_TOKENS
-        [@text]
+        [ @text ]
       else
         paragraphs = @text.split(/\n{2,}/).map(&:strip).reject(&:blank?)
         chunks = []
@@ -52,9 +52,9 @@ module HotelKnowledges
             chunks << buffer.join("\n\n") if buffer.any?
             buffer = []
             chunks.concat(fixed_token_split_for(para))
-          elsif token_count((buffer + [para]).join("\n\n")) > MAX_TOKENS && buffer.any?
+          elsif token_count((buffer + [ para ]).join("\n\n")) > MAX_TOKENS && buffer.any?
             chunks << buffer.join("\n\n")
-            buffer = [para]
+            buffer = [ para ]
           else
             buffer << para
           end
