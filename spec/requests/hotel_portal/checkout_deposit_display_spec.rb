@@ -21,12 +21,12 @@ RSpec.describe "Checkout Deposit Display", type: :request do
   end
 
   it "renders held security deposits in the checkout sheet" do
-    create(:deposit, 
-      booking: booking, 
-      hotel: hotel, 
-      booking_folio: folio, 
-      amount: 250.0, 
-      status: "collected", 
+    create(:deposit,
+      booking: booking,
+      hotel: hotel,
+      booking_folio: folio,
+      amount: 250.0,
+      status: "collected",
       payment_method: "cash"
     )
 

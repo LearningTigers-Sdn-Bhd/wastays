@@ -9,10 +9,10 @@ RSpec.describe 'HotelPortal::Settings Housekeeper Access', type: :request do
   before do
     Permission.find_or_create_by!(slug: 'manage_room_status') { |p| p.name = 'Manage Room Status' }
     Permission.find_or_create_by!(slug: 'manage_requests') { |p| p.name = 'Manage Requests' }
-    
+
     RolePermission.find_or_create_by!(role: housekeeper_role, permission: Permission.find_by!(slug: 'manage_room_status'))
     RolePermission.find_or_create_by!(role: housekeeper_role, permission: Permission.find_by!(slug: 'manage_requests'))
-    
+
     UserHotelAccess.create!(user: housekeeper, hotel: hotel, role: housekeeper_role)
     sign_in_as(housekeeper)
   end
@@ -20,7 +20,7 @@ RSpec.describe 'HotelPortal::Settings Housekeeper Access', type: :request do
   describe 'GET /hotel/:hotel_id/settings' do
     it 'denies access to housekeeper' do
       get hotel_settings_path(hotel)
-      
+
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq('You are not authorized to perform this action.')
     end
@@ -29,7 +29,7 @@ RSpec.describe 'HotelPortal::Settings Housekeeper Access', type: :request do
   describe 'GET /hotel/:hotel_id/settings/edit' do
     it 'denies access to housekeeper' do
       get hotel_edit_settings_path(hotel)
-      
+
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq('You are not authorized to perform this action.')
     end
@@ -40,7 +40,7 @@ RSpec.describe 'HotelPortal::Settings Housekeeper Access', type: :request do
       patch hotel_settings_path(hotel), params: {
         hotel: { time_zone: 'UTC' }
       }
-      
+
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq('You are not authorized to perform this action.')
     end
