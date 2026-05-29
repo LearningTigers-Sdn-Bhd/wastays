@@ -3,7 +3,12 @@ require 'rails_helper'
 RSpec.describe 'Channex onboarding flow' do
   let(:hotel) { create(:hotel, preferred_channel_manager: 'channex', name: 'Flow Hotel', city: 'Kuching') }
   let!(:room_type) { create(:room_type, hotel: hotel, name: 'Deluxe', quantity: 3, max_adults: 2) }
-  let!(:rate_plan) { create(:rate_plan, room_type: room_type, name: 'BAR', currency: 'MYR') }
+  let!(:rate_plan) do
+    # Use auto-created plan and rename it to BAR
+    plan = room_type.rate_plans.first
+    plan.update!(name: 'BAR')
+    plan
+  end
   let(:client_double) { instance_double(Channex::Client) }
 
   before do

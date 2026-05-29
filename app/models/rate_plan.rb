@@ -16,6 +16,21 @@ class RatePlan < ApplicationRecord
     %w[per_room per_person]
   end
 
+  def special_tier?
+    special_tier_kind.present?
+  end
+
+  def special_tier_kind
+    normalized = name.to_s.strip.downcase
+    if normalized.in?([ "walk-in rate", "walk in rate", "walk-in", "walk in" ])
+      :walk_in
+    elsif normalized.in?([ "corporate rate", "corporate" ])
+      :corporate
+    elsif normalized.in?([ "ota rate", "ota" ])
+      :ota
+    end
+  end
+
   private
 
   def normalize_currency

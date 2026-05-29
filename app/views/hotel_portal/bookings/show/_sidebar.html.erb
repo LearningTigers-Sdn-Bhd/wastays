@@ -103,20 +103,30 @@
 </div>
 
 <!-- Refund Request -->
-<% if booking.status == "cancelled" && booking.online? && booking.refund_request.blank? %>
+<% if (booking.status == "cancelled" || booking.status == "confirmed") && booking.refund_request.blank? %>
+  <% eligibility = Refunds::Eligibility.new(booking).call %>
   <div class="overflow-hidden rounded-2xl border border-red-200 bg-red-50/30 shadow-sm">
     <div class="border-b border-red-200 bg-red-50 px-6 py-4">
       <h3 class="text-[11px] font-bold text-red-600 uppercase tracking-widest">Platform Refund</h3>
     </div>
     <div class="p-6 space-y-4">
-      <p class="text-xs text-red-600 leading-relaxed font-medium">
-        This is an online booking. You can initiate a platform refund request if it follows the hotel's refund policy.
-      </p>
-      <%= link_to new_hotel_booking_refund_request_path(current_hotel, booking), 
-          class: "flex items-center justify-center gap-2 w-full rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 shadow-sm",
-          data: { turbo_frame: "offcanvas_drawer" } do %>
-        Initiate Refund Request
-        <%= lucide_icon "arrow-right", stroke_width: 2.5, class: "size-3.5" %>
+      <% if eligibility.success? %>
+        <p class="text-xs text-red-600 leading-relaxed font-medium">
+          This is an online booking. You can initiate a platform refund request if it follows the hotel's refund policy.
+        </p>
+        <%= link_to new_hotel_booking_refund_request_path(current_hotel, booking), 
+            class: "flex items-center justify-center gap-2 w-full rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 shadow-sm",
+            data: { turbo_frame: "offcanvas_drawer" } do %>
+          Initiate Refund Request
+          <%= lucide_icon "arrow-right", stroke_width: 2.5, class: "size-3.5" %>
+        <% end %>
+      <% else %>
+        <p class="text-xs text-red-600 leading-relaxed font-medium">
+          <%= eligibility.error %>
+        </p>
+        <div class="p-3 bg-red-100/50 rounded-lg text-[10px] text-red-700 font-bold uppercase tracking-wider text-center border border-red-200">
+          Ineligible for Platform Refund
+        </div>
       <% end %>
     </div>
   </div>

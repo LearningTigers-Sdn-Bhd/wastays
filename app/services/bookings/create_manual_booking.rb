@@ -4,7 +4,7 @@ require "ostruct"
 
 module Bookings
   class CreateManualBooking
-    def initialize(hotel:, params:, user: nil)
+    def initialize(hotel:, params:, user: nil, rate_tier: :standard)
       @hotel = hotel
       @params = params.dup
       @room_type_id = @params.delete(:room_type_id)
@@ -22,6 +22,7 @@ module Bookings
       @apply_stay_length_restrictions = @params.delete(:apply_stay_length_restrictions)
 
       @user = user
+      @rate_tier = rate_tier
     end
 
     def call
@@ -74,6 +75,7 @@ module Bookings
           hotel: @hotel,
           room_type: room_type,
           rate_plan: rate_plan,
+          rate_tier: @rate_tier,
           check_in: booking.check_in,
           check_out: booking.check_out,
           guest_country: booking.guest_country,

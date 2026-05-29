@@ -74,12 +74,13 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     end
 
     room_type = current_hotel.room_types.find(params[:room_type_id])
-    rate_plan = rate_plan_for(room_type, params[:rate_plan_id])
+    rate_plan, rate_tier = parse_rate_selection(room_type, params[:rate_plan_id])
 
     snapshot = Bookings::BuildFinancialSnapshot.new(
       hotel: current_hotel,
       room_type: room_type,
       rate_plan: rate_plan,
+      rate_tier: rate_tier,
       check_in: Date.parse(params[:check_in]),
       check_out: Date.parse(params[:check_out]),
       guest_country: params[:guest_country].presence || current_hotel.country,
@@ -104,17 +105,22 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       check_out: Date.parse(params[:check_out]),
       apply_stop_sell: params[:apply_stop_sell_restriction],
       apply_arrival_departure: params[:apply_arrival_departure_restrictions],
-      apply_stay_length: params[:apply_stay_length_restrictions]
+      apply_stay_length: params[:apply_stay_length_restrictions],
+      corporate_rate: params[:corporate_rate] == "true"
     ).call
 
     render json: { rate_options: options }
   end
 
   def create
+    room_type = current_hotel.room_types.find(booking_params[:room_type_id])
+    rate_plan, rate_tier = parse_rate_selection(room_type, booking_params[:rate_plan_id])
+
     result = Bookings::CreateManualBooking.new(
       hotel: current_hotel,
-      params: booking_params,
-      user: current_user
+      params: booking_params.merge(rate_plan_id: rate_plan&.id),
+      user: current_user,
+      rate_tier: rate_tier
     ).call
 
     if result.success?
@@ -496,10 +502,23 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     }
   end
 
-  def rate_plan_for(room_type, rate_plan_id)
-    return if rate_plan_id.blank?
+  def parse_rate_selection(room_type, rate_plan_id)
+    return [ nil, :standard ] if rate_plan_id.blank?
 
-    room_type.rate_plans.find_by(id: rate_plan_id)
+    if rate_plan_id.to_s.start_with?("tier_")
+      parts = rate_plan_id.to_s.split("_") # ["tier", "walk", "in", "1"] or ["tier", "corporate", "1"]
+      kind = parts[1] == "walk" ? :walk_in : parts[1].to_sym
+      real_plan_id = parts.last
+      plan = room_type.rate_plans.find_by(id: real_plan_id)
+      [ plan, kind ]
+    else
+      plan = room_type.rate_plans.find_by(id: rate_plan_id)
+      [ plan, :standard ]
+    end
+  end
+
+  def rate_plan_for(room_type, rate_plan_id)
+    parse_rate_selection(room_type, rate_plan_id).first
   end
 
   def manual_booking_form_only_param_keys

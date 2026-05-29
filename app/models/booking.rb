@@ -26,7 +26,7 @@ class Booking < ApplicationRecord
   attr_accessor :estimated_arrival_time, :signature, :existing_guest_id, :guest_update_intent, :status_transition_event
 
   def online?
-    source.present? && source != "internal"
+    source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
   end
 
   def room_type_summary
@@ -59,7 +59,7 @@ class Booking < ApplicationRecord
   validate :status_transition_must_be_allowed, if: :status_changed_on_persisted_record?
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
-  validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_nil: true }
+  validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_blank: true }
   validates :deposit_status, inclusion: { in: DEPOSIT_STATUSES, allow_nil: true }
 
   def primary_guest
