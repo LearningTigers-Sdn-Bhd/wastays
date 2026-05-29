@@ -1,5 +1,27 @@
 # AI Concierge Changelog
 
+## V3.2 — Hotel Knowledge Tool Migration (Current)
+
+### Changes
+- Migrated `GetHotelFaqTool` to query `HotelKnowledgeDocument.where(category: "faq")` with chunk content instead of the removed `hotel.faq` JSONB column
+- Migrated `GetHotelPolicyTool` to query `HotelKnowledgeDocument.where(category: "policy")` with chunk content instead of the removed `hotel.policy` JSONB column
+- Preserved `PropertyPolicy` fallback for structured policy fields (check-in/out times, cancellation policy)
+- Chunk rendering strategy: all chunks joined in `chunk_index` order per document
+- No changes needed to `LibrarianOrchestrator`, `ToolRegistry`, or `InterpreterAgent` — tool interfaces unchanged
+
+### Files Changed
+- `get_hotel_faq_tool.rb` — rewritten to query `HotelKnowledgeDocument` + `HotelKnowledgeChunk`
+- `get_hotel_policy_tool.rb` — rewritten to query `HotelKnowledgeDocument` + `HotelKnowledgeChunk`
+- `get_hotel_faq_tool_spec.rb` — rewritten with knowledge document factories
+- `get_hotel_policy_tool_spec.rb` — rewritten with knowledge document factories
+- `spec/factories/hotel_knowledge_chunks.rb` — new factory
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge_v3/tools/hotel_information/`
+- 13 examples, 0 failures
+
+---
+
 ## V3.1 — Rate Plan Selection
 
 ### Changes
@@ -21,7 +43,7 @@
 - `booking_actions_builder.rb` — `ask_rate_plan` message, updated `ask_confirmation` to show selected rate plan price
 - `generate_booking_url_tool.rb`, `create_quote.rb`, `availability_service.rb` — `rate_plan_id` forwarding
 
-## V3 — Current
+## V3 — Initial Release
 
 
 ### Architecture Decisions

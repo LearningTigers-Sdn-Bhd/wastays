@@ -4,7 +4,7 @@
 
 - Path: `app/services/ai_concierge_v3/tools/hotel_information/get_hotel_policy_tool.rb`
 - Purpose: answer hotel policy questions
-- Source order: `hotel.policy` -> fallback to `hotel.property_policy`
+- Source order: `HotelKnowledgeDocument` (category: policy) -> fallback to `hotel.property_policy`
 - Success output: policy_text and/or structured policy fields
 - Example: "what time is check in", "what is your cancellation policy"
 

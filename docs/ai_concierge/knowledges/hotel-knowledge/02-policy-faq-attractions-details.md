@@ -3,7 +3,7 @@
 ## Hotel Policy
 
 - Answers check-in/out times, cancellation policy, hotel rules
-- Falls back from `hotel.policy` to `hotel.property_policy`
+- Reads from `HotelKnowledgeDocument` (category: policy), falls back to `hotel.property_policy`
 - Returns structured policy facts or unavailable state when no policy data exists
 
 ## Hotel FAQ
