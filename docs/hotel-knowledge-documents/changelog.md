@@ -1,4 +1,43 @@
-# V1.1.2 — Expandable Grid Index UI (Current)
+# V3.2 — AI Embedding Pipeline (Current)
+
+## Changes
+- Added `pdf-reader` gem for PDF text extraction
+- Created `PdfParsingService` — extracts clean text from uploaded PDFs, handles blank PDFs and malformed files
+- Created `ChunkingService` — section-based splitting for PDFs with fixed-token fallback; paragraph-boundary splitting for text source type with fixed-token fallback for oversized paragraphs; 64-token overlap; minimum 3-token section threshold
+- Created `EmbeddingService` — wraps `RubyLLM.embed` with OpenAI `text-embedding-3-small` (1536 dimensions); per-hotel API key with `AppConfig` fallback; 20-item batch processing
+- Created `KnowledgeIngestionService` — orchestrates PDF parsing → chunking → embedding → bulk chunk insert via `insert_all` → updates `embedding_status` to `"indexed"`; sets `"failed"` with `last_error` in metadata on error
+- Created `GenerateEmbeddingsJob` — Solid Queue `:ai_concierge` queue; `retry_on` up to 3 attempts; inline rescue marks document as failed with error message
+- Added IVFFlat vector index on `hotel_knowledge_chunks.embedding` for cosine similarity search
+- Added `after_commit` auto-trigger on document create/update — enqueues `GenerateEmbeddingsJob` only when `hotel.ai_concierge_enabled?` is true
+- Added `reindex` action + route to all 3 knowledge controllers for manual embedding retry
+- Added "Generate Embeddings" / "Retry Embeddings" button in index Manage dropdown — visible when `ai_concierge_enabled?` and status is `pending` or `failed`
+- Added same button in show page header + error message display (`last_error`) in metadata sidebar for failed documents
+
+## Files Changed
+- `Gemfile` — added `pdf-reader`
+- `db/migrate/20260529104830_add_ivfflat_index_to_knowledge_chunks.rb` — new
+- `app/services/hotel_knowledges/pdf_parsing_service.rb` — new
+- `app/services/hotel_knowledges/chunking_service.rb` — new
+- `app/services/hotel_knowledges/embedding_service.rb` — new
+- `app/services/hotel_knowledges/knowledge_ingestion_service.rb` — new
+- `app/jobs/hotel_knowledges/generate_embeddings_job.rb` — new
+- `app/models/hotel_knowledge_document.rb` — added `after_commit` callback
+- `config/routes.rb` — added `post :reindex` to 3 knowledge resources
+- `app/controllers/hotel_portal/knowledge_policies_controller.rb` — added `reindex` action + helper
+- `app/controllers/hotel_portal/knowledge_faqs_controller.rb` — added `reindex` action + helper
+- `app/controllers/hotel_portal/knowledge_general_infos_controller.rb` — added `reindex` action + helper
+- `lib/tasks/hotel_ops.rake` — replaced `migrate_knowledges` with `generate_knowledge_embeddings`; added embedding step to `clean_hotel_state_records`
+- `app/views/hotel_portal/knowledge_base/_documents_table.html.erb` — added embedding retry button
+- `app/views/hotel_portal/knowledge_base/show.html.erb` — added retry button + error display
+
+## Verification
+- `bundle exec rspec spec/services/hotel_knowledges/ spec/jobs/hotel_knowledges/`
+- 35 examples, 0 failures
+- 462 existing model + request specs, 0 failures
+
+---
+
+# V1.1.2 — Expandable Grid Index UI
 
 ## Changes
 - Replaced duplicate per-category index table markup with a single shared partial `_documents_table.html.erb` in `knowledge_base/`

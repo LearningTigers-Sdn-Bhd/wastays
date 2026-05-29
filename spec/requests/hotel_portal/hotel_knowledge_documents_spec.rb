@@ -125,7 +125,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
     route_prefix: "hotel_knowledge_faq",
     index_title: "FAQs Management",
     create_params: {
-      metadata: { qa_pairs: [{ question: "What time is check-in?", answer: "3:00 PM" }] }
+      metadata: { qa_pairs: [ { question: "What time is check-in?", answer: "3:00 PM" } ] }
     }
 
   it_behaves_like "a knowledge resource",

@@ -2,60 +2,69 @@
 
 ## Overview
 
-Existing `hotel.faq` and `hotel.policy` JSONB data must be migrated into the new `hotel_knowledge_documents` + `hotel_knowledge_chunks` tables. A rake task handles this.
+Knowledge documents (`HotelKnowledgeDocument`) created through the admin UI or the old `migrate_knowledges` task start with `embedding_status: "pending"`. This rake task generates embeddings for all pending documents across all AI-concierge-enabled hotels.
 
 ## Rake Task
 
 **File:** `lib/tasks/hotel_ops.rake`
-**Task:** `hotel_ops:migrate_knowledges`
+**Task:** `hotel_ops:generate_knowledge_embeddings`
 
 ### What it does
 
-Iterates over all hotels and migrates their existing data:
+Iterates over all hotels, skips those without AI Concierge enabled, and enqueues a `GenerateEmbeddingsJob` for each pending knowledge document:
 
-#### FAQ Migration
-Each FAQ section → one `HotelKnowledgeDocument` (category: "faq"):
 ```ruby
-section = { "section_name" => "General", "items" => [{ "question" => "...", "answer" => "..." }] }
-# Becomes:
-doc = HotelKnowledgeDocument(title: section_name, source_type: "text", category: "faq")
-# Each Q&A pair becomes a chunk:
-chunk = HotelKnowledgeChunk(content: "Q: {question}\nA: {answer}", chunk_index: N)
-```
-
-#### Policy Migration
-Each policy item → one `HotelKnowledgeDocument` (category: "policy"):
-```ruby
-item = { "title" => "Cancellation", "content" => "Free cancellation up to 24 hours..." }
-# Becomes:
-doc = HotelKnowledgeDocument(title: item["title"], source_type: "text", category: "policy", content: "...")
-chunk = HotelKnowledgeChunk(content: "...", chunk_index: 0)
+Hotel.find_each do |hotel|
+  next unless hotel.ai_concierge_enabled?
+  pending_docs = hotel.knowledge_documents.where(embedding_status: "pending")
+  pending_docs.find_each do |doc|
+    HotelKnowledges::GenerateEmbeddingsJob.perform_later(doc.id)
+  end
+end
 ```
 
 ### Usage
 
 ```bash
-bin/rails hotel_ops:migrate_knowledges
+bin/rails hotel_ops:generate_knowledge_embeddings
 ```
 
 ### Notes
-- All migrated documents get `embedding_status: "pending"` — embeddings must be generated separately
-- All migrated documents get `tags: []` — old data had no tags
-- All migrated documents get `effective_date: nil` (forever)
-- The migration is idempotent but not incremental — it creates new records each time
+- Only processes documents with `embedding_status: "pending"` — already-indexed documents are skipped
+- Skips hotels that don't have AI Concierge enabled (`hotel.ai_concierge_enabled?`)
+- The job runs via Solid Queue on the `ai_concierge` queue
+- The old `hotel_ops:migrate_knowledges` task (which read from removed `hotel.faq`/`hotel.policy` JSONB columns) has been removed
 
-## Post-Migration Steps
+## Clean State Integration
 
-After the rake task completes successfully:
+The `clean_hotel_state_records` method, called by both `hotel_ops:clean_state`
+and `hotel_ops:realtime_state`, includes two knowledge document steps:
 
-1. **Drop old columns** — run migration `20260526062829_remove_faq_and_policy_from_hotels.rb`
-2. **Update `booking_snapshot`** — remove `faq`/`policy` from the exclusion list in `hotel.rb` (already done)
+### Step 6 — Clean & Seed
 
-## Production Deployment Order
+Destroys all existing knowledge documents (chunks cascade via `dependent: :destroy`)
+and creates 6 sample documents:
 
-```
-1. Deploy code (new tables are empty, old columns still exist)
-2. Run: bin/rails hotel_ops:migrate_knowledges
-3. Run: bin/rails db:migrate (applies the drop-column migration)
-4. Verify: check a few hotels' knowledge documents in the admin UI
+| Category | Title | Chunks | Sample Content |
+|----------|-------|--------|---------------|
+| FAQ | Booking & Reservations | 3 Q&A | Check-in/out times, cancellations, early check-in. Sets `metadata.qa_pairs` + concatenated `content` + one chunk per Q&A. |
+| FAQ | Amenities & Services | 4 Q&A | Pool hours, Wi-Fi, spa/fitness, room service. Same structure as above. |
+| FAQ | Transportation | 3 Q&A | Airport transfers, parking, shuttle service. Same structure as above. |
+| Policy | Check-in & Check-out | 1 | Times, ID requirements, late check-out |
+| Policy | Cancellation Policy | 1 | Free cancellation window, no-show charges |
+| Policy | House Rules | 1 | Quiet hours, smoking, pets, visitors |
+
+All seeded documents get `embedding_status: "pending"`.
+
+### Step 7 — Embed (opt-in)
+
+Generates embeddings for pending documents. **Opt-in** — skipped by default.
+Pass `EMBED=true` to enable:
+
+```bash
+# Clean state with default sample documents (no embeddings)
+bin/rails hotel_ops:clean_state['My Hotel']
+
+# Clean state with sample documents + embeddings
+EMBED=true bin/rails hotel_ops:clean_state['My Hotel']
 ```

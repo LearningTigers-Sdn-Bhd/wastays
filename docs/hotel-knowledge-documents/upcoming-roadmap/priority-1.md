@@ -1,12 +1,16 @@
 # Priority 1 — Embedding Pipeline & Tool Migration
 
+## Completed (V3.2)
+- Chunking service for PDF uploads (section-based + fixed-token fallback) ✓
+- Embedding generation pipeline (background job, provider choice, chunk size strategy) ✓
+- Vector index created on `hotel_knowledge_chunks.embedding` (IVFFlat) ✓
+- Automatic embedding generation on document create/update via background job ✓
+- PDF parsing pipeline (pdf-reader gem, section-based chunking, fixed-token fallback) ✓
+
 ## Remaining Risks
 1. Old AI Concierge info tools (`GetHotelFaqTool`, `GetHotelPolicyTool`) still read from removed JSONB columns — broken until migrated
-2. No chunking service implemented yet for PDF uploads (OCR, section-based, fixed-token fallback)
-3. No embedding generation pipeline (background job, provider choice, chunk size strategy)
-4. No vector index created on `hotel_knowledge_chunks.embedding` (needs IVFFlat or HNSW after embeddings are populated)
-5. `effective_date` filtering not implemented in any query layer
-6. Version increment logic not wired (updating a document should bump version and regenerate chunks/embeddings)
+2. `effective_date` filtering not implemented in any query layer
+3. Version increment logic not wired (updating a document should bump version and regenerate chunks/embeddings)
 
 ## AI Concierge Tool Migration (Blocking)
 - Update `GetHotelFaqTool` to query `HotelKnowledgeDocument.where(category: "faq")` with chunk content
@@ -17,8 +21,6 @@
 - Remove old tool specs referencing `hotel.faq`/`hotel.policy` and write new ones
 
 ## Expansion Candidates
-- Automatic embedding generation on document create/update via background job
-- PDF parsing pipeline: OCR (tesseract-ocr), section-based chunking, fixed-token fallback
 - Vector search endpoint for AI Concierge to retrieve relevant chunks by semantic similarity
 - Chunk inspection in admin UI (preview tokens, regenerate single chunk)
 - Bulk import from CSV/JSON for migrating large knowledge bases

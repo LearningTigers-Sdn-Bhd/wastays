@@ -4,9 +4,9 @@ module HotelPortal
   class KnowledgeFaqsController < HotelPortal::BaseController
     before_action :set_hotel
     before_action :authorize_hotel
-    before_action :set_document, only: %i[show edit update destroy]
+    before_action :set_document, only: %i[show edit update destroy reindex]
 
-    helper_method :kb_index_path, :kb_show_path, :kb_edit_path, :kb_new_path
+    helper_method :kb_index_path, :kb_show_path, :kb_edit_path, :kb_new_path, :kb_reindex_path
 
     def index
       @documents = @hotel.knowledge_documents.where(category: "faq").order(created_at: :desc)
@@ -53,6 +53,11 @@ module HotelPortal
       redirect_to kb_index_path, notice: "FAQ document deleted successfully."
     end
 
+    def reindex
+      HotelKnowledges::GenerateEmbeddingsJob.perform_later(@document.id)
+      redirect_to kb_show_path(@document), notice: "Embedding generation started."
+    end
+
     private
 
     def kb_index_path
@@ -69,6 +74,10 @@ module HotelPortal
 
     def kb_new_path
       new_hotel_knowledge_faq_path(@hotel)
+    end
+
+    def kb_reindex_path(doc)
+      reindex_hotel_knowledge_faq_path(@hotel, doc)
     end
 
     def set_hotel

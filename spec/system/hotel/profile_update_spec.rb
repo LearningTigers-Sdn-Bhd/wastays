@@ -36,6 +36,4 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     expect(page).to have_current_path(edit_hotel_profile_path(hotel))
     expect(page).not_to have_css('#hotel-faq-section')
   end
-
-
 end

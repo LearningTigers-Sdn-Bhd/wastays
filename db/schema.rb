@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_26_062829) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_29_104830) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -492,14 +492,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_26_062829) do
   create_table "hotel_knowledge_chunks", force: :cascade do |t|
     t.bigint "hotel_knowledge_document_id", null: false
     t.text "content", null: false
-    t.column "embedding", "vector(1536)"
+    t.vector "embedding", limit: 1536
     t.integer "chunk_index", null: false
     t.integer "token_count"
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["embedding"], name: "index_hotel_knowledge_chunks_on_embedding", opclass: :vector_cosine_ops, using: :ivfflat
     t.index ["hotel_knowledge_document_id", "chunk_index"], name: "idx_knowledge_chunks_on_document_and_index", unique: true
-    t.index ["hotel_knowledge_document_id"], name: "ix_hotel_knowledge_chunks_on_hotel_knowledge_document_id"
+    t.index ["hotel_knowledge_document_id"], name: "index_hotel_knowledge_chunks_on_hotel_knowledge_document_id"
   end
 
   create_table "hotel_knowledge_documents", force: :cascade do |t|

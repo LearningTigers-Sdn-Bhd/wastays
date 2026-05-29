@@ -1,49 +1,16 @@
 namespace :hotel_ops do
-  desc "Migrate existing hotel.faq and hotel.policy JSONB data to hotel_knowledge_documents and chunks"
-  task migrate_knowledges: :environment do
+  desc "Generate embeddings for all knowledge documents with pending status"
+  task generate_knowledge_embeddings: :environment do
     Hotel.find_each do |hotel|
-      migrated = 0
+      next unless hotel.ai_concierge_enabled?
 
-      # FAQ sections → one document per section, one chunk per Q&A pair
-      Array(hotel.faq).each do |section|
-        doc = hotel.knowledge_documents.create!(
-          title: section["section_name"].presence || "FAQ",
-          source_type: "text",
-          category: "faq",
-          language: "en",
-          embedding_status: "pending",
-          tags: [],
-          effective_date: nil,
-          content: nil
-        )
-        Array(section["items"]).each_with_index do |item, idx|
-          q = item["question"].presence
-          a = item["answer"].presence
-          content = [ ("Q: #{q}" if q), ("A: #{a}" if a) ].compact.join("\n")
-          doc.chunks.create!(content: content, chunk_index: idx) if content.present?
-        end
-        migrated += 1
+      pending_docs = hotel.knowledge_documents.where(embedding_status: "pending")
+      next if pending_docs.none?
+
+      pending_docs.find_each do |doc|
+        HotelKnowledges::GenerateEmbeddingsJob.perform_later(doc.id)
       end
-
-      # Policy items → one document per item, one chunk
-      Array(hotel.policy).each do |item|
-        title = item["title"].presence || "Policy"
-        content = [ title, item["content"].presence ].compact.join(": ")
-        doc = hotel.knowledge_documents.create!(
-          title: title,
-          source_type: "text",
-          category: "policy",
-          language: "en",
-          embedding_status: "pending",
-          tags: [],
-          effective_date: nil,
-          content: content
-        )
-        doc.chunks.create!(content: content, chunk_index: 0)
-        migrated += 1
-      end
-
-      puts "Migrated #{migrated} documents for hotel #{hotel.id}" if migrated > 0
+      puts "Enqueued #{pending_docs.count} embedding jobs for hotel #{hotel.id}"
     end
   end
 
@@ -322,7 +289,133 @@ def clean_hotel_state_records(hotel)
       { name: "City Park", description: "Enjoy a relaxing day surrounded by nature.", address: "Park Avenue", city: hotel.city, country: hotel.country }
     ])
 
-    # 7. Trigger Sync if needed
+    # 6. Clean and seed sample knowledge documents
+    puts "Cleaning knowledge documents..."
+    hotel.knowledge_documents.destroy_all
+
+    puts "Seeding sample FAQ and policy documents..."
+
+    booking_qa = {
+      "0" => { "question" => "What are your check-in and check-out times?",
+               "answer" => "Check-in is from 3:00 PM and check-out is by 11:00 AM. Early check-in and late check-out are subject to availability." },
+      "1" => { "question" => "Can I modify or cancel my reservation?",
+               "answer" => "Yes, modifications and cancellations are accepted up to 24 hours before arrival without charge. Late cancellations may incur a one-night fee." },
+      "2" => { "question" => "Do you accommodate early check-in requests?",
+               "answer" => "Early check-in is subject to availability. You may request it at the time of booking or contact the front desk on the day of arrival." }
+    }
+    faq_booking = hotel.knowledge_documents.create!(
+      title: "Booking & Reservations",
+      source_type: "text",
+      category: "faq",
+      language: "en",
+      embedding_status: "pending",
+      tags: [],
+      effective_date: nil,
+      metadata: { "qa_pairs" => booking_qa },
+      content: booking_qa.values.map { |p| "Q: #{p['question']}\nA: #{p['answer']}" }.join("\n\n")
+    )
+    faq_booking.chunks.create!(booking_qa.values.each_with_index.map { |p, i|
+      { content: "Q: #{p['question']}\nA: #{p['answer']}", chunk_index: i }
+    })
+
+    amenities_qa = {
+      "0" => { "question" => "What are the swimming pool operating hours?",
+               "answer" => "Our swimming pool is open daily from 7:00 AM to 9:00 PM." },
+      "1" => { "question" => "Is Wi-Fi available for guests?",
+               "answer" => "Yes, complimentary high-speed Wi-Fi is available throughout the property. Simply connect to the 'Guest Network' and enter your room number." },
+      "2" => { "question" => "Do you have a spa or fitness centre?",
+               "answer" => "Yes, we offer a full-service spa (open 10:00 AM to 8:00 PM) and a 24-hour fitness centre. Spa appointments are recommended." },
+      "3" => { "question" => "Is room service available?",
+               "answer" => "Yes, room service is available from 6:30 AM to 10:30 PM daily. A menu is available in your room or via the in-room tablet." }
+    }
+    faq_amenities = hotel.knowledge_documents.create!(
+      title: "Amenities & Services",
+      source_type: "text",
+      category: "faq",
+      language: "en",
+      embedding_status: "pending",
+      tags: [],
+      effective_date: nil,
+      metadata: { "qa_pairs" => amenities_qa },
+      content: amenities_qa.values.map { |p| "Q: #{p['question']}\nA: #{p['answer']}" }.join("\n\n")
+    )
+    faq_amenities.chunks.create!(amenities_qa.values.each_with_index.map { |p, i|
+      { content: "Q: #{p['question']}\nA: #{p['answer']}", chunk_index: i }
+    })
+
+    transport_qa = {
+      "0" => { "question" => "Do you offer airport transfers?",
+               "answer" => "Yes, we provide airport transfer services. Please arrange at least 24 hours in advance by contacting our concierge." },
+      "1" => { "question" => "Is parking available?",
+               "answer" => "Yes, complimentary valet and self-parking are available for all guests." },
+      "2" => { "question" => "Is there a shuttle service to nearby attractions?",
+               "answer" => "Yes, we operate a complimentary shuttle to the city centre and popular attractions. The schedule is available at the concierge desk." }
+    }
+    faq_transport = hotel.knowledge_documents.create!(
+      title: "Transportation",
+      source_type: "text",
+      category: "faq",
+      language: "en",
+      embedding_status: "pending",
+      tags: [],
+      effective_date: nil,
+      metadata: { "qa_pairs" => transport_qa },
+      content: transport_qa.values.map { |p| "Q: #{p['question']}\nA: #{p['answer']}" }.join("\n\n")
+    )
+    faq_transport.chunks.create!(transport_qa.values.each_with_index.map { |p, i|
+      { content: "Q: #{p['question']}\nA: #{p['answer']}", chunk_index: i }
+    })
+
+    policy_checkin = hotel.knowledge_documents.create!(
+      title: "Check-in & Check-out",
+      source_type: "text",
+      category: "policy",
+      language: "en",
+      embedding_status: "pending",
+      tags: [],
+      effective_date: nil,
+      content: "Check-in time: 3:00 PM. Check-out time: 11:00 AM. A valid government-issued ID and credit card are required at check-in. Late check-out may be available upon request and is subject to additional charges. Early check-in is based on availability."
+    )
+    policy_checkin.chunks.create!(content: policy_checkin.content, chunk_index: 0)
+
+    policy_cancellation = hotel.knowledge_documents.create!(
+      title: "Cancellation Policy",
+      source_type: "text",
+      category: "policy",
+      language: "en",
+      embedding_status: "pending",
+      tags: [],
+      effective_date: nil,
+      content: "Free cancellation up to 24 hours before arrival. Cancellations made within 24 hours of arrival will be charged the first night's stay. No-show reservations will be charged the full booking amount."
+    )
+    policy_cancellation.chunks.create!(content: policy_cancellation.content, chunk_index: 0)
+
+    policy_rules = hotel.knowledge_documents.create!(
+      title: "House Rules",
+      source_type: "text",
+      category: "policy",
+      language: "en",
+      embedding_status: "pending",
+      tags: [],
+      effective_date: nil,
+      content: "Quiet hours are from 10:00 PM to 8:00 AM. Smoking is prohibited in all indoor areas. Pets are not allowed. Visitors must register at the front desk. The hotel reserves the right to refuse service to any guest."
+    )
+    policy_rules.chunks.create!(content: policy_rules.content, chunk_index: 0)
+
+    puts "Seeded #{hotel.knowledge_documents.count} knowledge documents."
+
+    # 7. Generate embeddings for pending knowledge documents (opt-in: EMBED=true)
+    if ENV['EMBED'] == 'true' && hotel.ai_concierge_enabled?
+      pending_docs = hotel.knowledge_documents.where(embedding_status: "pending")
+      if pending_docs.any?
+        puts "Enqueuing embedding generation for #{pending_docs.count} knowledge documents..."
+        pending_docs.find_each do |doc|
+          HotelKnowledges::GenerateEmbeddingsJob.perform_later(doc.id)
+        end
+      end
+    end
+
+    # 8. Trigger Sync if needed
     if hotel.preferred_channel_manager.present?
       puts "Triggering Channel Manager Sync..."
       ChannelManagers::SyncJob.perform_later(hotel.id, start_date, end_date)
