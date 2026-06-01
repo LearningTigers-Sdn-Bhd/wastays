@@ -11,6 +11,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
   before do
     create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "12:00", cancellation_policy: "24 hours")
     create(:guest, phone: "+60123456789")
+    allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([])
     stub_interpreter
   end
 
@@ -49,13 +50,13 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     end
 
     it "answers hotel policy questions" do
-      doc = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Quiet Hours")
+      doc = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Quiet Hours", embedding_status: "indexed")
       create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Quiet hours start at 10 PM.")
 
       post path, params: { message: "What is the policy of this hotel?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to eq("Welcome to #{hotel.name}! Quiet Hours\nQuiet hours start at 10 PM.")
+      expect(parsed_body["reply_message"]).to eq("Quiet Hours\nQuiet hours start at 10 PM.")
       expect(parsed_body["needs_human_support"]).to be(false)
       expect(parsed_body["action_name"]).to be_nil
       expect(parsed_body["prospect_public_id"]).to be_present
@@ -78,7 +79,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     end
 
     it "answers hotel faq questions" do
-      doc = create(:hotel_knowledge_document, hotel: hotel, category: "faq", title: "General")
+      doc = create(:hotel_knowledge_document, hotel: hotel, category: "faq", title: "General", embedding_status: "indexed")
       create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Q: What time is breakfast?\nA: Breakfast is served daily from 7 AM to 10 AM.")
 
       post path, params: { message: "Do you have an faq?", phone: phone }.to_json, headers: headers

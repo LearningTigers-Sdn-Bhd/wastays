@@ -27,6 +27,7 @@ RSpec.describe AiConciergeV3::Orchestration::LibrarianOrchestrator do
 
   before do
     create(:property_policy, hotel: hotel, check_in_time: "3:00 PM", check_out_time: "11:00 AM")
+    allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([])
   end
 
   it "returns a general hotel information domain result" do
@@ -50,7 +51,7 @@ RSpec.describe AiConciergeV3::Orchestration::LibrarianOrchestrator do
   end
 
   it "returns a hotel faq domain result" do
-    doc = create(:hotel_knowledge_document, hotel: hotel, category: "faq", title: "General")
+    doc = create(:hotel_knowledge_document, hotel: hotel, category: "faq", title: "General", embedding_status: "indexed")
     create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Q: Breakfast?\nA: From 7 AM.")
 
     result = described_class.new(

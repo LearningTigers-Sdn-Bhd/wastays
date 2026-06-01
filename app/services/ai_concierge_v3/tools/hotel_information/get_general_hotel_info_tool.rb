@@ -2,26 +2,43 @@ module AiConciergeV3
   module Tools
     module HotelInformation
       class GetGeneralHotelInfoTool
-        def initialize(hotel:)
+        def initialize(hotel:, query: nil)
           @hotel = hotel
+          @query = query.to_s
         end
 
         def call
+          answer_payload = HybridAnswerBuilder.new(
+            hotel: hotel,
+            query: query,
+            intent: "hotel_information",
+            topic: "general_hotel_info",
+            categories: [ "general_info" ],
+            source: "general_hotel_info",
+            structured_facts: structured_facts,
+            fallback_text: general_fallback_text,
+            unavailable_answer: "I couldn't find general hotel information right now."
+          ).call
+
           {
             "success" => true,
+            "answer" => answer_payload["answer"],
+            "answer_mode" => answer_payload["answer_mode"],
             "name" => hotel.name,
             "address" => hotel.address,
             "city" => hotel.city,
             "country" => hotel.country,
             "star_rating" => hotel.star_rating,
             "amenities" => amenity_names,
-            "summary_text" => summary_text
+            "summary_text" => summary_text,
+            "source" => "general_hotel_info",
+            "knowledge_matches" => answer_payload["knowledge_matches"]
           }
         end
 
         private
 
-        attr_reader :hotel
+        attr_reader :hotel, :query
 
         def summary_text
           parts = [ hotel.name ]
@@ -39,6 +56,22 @@ module AiConciergeV3
           Array(hotel.amenities).filter_map do |amenity_id|
             lookup[amenity_id]&.fetch(:name)
           end
+        end
+
+        def structured_facts
+          {
+            "name" => hotel.name,
+            "address" => hotel.address,
+            "city" => hotel.city,
+            "country" => hotel.country,
+            "star_rating" => hotel.star_rating,
+            "amenities" => amenity_names,
+            "summary_text" => summary_text
+          }
+        end
+
+        def general_fallback_text
+          [ summary_text, amenity_names.presence && "Hotel amenities: #{amenity_names.join(', ')}" ].compact.join("\n").presence
         end
       end
     end

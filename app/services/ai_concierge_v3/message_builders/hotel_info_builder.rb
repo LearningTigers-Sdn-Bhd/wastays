@@ -22,6 +22,7 @@ module AiConciergeV3
 
       def hotel_policy_message
         result = context[:result] || {}
+        return result["answer"] if result["answer"].present? && result["success"] != false
         return "Welcome to #{hotel.name}! #{result['policy_text']}" if result["policy_text"].present?
 
         structured_policy_present = result["check_in_time"].present? || result["check_out_time"].present? || result["cancellation_policy"].present?
@@ -49,6 +50,7 @@ module AiConciergeV3
 
       def general_hotel_info_message
         result = context[:result] || {}
+        return result["answer"] if result["answer"].present? && result["success"] != false
         summary = result["summary_text"].presence
         amenities = Array(result["amenities"])
         return "I couldn't find general hotel information right now." if summary.blank? && amenities.blank?
@@ -61,6 +63,7 @@ module AiConciergeV3
 
       def hotel_faq_message
         result = context[:result] || {}
+        return result["answer"] if result["answer"].present? && result["success"] != false
         return result["faq_text"] if result["faq_text"].present?
 
         "The hotel has not provided FAQ details yet."

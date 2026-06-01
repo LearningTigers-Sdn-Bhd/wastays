@@ -29,11 +29,11 @@ module AiConciergeV3
     def route_tool
       case interpretation["intent"]
       when "hotel_policy"
-        result = tool_registry.fetch("get_hotel_policy").new(hotel: hotel, policy_topic: interpretation["topic"]).call
+        result = tool_registry.fetch("get_hotel_policy").new(hotel: hotel, policy_topic: interpretation["topic"], query: message).call
         { reply_type: :hotel_policy, active_topic: "hotel_policy", active_flow: "hotel_policy", result: result }
       when "hotel_information"
         tool_name, reply_type = hotel_information_tool_and_reply_type
-        result = tool_registry.fetch(tool_name).new(hotel: hotel).call
+        result = tool_registry.fetch(tool_name).new(hotel: hotel, query: message).call
         { reply_type: reply_type, active_topic: interpretation["topic"], active_flow: "hotel_information", result: result }
       when "nearby_attractions"
         result = tool_registry.fetch("get_nearby_attractions").new(hotel: hotel).call

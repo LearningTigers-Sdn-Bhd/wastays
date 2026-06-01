@@ -5,6 +5,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
 
   before do
     create(:property_policy, hotel: hotel)
+    allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([])
   end
 
   it "asks for duration after a month window is provided" do
