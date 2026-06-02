@@ -7,6 +7,7 @@ module AiConciergeV3
     end
 
     def call
+      return policy_interpretation if policy_question?
       return interpretation unless hotel_amenities_question?
 
       interpretation.deep_dup.tap do |guarded|
@@ -21,6 +22,21 @@ module AiConciergeV3
     private
 
     attr_reader :message, :interpretation
+
+    def policy_question?
+      normalized = normalize_text(message)
+
+      normalized.match?(/\b(?:policy|policies|rules?|cancell?ation|check in|check out)\b/)
+    end
+
+    def policy_interpretation
+      interpretation.deep_dup.tap do |guarded|
+        guarded["intent"] = "hotel_policy"
+        guarded["topic"] = "hotel_policy"
+        guarded["slots"] ||= {}
+        guarded["tool_hints"] = [ "get_hotel_policy" ]
+      end
+    end
 
     def hotel_amenities_question?
       normalized = normalize_text(message)

@@ -32,6 +32,21 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     expect(result.payload[:reply_message]).not_to include("May")
   end
 
+  it "answers booking policy phrasing instead of continuing slot collection" do
+    hotel.property_policy.update!(check_in_time: "3:00 PM", check_out_time: "11:00 AM")
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+    )
+
+    result = described_class.new(hotel: hotel, message: "before that, may i know the booking policy?", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to include("Here is our hotel policy")
+    expect(result.payload[:reply_message]).to include("3:00 PM")
+    expect(result.payload[:reply_message]).not_to include("what dates or month")
+    expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_policy")
+  end
+
   it "does not end the conversation on a greeting" do
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(intent: "greeting", conversation_signals: { "end_conversation" => true })

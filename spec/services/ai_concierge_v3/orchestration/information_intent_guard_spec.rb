@@ -1,10 +1,30 @@
 require "rails_helper"
 
 RSpec.describe AiConciergeV3::Orchestration::InformationIntentGuard do
+  it "routes booking policy phrasing to hotel policy even when interpreted as booking search" do
+    result = described_class.new(
+      message: "before that, may i know the booking policy?",
+      interpretation: interpretation(intent: "booking_search", topic: "booking_search")
+    ).call
+
+    expect(result["intent"]).to eq("hotel_policy")
+    expect(result["topic"]).to eq("hotel_policy")
+    expect(result["tool_hints"]).to eq([ "get_hotel_policy" ])
+  end
+
+  it "routes cancellation questions to hotel policy" do
+    result = described_class.new(
+      message: "what is the cancellation rule?",
+      interpretation: interpretation(intent: "booking_search", topic: "booking_search")
+    ).call
+
+    expect(result["intent"]).to eq("hotel_policy")
+  end
+
   it "routes unscoped facilities questions to hotel information" do
     result = described_class.new(
       message: "available facilities?",
-      interpretation: interpretation(intent: "room_information", slots: { "room_type_name" => nil })
+      interpretation: interpretation(intent: "room_information", topic: "room_information", slots: { "room_type_name" => nil })
     ).call
 
     expect(result["intent"]).to eq("hotel_information")
@@ -16,14 +36,14 @@ RSpec.describe AiConciergeV3::Orchestration::InformationIntentGuard do
   it "routes hotel amenities questions to hotel information" do
     result = described_class.new(
       message: "may i know hotel amenities",
-      interpretation: interpretation(intent: "room_information", slots: { "room_type_name" => nil })
+      interpretation: interpretation(intent: "room_information", topic: "room_information", slots: { "room_type_name" => nil })
     ).call
 
     expect(result["intent"]).to eq("hotel_information")
   end
 
   it "keeps named room amenities questions on room information" do
-    input = interpretation(intent: "room_information", slots: { "room_type_name" => "Deluxe Room" })
+    input = interpretation(intent: "room_information", topic: "room_information", slots: { "room_type_name" => "Deluxe Room" })
 
     result = described_class.new(message: "what amenities does deluxe room have?", interpretation: input).call
 
@@ -31,10 +51,10 @@ RSpec.describe AiConciergeV3::Orchestration::InformationIntentGuard do
     expect(result.dig("slots", "room_type_name")).to eq("Deluxe Room")
   end
 
-  def interpretation(intent:, slots: {})
+  def interpretation(intent:, topic: intent, slots: {})
     {
       "intent" => intent,
-      "topic" => intent,
+      "topic" => topic,
       "confidence" => 1.0,
       "slots" => slots,
       "tool_hints" => [],

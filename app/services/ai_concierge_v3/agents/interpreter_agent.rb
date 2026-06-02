@@ -170,6 +170,7 @@ module AiConciergeV3
         - ANY message selecting an option number (e.g., "option 1", "choice 2", "option 1 the executive one") MUST be classified as option_selection, NEVER room_information.
         - "what attractions are nearby" -> nearby_attractions, not hotel_information.
         - "what time is check in" -> hotel_policy, not hotel_information.
+        - "booking policy" or "may I know the booking policy" -> hotel_policy, not booking_search.
         - "tell me about the hotel" -> hotel_information with general_hotel_info.
         - "can i see hotel amenities" -> hotel_information with general_hotel_info.
         - "what amenities do you have" -> hotel_information with general_hotel_info unless a room type is named.
@@ -208,6 +209,7 @@ module AiConciergeV3
         - EXAMPLE: "option 1 the executive one" -> intent=option_selection, topic=booking_search, option_number=1.
         - EXAMPLE: "august 3rd for 2 adults" -> explicit check_in set.
         - EXAMPLE: "what time is check in" -> intent=hotel_policy, topic=hotel_policy.
+        - EXAMPLE: "before that, may I know the booking policy?" -> intent=hotel_policy, topic=hotel_policy.
         - EXAMPLE: "tell me about the hotel" -> intent=hotel_information, topic=general_hotel_info.
         - EXAMPLE: "may i know hotel amenities" -> intent=hotel_information, topic=general_hotel_info.
         - EXAMPLE: "do you have faq" -> intent=hotel_information, topic=hotel_faq.

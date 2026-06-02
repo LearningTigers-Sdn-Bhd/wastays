@@ -1,6 +1,38 @@
 # AI Concierge Changelog
 
-## V3.2 — Hotel Knowledge Tool Migration (Current)
+## V3.3 — Hotel Knowledge Search (Current)
+
+### Changes
+- Added query-aware vector retrieval with `HotelKnowledges::SearchService`
+- Added hybrid hotel knowledge answer selection:
+  - deterministic answers for direct structured facts and single strong matches
+  - LLM synthesis for multi-snippet knowledge answers
+  - unavailable fallback when no useful knowledge source exists
+- Added `KnowledgeAnswerAgent` for grounded synthesis using retrieved snippets and structured hotel facts only
+- Updated policy, FAQ, and general-info tools to accept the guest message as `query`
+- Knowledge tools now return `answer`, `answer_mode`, `source`, and internal `knowledge_matches`
+- `HotelInfoBuilder` prefers hybrid `answer` while preserving legacy fallback rendering
+- Added deterministic policy routing guard for `booking policy`, policies/rules, cancellation, check-in, and check-out phrasing
+- Preserved booking interruption/resume behavior; policy/info turns still suspend active booking when appropriate
+
+### Files Changed
+- `app/services/hotel_knowledges/search_service.rb` — new vector retrieval service
+- `knowledge_answer_agent.rb` — new LLM synthesis agent
+- `hybrid_answer_builder.rb` — new answer-mode selector
+- `get_hotel_policy_tool.rb`, `get_hotel_faq_tool.rb`, `get_general_hotel_info_tool.rb` — query-aware hybrid answers
+- `librarian_orchestrator.rb` — passes raw message to knowledge tools
+- `hotel_info_builder.rb` — prefers `answer`
+- `information_intent_guard.rb` and `interpreter_agent.rb` — policy phrasing guard/prompt examples
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge_v3`
+- 158 examples, 0 failures
+- `bundle exec rubocop --cache false ...`
+- no offenses
+
+---
+
+## V3.2 — Hotel Knowledge Tool Migration
 
 ### Changes
 - Migrated `GetHotelFaqTool` to query `HotelKnowledgeDocument.where(category: "faq")` with chunk content instead of the removed `hotel.faq` JSONB column
