@@ -136,7 +136,7 @@ module AiConciergeV3
         - Use hotel_policy for operational policy questions such as check-in time, check-out time, cancellation, or hotel rules.
         - Use nearby_attractions for questions about places to visit, nearby spots, attractions, or what is around the hotel.
         - Use room_information for questions asking about a room type itself, such as details, room amenities, or occupancy.
-        - Use hotel_information for general hotel facts, hotel amenities/facilities, or hotel FAQ that are not specifically operational policy.
+        - Use hotel_information for general hotel facts, hotel amenities/facilities, hotel services such as parking, transportation, breakfast, pool, WiFi, restaurant, spa, or hotel FAQ that are not specifically operational policy.
         - Use booking_context only when the user is asking about an existing active booking.
         - Use booking_search when the user is asking to find, start, continue, or modify a booking search.
         - Use greeting ONLY for pure greetings or generic opening messages with no other intent. If the message includes a greeting AND a request like "can I book", use the stronger intent (e.g. booking_search).
@@ -171,9 +171,12 @@ module AiConciergeV3
         - "what attractions are nearby" -> nearby_attractions, not hotel_information.
         - "what time is check in" -> hotel_policy, not hotel_information.
         - "booking policy" or "may I know the booking policy" -> hotel_policy, not booking_search.
+        - "do you have house rules?" -> hotel_policy, not booking_search.
         - "tell me about the hotel" -> hotel_information with general_hotel_info.
         - "can i see hotel amenities" -> hotel_information with general_hotel_info.
         - "what amenities do you have" -> hotel_information with general_hotel_info unless a room type is named.
+        - "may i know if the hotel provide transportation" -> hotel_information with general_hotel_info.
+        - "is parking available there?" -> hotel_information with general_hotel_info.
         - "do you have an faq" -> hotel_information with hotel_faq.
 
         INTERRUPTION RULES:
@@ -210,8 +213,11 @@ module AiConciergeV3
         - EXAMPLE: "august 3rd for 2 adults" -> explicit check_in set.
         - EXAMPLE: "what time is check in" -> intent=hotel_policy, topic=hotel_policy.
         - EXAMPLE: "before that, may I know the booking policy?" -> intent=hotel_policy, topic=hotel_policy.
+        - EXAMPLE: "do you have house rules?" -> intent=hotel_policy, topic=hotel_policy.
         - EXAMPLE: "tell me about the hotel" -> intent=hotel_information, topic=general_hotel_info.
         - EXAMPLE: "may i know hotel amenities" -> intent=hotel_information, topic=general_hotel_info.
+        - EXAMPLE: "may i know if the hotel provide transportation" -> intent=hotel_information, topic=general_hotel_info.
+        - EXAMPLE: "is parking available there?" -> intent=hotel_information, topic=general_hotel_info.
         - EXAMPLE: "do you have faq" -> intent=hotel_information, topic=hotel_faq.
         - EXAMPLE: "what attractions are nearby" -> intent=nearby_attractions, topic=nearby_attractions.
         - EXAMPLE: "tell me about the executive suite" -> intent=room_information, topic=room_information, room_type_name="Executive Suite" if explicit.

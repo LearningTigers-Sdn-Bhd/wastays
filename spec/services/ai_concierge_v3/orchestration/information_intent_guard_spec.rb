@@ -21,6 +21,32 @@ RSpec.describe AiConciergeV3::Orchestration::InformationIntentGuard do
     expect(result["intent"]).to eq("hotel_policy")
   end
 
+  it "routes house rules questions to hotel policy" do
+    result = described_class.new(
+      message: "do you have house rules?",
+      interpretation: interpretation(intent: "booking_search", topic: "booking_search")
+    ).call
+
+    expect(result["intent"]).to eq("hotel_policy")
+    expect(result["topic"]).to eq("hotel_policy")
+  end
+
+  it "keeps room availability questions on booking" do
+    input = interpretation(intent: "booking_search", topic: "booking_search")
+
+    result = described_class.new(message: "do you have rooms available in july?", interpretation: input).call
+
+    expect(result["intent"]).to eq("booking_search")
+  end
+
+  it "keeps clear room booking requests on booking even when a service word is present" do
+    input = interpretation(intent: "booking_search", topic: "booking_search")
+
+    result = described_class.new(message: "can i book parking view room on june 23?", interpretation: input).call
+
+    expect(result["intent"]).to eq("booking_search")
+  end
+
   it "routes unscoped facilities questions to hotel information" do
     result = described_class.new(
       message: "available facilities?",
@@ -40,6 +66,26 @@ RSpec.describe AiConciergeV3::Orchestration::InformationIntentGuard do
     ).call
 
     expect(result["intent"]).to eq("hotel_information")
+  end
+
+  it "routes transportation questions to hotel information" do
+    result = described_class.new(
+      message: "may i know if the hotel provide transportation",
+      interpretation: interpretation(intent: "booking_search", topic: "booking_search")
+    ).call
+
+    expect(result["intent"]).to eq("hotel_information")
+    expect(result["topic"]).to eq("general_hotel_info")
+  end
+
+  it "routes parking questions to hotel information" do
+    result = described_class.new(
+      message: "is parking available there?",
+      interpretation: interpretation(intent: "booking_search", topic: "booking_search")
+    ).call
+
+    expect(result["intent"]).to eq("hotel_information")
+    expect(result["topic"]).to eq("general_hotel_info")
   end
 
   it "keeps named room amenities questions on room information" do

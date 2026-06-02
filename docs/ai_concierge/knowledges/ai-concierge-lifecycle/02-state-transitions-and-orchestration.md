@@ -58,6 +58,7 @@ Owns booking sub-step decisions after high-level transition is `:booking` or `:r
 Owns information tool routing:
 - hotel policy, general hotel info, FAQ, nearby attractions, room information
 - passes the raw guest message as `query` to hybrid hotel knowledge tools
+- hotel knowledge categories are treated as storage categories; answer retrieval may retry across `general_info`, `faq`, and `policy` when the routed category has no useful match
 - update `information_task` for each answered knowledge turn
 - suspend active booking tasks only when `pause: true`
 - leave active booking unsuspended when `pause: false`
@@ -77,7 +78,9 @@ Enforces high-level legal routing:
 - resume non-expired suspended bookings before general routing when inbound is selection/confirmation follow-up
 - route information intents during active booking to librarian with `pause: true`
 - route information intents outside active booking to librarian with `pause: false`
-- policy phrasing corrected by `InformationIntentGuard` before routing, including "booking policy", policies/rules, cancellation, check-in, and check-out questions
+- policy phrasing corrected by `InformationIntentGuard` before routing, including "booking policy", policies/rules/house rules, cancellation, check-in, and check-out questions
+- hotel service questions corrected by `InformationIntentGuard` before routing, including parking, transportation, shuttle/airport transfer, WiFi, breakfast, restaurant, spa, pool, amenities, and facilities
+- clear booking requests still remain booking flow, including book/reserve/quote, room availability, and date/month booking phrasing
 
 ## `ConversationTaskManager`
 

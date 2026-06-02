@@ -26,6 +26,20 @@ RSpec.describe AiConciergeV3::Tools::HotelInformation::HybridAnswerBuilder do
     end
   end
 
+  def search_service_by_categories(results)
+    Class.new do
+      define_singleton_method(:results) { results }
+
+      def initialize(hotel:, query:, categories:, **)
+        @categories = Array(categories).map(&:to_s).sort.join(",")
+      end
+
+      def call
+        self.class.results.fetch(@categories, [])
+      end
+    end
+  end
+
   def answer_agent_returning(answer)
     Class.new do
       define_singleton_method(:answer) { answer }
@@ -118,6 +132,54 @@ RSpec.describe AiConciergeV3::Tools::HotelInformation::HybridAnswerBuilder do
 
     expect(result["answer"]).to eq("Breakfast is served from 7 AM to 10 AM.")
     expect(result["answer_mode"]).to eq("deterministic")
+  end
+
+  it "searches all hotel knowledge categories before using generic fallback text" do
+    parking_match = match.merge(
+      "content" => "Parking is available for in-house guests.",
+      "category" => "faq",
+      "distance" => 0.11
+    )
+
+    result = described_class.new(
+      hotel: hotel,
+      query: "is parking available there?",
+      intent: "hotel_information",
+      topic: "general_hotel_info",
+      categories: [ "general_info" ],
+      source: "general_hotel_info",
+      fallback_text: "Generic hotel summary.",
+      search_service: search_service_by_categories(
+        "general_info" => [],
+        "faq,general_info,policy" => [ parking_match ]
+      ),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result["answer"]).to eq("Parking is available for in-house guests.")
+    expect(result["answer_mode"]).to eq("deterministic")
+    expect(result["knowledge_matches"].first["category"]).to eq("faq")
+  end
+
+  it "retries all categories when the routed category has only a weak single match" do
+    weak_match = match.merge("content" => "Generic hotel details.", "category" => "general_info", "distance" => 0.8)
+    parking_match = match.merge("content" => "Parking is free.", "category" => "faq", "distance" => 0.1)
+
+    result = described_class.new(
+      hotel: hotel,
+      query: "is parking available there?",
+      intent: "hotel_information",
+      topic: "general_hotel_info",
+      categories: [ "general_info" ],
+      source: "general_hotel_info",
+      search_service: search_service_by_categories(
+        "general_info" => [ weak_match ],
+        "faq,general_info,policy" => [ parking_match ]
+      ),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result["answer"]).to eq("Parking is free.")
   end
 
   it "returns unavailable mode when no match or fallback exists" do

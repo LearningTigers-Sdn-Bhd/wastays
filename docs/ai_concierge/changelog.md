@@ -1,6 +1,33 @@
 # AI Concierge Changelog
 
-## V3.3 — Hotel Knowledge Search (Current)
+## V3.4 — Black-Box Hotel Knowledge Routing (Current)
+
+### Changes
+- Treat hotel knowledge categories (`policy`, `faq`, `general_info`) as storage categories, not strict intent boundaries
+- Broadened `InformationIntentGuard` so hotel knowledge questions do not accidentally start booking slot collection:
+  - policy/rules/house rules/cancellation/check-in/check-out -> `hotel_policy`
+  - parking, transportation, airport transfer, shuttle, WiFi, breakfast, restaurant, spa, pool, amenities, and facilities -> `hotel_information`
+- Preserved clear booking requests, including room availability and booking/date phrasing, as booking flow
+- Added cross-category retrieval fallback in `HybridAnswerBuilder`:
+  - first search the routed category
+  - if no useful answer is found, retry across `general_info`, `faq`, and `policy`
+  - only then use structured fallback or unavailable answer
+- Preserved booking interruption/resume semantics for guarded hotel knowledge turns
+
+### Files Changed
+- `information_intent_guard.rb` — broader deterministic hotel-knowledge guard and booking contrast rules
+- `hybrid_answer_builder.rb` — cross-category hotel knowledge fallback before generic structured fallback
+- `interpreter_agent.rb` — prompt examples for house rules, transportation, and parking
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge_v3`
+- 170 examples, 0 failures
+- `bundle exec rubocop --cache false ...`
+- no offenses
+
+---
+
+## V3.3 — Hotel Knowledge Search
 
 ### Changes
 - Added query-aware vector retrieval with `HotelKnowledges::SearchService`

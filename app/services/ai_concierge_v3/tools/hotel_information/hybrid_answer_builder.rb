@@ -5,6 +5,7 @@ module AiConciergeV3
     module HotelInformation
       class HybridAnswerBuilder
         STRONG_MATCH_DISTANCE = 0.35
+        FALLBACK_CATEGORIES = %w[general_info faq policy].freeze
 
         def initialize(hotel:, query:, intent:, topic:, categories:, source:, structured_facts: {}, fallback_text: nil, unavailable_answer: nil, search_service: HotelKnowledges::SearchService, answer_agent: AiConciergeV3::Agents::KnowledgeAnswerAgent)
           @hotel = hotel
@@ -37,6 +38,17 @@ module AiConciergeV3
             return payload(answer: deterministic_fallback(matches), answer_mode: "deterministic", matches: matches)
           end
 
+          fallback_matches = fallback_search_matches
+          if deterministic_match?(fallback_matches)
+            return payload(answer: fallback_matches.first["content"], answer_mode: "deterministic", matches: fallback_matches)
+          end
+
+          if fallback_matches.many?
+            synthesized = synthesize(fallback_matches)
+            return payload(answer: synthesized, answer_mode: "synthesized", matches: fallback_matches) if synthesized.present?
+            return payload(answer: deterministic_fallback(fallback_matches), answer_mode: "deterministic", matches: fallback_matches)
+          end
+
           return payload(answer: fallback_text, answer_mode: "fallback", matches: matches) if fallback_text.present?
 
           payload(answer: unavailable_answer, answer_mode: "unavailable", matches: matches, success: false)
@@ -47,8 +59,15 @@ module AiConciergeV3
         attr_reader :hotel, :query, :intent, :topic, :categories, :source, :structured_facts,
           :fallback_text, :unavailable_answer, :search_service, :answer_agent
 
-        def search_matches
-          search_service.new(hotel: hotel, query: query, categories: categories).call
+        def search_matches(search_categories = categories)
+          search_service.new(hotel: hotel, query: query, categories: search_categories).call
+        end
+
+        def fallback_search_matches
+          return [] if query.blank?
+          return [] if categories.map(&:to_s).sort == FALLBACK_CATEGORIES.sort
+
+          search_matches(FALLBACK_CATEGORIES)
         end
 
         def direct_structured_answer

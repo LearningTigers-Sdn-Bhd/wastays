@@ -47,6 +47,75 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_policy")
   end
 
+  it "answers house rules phrasing instead of starting booking when the interpreter returns booking search" do
+    doc = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "House Rules", embedding_status: "indexed")
+    create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Quiet hours start at 10 PM.")
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+    )
+
+    result = described_class.new(hotel: hotel, message: "do you have house rules?", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to include("Quiet hours start at 10 PM")
+    expect(result.payload[:reply_message]).not_to include("what dates or month")
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_policy")
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+  end
+
+  it "answers transportation as hotel knowledge instead of starting booking when the interpreter returns booking search" do
+    stub_knowledge_search(
+      "general_info" => [
+        knowledge_match("Airport transportation is available by request.", category: "general_info")
+      ]
+    )
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+    )
+
+    result = described_class.new(hotel: hotel, message: "may i know if the hotel provide transportation", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to include("Airport transportation is available by request")
+    expect(result.payload[:reply_message]).not_to include("what dates or month")
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_information")
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+  end
+
+  it "answers parking from faq when routed through general hotel information" do
+    stub_knowledge_search(
+      "general_info" => [],
+      "faq,general_info,policy" => [
+        knowledge_match("Parking is complimentary for hotel guests.", category: "faq")
+      ]
+    )
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+    )
+
+    result = described_class.new(hotel: hotel, message: "is parking available there?", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to include("Parking is complimentary for hotel guests")
+    expect(result.payload[:reply_message]).not_to include("what dates or month")
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_information")
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+  end
+
+  it "keeps room availability questions in the booking flow" do
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "booking_search", topic: "booking_search", slots: { "target_month" => 7, "target_year" => 2026 })
+    )
+
+    result = described_class.new(hotel: hotel, message: "do you have rooms available in july?", phone: "+60123456789").call
+
+    expect(result.payload[:reply_message]).to include("exact check-in date")
+    expect(result.payload[:action_name]).to eq("request_quote")
+  end
+
   it "does not end the conversation on a greeting" do
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(intent: "greeting", conversation_signals: { "end_conversation" => true })
@@ -293,6 +362,40 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     expect(state.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-23")
   end
 
+  it "suspends active booking for guarded hotel knowledge and resumes afterward" do
+    stub_knowledge_search(
+      "general_info" => [],
+      "faq,general_info,policy" => [
+        knowledge_match("Parking is available near the lobby.", category: "faq")
+      ]
+    )
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call) do |agent|
+      case agent.instance_variable_get(:@message)
+      when "i would like to make reservation on next month"
+        interpretation(slots: { "target_month" => 6, "target_year" => 2026 })
+      when "is parking available there?"
+        interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+      else
+        interpretation(intent: "booking_search", slots: { "check_in" => "2026-06-23" })
+      end
+    end
+
+    first_reply = described_class.new(hotel: hotel, message: "i would like to make reservation on next month", phone: "+60123456789").call
+    info_reply = described_class.new(hotel: hotel, message: "is parking available there?", phone: "+60123456789").call
+    state_after_info = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+    resume_reply = described_class.new(hotel: hotel, message: "ok, i want to book on 23 june", phone: "+60123456789").call
+    state_after_resume = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(first_reply.payload[:reply_message]).to include("exact check-in date")
+    expect(info_reply.payload[:reply_message]).to include("Parking is available near the lobby")
+    expect(state_after_info.slots_payload.dig("booking_task", "status")).to eq("suspended")
+    expect(state_after_info.slots_payload.dig("booking_task", "pending_question")).to eq("specific_timing")
+    expect(resume_reply.payload[:reply_message]).to eq("How many days and nights will you be staying?")
+    expect(state_after_resume.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
+    expect(state_after_resume.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-23")
+  end
+
   it "preserves resumed room selection clarifications" do
     prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
     room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
@@ -390,6 +493,25 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
         "starts_new_booking_branch" => false,
         "end_conversation" => false
       }.merge(conversation_signals)
+    }
+  end
+
+  def stub_knowledge_search(results)
+    allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call) do |service|
+      categories = Array(service.instance_variable_get(:@categories)).map(&:to_s).sort.join(",")
+      results.fetch(categories, [])
+    end
+  end
+
+  def knowledge_match(content, category:, distance: 0.12)
+    {
+      "content" => content,
+      "document_title" => category.titleize,
+      "category" => category,
+      "language" => "en",
+      "version" => 1,
+      "chunk_index" => 0,
+      "distance" => distance
     }
   end
 end
