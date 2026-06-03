@@ -12,6 +12,17 @@ RSpec.describe AiConciergeV3::Orchestration::InformationIntentGuard do
     expect(result["tool_hints"]).to eq([ "get_hotel_policy" ])
   end
 
+  it "routes booking advice questions to hotel policy instead of booking search" do
+    result = described_class.new(
+      message: "what should i aware during booking in this hotel?",
+      interpretation: interpretation(intent: "booking_search", topic: "booking_search")
+    ).call
+
+    expect(result["intent"]).to eq("hotel_policy")
+    expect(result["topic"]).to eq("hotel_policy")
+    expect(result["tool_hints"]).to eq([ "get_hotel_policy" ])
+  end
+
   it "routes cancellation questions to hotel policy" do
     result = described_class.new(
       message: "what is the cancellation rule?",

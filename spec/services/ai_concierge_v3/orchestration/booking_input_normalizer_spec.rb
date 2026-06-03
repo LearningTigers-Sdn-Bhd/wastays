@@ -25,6 +25,41 @@ RSpec.describe AiConciergeV3::Orchestration::BookingInputNormalizer do
     expect(result["month_segment"]).to eq("early")
   end
 
+  it "extracts this-month timing even when the LLM returns no timing slots" do
+    travel_to Date.new(2026, 6, 3) do
+      result = described_class.new(
+        message: "late this month have?",
+        slots: {},
+        pending_question: "booking_timing",
+        conversation_signals: signals
+      ).call
+
+      expect(result).to include(
+        "target_month" => 6,
+        "target_year" => 2026,
+        "month_segment" => "late"
+      )
+    end
+  end
+
+  it "clears a stale month segment when this-month timing has no segment" do
+    travel_to Date.new(2026, 6, 3) do
+      result = described_class.new(
+        message: "nice, can i book for this month?",
+        slots: {},
+        pending_question: "booking_timing",
+        conversation_signals: signals,
+        active_branch: { "target_month" => 7, "target_year" => 2026, "month_segment" => "late" }
+      ).call
+
+      expect(result).to include(
+        "target_month" => 6,
+        "target_year" => 2026,
+        "month_segment" => ""
+      )
+    end
+  end
+
   it "extracts a specific date answer with an affirmative suffix" do
     result = described_class.new(
       message: "23 june ok?",

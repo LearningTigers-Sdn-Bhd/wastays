@@ -5,7 +5,20 @@ require "json"
 module AiConciergeV3
   module Agents
     class InterpreterAgent
+    MESSAGE_TYPES = %w[
+      booking_request
+      booking_selection
+      booking_confirmation
+      hotel_info_question
+      hotel_policy_question
+      room_info_question
+      existing_booking_question
+      conversation_control
+      greeting_or_unknown
+    ].freeze
+
     class InterpretationSchema < RubyLLM::Schema
+      string :message_type, enum: MESSAGE_TYPES
       string :intent, enum: [ "booking_search", "option_selection", "confirmation", "booking_context", "hotel_policy", "hotel_information", "nearby_attractions", "room_information", "greeting", "resume", "new_branch", "reset" ]
       string :topic, enum: [ "booking_search", "booking_context", "hotel_policy", "general_hotel_info", "hotel_faq", "nearby_attractions", "room_information", "general" ]
       number :confidence
@@ -99,6 +112,7 @@ module AiConciergeV3
 
     def default_interpretation
       {
+        "message_type" => "greeting_or_unknown",
         "intent" => "greeting",
         "topic" => "general",
         "confidence" => 0,
@@ -116,30 +130,47 @@ module AiConciergeV3
 
     def prompt
       <<~PROMPT
-        Identify intent and slots from the user message.
+        Classify the user message for AI Concierge.
         TODAY: #{today.iso8601}
         MESSAGE: "#{message}"
         SUMMARY: #{conversation_summary.to_json}
 
-        DIRECTIONS:
-        - Intent must be one of the enum values.
-        - Extract dates, party size, option numbers, and room type names when the user asks about a room.
-        - Map affirmative responses ("ok", "sure", "yes", "go ahead") to confirmation="yes" only when the user is approving a shown booking option or answering a yes/no clarification.
-        - If an affirmative word appears with a date answer, such as "23 june ok?", extract the date and keep intent=booking_search; do not treat it as confirmation.
-        - Set conversation signals (is_reset, is_correction, end_conversation, etc.).
-        - Set end_conversation=true for messages that close or abandon the current conversation, such as "stop", "bye", "thanks", "that's all", "end chat", "nevermind", or "forget it". DO NOT set it for a simple "no" or "no thanks" when rejecting a confirmation or option.
-        - Choose the most specific intent that matches the user's request. For pure abandonment messages like "nevermind" or "forget it", use intent="greeting" or similar generic intent if no other fits, but prioritize setting end_conversation=true. Do NOT extract option_number or other slots for abandonment messages.
+        ORDER OF WORK:
+        1. Choose exactly one message_type.
+        2. Map that message_type to intent/topic.
+        3. Extract only slots relevant to that message_type.
+        4. Set conversation_signals.
 
-        INTENT ROUTING RULES:
-        - Use confirmation when the user is approving or rejecting a shown booking option.
-        - Use option_selection when the user is choosing from shown booking options by room type, option number, or shown date.
-        - Use hotel_policy for operational policy questions such as check-in time, check-out time, cancellation, or hotel rules.
-        - Use nearby_attractions for questions about places to visit, nearby spots, attractions, or what is around the hotel.
-        - Use room_information for questions asking about a room type itself, such as details, room amenities, or occupancy.
-        - Use hotel_information for general hotel facts, hotel amenities/facilities, hotel services such as parking, transportation, breakfast, pool, WiFi, restaurant, spa, or hotel FAQ that are not specifically operational policy.
-        - Use booking_context only when the user is asking about an existing active booking.
-        - Use booking_search when the user is asking to find, start, continue, or modify a booking search.
-        - Use greeting ONLY for pure greetings or generic opening messages with no other intent. If the message includes a greeting AND a request like "can I book", use the stronger intent (e.g. booking_search).
+        MESSAGE TYPE DECISION TREE:
+        - booking_request: user wants to search, book, reserve, quote, check availability, change booking dates, or continue booking slot collection.
+          Relative timing like "this month", "late this month", "next month", and "late next month" is booking timing.
+        - booking_selection: user chooses from shown booking options by option number, room type, shown date, or words like "that one". Use this when SUMMARY.booking_task.has_suggested_options is true and the message is selecting an option.
+        - booking_confirmation: user answers yes/no to a pending booking confirmation, rate-plan confirmation, or party-split clarification. Use yes/no carefully based on SUMMARY.booking_task.pending_question.
+        - hotel_info_question: user asks about hotel facts, facilities, amenities, services, parking, transportation, WiFi, breakfast, restaurant, spa, pool, or FAQ.
+        - hotel_policy_question: user asks about policy, rules, house rules, check-in, check-out, cancellation, booking policy, or what to know/be aware of before/during booking.
+        - room_info_question: user asks about room type details, room amenities, occupancy, or description, without clearly trying to book it.
+        - existing_booking_question: user asks about an existing/current active booking.
+        - conversation_control: user says stop, bye, thanks, end chat, reset, start over, nevermind, forget it, or another booking.
+        - greeting_or_unknown: pure greeting or unclear message with no stronger type.
+
+        MESSAGE TYPE TO INTENT/TOPIC:
+        - booking_request -> intent=booking_search, topic=booking_search.
+        - booking_selection -> intent=option_selection, topic=booking_search.
+        - booking_confirmation -> intent=confirmation, topic=booking_search.
+        - hotel_info_question -> intent=hotel_information, topic=general_hotel_info or hotel_faq.
+        - hotel_policy_question -> intent=hotel_policy, topic=hotel_policy.
+        - room_info_question -> intent=room_information, topic=room_information.
+        - existing_booking_question -> intent=booking_context, topic=booking_context.
+        - conversation_control -> use reset when resetting, otherwise use a generic intent with end_conversation=true when ending.
+        - greeting_or_unknown -> intent=greeting, topic=general.
+
+        CORE ROUTING RULES:
+        - First prefer the guest's actual question over the previous booking flow.
+        - If a booking is active but the message asks hotel, policy, room, or attraction info, use the information message type.
+        - If the message returns to choosing options, dates, rate plans, or confirming a booking after an information interruption, use the matching booking message type.
+        - Use nearby_attractions when the user asks about places to visit, nearby spots, attractions, or what is around the hotel.
+        - Use greeting ONLY for pure greetings. If the message includes a greeting plus "can I book", use booking_request.
+        - Set end_conversation=true for stop/bye/thanks/nevermind/forget it/end chat, but not for "no" rejecting a booking option.
 
         TOPIC RULES:
         - For hotel_policy intent, topic must be hotel_policy.
@@ -149,7 +180,8 @@ module AiConciergeV3
         - For booking_context intent, topic must be booking_context.
         - For booking_search, option_selection, and confirmation intents, topic should usually be booking_search.
 
-        ROOM TYPE EXTRACTION RULES:
+        SLOT EXTRACTION RULES:
+        - Extract dates, party size, option numbers, room type names, and rate plan names only when relevant to the chosen message_type.
         - Only set room_type_name when the user explicitly names or clearly refers to a room type.
         - If the user asks a vague room question without a room name, leave room_type_name null.
         - Never invent or normalize a room type name that was not clearly implied by the message.
@@ -165,12 +197,13 @@ module AiConciergeV3
         - If the user asks about hotel amenities/facilities, prefer hotel_information.
         - If the user asks about room facts, named room amenities, or room description, prefer room_information.
         - If the user asks to book, select, reserve, confirm, or check availability for a room, prefer booking_search or option_selection.
-        - "tell me about executive suite" -> room_information.
-        - "i want executive suite on may 22" -> booking_search or option_selection depending on context, not room_information.
+        - "tell me about executive suite" -> message_type=room_info_question, intent=room_information.
+        - "i want executive suite on may 22" -> message_type=booking_request, intent=booking_search.
         - ANY message selecting an option number (e.g., "option 1", "choice 2", "option 1 the executive one") MUST be classified as option_selection, NEVER room_information.
         - "what attractions are nearby" -> nearby_attractions, not hotel_information.
         - "what time is check in" -> hotel_policy, not hotel_information.
         - "booking policy" or "may I know the booking policy" -> hotel_policy, not booking_search.
+        - "what should i aware during booking in this hotel?" -> hotel_policy, not booking_search.
         - "do you have house rules?" -> hotel_policy, not booking_search.
         - "tell me about the hotel" -> hotel_information with general_hotel_info.
         - "can i see hotel amenities" -> hotel_information with general_hotel_info.
@@ -185,6 +218,8 @@ module AiConciergeV3
         - If SUMMARY.booking_task.status="suspended" and SUMMARY.booking_task.pending_question="confirm_selection", classify clear yes/no replies as confirmation unless the message clearly asks a new information question.
         - If SUMMARY.booking_task.status="suspended" and SUMMARY.booking_task.pending_question="select_option", classify option numbers, room names, shown dates, or references like "that one" as option_selection unless the message clearly asks a new information question.
         - If SUMMARY.booking_task.status="suspended" and the user says something like "ok, I want to book on 23 june", classify it as booking_search and extract the date slots. Do not treat it as option_selection unless they choose from shown options.
+        - If SUMMARY.booking_task.pending_question is "guest_count", a plain number is slot collection, not booking confirmation.
+        - If SUMMARY.booking_task.pending_question is "confirm_selection", "yes" means booking_confirmation.
 
         - Use hotel_policy for operational policy questions like check-in, check-out, and cancellation.
         - Use hotel_information with topic general_hotel_info for general hotel details.
@@ -198,7 +233,7 @@ module AiConciergeV3
         - IMPORTANT: If the user only mentions guest count or room interest, leave all timing slots null.
         - IMPORTANT: If the user only gives a month or month window like "early august", leave days, nights, and check_out null.
         - IMPORTANT: Only set month_segment when the message explicitly includes a month with words like early, mid, or late.
-        - IMPORTANT: Only set target_month or target_year when the message explicitly includes a date, month, or window such as next month.
+        - IMPORTANT: Only set target_month or target_year when the message explicitly includes a date, month, or window such as this month or next month.
         - IMPORTANT: Only set days or nights when the message explicitly mentions stay length.
         - IMPORTANT: Only set check_out when the message explicitly provides a checkout date or date range.
         - IMPORTANT: If the user says "2 people", set party_size_total=2 and leave adults and children null.
@@ -207,6 +242,7 @@ module AiConciergeV3
         - EXAMPLE: "need a room for 2" -> no timing slots.
         - EXAMPLE: "early august for 2 adults" -> target_month/target_year/month_segment set.
         - EXAMPLE: "early august" -> timing only, no days, nights, or check_out.
+        - EXAMPLE: "late this month have?" -> message_type=booking_request, intent=booking_search, topic=booking_search, target_month/current year set, month_segment=late.
         - EXAMPLE: "early august for 3 days 2 nights" -> timing and duration set.
         - EXAMPLE: "early june for 2 people" -> party_size_total=2, adults=null, children=null.
         - EXAMPLE: "option 1 the executive one" -> intent=option_selection, topic=booking_search, option_number=1.
@@ -229,6 +265,12 @@ module AiConciergeV3
         - EXAMPLE: "after a room info answer, option 2 please" -> intent=option_selection, topic=booking_search.
         - EXAMPLE: "after a hotel info answer, ok i want to book on 23 june" -> intent=booking_search, topic=booking_search, check_in set.
         - EXAMPLE: "after a hotel info answer, yes" with suspended confirm_selection -> intent=confirmation, topic=booking_search, confirmation=yes.
+        - EXAMPLE: "do you have parking?" -> message_type=hotel_info_question, intent=hotel_information, topic=general_hotel_info.
+        - EXAMPLE: "booking policy?" -> message_type=hotel_policy_question, intent=hotel_policy, topic=hotel_policy.
+        - EXAMPLE: "what should i aware during booking in this hotel?" -> message_type=hotel_policy_question, intent=hotel_policy, topic=hotel_policy.
+        - EXAMPLE: "option 1 executive" -> message_type=booking_selection, intent=option_selection, topic=booking_search, option_number=1.
+        - EXAMPLE: "yes" with pending_question=guest_count -> message_type=booking_request, intent=booking_search, no confirmation slot.
+        - EXAMPLE: "yes" with pending_question=confirm_selection -> message_type=booking_confirmation, intent=confirmation, confirmation=yes.
         - Return strictly JSON.
       PROMPT
     end

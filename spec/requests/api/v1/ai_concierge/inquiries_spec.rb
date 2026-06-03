@@ -40,6 +40,14 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(parsed_body["error"]).to eq("Message is required")
     end
 
+    it "accepts nested inquiry payloads" do
+      post path, params: { inquiry: { message: "Hello", phone: phone } }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to be_present
+      expect(parsed_body["prospect_public_id"]).to be_present
+    end
+
     it "returns 422 when message exceeds max length" do
       long_message = "x" * 2001
 
@@ -578,8 +586,9 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     interpretation(intent: "greeting", topic: "general")
   end
 
-  def interpretation(intent:, topic:, slots: {}, signals: {})
+  def interpretation(intent:, topic:, slots: {}, signals: {}, message_type: "booking_request")
     {
+      "message_type" => message_type,
       "intent" => intent,
       "topic" => topic,
       "confidence" => 1.0,

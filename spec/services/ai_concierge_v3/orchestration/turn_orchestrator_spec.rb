@@ -116,6 +116,68 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     expect(result.payload[:action_name]).to eq("request_quote")
   end
 
+  it "uses this-month timing instead of stale no-options month context" do
+    travel_to Date.new(2026, 6, 3) do
+      prospect = create(:prospect, hotel: hotel)
+      branch = {
+        "target_month" => 7,
+        "target_year" => 2026,
+        "month_segment" => "late",
+        "days" => 4,
+        "nights" => 3,
+        "party_size_total" => 5,
+        "adults" => 5,
+        "children" => 0
+      }
+      slots_payload = AiConciergeV3::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(branch, pending_question: "booking_timing")
+      create(:prospect_conversation_state, prospect: prospect, pending_question: "booking_timing", slots_payload: slots_payload)
+
+      allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+        interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+      )
+
+      result = described_class.new(hotel: hotel, message: "late this month have?", prospect_public_id: prospect.public_id).call
+      state = prospect.prospect_conversation_state.reload
+
+      expect(result.payload[:reply_message]).to include("late June 2026")
+      expect(result.payload[:reply_message]).not_to include("late July 2026")
+      expect(state.slots_payload.dig("booking_task", "branch", "target_month")).to eq(6)
+      expect(state.slots_payload.dig("booking_task", "branch", "month_segment")).to eq("late")
+    end
+  end
+
+  it "asks for a timing segment when this-month request omits early mid or late" do
+    travel_to Date.new(2026, 6, 3) do
+      prospect = create(:prospect, hotel: hotel)
+      branch = {
+        "target_month" => 7,
+        "target_year" => 2026,
+        "month_segment" => "late",
+        "days" => 4,
+        "nights" => 3,
+        "party_size_total" => 5,
+        "adults" => 5,
+        "children" => 0
+      }
+      slots_payload = AiConciergeV3::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(branch, pending_question: "booking_timing")
+      create(:prospect_conversation_state, prospect: prospect, pending_question: "booking_timing", slots_payload: slots_payload)
+
+      allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+        interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+      )
+
+      result = described_class.new(hotel: hotel, message: "nice, can i book for this month?", prospect_public_id: prospect.public_id).call
+      state = prospect.prospect_conversation_state.reload
+
+      expect(result.payload[:reply_message]).to include("exact check-in date or assumption range")
+      expect(result.payload[:reply_message]).to include("June 2026")
+      expect(result.payload[:reply_message]).not_to include("Sorry, I couldn't find any rooms")
+      expect(state.slots_payload.dig("booking_task", "branch", "target_month")).to eq(6)
+      expect(state.slots_payload.dig("booking_task", "branch", "month_segment")).to eq("")
+      expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("specific_timing")
+    end
+  end
+
   it "does not end the conversation on a greeting" do
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(intent: "greeting", conversation_signals: { "end_conversation" => true })
@@ -148,7 +210,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     )
 
     prompt = described_class.new(hotel: hotel, message: "stop", phone: "+60123456789").call
-    expect(prompt.payload[:reply_message]).to include("do you want to cancel")
+    expect(prompt.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
 
     finish = described_class.new(hotel: hotel, message: "stop", phone: "+60123456789").call
     expect(finish.payload[:reply_message]).to eq("No problem, please let me know if you need anything.")
@@ -228,7 +290,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(intent: "greeting", slots: {})
     )
     end_reply = described_class.new(hotel: hotel, message: "nevermind", phone: "+60123456789").call
-    expect(end_reply.payload[:reply_message]).to eq("Dear guest, do you want to cancel your booking quotation attempt?")
+    expect(end_reply.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
 
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
     expect(state.pending_question).to eq("confirm_to_end_conversation")
@@ -245,7 +307,7 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
       interpretation(intent: "greeting", slots: {})
     )
     second_prompt = described_class.new(hotel: hotel, message: "nevermind", phone: "+60123456789").call
-    expect(second_prompt.payload[:reply_message]).to eq("Dear guest, do you want to cancel your booking quotation attempt?")
+    expect(second_prompt.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
 
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(intent: "confirmation", slots: { "confirmation" => "yes" })
@@ -260,6 +322,103 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
 
     # It should ask for timing because the previous branch (with July) was archived
     expect(reactivation_reply.payload[:reply_message]).to include("what dates or month")
+  end
+
+  it "cancels the booking attempt and asks for the next step" do
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(slots: { "target_month" => 7, "target_year" => 2026, "month_segment" => "early", "days" => 3, "nights" => 2, "adults" => 2, "children" => 0 })
+    )
+    described_class.new(hotel: hotel, message: "book early july for 2 adults", phone: "+60123456789").call
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "greeting", slots: {})
+    )
+    prompt = described_class.new(hotel: hotel, message: "nevermind", phone: "+60123456789").call
+    expect(prompt.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
+
+    cancel_reply = described_class.new(hotel: hotel, message: "cancel attempt", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(cancel_reply.payload[:reply_message]).to eq("I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(state.flow_status).to eq("active")
+    expect(state.pending_question).to be_nil
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(slots: {})
+    )
+    fresh_reply = described_class.new(hotel: hotel, message: "i want to make booking", phone: "+60123456789").call
+
+    expect(fresh_reply.payload[:reply_message]).to include("what dates or month")
+    expect(fresh_reply.payload[:reply_message]).not_to include("couldn't find any rooms")
+  end
+
+  it "allows ending the conversation after cancelling a booking attempt" do
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(slots: { "target_month" => 7, "target_year" => 2026, "month_segment" => "early" })
+    )
+    described_class.new(hotel: hotel, message: "book early july", phone: "+60123456789").call
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "reset", conversation_signals: { "is_reset" => true })
+    )
+    cancel_reply = described_class.new(hotel: hotel, message: "cancel my attempt for booking", phone: "+60123456789").call
+    expect(cancel_reply.payload[:reply_message]).to include("end the conversation")
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "greeting", conversation_signals: { "end_conversation" => true })
+    )
+    end_reply = described_class.new(hotel: hotel, message: "end conversation", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(end_reply.payload[:reply_message]).to eq("No problem, please let me know if you need anything.")
+    expect(state.flow_status).to eq("ended")
+  end
+
+  it "catches cancel attempt language before the reset branch" do
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(slots: { "target_month" => 7, "target_year" => 2026, "month_segment" => "early" })
+    )
+    described_class.new(hotel: hotel, message: "book early july", phone: "+60123456789").call
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "reset", conversation_signals: { "is_reset" => true })
+    )
+
+    result = described_class.new(hotel: hotel, message: "cancel my attempt for booking", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to eq("I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(state.pending_question).to be_nil
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+    expect(state.slots_payload.dig("booking_task", "branch", "target_month")).to be_nil
+  end
+
+  it "starts a fresh booking when a generic booking request follows a stale no-options attempt" do
+    prospect = create(:prospect, hotel: hotel)
+    branch = {
+      "target_month" => 6,
+      "target_year" => 2026,
+      "month_segment" => "early",
+      "days" => 3,
+      "nights" => 2,
+      "adults" => 2,
+      "children" => 0
+    }
+    slots_payload = AiConciergeV3::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(branch, pending_question: "booking_timing")
+    create(:prospect_conversation_state, prospect: prospect, pending_question: "booking_timing", active_flow: "booking_search", active_topic: "booking_search", slots_payload: slots_payload)
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(slots: {})
+    )
+
+    result = described_class.new(hotel: hotel, message: "i want to make booking", prospect_public_id: prospect.public_id).call
+    state = prospect.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to include("what dates or month")
+    expect(result.payload[:reply_message]).not_to include("early June 2026")
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
+    expect(state.slots_payload.dig("booking_task", "branch", "target_month")).to be_nil
   end
 
   it "keeps a suspended confirmation through information turns and resumes on yes" do
@@ -396,6 +555,33 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     expect(state_after_resume.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-23")
   end
 
+  it "answers booking advice questions while a booking is suspended instead of resuming stale search" do
+    hotel.property_policy.update!(cancellation_policy: "Full payment is required before confirmation.")
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call) do |agent|
+      case agent.instance_variable_get(:@message)
+      when "i would like to make reservation on early june"
+        interpretation(slots: { "target_month" => 6, "target_year" => 2026, "month_segment" => "early" })
+      when "may i know is there swimming pool"
+        interpretation(intent: "hotel_information", topic: "general_hotel_info", slots: {}, tool_hints: [ "get_general_hotel_info" ])
+      else
+        interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+      end
+    end
+
+    first_reply = described_class.new(hotel: hotel, message: "i would like to make reservation on early june", phone: "+60123456789").call
+    info_reply = described_class.new(hotel: hotel, message: "may i know is there swimming pool", phone: "+60123456789").call
+    policy_reply = described_class.new(hotel: hotel, message: "what should i aware during booking in this hotel?", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(first_reply.payload[:reply_message]).to include("How many days and nights")
+    expect(info_reply.payload[:reply_message]).to be_present
+    expect(policy_reply.payload[:reply_message]).to include("Here is our hotel policy")
+    expect(policy_reply.payload[:reply_message]).not_to include("Sorry, I couldn't find any rooms")
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("suspended")
+    expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_policy")
+  end
+
   it "preserves resumed room selection clarifications" do
     prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
     room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
@@ -479,8 +665,9 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     expect(result.payload[:reply_message]).to include("Amenities: Free WiFi, Air Conditioning")
   end
 
-  def interpretation(intent: "booking_search", topic: "booking_search", slots: {}, tool_hints: [ "search_booking_options" ], conversation_signals: {})
+  def interpretation(message_type: "booking_request", intent: "booking_search", topic: "booking_search", slots: {}, tool_hints: [ "search_booking_options" ], conversation_signals: {})
     {
+      "message_type" => message_type,
       "intent" => intent,
       "topic" => topic,
       "confidence" => 1.0,

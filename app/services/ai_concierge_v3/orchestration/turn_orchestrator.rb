@@ -32,6 +32,10 @@ module AiConciergeV3
       ).call
       validate_interpretation!(interpretation)
 
+      if cancel_attempt_request?
+        return Result.success(payload: handle_cancel_booking_attempt(prospect:, conversation_state:, interpretation: interpretation))
+      end
+
       if end_confirmation_pending?(conversation_state)
         return handle_end_confirmation_response(prospect:, conversation_state:, interpretation: interpretation)
       end
@@ -232,6 +236,11 @@ module AiConciergeV3
         task_manager = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
         pending_question = nil
         base_branch = empty_branch
+      elsif fresh_booking_request_without_details?(interpretation, pending_question)
+        conversation_state = temporary_state(conversation_state, task_manager.reset_booking_task)
+        task_manager = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
+        pending_question = nil
+        base_branch = empty_branch
       end
 
       {
@@ -261,6 +270,22 @@ module AiConciergeV3
         action_name: nil,
         flow_status: "active",
         extra_context: { end_confirmation_mode: mode }
+      )
+    end
+
+    def handle_cancel_booking_attempt(prospect:, conversation_state:, interpretation:)
+      slots_payload = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).reset_booking_task
+      build_and_persist_response(
+        prospect: prospect,
+        conversation_state: conversation_state,
+        interpretation: interpretation,
+        slots_payload: slots_payload,
+        reply_type: :booking_attempt_cancelled_next_step,
+        active_topic: nil,
+        active_flow: nil,
+        pending_question: nil,
+        action_name: nil,
+        flow_status: "active"
       )
     end
 
@@ -353,7 +378,29 @@ module AiConciergeV3
 
     def explicit_end_request?
       normalized = message.downcase.gsub(/[^a-z0-9']+/, " ").squish
-      normalized.match?(/\A(?:stop|bye|bye bye|good bye|goodbye|thanks|thank you|that's all|thats all|end chat|nevermind|never mind|forget|forget it|no thanks|not now)\z/)
+      normalized.match?(/\A(?:stop|bye|bye bye|good bye|goodbye|thanks|thank you|that's all|thats all|end chat|end conversation|nevermind|never mind|forget|forget it|no thanks|not now|cancel attempt|cancel booking attempt|cancel quotation attempt)\z/)
+    end
+
+    def cancel_attempt_request?
+      normalized = message.downcase.gsub(/[^a-z0-9']+/, " ").squish
+      normalized.match?(/\bcancel\b/) && normalized.match?(/\b(?:attempt|booking|quotation|quote)\b/)
+    end
+
+    def fresh_booking_request_without_details?(interpretation, pending_question)
+      return false unless %w[booking_timing specific_timing].include?(pending_question.to_s)
+      return false unless interpretation["intent"] == "booking_search"
+      return false if booking_detail_slots_present?(interpretation["slots"])
+
+      normalized = message.downcase.gsub(/[^a-z0-9]+/, " ").squish
+      normalized.match?(/\b(?:book|booking|reserve|reservation|make booking|new booking|start booking)\b/) &&
+        !normalized.match?(/\b(?:this month|next month|today|tomorrow|tonight|early|mid|late|jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december|\d)\b/)
+    end
+
+    def booking_detail_slots_present?(slots)
+      %w[target_month target_year month_segment check_in check_out nights days party_size_total adults children room_count option_number].any? do |key|
+        value = slots&.dig(key)
+        value.present? && value != 0
+      end
     end
 
     def end_confirmation_pending?(conversation_state)

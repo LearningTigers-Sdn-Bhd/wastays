@@ -49,6 +49,7 @@ module AiConciergeV3
     end
 
     def should_resume_paused_flow?
+      return false if librarian_intent?
       return false unless suspended_booking_resumable?
 
       confirmation_follow_up? || selection_follow_up? || interpretation["intent"] == "option_selection" || interpretation.dig("conversation_signals", "is_resume") || selection_like_follow_up? || booking_continuation_follow_up?
@@ -88,7 +89,7 @@ module AiConciergeV3
 
       normalized = normalize(message)
       normalized.match?(/\b(?:book|booking|reserve|reservation|stay|quote|availability)\b/) ||
-        normalized.match?(/\b(?:next month|early|mid|late)\b/) ||
+        normalized.match?(/\b(?:this month|next month|early|mid|late)\b/) ||
         normalized.match?(/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|june|jul|july|aug|sep|sept|oct|nov|dec)[a-z]*\b/) ||
         normalized.match?(/\b(?:jan|feb|mar|apr|may|jun|june|jul|july|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?\b/) ||
         normalized.match?(/\b\d+\s+(?:days?|nights?)\b/)

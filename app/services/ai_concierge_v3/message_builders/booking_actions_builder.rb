@@ -22,6 +22,7 @@ module AiConciergeV3
         ask_specific_timing
         ask_rate_plan
         confirm_to_end_conversation
+        booking_attempt_cancelled_next_step
         end_conversation_declined
       ].freeze
 
@@ -67,6 +68,8 @@ module AiConciergeV3
           ask_rate_plan_message
         when :confirm_to_end_conversation
           confirm_to_end_conversation_message
+        when :booking_attempt_cancelled_next_step
+          booking_attempt_cancelled_next_step_message
         when :end_conversation_declined
           "No problem, please let me know if you need anything."
         end
@@ -206,12 +209,16 @@ module AiConciergeV3
       def confirm_to_end_conversation_message
         case context[:end_confirmation_mode].to_s
         when "cancel_booking_attempt"
-          "Dear guest, do you want to cancel your booking quotation attempt?"
+          "Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?"
         when "continue_booking"
           "Dear guest, do you have anything else to ask or do you want to continue with your booking?"
         else
           "Dear guest, do you have anything else to ask?"
         end
+      end
+
+      def booking_attempt_cancelled_next_step_message
+        "I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?"
       end
     end
   end

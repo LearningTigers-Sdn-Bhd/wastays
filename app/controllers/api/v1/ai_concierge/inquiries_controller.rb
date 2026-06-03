@@ -31,6 +31,7 @@ class Api::V1::AiConcierge::InquiriesController < Api::V1::BaseController
   private
 
   def inquiry_params
-    params.permit(:message, :phone, :prospect_public_id)
+    source = params[:inquiry].presence || params[:ai_concierge].presence || params
+    source.slice(:message, :phone, :prospect_public_id).permit(:message, :phone, :prospect_public_id)
   end
 end

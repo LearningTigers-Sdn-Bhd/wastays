@@ -119,6 +119,10 @@ module AiConciergeV3
       )
     end
 
+    def reset_booking_task
+      without_legacy(payload.merge("booking_task" => default_booking_task))
+    end
+
     private
 
     attr_reader :now

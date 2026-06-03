@@ -1,10 +1,12 @@
 module AiConciergeV3
   module Schemas
     class InterpretationSchema
+      MESSAGE_TYPES = AiConciergeV3::Agents::InterpreterAgent::MESSAGE_TYPES
       REQUIRED_SIGNAL_KEYS = %w[is_reset is_resume is_correction starts_new_booking_branch end_conversation].freeze
 
       def valid?(interpretation)
         interpretation.is_a?(Hash) &&
+          MESSAGE_TYPES.include?(interpretation["message_type"]) &&
           interpretation["intent"].present? &&
           interpretation["topic"].present? &&
           interpretation["slots"].is_a?(Hash) &&

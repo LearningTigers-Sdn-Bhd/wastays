@@ -148,6 +148,24 @@ RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
     expect(result[:action]).to eq(:resume)
   end
 
+  it "does not resume suspended bookings for hotel policy questions" do
+    result = described_class.new(
+      interpretation: interpretation.merge("intent" => "hotel_policy", "topic" => "hotel_policy"),
+      active_branch: {},
+      booking_task: {
+        "status" => "suspended",
+        "suspended" => true,
+        "pending_question" => "specific_timing",
+        "branch" => { "target_month" => 6, "target_year" => 2026, "month_segment" => "early" }
+      },
+      pending_question: nil,
+      message: "what should i aware during booking in this hotel?"
+    ).call
+
+    expect(result[:action]).to eq(:librarian)
+    expect(result[:pause]).to be(false)
+  end
+
   it "does not resume expired suspended bookings" do
     result = described_class.new(
       interpretation: interpretation.merge("intent" => "confirmation", "slots" => { "confirmation" => "yes" }),

@@ -110,7 +110,15 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
       end_confirmation_mode: :cancel_booking_attempt
     }).call
 
-    expect(result["reply_message"]).to eq("Dear guest, do you want to cancel your booking quotation attempt?")
+    expect(result["reply_message"]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
+  end
+
+  it "renders the cancelled booking attempt next-step prompt" do
+    result = described_class.new(hotel: hotel, context: {
+      reply_type: :booking_attempt_cancelled_next_step
+    }).call
+
+    expect(result["reply_message"]).to eq("I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?")
   end
 
   it "renders the generic end confirmation prompt" do
@@ -213,6 +221,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
 
     # We mock the interpreter to ensure it returns end_conversation=true
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return({
+      "message_type" => "conversation_control",
       "intent" => "greeting",
       "topic" => "greeting",
       "slots" => {},
@@ -227,7 +236,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
 
     result = AiConciergeV3::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "nevermind", prospect_public_id: prospect.public_id).call
 
-    expect(result.payload[:reply_message]).to eq("Dear guest, do you want to cancel your booking quotation attempt?")
+    expect(result.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
     state = prospect.prospect_conversation_state.reload
     expect(state.pending_question).to eq("confirm_to_end_conversation")
     expect(state.flow_status).to eq("active")
@@ -242,6 +251,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
 
     # We mock the interpreter to return no slots, but the guardrail should extract '4'
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return({
+      "message_type" => "booking_request",
       "intent" => "booking_search",
       "topic" => "booking_search",
       "slots" => {},
@@ -267,6 +277,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
 
     # Mock LLM hallucinating month_segment="early" for "june"
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return({
+      "message_type" => "booking_request",
       "intent" => "booking_search",
       "topic" => "booking_search",
       "slots" => { "target_month" => 6, "target_year" => 2026, "month_segment" => "early" },
@@ -293,6 +304,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
 
     # LLM correctly extracts mid
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return({
+      "message_type" => "booking_request",
       "intent" => "booking_search",
       "topic" => "booking_search",
       "slots" => { "month_segment" => "mid" },
@@ -318,6 +330,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
     })
 
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return({
+      "message_type" => "booking_confirmation",
       "intent" => "confirmation",
       "topic" => "booking_search",
       "slots" => { "confirmation" => "yes" },
@@ -342,6 +355,7 @@ RSpec.describe AiConciergeV3::Agents::MessengerAgent do
     prospect = create(:prospect, hotel: hotel)
 
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return({
+      "message_type" => "booking_request",
       "intent" => "booking_search",
       "topic" => "booking_search",
       "slots" => {},

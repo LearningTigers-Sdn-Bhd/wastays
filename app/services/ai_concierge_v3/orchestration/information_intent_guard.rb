@@ -27,7 +27,13 @@ module AiConciergeV3
     def policy_question?
       normalized = normalize_text(message)
 
-      normalized.match?(/\b(?:policy|policies|rules?|house rules?|hotel rules?|cancell?ation|check in|check out)\b/)
+      normalized.match?(/\b(?:policy|policies|rules?|house rules?|hotel rules?|cancell?ation|check in|check out)\b/) ||
+        booking_advice_question?(normalized)
+    end
+
+    def booking_advice_question?(normalized)
+      normalized.match?(/\bbooking\b/) &&
+        normalized.match?(/\b(?:aware|know|notice|note|terms?|conditions?|requirements?|important|before|during|while|when)\b/)
     end
 
     def policy_interpretation
@@ -76,7 +82,7 @@ module AiConciergeV3
     end
 
     def timing_reference?(normalized)
-      normalized.match?(/\b(?:today|tomorrow|tonight|next month|early|mid|late|jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\b/) ||
+      normalized.match?(/\b(?:today|tomorrow|tonight|this month|next month|early|mid|late|jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\b/) ||
         normalized.match?(/\b\d{1,2}(?:st|nd|rd|th)?\b/)
     end
 

@@ -6,6 +6,7 @@ RSpec.describe AiConciergeV3::Orchestration::InquiryResponder do
   before do
     # Mock Interpreter
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return({
+      "message_type" => "greeting_or_unknown",
       "intent" => "greeting",
       "topic" => "general",
       "confidence" => 1.0,
