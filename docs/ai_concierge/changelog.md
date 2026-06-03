@@ -1,6 +1,65 @@
 # AI Concierge Changelog
 
-## V3.4 — Black-Box Hotel Knowledge Routing (Current)
+## V4 — Interpreter Message-Type and Compact State Context (Current)
+
+### Changes
+- Added internal interpreter `message_type` classification before existing `intent`, `topic`, slots, and tool hints
+- Supported internal message types:
+  - `booking_request`
+  - `booking_selection`
+  - `booking_confirmation`
+  - `hotel_info_question`
+  - `hotel_policy_question`
+  - `room_info_question`
+  - `existing_booking_question`
+  - `conversation_control`
+  - `greeting_or_unknown`
+- Kept the public API response unchanged:
+  - `reply_message`
+  - `needs_human_support`
+  - `action_name`
+  - `prospect_public_id`
+- Enhanced compact interpreter state instead of loading full conversation history:
+  - latest assistant question
+  - compact shown booking options
+  - compact rate-plan options
+  - selected option summary
+- Improved booking-vs-hotel-knowledge filtering:
+  - hotel service/policy/advice questions stay in librarian routing
+  - room description questions stay room info
+  - date/month booking requests stay booking flow
+  - yes/no and option-number replies depend on pending question/state
+- Added relative-month guardrails:
+  - `late this month` resolves against the current month
+  - bare `this month` does not reuse stale `early/mid/late`; it asks for a date or assumption range
+- Fixed suspended booking interruptions so hotel information/policy questions do not resume stale no-option searches
+- Fixed booking attempt cancellation:
+  - cancel-attempt phrases clear the booking task
+  - guest is asked whether to start a new booking, ask hotel policies/information, or end the conversation
+  - a follow-up generic booking request starts fresh instead of continuing stale state
+- Accepted nested `inquiry` / `ai_concierge` request payloads and avoided unpermitted route-param noise
+
+### Files Changed
+- `interpreter_agent.rb` — message-type-first prompt and examples
+- `interpretation_schema.rb` — validates supported internal `message_type`
+- `conversation_summary_builder.rb` — compact context for latest assistant question, shown options, rate plans, and selected option
+- `booking_input_normalizer.rb` — deterministic relative-month handling and stale segment clearing
+- `information_intent_guard.rb` — booking-advice and hotel-service routing corrections
+- `transition_policy.rb` — prevents hotel knowledge interruptions from resuming stale booking flow
+- `turn_orchestrator.rb` — cancel-attempt reset/next-step flow and fresh booking after stale attempts
+- `conversation_task_manager.rb` — booking task reset helper
+- `booking_actions_builder.rb` — cancel-attempt next-step reply
+- `inquiries_controller.rb` — permitted nested inquiry params
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge_v3`
+- 185 examples, 0 failures
+- `bundle exec rspec spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
+- 34 examples, 0 failures
+
+---
+
+## V3.4 — Black-Box Hotel Knowledge Routing
 
 ### Changes
 - Treat hotel knowledge categories (`policy`, `faq`, `general_info`) as storage categories, not strict intent boundaries

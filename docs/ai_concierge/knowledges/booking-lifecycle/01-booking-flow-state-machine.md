@@ -4,15 +4,16 @@
 
 High-level transition order:
 
-1. explicit stop/bye/thanks/nevermind message -> end the current conversation (highest precedence)
-2. explicit reset -> reset current flow
-3. non-expired suspended booking selection or confirmation follow-up -> resume booking
-4. hotel-policy, hotel-information, nearby-attractions, or room-information intent -> librarian
-5. booking context intent -> booking context
-6. pending booking question -> booking
-7. greeting intent -> greeting
-8. booking, option-selection, or confirmation intent -> booking
-9. unknown intent without state -> fallback
+1. explicit booking attempt cancellation -> reset booking task and ask the next-step choice
+2. explicit stop/bye/thanks/nevermind message -> end or confirm ending the current conversation
+3. explicit reset -> reset current flow
+4. non-expired suspended booking selection or confirmation follow-up -> resume booking
+5. hotel-policy, hotel-information, nearby-attractions, or room-information intent -> librarian
+6. booking context intent -> booking context
+7. pending booking question -> booking
+8. greeting intent -> greeting
+9. booking, option-selection, or confirmation intent -> booking
+10. unknown intent without state -> fallback
 
 ## Booking Sub-step Rules (inside `BookingOrchestrator`)
 
@@ -32,6 +33,8 @@ High-level transition order:
 14. return with option selection -> resume suspended branch if still valid
 15. `another booking` -> archive completed branch and start fresh branch
 16. change of month/window or party composition -> clear stale suggestions, pending selection, and confirmation state, then rerun search
+17. generic booking request after stale no-options state -> reset stale branch and ask for fresh dates/month
+18. bare `this month` without date or early/mid/late -> ask for exact check-in date or assumption range
 
 ## Booking Task Statuses
 

@@ -27,6 +27,8 @@ When party composition changes, clear:
 - preserve correction turns
 - extract pure numeric guest-count answers when the pending question is guest count
 - guard `party_size_total`, `adults`, and `children` against LLM over-inference
+- resolve explicit `late this month` / `early this month` / `mid this month` against the current month
+- clear stale `month_segment` for bare `this month` so the flow asks for exact date or assumption range
 
 ## `pending_selection` Shape
 
@@ -76,4 +78,5 @@ These fields are set during `handle_rate_plan_selection` in `BookingOrchestrator
 - `mid august` -> days `11..20`
 - `late august` -> days `21..end_of_month`
 - `august` -> whole month
+- `this month` -> current calendar month, with no segment unless the guest said early/mid/late
 - `next month` -> next calendar month

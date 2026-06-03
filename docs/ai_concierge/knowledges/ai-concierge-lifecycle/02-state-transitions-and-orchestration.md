@@ -28,17 +28,19 @@ Central coordinator for a single concierge turn:
 2. load persisted conversation state
 3. reactivate an ended conversation state when a new inbound turn arrives
 4. record inbound message
-5. call interpreter
-6. apply `InformationIntentGuard` and `BookingInputNormalizer`
-7. merge incoming slots into active branch
-8. decide next legal action via `TransitionPolicy`
-9. delegate booking actions to `BookingOrchestrator`
-10. delegate information actions to `LibrarianOrchestrator`
-11. build state patch
-12. call messenger
-13. record inbound and outbound prospect messages
-14. explicitly archive active branches on conversation end
-15. return final payload
+5. build compact conversation summary
+6. call interpreter
+7. intercept explicit booking attempt cancellation
+8. apply `InformationIntentGuard` and `BookingInputNormalizer`
+9. merge incoming slots into active branch
+10. decide next legal action via `TransitionPolicy`
+11. delegate booking actions to `BookingOrchestrator`
+12. delegate information actions to `LibrarianOrchestrator`
+13. build state patch
+14. call messenger
+15. record inbound and outbound prospect messages
+16. explicitly archive active branches on conversation end
+17. return final payload
 
 ## `BookingOrchestrator`
 
@@ -80,12 +82,28 @@ Enforces high-level legal routing:
 - route information intents outside active booking to librarian with `pause: false`
 - policy phrasing corrected by `InformationIntentGuard` before routing, including "booking policy", policies/rules/house rules, cancellation, check-in, and check-out questions
 - hotel service questions corrected by `InformationIntentGuard` before routing, including parking, transportation, shuttle/airport transfer, WiFi, breakfast, restaurant, spa, pool, amenities, and facilities
+- hotel booking-advice questions corrected by `InformationIntentGuard` before routing, including "what should I be aware of during booking"
 - clear booking requests still remain booking flow, including book/reserve/quote, room availability, and date/month booking phrasing
+- suspended booking resumes only for selection/confirmation/booking follow-ups, not hotel information or policy interruptions
 
 ## `ConversationTaskManager`
 
 - normalize legacy `active` and `paused_flows` state into V2 task state on read
 - write new state using `state_version: 2`
 - activate, suspend, resume, expire, and archive booking tasks
+- reset the active booking task when the guest cancels the booking attempt
 - update `information_task`
 - avoid writing legacy `active` and `paused_flows` keys
+
+## Booking Attempt Cancellation
+
+Cancel-attempt phrases such as `cancel attempt`, `cancel booking attempt`, and `cancel my attempt for booking` do not continue a stale booking branch.
+
+They:
+
+1. reset `booking_task` to `idle`
+2. clear `active_flow`, `active_topic`, and `pending_question`
+3. keep the conversation active
+4. ask whether the guest wants to start a new booking, ask hotel policies/information, or end the conversation
+
+A follow-up generic booking request such as `I want to make booking` starts fresh and asks for dates or month.

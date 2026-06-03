@@ -14,7 +14,8 @@ AiConciergeV3 uses a hybrid architecture where:
 ## AI Responsibilities
 
 - interpret the user's message into structured meaning
-- return slots, intent, and conversation signals only
+- classify an internal `message_type` before intent/topic mapping
+- return `message_type`, slots, intent, tool hints, and conversation signals only
 
 ## Ruby Responsibilities
 
@@ -26,19 +27,21 @@ AiConciergeV3 uses a hybrid architecture where:
 - invalidate stale suggestion sets
 - guard against invented timing, duration, and guest-count splits
 - preserve disambiguation context across turns
+- keep compact state summaries instead of sending full chat history to the interpreter
 - render deterministic guest-facing replies
 - generate booking links through the existing quote flow
 
 ## Target Workflow
 
 1. user sends message
-2. `InterpreterAgent` returns structured interpretation
-3. `TurnOrchestrator` applies deterministic guards to timing, duration, and guest count
-4. orchestrator merges safe slots into state and decides the next action
-5. orchestrator executes one or more deterministic tools
-6. orchestrator builds structured reply context
-7. `MessengerAgent` renders `reply_message`
-8. Ruby returns public payload and persists state updates
+2. `ConversationSummaryBuilder` builds compact state context
+3. `InterpreterAgent` classifies internal `message_type`, then returns structured interpretation
+4. `TurnOrchestrator` applies deterministic guards to timing, duration, and guest count
+5. orchestrator merges safe slots into state and decides the next action
+6. orchestrator executes one or more deterministic tools
+7. orchestrator builds structured reply context
+8. `MessengerAgent` renders `reply_message`
+9. Ruby returns public payload and persists state updates
 
 ## Ownership Boundaries
 
@@ -49,3 +52,12 @@ AiConciergeV3 uses a hybrid architecture where:
 - `ConversationTaskManager`: V2 task-state normalization, legacy read migration, activate/suspend/resume/archive, and avoiding legacy writes.
 - `BookingInputNormalizer`: deterministic booking slot guards before merge.
 - `InformationIntentGuard`: deterministic hotel/property amenities and facilities correction before routing.
+
+## Public Payload Stability
+
+V4 adds internal interpreter/state fields, but the public inquiry response stays unchanged:
+
+- `reply_message`
+- `needs_human_support`
+- `action_name`
+- `prospect_public_id`

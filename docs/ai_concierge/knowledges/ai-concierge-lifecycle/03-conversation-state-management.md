@@ -34,6 +34,7 @@
 - explicit user stop phrases end only the current conversation (`end_reason: "user_ended"`)
 - successful booking URL generation ends the current conversation (`end_reason: "booking_url_generated"`)
 - a later valid inbound message reactivates the same `ProspectConversationState`
+- booking attempt cancellation resets `booking_task` but keeps the conversation active so the guest can choose the next step
 
 ## `slots_payload["booking_task"]`
 
@@ -86,6 +87,41 @@
 
 - Information turns update `information_task` and may suspend `booking_task`
 - They do not erase booking options or confirmation candidates
+
+## Compact Interpreter Summary
+
+The interpreter does not receive full conversation history by default. `ConversationSummaryBuilder` sends compact state instead:
+
+```json
+{
+  "last_assistant_question": "For 5 people, how many are adults and how many are children?",
+  "booking_task": {
+    "status": "waiting_for_option_selection",
+    "pending_question": "select_option",
+    "shown_options": [
+      {
+        "position": 1,
+        "selection_id": "option-uuid",
+        "room_type_name": "Deluxe Room",
+        "check_in": "2026-06-23",
+        "check_out": "2026-06-26"
+      }
+    ],
+    "rate_plan_options": [
+      { "position": 1, "name": "Standard Rate" },
+      { "position": 2, "name": "Non-Refundable" }
+    ],
+    "selected_option_summary": {
+      "room_type_name": "Deluxe Room",
+      "check_in": "2026-06-23",
+      "check_out": "2026-06-26",
+      "rate_plan_name": "Standard Rate"
+    }
+  }
+}
+```
+
+This lets the interpreter understand compact follow-ups without loading noisy transcripts.
 
 ## `slots_payload["completed_booking_branches"]`
 

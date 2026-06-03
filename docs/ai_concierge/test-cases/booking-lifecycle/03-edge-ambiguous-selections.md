@@ -23,3 +23,11 @@
 ## Scenario: Raw option phrases
 
 1. `i chose option 1`, `i choose option 1`, `choice 1`, `number 1` all accepted
+
+## Scenario: Message type depends on state
+
+1. `yes` while pending confirmation confirms the selected option
+2. `yes` while pending guest count does not confirm booking
+3. `option 1 executive` while shown options exist selects the shown option
+4. `the cheaper one` while rate plans are shown selects the cheaper rate plan
+5. `what about deluxe?` after shown options uses compact shown-option context

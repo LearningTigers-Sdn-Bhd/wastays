@@ -1,18 +1,20 @@
 # Priority 1: Top Risks
 
 ## Remaining Risks
-1. interpreter invents month or date from vague booking interest
-2. interpreter invents duration from month-only messages
-3. interpreter converts `people` into `adults`
-4. stale option sets survive corrections
-5. disambiguation loops if pending selection context is not preserved
-6. room-type matching is too strict for natural shorthand
-7. booking-link generation fails because selected options lack `room_type_id`
+1. room-type matching may still be too strict for natural shorthand not covered by current examples
+2. booking-link generation can still fail when upstream quote/availability data lacks required IDs
+3. hotels may store policy/service facts in unexpected knowledge categories, so retrieval quality still depends on good content
+4. multi-turn cancellation phrasing beyond explicit cancel-attempt language may need more product tuning
 
 ## V3.1 Risks
-1. interpreter fails to extract rate plan name from vague guest descriptions ("the cheaper one", "first one")
+1. interpreter may still miss unusual rate plan descriptions beyond common phrases such as "the cheaper one" or "first one"
 2. rate plan name normalization across providers — some hotels may use non-standard naming
 3. rate plan selection during suspended booking resume may lose context
+
+## V4 Risks
+1. `message_type` is internal guidance only; Ruby guards remain the final authority
+2. compact state can become stale if shown options or rate-plan summaries are not cleared with branch changes
+3. booking-advice phrases may overlap with actual booking requests and should stay covered by regression tests
 
 ## Expansion Candidates
 - hotel-policy interruption and resume (implemented — verify coverage)
@@ -26,4 +28,3 @@
 - Additional information tool groups (restaurants, spa, events)
 - Multi-language support
 - Voice interface support
-
