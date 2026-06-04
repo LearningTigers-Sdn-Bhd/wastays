@@ -59,7 +59,7 @@ Supported internal types:
 
 ## Verification
 
-- `bundle exec rspec spec/services/ai_concierge_v3`
+- `bundle exec rspec spec/services/ai_concierge`
 - 185 examples, 0 failures
 - `bundle exec rspec spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
 - 34 examples, 0 failures

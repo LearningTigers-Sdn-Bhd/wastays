@@ -2,7 +2,7 @@
 
 ## `search_booking_options`
 
-- Path: `app/services/ai_concierge_v3/tools/booking/search_booking_options_tool.rb`
+- Path: `app/services/ai_concierge/tools/booking/search_booking_options_tool.rb`
 - Purpose: search available booking options for the current branch inputs
 - Inputs: hotel, target_month, target_year, month_segment, optional check_in, optional check_out, adults, children, room_count, nights
 - Output: grouped options with room type identity, dates, prices, positions, and selection IDs
@@ -40,7 +40,7 @@
 
 ## `select_booking_option`
 
-- Path: `app/services/ai_concierge_v3/tools/booking/select_booking_option_tool.rb`
+- Path: `app/services/ai_concierge/tools/booking/select_booking_option_tool.rb`
 - Purpose: resolve selection input against the current shown suggestion set
 - Inputs: optional option_number, suggested_options, suggestion_set_version, optional selection_id, optional check_in, raw message, optional pending_selection
 - Success output: selected option payload and suggestion set version
@@ -58,7 +58,7 @@ Supported selection styles:
 
 ## `generate_booking_url`
 
-- Path: `app/services/ai_concierge_v3/tools/booking/generate_booking_url_tool.rb`
+- Path: `app/services/ai_concierge/tools/booking/generate_booking_url_tool.rb`
 - Purpose: convert a confirmed option into a booking quote link
 - Inputs: selected option, resolved prospect phone, optional `rate_plan_id`
 - Success output: booking_url, total_amount, currency, expires_at, quote_token
@@ -78,7 +78,7 @@ Internal booking URL failure codes:
 
 ## Rate Plan Selection
 
-Rate plan selection is resolved deterministically by `AiConciergeV3::Matching::RatePlanMatcher`, called from `Booking::RatePlanSelectionHandler`.
+Rate plan selection is resolved deterministically by `AiConcierge::Matching::RatePlanMatcher`, called from `Booking::RatePlanSelectionHandler`.
 
 Supported rate-plan selection styles:
 - exact or partial rate-plan names when unique

@@ -6,9 +6,9 @@
 
 ## Changes
 
-- Extracted `AiConciergeV3::Orchestration::BookingRevisionPolicy` for booking-ready `change rate` and `change room` decisions.
-- Extracted `AiConciergeV3::Matching::RatePlanMatcher` for deterministic rate-plan matching.
-- Extracted `AiConciergeV3::Orchestration::Core::ConversationControlPolicy` for booking-attempt cancellation, explicit end requests, end-confirmation replies, and end-confirmation mode.
+- Extracted `AiConcierge::Orchestration::BookingRevisionPolicy` for booking-ready `change rate` and `change room` decisions.
+- Extracted `AiConcierge::Matching::RatePlanMatcher` for deterministic rate-plan matching.
+- Extracted `AiConcierge::Orchestration::Core::ConversationControlPolicy` for booking-attempt cancellation, explicit end requests, end-confirmation replies, and end-confirmation mode.
 - Kept orchestrators as coordinators:
   - `TurnOrchestrator` still owns lifecycle sequencing, persistence, and response construction.
   - `BookingOrchestrator` still owns booking flow execution and delegates matching/revision decisions.
@@ -28,6 +28,6 @@ Inquiry responses remain:
 
 ## Verification
 
-- `bundle exec rspec spec/services/ai_concierge_v3/orchestration spec/services/ai_concierge_v3/matching spec/services/ai_concierge_v3/tools/booking/search_booking_options_tool_spec.rb`
+- `bundle exec rspec spec/services/ai_concierge/orchestration spec/services/ai_concierge/matching spec/services/ai_concierge/tools/booking/search_booking_options_tool_spec.rb`
 - `bundle exec rspec spec/requests/api/v1/ai_concierge`
-- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge`
+- `bundle exec rubocop --cache false app/services/ai_concierge spec/services/ai_concierge spec/requests/api/v1/ai_concierge`

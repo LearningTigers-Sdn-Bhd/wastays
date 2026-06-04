@@ -513,7 +513,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
   end
 
   def stub_interpreter
-    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call) do |agent|
+    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call) do |agent|
       build_interpretation(
         message: agent.instance_variable_get(:@message),
         conversation_summary: agent.instance_variable_get(:@conversation_summary)

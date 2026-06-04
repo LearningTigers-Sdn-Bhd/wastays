@@ -29,7 +29,7 @@
 
 ## `get_hotel_policy`
 
-- Path: `app/services/ai_concierge_v3/tools/hotel_information/get_hotel_policy_tool.rb`
+- Path: `app/services/ai_concierge/tools/hotel_information/get_hotel_policy_tool.rb`
 - Purpose: answer hotel policy questions
 - Inputs: hotel, optional `policy_topic`, optional `query`
 - Source order: vector search over indexed policy chunks -> cross-category hotel knowledge retry -> full indexed policy document fallback -> `hotel.property_policy`
@@ -38,7 +38,7 @@
 
 ## `get_general_hotel_info`
 
-- Path: `app/services/ai_concierge_v3/tools/hotel_information/get_general_hotel_info_tool.rb`
+- Path: `app/services/ai_concierge/tools/hotel_information/get_general_hotel_info_tool.rb`
 - Purpose: return general hotel details
 - Inputs: hotel, optional `query`
 - Source order: vector search over indexed `general_info` chunks -> cross-category hotel knowledge retry -> structured hotel facts and amenities
@@ -47,7 +47,7 @@
 
 ## `get_hotel_faq`
 
-- Path: `app/services/ai_concierge_v3/tools/hotel_information/get_hotel_faq_tool.rb`
+- Path: `app/services/ai_concierge/tools/hotel_information/get_hotel_faq_tool.rb`
 - Purpose: return hotel FAQ content
 - Inputs: hotel, optional `query`
 - Source order: vector search over indexed FAQ chunks -> cross-category hotel knowledge retry -> full indexed FAQ document fallback
@@ -56,7 +56,7 @@
 
 ## `get_nearby_attractions`
 
-- Path: `app/services/ai_concierge_v3/tools/hotel_information/get_nearby_attractions_tool.rb`
+- Path: `app/services/ai_concierge/tools/hotel_information/get_nearby_attractions_tool.rb`
 - Purpose: return the full nearby attractions list
 - Inputs: hotel only
 - Output: all nearby attractions with name, description, address, city, and country
@@ -64,7 +64,7 @@
 
 ## `get_booking_context`
 
-- Path: `app/services/ai_concierge_v3/tools/hotel_information/get_booking_context_tool.rb`
+- Path: `app/services/ai_concierge/tools/hotel_information/get_booking_context_tool.rb`
 - Purpose: answer questions about an existing active booking for the resolved prospect phone number
 - Output: structured booking rows with date range and room type name
 - Example: "what booking do i have", "do i have an active booking"

@@ -2,7 +2,7 @@
 
 ## `InterpreterAgent`
 
-- Path: `app/services/ai_concierge_v3/agents/interpreter_agent.rb`
+- Path: `app/services/ai_concierge/agents/interpreter_agent.rb`
 - Input: raw message + compact conversation summary
 - Output: structured interpretation only
 - No state mutation
@@ -73,7 +73,7 @@
 
 ## Schema Validation
 
-- Defined in `app/services/ai_concierge_v3/schemas/interpretation_schema.rb`
+- Defined in `app/services/ai_concierge/schemas/interpretation_schema.rb`
 - Keeps model output shape validated before the rest of the Ruby flow uses it
 
 ## `ConversationSummaryBuilder`

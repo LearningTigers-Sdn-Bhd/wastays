@@ -1,16 +1,32 @@
 # AI Concierge Changelog
 
-## V5.0 — Orchestration Domain Restructure (Current)
+## V5.1 — Internal Namespace Rename (Current)
 
 ### Changes
-- Reorganized AI Concierge V3 orchestration into focused folders:
+- Renamed the internal implementation namespace from `AiConciergeV3` to `AiConcierge`.
+- Moved service and spec folders from `ai_concierge_v3` to `ai_concierge`.
+- Updated internal callers, tool registry constants, request specs, lifecycle docs, completed-roadmap notes, and PR docs to the current namespace.
+- Kept the public API route, controller namespace, database fields, request params, and response payload unchanged.
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge spec/requests/api/v1/ai_concierge`
+- 307 examples, 0 failures
+- `bundle exec rubocop --cache false app/services/ai_concierge spec/services/ai_concierge spec/requests/api/v1/ai_concierge`
+- no offenses
+
+---
+
+## V5.0 — Orchestration Domain Restructure
+
+### Changes
+- Reorganized AI Concierge orchestration into focused folders:
   - `orchestration/core` for shared entry/result/policy/payload primitives
   - `orchestration/conversation` for prospect session loading, interpretation, control handling, booking-context handling, and response persistence
   - `orchestration/booking` for booking-specific orchestration, selection, rate-plan, resume, completion, revision, and normalization logic
   - `orchestration/hotel_knowledge` for policy/general info/FAQ/attractions/room-information coordination
 - Kept `TurnOrchestrator` as the top-level conversation coordinator while moving lifecycle details into focused conversation collaborators.
 - Replaced `LibrarianOrchestrator` with `HotelKnowledge::Orchestrator` and extracted tool routing, state handling, diagnostics, and room reply mapping.
-- Grouped shared orchestration primitives under `AiConciergeV3::Orchestration::Core`:
+- Grouped shared orchestration primitives under `AiConcierge::Orchestration::Core`:
   - `InquiryResponder`
   - `Result`
   - `ResponsePayloadBuilder`
@@ -35,9 +51,9 @@
 - lifecycle docs — updated architecture, state-transition, and implementation reading order references
 
 ### Verification
-- `bundle exec rspec spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge`
+- `bundle exec rspec spec/services/ai_concierge spec/requests/api/v1/ai_concierge`
 - 307 examples, 0 failures
-- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge`
+- `bundle exec rubocop --cache false app/services/ai_concierge spec/services/ai_concierge spec/requests/api/v1/ai_concierge`
 - no offenses
 
 ---
@@ -69,11 +85,11 @@
 - policy, matcher, and booking search specs — focused unit coverage plus bounded SQL query-count regression coverage
 
 ### Verification
-- `bundle exec rspec spec/services/ai_concierge_v3/orchestration spec/services/ai_concierge_v3/matching spec/services/ai_concierge_v3/tools/booking/search_booking_options_tool_spec.rb`
+- `bundle exec rspec spec/services/ai_concierge/orchestration spec/services/ai_concierge/matching spec/services/ai_concierge/tools/booking/search_booking_options_tool_spec.rb`
 - 132 examples, 0 failures
 - `bundle exec rspec spec/requests/api/v1/ai_concierge`
 - 48 examples, 0 failures
-- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge`
+- `bundle exec rubocop --cache false app/services/ai_concierge spec/services/ai_concierge spec/requests/api/v1/ai_concierge`
 - no offenses
 
 ---
@@ -95,12 +111,12 @@
 - `rate_plan_black_box_spec.rb` — request-level coverage for rate revision through quote confirmation, room revision after hotel-info interruption, cancellation, and confirmation rejection
 
 ### Verification
-- `bundle exec rspec spec/services/ai_concierge_v3/orchestration/booking_orchestrator_spec.rb`
-- `bundle exec rspec spec/services/ai_concierge_v3/state/slot_merger_spec.rb`
+- `bundle exec rspec spec/services/ai_concierge/orchestration/booking_orchestrator_spec.rb`
+- `bundle exec rspec spec/services/ai_concierge/state/slot_merger_spec.rb`
 - `bundle exec rspec spec/requests/api/v1/ai_concierge/rate_plan_black_box_spec.rb`
 - `bundle exec rspec spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
-- `bundle exec rspec spec/services/ai_concierge_v3`
-- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge`
+- `bundle exec rspec spec/services/ai_concierge`
+- `bundle exec rubocop --cache false app/services/ai_concierge spec/services/ai_concierge spec/requests/api/v1/ai_concierge`
 
 ---
 
@@ -173,11 +189,11 @@
 - `turn_orchestrator.rb` — broader booking-attempt cancellation and stable direct fallback payloads
 
 ### Verification
-- `bundle exec rspec spec/services/ai_concierge_v3`
+- `bundle exec rspec spec/services/ai_concierge`
 - 200 examples, 0 failures
 - `bundle exec rspec spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
 - 35 examples, 0 failures
-- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
+- `bundle exec rubocop --cache false app/services/ai_concierge spec/services/ai_concierge spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
 - no offenses
 
 ---
@@ -234,7 +250,7 @@
 - `inquiries_controller.rb` — permitted nested inquiry params
 
 ### Verification
-- `bundle exec rspec spec/services/ai_concierge_v3`
+- `bundle exec rspec spec/services/ai_concierge`
 - 185 examples, 0 failures
 - `bundle exec rspec spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
 - 34 examples, 0 failures
@@ -261,7 +277,7 @@
 - `interpreter_agent.rb` — prompt examples for house rules, transportation, and parking
 
 ### Verification
-- `bundle exec rspec spec/services/ai_concierge_v3`
+- `bundle exec rspec spec/services/ai_concierge`
 - 170 examples, 0 failures
 - `bundle exec rubocop --cache false ...`
 - no offenses
@@ -293,7 +309,7 @@
 - `information_intent_guard.rb` and `interpreter_agent.rb` — policy phrasing guard/prompt examples
 
 ### Verification
-- `bundle exec rspec spec/services/ai_concierge_v3`
+- `bundle exec rspec spec/services/ai_concierge`
 - 158 examples, 0 failures
 - `bundle exec rubocop --cache false ...`
 - no offenses
@@ -317,7 +333,7 @@
 - `spec/factories/hotel_knowledge_chunks.rb` — new factory
 
 ### Verification
-- `bundle exec rspec spec/services/ai_concierge_v3/tools/hotel_information/`
+- `bundle exec rspec spec/services/ai_concierge/tools/hotel_information/`
 - 13 examples, 0 failures
 
 ---

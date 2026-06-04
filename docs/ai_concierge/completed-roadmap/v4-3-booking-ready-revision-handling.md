@@ -16,9 +16,9 @@ When a booking branch already had enough information to quote or confirm, guest 
 
 ## Verification
 
-- `bundle exec rspec spec/services/ai_concierge_v3/orchestration/booking_orchestrator_spec.rb`
-- `bundle exec rspec spec/services/ai_concierge_v3/state/slot_merger_spec.rb`
+- `bundle exec rspec spec/services/ai_concierge/orchestration/booking_orchestrator_spec.rb`
+- `bundle exec rspec spec/services/ai_concierge/state/slot_merger_spec.rb`
 - `bundle exec rspec spec/requests/api/v1/ai_concierge/rate_plan_black_box_spec.rb`
 - `bundle exec rspec spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
-- `bundle exec rspec spec/services/ai_concierge_v3`
-- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge`
+- `bundle exec rspec spec/services/ai_concierge`
+- `bundle exec rubocop --cache false app/services/ai_concierge spec/services/ai_concierge spec/requests/api/v1/ai_concierge`

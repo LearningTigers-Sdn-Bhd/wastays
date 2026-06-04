@@ -7,7 +7,7 @@ V3.2 restored FAQ and policy tools by reading normalized `HotelKnowledgeDocument
 - [x] Added `HotelKnowledges::SearchService` for vector retrieval over indexed knowledge chunks
 - [x] Search filters by hotel, category, indexed document status, and non-empty embeddings
 - [x] Search returns normalized internal metadata: content, document title, category, language, version, chunk index, and vector distance
-- [x] Added `AiConciergeV3::Agents::KnowledgeAnswerAgent` for LLM synthesis over retrieved snippets and structured fallback facts
+- [x] Added `AiConcierge::Agents::KnowledgeAnswerAgent` for LLM synthesis over retrieved snippets and structured fallback facts
 - [x] Added `HybridAnswerBuilder` answer-mode selection:
   - `fallback` for direct structured facts or existing full-document fallback text
   - `deterministic` for one strong retrieved match
@@ -26,7 +26,7 @@ V3.2 restored FAQ and policy tools by reading normalized `HotelKnowledgeDocument
 - No database migration required
 
 ## Verification
-- `bundle exec rspec spec/services/ai_concierge_v3`
+- `bundle exec rspec spec/services/ai_concierge`
 - 158 examples, 0 failures
 - `bundle exec rspec spec/services/hotel_knowledges spec/jobs/hotel_knowledges spec/models/hotel_knowledge_document_spec.rb spec/models/hotel_knowledge_chunk_spec.rb`
 - 50 examples, 0 failures

@@ -33,7 +33,7 @@ The AI Concierge V3 feature needed production hardening — rate limiting to pro
 ## File Changes
 
 ```
-app/services/ai_concierge_v3/
+app/services/ai_concierge/
 ├── prospect_not_found_error.rb                          (new)
 ├── agents/
 │   ├── interpreter_agent.rb                             (modified)
@@ -78,7 +78,7 @@ app/services/ai_concierge_v3/
     └── room_information/
         └── get_room_type_details_tool.rb
 
-spec/services/ai_concierge_v3/
+spec/services/ai_concierge/
 ├── prospect_not_found_error_spec.rb                     (new)
 ├── agents/
 │   ├── interpreter_agent_spec.rb
@@ -143,8 +143,8 @@ lib/tasks/
 └── hotel_ops.rake                                         (modified)
 
 Removed:
-├── app/services/ai_concierge_v3/state/branch_manager.rb
-├── spec/services/ai_concierge_v3/state/branch_manager_spec.rb
+├── app/services/ai_concierge/state/branch_manager.rb
+├── spec/services/ai_concierge/state/branch_manager_spec.rb
 ├── docs/ai-concierge/v3/
 │   ├── file-structure.md
 │   ├── research.md
@@ -158,8 +158,8 @@ Removed:
 - **1941 examples, 0 failures** — all 8 CI stages pass (RuboCop, Brakeman, Bundle Audit, Importmap Audit, Tailwind Build, DB Setup, Parallel RSpec)
 - New specs:
   - `spec/requests/api/v1/ai_concierge/inquiries_spec.rb` — 4 new auth/validation scenarios
-  - `spec/services/ai_concierge_v3/prospect_not_found_error_spec.rb` — error class unit test
+  - `spec/services/ai_concierge/prospect_not_found_error_spec.rb` — error class unit test
 - Updated specs:
-  - `spec/services/ai_concierge_v3/orchestration/turn_orchestrator_spec.rb` — removed `identity_mode:` param across all examples
+  - `spec/services/ai_concierge/orchestration/turn_orchestrator_spec.rb` — removed `identity_mode:` param across all examples
 - Removed specs:
-  - `spec/services/ai_concierge_v3/state/branch_manager_spec.rb` — deprecated alongside `BranchManager`
+  - `spec/services/ai_concierge/state/branch_manager_spec.rb` — deprecated alongside `BranchManager`

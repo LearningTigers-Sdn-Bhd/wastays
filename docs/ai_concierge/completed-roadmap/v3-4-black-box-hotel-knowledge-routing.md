@@ -25,7 +25,7 @@ Only after the cross-category retry fails should the tool use structured fallbac
 
 ## Verification
 
-- `bundle exec rspec spec/services/ai_concierge_v3`
+- `bundle exec rspec spec/services/ai_concierge`
 - 170 examples, 0 failures
 - `bundle exec rubocop --cache false ...`
 - no offenses

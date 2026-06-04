@@ -2,7 +2,7 @@
 
 ## Hybrid Workflow
 
-AiConciergeV3 uses a hybrid architecture where:
+AiConcierge uses a hybrid architecture where:
 
 - **LLM handles structured interpretation only** — converting raw user messages into structured intents, slots, and signals
 - **Ruby handles everything else** — state management, transitions, validation, tool execution, side effects, and guest-facing reply rendering

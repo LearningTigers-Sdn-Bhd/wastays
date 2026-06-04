@@ -46,9 +46,9 @@ V4 improved routing and compact state context, but several production-risk edges
 
 ## Verification
 
-- `bundle exec rspec spec/services/ai_concierge_v3`
+- `bundle exec rspec spec/services/ai_concierge`
 - 200 examples, 0 failures
 - `bundle exec rspec spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
 - 35 examples, 0 failures
-- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
+- `bundle exec rubocop --cache false app/services/ai_concierge spec/services/ai_concierge spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
 - no offenses

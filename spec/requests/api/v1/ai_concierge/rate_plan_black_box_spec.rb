@@ -208,7 +208,7 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
   end
 
   def stub_interpreter
-    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call) do |agent|
+    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call) do |agent|
       build_interpretation(agent.instance_variable_get(:@message))
     end
   end

@@ -2,7 +2,7 @@
 
 ## `get_room_type_details`
 
-- Path: `app/services/ai_concierge_v3/tools/room_information/get_room_type_details_tool.rb`
+- Path: `app/services/ai_concierge/tools/room_information/get_room_type_details_tool.rb`
 - Purpose: answer room detail questions
 - Inputs: guest message and optional interpreted `room_type_name`
 - Success output: matched room type, description, occupancy, and amenity names
