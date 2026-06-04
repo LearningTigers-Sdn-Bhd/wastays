@@ -1,6 +1,7 @@
 module AiConciergeV3
   module Orchestration
-    class BookingRevisionPolicy
+    module Booking
+      class RevisionPolicy
       REVISION_SLOT_KEYS = %w[
         target_month target_year month_segment check_in check_out nights days
         party_size_total adults children room_count
@@ -96,6 +97,7 @@ module AiConciergeV3
 
       def normalized_message
         @normalized_message ||= message.downcase.gsub(/[^a-z0-9]+/, " ").squish
+      end
       end
     end
   end

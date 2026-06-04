@@ -15,7 +15,7 @@ High-level transition order:
 9. booking, option-selection, or confirmation intent -> booking
 10. unknown intent without state -> fallback
 
-## Booking Sub-step Rules (inside `BookingOrchestrator`)
+## Booking Sub-step Rules (inside `Booking::Orchestrator` and booking handlers)
 
 1. no date window or concrete dates -> ask for booking timing
 2. vague month without specific date or segment -> ask for specific timing (early/mid/late)

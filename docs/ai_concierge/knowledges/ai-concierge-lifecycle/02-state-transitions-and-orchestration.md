@@ -25,32 +25,37 @@ Identity rules:
 Central coordinator for a single concierge turn:
 
 1. resolve or create prospect
-2. load persisted conversation state
-3. reactivate an ended conversation state when a new inbound turn arrives
-4. record inbound message
-5. build compact conversation summary
-6. call interpreter
-7. evaluate conversation-control decisions via `ConversationControlPolicy`
-8. apply `InformationIntentGuard` and `BookingInputNormalizer`
-9. merge incoming slots into active branch
-10. decide next legal action via `TransitionPolicy`
-11. delegate booking actions to `BookingOrchestrator`
-12. delegate information actions to `LibrarianOrchestrator`
-13. build state patch
-14. call messenger
-15. record inbound and outbound prospect messages
-16. explicitly archive active branches on conversation end
-17. return final payload
+2. serialize the prospect turn with a row lock
+3. load persisted conversation state
+4. reactivate an ended conversation state when a new inbound turn arrives
+5. record inbound message
+6. build compact conversation summary
+7. call interpreter
+8. evaluate conversation-control decisions via `ConversationControlPolicy`
+9. apply `InformationIntentGuard` and `Booking::InputNormalizer`
+10. merge incoming slots into active branch
+11. decide next legal action via `TransitionPolicy`
+12. delegate booking actions to `Booking::Orchestrator`
+13. delegate information actions to `LibrarianOrchestrator`
+14. build state patch
+15. call messenger
+16. record inbound and outbound prospect messages
+17. explicitly archive active branches on conversation end
+18. return final payload
 
-## `BookingOrchestrator`
+## `Booking::Orchestrator`
 
-Owns booking sub-step decisions after high-level transition is `:booking` or `:resume`:
+Coordinates booking sub-step execution after high-level transition is `:booking` or `:resume`:
 - timing, duration, guest count follow-ups
 - search booking options
 - resolve option selections
 - ask rate plan when an option has multiple rate plans
-- resolve rate plan selections through `RatePlanMatcher`
-- apply booking-ready rate/room revision decisions from `BookingRevisionPolicy`
+- delegate next-step resolution to `Booking::ActionResolver`
+- delegate option ambiguity to `Booking::SelectionHandler`
+- delegate rate plan selections through `Booking::RatePlanSelectionHandler` and `RatePlanMatcher`
+- delegate booking URL generation and archive behavior to `Booking::CompletionHandler`
+- delegate suspended booking resume to `Booking::ResumeHandler`
+- apply booking-ready rate/room revision decisions from `Booking::RevisionPolicy`
 - preserve `pending_selection` for ambiguous follow-ups
 - generate booking URLs with selected rate plan pricing
 - archive completed booking tasks only after successful URL generation
@@ -64,7 +69,7 @@ Owns booking sub-step decisions after high-level transition is `:booking` or `:r
 - end-confirmation yes/no interpretation
 - end-confirmation mode (`generic`, `continue_booking`, or `cancel_booking_attempt`)
 
-`BookingRevisionPolicy` owns booking-ready revision detection:
+`Booking::RevisionPolicy` owns booking-ready revision detection:
 - `change rate` / `show rates again` -> `:change_rate`
 - `change room` / `different option` -> `:change_option`
 - blocks revision when the message is informational, confirmation, ending the conversation, changing timing/party slots, or already answering rate-plan selection

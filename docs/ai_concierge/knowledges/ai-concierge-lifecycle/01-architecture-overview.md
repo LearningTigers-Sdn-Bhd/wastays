@@ -45,12 +45,18 @@ AiConciergeV3 uses a hybrid architecture where:
 
 ## Ownership Boundaries
 
-- `TurnOrchestrator`: prospect resolution, state loading, interpreter call, deterministic guard invocation, high-level delegation, persistence, message rendering, and final payload.
+- `TurnOrchestrator`: prospect resolution, per-prospect turn locking, state loading, interpreter call, deterministic guard invocation, high-level delegation, persistence, message rendering, and final payload.
 - `TransitionPolicy`: high-level action routing only; it does not decide booking sub-steps.
-- `BookingOrchestrator`: booking prompts, option search, option selection, confirmation, booking URL generation, booking completion/archive semantics, and safe URL-failure fallback.
+- `Booking::Orchestrator`: booking prompts and high-level booking sub-flow coordination.
+- `Booking::ActionResolver`: next booking sub-step resolution.
+- `Booking::SelectionHandler`: option/date/room ambiguity and pending-selection handling.
+- `Booking::RatePlanSelectionHandler`: deterministic rate-plan selection follow-ups.
+- `Booking::CompletionHandler`: booking URL generation, completion/archive semantics, and safe URL-failure fallback.
+- `Booking::ResumeHandler`: suspended booking resume behavior.
+- `Booking::RevisionPolicy`: booking-ready rate/room revision detection.
 - `LibrarianOrchestrator`: hotel policy, general hotel info, FAQ, nearby attractions, room information, `information_task`, and booking suspension on interruptions.
 - `ConversationTaskManager`: V2 task-state normalization, legacy read migration, activate/suspend/resume/archive, and avoiding legacy writes.
-- `BookingInputNormalizer`: deterministic booking slot guards before merge.
+- `Booking::InputNormalizer`: deterministic booking slot guards before merge.
 - `InformationIntentGuard`: deterministic hotel/property amenities and facilities correction before routing.
 
 ## Public Payload Stability

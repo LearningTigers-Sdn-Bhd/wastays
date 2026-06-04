@@ -8,6 +8,27 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([])
   end
 
+  it "serializes a prospect turn with a row lock" do
+    prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
+    create(:prospect_conversation_state, prospect: prospect)
+    locked = false
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call) do
+      expect(locked).to be(true)
+      interpretation(intent: "greeting", topic: "general", slots: {})
+    end
+    expect_any_instance_of(Prospect).to receive(:with_lock).and_wrap_original do |original, *args, &block|
+      locked = true
+      original.call(*args, &block)
+    ensure
+      locked = false
+    end
+
+    result = described_class.new(hotel: hotel, message: "hello", prospect_public_id: prospect.public_id).call
+
+    expect(result).to be_success
+  end
+
   it "asks for duration after a month window is provided" do
     allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(slots: { "target_month" => 8, "target_year" => 2026, "month_segment" => "mid", "days" => 3, "nights" => 2 })

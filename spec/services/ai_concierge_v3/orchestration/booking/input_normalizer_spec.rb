@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConciergeV3::Orchestration::BookingInputNormalizer do
+RSpec.describe AiConciergeV3::Orchestration::Booking::InputNormalizer do
   it "removes hallucinated timing from vague booking messages" do
     result = described_class.new(
       message: "hello, is there any booking for 2 adults",

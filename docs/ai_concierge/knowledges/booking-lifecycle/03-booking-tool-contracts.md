@@ -78,7 +78,7 @@ Internal booking URL failure codes:
 
 ## Rate Plan Selection
 
-Rate plan selection is resolved deterministically by `AiConciergeV3::Matching::RatePlanMatcher`, called from `BookingOrchestrator`.
+Rate plan selection is resolved deterministically by `AiConciergeV3::Matching::RatePlanMatcher`, called from `Booking::RatePlanSelectionHandler`.
 
 Supported rate-plan selection styles:
 - exact or partial rate-plan names when unique

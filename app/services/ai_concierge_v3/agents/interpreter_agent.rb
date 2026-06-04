@@ -61,26 +61,11 @@ module AiConciergeV3
     LLM_TIMEOUT = 30
 
     def call
-      context = RubyLLM.context do |config|
-        case hotel.ai_provider_name
-        when "openai"
-          config.openai_api_key = hotel.ai_concierge_api_key
-        when "claude"
-          config.anthropic_api_key = hotel.ai_concierge_api_key
-        when "gemini"
-          config.gemini_api_key = hotel.ai_concierge_api_key
-        when "deepseek"
-          config.deepseek_api_key = hotel.ai_concierge_api_key
-        end
-      end
-
-      chat = context.chat(
-        model: hotel.ai_concierge_model_name,
-        provider: hotel.ai_concierge_provider
-      )
+      client = Providers::RubyLlmClient.new(hotel: hotel)
+      chat = client.chat
 
       response = Timeout.timeout(LLM_TIMEOUT) do
-        if hotel.ai_concierge_structured_output_supported?
+        if client.structured_output_supported?
           chat.with_schema(InterpretationSchema).ask(prompt)
         else
           chat.ask(prompt)
@@ -88,7 +73,7 @@ module AiConciergeV3
       end
       content = response&.content || raise("Empty response from LLM")
 
-      if hotel.ai_concierge_structured_output_supported?
+      if client.structured_output_supported?
         content
       else
         parse_fallback_response(content)

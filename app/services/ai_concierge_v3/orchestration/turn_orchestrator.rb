@@ -14,6 +14,25 @@ module AiConciergeV3
 
     def call
       prospect = resolve_prospect
+
+      prospect.with_lock do
+        process_turn(prospect)
+      end
+    rescue AiConciergeV3::ProspectNotFoundError => e
+      Result.failure(error: e.message, status: :not_found)
+    rescue ActiveRecord::StaleObjectError
+      Result.failure(error: "This conversation was updated by another request. Please try again.", status: :conflict)
+    rescue StandardError => e
+      Rails.logger.error("AiConciergeV3::TurnOrchestrator error: #{e.class}: #{e.message}")
+      Rails.logger.error(e.backtrace.join("\n")) if e.backtrace
+      Result.failure(error: "AI Concierge is temporarily unavailable.", status: :internal_server_error)
+    end
+
+    private
+
+    attr_reader :hotel, :message, :phone, :prospect_public_id, :tool_registry
+
+    def process_turn(prospect)
       conversation_state = load_conversation_state(prospect)
 
       ActiveRecord::Base.transaction do
@@ -57,7 +76,7 @@ module AiConciergeV3
       base_branch = booking_context[:base_branch]
       current_pending_question = booking_context[:pending_question]
 
-      slots = BookingInputNormalizer.new(
+      slots = Booking::InputNormalizer.new(
         message: message,
         slots: interpretation["slots"],
         pending_question: current_pending_question,
@@ -89,19 +108,7 @@ module AiConciergeV3
       )
 
       Result.success(payload: response)
-    rescue AiConciergeV3::ProspectNotFoundError => e
-      Result.failure(error: e.message, status: :not_found)
-    rescue ActiveRecord::StaleObjectError
-      Result.failure(error: "This conversation was updated by another request. Please try again.", status: :conflict)
-    rescue StandardError => e
-      Rails.logger.error("AiConciergeV3::TurnOrchestrator error: #{e.class}: #{e.message}")
-      Rails.logger.error(e.backtrace.join("\n")) if e.backtrace
-      Result.failure(error: "AI Concierge is temporarily unavailable.", status: :internal_server_error)
     end
-
-    private
-
-    attr_reader :hotel, :message, :phone, :prospect_public_id, :tool_registry
 
     def resolve_prospect
       return resolve_prospect_by_phone if phone.present?
@@ -183,7 +190,7 @@ module AiConciergeV3
     end
 
     def handle_booking_decision(prospect:, conversation_state:, interpretation:, active_branch:, decision:)
-      domain_result = BookingOrchestrator.new(
+      domain_result = Booking::Orchestrator.new(
         hotel: hotel,
         prospect: prospect,
         conversation_state: conversation_state,

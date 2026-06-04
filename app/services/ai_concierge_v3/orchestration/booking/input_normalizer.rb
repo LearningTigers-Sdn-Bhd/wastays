@@ -1,6 +1,7 @@
 module AiConciergeV3
   module Orchestration
-    class BookingInputNormalizer
+    module Booking
+      class InputNormalizer
     def initialize(message:, slots:, pending_question:, conversation_signals:, active_branch: {})
       @message = message.to_s
       @slots = slots.is_a?(Hash) ? slots.deep_dup : {}
@@ -228,6 +229,7 @@ module AiConciergeV3
       %w[nov november],
       %w[dec december]
     ].freeze
+      end
     end
   end
 end

@@ -48,7 +48,7 @@ Clear:
 - `selected_rate_plan_id`
 - `selected_rate_plan_name`
 
-## `BookingInputNormalizer` Behavior
+## `Booking::InputNormalizer` Behavior
 
 - strip hallucinated timing, duration, checkout, and month segment slots unless explicit in the message
 - preserve correction turns
@@ -74,7 +74,7 @@ When an option has multiple rate plans, `selected_rate_plan_id` and `selected_ra
 - `selected_rate_plan_id` — the database ID of the chosen `RatePlan`
 - `selected_rate_plan_name` — the display name (e.g. "Standard Rate", "Non-Refundable Rate")
 
-These fields are set during `handle_rate_plan_selection` in `BookingOrchestrator` and cleared with other downstream state on timing/party changes via `clear_downstream!`.
+These fields are set by `Booking::RatePlanSelectionHandler` and cleared with other downstream state on timing/party changes via `clear_downstream!`.
 
 Rate-plan follow-ups support deterministic matching for:
 - ordinal replies such as `first` and `second`
@@ -86,7 +86,7 @@ Ambiguous rate-plan replies keep `pending_question=rate_plan_selection` and re-a
 
 ## Booking-Ready Revisions
 
-Booking-ready revision handling lives in `BookingOrchestrator`, before normal booking action resolution.
+Booking-ready revision handling lives in `Booking::RevisionPolicy`, before normal booking action resolution.
 
 - `change rate`, `show rates again`, and similar phrases require an existing selected option
 - rate revisions with multiple rate plans set `pending_question=rate_plan_selection`

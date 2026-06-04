@@ -35,25 +35,7 @@ module AiConciergeV3
       attr_reader :hotel, :message, :intent, :topic, :matches, :structured_facts
 
       def chat
-        context.chat(
-          model: hotel.ai_concierge_model_name,
-          provider: hotel.ai_concierge_provider
-        )
-      end
-
-      def context
-        RubyLLM.context do |config|
-          case hotel.ai_provider_name
-          when "openai"
-            config.openai_api_key = hotel.ai_concierge_api_key
-          when "claude"
-            config.anthropic_api_key = hotel.ai_concierge_api_key
-          when "gemini"
-            config.gemini_api_key = hotel.ai_concierge_api_key
-          when "deepseek"
-            config.deepseek_api_key = hotel.ai_concierge_api_key
-          end
-        end
+        Providers::RubyLlmClient.new(hotel: hotel).chat
       end
 
       def prompt

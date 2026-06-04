@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConciergeV3::Orchestration::BookingRevisionPolicy do
+RSpec.describe AiConciergeV3::Orchestration::Booking::RevisionPolicy do
   let(:branch) do
     AiConciergeV3::State::SlotMerger.empty_branch.merge(
       "target_month" => 8,
