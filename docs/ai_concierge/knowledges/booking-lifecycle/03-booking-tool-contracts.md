@@ -6,6 +6,7 @@
 - Purpose: search available booking options for the current branch inputs
 - Inputs: hotel, target_month, target_year, month_segment, optional check_in, optional check_out, adults, children, room_count, nights
 - Output: grouped options with room type identity, dates, prices, positions, and selection IDs
+- Performance contract: loads ordered room types once, preloads inventories and rates for the bounded candidate date range, indexes preloaded rows by date, and preserves eager-loaded rate plan names. Query count is covered by regression specs so it should not grow linearly with room types or rate plans.
 
 ```json
 [
@@ -35,6 +36,7 @@
 ```
 
 - Uses a scoring-based date alignment algorithm to ensure consistent check-in/out windows across all room types.
+- Uses the cheapest complete rate plan as the option-level `total_price` while still returning all complete rate plans.
 
 ## `select_booking_option`
 
@@ -76,7 +78,7 @@ Internal booking URL failure codes:
 
 ## Rate Plan Selection
 
-Rate plan selection is resolved deterministically inside `BookingOrchestrator`.
+Rate plan selection is resolved deterministically by `AiConciergeV3::Matching::RatePlanMatcher`, called from `BookingOrchestrator`.
 
 Supported rate-plan selection styles:
 - exact or partial rate-plan names when unique

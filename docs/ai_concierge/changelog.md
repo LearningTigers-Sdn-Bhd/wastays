@@ -1,6 +1,42 @@
 # AI Concierge Changelog
 
-## V4.3 — Booking-Ready Revision Handling (Current)
+## V4.4 — Orchestrator Policy Extraction and Booking Search Query Proof (Current)
+
+### Changes
+- Extracted booking-ready revision detection out of `BookingOrchestrator` into `BookingRevisionPolicy`.
+- Extracted deterministic rate-plan matching out of `BookingOrchestrator` into `RatePlanMatcher`.
+- Extracted conversation-control decisions out of `TurnOrchestrator` into `ConversationControlPolicy`.
+- Kept the public inquiry response unchanged:
+  - `reply_message`
+  - `needs_human_support`
+  - `action_name`
+  - `prospect_public_id`
+- Optimized `SearchBookingOptionsTool` internals without changing its output:
+  - ordered room types are loaded once and reused
+  - preloaded inventories are indexed by room type and date
+  - preloaded rates are indexed by room type and date while preserving eager-loaded rate plans
+  - repeated availability checks use indexed in-memory lookup instead of repeated array scans
+- Added SQL query-count regression coverage proving booking option search remains bounded as room types and rate plans grow.
+
+### Files Changed
+- `booking_revision_policy.rb` — owns booking-ready `change rate` / `change room` decision rules
+- `rate_plan_matcher.rb` — owns deterministic rate-plan selection by price intent, ordinal, exact/partial name, `standard`, and refundable/non-refundable phrasing
+- `conversation_control_policy.rb` — owns booking-attempt cancellation, explicit end requests, end-confirmation replies, and end-confirmation mode
+- `booking_orchestrator.rb` and `turn_orchestrator.rb` — delegate policy/matching decisions while preserving orchestration responsibilities
+- `search_booking_options_tool.rb` — reuses loaded room types and date-indexed inventory/rate preload maps
+- policy, matcher, and booking search specs — focused unit coverage plus bounded SQL query-count regression coverage
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge_v3/orchestration spec/services/ai_concierge_v3/matching spec/services/ai_concierge_v3/tools/booking/search_booking_options_tool_spec.rb`
+- 132 examples, 0 failures
+- `bundle exec rspec spec/requests/api/v1/ai_concierge`
+- 48 examples, 0 failures
+- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge`
+- no offenses
+
+---
+
+## V4.3 — Booking-Ready Revision Handling
 
 ### Changes
 - Added deterministic booking-ready revision handling for guests who want to revise an active quote candidate without cancelling the booking attempt.

@@ -31,17 +31,18 @@ module AiConciergeV3
         conversation_summary: State::ConversationSummaryBuilder.new(conversation_state: conversation_state).call
       ).call
       validate_interpretation!(interpretation)
+      conversation_control = ConversationControlPolicy.new(message: message, conversation_state: conversation_state, interpretation: interpretation)
 
-      if cancel_attempt_request?(conversation_state)
+      if conversation_control.cancel_attempt?
         return Result.success(payload: handle_cancel_booking_attempt(prospect:, conversation_state:, interpretation: interpretation))
       end
 
       if end_confirmation_pending?(conversation_state)
-        return handle_end_confirmation_response(prospect:, conversation_state:, interpretation: interpretation)
+        return handle_end_confirmation_response(prospect:, conversation_state:, interpretation: interpretation, conversation_control: conversation_control)
       end
 
-      if explicit_end_request?
-        if end_confirmation_mode(conversation_state) == :generic
+      if conversation_control.explicit_end?
+        if conversation_control.end_confirmation_mode == :generic
           return Result.success(payload: handle_end_conversation(prospect:, conversation_state:, interpretation: interpretation))
         else
           return Result.success(payload: request_end_confirmation(prospect:, conversation_state:, interpretation: interpretation))
@@ -257,7 +258,7 @@ module AiConciergeV3
     end
 
     def request_end_confirmation(prospect:, conversation_state:, interpretation:)
-      mode = end_confirmation_mode(conversation_state)
+      mode = ConversationControlPolicy.new(message: message, conversation_state: conversation_state, interpretation: interpretation).end_confirmation_mode
       build_and_persist_response(
         prospect: prospect,
         conversation_state: conversation_state,
@@ -289,8 +290,8 @@ module AiConciergeV3
       )
     end
 
-    def handle_end_confirmation_response(prospect:, conversation_state:, interpretation:)
-      if end_confirmation_yes?(interpretation) || explicit_end_request?
+    def handle_end_confirmation_response(prospect:, conversation_state:, interpretation:, conversation_control:)
+      if conversation_control.end_confirmation_yes? || conversation_control.explicit_end?
         Result.success(payload: handle_end_conversation(prospect:, conversation_state:, interpretation:))
       else
         Result.success(payload: build_and_persist_response(
@@ -380,33 +381,6 @@ module AiConciergeV3
       State::SlotMerger.empty_branch
     end
 
-    def explicit_end_request?
-      normalized = message.downcase.gsub(/[^a-z0-9']+/, " ").squish
-      normalized.match?(/\A(?:stop|bye|bye bye|good bye|goodbye|thanks|thank you|that's all|thats all|end chat|end conversation|nevermind|never mind|forget|forget it|no thanks|not now|cancel attempt|cancel booking attempt|cancel quotation attempt)\z/)
-    end
-
-    def cancel_attempt_request?(conversation_state)
-      normalized = message.downcase.gsub(/[^a-z0-9']+/, " ").squish
-      return true if normalized.match?(/\bcancel\b/) && normalized.match?(/\b(?:attempt|booking|reservation|quotation|quote)\b/)
-      return true if normalized.match?(/\b(?:drop|forget)\b/) && normalized.match?(/\b(?:room|booking|reservation|quotation|quote)\b/)
-      return false unless active_booking_attempt?(conversation_state)
-
-      normalized.match?(/\A(?:leave it|changed my mind|i changed my mind|not that booking|not that reservation|drop it)\z/)
-    end
-
-    def active_booking_attempt?(conversation_state)
-      return true if conversation_state.active_flow == "booking_search"
-
-      manager = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
-      booking_task = manager.booking_task
-      branch = manager.booking_branch
-
-      booking_task["status"].present? && booking_task["status"] != "idle" ||
-        booking_task["pending_question"].present? ||
-        branch.except("branch_id", "room_count", "suggestion_set_version", "suggested_options").values.any?(&:present?) ||
-        Array(branch["suggested_options"]).present?
-    end
-
     def fresh_booking_request_without_details?(interpretation, pending_question)
       return false unless %w[booking_timing specific_timing].include?(pending_question.to_s)
       return false unless interpretation["intent"] == "booking_search"
@@ -428,10 +402,6 @@ module AiConciergeV3
       conversation_state.pending_question == "confirm_to_end_conversation"
     end
 
-    def end_confirmation_yes?(interpretation)
-      interpretation["intent"].to_s == "confirmation" && interpretation.dig("slots", "confirmation") != "no"
-    end
-
     def max_turns_exceeded?(conversation_state)
       conversation_state.slots_payload.dig("conversation", "turn_count").to_i >= MAX_TURNS
     end
@@ -451,17 +421,6 @@ module AiConciergeV3
       )
       record_outbound_message(prospect, reply)
       ResponsePayloadBuilder.new(reply_message: reply, needs_human_support: true, action_name: nil, prospect_public_id: prospect.public_id).call
-    end
-
-    def end_confirmation_mode(conversation_state)
-      manager = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
-      booking_task = manager.booking_task
-
-      return :continue_booking if booking_task["status"] == "suspended"
-      return :continue_booking if booking_task["pending_question"].present? && conversation_state.active_flow.to_s != "booking_search"
-      return :cancel_booking_attempt if conversation_state.active_flow == "booking_search"
-
-      :generic
     end
     end
   end

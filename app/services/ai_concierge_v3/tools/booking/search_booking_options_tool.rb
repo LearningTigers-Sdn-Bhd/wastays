@@ -36,20 +36,23 @@ module AiConciergeV3
         def preload_availability
           all_check_ins = candidate_check_in_days
           @preloaded = false
+          @room_types = hotel.room_types.order(:id).to_a
           return if all_check_ins.empty?
 
           max_check_out = all_check_ins.max + nights.days
           min_check_in = all_check_ins.min
-          room_type_ids = hotel.room_types.pluck(:id)
+          room_type_ids = room_types.map(&:id)
 
           @inventories_by_type = RoomInventory
             .where(room_type_id: room_type_ids, date: min_check_in...max_check_out)
             .group_by(&:room_type_id)
+            .transform_values { |inventories| inventories.index_by(&:date) }
 
           @rates_by_type = RoomRate
             .includes(:rate_plan)
             .where(room_type_id: room_type_ids, date: min_check_in...max_check_out)
             .group_by(&:room_type_id)
+            .transform_values { |rates| rates.group_by(&:date) }
 
           @preloaded = true
         end
@@ -57,19 +60,19 @@ module AiConciergeV3
         def inventories_for(room_type, stay_dates)
           return room_type.room_inventories.where(date: stay_dates) unless @preloaded
 
-          invs = @inventories_by_type[room_type.id] || []
-          invs.select { |inv| stay_dates.include?(inv.date) }
+          invs_by_date = @inventories_by_type[room_type.id] || {}
+          stay_dates.filter_map { |date| invs_by_date[date] }
         end
 
         def rates_for(room_type, stay_dates)
           return room_type.room_rates.where(date: stay_dates) unless @preloaded
 
-          rates = @rates_by_type[room_type.id] || []
-          rates.select { |rate| stay_dates.include?(rate.date) }
+          rates_by_date = @rates_by_type[room_type.id] || {}
+          stay_dates.flat_map { |date| rates_by_date[date] || [] }
         end
 
         def grouped_options
-          hotel.room_types.order(:id).each_with_object([]) do |room_type, groups|
+          room_types.each_with_object([]) do |room_type, groups|
             options = options_for_room_type(room_type)
             next if options.empty?
 
@@ -138,7 +141,7 @@ module AiConciergeV3
               candidate_check_out = candidate + nights.days
               next unless candidate_check_out.month == target_month || month_segment.blank?
 
-              count = hotel.room_types.count { |rt| room_type_available?(rt, check_in: candidate, check_out: candidate_check_out) }
+              count = room_types.count { |rt| room_type_available?(rt, check_in: candidate, check_out: candidate_check_out) }
               next if count.zero?
 
               [ candidate, count ]
@@ -226,6 +229,10 @@ module AiConciergeV3
 
         def selection_id(room_type_id, position)
           "room_type_#{room_type_id}_option_#{position}"
+        end
+
+        def room_types
+          @room_types ||= hotel.room_types.order(:id).to_a
         end
       end
     end

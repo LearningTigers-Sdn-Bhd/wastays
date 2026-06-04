@@ -102,7 +102,12 @@ module AiConciergeV3
     end
 
     def handle_booking_revision(conversation_state: self.conversation_state, active_branch: self.active_branch)
-      case booking_revision_kind(active_branch)
+      case BookingRevisionPolicy.new(
+        message: message,
+        interpretation: interpretation,
+        active_branch: active_branch,
+        pending_question: pending_question
+      ).call
       when :change_rate
         handle_rate_plan_revision(conversation_state: conversation_state, active_branch: active_branch)
       when :change_option
@@ -185,84 +190,6 @@ module AiConciergeV3
       branch["confirmation_candidate"] = nil
       branch["pending_selection"] = nil
       branch
-    end
-
-    def booking_revision_kind(branch)
-      return unless booking_ready_for_revision?(branch)
-      return if revision_blocked_by_interpretation?
-      return if timing_or_party_revision?
-
-      return :change_option if option_revision_message?
-      return if pending_question == "rate_plan_selection"
-      return :change_rate if rate_revision_message?(branch)
-
-      nil
-    end
-
-    def booking_ready_for_revision?(branch)
-      Array(branch["suggested_options"]).present? &&
-        branch_has_timing?(branch) &&
-        !branch_duration_missing?(branch) &&
-        !branch_guest_count_missing?(branch) &&
-        !branch_party_split_missing?(branch)
-    end
-
-    def revision_blocked_by_interpretation?
-      informational_intent?(interpretation["intent"]) ||
-        interpretation.dig("conversation_signals", "end_conversation") ||
-        interpretation["intent"] == "confirmation"
-    end
-
-    def timing_or_party_revision?
-      revision_slot_keys = %w[target_month target_year month_segment check_in check_out nights days party_size_total adults children room_count]
-      revision_slot_keys.any? do |key|
-        value = interpretation.dig("slots", key)
-        value.present? && value != 0
-      end
-    end
-
-    def rate_revision_message?(branch)
-      return false unless selected_booking_option_present?(branch)
-
-      normalized_message.match?(/\b(?:change|switch|choose|select|show|see|different|another|other|new)\b.*\b(?:rate|rates|rate plan|plan|plans)\b/) ||
-        normalized_message.match?(/\b(?:rate|rates|rate plan|plan|plans)\b.*\b(?:change|switch|choose|select|show|see|different|another|other|new)\b/) ||
-        normalized_message.match?(/\b(?:refundable|non refundable|nonrefundable|standard|flexible|cheaper|cheapest|lowest)\b.*\b(?:instead|please|rate|plan)\b/)
-    end
-
-    def option_revision_message?
-      normalized_message.match?(/\b(?:change|switch|choose|select|pick|show|see|different|another|other|new)\b.*\b(?:room|rooms|option|options|choice|choices|suite|villa)\b/) ||
-        normalized_message.match?(/\b(?:room|rooms|option|options|choice|choices|suite|villa)\b.*\b(?:change|switch|choose|select|pick|show|see|different|another|other|new)\b/)
-    end
-
-    def selected_booking_option_present?(branch)
-      (branch["selected_option"] || branch["confirmation_candidate"]).present?
-    end
-
-    def normalized_message
-      @normalized_message ||= message.downcase.gsub(/[^a-z0-9]+/, " ").squish
-    end
-
-    def branch_has_timing?(branch)
-      branch["check_in"].present? || branch["target_month"].present?
-    end
-
-    def branch_duration_missing?(branch)
-      branch["check_out"].blank? &&
-        branch["nights"].to_i <= 0 &&
-        branch["days"].to_i <= 0
-    end
-
-    def branch_guest_count_missing?(branch)
-      branch["party_size_total"].to_i <= 0 &&
-        branch["adults"].to_i <= 0 &&
-        branch["children"].to_i <= 0
-    end
-
-    def branch_party_split_missing?(branch)
-      total = branch["party_size_total"].to_i
-      return false if total <= 0
-
-      (branch["adults"].to_i + branch["children"].to_i) != total
     end
 
     def handle_resume
@@ -498,7 +425,7 @@ module AiConciergeV3
       rate_plan_name = interpretation.dig("slots", "rate_plan_name")
       selected_option = active_branch["selected_option"]
       rate_plans = Array(selected_option&.dig("rate_plans"))
-      matched = find_matching_rate_plan(rate_plan_name, rate_plans)
+      matched = Matching::RatePlanMatcher.new(message: message, rate_plan_name: rate_plan_name, rate_plans: rate_plans).call
 
       if matched
         active_branch["selected_rate_plan_id"] = matched["rate_plan_id"]
@@ -522,89 +449,6 @@ module AiConciergeV3
         pending_question: "rate_plan_selection",
         extra_context: { selected_option: selected_option, rate_plans: rate_plans }
       )
-    end
-
-    def find_matching_rate_plan(name, rate_plans)
-      return rate_plans.first if rate_plans.one?
-      return nil if rate_plans.blank?
-
-      normalized = normalize_rate_plan_query([ name, message ].compact.join(" "))
-      return nil if normalized.blank?
-
-      price_match = rate_plan_price_match(normalized, rate_plans)
-      return price_match if price_match
-
-      ordinal = rate_plan_ordinal(normalized)
-      return rate_plans[ordinal] if ordinal && rate_plans[ordinal]
-
-      refundable_match = rate_plan_refundable_match(normalized, rate_plans)
-      return refundable_match if refundable_match
-
-      standard_match = unique_rate_plan_match(rate_plans) { |rate_plan| normalize_rate_plan_name(rate_plan["name"]).include?("standard") } if normalized.match?(/\bstandard\b/)
-      return standard_match if standard_match
-
-      exact_matches = rate_plans.select { |rate_plan| normalize_rate_plan_name(rate_plan["name"]) == normalized }
-      return exact_matches.first if exact_matches.one?
-
-      partial_matches = rate_plans.select do |rate_plan|
-        normalized_name = normalize_rate_plan_name(rate_plan["name"])
-        normalized_name.include?(normalized) || normalized.split.all? { |token| normalized_name.include?(token) }
-      end
-      return partial_matches.first if partial_matches.one?
-
-      nil
-    end
-
-    def normalize_rate_plan_query(value)
-      value.to_s.downcase.gsub(/[^a-z0-9]+/, " ").squish
-    end
-
-    def normalize_rate_plan_name(value)
-      normalize_rate_plan_query(value)
-    end
-
-    def rate_plan_ordinal(normalized)
-      case normalized
-      when /\b(?:second|two|2)\b/
-        1
-      when /\b(?:third|three|3)\b/
-        2
-      when /\b(?:first|one|1)\b/
-        0
-      else
-        nil
-      end
-    end
-
-    def rate_plan_price_match(normalized, rate_plans)
-      return unless normalized.match?(/\b(?:cheapest|lowest|cheaper|less expensive|lower price|lowest price)\b/)
-
-      prices = rate_plans.filter_map { |rate_plan| BigDecimal(rate_plan["total_price"].to_s) if rate_plan["total_price"].present? }
-      return if prices.empty?
-
-      cheapest = prices.min
-      matches = rate_plans.select { |rate_plan| rate_plan["total_price"].present? && BigDecimal(rate_plan["total_price"].to_s) == cheapest }
-      matches.one? ? matches.first : nil
-    end
-
-    def rate_plan_refundable_match(normalized, rate_plans)
-      if normalized.match?(/\bnon refundable\b|\bnonrefundable\b|\bno refund\b/)
-        return unique_rate_plan_match(rate_plans) { |rate_plan| normalize_rate_plan_name(rate_plan["name"]).match?(/\bnon refundable\b|\bnonrefundable\b/) }
-      end
-
-      if normalized.match?(/\brefundable\b|\bflexible\b/)
-        return unique_rate_plan_match(rate_plans) do |rate_plan|
-          normalized_name = normalize_rate_plan_name(rate_plan["name"])
-          normalized_name.match?(/\brefundable\b|\bflexible\b/) && !normalized_name.match?(/\bnon refundable\b|\bnonrefundable\b/)
-        end
-      end
-
-      nil
-    end
-
-    def unique_rate_plan_match(rate_plans)
-      matches = rate_plans.select { |rate_plan| yield(rate_plan) }
-      matches.one? ? matches.first : nil
     end
 
     def resolve_selection_follow_up(conversation_state:, interpretation:, active_branch:, pending_question:)
@@ -783,7 +627,7 @@ module AiConciergeV3
     end
 
     def empty_branch
-      State::SlotMerger.new(active_branch: nil, slots: {}, pending_question: nil, message: nil).send(:default_branch)
+      State::SlotMerger.empty_branch
     end
 
     def pending_question

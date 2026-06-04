@@ -30,7 +30,7 @@ Central coordinator for a single concierge turn:
 4. record inbound message
 5. build compact conversation summary
 6. call interpreter
-7. intercept explicit booking attempt cancellation
+7. evaluate conversation-control decisions via `ConversationControlPolicy`
 8. apply `InformationIntentGuard` and `BookingInputNormalizer`
 9. merge incoming slots into active branch
 10. decide next legal action via `TransitionPolicy`
@@ -49,11 +49,32 @@ Owns booking sub-step decisions after high-level transition is `:booking` or `:r
 - search booking options
 - resolve option selections
 - ask rate plan when an option has multiple rate plans
-- resolve rate plan selections with fuzzy name matching
+- resolve rate plan selections through `RatePlanMatcher`
+- apply booking-ready rate/room revision decisions from `BookingRevisionPolicy`
 - preserve `pending_selection` for ambiguous follow-ups
 - generate booking URLs with selected rate plan pricing
 - archive completed booking tasks only after successful URL generation
 - safe fallback on URL generation failure
+
+## Policy and Matcher Objects
+
+`ConversationControlPolicy` owns deterministic conversation-control checks:
+- explicit booking-attempt cancellation
+- explicit end requests
+- end-confirmation yes/no interpretation
+- end-confirmation mode (`generic`, `continue_booking`, or `cancel_booking_attempt`)
+
+`BookingRevisionPolicy` owns booking-ready revision detection:
+- `change rate` / `show rates again` -> `:change_rate`
+- `change room` / `different option` -> `:change_option`
+- blocks revision when the message is informational, confirmation, ending the conversation, changing timing/party slots, or already answering rate-plan selection
+
+`RatePlanMatcher` owns deterministic rate-plan matching:
+- exact or unique partial names
+- ordinal replies
+- price intent
+- unique `standard`
+- refundable/non-refundable distinction
 
 ## `LibrarianOrchestrator`
 
@@ -98,6 +119,8 @@ Enforces high-level legal routing:
 ## Booking Attempt Cancellation
 
 Cancel-attempt phrases such as `cancel attempt`, `cancel booking attempt`, and `cancel my attempt for booking` do not continue a stale booking branch.
+
+These checks are owned by `ConversationControlPolicy` and run before end-confirmation and generic explicit-end handling.
 
 They:
 

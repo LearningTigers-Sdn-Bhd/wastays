@@ -4,11 +4,31 @@ RSpec.describe AiConciergeV3::Tools::Booking::SearchBookingOptionsTool do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Deluxe Room", max_adults: 2) }
 
+  def create_availability(room_type, date:, price: 200, quantity: 2, rate_plan: nil)
+    create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: date, price: price, currency: "MYR")
+    create(:room_inventory, room_type: room_type, date: date, quantity: quantity, status: "open")
+  end
+
+  def count_sql_queries
+    queries = []
+    callback = lambda do |_name, _started, _finished, _unique_id, payload|
+      next if payload[:cached]
+      next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+      queries << payload[:sql]
+    end
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      yield
+    end
+
+    queries.count
+  end
+
   before do
     [ 11, 12, 13, 14 ].each_with_index do |day, index|
       date = Date.new(2026, 8, day)
-      create(:room_rate, room_type: room_type, date: date, price: 200 + index, currency: "MYR")
-      create(:room_inventory, room_type: room_type, date: date, quantity: 2, status: "open")
+      create_availability(room_type, date: date, price: 200 + index)
     end
   end
 
@@ -106,6 +126,83 @@ RSpec.describe AiConciergeV3::Tools::Booking::SearchBookingOptionsTool do
       # Room C is not available on 24, 25, 26, so it should fall back to its own dates.
       expect(dates_c).to include("2026-05-21")
       expect(dates_c).to include("2026-05-22")
+    end
+  end
+
+  context "rate plans and query shape" do
+    it "returns all complete rate plans and uses the cheapest plan for option total" do
+      standard = create(:rate_plan, room_type: room_type, name: "Standard Rate")
+      non_refundable = create(:rate_plan, room_type: room_type, name: "Non-Refundable Rate")
+
+      RoomRate.where(room_type: room_type).delete_all
+      [ 11, 12 ].each do |day|
+        date = Date.new(2026, 8, day)
+        create(:room_rate, room_type: room_type, rate_plan: standard, date: date, price: 150, currency: "MYR")
+        create(:room_rate, room_type: room_type, rate_plan: non_refundable, date: date, price: 120, currency: "MYR")
+      end
+
+      result = described_class.new(
+        hotel: hotel,
+        target_month: 8,
+        target_year: 2026,
+        month_segment: "mid",
+        adults: 2,
+        children: 0,
+        room_count: 1,
+        nights: 2
+      ).call
+
+      option = result.first.dig("options", 0)
+
+      expect(option["total_price"]).to eq(240)
+      expect(option["rate_plans"]).to contain_exactly(
+        include("name" => "Standard Rate", "total_price" => 300.to_d, "currency" => "MYR"),
+        include("name" => "Non-Refundable Rate", "total_price" => 240.to_d, "currency" => "MYR")
+      )
+    end
+
+    it "keeps SQL query count bounded as room types and rate plans grow" do
+      small_hotel = create(:hotel, :with_ai_concierge)
+      large_hotel = create(:hotel, :with_ai_concierge)
+
+      build_search_fixture(hotel: small_hotel, room_type_count: 1, rate_plan_count: 1)
+      build_search_fixture(hotel: large_hotel, room_type_count: 5, rate_plan_count: 3)
+
+      small_count = count_sql_queries { run_search(small_hotel) }
+      large_count = count_sql_queries { run_search(large_hotel) }
+
+      expect(large_count).to be <= small_count + 1
+    end
+
+    def build_search_fixture(hotel:, room_type_count:, rate_plan_count:)
+      room_type_count.times do |room_index|
+        current_room_type = create(:room_type, hotel: hotel, name: "Query Room #{room_index}", max_adults: 2)
+        rate_plans = rate_plan_count.times.map do |plan_index|
+          create(:rate_plan, room_type: current_room_type, name: "Plan #{room_index}-#{plan_index}")
+        end
+
+        (11..14).each do |day|
+          date = Date.new(2026, 8, day)
+          create(:room_inventory, room_type: current_room_type, date: date, quantity: 2, status: "open")
+
+          rate_plans.each_with_index do |rate_plan, index|
+            create(:room_rate, room_type: current_room_type, rate_plan: rate_plan, date: date, price: 100 + index, currency: "MYR")
+          end
+        end
+      end
+    end
+
+    def run_search(hotel)
+      described_class.new(
+        hotel: hotel,
+        target_month: 8,
+        target_year: 2026,
+        month_segment: "mid",
+        adults: 2,
+        children: 0,
+        room_count: 1,
+        nights: 2
+      ).call
     end
   end
 end
