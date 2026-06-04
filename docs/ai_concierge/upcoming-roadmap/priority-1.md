@@ -25,11 +25,18 @@
 2. suspended rate-plan selection has black-box coverage, including hotel information interruptions and `the cheaper one` resume language
 3. strong deterministic knowledge answers are covered to avoid noisy diagnostic creation
 
+## V4.3 Mitigated Risks
+1. booking-ready `change rate` requests revise rate-plan state without cancelling the booking attempt
+2. booking-ready `change room` / `different option` requests preserve upstream booking context and return to option selection
+3. scoped booking revisions work after hotel-information interruptions resume a suspended booking
+4. cancellation and revision language are covered separately so `changed my mind` still cancels while `change room` does not
+
 ## Expansion Candidates
 - hotel-policy interruption and resume (implemented — covered)
 - booking context rendering (implemented — covered)
 - correction handling (implemented — covered)
 - another-booking branching (implemented — covered)
+- booking-ready rate/option revision (implemented — covered)
 
 ## Future Work
 - `ProspectProfileFact` integration for persistent guest memory

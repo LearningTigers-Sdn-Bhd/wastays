@@ -35,8 +35,23 @@ High-level transition order:
 16. change of month/window or party composition -> clear stale suggestions, pending selection, and confirmation state, then rerun search
 17. generic booking request after stale no-options state -> reset stale branch and ask for fresh dates/month
 18. bare `this month` without date or early/mid/late -> ask for exact check-in date or assumption range
+19. booking-ready `change rate` / `show rates again` -> preserve selected room/date option, clear selected rate-plan state and confirmation candidate, then ask rate-plan selection when multiple rates exist
+20. booking-ready `change room` / `different option` -> preserve timing, duration, guest composition, room count, and suggested options; clear selected option/rate/candidate; ask option selection or resolve the newly named option in the same turn
 
-## V4.1 Hardening Rules
+## Booking-Ready Revision Rules
+
+A booking branch is booking-ready for scoped revision when it already has timing, duration, guest composition, room count, and `suggested_options`.
+
+- rate revisions keep `selected_option` and upstream booking slots
+- rate revisions clear `selected_rate_plan_id`, `selected_rate_plan_name`, and `confirmation_candidate`
+- rate revisions with one/no available rate plan re-ask confirmation instead of cancelling
+- option revisions keep timing, duration, guests, room count, and `suggested_options`
+- option revisions clear `selected_option`, `selected_rate_plan_id`, `selected_rate_plan_name`, `confirmation_candidate`, and `pending_selection`
+- same-turn option revisions can select a new room/date option immediately
+- timing, duration, guest, or room-count changes remain broader corrections and clear downstream search/selection state
+- explicit cancellation remains separate from revision and resets the booking task
+
+## V4.1+ Hardening Rules
 
 - booking URL generation validates required option fields and dates before quote creation
 - failed booking URL generation returns a safe fallback and keeps the booking uncompleted
@@ -45,6 +60,7 @@ High-level transition order:
 - ambiguous rate-plan matching re-asks instead of guessing
 - timing or party changes clear selected rate-plan fields along with suggestions, pending selections, confirmation candidates, and selected options
 - natural active-booking cancellation phrases such as `forget the room`, `changed my mind`, and `drop the reservation` cancel only the booking attempt
+- booking-ready revision phrases such as `change rate` and `change room` revise only the relevant downstream booking state and do not cancel the booking attempt
 
 ## Booking Task Statuses
 

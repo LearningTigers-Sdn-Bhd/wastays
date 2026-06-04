@@ -1,6 +1,32 @@
 # AI Concierge Changelog
 
-## V4.2 — Knowledge Diagnostics Producer and Rate-Plan Black-Box Coverage (Current)
+## V4.3 — Booking-Ready Revision Handling (Current)
+
+### Changes
+- Added deterministic booking-ready revision handling for guests who want to revise an active quote candidate without cancelling the booking attempt.
+- `change rate` / `show rates again` now preserves the selected room/date option, clears selected rate-plan state and confirmation candidate, and re-asks the rate-plan question when multiple rates are available.
+- Single-rate selected options re-ask confirmation instead of cancelling or clearing upstream booking context.
+- `change room` / `different option` now preserves timing, duration, guest composition, room count, and suggested options while clearing selected option, selected rate-plan fields, pending selection, and confirmation candidate.
+- Same-turn room changes such as `change room to Deluxe Room option 1` can resolve the new option immediately, then continue to rate-plan selection or confirmation.
+- Revision handling also applies after a suspended hotel-information interruption resumes.
+- Explicit booking-attempt cancellation remains separate; natural abandonment phrases such as `changed my mind` still reset the booking task.
+
+### Files Changed
+- `booking_orchestrator.rb` — detects booking-ready rate/option revision messages before normal booking action resolution and applies scoped downstream clearing
+- `booking_orchestrator_spec.rb` — service-level coverage for rate revision, single-rate revision, room revision, and same-turn option revision
+- `rate_plan_black_box_spec.rb` — request-level coverage for rate revision through quote confirmation, room revision after hotel-info interruption, cancellation, and confirmation rejection
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge_v3/orchestration/booking_orchestrator_spec.rb`
+- `bundle exec rspec spec/services/ai_concierge_v3/state/slot_merger_spec.rb`
+- `bundle exec rspec spec/requests/api/v1/ai_concierge/rate_plan_black_box_spec.rb`
+- `bundle exec rspec spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
+- `bundle exec rspec spec/services/ai_concierge_v3`
+- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge`
+
+---
+
+## V4.2 — Knowledge Diagnostics Producer and Rate-Plan Black-Box Coverage
 
 ### Changes
 - Added AI Concierge as a producer for hotel knowledge diagnostics without moving diagnostics into the AI Concierge domain.

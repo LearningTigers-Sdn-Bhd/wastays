@@ -207,6 +207,134 @@ RSpec.describe AiConciergeV3::Orchestration::BookingOrchestrator do
     expect(result.dig(:slots_payload, "booking_task", "branch", "confirmation_candidate")).to be_nil
   end
 
+  it "asks for rate plan again when a booking-ready guest changes rates" do
+    selected_option = option(1, "garden_1", "2026-08-01").merge(
+      "rate_plans" => [
+        { "rate_plan_id" => 10, "name" => "Standard Rate", "total_price" => 240.0, "currency" => "MYR" },
+        { "rate_plan_id" => 11, "name" => "Non-Refundable Rate", "total_price" => 210.0, "currency" => "MYR" }
+      ],
+      "selected_rate_plan" => { "rate_plan_id" => 10, "name" => "Standard Rate", "total_price" => 240.0, "currency" => "MYR" }
+    )
+    active_branch = branch_with_options([ group("Garden Prestige Suite", [ selected_option ]) ]).merge(
+      "selected_option" => selected_option,
+      "confirmation_candidate" => selected_option,
+      "selected_rate_plan_id" => 10,
+      "selected_rate_plan_name" => "Standard Rate"
+    )
+
+    result = orchestrate(
+      message: "show me the rates again",
+      interpretation: interpretation(intent: "greeting", topic: "general"),
+      active_branch: active_branch,
+      decision: { action: :booking, pending_question: "confirm_selection" }
+    )
+
+    branch = result.dig(:slots_payload, "booking_task", "branch")
+    expect(result[:reply_type]).to eq(:ask_rate_plan)
+    expect(result[:pending_question]).to eq("rate_plan_selection")
+    expect(branch["selected_option"]["selection_id"]).to eq("garden_1")
+    expect(branch["selected_option"]).not_to have_key("selected_rate_plan")
+    expect(branch["selected_rate_plan_id"]).to be_nil
+    expect(branch["selected_rate_plan_name"]).to be_nil
+    expect(branch["confirmation_candidate"]).to be_nil
+  end
+
+  it "re-asks confirmation when changing rate for an option with a single rate plan" do
+    selected_option = option(1, "garden_1", "2026-08-01").merge(
+      "rate_plans" => [
+        { "rate_plan_id" => 10, "name" => "Standard Rate", "total_price" => 240.0, "currency" => "MYR" }
+      ]
+    )
+    active_branch = branch_with_options([ group("Garden Prestige Suite", [ selected_option ]) ]).merge(
+      "selected_option" => selected_option,
+      "confirmation_candidate" => selected_option
+    )
+
+    result = orchestrate(
+      message: "change rate",
+      interpretation: interpretation(intent: "greeting", topic: "general"),
+      active_branch: active_branch,
+      decision: { action: :booking, pending_question: "confirm_selection" }
+    )
+
+    branch = result.dig(:slots_payload, "booking_task", "branch")
+    expect(result[:reply_type]).to eq(:ask_confirmation)
+    expect(result[:pending_question]).to eq("confirm_selection")
+    expect(branch["selected_option"]["selection_id"]).to eq("garden_1")
+    expect(branch["confirmation_candidate"]["selection_id"]).to eq("garden_1")
+    expect(branch["selected_rate_plan_id"]).to eq(10)
+    expect(branch["selected_rate_plan_name"]).to eq("Standard Rate")
+  end
+
+  it "returns to option selection when a booking-ready guest changes room" do
+    selected_option = option(1, "garden_1", "2026-08-01").merge(
+      "selected_rate_plan" => { "rate_plan_id" => 10, "name" => "Standard Rate" }
+    )
+    suggested_options = [
+      group("Garden Prestige Suite", [ selected_option ]),
+      group("Deluxe Room", [ option(1, "deluxe_1", "2026-08-01") ])
+    ]
+    active_branch = branch_with_options(suggested_options).merge(
+      "selected_option" => selected_option,
+      "confirmation_candidate" => selected_option,
+      "selected_rate_plan_id" => 10,
+      "selected_rate_plan_name" => "Standard Rate"
+    )
+
+    result = orchestrate(
+      message: "change room",
+      interpretation: interpretation(intent: "greeting", topic: "general"),
+      active_branch: active_branch,
+      decision: { action: :booking, pending_question: "confirm_selection" }
+    )
+
+    branch = result.dig(:slots_payload, "booking_task", "branch")
+    expect(result[:reply_type]).to eq(:suggest_options)
+    expect(result[:pending_question]).to eq("select_option")
+    expect(branch["target_month"]).to eq(8)
+    expect(branch["adults"]).to eq(2)
+    expect(branch["suggested_options"].size).to eq(2)
+    expect(branch["selected_option"]).to be_nil
+    expect(branch["confirmation_candidate"]).to be_nil
+    expect(branch["selected_rate_plan_id"]).to be_nil
+    expect(branch["selected_rate_plan_name"]).to be_nil
+  end
+
+  it "selects a new option from the same change-room message" do
+    selected_option = option(1, "garden_1", "2026-08-01").merge(
+      "selected_rate_plan" => { "rate_plan_id" => 10, "name" => "Standard Rate" }
+    )
+    deluxe_option = option(2, "deluxe_2", "2026-08-02").merge(
+      "rate_plans" => [
+        { "rate_plan_id" => 20, "name" => "Standard Rate", "total_price" => 260.0, "currency" => "MYR" },
+        { "rate_plan_id" => 21, "name" => "Flexible Rate", "total_price" => 290.0, "currency" => "MYR" }
+      ]
+    )
+    active_branch = branch_with_options([
+      group("Garden Prestige Suite", [ selected_option ]),
+      group("Deluxe Room", [ deluxe_option ])
+    ]).merge(
+      "selected_option" => selected_option,
+      "confirmation_candidate" => selected_option,
+      "selected_rate_plan_id" => 10,
+      "selected_rate_plan_name" => "Standard Rate"
+    )
+
+    result = orchestrate(
+      message: "change room to deluxe room option 2",
+      interpretation: interpretation(intent: "option_selection", slots: { "option_number" => 2 }),
+      active_branch: active_branch,
+      decision: { action: :booking, pending_question: "confirm_selection" }
+    )
+
+    branch = result.dig(:slots_payload, "booking_task", "branch")
+    expect(result[:reply_type]).to eq(:ask_rate_plan)
+    expect(result[:pending_question]).to eq("rate_plan_selection")
+    expect(branch["selected_option"]["selection_id"]).to eq("deluxe_2")
+    expect(branch["confirmation_candidate"]).to be_nil
+    expect(branch["selected_rate_plan_id"]).to be_nil
+  end
+
   def orchestrate(message:, interpretation:, active_branch:, decision: self.decision)
     described_class.new(
       hotel: hotel,

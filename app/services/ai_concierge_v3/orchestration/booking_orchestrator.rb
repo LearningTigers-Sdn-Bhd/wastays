@@ -18,6 +18,9 @@ module AiConciergeV3
       when :resume
         handle_resume
       when :booking
+        revision_response = handle_booking_revision
+        return revision_response if revision_response
+
         selection_follow_up = resolve_selection_follow_up(
           conversation_state: conversation_state,
           interpretation: interpretation,
@@ -98,10 +101,177 @@ module AiConciergeV3
       end
     end
 
+    def handle_booking_revision(conversation_state: self.conversation_state, active_branch: self.active_branch)
+      case booking_revision_kind(active_branch)
+      when :change_rate
+        handle_rate_plan_revision(conversation_state: conversation_state, active_branch: active_branch)
+      when :change_option
+        handle_option_revision(conversation_state: conversation_state, active_branch: active_branch)
+      end
+    end
+
+    def handle_rate_plan_revision(conversation_state:, active_branch:)
+      branch = active_branch.deep_dup
+      selected_option = branch["selected_option"] || branch["confirmation_candidate"]
+
+      return ask_for_option_revision(branch, conversation_state: conversation_state) unless selected_option.present?
+
+      rate_plans = Array(selected_option["rate_plans"])
+      if rate_plans.many?
+        selected_option = selected_option.except("selected_rate_plan")
+        branch["selected_option"] = selected_option
+        branch["selected_rate_plan_id"] = nil
+        branch["selected_rate_plan_name"] = nil
+        branch["confirmation_candidate"] = nil
+
+        return booking_response(
+          conversation_state: conversation_state,
+          active_branch: branch,
+          reply_type: :ask_rate_plan,
+          pending_question: "rate_plan_selection",
+          extra_context: { selected_option: selected_option, rate_plans: rate_plans }
+        )
+      end
+
+      selected_option["selected_rate_plan"] ||= rate_plans.first if rate_plans.one?
+      branch["selected_option"] = selected_option
+      branch["confirmation_candidate"] = selected_option
+      branch["selected_rate_plan_id"] = selected_option.dig("selected_rate_plan", "rate_plan_id")
+      branch["selected_rate_plan_name"] = selected_option.dig("selected_rate_plan", "name")
+
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: branch,
+        reply_type: :ask_confirmation,
+        pending_question: "confirm_selection",
+        extra_context: { selected_option: selected_option }
+      )
+    end
+
+    def handle_option_revision(conversation_state:, active_branch:)
+      branch = clear_selected_booking_option(active_branch.deep_dup)
+      selection_follow_up = resolve_selection_follow_up(
+        conversation_state: conversation_state,
+        interpretation: interpretation,
+        active_branch: branch,
+        pending_question: "select_option"
+      )
+
+      return selection_follow_up if direct_payload_response?(selection_follow_up) || domain_response?(selection_follow_up)
+      return handle_option_selection(interpretation: selection_follow_up, active_branch: branch) if selection_follow_up.dig("slots", "selection_id").present?
+
+      ask_for_option_revision(branch, conversation_state: conversation_state)
+    end
+
+    def ask_for_option_revision(branch, conversation_state:)
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: branch,
+        reply_type: :suggest_options,
+        pending_question: "select_option",
+        extra_context: {
+          options: branch["suggested_options"],
+          month_label: month_label(branch),
+          guest_label: guest_label(branch),
+          search_params: search_params_for(branch)
+        }
+      )
+    end
+
+    def clear_selected_booking_option(branch)
+      branch["selected_option"] = nil
+      branch["selected_rate_plan_id"] = nil
+      branch["selected_rate_plan_name"] = nil
+      branch["confirmation_candidate"] = nil
+      branch["pending_selection"] = nil
+      branch
+    end
+
+    def booking_revision_kind(branch)
+      return unless booking_ready_for_revision?(branch)
+      return if revision_blocked_by_interpretation?
+      return if timing_or_party_revision?
+
+      return :change_option if option_revision_message?
+      return if pending_question == "rate_plan_selection"
+      return :change_rate if rate_revision_message?(branch)
+
+      nil
+    end
+
+    def booking_ready_for_revision?(branch)
+      Array(branch["suggested_options"]).present? &&
+        branch_has_timing?(branch) &&
+        !branch_duration_missing?(branch) &&
+        !branch_guest_count_missing?(branch) &&
+        !branch_party_split_missing?(branch)
+    end
+
+    def revision_blocked_by_interpretation?
+      informational_intent?(interpretation["intent"]) ||
+        interpretation.dig("conversation_signals", "end_conversation") ||
+        interpretation["intent"] == "confirmation"
+    end
+
+    def timing_or_party_revision?
+      revision_slot_keys = %w[target_month target_year month_segment check_in check_out nights days party_size_total adults children room_count]
+      revision_slot_keys.any? do |key|
+        value = interpretation.dig("slots", key)
+        value.present? && value != 0
+      end
+    end
+
+    def rate_revision_message?(branch)
+      return false unless selected_booking_option_present?(branch)
+
+      normalized_message.match?(/\b(?:change|switch|choose|select|show|see|different|another|other|new)\b.*\b(?:rate|rates|rate plan|plan|plans)\b/) ||
+        normalized_message.match?(/\b(?:rate|rates|rate plan|plan|plans)\b.*\b(?:change|switch|choose|select|show|see|different|another|other|new)\b/) ||
+        normalized_message.match?(/\b(?:refundable|non refundable|nonrefundable|standard|flexible|cheaper|cheapest|lowest)\b.*\b(?:instead|please|rate|plan)\b/)
+    end
+
+    def option_revision_message?
+      normalized_message.match?(/\b(?:change|switch|choose|select|pick|show|see|different|another|other|new)\b.*\b(?:room|rooms|option|options|choice|choices|suite|villa)\b/) ||
+        normalized_message.match?(/\b(?:room|rooms|option|options|choice|choices|suite|villa)\b.*\b(?:change|switch|choose|select|pick|show|see|different|another|other|new)\b/)
+    end
+
+    def selected_booking_option_present?(branch)
+      (branch["selected_option"] || branch["confirmation_candidate"]).present?
+    end
+
+    def normalized_message
+      @normalized_message ||= message.downcase.gsub(/[^a-z0-9]+/, " ").squish
+    end
+
+    def branch_has_timing?(branch)
+      branch["check_in"].present? || branch["target_month"].present?
+    end
+
+    def branch_duration_missing?(branch)
+      branch["check_out"].blank? &&
+        branch["nights"].to_i <= 0 &&
+        branch["days"].to_i <= 0
+    end
+
+    def branch_guest_count_missing?(branch)
+      branch["party_size_total"].to_i <= 0 &&
+        branch["adults"].to_i <= 0 &&
+        branch["children"].to_i <= 0
+    end
+
+    def branch_party_split_missing?(branch)
+      total = branch["party_size_total"].to_i
+      return false if total <= 0
+
+      (branch["adults"].to_i + branch["children"].to_i) != total
+    end
+
     def handle_resume
       slots_payload, resumed = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).resume_booking
       branch = resumed&.dig("branch") || empty_branch
       resumed_state = temporary_state(conversation_state, slots_payload)
+
+      revision_response = handle_booking_revision(conversation_state: resumed_state, active_branch: branch)
+      return revision_response if revision_response
 
       if resumed&.dig("pending_question") == "confirm_selection" && interpretation["intent"] == "confirmation"
         if interpretation.dig("slots", "confirmation") == "no"

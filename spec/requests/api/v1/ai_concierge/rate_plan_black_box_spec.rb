@@ -103,7 +103,78 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     expect(active_branch["confirmation_candidate"]).to be_nil
   end
 
-  def seed_rate_plan_options(standard_name: "Standard Rate", non_refundable_name: "Non-Refundable Rate", standard_price: 240, non_refundable_price: 220)
+  it "changes rate after confirmation candidate, selects a cheaper rate, and confirms a quote" do
+    _standard, non_refundable = seed_rate_plan_options(standard_price: 260, non_refundable_price: 210)
+
+    run_to_rate_plan_prompt
+    post_message("first one")
+    expect(active_branch["selected_rate_plan_name"]).to eq("Standard Rate")
+
+    post_message("change rate")
+    expect(parsed_body["reply_message"]).to include("which rate plan would you like?")
+    expect(active_branch["selected_rate_plan_id"]).to be_nil
+    expect(active_branch["confirmation_candidate"]).to be_nil
+
+    post_message("cheapest")
+    expect(active_branch["selected_rate_plan_id"]).to eq(non_refundable.id)
+
+    post_message("yes")
+    expect(parsed_body["reply_message"]).to include("Quotation link:")
+    expect(parsed_body["reply_message"]).to include("Total:")
+    expect(Prospect.lookup_by_phone(phone).first.prospect_conversation_state.reload.flow_status).to eq("ended")
+  end
+
+  it "changes room after a hotel info interruption and asks for rates on the new room" do
+    seed_rate_plan_options
+    deluxe_standard, _deluxe_flexible = seed_rate_plan_options(
+      room_name: "Deluxe Room",
+      standard_price: 260,
+      non_refundable_name: "Flexible Rate",
+      non_refundable_price: 290
+    )
+
+    run_to_rate_plan_prompt
+    post_message("first one")
+    post_message("what time is check in?")
+    expect(parsed_body["reply_message"]).to include("Check-in starts")
+
+    post_message("change room to Deluxe Room option 1")
+    expect(parsed_body["reply_message"]).to include("For Deluxe Room")
+    expect(parsed_body["reply_message"]).to include("which rate plan would you like?")
+    expect(active_branch["selected_option"]["room_type_name"]).to eq("Deluxe Room")
+    expect(active_branch["selected_rate_plan_id"]).to be_nil
+
+    post_message("first one")
+    expect(active_branch["selected_rate_plan_id"]).to eq(deluxe_standard.id)
+    expect(parsed_body["reply_message"]).to include("Deluxe Room")
+    expect(parsed_body["reply_message"]).to include("(Standard Rate)")
+  end
+
+  it "still cancels the booking attempt from natural abandonment language" do
+    seed_rate_plan_options
+
+    run_to_rate_plan_prompt
+    post_message("first one")
+    post_message("changed my mind")
+
+    expect(parsed_body["reply_message"]).to include("I've cancelled your booking attempt")
+    expect(active_branch["selected_option"]).to be_nil
+    expect(active_branch["confirmation_candidate"]).to be_nil
+  end
+
+  it "returns to option selection when the guest rejects confirmation" do
+    seed_rate_plan_options
+
+    run_to_rate_plan_prompt
+    post_message("first one")
+    post_message("no")
+
+    expect(parsed_body["reply_message"]).to include("Here are the available options")
+    expect(active_branch["confirmation_candidate"]).to be_nil
+    expect(Prospect.lookup_by_phone(phone).first.prospect_conversation_state.reload.pending_question).to eq("select_option")
+  end
+
+  def seed_rate_plan_options(room_name: self.room_name, standard_name: "Standard Rate", non_refundable_name: "Non-Refundable Rate", standard_price: 240, non_refundable_price: 220)
     room_type = create(:room_type, hotel: hotel, name: room_name, base_price: standard_price, max_adults: 3)
     standard = create(:rate_plan, room_type: room_type, name: standard_name)
     non_refundable = create(:rate_plan, room_type: room_type, name: non_refundable_name)
@@ -150,6 +221,8 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     return interpretation(slots: { "days" => 3, "nights" => 2 }) if normalized.include?("3 days 2 nights")
     return interpretation(slots: { "adults" => 2, "children" => 0 }) if normalized.include?("2 adults")
     return interpretation(slots: month_slots(9, "early"), signals: { "is_correction" => true }) if normalized.include?("early september")
+    return interpretation(intent: "confirmation", slots: { "confirmation" => "yes" }) if normalized == "yes"
+    return interpretation(intent: "confirmation", slots: { "confirmation" => "no" }) if normalized == "no"
 
     if normalized.match?(/\boption\s*\d+\b/)
       return interpretation(

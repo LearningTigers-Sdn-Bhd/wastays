@@ -25,6 +25,29 @@ When party composition changes, clear:
 - `selected_rate_plan_id`
 - `selected_rate_plan_name`
 
+When a booking-ready guest changes only the rate plan, preserve:
+- timing, duration, guest composition, and room count
+- `suggested_options`
+- `selected_option`
+
+Clear:
+- `confirmation_candidate`
+- `selected_rate_plan_id`
+- `selected_rate_plan_name`
+- nested `selected_rate_plan` on `selected_option`
+
+When a booking-ready guest changes only the room/option, preserve:
+- timing, duration, guest composition, and room count
+- `suggested_options`
+- `suggestion_set_version`
+
+Clear:
+- `pending_selection`
+- `confirmation_candidate`
+- `selected_option`
+- `selected_rate_plan_id`
+- `selected_rate_plan_name`
+
 ## `BookingInputNormalizer` Behavior
 
 - strip hallucinated timing, duration, checkout, and month segment slots unless explicit in the message
@@ -60,6 +83,18 @@ Rate-plan follow-ups support deterministic matching for:
 - unique partial rate-plan names
 
 Ambiguous rate-plan replies keep `pending_question=rate_plan_selection` and re-ask instead of confirming a plan.
+
+## Booking-Ready Revisions
+
+Booking-ready revision handling lives in `BookingOrchestrator`, before normal booking action resolution.
+
+- `change rate`, `show rates again`, and similar phrases require an existing selected option
+- rate revisions with multiple rate plans set `pending_question=rate_plan_selection`
+- rate revisions with one/no rate plan keep the option and re-ask confirmation
+- `change room`, `different option`, and similar phrases set `pending_question=select_option`
+- same-turn option revisions can resolve a new `selection_id` from the existing suggestion set
+- revisions are skipped when the message includes timing/party slots, because those are broader corrections handled by `SlotMerger`
+- revisions are skipped for hotel-information/policy intents and explicit conversation-end signals
 
 ## Branch Fields Reference
 
