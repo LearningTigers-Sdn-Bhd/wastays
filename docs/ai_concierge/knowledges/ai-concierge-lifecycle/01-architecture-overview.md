@@ -34,19 +34,25 @@ AiConciergeV3 uses a hybrid architecture where:
 ## Target Workflow
 
 1. user sends message
-2. `ConversationSummaryBuilder` builds compact state context
-3. `InterpreterAgent` classifies internal `message_type`, then returns structured interpretation
-4. `TurnOrchestrator` applies deterministic guards to timing, duration, and guest count
-5. orchestrator merges safe slots into state and decides the next action
-6. orchestrator executes one or more deterministic tools
-7. orchestrator builds structured reply context
-8. `MessengerAgent` renders `reply_message`
-9. Ruby returns public payload and persists state updates
+2. `Conversation::SessionLoader` resolves/locks the prospect and records the inbound turn
+3. `Conversation::InterpretationPipeline` builds compact state context and calls `InterpreterAgent`
+4. `Conversation::ControlHandler` handles cancellation/end/max-turn decisions
+5. `Conversation::InterpretationPipeline` applies deterministic guards, merges safe slots, and decides the next action
+6. `TurnOrchestrator` delegates to booking, hotel-knowledge, booking-context, or fallback handlers
+7. `Conversation::ResponsePersister` renders the reply, persists state, records outbound message, and returns public payload
 
 ## Ownership Boundaries
 
-- `TurnOrchestrator`: prospect resolution, per-prospect turn locking, state loading, interpreter call, deterministic guard invocation, high-level delegation, persistence, message rendering, and final payload.
-- `TransitionPolicy`: high-level action routing only; it does not decide booking sub-steps.
+- `TurnOrchestrator`: public entrypoint and high-level delegation spine.
+- `Conversation::SessionLoader`: prospect resolution/creation, per-prospect turn locking, state loading/reactivation, inbound message recording, and max-turn checks.
+- `Conversation::InterpretationPipeline`: summary building, interpreter call, schema validation, deterministic guards, booking context prep, slot merge, and transition decision.
+- `Conversation::ControlHandler`: booking-attempt cancellation, end confirmation, explicit end, declined end, and max-turn responses.
+- `Conversation::ResponsePersister`: messenger invocation, state patch persistence, outbound message recording, direct payload completion, and final public payload.
+- `Conversation::BookingContextHandler`: existing-booking context tool execution and domain result shaping.
+- `Core::TransitionPolicy`: high-level action routing only; it does not decide booking sub-steps.
+- `Core::ConversationControlPolicy`: deterministic cancel/end conversation-control decisions.
+- `Core::InformationIntentGuard`: deterministic hotel/property amenities and facilities correction before routing.
+- `Core::InquiryResponder`, `Core::Result`, and `Core::ResponsePayloadBuilder`: public entry validation, service result envelope, and public payload shape.
 - `Booking::Orchestrator`: booking prompts and high-level booking sub-flow coordination.
 - `Booking::ActionResolver`: next booking sub-step resolution.
 - `Booking::SelectionHandler`: option/date/room ambiguity and pending-selection handling.
@@ -54,10 +60,13 @@ AiConciergeV3 uses a hybrid architecture where:
 - `Booking::CompletionHandler`: booking URL generation, completion/archive semantics, and safe URL-failure fallback.
 - `Booking::ResumeHandler`: suspended booking resume behavior.
 - `Booking::RevisionPolicy`: booking-ready rate/room revision detection.
-- `LibrarianOrchestrator`: hotel policy, general hotel info, FAQ, nearby attractions, room information, `information_task`, and booking suspension on interruptions.
+- `HotelKnowledge::Orchestrator`: hotel policy, general hotel info, FAQ, nearby attractions, and room information coordination.
+- `HotelKnowledge::ToolRouter`: hotel-knowledge intent/topic to tool/reply mapping.
+- `HotelKnowledge::StateHandler`: `information_task` updates and booking suspension on interruptions.
+- `HotelKnowledge::DiagnosticRecorder`: hotel-knowledge diagnostic recording context.
+- `HotelKnowledge::RoomReplyResolver`: room information result to reply-type mapping.
 - `ConversationTaskManager`: V2 task-state normalization, legacy read migration, activate/suspend/resume/archive, and avoiding legacy writes.
 - `Booking::InputNormalizer`: deterministic booking slot guards before merge.
-- `InformationIntentGuard`: deterministic hotel/property amenities and facilities correction before routing.
 
 ## Public Payload Stability
 

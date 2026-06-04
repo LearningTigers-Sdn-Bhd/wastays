@@ -22,26 +22,17 @@ Identity rules:
 
 ## `TurnOrchestrator`
 
-Central coordinator for a single concierge turn:
+Thin coordinator for a single concierge turn:
 
-1. resolve or create prospect
-2. serialize the prospect turn with a row lock
-3. load persisted conversation state
-4. reactivate an ended conversation state when a new inbound turn arrives
-5. record inbound message
-6. build compact conversation summary
-7. call interpreter
-8. evaluate conversation-control decisions via `ConversationControlPolicy`
-9. apply `InformationIntentGuard` and `Booking::InputNormalizer`
-10. merge incoming slots into active branch
-11. decide next legal action via `TransitionPolicy`
-12. delegate booking actions to `Booking::Orchestrator`
-13. delegate information actions to `LibrarianOrchestrator`
-14. build state patch
-15. call messenger
-16. record inbound and outbound prospect messages
-17. explicitly archive active branches on conversation end
-18. return final payload
+1. ask `Conversation::SessionLoader` to resolve/create the prospect, lock the turn, load/reactivate state, and record inbound message
+2. return `Conversation::ControlHandler` max-turn response when the conversation exceeds the turn limit
+3. ask `Conversation::InterpretationPipeline` to call the interpreter and validate the structured result
+4. return `Conversation::ControlHandler` result when cancellation/end controls apply
+5. ask `Conversation::InterpretationPipeline` to guard, merge, and decide the legal route
+6. delegate booking actions to `Booking::Orchestrator`
+7. delegate information actions to `HotelKnowledge::Orchestrator`
+8. delegate existing-booking context to `Conversation::BookingContextHandler`
+9. ask `Conversation::ResponsePersister` to render, persist, record outbound, and return the public payload
 
 ## `Booking::Orchestrator`
 
@@ -63,7 +54,7 @@ Coordinates booking sub-step execution after high-level transition is `:booking`
 
 ## Policy and Matcher Objects
 
-`ConversationControlPolicy` owns deterministic conversation-control checks:
+`Core::ConversationControlPolicy` owns deterministic conversation-control checks:
 - explicit booking-attempt cancellation
 - explicit end requests
 - end-confirmation yes/no interpretation
@@ -81,10 +72,14 @@ Coordinates booking sub-step execution after high-level transition is `:booking`
 - unique `standard`
 - refundable/non-refundable distinction
 
-## `LibrarianOrchestrator`
+## `HotelKnowledge::Orchestrator`
 
-Owns information tool routing:
+Coordinates information tool execution after high-level transition is `:librarian`:
 - hotel policy, general hotel info, FAQ, nearby attractions, room information
+- delegate intent/topic tool routing to `HotelKnowledge::ToolRouter`
+- delegate room result mapping to `HotelKnowledge::RoomReplyResolver`
+- delegate `information_task` and booking suspension payload updates to `HotelKnowledge::StateHandler`
+- delegate diagnostic creation context to `HotelKnowledge::DiagnosticRecorder`
 - passes the raw guest message as `query` to hybrid hotel knowledge tools
 - hotel knowledge categories are treated as storage categories; answer retrieval may retry across `general_info`, `faq`, and `policy` when the routed category has no useful match
 - update `information_task` for each answered knowledge turn
@@ -99,16 +94,16 @@ Owns information tool routing:
 - format multiline confirmation and quote replies
 - not allowed to set: `action_name`, `needs_human_support`, state patches
 
-## `TransitionPolicy`
+## `Core::TransitionPolicy`
 
 Enforces high-level legal routing:
 - `:end_conversation`, `:reset`, `:resume`, `:librarian`, `:booking_context`, `:booking`, `:greeting`, or `:fallback`
 - resume non-expired suspended bookings before general routing when inbound is selection/confirmation follow-up
 - route information intents during active booking to librarian with `pause: true`
 - route information intents outside active booking to librarian with `pause: false`
-- policy phrasing corrected by `InformationIntentGuard` before routing, including "booking policy", policies/rules/house rules, cancellation, check-in, and check-out questions
-- hotel service questions corrected by `InformationIntentGuard` before routing, including parking, transportation, shuttle/airport transfer, WiFi, breakfast, restaurant, spa, pool, amenities, and facilities
-- hotel booking-advice questions corrected by `InformationIntentGuard` before routing, including "what should I be aware of during booking"
+- policy phrasing corrected by `Core::InformationIntentGuard` before routing, including "booking policy", policies/rules/house rules, cancellation, check-in, and check-out questions
+- hotel service questions corrected by `Core::InformationIntentGuard` before routing, including parking, transportation, shuttle/airport transfer, WiFi, breakfast, restaurant, spa, pool, amenities, and facilities
+- hotel booking-advice questions corrected by `Core::InformationIntentGuard` before routing, including "what should I be aware of during booking"
 - clear booking requests still remain booking flow, including book/reserve/quote, room availability, and date/month booking phrasing
 - suspended booking resumes only for selection/confirmation/booking follow-ups, not hotel information or policy interruptions
 
@@ -125,7 +120,7 @@ Enforces high-level legal routing:
 
 Cancel-attempt phrases such as `cancel attempt`, `cancel booking attempt`, and `cancel my attempt for booking` do not continue a stale booking branch.
 
-These checks are owned by `ConversationControlPolicy` and run before end-confirmation and generic explicit-end handling.
+These checks are owned by `Core::ConversationControlPolicy` and run before end-confirmation and generic explicit-end handling.
 
 They:
 

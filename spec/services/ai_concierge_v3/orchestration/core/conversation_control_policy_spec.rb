@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConciergeV3::Orchestration::ConversationControlPolicy do
+RSpec.describe AiConciergeV3::Orchestration::Core::ConversationControlPolicy do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:interpretation) do
     {

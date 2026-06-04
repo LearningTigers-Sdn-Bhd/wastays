@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConciergeV3::Orchestration::InquiryResponder do
+RSpec.describe AiConciergeV3::Orchestration::Core::InquiryResponder do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
 
   before do

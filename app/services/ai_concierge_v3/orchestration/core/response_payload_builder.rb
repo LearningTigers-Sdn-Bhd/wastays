@@ -1,6 +1,7 @@
 module AiConciergeV3
   module Orchestration
-    class ResponsePayloadBuilder
+    module Core
+      class ResponsePayloadBuilder
     def initialize(reply_message:, needs_human_support:, action_name:, prospect_public_id: nil)
       @reply_message = reply_message
       @needs_human_support = needs_human_support
@@ -21,6 +22,7 @@ module AiConciergeV3
     private
 
     attr_reader :reply_message, :needs_human_support, :action_name, :prospect_public_id
+      end
     end
   end
 end

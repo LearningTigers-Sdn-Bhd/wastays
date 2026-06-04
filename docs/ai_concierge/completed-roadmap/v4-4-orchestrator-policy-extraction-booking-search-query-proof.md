@@ -8,7 +8,7 @@
 
 - Extracted `AiConciergeV3::Orchestration::BookingRevisionPolicy` for booking-ready `change rate` and `change room` decisions.
 - Extracted `AiConciergeV3::Matching::RatePlanMatcher` for deterministic rate-plan matching.
-- Extracted `AiConciergeV3::Orchestration::ConversationControlPolicy` for booking-attempt cancellation, explicit end requests, end-confirmation replies, and end-confirmation mode.
+- Extracted `AiConciergeV3::Orchestration::Core::ConversationControlPolicy` for booking-attempt cancellation, explicit end requests, end-confirmation replies, and end-confirmation mode.
 - Kept orchestrators as coordinators:
   - `TurnOrchestrator` still owns lifecycle sequencing, persistence, and response construction.
   - `BookingOrchestrator` still owns booking flow execution and delegates matching/revision decisions.

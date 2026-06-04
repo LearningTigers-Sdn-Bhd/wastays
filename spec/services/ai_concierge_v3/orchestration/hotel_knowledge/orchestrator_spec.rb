@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConciergeV3::Orchestration::LibrarianOrchestrator do
+RSpec.describe AiConciergeV3::Orchestration::HotelKnowledge::Orchestrator do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:prospect) { create(:prospect, hotel: hotel, phone_number: "+60123456789") }
   let(:conversation_state) { create(:prospect_conversation_state, prospect: prospect, pending_question: "confirm_selection", slots_payload: slots_payload) }

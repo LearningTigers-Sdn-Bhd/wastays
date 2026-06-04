@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConciergeV3::Orchestration::InformationIntentGuard do
+RSpec.describe AiConciergeV3::Orchestration::Core::InformationIntentGuard do
   it "routes booking policy phrasing to hotel policy even when interpreted as booking search" do
     result = described_class.new(
       message: "before that, may i know the booking policy?",

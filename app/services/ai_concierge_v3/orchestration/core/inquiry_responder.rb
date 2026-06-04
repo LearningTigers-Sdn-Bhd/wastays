@@ -1,6 +1,7 @@
 module AiConciergeV3
   module Orchestration
-    class InquiryResponder
+    module Core
+      class InquiryResponder
     MAX_MESSAGE_LENGTH = 2_000
 
     def initialize(hotel:, message:, phone: nil, prospect_public_id: nil)
@@ -16,14 +17,14 @@ module AiConciergeV3
       return error_result("Phone or prospect_public_id is required for AI concierge conversations") if phone.blank? && prospect_public_id.blank?
       return error_result("Message is too long (max #{MAX_MESSAGE_LENGTH} characters)") if message.length > MAX_MESSAGE_LENGTH
 
-      TurnOrchestrator.new(
+      AiConciergeV3::Orchestration::TurnOrchestrator.new(
         hotel: hotel,
         message: message,
         phone: phone,
         prospect_public_id: prospect_public_id
       ).call
     rescue StandardError => e
-      Rails.logger.error("AiConciergeV3::InquiryResponder error: #{e.class}: #{e.message}")
+      Rails.logger.error("AiConciergeV3::Orchestration::Core::InquiryResponder error: #{e.class}: #{e.message}")
       Result.failure(error: "AI Concierge is temporarily unavailable.", status: :internal_server_error)
     end
 
@@ -34,6 +35,7 @@ module AiConciergeV3
     def error_result(message)
       Result.failure(error: message, status: :unprocessable_content)
     end
+      end
     end
   end
 end

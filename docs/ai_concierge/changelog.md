@@ -1,6 +1,48 @@
 # AI Concierge Changelog
 
-## V4.4 — Orchestrator Policy Extraction and Booking Search Query Proof (Current)
+## V5.0 — Orchestration Domain Restructure (Current)
+
+### Changes
+- Reorganized AI Concierge V3 orchestration into focused folders:
+  - `orchestration/core` for shared entry/result/policy/payload primitives
+  - `orchestration/conversation` for prospect session loading, interpretation, control handling, booking-context handling, and response persistence
+  - `orchestration/booking` for booking-specific orchestration, selection, rate-plan, resume, completion, revision, and normalization logic
+  - `orchestration/hotel_knowledge` for policy/general info/FAQ/attractions/room-information coordination
+- Kept `TurnOrchestrator` as the top-level conversation coordinator while moving lifecycle details into focused conversation collaborators.
+- Replaced `LibrarianOrchestrator` with `HotelKnowledge::Orchestrator` and extracted tool routing, state handling, diagnostics, and room reply mapping.
+- Grouped shared orchestration primitives under `AiConciergeV3::Orchestration::Core`:
+  - `InquiryResponder`
+  - `Result`
+  - `ResponsePayloadBuilder`
+  - `TransitionPolicy`
+  - `ConversationControlPolicy`
+  - `InformationIntentGuard`
+- Added same-prospect turn serialization through the conversation session loader while preserving optimistic-lock conflict handling as a fallback.
+- Consolidated RubyLLM setup in `Providers::RubyLlmClient` and updated AI agents to share provider/model setup.
+- Preserved public inquiry response shape:
+  - `reply_message`
+  - `needs_human_support`
+  - `action_name`
+  - `prospect_public_id`
+
+### Files Changed
+- `orchestration/turn_orchestrator.rb` — remains the high-level router over conversation, booking, hotel knowledge, and booking-context flows
+- `orchestration/core/` — shared orchestration entrypoint, result envelope, policies, guards, and public payload builder
+- `orchestration/conversation/` — turn/session lifecycle helpers and response persistence
+- `orchestration/booking/` — booking orchestration and focused booking sub-flow handlers
+- `orchestration/hotel_knowledge/` — hotel-knowledge orchestration and focused knowledge collaborators
+- `providers/ruby_llm_client.rb` — shared RubyLLM provider/model/chat setup for AI agents
+- lifecycle docs — updated architecture, state-transition, and implementation reading order references
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge`
+- 307 examples, 0 failures
+- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge`
+- no offenses
+
+---
+
+## V4.4 — Orchestrator Policy Extraction and Booking Search Query Proof
 
 ### Changes
 - Extracted booking-ready revision detection out of `BookingOrchestrator` into `BookingRevisionPolicy`.

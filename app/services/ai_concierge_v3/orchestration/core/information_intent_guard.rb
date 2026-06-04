@@ -1,6 +1,7 @@
 module AiConciergeV3
   module Orchestration
-    class InformationIntentGuard
+    module Core
+      class InformationIntentGuard
     def initialize(message:, interpretation:)
       @message = message.to_s
       @interpretation = interpretation
@@ -89,6 +90,7 @@ module AiConciergeV3
     def normalize_text(value)
       value.to_s.downcase.gsub(/[^a-z0-9]+/, " ").squish
     end
+      end
     end
   end
 end

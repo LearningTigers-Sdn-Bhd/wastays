@@ -1,6 +1,7 @@
 module AiConciergeV3
   module Orchestration
-    class TransitionPolicy
+    module Core
+      class TransitionPolicy
     def initialize(interpretation:, active_branch:, paused_flows: [], pending_question:, message: nil, booking_task: nil)
       @interpretation = interpretation
       @active_branch = active_branch || {}
@@ -125,6 +126,7 @@ module AiConciergeV3
     def normalize(value)
       value.to_s.downcase.gsub(/[^a-z0-9]+/, " ").squish
     end
+      end
     end
   end
 end

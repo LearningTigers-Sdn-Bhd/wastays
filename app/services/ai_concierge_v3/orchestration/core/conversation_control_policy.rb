@@ -1,6 +1,7 @@
 module AiConciergeV3
   module Orchestration
-    class ConversationControlPolicy
+    module Core
+      class ConversationControlPolicy
       def initialize(message:, conversation_state:, interpretation:)
         @message = message.to_s
         @conversation_state = conversation_state
@@ -53,6 +54,7 @@ module AiConciergeV3
 
       def normalized_message
         @normalized_message ||= message.downcase.gsub(/[^a-z0-9']+/, " ").squish
+      end
       end
     end
   end

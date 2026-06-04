@@ -10,7 +10,7 @@ module AiConciergeV3
       end
 
       def call
-        Orchestration::ResponsePayloadBuilder.new(
+        Orchestration::Core::ResponsePayloadBuilder.new(
           reply_message: message,
           needs_human_support: needs_human_support,
           action_name: action_name

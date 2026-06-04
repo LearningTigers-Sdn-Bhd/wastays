@@ -14,7 +14,7 @@ class Api::V1::AiConcierge::InquiriesController < Api::V1::BaseController
     end
 
     hotel = hotel.class.includes(:property_policy, room_types: :room_rates).find(hotel.id)
-    result = AiConciergeV3::Orchestration::InquiryResponder.new(
+    result = AiConciergeV3::Orchestration::Core::InquiryResponder.new(
       hotel: hotel,
       message: inquiry_params[:message],
       phone: inquiry_params[:phone],

@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConciergeV3::Orchestration::TransitionPolicy do
+RSpec.describe AiConciergeV3::Orchestration::Core::TransitionPolicy do
   let(:interpretation) do
     {
       "intent" => "booking_search",

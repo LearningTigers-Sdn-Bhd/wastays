@@ -1,6 +1,7 @@
 module AiConciergeV3
   module Orchestration
-    class Result
+    module Core
+      class Result
     attr_reader :payload, :error, :status
 
     def self.success(payload:)
@@ -21,6 +22,7 @@ module AiConciergeV3
     def success?
       @success
     end
+      end
     end
   end
 end
