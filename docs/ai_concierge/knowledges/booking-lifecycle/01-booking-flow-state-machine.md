@@ -4,7 +4,7 @@
 
 High-level transition order:
 
-1. explicit booking attempt cancellation -> reset booking task and ask the next-step choice
+1. explicit or active-booking natural cancellation -> reset booking task and ask the next-step choice
 2. explicit stop/bye/thanks/nevermind message -> end or confirm ending the current conversation
 3. explicit reset -> reset current flow
 4. non-expired suspended booking selection or confirmation follow-up -> resume booking
@@ -25,7 +25,7 @@ High-level transition order:
 6. `party_size_total` exists but adult/children split missing -> ask clarification (smart split with remainder suggestion)
 7. valid option selection with multiple rate plans -> ask which rate plan
 8. valid option selection with single/no rate plan -> auto-select, set `confirmation_candidate`, ask for confirmation
-9. valid rate plan selection -> set `selected_rate_plan_id/name`, set `confirmation_candidate`, ask for confirmation
+9. valid deterministic rate plan selection -> set `selected_rate_plan_id/name`, set `confirmation_candidate`, ask for confirmation
 10. confirmation `yes` -> generate booking link and end the current conversation when URL generation succeeds
 11. confirmation `no` -> clear candidate and return to option selection
 12. failed booking URL generation -> return safe fallback and leave booking uncompleted
@@ -35,6 +35,16 @@ High-level transition order:
 16. change of month/window or party composition -> clear stale suggestions, pending selection, and confirmation state, then rerun search
 17. generic booking request after stale no-options state -> reset stale branch and ask for fresh dates/month
 18. bare `this month` without date or early/mid/late -> ask for exact check-in date or assumption range
+
+## V4.1 Hardening Rules
+
+- booking URL generation validates required option fields and dates before quote creation
+- failed booking URL generation returns a safe fallback and keeps the booking uncompleted
+- room-type matching supports reordered shorthand, common aliases, suffix/plural normalization, and small typos while preserving ambiguity prompts
+- rate-plan matching supports ordinals, price intent, `standard`, and refundable/non-refundable wording
+- ambiguous rate-plan matching re-asks instead of guessing
+- timing or party changes clear selected rate-plan fields along with suggestions, pending selections, confirmation candidates, and selected options
+- natural active-booking cancellation phrases such as `forget the room`, `changed my mind`, and `drop the reservation` cancel only the booking attempt
 
 ## Booking Task Statuses
 

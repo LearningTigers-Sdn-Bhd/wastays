@@ -119,6 +119,94 @@ RSpec.describe AiConciergeV3::Orchestration::BookingOrchestrator do
     expect(result).not_to include(flow_status: "ended", end_reason: "booking_url_generated")
   end
 
+  it "selects the cheapest rate plan from natural price language" do
+    selected_option = option(1, "garden_1", "2026-08-01").merge(
+      "rate_plans" => [
+        { "rate_plan_id" => 10, "name" => "Standard Rate", "total_price" => 240.0, "currency" => "MYR" },
+        { "rate_plan_id" => 11, "name" => "Non-Refundable Rate", "total_price" => 210.0, "currency" => "MYR" }
+      ]
+    )
+    active_branch = branch_with_options([ group("Garden Prestige Suite", [ selected_option ]) ]).merge("selected_option" => selected_option)
+
+    result = orchestrate(
+      message: "the cheapest one please",
+      interpretation: interpretation(slots: {}),
+      active_branch: active_branch,
+      decision: { action: :booking, pending_question: "rate_plan_selection" }
+    )
+
+    expect(result[:reply_type]).to eq(:ask_confirmation)
+    expect(result.dig(:extra_context, :selected_option, "selected_rate_plan", "name")).to eq("Non-Refundable Rate")
+    expect(result.dig(:slots_payload, "booking_task", "branch", "selected_rate_plan_id")).to eq(11)
+  end
+
+  it "selects a rate plan by ordinal follow-up" do
+    selected_option = option(1, "garden_1", "2026-08-01").merge(
+      "rate_plans" => [
+        { "rate_plan_id" => 10, "name" => "Standard Rate", "total_price" => 240.0, "currency" => "MYR" },
+        { "rate_plan_id" => 11, "name" => "Flexible Rate", "total_price" => 260.0, "currency" => "MYR" }
+      ]
+    )
+    active_branch = branch_with_options([ group("Garden Prestige Suite", [ selected_option ]) ]).merge("selected_option" => selected_option)
+
+    result = orchestrate(
+      message: "second one",
+      interpretation: interpretation(slots: {}),
+      active_branch: active_branch,
+      decision: { action: :booking, pending_question: "rate_plan_selection" }
+    )
+
+    expect(result[:reply_type]).to eq(:ask_confirmation)
+    expect(result.dig(:extra_context, :selected_option, "selected_rate_plan", "name")).to eq("Flexible Rate")
+  end
+
+  it "matches non-refundable without treating refundable as the same plan" do
+    selected_option = option(1, "garden_1", "2026-08-01").merge(
+      "rate_plans" => [
+        { "rate_plan_id" => 10, "name" => "Refundable Rate", "total_price" => 260.0, "currency" => "MYR" },
+        { "rate_plan_id" => 11, "name" => "Non-Refundable Rate", "total_price" => 220.0, "currency" => "MYR" }
+      ]
+    )
+    active_branch = branch_with_options([ group("Garden Prestige Suite", [ selected_option ]) ]).merge("selected_option" => selected_option)
+
+    refundable = orchestrate(
+      message: "refundable",
+      interpretation: interpretation(slots: {}),
+      active_branch: active_branch.deep_dup,
+      decision: { action: :booking, pending_question: "rate_plan_selection" }
+    )
+    non_refundable = orchestrate(
+      message: "non refundable",
+      interpretation: interpretation(slots: {}),
+      active_branch: active_branch.deep_dup,
+      decision: { action: :booking, pending_question: "rate_plan_selection" }
+    )
+
+    expect(refundable.dig(:extra_context, :selected_option, "selected_rate_plan", "name")).to eq("Refundable Rate")
+    expect(non_refundable.dig(:extra_context, :selected_option, "selected_rate_plan", "name")).to eq("Non-Refundable Rate")
+  end
+
+  it "re-asks for rate plan when a partial provider name is ambiguous" do
+    selected_option = option(1, "garden_1", "2026-08-01").merge(
+      "rate_plans" => [
+        { "rate_plan_id" => 10, "name" => "Standard Rate", "total_price" => 240.0, "currency" => "MYR" },
+        { "rate_plan_id" => 11, "name" => "Standard Flexible Rate", "total_price" => 260.0, "currency" => "MYR" }
+      ]
+    )
+    active_branch = branch_with_options([ group("Garden Prestige Suite", [ selected_option ]) ]).merge("selected_option" => selected_option)
+
+    result = orchestrate(
+      message: "standard",
+      interpretation: interpretation(slots: { "rate_plan_name" => "standard" }),
+      active_branch: active_branch,
+      decision: { action: :booking, pending_question: "rate_plan_selection" }
+    )
+
+    expect(result[:reply_type]).to eq(:ask_rate_plan)
+    expect(result[:pending_question]).to eq("rate_plan_selection")
+    expect(result.dig(:slots_payload, "booking_task", "branch", "confirmation_candidate")).to be_nil
+  end
+
   def orchestrate(message:, interpretation:, active_branch:, decision: self.decision)
     described_class.new(
       hotel: hotel,

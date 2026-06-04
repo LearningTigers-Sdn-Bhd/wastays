@@ -64,6 +64,44 @@ RSpec.describe AiConciergeV3::Tools::Booking::SelectBookingOptionTool do
     expect(result.dig("selected_option", "selection_id")).to eq("room_type_9_option_1")
   end
 
+  it "selects the only visible option with reordered room type shorthand" do
+    result = described_class.new(
+      option_number: nil,
+      suggested_options: [
+        {
+          "room_type_name" => "Ocean Villa King",
+          "options" => [
+            { "position" => 1, "selection_id" => "room_type_7_option_1", "check_in" => "2026-06-06" }
+          ]
+        }
+      ],
+      suggestion_set_version: 3,
+      message: "king ocean"
+    ).call
+
+    expect(result["success"]).to be(true)
+    expect(result.dig("selected_option", "selection_id")).to eq("room_type_7_option_1")
+  end
+
+  it "selects the only visible option with a small typo" do
+    result = described_class.new(
+      option_number: nil,
+      suggested_options: [
+        {
+          "room_type_name" => "Executive Penthouse",
+          "options" => [
+            { "position" => 1, "selection_id" => "room_type_8_option_1", "check_in" => "2026-06-06" }
+          ]
+        }
+      ],
+      suggestion_set_version: 3,
+      message: "excutive penthouse"
+    ).call
+
+    expect(result["success"]).to be(true)
+    expect(result.dig("selected_option", "selection_id")).to eq("room_type_8_option_1")
+  end
+
   it "asks for option number when a room type has multiple visible options" do
     result = described_class.new(
       option_number: nil,

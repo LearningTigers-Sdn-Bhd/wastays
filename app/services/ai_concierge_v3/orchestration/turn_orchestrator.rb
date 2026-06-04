@@ -32,7 +32,7 @@ module AiConciergeV3
       ).call
       validate_interpretation!(interpretation)
 
-      if cancel_attempt_request?
+      if cancel_attempt_request?(conversation_state)
         return Result.success(payload: handle_cancel_booking_attempt(prospect:, conversation_state:, interpretation: interpretation))
       end
 
@@ -194,7 +194,7 @@ module AiConciergeV3
         tool_registry: tool_registry
       ).call
 
-      return domain_result[:direct_payload] if domain_result.is_a?(Hash) && domain_result.key?(:direct_payload)
+      return public_direct_payload(domain_result[:direct_payload], prospect) if domain_result.is_a?(Hash) && domain_result.key?(:direct_payload)
 
       build_and_persist_domain_response(prospect:, conversation_state:, interpretation:, domain_result:)
     end
@@ -352,6 +352,10 @@ module AiConciergeV3
       )
     end
 
+    def public_direct_payload(payload, prospect)
+      payload.merge(prospect_public_id: prospect.public_id)
+    end
+
     def persist_state(conversation_state, slots_payload:, interpretation:, active_topic:, active_flow:, pending_question:, action_name:, flow_status: nil, end_reason: nil)
       patch = State::StatePatchBuilder.new(
         conversation_state: conversation_state,
@@ -381,9 +385,26 @@ module AiConciergeV3
       normalized.match?(/\A(?:stop|bye|bye bye|good bye|goodbye|thanks|thank you|that's all|thats all|end chat|end conversation|nevermind|never mind|forget|forget it|no thanks|not now|cancel attempt|cancel booking attempt|cancel quotation attempt)\z/)
     end
 
-    def cancel_attempt_request?
+    def cancel_attempt_request?(conversation_state)
       normalized = message.downcase.gsub(/[^a-z0-9']+/, " ").squish
-      normalized.match?(/\bcancel\b/) && normalized.match?(/\b(?:attempt|booking|quotation|quote)\b/)
+      return true if normalized.match?(/\bcancel\b/) && normalized.match?(/\b(?:attempt|booking|reservation|quotation|quote)\b/)
+      return true if normalized.match?(/\b(?:drop|forget)\b/) && normalized.match?(/\b(?:room|booking|reservation|quotation|quote)\b/)
+      return false unless active_booking_attempt?(conversation_state)
+
+      normalized.match?(/\A(?:leave it|changed my mind|i changed my mind|not that booking|not that reservation|drop it)\z/)
+    end
+
+    def active_booking_attempt?(conversation_state)
+      return true if conversation_state.active_flow == "booking_search"
+
+      manager = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
+      booking_task = manager.booking_task
+      branch = manager.booking_branch
+
+      booking_task["status"].present? && booking_task["status"] != "idle" ||
+        booking_task["pending_question"].present? ||
+        branch.except("branch_id", "room_count", "suggestion_set_version", "suggested_options").values.any?(&:present?) ||
+        Array(branch["suggested_options"]).present?
     end
 
     def fresh_booking_request_without_details?(interpretation, pending_question)

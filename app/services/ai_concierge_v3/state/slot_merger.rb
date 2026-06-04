@@ -1,7 +1,7 @@
 module AiConciergeV3
   module State
     class SlotMerger
-    DOWNSTREAM_KEYS = %w[suggested_options confirmation_candidate selected_option suggestion_set_version pending_selection].freeze
+    DOWNSTREAM_KEYS = %w[suggested_options confirmation_candidate selected_option suggestion_set_version pending_selection selected_rate_plan_id selected_rate_plan_name].freeze
     TIMING_KEYS = %w[target_month target_year month_segment check_in check_out nights days].freeze
     PARTY_KEYS = %w[party_size_total adults children room_count].freeze
 

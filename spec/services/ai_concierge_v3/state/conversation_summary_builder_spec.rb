@@ -82,4 +82,38 @@ RSpec.describe AiConciergeV3::State::ConversationSummaryBuilder do
     expect(summary).not_to have_key(:active_branch)
     expect(summary).not_to have_key(:paused_flows_count)
   end
+
+  it "does not expose stale options or rate plans after downstream state is cleared" do
+    prospect = create(:prospect)
+    stale_branch = {
+      "target_month" => 8,
+      "target_year" => 2026,
+      "suggested_options" => [ { "room_type_name" => "Deluxe Room", "options" => [ { "position" => 1 } ] } ],
+      "selected_option" => {
+        "room_type_name" => "Deluxe Room",
+        "check_in" => "2026-08-01",
+        "check_out" => "2026-08-03",
+        "selected_rate_plan" => { "name" => "Standard Rate" },
+        "rate_plans" => [ { "name" => "Standard Rate" } ]
+      },
+      "selected_rate_plan_id" => 1,
+      "selected_rate_plan_name" => "Standard Rate"
+    }
+    cleared_branch = AiConciergeV3::State::SlotMerger.new(
+      active_branch: stale_branch,
+      slots: { "target_month" => 9 },
+      pending_question: nil,
+      message: "september"
+    ).call
+    slots_payload = AiConciergeV3::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(cleared_branch, pending_question: "duration")
+    state = create(:prospect_conversation_state, prospect: prospect, slots_payload: slots_payload)
+
+    summary = described_class.new(conversation_state: state).call
+
+    expect(summary.dig(:booking_task, :has_suggested_options)).to be(false)
+    expect(summary.dig(:booking_task, :has_selected_option)).to be(false)
+    expect(summary.dig(:booking_task, :shown_options)).to eq([])
+    expect(summary.dig(:booking_task, :rate_plan_options)).to eq([])
+    expect(summary.dig(:booking_task, :selected_option_summary)).to be_nil
+  end
 end

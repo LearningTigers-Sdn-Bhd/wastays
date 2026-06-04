@@ -10,6 +10,8 @@ RSpec.describe AiConciergeV3::State::SlotMerger do
       "suggested_options" => [ { "position" => 1 } ],
       "confirmation_candidate" => { "position" => 1 },
       "selected_option" => { "position" => 1 },
+      "selected_rate_plan_id" => 12,
+      "selected_rate_plan_name" => "Standard Rate",
       "suggestion_set_version" => 1
     }
 
@@ -99,6 +101,8 @@ RSpec.describe AiConciergeV3::State::SlotMerger do
     expect(result["suggested_options"]).to eq([])
     expect(result["confirmation_candidate"]).to be_nil
     expect(result["selected_option"]).to be_nil
+    expect(result["selected_rate_plan_id"]).to be_nil
+    expect(result["selected_rate_plan_name"]).to be_nil
   end
 
   it "derives nights and check-out from days and check-in" do

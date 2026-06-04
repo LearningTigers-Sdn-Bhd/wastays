@@ -7,6 +7,14 @@ module AiConciergeV3
           jan january feb february mar march apr april may jun june jul july aug august sep september oct october nov november dec december
           first second third one two three four five six seven eight nine ten
         ].freeze
+        ROOM_TYPE_SUFFIX_TOKENS = %w[room rooms suite suites villa villas apartment apartments cabin cabins].freeze
+        TOKEN_ALIASES = {
+          "exec" => "executive",
+          "prem" => "premium",
+          "dlx" => "deluxe",
+          "std" => "standard",
+          "apt" => "apartment"
+        }.freeze
 
         def initialize(option_number:, suggested_options:, suggestion_set_version: nil, selection_id: nil, check_in: nil, message: nil, pending_selection: nil)
           @option_number = option_number.to_i
@@ -140,7 +148,12 @@ module AiConciergeV3
           return exact_match.fetch("room_type_name") if exact_match
 
           partial_matches = candidate_groups.select do |group|
-            room_type_tokens_match?(group["room_type_name"])
+            room_type_match_score(group["room_type_name"]).positive?
+          end
+
+          if partial_matches.many?
+            best_score = partial_matches.map { |group| room_type_match_score(group["room_type_name"]) }.max
+            partial_matches = partial_matches.select { |group| room_type_match_score(group["room_type_name"]) == best_score }
           end
 
           return partial_matches.first.fetch("room_type_name") if partial_matches.one?
@@ -195,11 +208,15 @@ module AiConciergeV3
           @message_tokens ||= normalized_message.split
         end
 
-        def room_type_tokens_match?(room_type_name)
-          room_tokens = normalized(room_type_name).split
-          return false if room_tokens.empty? || room_type_message_tokens.empty?
+        def room_type_match_score(room_type_name)
+          room_tokens = significant_tokens(room_type_name)
+          return 0 if room_tokens.empty? || room_type_message_tokens.empty?
 
-          consecutive_token_match?(room_tokens) || all_tokens_prefix_match?(room_tokens)
+          return 4 if consecutive_token_match?(room_tokens)
+          return 3 if all_tokens_prefix_match?(room_tokens)
+          return 2 if all_tokens_fuzzy_match?(room_tokens)
+
+          0
         end
 
         def consecutive_token_match?(room_tokens)
@@ -215,14 +232,71 @@ module AiConciergeV3
 
         def all_tokens_prefix_match?(room_tokens)
           room_type_message_tokens.all? do |token|
-            room_tokens.any? { |room_token| room_token.start_with?(token) }
+            room_tokens.any? { |room_token| room_token.start_with?(token) || token.start_with?(room_token) }
+          end
+        end
+
+        def all_tokens_fuzzy_match?(room_tokens)
+          return false if room_type_message_tokens.size > room_tokens.size
+
+          room_type_message_tokens.all? do |token|
+            room_tokens.any? { |room_token| small_typo_match?(token, room_token) }
           end
         end
 
         def room_type_message_tokens
-          @room_type_message_tokens ||= message_tokens.reject do |token|
+          @room_type_message_tokens ||= significant_tokens(message).reject do |token|
             ROOM_TYPE_IGNORED_TOKENS.include?(token) || token.match?(/^\d+$/)
           end
+        end
+
+        def significant_tokens(value)
+          normalized(value).split.filter_map do |token|
+            normalized_token = singularize(TOKEN_ALIASES.fetch(token, token))
+            next if room_type_suffix_token?(normalized_token)
+
+            normalized_token
+          end
+        end
+
+        def room_type_suffix_token?(token)
+          ROOM_TYPE_SUFFIX_TOKENS.include?(token) ||
+            token.start_with?("suit") ||
+            token.start_with?("vill") ||
+            token.start_with?("room")
+        end
+
+        def singularize(token)
+          return token.delete_suffix("ies") + "y" if token.length > 4 && token.end_with?("ies")
+          return token.delete_suffix("s") if token.length > 3 && token.end_with?("s")
+
+          token
+        end
+
+        def small_typo_match?(left, right)
+          return true if left == right
+          return true if left.length >= 4 && right.start_with?(left)
+          return true if right.length >= 4 && left.start_with?(right)
+          return false if (left.length - right.length).abs > 1
+          return false if [ left.length, right.length ].min < 4
+
+          levenshtein_distance(left, right) <= 1
+        end
+
+        def levenshtein_distance(left, right)
+          previous = (0..right.length).to_a
+          left.each_char.with_index(1) do |left_char, i|
+            current = [ i ]
+            right.each_char.with_index(1) do |right_char, j|
+              current[j] = if left_char == right_char
+                previous[j - 1]
+              else
+                [ previous[j], current[j - 1], previous[j - 1] ].min + 1
+              end
+            end
+            previous = current
+          end
+          previous.last
         end
 
         def resolved_option_number

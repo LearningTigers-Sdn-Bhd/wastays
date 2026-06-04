@@ -394,6 +394,64 @@ RSpec.describe AiConciergeV3::Orchestration::TurnOrchestrator do
     expect(state.slots_payload.dig("booking_task", "branch", "target_month")).to be_nil
   end
 
+  it "cancels a booking attempt from natural abandonment language and clears stale selection state" do
+    prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
+    selected_option = {
+      "selection_id" => "sel_1",
+      "room_type_name" => "Deluxe Room",
+      "check_in" => "2026-08-03",
+      "check_out" => "2026-08-05",
+      "selected_rate_plan" => { "rate_plan_id" => 2, "name" => "Standard Rate" }
+    }
+    branch = {
+      "branch_id" => "branch-1",
+      "target_month" => 8,
+      "target_year" => 2026,
+      "suggested_options" => [ { "room_type_name" => "Deluxe Room", "options" => [ selected_option ] } ],
+      "suggestion_set_version" => 1,
+      "selected_option" => selected_option,
+      "confirmation_candidate" => selected_option,
+      "selected_rate_plan_id" => 2,
+      "selected_rate_plan_name" => "Standard Rate"
+    }
+    slots_payload = AiConciergeV3::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(branch, pending_question: "confirm_selection")
+    create(:prospect_conversation_state, prospect: prospect, pending_question: "confirm_selection", active_flow: "booking_search", slots_payload: slots_payload)
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "greeting", slots: {})
+    )
+
+    result = described_class.new(hotel: hotel, message: "changed my mind", phone: "+60123456789").call
+    state = prospect.reload.prospect_conversation_state
+
+    expect(result.payload[:reply_message]).to eq("I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(state.pending_question).to be_nil
+    expect(state.active_flow).to be_nil
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+    expect(state.slots_payload.dig("booking_task", "branch", "selected_option")).to be_nil
+    expect(state.slots_payload.dig("booking_task", "branch", "confirmation_candidate")).to be_nil
+    expect(state.slots_payload.dig("booking_task", "branch", "selected_rate_plan_id")).to be_nil
+    expect(state.slots_payload.dig("booking_task", "branch", "selected_rate_plan_name")).to be_nil
+  end
+
+  it "cancels room-specific abandonment without ending the whole conversation" do
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(slots: { "target_month" => 7, "target_year" => 2026, "month_segment" => "early" })
+    )
+    described_class.new(hotel: hotel, message: "book early july", phone: "+60123456789").call
+
+    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "greeting", slots: {})
+    )
+
+    result = described_class.new(hotel: hotel, message: "forget the room", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to include("I've cancelled your booking attempt")
+    expect(state.flow_status).to eq("active")
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+  end
+
   it "starts a fresh booking when a generic booking request follows a stale no-options attempt" do
     prospect = create(:prospect, hotel: hotel)
     branch = {

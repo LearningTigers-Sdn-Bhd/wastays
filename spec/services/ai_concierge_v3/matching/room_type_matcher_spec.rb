@@ -19,6 +19,20 @@ RSpec.describe AiConciergeV3::Matching::RoomTypeMatcher do
     expect(result.fetch("room_type")).to eq(executive_suite)
   end
 
+  it "matches reordered room type shorthand" do
+    result = described_class.new(room_types: [ ocean_villa, executive_suite ], query: "tell me about the king ocean").call
+
+    expect(result["success"]).to eq(true)
+    expect(result.fetch("room_type")).to eq(ocean_villa)
+  end
+
+  it "matches small typos and plural variants" do
+    result = described_class.new(room_types: [ ocean_villa, executive_suite ], query: "any executive suittes?").call
+
+    expect(result["success"]).to eq(true)
+    expect(result.fetch("room_type")).to eq(executive_suite)
+  end
+
   it "returns ambiguous candidates when the query matches multiple room types" do
     ocean_villa
     create(:room_type, hotel: hotel, name: "Ocean Villa Twin")

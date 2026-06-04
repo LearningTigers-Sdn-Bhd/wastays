@@ -50,13 +50,39 @@ Supported selection styles:
 - `option 1` when only one room-type group is relevant
 - `i chose option 1`
 - partial room type matches like `garden prestige` and `executive`
+- reordered shorthand like `king ocean`
+- common aliases like `exec`
+- minor typos when the match remains unique
 
 ## `generate_booking_url`
 
 - Path: `app/services/ai_concierge_v3/tools/booking/generate_booking_url_tool.rb`
 - Purpose: convert a confirmed option into a booking quote link
 - Inputs: selected option, resolved prospect phone, optional `rate_plan_id`
-- Output: booking_url, total_amount, currency, expires_at, quote_token
+- Success output: booking_url, total_amount, currency, expires_at, quote_token
+- Failure output: `success=false`, safe `error`, and internal `error_code`
 - Lifecycle side effect: successful booking URL generation ends the current conversation with `end_reason: "booking_url_generated"`
-- Failure behavior: returns safe fallback and does not archive booking as completed
+- Failure behavior: validates selected option shape before quote creation, returns safe fallback, and does not archive booking as completed
 - Rate plan: when `rate_plan_id` is provided, the quote uses that plan's pricing; otherwise falls back to the lowest available rate
+
+Internal booking URL failure codes:
+- `invalid_selection`
+- `missing_room_type_id`
+- `missing_check_in`
+- `missing_check_out`
+- `invalid_dates`
+- `quote_creation_failed`
+- `quote_missing`
+
+## Rate Plan Selection
+
+Rate plan selection is resolved deterministically inside `BookingOrchestrator`.
+
+Supported rate-plan selection styles:
+- exact or partial rate-plan names when unique
+- ordinal replies such as `first`, `second`, `1`, or `2`
+- price intent such as `cheapest` or `lowest`
+- `standard` when exactly one standard-like plan exists
+- `refundable` and `non-refundable`, with explicit protection against matching `refundable` to `Non-Refundable Rate`
+
+Ambiguous rate-plan matches re-ask the rate-plan question and leave the selected option unconfirmed.

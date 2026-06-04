@@ -12,6 +12,9 @@ module AiConciergeV3
         end
 
         def call
+          validation_error = validate_selected_option
+          return validation_error if validation_error
+
           result = BookingEngine::CreateQuote.new(
             hotel_id: hotel.id,
             room_type_id: selected_option.fetch("room_type_id"),
@@ -26,7 +29,8 @@ module AiConciergeV3
             rate_plan_id: rate_plan_id
           ).call
 
-          return ({ "success" => false, "error" => result.message }) unless result.success?
+          return failure("quote_creation_failed", result.message.presence || "Unable to generate quote right now.") unless result.success?
+          return failure("quote_missing", "Unable to generate quote right now.") unless result.quote
 
           {
             "success" => true,
@@ -41,6 +45,28 @@ module AiConciergeV3
         private
 
         attr_reader :hotel, :selected_option, :guest_phone, :guest_name, :guest_email, :rate_plan_id
+
+        def validate_selected_option
+          return failure("invalid_selection", "Unable to generate quote right now.") unless selected_option.is_a?(Hash)
+
+          %w[room_type_id check_in check_out].each do |key|
+            return failure("missing_#{key}", "Unable to generate quote right now.") if selected_option[key].blank?
+          end
+
+          Date.iso8601(selected_option["check_in"].to_s)
+          Date.iso8601(selected_option["check_out"].to_s)
+          nil
+        rescue Date::Error
+          failure("invalid_dates", "Unable to generate quote right now.")
+        end
+
+        def failure(error_code, message)
+          {
+            "success" => false,
+            "error" => message,
+            "error_code" => error_code
+          }
+        end
 
         def default_host
           host_options = Rails.application.config.action_mailer.default_url_options || {}

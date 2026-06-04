@@ -14,12 +14,16 @@ When booking timing changes, clear:
 - `pending_selection`
 - `confirmation_candidate`
 - `selected_option`
+- `selected_rate_plan_id`
+- `selected_rate_plan_name`
 
 When party composition changes, clear:
 - `suggested_options`
 - `pending_selection`
 - `confirmation_candidate`
 - `selected_option`
+- `selected_rate_plan_id`
+- `selected_rate_plan_name`
 
 ## `BookingInputNormalizer` Behavior
 
@@ -47,7 +51,15 @@ When an option has multiple rate plans, `selected_rate_plan_id` and `selected_ra
 - `selected_rate_plan_id` — the database ID of the chosen `RatePlan`
 - `selected_rate_plan_name` — the display name (e.g. "Standard Rate", "Non-Refundable Rate")
 
-These fields are set during `handle_rate_plan_selection` in `BookingOrchestrator` and cleared on timing/party changes via `clear_downstream!`.
+These fields are set during `handle_rate_plan_selection` in `BookingOrchestrator` and cleared with other downstream state on timing/party changes via `clear_downstream!`.
+
+Rate-plan follow-ups support deterministic matching for:
+- ordinal replies such as `first` and `second`
+- price intent such as `cheapest`
+- standard/refundable/non-refundable wording
+- unique partial rate-plan names
+
+Ambiguous rate-plan replies keep `pending_question=rate_plan_selection` and re-ask instead of confirming a plan.
 
 ## Branch Fields Reference
 
