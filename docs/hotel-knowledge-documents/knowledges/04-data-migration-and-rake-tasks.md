@@ -35,6 +35,23 @@ bin/rails hotel_ops:generate_knowledge_embeddings
 - The job runs via Solid Queue on the `ai_concierge` queue
 - The old `hotel_ops:migrate_knowledges` task (which read from removed `hotel.faq`/`hotel.policy` JSONB columns) has been removed
 
+## Diagnostic Retention Task
+
+**File:** `lib/tasks/hotel_knowledges.rake`
+**Task:** `hotel_knowledges:prune_diagnostics`
+
+Deletes `HotelKnowledgeDiagnostic` records older than 90 days by default.
+
+```bash
+bin/rails hotel_knowledges:prune_diagnostics
+```
+
+Override retention with `RETENTION_DAYS`:
+
+```bash
+RETENTION_DAYS=30 bin/rails hotel_knowledges:prune_diagnostics
+```
+
 ## Clean State Integration
 
 The `clean_hotel_state_records` method, called by both `hotel_ops:clean_state`

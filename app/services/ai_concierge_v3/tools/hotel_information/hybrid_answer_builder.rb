@@ -67,6 +67,7 @@ module AiConciergeV3
           return [] if query.blank?
           return [] if categories.map(&:to_s).sort == FALLBACK_CATEGORIES.sort
 
+          @fallback_categories_used = FALLBACK_CATEGORIES
           search_matches(FALLBACK_CATEGORIES)
         end
 
@@ -117,7 +118,9 @@ module AiConciergeV3
             "answer" => answer,
             "answer_mode" => answer_mode,
             "source" => source,
-            "knowledge_matches" => matches
+            "knowledge_matches" => matches,
+            "searched_categories" => categories,
+            "fallback_categories" => @fallback_categories_used || []
           }
         end
       end

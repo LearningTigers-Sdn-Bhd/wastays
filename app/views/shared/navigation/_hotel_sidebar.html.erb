@@ -15,7 +15,8 @@ reports_nav_active = reports_nav_items.any? { |item| item[:active] }
 knowledge_nav_items = [
   { label: "Policy Management", path: hotel_knowledge_policies_path(current_hotel), active: controller_name == "knowledge_policies" },
   { label: "FAQs Management", path: hotel_knowledge_faqs_path(current_hotel), active: controller_name == "knowledge_faqs" },
-  { label: "General Info", path: hotel_knowledge_general_infos_path(current_hotel), active: controller_name == "knowledge_general_infos" }
+  { label: "General Info", path: hotel_knowledge_general_infos_path(current_hotel), active: controller_name == "knowledge_general_infos" },
+  { label: "Knowledge Diagnostics", path: hotel_knowledge_diagnostics_path(current_hotel), active: controller_name == "knowledge_diagnostics" }
 ]
 knowledge_nav_active = knowledge_nav_items.any? { |item| item[:active] }
 

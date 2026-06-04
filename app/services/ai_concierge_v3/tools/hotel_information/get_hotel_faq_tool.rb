@@ -27,7 +27,9 @@ module AiConciergeV3
             "answer_mode" => answer_payload["answer_mode"],
             "faq_text" => faq_text.presence,
             "source" => "hotel_faq",
-            "knowledge_matches" => answer_payload["knowledge_matches"]
+            "knowledge_matches" => answer_payload["knowledge_matches"],
+            "searched_categories" => answer_payload["searched_categories"],
+            "fallback_categories" => answer_payload["fallback_categories"]
           }
         end
 

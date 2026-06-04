@@ -68,7 +68,54 @@ end
 
 ```ruby
 has_many :knowledge_documents, class_name: "HotelKnowledgeDocument", dependent: :destroy
+has_many :knowledge_diagnostics, class_name: "HotelKnowledgeDiagnostic", dependent: :destroy
 ```
+
+---
+
+## `hotel_knowledge_diagnostics`
+
+```ruby
+class HotelKnowledgeDiagnostic < ApplicationRecord
+  belongs_to :hotel
+  belongs_to :prospect, optional: true
+  belongs_to :prospect_message, optional: true
+
+  validates :question, :intent, :diagnostic_status, presence: true
+  validates :diagnostic_status, inclusion: { in: %w[open reviewed resolved dismissed] }
+  validates :suggested_category, inclusion: { in: %w[policy faq general_info] }, allow_blank: true
+end
+```
+
+### Columns
+
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| `hotel_id` | bigint | — | FK, not null |
+| `prospect_id` | bigint | nullable | optional guest/prospect link |
+| `prospect_message_id` | bigint | nullable | optional source message link |
+| `question` | text | — | guest/staff knowledge question |
+| `intent` | string | — | producer intent such as `hotel_information` |
+| `topic` | string | nullable | more specific routed topic |
+| `routed_categories` | text[] | `[]` | categories searched first |
+| `fallback_categories` | text[] | `[]` | fallback categories searched |
+| `answer_mode` | string | nullable | `unavailable`, `fallback`, `deterministic`, etc. |
+| `answer` | text | nullable | generated or fallback answer |
+| `success` | boolean | `false` | tool result success flag |
+| `source` | string | nullable | producer/tool source |
+| `knowledge_matches` | jsonb | `[]` | matched chunk summaries |
+| `match_count` | integer | `0` | stored count of matches |
+| `best_distance` | decimal | nullable | lowest vector distance when present |
+| `diagnostic_status` | string | `"open"` | `open`, `reviewed`, `resolved`, `dismissed` |
+| `suggested_category` | string | nullable | `policy`, `faq`, or `general_info` |
+| `metadata` | jsonb | `{}` | producer/tool context |
+
+### Indexes
+- `hotel_id`
+- `created_at`
+- `diagnostic_status`
+- `answer_mode`
+- `suggested_category`
 
 ## Migration Details
 

@@ -32,7 +32,9 @@ module AiConciergeV3
             "amenities" => amenity_names,
             "summary_text" => summary_text,
             "source" => "general_hotel_info",
-            "knowledge_matches" => answer_payload["knowledge_matches"]
+            "knowledge_matches" => answer_payload["knowledge_matches"],
+            "searched_categories" => answer_payload["searched_categories"],
+            "fallback_categories" => answer_payload["fallback_categories"]
           }
         end
 

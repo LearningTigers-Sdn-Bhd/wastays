@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_29_104830) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_04_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -501,6 +501,36 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_29_104830) do
     t.index ["embedding"], name: "index_hotel_knowledge_chunks_on_embedding", opclass: :vector_cosine_ops, using: :ivfflat
     t.index ["hotel_knowledge_document_id", "chunk_index"], name: "idx_knowledge_chunks_on_document_and_index", unique: true
     t.index ["hotel_knowledge_document_id"], name: "index_hotel_knowledge_chunks_on_hotel_knowledge_document_id"
+  end
+
+  create_table "hotel_knowledge_diagnostics", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "prospect_id"
+    t.bigint "prospect_message_id"
+    t.text "question", null: false
+    t.string "intent", null: false
+    t.string "topic"
+    t.string "answer_mode"
+    t.text "answer"
+    t.boolean "success", default: false, null: false
+    t.string "source"
+    t.string "diagnostic_status", default: "open", null: false
+    t.string "suggested_category"
+    t.text "routed_categories", default: [], null: false, array: true
+    t.text "fallback_categories", default: [], null: false, array: true
+    t.jsonb "knowledge_matches", default: [], null: false
+    t.integer "match_count", default: 0, null: false
+    t.decimal "best_distance", precision: 8, scale: 6
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["answer_mode"], name: "index_hotel_knowledge_diagnostics_on_answer_mode"
+    t.index ["created_at"], name: "index_hotel_knowledge_diagnostics_on_created_at"
+    t.index ["diagnostic_status"], name: "index_hotel_knowledge_diagnostics_on_diagnostic_status"
+    t.index ["hotel_id"], name: "index_hotel_knowledge_diagnostics_on_hotel_id"
+    t.index ["prospect_id"], name: "index_hotel_knowledge_diagnostics_on_prospect_id"
+    t.index ["prospect_message_id"], name: "index_hotel_knowledge_diagnostics_on_prospect_message_id"
+    t.index ["suggested_category"], name: "index_hotel_knowledge_diagnostics_on_suggested_category"
   end
 
   create_table "hotel_knowledge_documents", force: :cascade do |t|
@@ -1241,6 +1271,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_29_104830) do
   add_foreign_key "hotel_counters", "hotels"
   add_foreign_key "hotel_general_ledger_maps", "hotels"
   add_foreign_key "hotel_knowledge_chunks", "hotel_knowledge_documents"
+  add_foreign_key "hotel_knowledge_diagnostics", "hotels"
+  add_foreign_key "hotel_knowledge_diagnostics", "prospect_messages"
+  add_foreign_key "hotel_knowledge_diagnostics", "prospects"
   add_foreign_key "hotel_knowledge_documents", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotel_taxes", "hotels"

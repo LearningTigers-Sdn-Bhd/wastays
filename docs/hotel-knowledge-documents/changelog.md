@@ -1,4 +1,35 @@
-# V1.2 — AI Embedding Pipeline (Current)
+# V1.3 — Knowledge Diagnostics (Current)
+
+## Changes
+- Added `HotelKnowledgeDiagnostic` as a hotel-scoped, staff-facing diagnostic record for weak or unanswered knowledge retrieval turns.
+- Diagnostics can link optionally to `Prospect` and `ProspectMessage` and retain:
+  - question, intent, topic, answer mode, answer, success, source
+  - routed and fallback categories
+  - matched knowledge chunks, match count, and best distance
+  - status: `open`, `reviewed`, `resolved`, or `dismissed`
+  - suggested category: `policy`, `faq`, or `general_info`
+  - metadata for producer/tool context
+- Added `HotelKnowledges::DiagnosticRecorder` as the domain service; AI Concierge emits diagnostic input but does not own the diagnostic model/UI.
+- Added Hotel Portal `Knowledge Diagnostics` page under the existing Knowledge sidebar group.
+- Staff can filter diagnostics by status, answer mode, suggested category, and date range.
+- Staff can mark diagnostics as reviewed, resolved, or dismissed.
+- Added `hotel_knowledges:prune_diagnostics` to delete diagnostics older than 90 days by default.
+
+## Files Changed
+- `hotel_knowledge_diagnostic.rb` — new model with scopes and validations
+- `hotel_knowledges/diagnostic_recorder.rb` — new recorder service
+- `knowledge_diagnostics_controller.rb` — new hotel portal controller
+- `app/views/hotel_portal/knowledge_diagnostics/` — diagnostics index/detail UI
+- `shared/navigation/_hotel_sidebar.html.erb` — Knowledge Diagnostics nav item under Knowledge
+- `lib/tasks/hotel_knowledges.rake` — 90-day diagnostic pruning task
+
+## Verification
+- `bundle exec rspec spec/models/hotel_knowledge_diagnostic_spec.rb spec/services/hotel_knowledges/diagnostic_recorder_spec.rb spec/requests/hotel_portal/knowledge_diagnostics_spec.rb`
+- 14 examples, 0 failures
+
+---
+
+# V1.2 — AI Embedding Pipeline
 
 ## Changes
 - Added `pdf-reader` gem for PDF text extraction

@@ -1,4 +1,5 @@
 require "rails_helper"
+require "ostruct"
 
 RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
@@ -68,6 +69,43 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(parsed_body["needs_human_support"]).to be(false)
       expect(parsed_body["action_name"]).to be_nil
       expect(parsed_body["prospect_public_id"]).to be_present
+    end
+
+    it "records a knowledge diagnostic for unanswered knowledge turns without changing the public payload" do
+      expect {
+        post path, params: { message: "Do you have an faq?", phone: phone }.to_json, headers: headers
+      }.to change(HotelKnowledgeDiagnostic, :count).by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body.keys).to contain_exactly("reply_message", "needs_human_support", "action_name", "prospect_public_id")
+
+      diagnostic = HotelKnowledgeDiagnostic.last
+      expect(diagnostic.hotel).to eq(hotel)
+      expect(diagnostic.prospect).to eq(Prospect.lookup_by_phone(phone).first)
+      expect(diagnostic.intent).to eq("hotel_information")
+      expect(diagnostic.topic).to eq("hotel_faq")
+      expect(diagnostic.question).to eq("Do you have an faq?")
+      expect(diagnostic.answer_mode).to eq("unavailable")
+      expect(diagnostic.suggested_category).to eq("faq")
+    end
+
+    it "does not record noisy diagnostics for strong retrieved knowledge answers" do
+      allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([
+        {
+          "content" => "Breakfast is served daily from 7 AM to 10 AM.",
+          "document_title" => "Breakfast",
+          "category" => "faq",
+          "distance" => 0.12
+        }
+      ])
+
+      expect {
+        post path, params: { message: "Do you have an faq?", phone: phone }.to_json, headers: headers
+      }.not_to change(HotelKnowledgeDiagnostic, :count)
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body.keys).to contain_exactly("reply_message", "needs_human_support", "action_name", "prospect_public_id")
+      expect(parsed_body["reply_message"]).to eq("Breakfast is served daily from 7 AM to 10 AM.")
     end
 
     it "accepts hotel slugs in the path" do
@@ -351,6 +389,31 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       state = Prospect.lookup_by_phone(phone).first.prospect_conversation_state
       expect(state.flow_status).to eq("ended")
       expect(state.slots_payload.dig("conversation", "end_reason")).to eq("booking_url_generated")
+    end
+
+    it "returns a friendly fallback without completing the conversation when quote generation is stale" do
+      seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 11, 12, 13, 14 ])
+
+      post path, params: { message: "mid august", phone: phone }.to_json, headers: headers
+      post path, params: { message: "3 days 2 nights", phone: phone }.to_json, headers: headers
+      post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
+      post path, params: { message: "Garden Prestige Suite option 2", phone: phone }.to_json, headers: headers
+
+      quote_service = instance_double(BookingEngine::CreateQuote, call: OpenStruct.new(success?: true, quote: nil))
+      allow(BookingEngine::CreateQuote).to receive(:new).and_return(quote_service)
+
+      post path, params: { message: "yes", phone: phone }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body.keys).to contain_exactly("reply_message", "needs_human_support", "action_name", "prospect_public_id")
+      expect(parsed_body["reply_message"]).to eq("Unable to generate quote right now.")
+      expect(parsed_body["needs_human_support"]).to be(true)
+      expect(parsed_body["action_name"]).to be_nil
+
+      state = Prospect.lookup_by_phone(phone).first.prospect_conversation_state
+      expect(state.flow_status).not_to eq("ended")
+      expect(state.slots_payload.dig("conversation", "end_reason")).not_to eq("booking_url_generated")
+      expect(state.slots_payload.dig("booking_task", "status")).to eq("waiting_for_confirmation")
     end
 
     it "starts a fresh branch after another booking" do

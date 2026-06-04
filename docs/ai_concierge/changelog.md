@@ -1,6 +1,84 @@
 # AI Concierge Changelog
 
-## V4 — Interpreter Message-Type and Compact State Context (Current)
+## V4.2 — Knowledge Diagnostics Producer and Rate-Plan Black-Box Coverage (Current)
+
+### Changes
+- Added AI Concierge as a producer for hotel knowledge diagnostics without moving diagnostics into the AI Concierge domain.
+- Knowledge-related librarian turns now pass internal result metadata to `HotelKnowledges::DiagnosticRecorder` after tool execution.
+- Guest-facing inquiry responses remain unchanged:
+  - `reply_message`
+  - `needs_human_support`
+  - `action_name`
+  - `prospect_public_id`
+- Added request-level regression coverage for weak/unanswered knowledge turns creating `HotelKnowledgeDiagnostic` records.
+- Added strong-answer regression coverage to avoid noisy diagnostics for deterministic retrieved knowledge.
+- Added fixture-driven black-box rate-plan conversation coverage for:
+  - ordinal selections such as `first one`
+  - unique cheapest selections
+  - suspended booking resume after a hotel-info interruption
+  - `refundable` not selecting `Non-Refundable Rate`
+  - ambiguous `standard` re-asking the rate-plan question
+  - selected rate plan surviving into the confirmation candidate
+  - selected rate plan clearing after date correction
+- Hardened price-intent matching so `the cheaper one` is treated as price intent before the word `one` can be interpreted as an ordinal.
+
+### Files Changed
+- `librarian_orchestrator.rb` — records knowledge diagnostics after knowledge tool execution
+- `hybrid_answer_builder.rb` and hotel information tools — include searched/fallback category metadata internally
+- `booking_orchestrator.rb` — uses the restored branch during suspended rate-plan resume and recognizes `cheaper`
+- `inquiries_spec.rb` — request-level knowledge diagnostic regressions
+- `rate_plan_black_box_spec.rb` — scripted end-to-end rate-plan conversation scenarios
+
+### Verification
+- `bundle exec rspec spec/models/hotel_knowledge_diagnostic_spec.rb spec/services/hotel_knowledges/diagnostic_recorder_spec.rb spec/requests/hotel_portal/knowledge_diagnostics_spec.rb spec/requests/api/v1/ai_concierge/rate_plan_black_box_spec.rb`
+- 21 examples, 0 failures
+
+---
+
+## V4.1 — Booking Hardening and Natural Follow-ups
+
+### Changes
+- Hardened booking URL generation:
+  - validates confirmed option shape before quote creation
+  - returns safe internal `error_code` values for missing IDs, invalid dates, quote creation failure, and missing quote records
+  - preserves the public inquiry payload shape and keeps failed booking URL generation from completing or ending the conversation
+- Improved room-type matching for room info and booking option selection:
+  - supports reordered room-name shorthand such as `king ocean`
+  - supports common aliases such as `exec`, `dlx`, `std`, and `apt`
+  - handles simple plural/suffix variants and small typos
+  - keeps ambiguity-first behavior when multiple room types remain plausible
+- Improved rate-plan selection:
+  - supports ordinal replies such as `first` and `second`
+  - supports price intent such as `cheapest` and `lowest`
+  - distinguishes `refundable` from `non-refundable`
+  - re-asks for the rate plan when partial provider/rate names remain ambiguous
+- Expanded stale downstream cleanup:
+  - selected rate-plan fields are cleared with stale suggestions, pending selections, confirmation candidates, and selected options
+  - compact interpreter summaries no longer expose stale shown options, rate plans, or selected-option summaries after downstream state is cleared
+- Broadened booking-attempt cancellation:
+  - natural phrases such as `forget the room`, `changed my mind`, and `drop the reservation` clear the booking attempt when a booking is active
+  - ending the whole conversation remains separate from cancelling the booking attempt
+- Fixed direct fallback responses from booking orchestration to include `prospect_public_id`.
+
+### Files Changed
+- `generate_booking_url_tool.rb` — defensive selected-option validation and internal error codes
+- `room_type_matcher.rb` — scoring-based room-name matching with aliases, suffix handling, and small typo tolerance
+- `select_booking_option_tool.rb` — reused stronger room-name matching for shown booking options
+- `booking_orchestrator.rb` — deterministic rate-plan resolver for ordinals, price intent, refundable/non-refundable, and ambiguous partials
+- `slot_merger.rb` — clears selected rate-plan fields with downstream state
+- `turn_orchestrator.rb` — broader booking-attempt cancellation and stable direct fallback payloads
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge_v3`
+- 200 examples, 0 failures
+- `bundle exec rspec spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
+- 35 examples, 0 failures
+- `bundle exec rubocop --cache false app/services/ai_concierge_v3 spec/services/ai_concierge_v3 spec/requests/api/v1/ai_concierge/inquiries_spec.rb`
+- no offenses
+
+---
+
+## V4 — Interpreter Message-Type and Compact State Context
 
 ### Changes
 - Added internal interpreter `message_type` classification before existing `intent`, `topic`, slots, and tool hints

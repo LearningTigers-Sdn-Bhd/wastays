@@ -247,6 +247,7 @@ Rails.application.routes.draw do
     resources :knowledge_general_infos do
       member { post :reindex }
     end
+    resources :knowledge_diagnostics, only: [ :index, :update ]
     delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
     delete "profile/photos", to: "profiles#destroy_photos", as: :profile_photos
     patch "profile/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature

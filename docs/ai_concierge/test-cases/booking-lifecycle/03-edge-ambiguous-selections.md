@@ -31,3 +31,13 @@
 3. `option 1 executive` while shown options exist selects the shown option
 4. `the cheaper one` while rate plans are shown selects the cheaper rate plan
 5. `what about deluxe?` after shown options uses compact shown-option context
+
+## Scenario: Rate-plan black-box coverage
+
+1. multiple rate plans shown, `first one` selects the first displayed plan
+2. multiple rate plans shown, `cheapest` selects the unique lowest-priced plan
+3. hotel policy/info interruption during `rate_plan_selection` suspends booking and `the cheaper one` resumes it
+4. `refundable` does not select `Non-Refundable Rate`
+5. ambiguous `standard` re-asks the rate-plan question instead of guessing
+6. selected rate plan is preserved in `confirmation_candidate`
+7. selected rate plan state clears when date or party slots change

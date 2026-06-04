@@ -2,6 +2,7 @@ class ProspectMessage < ApplicationRecord
   DIRECTIONS = %w[inbound outbound system].freeze
 
   belongs_to :prospect
+  has_many :hotel_knowledge_diagnostics, dependent: :nullify
 
   validates :direction, presence: true, inclusion: { in: DIRECTIONS }
   validates :body, presence: true

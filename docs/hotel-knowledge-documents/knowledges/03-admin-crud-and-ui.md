@@ -173,10 +173,30 @@ Nested under the hotel portal scope, generating:
 
 Same pattern for `knowledge_faqs` and `knowledge_general_infos`.
 
+Diagnostics add staff-only routes under the same hotel portal scope:
+
+| Route Helper | Path | Controller#Action |
+|---|---|---|
+| `hotel_knowledge_diagnostics_path` | `/hotel/:id/knowledge_diagnostics` | `knowledge_diagnostics#index` |
+| `hotel_knowledge_diagnostic_path` | `/hotel/:id/knowledge_diagnostics/:id` | `knowledge_diagnostics#update` |
+
+`KnowledgeDiagnosticsController` authorizes through `HotelPolicy#update?`, matching the document management pages.
+
 ## Navigation
 
-- **Sidebar** — The flat "Knowledge Documents" link in Property section was replaced with an expandable "Knowledge" section (using the same `<details>` pattern as Reports), containing 3 children:
+- **Sidebar** — The flat "Knowledge Documents" link in Property section was replaced with an expandable "Knowledge" section (using the same `<details>` pattern as Reports), containing 4 children:
   1. Policy Management → `hotel_knowledge_policies_path`
   2. FAQs Management → `hotel_knowledge_faqs_path`
   3. General Info → `hotel_knowledge_general_infos_path`
+  4. Knowledge Diagnostics → `hotel_knowledge_diagnostics_path`
 - **Global search** — Updated with 3 separate entries, one for each resource page
+
+## Knowledge Diagnostics UI
+
+The diagnostics index is an operational review queue for weak or unanswered knowledge turns.
+
+- Summary counts show open, unavailable/weak, reviewed, and resolved diagnostics.
+- Filters support status, answer mode, suggested category, and date range.
+- Each row shows the guest question, intent/topic, answer mode, suggested category, best match/document, created time, and current status.
+- Expanded row details include generated answer, matched chunk/document/category/distance data, searched and fallback categories, and status action buttons.
+- Staff can mark a diagnostic as reviewed, resolved, or dismissed.

@@ -40,7 +40,9 @@ module AiConciergeV3
             "cancellation_policy" => structured_facts["cancellation_policy"],
             "policy_topic" => policy_topic,
             "source" => answer_payload["source"],
-            "knowledge_matches" => answer_payload["knowledge_matches"]
+            "knowledge_matches" => answer_payload["knowledge_matches"],
+            "searched_categories" => answer_payload["searched_categories"],
+            "fallback_categories" => answer_payload["fallback_categories"]
           }
         end
 
