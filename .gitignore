@@ -38,3 +38,6 @@
 
 # Gemini CLI / Agent Skills
 .agents/
+
+# OS files
+.DS_Store

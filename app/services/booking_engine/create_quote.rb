@@ -15,6 +15,7 @@ module BookingEngine
       @guest_email = params[:guest_email]
       @guest_phone = params[:guest_phone]
       @display_currency = CurrencyCatalog.normalize(params[:display_currency], fallback: nil)
+      @rate_plan_id = params[:rate_plan_id]
     end
 
     def call
@@ -36,8 +37,9 @@ module BookingEngine
           return OpenStruct.new(success?: false, message: "Room is no longer available for these dates.")
         end
 
-        # 2. Calculate total amount from the lowest available native rate-plan currency.
-        pricing_summary = availability_service.pricing_summary_for(@room_type)
+        # 2. Calculate total amount from the selected rate plan or lowest available.
+        rate_plan = @rate_plan_id.present? ? @room_type.rate_plans.find_by(id: @rate_plan_id) : nil
+        pricing_summary = availability_service.pricing_summary_for(@room_type, rate_plan: rate_plan)
         return OpenStruct.new(success?: false, message: "No valid rate is available for these dates.") if pricing_summary.blank?
 
         nightly_rates = pricing_summary[:nightly_rates]

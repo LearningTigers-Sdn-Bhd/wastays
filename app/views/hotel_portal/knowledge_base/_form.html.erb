@@ -1,0 +1,115 @@
+<%= form_with model: document,
+            url: document.new_record? ? kb_index_path : kb_show_path(document),
+            method: document.new_record? ? :post : :patch,
+            local: true,
+            data: { controller: "knowledge-document" } do |f| %>
+  <div class="grid gap-y-6">
+    <div>
+      <%= f.label :title, "Document Title", class: "block text-sm mb-2 font-medium text-slate-700" %>
+      <%= f.text_field :title, class: "py-3 px-4 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm", required: true, placeholder: "e.g. Cancellation Policy, Check-in FAQ" %>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <%= f.label :source_type, "Source Type", class: "block text-sm mb-2 font-medium text-slate-700" %>
+        <%= f.select :source_type, options_for_select([["Text", "text"], ["PDF Upload", "pdf"]], document.source_type || "text"), { include_blank: false },
+              class: "py-3 px-4 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm",
+              data: { action: "change->knowledge-document#toggleSourceType", knowledge_document_target: "sourceType" } %>
+      </div>
+
+      <div>
+        <%= f.label :language, class: "block text-sm mb-2 font-medium text-slate-700" %>
+        <%= f.select :language, options_for_select([["English", "en"], ["Malay", "ms"], ["Chinese", "zh"], ["Hindi", "hi"]], document.persisted? ? document.language : "en"), { include_blank: false },
+              class: "py-3 px-4 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm" %>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <%= f.label :effective_date, "Effective Date (optional)", class: "block text-sm mb-2 font-medium text-slate-700" %>
+        <%= f.date_field :effective_date, class: "py-3 px-4 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm" %>
+        <p class="mt-1 text-xs text-slate-500">Leave blank if the information is always relevant.</p>
+      </div>
+
+      <div>
+        <%= f.label :tags, class: "block text-sm mb-2 font-medium text-slate-700" %>
+        <%= f.text_field :tags, value: document.tags.join(", "), class: "py-3 px-4 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm", placeholder: "comma, separated, tags" %>
+        <p class="mt-1 text-xs text-slate-500">Separate tags with commas.</p>
+      </div>
+    </div>
+
+    <div data-knowledge-document-target="textContent">
+      <% if document.category == "faq" %>
+        <div data-controller="knowledge-faq-form">
+          <label class="block text-sm mb-2 font-medium text-slate-700">Question & Answer Pairs</label>
+          <p class="mb-3 text-xs text-slate-500">Add question and answer pairs for the AI concierge.</p>
+
+          <div data-knowledge-faq-form-target="container" class="space-y-4">
+            <% existing_pairs = document.metadata&.dig("qa_pairs") %>
+            <% if existing_pairs.present? %>
+              <% existing_pairs.each_with_index do |pair, idx| %>
+                <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-4" data-qa-pair>
+                  <div class="mb-3">
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Question</label>
+                    <textarea name="hotel_knowledge_document[metadata][qa_pairs][<%= idx %>][question]" rows="2" class="py-2 px-3 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm" placeholder="e.g. What time is check-in?"><%= pair["question"] %></textarea>
+                  </div>
+                  <div class="mb-3">
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Answer</label>
+                    <textarea name="hotel_knowledge_document[metadata][qa_pairs][<%= idx %>][answer]" rows="3" class="py-2 px-3 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm font-mono" placeholder="e.g. Check-in starts at 3:00 PM."><%= pair["answer"] %></textarea>
+                  </div>
+                  <button type="button" data-action="knowledge-faq-form#remove" class="text-xs font-bold text-red-600 hover:text-red-800">Remove pair</button>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-4" data-qa-pair>
+                <div class="mb-3">
+                  <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Question</label>
+                  <textarea name="hotel_knowledge_document[metadata][qa_pairs][0][question]" rows="2" class="py-2 px-3 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm" placeholder="e.g. What time is check-in?"></textarea>
+                </div>
+                <div class="mb-3">
+                  <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Answer</label>
+                  <textarea name="hotel_knowledge_document[metadata][qa_pairs][0][answer]" rows="3" class="py-2 px-3 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm font-mono" placeholder="e.g. Check-in starts at 3:00 PM."></textarea>
+                </div>
+                <button type="button" data-action="knowledge-faq-form#remove" class="text-xs font-bold text-red-600 hover:text-red-800">Remove pair</button>
+              </div>
+            <% end %>
+          </div>
+
+          <template data-knowledge-faq-form-target="template">
+            <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-4" data-qa-pair>
+              <div class="mb-3">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Question</label>
+                <textarea name="hotel_knowledge_document[metadata][qa_pairs][__INDEX__][question]" rows="2" class="py-2 px-3 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm" placeholder="e.g. What time is check-in?"></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Answer</label>
+                <textarea name="hotel_knowledge_document[metadata][qa_pairs][__INDEX__][answer]" rows="3" class="py-2 px-3 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm font-mono" placeholder="e.g. Check-in starts at 3:00 PM."></textarea>
+              </div>
+              <button type="button" data-action="knowledge-faq-form#remove" class="text-xs font-bold text-red-600 hover:text-red-800">Remove pair</button>
+            </div>
+          </template>
+
+          <button type="button" data-action="knowledge-faq-form#add" class="mt-3 inline-flex items-center gap-x-1.5 text-sm font-bold text-blue-600 hover:text-blue-800">
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Add Q&A Pair
+          </button>
+        </div>
+      <% else %>
+        <%= f.label :content, class: "block text-sm mb-2 font-medium text-slate-700" %>
+        <%= f.text_area :content, rows: 12, class: "py-3 px-4 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm font-mono", placeholder: "Enter the knowledge content here..." %>
+      <% end %>
+    </div>
+
+    <div data-knowledge-document-target="pdfUpload" class="hidden">
+      <%= f.label :file, "Upload PDF", class: "block text-sm mb-2 font-medium text-slate-700" %>
+      <%= f.file_field :file, accept: "application/pdf", class: "py-3 px-4 block w-full border border-slate-200 rounded-xl text-sm focus:border-slate-300 focus:ring-0 shadow-sm" %>
+      <% if document.file.attached? %>
+        <p class="mt-2 text-sm text-slate-500 font-medium">Current file: <%= link_to document.file.filename, url_for(document.file), target: "_blank", class: "text-blue-600 hover:underline" %></p>
+      <% end %>
+    </div>
+
+    <div class="mt-5">
+      <%= f.submit (document.new_record? ? "Create Document" : "Update Document"), class: "w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-bold rounded-xl border border-transparent bg-slate-900 text-white hover:bg-slate-700 shadow-sm transition-all disabled:opacity-50 disabled:pointer-events-none" %>
+    </div>
+  </div>
+<% end %>

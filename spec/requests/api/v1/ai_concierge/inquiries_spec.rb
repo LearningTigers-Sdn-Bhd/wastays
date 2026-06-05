@@ -1,4 +1,5 @@
 require "rails_helper"
+require "ostruct"
 
 RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
@@ -11,6 +12,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
   before do
     create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "12:00", cancellation_policy: "24 hours")
     create(:guest, phone: "+60123456789")
+    allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([])
     stub_interpreter
   end
 
@@ -39,6 +41,14 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(parsed_body["error"]).to eq("Message is required")
     end
 
+    it "accepts nested inquiry payloads" do
+      post path, params: { inquiry: { message: "Hello", phone: phone } }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to be_present
+      expect(parsed_body["prospect_public_id"]).to be_present
+    end
+
     it "returns 422 when message exceeds max length" do
       long_message = "x" * 2001
 
@@ -49,20 +59,53 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     end
 
     it "answers hotel policy questions" do
-      hotel.update!(policy: [
-        {
-          "title" => "Quiet Hours",
-          "content" => "Quiet hours start at 10 PM."
-        }
-      ])
+      doc = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Quiet Hours", embedding_status: "indexed")
+      create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Quiet hours start at 10 PM.")
 
       post path, params: { message: "What is the policy of this hotel?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to eq("Welcome to #{hotel.name}! Quiet Hours: Quiet hours start at 10 PM.")
+      expect(parsed_body["reply_message"]).to eq("Quiet Hours\nQuiet hours start at 10 PM.")
       expect(parsed_body["needs_human_support"]).to be(false)
       expect(parsed_body["action_name"]).to be_nil
       expect(parsed_body["prospect_public_id"]).to be_present
+    end
+
+    it "records a knowledge diagnostic for unanswered knowledge turns without changing the public payload" do
+      expect {
+        post path, params: { message: "Do you have an faq?", phone: phone }.to_json, headers: headers
+      }.to change(HotelKnowledgeDiagnostic, :count).by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body.keys).to contain_exactly("reply_message", "needs_human_support", "action_name", "prospect_public_id")
+
+      diagnostic = HotelKnowledgeDiagnostic.last
+      expect(diagnostic.hotel).to eq(hotel)
+      expect(diagnostic.prospect).to eq(Prospect.lookup_by_phone(phone).first)
+      expect(diagnostic.intent).to eq("hotel_information")
+      expect(diagnostic.topic).to eq("hotel_faq")
+      expect(diagnostic.question).to eq("Do you have an faq?")
+      expect(diagnostic.answer_mode).to eq("unavailable")
+      expect(diagnostic.suggested_category).to eq("faq")
+    end
+
+    it "does not record noisy diagnostics for strong retrieved knowledge answers" do
+      allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([
+        {
+          "content" => "Breakfast is served daily from 7 AM to 10 AM.",
+          "document_title" => "Breakfast",
+          "category" => "faq",
+          "distance" => 0.12
+        }
+      ])
+
+      expect {
+        post path, params: { message: "Do you have an faq?", phone: phone }.to_json, headers: headers
+      }.not_to change(HotelKnowledgeDiagnostic, :count)
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body.keys).to contain_exactly("reply_message", "needs_human_support", "action_name", "prospect_public_id")
+      expect(parsed_body["reply_message"]).to eq("Breakfast is served daily from 7 AM to 10 AM.")
     end
 
     it "accepts hotel slugs in the path" do
@@ -82,22 +125,13 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     end
 
     it "answers hotel faq questions" do
-      hotel.update!(faq: [
-        {
-          "section_name" => "General",
-          "items" => [
-            {
-              "question" => "What time is breakfast?",
-              "answer" => "Breakfast is served daily from 7 AM to 10 AM."
-            }
-          ]
-        }
-      ])
+      doc = create(:hotel_knowledge_document, hotel: hotel, category: "faq", title: "General", embedding_status: "indexed")
+      create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Q: What time is breakfast?\nA: Breakfast is served daily from 7 AM to 10 AM.")
 
       post path, params: { message: "Do you have an faq?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to eq("General\n- Q: What time is breakfast?\n  A: Breakfast is served daily from 7 AM to 10 AM.")
+      expect(parsed_body["reply_message"]).to eq("General\nQ: What time is breakfast?\nA: Breakfast is served daily from 7 AM to 10 AM.")
     end
 
     it "returns the full nearby attractions list" do
@@ -187,8 +221,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
-      expect(parsed_body["reply_message"]).to include("1. *RM")
-      expect(parsed_body["reply_message"]).to include("Check-in *1 August 2026* - Check-out *3 August 2026*")
+      expect(parsed_body["reply_message"]).to include("  Option 1: 1 August 2026 - 3 August 2026 (2 nights)")
       expect(parsed_body["reply_message"]).to include('Reply with the room type name and option number or date you want, for example: "Ocean Villa King option 1" or "Executive Penthouse on May 21"')
     end
 
@@ -335,7 +368,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Executive Penthouse")
       expect(parsed_body["reply_message"]).to include("I found multiple options under Executive Penthouse:")
-      expect(parsed_body["reply_message"]).to include("1. *RM")
+      expect(parsed_body["reply_message"]).to include("  Option 1:")
       expect(parsed_body["reply_message"]).to include("Please tell me the option number you want.")
     end
 
@@ -356,6 +389,31 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       state = Prospect.lookup_by_phone(phone).first.prospect_conversation_state
       expect(state.flow_status).to eq("ended")
       expect(state.slots_payload.dig("conversation", "end_reason")).to eq("booking_url_generated")
+    end
+
+    it "returns a friendly fallback without completing the conversation when quote generation is stale" do
+      seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 11, 12, 13, 14 ])
+
+      post path, params: { message: "mid august", phone: phone }.to_json, headers: headers
+      post path, params: { message: "3 days 2 nights", phone: phone }.to_json, headers: headers
+      post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
+      post path, params: { message: "Garden Prestige Suite option 2", phone: phone }.to_json, headers: headers
+
+      quote_service = instance_double(BookingEngine::CreateQuote, call: OpenStruct.new(success?: true, quote: nil))
+      allow(BookingEngine::CreateQuote).to receive(:new).and_return(quote_service)
+
+      post path, params: { message: "yes", phone: phone }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body.keys).to contain_exactly("reply_message", "needs_human_support", "action_name", "prospect_public_id")
+      expect(parsed_body["reply_message"]).to eq("Unable to generate quote right now.")
+      expect(parsed_body["needs_human_support"]).to be(true)
+      expect(parsed_body["action_name"]).to be_nil
+
+      state = Prospect.lookup_by_phone(phone).first.prospect_conversation_state
+      expect(state.flow_status).not_to eq("ended")
+      expect(state.slots_payload.dig("conversation", "end_reason")).not_to eq("booking_url_generated")
+      expect(state.slots_payload.dig("booking_task", "status")).to eq("waiting_for_confirmation")
     end
 
     it "starts a fresh branch after another booking" do
@@ -455,7 +513,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
   end
 
   def stub_interpreter
-    allow_any_instance_of(AiConciergeV3::Agents::InterpreterAgent).to receive(:call) do |agent|
+    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call) do |agent|
       build_interpretation(
         message: agent.instance_variable_get(:@message),
         conversation_summary: agent.instance_variable_get(:@conversation_summary)
@@ -591,8 +649,9 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     interpretation(intent: "greeting", topic: "general")
   end
 
-  def interpretation(intent:, topic:, slots: {}, signals: {})
+  def interpretation(intent:, topic:, slots: {}, signals: {}, message_type: "booking_request")
     {
+      "message_type" => message_type,
       "intent" => intent,
       "topic" => topic,
       "confidence" => 1.0,

@@ -7,6 +7,7 @@ gem "friendly_id", "~> 5.6"
 gem "propshaft"
 # Use postgresql as the database for Active Record
 gem "pg", "~> 1.1"
+gem "neighbor", "~> 0.3"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
@@ -57,6 +58,7 @@ gem "rqrcode", "~> 2.2"
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
 gem "ruby_llm", "~> 1.14"
+gem "pdf-reader", "~> 2.12"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
