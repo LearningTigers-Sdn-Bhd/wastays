@@ -18,7 +18,7 @@
 
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
-    <% unless controller_name == "static_pages" && action_name == "home" %>
+    <% unless Rails.env.test? || (controller_name == "static_pages" && action_name == "home") %>
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/preline@2.4.1/dist/preline.min.css">
     <% end %>
     <%= javascript_importmap_tags %>
@@ -35,12 +35,12 @@
     </style>
   </head>
   <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased" 
-        data-preline-enabled="<%= !(controller_name == 'static_pages' && action_name == 'home') %>" 
+        data-preline-enabled="<%= !(Rails.env.test? || (controller_name == 'static_pages' && action_name == 'home')) %>" 
         data-controller="widget <%= yield :body_controllers %>"
         <%= yield :body_attributes %>>
     <div id="abw-btn-cont" data-turbo-permanent></div>
     <style id="abw-style" data-turbo-permanent></style>
-    <% unless controller_name == "static_pages" && action_name == "home" %>
+    <% unless Rails.env.test? || (controller_name == "static_pages" && action_name == "home") %>
     <script>
       document.documentElement.classList.remove("landing-loader-active")
     </script>

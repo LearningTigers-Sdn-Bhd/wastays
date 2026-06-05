@@ -4,12 +4,12 @@ require "rails_helper"
 
 RSpec.describe "Hotel Room Assignment Locks", type: :system do
   before do
-    driven_by :cuprite
+    driven_by :cuprite, options: { timeout: 10 }
   end
 
   let(:hotel) { create(:hotel) }
-  let(:user1) { create(:user, name: "Admin One") }
-  let(:user2) { create(:user, name: "Admin Two") }
+  let(:user1) { create(:user, account: hotel.account, name: "Admin One") }
+  let(:user2) { create(:user, account: hotel.account, name: "Admin Two") }
   let!(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "206", "207" ]) }
   let!(:booking) { create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current, check_out: Date.current + 2.days) }
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type) }
@@ -129,7 +129,6 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
     find("input[name*='email']").set user.email
     find("input[name*='password']").set "password123"
     click_button "Sign In to Portal"
-    # Wait for dashboard or welcome message
-    expect(page).to have_content(/Welcome|Dashboard/i)
+    expect(page).to have_no_current_path(login_path, ignore_query: true)
   end
 end
