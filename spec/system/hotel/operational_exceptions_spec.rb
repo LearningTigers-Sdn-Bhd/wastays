@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Operational Exceptions", type: :system do
   let(:account) { create(:account) }
-  let(:user) { create(:user, :superadmin, account: account, email: "staff@example.com") }
+  let(:user) { create(:user, :superadmin, account: account, email: "operational-exceptions-#{SecureRandom.hex(4)}@example.com") }
   let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:role) { create(:role, account: account, slug: "manager", name: "Manager") }
   let(:room_type) { create(:room_type, hotel: hotel) }

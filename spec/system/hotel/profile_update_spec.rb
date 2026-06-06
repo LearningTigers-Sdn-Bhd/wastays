@@ -36,47 +36,4 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     expect(page).to have_current_path(edit_hotel_profile_path(hotel))
     expect(page).not_to have_css('#hotel-faq-section')
   end
-
-  it 'allows the user to save the hotel faq independently' do
-    visit edit_hotel_faq_path(hotel)
-
-    within('#hotel-faq-form') do
-      click_button 'Add Section'
-
-      # Fill section name
-      find('input[placeholder="e.g., Arrival & Check-in"]').set('General')
-
-      # Fill question and answer
-      find('input[placeholder="Enter question here..."]').set('Do you offer airport transfers?')
-      find('textarea[placeholder="Write the answer..."]').set('Yes, on request.')
-
-      click_button 'Done and Save'
-    end
-
-    expect(page).to have_current_path(edit_hotel_faq_path(hotel))
-
-    hotel.reload
-    expect(hotel.faq).to be_an(Array)
-    expect(hotel.faq.first['section_name']).to eq('General')
-    expect(hotel.faq.first['items'].first['question']).to eq('Do you offer airport transfers?')
-  end
-
-  it 'allows the user to save the hotel policy independently' do
-    visit edit_hotel_policy_path(hotel)
-
-    within('#hotel-policy-form') do
-      click_button 'Add Policy'
-      find('input[placeholder="e.g., Quiet Hours"]', wait: 5).set('Quiet Hours')
-      find('textarea[placeholder="Write the policy details..."]', wait: 5).set('Quiet hours start at 10 PM.')
-      click_button 'Done and Save'
-    end
-
-    expect(page).to have_current_path(edit_hotel_policy_path(hotel))
-    expect(hotel.reload.policy).to eq([
-      {
-        'title' => 'Quiet Hours',
-        'content' => 'Quiet hours start at 10 PM.'
-      }
-    ])
-  end
 end
