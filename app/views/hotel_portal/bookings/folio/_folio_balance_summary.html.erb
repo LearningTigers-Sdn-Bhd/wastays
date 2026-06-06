@@ -1,0 +1,40 @@
+<% folio = booking.booking_folio %>
+<% currency = booking.currency.presence || "MYR" %>
+<% projected_lines = Array(local_assigns[:projected_lines]) %>
+<% projected_charges = projected_lines.sum { |line| line[:amount].to_d } %>
+<% total_charges = (folio&.total_charges || 0).to_d + projected_charges %>
+<% total_payments = (folio&.total_payments || 0).to_d %>
+<% total_adjustments = (folio&.total_adjustments || 0).to_d %>
+<% outstanding_balance = total_charges - total_payments + total_adjustments %>
+
+<div class="bg-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-200/50">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-8">
+    <div>
+      <div class="flex items-center gap-2 mb-4">
+        <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Outstanding Balance</h3>
+        <div class="size-5 rounded-lg bg-white/10 flex items-center justify-center text-slate-300">
+          <%= lucide_icon "credit-card", stroke_width: 2.5, class: "size-3" %>
+        </div>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <span class="text-sm font-bold text-slate-400"><%= currency %></span>
+        <span class="text-5xl font-black tracking-tight"><%= number_with_precision(outstanding_balance, precision: 2) %></span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-12 md:pl-12 md:border-l border-slate-800">
+      <div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Folio Status</p>
+        <p class="text-lg font-black uppercase tracking-tight text-white"><%= folio&.status || "N/A" %></p>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Charges</p>
+        <p class="text-lg font-black text-white"><%= currency %> <%= number_with_precision(total_charges, precision: 2) %></p>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Payments</p>
+        <p class="text-lg font-black text-emerald-400"><%= currency %> <%= number_with_precision(total_payments, precision: 2) %></p>
+      </div>
+    </div>
+  </div>
+</div>

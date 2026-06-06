@@ -42,10 +42,10 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
     end
 
     it "blocks lookup stage for completed booking" do
-      booking.update!(status: "completed")
+      completed = create(:booking, hotel: hotel, guest_name: "Ahmad Zulkifli", status: "completed")
 
       post concierge_requests_path(hotel.slug), params: {
-        confirmation_token: booking.confirmation_token,
+        confirmation_token: completed.confirmation_token,
         stage: "lookup"
       }
 

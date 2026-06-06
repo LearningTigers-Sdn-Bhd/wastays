@@ -3,7 +3,7 @@ module BookingEngine
     queue_as :default
 
     def perform
-      expired_quotes = BookingQuote.where(status: "pending").where("expires_at < ?", Time.current)
+      expired_quotes = BookingQuote.where(status: %w[active pending]).where("expires_at < ?", Time.current)
 
       expired_quotes.find_each do |quote|
         release_hold(quote)
@@ -14,13 +14,16 @@ module BookingEngine
 
     def release_hold(quote)
       ActiveRecord::Base.transaction do
+        quote.lock!
+        return if quote.status == "expired"
+
         quote.booking_quote_items.each do |item|
           room_type = item.room_type
           quantity = item.quantity
           stay_dates = (quote.check_in...quote.check_out).to_a
 
           stay_dates.each do |date|
-            inventory = room_type.room_inventories.find_by(date: date)
+            inventory = room_type.room_inventories.lock.find_by(date: date)
             if inventory
               inventory.update!(quantity: inventory.quantity + quantity)
             end

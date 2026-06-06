@@ -1,37 +1,3 @@
-<%= turbo_frame_tag "reservation_board_booking_sheet_content" do %>
-  <div class="flex flex-col h-full bg-slate-50">
-    <%= form_with model: @booking, url: hotel_reservation_board_board_bookings_path(current_hotel), local: true,
-        class: "flex flex-col h-full",
-        data: {
-          controller: "booking-calc room-lock",
-          room_lock_url_value: hotel_room_locks_path(current_hotel),
-          booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
-          booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel)
-        } do |f| %>
-
-      <%# Modal Header %>
-      <%= render "hotel_portal/reservation_board/partials/content_header",
-                 title: "New Booking",
-                 subtitle: "Manual Reservation",
-                 icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-5"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M10 16h4"/><path d="M12 14v4"/></svg>' %>
-
-      <%# Modal Content (Scrollable) %>
-      <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
-        <%= render "hotel_portal/reservation_board/board_bookings/form_sections",
-                   f: f,
-                   booking: @booking,
-                   room_types: @room_types,
-                   room_type_id: @room_type_id,
-                   room_number: @room_number %>
-      </div>
-      </div>
-
-      <%# Modal Footer %>
-      <%= render "hotel_portal/reservation_board/partials/content_footer",
-                 show_full_page_link: true,
-                 full_page_path: hotel_bookings_path(current_hotel),
-                 full_page_label: "Full Booking Page",
-                 submit_button: f.submit("Create Booking", class: "px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors shadow-sm") %>
-    <% end %>
-  </div>
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <%= render "hotel_portal/bookings/form" %>
 <% end %>

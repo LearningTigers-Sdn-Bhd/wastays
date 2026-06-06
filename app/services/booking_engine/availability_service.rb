@@ -28,7 +28,7 @@ module BookingEngine
       hotels = hotels.where("city ILIKE ?", "%#{@city}%") if @city.present?
 
       # 2. Filter by availability
-      # Note: This is simplified for MVP. For production with many hotels, use specialized indexing.
+      # Note: Initial implementation for availability checks. For higher volume properties, consider specialized indexing.
       hotels.select do |hotel|
         available_rooms_for_hotel(hotel).any?
       end
@@ -61,8 +61,8 @@ module BookingEngine
       available_room_types
     end
 
-    def pricing_summary_for(room_type)
-      option = lowest_pricing_option_for(room_type)
+    def pricing_summary_for(room_type, rate_plan: nil)
+      option = rate_plan.present? ? pricing_option_for(room_type, rate_plan) : lowest_pricing_option_for(room_type)
       return {} if option.blank?
 
       display_name = option.rate_plan&.name

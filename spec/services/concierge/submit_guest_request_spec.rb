@@ -32,8 +32,8 @@ RSpec.describe Concierge::SubmitGuestRequest do
   end
 
   it "fails for cancelled bookings" do
-    booking.update!(status: "cancelled")
-    result = described_class.new(booking: booking, kind: "housekeeping", details: "test").call
+    cancelled = create(:booking, hotel: hotel, status: "cancelled")
+    result = described_class.new(booking: cancelled, kind: "housekeeping", details: "test").call
     expect(result.success?).to be false
   end
 end

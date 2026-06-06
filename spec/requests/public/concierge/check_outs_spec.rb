@@ -40,10 +40,10 @@ RSpec.describe "Public::Concierge::CheckOuts", type: :request do
     end
 
     it "blocks lookup stage for non-checked-in booking" do
-      booking.update!(status: "confirmed")
+      confirmed = create(:booking, hotel: hotel, guest_name: "Ahmad Zulkifli", status: "confirmed")
 
       post concierge_create_check_out_path(hotel.slug), params: {
-        confirmation_token: booking.confirmation_token,
+        confirmation_token: confirmed.confirmation_token,
         stage: "lookup"
       }
 
@@ -52,9 +52,9 @@ RSpec.describe "Public::Concierge::CheckOuts", type: :request do
     end
 
     it "fails for a non-checked-in booking" do
-      booking.update!(status: "confirmed")
+      confirmed = create(:booking, hotel: hotel, guest_name: "Ahmad Zulkifli", status: "confirmed")
       post concierge_create_check_out_path(hotel.slug), params: {
-        confirmation_token: booking.confirmation_token,
+        confirmation_token: confirmed.confirmation_token,
         stage: "submit"
       }
       expect(response).to have_http_status(:unprocessable_content)

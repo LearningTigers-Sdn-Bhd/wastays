@@ -8,47 +8,43 @@ module BookingEngine
     end
 
     def call
-      return OpenStruct.new(success?: true, booking: existing_booking) if existing_booking
+      @quote.with_lock do
+        return OpenStruct.new(success?: true, booking: existing_booking) if existing_booking
 
-      # Pre-assign sequential numbers outside the transaction to avoid nested lock conflicts
-      reservation_num = HotelCounter.increment!(hotel: @quote.hotel, type: "reservation")
-      receipt_num     = HotelCounter.increment!(hotel: @quote.hotel, type: "receipt")
-
-      Booking.transaction do
         # 1. Double check quote haven't expired (though it should have been held)
-        if @quote.status == "expired"
+        if quote_expired?
+          expire_quote!
           return OpenStruct.new(success?: false, message: "Quote has expired.")
         end
+
+        reservation_num = HotelCounter.increment!(hotel: @quote.hotel, type: "reservation")
+        receipt_num     = HotelCounter.increment!(hotel: @quote.hotel, type: "receipt")
 
         # 2. Create Booking from Quote snapshots
         margin_rate = @quote.hotel.effective_margin_rate
         margin_amount = (@quote.total_amount * (margin_rate / 100.0)).round(2)
-        net_amount = @quote.total_amount - margin_amount
 
         guest_country = normalize_country(@payment_details[:country])
         gender = @payment_details[:gender]&.downcase&.strip
         document_type = @payment_details[:document_type]&.downcase&.strip
 
-        rooms_subtotal = @quote.booking_quote_items.sum(&:subtotal).to_f
+        financial_snapshot = Bookings::BuildFinancialSnapshot.new(
+          hotel: @quote.hotel,
+          check_in: @quote.check_in,
+          check_out: @quote.check_out,
+          guest_country: guest_country,
+          room_items: @quote.booking_quote_items.map do |item|
+            {
+              quantity: item.quantity,
+              nightly_rate_snapshot: item.nightly_rate_snapshot
+            }
+          end
+        ).call
 
-        # Build tax lines from hotel's custom taxes
-        tax_lines = @quote.hotel.hotel_taxes.enabled.filter_map do |tax|
-          next unless tax.applicable_for?(guest_country)
-          tax.to_tax_line(rooms_subtotal: rooms_subtotal)
-        end
-
-        # Add SST if enabled (8% of room subtotal, all guests)
-        if @quote.hotel.sst_enabled?
-          tax_lines << {
-            "name"   => "Service Tax (SST 8%)",
-            "amount" => (rooms_subtotal * 0.08).round(2),
-            "type"   => "sst"
-          }
-        end
-
-        # Backward-compat: keep tourism_tax_amount/applied
-        ttx = tax_lines.find { |t| t["name"].to_s.downcase.include?("tourism") }
-        tourism_tax_amount = ttx ? ttx["amount"].to_f : @quote.hotel.tourism_tax_amount_for(guest_country)
+        tax_lines = financial_snapshot.tax_lines
+        tourism_tax = tax_lines.find { |tax| tax["type"].to_s == "tourism_tax" }
+        tourism_tax_amount = tourism_tax ? tourism_tax["amount"].to_d : 0
+        payable_total = financial_snapshot.room_total + financial_snapshot.tax_total
 
         booking = Booking.new(
           booking_quote: @quote,
@@ -56,7 +52,7 @@ module BookingEngine
           guest_name: @payment_details[:guest_name], # From checkout form
           guest_email: @payment_details[:guest_email],
           guest_phone: @payment_details[:guest_phone],
-          total_amount: @quote.total_amount,
+          total_amount: payable_total,
           currency: @quote.currency,
           check_in: @quote.check_in,
           check_out: @quote.check_out,
@@ -68,13 +64,14 @@ module BookingEngine
           payment_status: "captured",
           margin_rate: margin_rate,
           margin_amount: margin_amount,
-          net_amount: net_amount,
+          net_amount: payable_total - margin_amount,
           guest_gender: gender,
           guest_country: guest_country,
           guest_document_type: document_type,
           tourism_tax_amount: tourism_tax_amount,
           tourism_tax_applied: tourism_tax_amount.positive?,
           tax_lines: tax_lines,
+          tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
           reservation_number: reservation_num,
           receipt_number: receipt_num
         )
@@ -124,9 +121,8 @@ module BookingEngine
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
           Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
 
-          # 6. TODO: Trigger notifications (Phase 5 checklist)
+          # 6. Dispatch Guest Notifications
           # Notifications::BookingConfirmedJob.perform_later(booking.id)
-
           OpenStruct.new(success?: true, booking: booking)
         else
           OpenStruct.new(success?: false, message: booking.errors.full_messages.to_sentence)
@@ -139,7 +135,25 @@ module BookingEngine
     private
 
     def existing_booking
-      @existing_booking ||= Booking.find_by(booking_quote_id: @quote.id)
+      Booking.find_by(booking_quote_id: @quote.id)
+    end
+
+    def quote_expired?
+      @quote.status == "expired" || @quote.expires_at <= Time.current
+    end
+
+    def expire_quote!
+      return if @quote.status == "expired"
+
+      @quote.booking_quote_items.includes(:room_type).each do |item|
+        (@quote.check_in...@quote.check_out).each do |date|
+          inventory = item.room_type.room_inventories.lock.find_by(date: date)
+          inventory&.update!(quantity: inventory.quantity + item.quantity)
+        end
+      end
+
+      @quote.update!(status: "expired")
+      Bookings::RecordAuditLog.call(auditable: @quote, action_type: "expire")
     end
 
     def normalize_country(value)

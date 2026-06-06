@@ -3,9 +3,9 @@ require 'rails_helper'
 RSpec.describe "HotelPortal::Reports", type: :request do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user) }
+  let(:role) { create(:role, account: hotel.account) }
 
   before do
-    role = create(:role, account: hotel.account)
     [ "view_reports", "view_payouts" ].each do |slug|
       permission = Permission.find_by(slug: slug) || create(:permission, name: slug.titleize, slug: slug)
       role.permissions << permission
@@ -216,8 +216,14 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     let(:end_date) { Date.new(2026, 5, 8) }
 
     it "renders outstanding balance report for selected range" do
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Unpaid Guest", confirmation_token: "WS-UNPAID")
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", check_in: start_date, check_out: start_date + 1.day, guest_name: "Paid Guest", confirmation_token: "WS-PAID")
+      unpaid = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Unpaid Guest", confirmation_token: "WS-UNPAID")
+      unpaid_folio = create(:booking_folio, booking: unpaid, hotel: hotel)
+      create(:folio_transaction, booking_folio: unpaid_folio, transaction_type: "charge", category: "accommodation", amount: 100)
+
+      paid = create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", check_in: start_date, check_out: start_date + 1.day, guest_name: "Paid Guest", confirmation_token: "WS-PAID")
+      paid_folio = create(:booking_folio, booking: paid, hotel: hotel)
+      create(:folio_transaction, booking_folio: paid_folio, transaction_type: "charge", category: "accommodation", amount: 100)
+      create(:folio_transaction, booking_folio: paid_folio, transaction_type: "payment", category: "cash", amount: 100)
 
       get outstanding_balance_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -228,7 +234,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "exports CSV" do
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "CSV Outstanding", confirmation_token: "WS-OB-CSV")
+      booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "CSV Outstanding", confirmation_token: "WS-OB-CSV")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
 
       get outstanding_balance_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -239,7 +247,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "exports PDF" do
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day)
+      booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day)
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
 
       get outstanding_balance_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -249,7 +259,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "exports XLS" do
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Outstanding")
+      booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Outstanding")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
 
       get outstanding_balance_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -258,6 +270,69 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.headers["Content-Disposition"]).to include(".xls")
       expect(response.body).to include('ss:Name="Summary"')
       expect(response.body).to include('ss:Name="Outstanding Balances"')
+    end
+  end
+
+  describe "GET /deposit_liability" do
+    let(:as_of_date) { Date.new(2026, 5, 20) }
+
+    it "renders deposit liability report for selected as-of date" do
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Deposit Guest", confirmation_token: "WS-DEP")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 250, posting_date: as_of_date - 1.day)
+
+      ignored = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Gateway Guest", confirmation_token: "WS-GATEWAY")
+      ignored_folio = create(:booking_folio, booking: ignored, hotel: hotel)
+      create(:folio_transaction, booking_folio: ignored_folio, transaction_type: :payment, category: "gateway_payment", amount: 250, posting_date: as_of_date - 1.day)
+
+      get deposit_liability_hotel_reports_path(hotel), params: { as_of_date: as_of_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Deposit Liability Report")
+      expect(response.body).to include("Deposit Guest")
+      expect(response.body).not_to include("Gateway Guest")
+    end
+
+    it "does not show bookings from another hotel" do
+      other_hotel = create(:hotel)
+      booking = create(:booking, hotel: other_hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Other Deposit Guest")
+      folio = create(:booking_folio, booking: booking, hotel: other_hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 250, posting_date: as_of_date - 1.day)
+
+      get deposit_liability_hotel_reports_path(hotel), params: { as_of_date: as_of_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).not_to include("Other Deposit Guest")
+    end
+
+    it "exports csv/xls/pdf" do
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Export Deposit")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 250, posting_date: as_of_date - 1.day)
+
+      get deposit_liability_hotel_reports_path(hotel, format: :csv), params: { as_of_date: as_of_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+      expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Booking Payment,Earned,Refunds,Remaining Liability,Latest Payment Date")
+
+      get deposit_liability_hotel_reports_path(hotel, format: :xls), params: { as_of_date: as_of_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.ms-excel")
+      expect(response.body).to include('ss:Name="Deposit Liability"')
+
+      get deposit_liability_hotel_reports_path(hotel, format: :pdf), params: { as_of_date: as_of_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.headers["Content-Disposition"]).to include(".pdf")
+    end
+
+    it "requires view_reports permission" do
+      role.permissions.delete(Permission.find_by!(slug: "view_reports"))
+
+      get deposit_liability_hotel_reports_path(hotel), params: { as_of_date: as_of_date.to_s }
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
     end
   end
 
@@ -288,6 +363,46 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.content_type).to include("application/vnd.ms-excel")
 
       get daily_revenue_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+    end
+
+    it "requires view_reports permission" do
+      role.permissions.delete(Permission.find_by!(slug: "view_reports"))
+
+      get daily_revenue_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+    end
+  end
+
+  describe "GET /managers_flash" do
+    let(:start_date) { Date.new(2026, 5, 6) }
+    let(:end_date) { Date.new(2026, 5, 7) }
+
+    it "renders the manager flash report for the selected range" do
+      room_type = create(:room_type, hotel: hotel, quantity: 10)
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
+      create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 400)
+
+      get managers_flash_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Manager Flash Report")
+      expect(response.body).to include("Total Revenue")
+    end
+
+    it "exports csv/xls/pdf" do
+      get managers_flash_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+
+      get managers_flash_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.ms-excel")
+
+      get managers_flash_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
     end

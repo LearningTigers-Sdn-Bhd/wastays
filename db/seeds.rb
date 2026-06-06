@@ -112,6 +112,10 @@ module SeedData
     booking.update!(guarantee_method: guarantee, deposit_status: deposit)
     booking
   end
+
+  def ensure_default_gl_maps(hotel)
+    Financials::EnsureDefaultGlMaps.call(hotel)
+  end
 end
 
 AmenitiesSeeder.run
@@ -138,6 +142,13 @@ platform_permissions = [
   { name: 'Manage Users', slug: 'manage_users' },
   { name: 'Manage Room Status', slug: 'manage_room_status' },
   { name: 'Post Charges', slug: 'post_charges' },
+  { name: 'Post Folio Charges', slug: 'post_folio_charges' },
+  { name: 'Post Folio Payments', slug: 'post_folio_payments' },
+  { name: 'Execute Folio Refunds', slug: 'execute_folio_refunds' },
+  { name: 'Post Folio Adjustments', slug: 'post_folio_adjustments' },
+  { name: 'Post Folio Corrections', slug: 'post_folio_corrections' },
+  { name: 'Post Folio Write-Offs', slug: 'post_folio_write_offs' },
+  { name: 'Manage GL Mappings', slug: 'manage_general_ledger_maps' },
   { name: 'View Reports', slug: 'view_reports' },
   { name: 'View Payouts', slug: 'view_payouts' },
   { name: 'Manage Requests', slug: 'manage_requests' },
@@ -147,7 +158,7 @@ platform_permissions = [
 role_templates = [
   { name: 'Hotel Owner', slug: 'hotel_owner', permissions: platform_permissions.map { |p| p[:slug] } },
   { name: 'General Manager', slug: 'general_manager', permissions: platform_permissions.map { |p| p[:slug] }.reject { |s| s == 'manage_account' } },
-  { name: 'Front Desk', slug: 'front_desk', permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit manage_room_status post_charges manage_requests manage_concierge] },
+  { name: 'Front Desk', slug: 'front_desk', permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit manage_room_status post_charges post_folio_charges post_folio_payments manage_requests manage_concierge] },
   { name: 'Housekeeper', slug: 'housekeeper', permissions: %w[manage_room_status manage_requests] }
 ]
 
@@ -294,6 +305,8 @@ if Rails.env.development?
         tourism_tax_enabled: hotel_attrs[:tourism_tax_enabled],
         tourism_tax_amount: hotel_attrs[:tourism_tax_amount]
       )
+
+      SeedData.ensure_default_gl_maps(hotel)
 
       PropertyPolicy.find_or_create_by!(hotel: hotel) do |policy|
         policy.check_in_time = hotel_attrs[:policy][:check_in_time]

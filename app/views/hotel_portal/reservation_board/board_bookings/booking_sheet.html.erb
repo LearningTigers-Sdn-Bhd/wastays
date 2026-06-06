@@ -1,0 +1,279 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="flex flex-col h-full bg-white">
+    <% status_badge = capture do %>
+      <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase <%= booking_status_class(@booking.status) %>">
+        <%= @booking.status.humanize %>
+      </span>
+    <% end %>
+
+    <%# Header %>
+    <%= render "hotel_portal/reservation_board/partials/content_header",
+               title: @booking.confirmation_token,
+               subtitle: @booking.guest_name,
+               icon: lucide_icon("user", stroke_width: 2.5, class: "size-5"),
+               status_badge: status_badge %>
+
+    <%# Body — Single Column %>
+    <div class="flex-1 overflow-y-auto">
+      <div class="divide-y divide-slate-100">
+
+        <%# Booking Details %>
+        <div class="px-6 py-5 space-y-3">
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Booking Details</p>
+          <div class="grid grid-cols-2 gap-x-6 gap-y-2.5">
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Check-in</p>
+              <p class="text-sm font-bold text-slate-900"><%= @booking.check_in.strftime("%d %b %Y") %></p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Check-out</p>
+              <p class="text-sm font-bold text-slate-900"><%= @booking.check_out.strftime("%d %b %Y") %></p>
+            </div>
+            <% @presenter.booking_rooms.each do |room| %>
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Room</p>
+                <p class="text-sm font-bold text-slate-900">
+                  <%= room.room_type_snapshot['name'] %>
+                  <% if @presenter.current_room_number.present? %>
+                    — <%= @presenter.current_room_number %>
+                  <% end %>
+                </p>
+              </div>
+            <% end %>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</p>
+              <p class="text-sm font-bold text-slate-900"><%= @presenter.currency %> <%= number_with_precision(@booking.total_amount, precision: 2) %></p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment</p>
+              <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase <%= hotel_payment_status_class(@booking.payment_status) %>">
+                <%= hotel_payment_display_status(@booking.payment_status) %>
+              </span>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Source</p>
+              <p class="text-sm font-bold text-slate-900"><%= @booking.source.presence || "Direct" %></p>
+            </div>
+          </div>
+        </div>
+
+        <%# Actions %>
+        <div class="px-6 py-5 space-y-3">
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</p>
+          <div class="space-y-1">
+
+            <%# Check In %>
+            <% if @booking.status == 'confirmed' %>
+              <button onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()"
+                      class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-blue-700 bg-blue-50/50 hover:bg-blue-100 hover:text-blue-800 transition-all group">
+                <span class="size-8 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
+                  <%= lucide_icon "log-in", stroke_width: 2.5, class: "size-4 text-blue-600" %>
+                </span>
+                <span class="flex-1 text-left">Check In</span>
+                <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-blue-400 group-hover:text-blue-600 transition-colors" %>
+              </button>
+            <% end %>
+
+            <%# Check Out %>
+            <% if @booking.status.in?(%w[checked_in review_due_out]) %>
+              <button onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').showModal()"
+                      class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 hover:text-emerald-800 transition-all group">
+                <span class="size-8 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
+                  <%= lucide_icon "log-out", stroke_width: 2.5, class: "size-4 text-emerald-600" %>
+                </span>
+                <span class="flex-1 text-left">Check Out</span>
+                <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-emerald-400 group-hover:text-emerald-600 transition-colors" %>
+              </button>
+            <% end %>
+
+            <%# Late Checkout %>
+            <% if @booking.status == 'review_due_out' %>
+              <button onclick="document.getElementById('late-checkout-modal-show-<%= @booking.id %>').showModal()"
+                      class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-amber-700 bg-amber-50/50 hover:bg-amber-100 hover:text-amber-800 transition-all group">
+                <span class="size-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0 group-hover:bg-amber-200 transition-colors">
+                  <%= lucide_icon "clock-alert", stroke_width: 2.5, class: "size-4 text-amber-600" %>
+                </span>
+                <span class="flex-1 text-left">Review Late Checkout</span>
+                <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-amber-400 group-hover:text-amber-600 transition-colors" %>
+              </button>
+            <% end %>
+
+            <hr class="border-slate-100 my-2">
+
+            <%# Edit Stay %>
+            <button onclick="document.getElementById('edit-stay-modal-<%= @booking.id %>').showModal()"
+                    class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-all group">
+              <span class="size-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 group-hover:bg-slate-200 transition-colors">
+                <%= lucide_icon "pen-line", stroke_width: 2.5, class: "size-4 text-slate-500" %>
+              </span>
+              <span class="flex-1 text-left">Edit Stay</span>
+              <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-slate-300 group-hover:text-slate-500 transition-colors" %>
+            </button>
+
+            <%# Guest Notes %>
+            <button onclick="document.getElementById('notes-modal-<%= @booking.id %>').showModal()"
+                    class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-amber-600 hover:bg-amber-50 hover:text-amber-700 transition-all group">
+              <span class="size-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0 group-hover:bg-amber-100 transition-colors">
+                <%= lucide_icon "sticky-note", stroke_width: 2.5, class: "size-4 text-amber-500" %>
+              </span>
+              <span class="flex-1 text-left">Guest Notes</span>
+              <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-amber-300 group-hover:text-amber-500 transition-colors" %>
+            </button>
+
+            <hr class="border-slate-100 my-2">
+
+            <%# View Full Page %>
+            <%= link_to hotel_reservation_board_board_booking_path(current_hotel, @booking),
+                        class: "flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-all group",
+                        data: { turbo: false } do %>
+              <span class="size-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 group-hover:bg-slate-200 transition-colors">
+                <%= lucide_icon "external-link", stroke_width: 2.5, class: "size-4 text-slate-500" %>
+              </span>
+              <span class="flex-1 text-left">View Full Page</span>
+              <%= lucide_icon "arrow-up-right", stroke_width: 2.5, class: "size-4 text-slate-300 group-hover:text-slate-500 transition-colors" %>
+            <% end %>
+
+            <%# View Folio %>
+            <%= link_to folio_hotel_reservation_board_board_booking_path(current_hotel, @booking),
+                        class: "flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-all group",
+                        data: { turbo: false } do %>
+              <span class="size-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 group-hover:bg-slate-200 transition-colors">
+                <%= lucide_icon "book-open", stroke_width: 2.5, class: "size-4 text-slate-500" %>
+              </span>
+              <span class="flex-1 text-left">View Folio</span>
+              <%= lucide_icon "arrow-up-right", stroke_width: 2.5, class: "size-4 text-slate-300 group-hover:text-slate-500 transition-colors" %>
+            <% end %>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# ── Native <dialog> Modals ── %>
+    <% booking = @booking %>
+    <% presenter = @presenter %>
+
+    <%= render "hotel_portal/bookings/show/modals/action_modals", booking: booking, presenter: presenter %>
+    <%= render "hotel_portal/bookings/show/modals/late_checkout_modal", booking: booking %>
+    <%= render "hotel_portal/bookings/show/modals/reinstate_modal", booking: booking %>
+
+    <%# Edit Stay Dialog %>
+    <dialog id="edit-stay-modal-<%= @booking.id %>"
+            class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,34rem)] max-w-xl shadow-2xl backdrop:bg-slate-900/50"
+            onclick="if(event.target===this){this.close()}">
+      <div class="p-6 bg-white" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Edit Stay & Room</h3>
+            <p class="text-sm text-slate-500 mt-1">Update booking dates and room assignment</p>
+          </div>
+          <button type="button" onclick="this.closest('dialog').close()" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all">
+            <%= lucide_icon "x", stroke_width: 2.5, class: "size-5" %>
+          </button>
+        </div>
+
+        <%= form_with model: @booking, url: hotel_reservation_board_board_booking_path(current_hotel, @booking), method: :patch,
+            data: {
+              controller: "booking-calc",
+              booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
+              booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel),
+              booking_calc_exclude_booking_id_value: @booking.id
+            } do |f| %>
+
+          <div class="grid sm:grid-cols-2 gap-4 mb-4">
+            <div class="space-y-2">
+              <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Check-in Date</label>
+              <%= f.date_field :check_in,
+                  class: "w-full rounded-xl border-2 border-slate-100 bg-slate-50 py-2.5 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none transition-all",
+                  data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
+            </div>
+            <div class="space-y-2">
+              <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Check-out Date</label>
+              <%= f.date_field :check_out,
+                  class: "w-full rounded-xl border-2 border-slate-100 bg-slate-50 py-2.5 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none transition-all",
+                  data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
+            </div>
+          </div>
+
+          <div class="space-y-2 mb-4">
+            <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Room Category</label>
+            <% current_room_type_id = @booking.booking_rooms.first&.room_type_id %>
+            <%= f.collection_select :room_type_id, @room_types, :id, :name, { selected: current_room_type_id },
+                { class: "w-full rounded-xl border-2 border-slate-100 bg-slate-50 py-2.5 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none transition-all",
+                  data: {
+                    booking_calc_target: "roomType",
+                    action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate",
+                    prices: @room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
+                    room_numbers: @room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
+                  }
+                } %>
+          </div>
+
+          <div data-controller="room-lock"
+               data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
+               data-room-lock-room-type-id-value="<%= current_room_type_id %>"
+               data-room-lock-current-room-value="<%= @booking.hotel_snapshot.is_a?(Hash) ? (@booking.hotel_snapshot['room_number'] || @booking.hotel_snapshot.dig('assignment', 'room_number')) : nil %>"
+               data-booking-calc-target="roomNumberContainer"
+               class="space-y-2 mb-6">
+            <label for="booking_room_number" class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Room Number</label>
+            <% current_room_number = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
+            <%= f.select :room_number, [[current_room_number, current_room_number]], { selected: current_room_number },
+                { id: "booking_room_number",
+                  class: "w-full rounded-xl border-2 border-slate-100 bg-slate-50 py-2.5 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none transition-all",
+                  data: {
+                    booking_calc_target: "roomNumberSelect",
+                    action: "change->room-lock#lock"
+                  }
+                } %>
+          </div>
+
+          <div class="flex items-center justify-end gap-x-3 pt-4 border-t border-slate-100">
+            <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
+            <%= f.submit "Save Changes", class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
+          </div>
+        <% end %>
+      </div>
+    </dialog>
+
+    <%# Guest Notes Dialog %>
+    <dialog id="notes-modal-<%= @booking.id %>"
+            class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,32rem)] max-w-lg shadow-2xl backdrop:bg-slate-900/50"
+            onclick="if(event.target===this){this.close()}">
+      <div class="p-6 bg-white" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Guest Notes</h3>
+            <p class="text-sm text-slate-500 mt-1">Internal staff notes for <%= @booking.guest_name %></p>
+          </div>
+          <button type="button" onclick="this.closest('dialog').close()" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all">
+            <%= lucide_icon "x", stroke_width: 2.5, class: "size-5" %>
+          </button>
+        </div>
+
+        <div class="space-y-4 max-h-[50vh] overflow-y-auto">
+          <% if @notes.any? %>
+            <% @notes.each do |note| %>
+              <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+                <div class="flex justify-between items-start">
+                  <span class="text-xs font-black text-slate-900 uppercase tracking-tight"><%= note.user.name %></span>
+                  <span class="text-[10px] text-slate-400 font-bold uppercase"><%= note.created_at.strftime("%b %d, %Y %H:%M") %></span>
+                </div>
+                <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed italic">"<%= note.body %>"</p>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="py-12 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+              <p class="text-xs font-black text-slate-400 uppercase tracking-widest">No guest notes recorded</p>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+          <button type="button" onclick="this.closest('dialog').close()" class="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition shadow-sm">
+            Close
+          </button>
+        </div>
+      </div>
+    </dialog>
+  </div>
+<% end %>

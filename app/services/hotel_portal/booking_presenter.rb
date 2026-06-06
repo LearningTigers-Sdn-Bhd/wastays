@@ -48,6 +48,10 @@ module HotelPortal
       Time.current.strftime("%Y-%m-%dT%H:%M")
     end
 
+    def requires_backdated_checkin_reason?
+      hotel.date_closed?(booking.check_in.to_date)
+    end
+
     def can_manage_bookings?(user)
       user.has_permission?("manage_bookings", hotel: hotel)
     end
@@ -161,6 +165,31 @@ module HotelPortal
 
     def pending_requests_count
       pending_housekeeping_requests_count + pending_complaint_requests_count
+    end
+
+    def suggested_late_checkout_amount
+      primary_room = booking.booking_rooms.first
+      return 0.to_d unless primary_room&.room_type
+
+      room_type = primary_room.room_type
+      quantity = primary_room.quantity.to_i
+
+      today = Time.current.to_date
+      rate = room_type.room_rates.find_by(date: today)&.price || room_type.base_price
+
+      base_amount = (rate.to_d * quantity).round(2)
+
+      applicable_taxes = hotel.hotel_taxes.enabled.to_a
+      taxes_amount = applicable_taxes.sum { |tax| tax.compute(rooms_subtotal: base_amount) }
+
+      nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
+      per_night_tourism_tax = nights.positive? ? (booking.tourism_tax_amount.to_d / nights).round(2) : 0.to_d
+
+      (base_amount + taxes_amount + per_night_tourism_tax).round(2)
+    end
+
+    def currency
+      booking.currency.presence || "MYR"
     end
 
     def notes_json

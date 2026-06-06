@@ -24,6 +24,6 @@ RSpec.describe BookingEngine::HoldInventory do
     room_type.room_inventories.first.update!(quantity: 0)
 
     result = described_class.new(quote).call
-    expect(result).to be_nil
+    expect(result).to be(false)
   end
 end

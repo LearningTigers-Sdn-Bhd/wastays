@@ -5,6 +5,10 @@ RSpec.describe Booking, type: :model do
     it "includes checked_in in STATUSES" do
       expect(Booking::STATUSES).to include('checked_in')
     end
+
+    it "includes no_show in STATUSES" do
+      expect(Booking::STATUSES).to include('no_show')
+    end
   end
 
   describe "scopes" do
@@ -12,18 +16,19 @@ RSpec.describe Booking, type: :model do
     let!(:confirmed_booking) { create(:booking, hotel: hotel, status: 'confirmed') }
     let!(:checked_in_booking) { create(:booking, hotel: hotel, status: 'checked_in') }
     let!(:completed_booking) { create(:booking, hotel: hotel, status: 'completed') }
+    let!(:no_show_booking) { create(:booking, hotel: hotel, status: 'no_show') }
     let!(:cancelled_booking) { create(:booking, hotel: hotel, status: 'cancelled') }
 
     describe ".active" do
       it "includes confirmed and checked_in bookings" do
         expect(Booking.active).to include(confirmed_booking, checked_in_booking)
-        expect(Booking.active).not_to include(completed_booking, cancelled_booking)
+        expect(Booking.active).not_to include(completed_booking, no_show_booking, cancelled_booking)
       end
     end
 
     describe ".revenue_generating" do
-      it "includes confirmed, checked_in, and completed bookings" do
-        expect(Booking.revenue_generating).to include(confirmed_booking, checked_in_booking, completed_booking)
+      it "includes confirmed, checked_in, completed, and no-show bookings" do
+        expect(Booking.revenue_generating).to include(confirmed_booking, checked_in_booking, completed_booking, no_show_booking)
         expect(Booking.revenue_generating).not_to include(cancelled_booking)
       end
     end
@@ -54,6 +59,70 @@ RSpec.describe Booking, type: :model do
     it "returns false if status is not completed" do
       booking.status = 'checked_in'
       expect(booking.checked_out?).to be false
+    end
+  end
+
+  describe "status lifecycle" do
+    def expect_transition(from:, to:, event:)
+      booking = create(:booking, status: from)
+
+      expect {
+        booking.transition_status_to!(to, event: event)
+      }.to change { booking.reload.status }.from(from).to(to)
+    end
+
+    it "allows valid lifecycle transitions" do
+      expect_transition(from: "pending", to: "confirmed", event: "confirm")
+      expect_transition(from: "pending", to: "cancelled", event: "cancel")
+      expect_transition(from: "confirmed", to: "checked_in", event: "check_in")
+      expect_transition(from: "confirmed", to: "cancelled", event: "cancel")
+      expect_transition(from: "confirmed", to: "no_show", event: "mark_no_show")
+      expect_transition(from: "confirmed", to: "overbooked", event: "mark_overbooked")
+      expect_transition(from: "overbooked", to: "confirmed", event: "resolve_overbooking")
+      expect_transition(from: "overbooked", to: "cancelled", event: "cancel")
+      expect_transition(from: "checked_in", to: "completed", event: "check_out")
+      expect_transition(from: "no_show", to: "checked_in", event: "reinstate")
+    end
+
+    it "rejects direct persisted status updates without an event" do
+      booking = create(:booking, status: "confirmed")
+
+      expect(booking.update(status: "checked_in")).to be(false)
+      expect(booking.errors[:status]).to include("status transition event is required")
+      expect(booking.reload.status).to eq("confirmed")
+    end
+
+    it "rejects status changes with the wrong event" do
+      booking = create(:booking, status: "confirmed")
+      booking.status_transition_event = "check_out"
+
+      expect(booking.update(status: "completed")).to be(false)
+      expect(booking.errors[:status]).to include("cannot transition from confirmed to completed with event check_out")
+      expect(booking.reload.status).to eq("confirmed")
+    end
+
+    it "treats cancelled as a hard terminal status" do
+      booking = create(:booking, status: "cancelled")
+      booking.status_transition_event = "confirm"
+
+      expect(booking.update(status: "confirmed")).to be(false)
+      expect(booking.errors[:status]).to include("cancelled is a terminal status")
+      expect(booking.reload.status).to eq("cancelled")
+    end
+
+    it "treats completed as a hard terminal status" do
+      booking = create(:booking, status: "completed")
+      booking.status_transition_event = "check_in"
+
+      expect(booking.update(status: "checked_in")).to be(false)
+      expect(booking.errors[:status]).to include("completed is a terminal status")
+      expect(booking.reload.status).to eq("completed")
+    end
+
+    it "allows setting the initial status on create" do
+      booking = create(:booking, status: "completed")
+
+      expect(booking.reload.status).to eq("completed")
     end
   end
 

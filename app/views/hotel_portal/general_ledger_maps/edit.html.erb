@@ -1,0 +1,64 @@
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <%= link_to "General Ledger Mappings", hotel_general_ledger_maps_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900">Edit Mapping</span>
+  </div>
+<% end %>
+
+<div class="max-w-2xl mx-auto pb-20">
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Edit Mapping</h1>
+    <p class="mt-1 text-sm font-medium text-slate-600">Update GL code for <span class="font-bold text-slate-900"><%= @gl_map.transaction_category.humanize %></span>.</p>
+  </div>
+
+  <%= form_with model: @gl_map, url: hotel_general_ledger_map_path(current_hotel, @gl_map), class: "space-y-6" do |f| %>
+    <% if @gl_map.errors.any? %>
+      <div class="rounded-xl bg-red-50 p-4 border border-red-100">
+        <div class="flex">
+          <div class="shrink-0">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-bold text-red-800"><%= pluralize(@gl_map.errors.count, "error") %> prohibited this mapping from being saved:</h3>
+            <div class="mt-2 text-sm text-red-700">
+              <ul role="list" class="list-disc space-y-1 pl-5">
+                <% @gl_map.errors.full_messages.each do |message| %>
+                  <li><%= message %></li>
+                <% end %>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="p-8 space-y-6">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Category (Read-only)</label>
+          <input type="text" value="<%= @gl_map.transaction_category.humanize %>" disabled class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-500 cursor-not-allowed">
+        </div>
+
+        <div>
+          <%= f.label :gl_code, "GL Code", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2" %>
+          <%= f.text_field :gl_code, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-900 focus:ring-0 transition-all placeholder:text-slate-300", placeholder: "e.g. 4010 or REV-ROOM" %>
+        </div>
+
+        <div>
+          <%= f.label :description, class: "block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2" %>
+          <%= f.text_area :description, rows: 3, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-900 focus:ring-0 transition-all placeholder:text-slate-300", placeholder: "Optional description of this GL mapping..." %>
+        </div>
+      </div>
+
+      <div class="bg-slate-50 px-8 py-4 flex items-center justify-between border-t border-slate-200">
+        <%= link_to "Cancel", hotel_general_ledger_maps_path(current_hotel), class: "text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors" %>
+        <%= f.submit "Update Mapping", class: "inline-flex items-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 cursor-pointer" %>
+      </div>
+    </div>
+  <% end %>
+</div>

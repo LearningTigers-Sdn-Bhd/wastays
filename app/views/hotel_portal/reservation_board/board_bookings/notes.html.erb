@@ -1,12 +1,12 @@
 <%# app/views/hotel_portal/reservation_board/bookings/notes.html.erb %>
 
-<%= turbo_frame_tag "reservation_board_notes_content" do %>
+<%= turbo_frame_tag "offcanvas_drawer" do %>
   <div class="flex flex-col h-full bg-white">
     <%# Modal Header %>
     <%= render "hotel_portal/reservation_board/partials/content_header",
                title: "Guest Notes",
                subtitle: "Internal staff notes for #{@booking.guest_name}",
-               icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-5 text-amber-500"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v5h6"/><path d="M7 11h8"/><path d="M7 15h10"/></svg>' %>
+               icon: lucide_icon("sticky-note", stroke_width: 2.5, class: "size-5 text-amber-500") %>
 
     <%# Modal Content %>
     <div class="flex-1 overflow-y-auto p-8 space-y-4">
@@ -30,7 +30,7 @@
     <%# Modal Footer %>
     <div class="px-8 py-6 border-t border-slate-100 flex justify-end bg-slate-50/50">
       <button type="button" 
-              data-action="reservation-board-modal#close" 
+              data-action="click->offcanvas#close" 
               class="px-8 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg transition hover:bg-slate-700 active:scale-95">
         Close
       </button>

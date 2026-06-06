@@ -5,11 +5,8 @@ class Public::BookingsController < ApplicationController
     @booking = Booking.find_by!(confirmation_token: params[:id])
     @hotel = @booking.hotel
     @booking_rooms = @booking.booking_rooms
-    @pre_checkin = @booking.pre_checkin || @booking.create_pre_checkin!(
-      status: "pending",
-      document_status: "pending",
-      signature_status: "pending"
-    )
+    pre_checkin_result = GuestArrival::StartPreCheckin.new(@booking).call
+    @pre_checkin = pre_checkin_result.pre_checkin if pre_checkin_result.success?
     @qr_data_url = Concierge::QrSvg.data_url(@booking.confirmation_token)
   end
 

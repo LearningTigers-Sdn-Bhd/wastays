@@ -32,8 +32,8 @@ RSpec.describe "HotelPortal::ReservationBoard::Boards", type: :request do
       get hotel_reservation_board_index_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("id=\"reservation-board-booking-sheet\"")
-      expect(response.body).to include("id=\"reservation_board_booking_sheet_content\"")
+      expect(response.body).to include("id=\"offcanvas_drawer_container\"")
+      expect(response.body).to include("id=\"reservation-board-extend-duration-overlay\"")
     end
 
     it "displays rates in empty cells when a rate plan is present" do

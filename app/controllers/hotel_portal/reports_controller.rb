@@ -3,7 +3,7 @@ require "csv"
 class HotelPortal::ReportsController < HotelPortal::BaseController
   include FinancialFiltering
 
-  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy outstanding_balance arrivals_departures]
+  before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches]
   before_action :authorize_view_payouts!, only: %i[payouts]
 
   def index
@@ -189,6 +189,39 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
     end
   end
 
+  def managers_flash
+    @report_start_date, @report_end_date = parse_report_date_range
+    @report = HotelPortal::Reports::ManagersFlashReport.new(
+      hotel: current_hotel,
+      start_date: @report_start_date,
+      end_date: @report_end_date
+    ).call
+
+    respond_to do |format|
+      format.html
+      format.csv do
+        csv = HotelPortal::Reports::ManagersFlashCsvExportService.new(report: @report).generate
+        send_data csv,
+          filename: "managers-flash-#{@report.start_date}-#{@report.end_date}.csv",
+          type: "text/csv"
+      end
+      format.any(:xls) do
+        workbook = HotelPortal::Reports::ManagersFlashExcelExportService.new(report: @report).generate
+        send_data workbook,
+          filename: "managers-flash-#{@report.start_date}-#{@report.end_date}.xls",
+          type: "application/vnd.ms-excel",
+          disposition: "attachment"
+      end
+      format.pdf do
+        pdf = HotelPortal::Reports::ManagersFlashPdfExportService.new(hotel: current_hotel, report: @report).generate
+        send_data pdf,
+          filename: "managers-flash-#{@report.start_date}-#{@report.end_date}.pdf",
+          type: "application/pdf",
+          disposition: "attachment"
+      end
+    end
+  end
+
   def outstanding_balance
     @report_start_date, @report_end_date = parse_report_date_range
     @report = HotelPortal::Reports::OutstandingBalanceReport.new(
@@ -216,6 +249,38 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
         pdf = HotelPortal::Reports::OutstandingBalancePdfExportService.new(hotel: current_hotel, report: @report).generate
         send_data pdf,
           filename: "outstanding-balance-#{@report.start_date}-#{@report.end_date}.pdf",
+          type: "application/pdf",
+          disposition: "attachment"
+      end
+    end
+  end
+
+  def deposit_liability
+    @report_as_of_date = parse_single_report_date(params[:as_of_date]) || parse_single_report_date(params[:date]) || current_hotel.business_date_for || Date.current
+    @report = HotelPortal::Reports::DepositLiabilityReport.new(
+      hotel: current_hotel,
+      as_of_date: @report_as_of_date
+    ).call
+
+    respond_to do |format|
+      format.html
+      format.csv do
+        csv = HotelPortal::Reports::DepositLiabilityCsvExportService.new(report: @report).generate
+        send_data csv,
+          filename: "deposit-liability-#{@report.as_of_date}.csv",
+          type: "text/csv"
+      end
+      format.any(:xls) do
+        workbook = HotelPortal::Reports::DepositLiabilityExcelExportService.new(report: @report).generate
+        send_data workbook,
+          filename: "deposit-liability-#{@report.as_of_date}.xls",
+          type: "application/vnd.ms-excel",
+          disposition: "attachment"
+      end
+      format.pdf do
+        pdf = HotelPortal::Reports::DepositLiabilityPdfExportService.new(hotel: current_hotel, report: @report).generate
+        send_data pdf,
+          filename: "deposit-liability-#{@report.as_of_date}.pdf",
           type: "application/pdf",
           disposition: "attachment"
       end
@@ -251,6 +316,55 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
           filename: "arrivals-departures-#{@report.start_date}-#{@report.end_date}.pdf",
           type: "application/pdf",
           disposition: "attachment"
+      end
+    end
+  end
+
+  def folio_ledger
+    @start_date, @end_date = parse_date_range(params[:start_date], params[:end_date])
+
+    # Default to the last completed night audit date if no range given
+    if @start_date.nil?
+      last_audit = current_hotel.night_audits.completed.order(business_date: :desc).first
+      @start_date = last_audit&.business_date || Date.current - 1.day
+      @end_date   = @start_date
+    end
+
+    service = folio_ledger_export_service
+    @totals = service.totals
+
+    respond_to do |format|
+      format.html
+      format.csv do
+        send_data service.generate_csv,
+          filename: "folio-ledger-#{@start_date}-#{@end_date}.csv",
+          type: "text/csv"
+      end
+      format.any(:xls) do
+        send_data service.generate_xls,
+          filename: "folio-ledger-#{@start_date}-#{@end_date}.xls",
+          type: "application/vnd.ms-excel",
+          disposition: "attachment"
+      end
+    end
+  end
+
+  def journal_batches
+    @report_start_date, @report_end_date = parse_report_date_range
+    @batches = current_hotel.journal_batches
+                            .where(business_date: @report_start_date..@report_end_date)
+                            .includes(:entries)
+                            .order(business_date: :desc)
+
+    respond_to do |format|
+      format.html do
+        @paginated_batches = @batches.page(params[:page]).per(25)
+      end
+      format.csv do
+        csv = HotelPortal::Reports::JournalBatchCsvExportService.new(batches: @batches).generate
+        send_data csv,
+          filename: "journal-batches-#{@report_start_date}-#{@report_end_date}.csv",
+          type: "text/csv"
       end
     end
   end
@@ -329,6 +443,14 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
       upcoming_payout_amount: @upcoming_payout_amount,
       processing_batches: @processing_batches,
       payout_history: history_scope
+    )
+  end
+
+  def folio_ledger_export_service
+    @folio_ledger_export_service ||= FolioLedgerExportService.new(
+      hotel: current_hotel,
+      start_date: @start_date,
+      end_date: @end_date
     )
   end
 end

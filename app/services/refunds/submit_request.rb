@@ -27,7 +27,7 @@ module Refunds
             refund_amount: refund_amount
           )
         else
-          @booking.update!(status: "cancelled")
+          @booking.transition_status_to!("cancelled", event: "cancel")
           RefundRequest.create!(
             booking: @booking,
             reason: @params[:reason],

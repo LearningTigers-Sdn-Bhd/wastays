@@ -24,6 +24,12 @@ module Bookings
       end
     end
 
+    def reserve_by_dates(start_date, end_date)
+      @booking.booking_rooms.each do |room|
+        update_inventory(room, -room.quantity, dates: (start_date...end_date).to_a)
+      end
+    end
+
     private
 
     def update_inventory(room, quantity_change, dates: nil)
@@ -31,11 +37,17 @@ module Bookings
       stay_dates = dates || (@booking.check_in...@booking.check_out).to_a
 
       stay_dates.each do |date|
-        inventory = room_type.room_inventories.find_or_initialize_by(date: date)
+        inventory = room_type.room_inventories.lock.find_by(date: date)
+        inventory ||= room_type.room_inventories.build(date: date)
         if inventory.new_record?
           inventory.quantity = room_type.quantity
           inventory.status = "open"
         end
+
+        if quantity_change.negative? && inventory.quantity < quantity_change.abs
+          raise "Not enough inventory for #{room_type.name} on #{date}"
+        end
+
         new_quantity = [ 0, inventory.quantity + quantity_change ].max
         inventory.update!(quantity: new_quantity)
       end

@@ -23,6 +23,7 @@ export default class extends Controller {
   }
 
   onGlobalKeydown(event) {
+    if (!event.key) return
     const key = event.key.toLowerCase()
     const commandPressed = (event.metaKey || event.ctrlKey) && key === "k"
     const slashPressed = key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey

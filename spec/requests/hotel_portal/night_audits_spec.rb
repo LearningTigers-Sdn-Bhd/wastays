@@ -1,8 +1,19 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::NightAudits", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
+  include ActiveJob::TestHelper
+
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "live") }
+  let(:hotel) do
+    create(:hotel,
+      account: account,
+      status: "live",
+      time_zone: "Kuala Lumpur",
+      business_starts_at: "08:00",
+      business_ends_at: "02:00",
+      arrival_grace_period: 7200)
+  end
   let(:user) { create(:user, account: account, role: "hotel_staff") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
   let!(:permission) do
@@ -26,26 +37,35 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
     business_date = today_kl - 1.day
 
-    post hotel_night_audits_path(hotel), params: {
-      night_audit: {
-        business_date: business_date.to_s,
-        notes: "Run now"
+    perform_enqueued_jobs do
+      post hotel_night_audits_path(hotel), params: {
+        night_audit: {
+          business_date: business_date.to_s,
+          notes: "Run now"
+        }
       }
-    }
+    end
 
     expect(response).to redirect_to(hotel_night_audit_path(hotel, NightAudit.last))
-    expect(flash[:notice]).to eq("Night audit completed successfully.")
+    expect(flash[:notice]).to eq("Night audit has been scheduled in the background. Please wait while it processes.")
     expect(NightAudit.last.business_date).to eq(business_date)
     expect(NightAudit.last.trigger_mode).to eq("manual")
+    expect(NightAudit.last).to be_completed
   end
 
   it "defaults manual business date to yesterday when omitted" do
     sign_in(user)
 
-    post hotel_night_audits_path(hotel), params: { night_audit: { notes: "Default run" } }
+    kl_zone = Time.find_zone("Kuala Lumpur")
+    travel_to(kl_zone.local(2026, 5, 19, 10, 10)) do
+      # At 10:10 AM on May 19, May 18 should be the latest closable date
+      expect(hotel.latest_closable_business_date).to eq(Date.new(2026, 5, 18))
+      perform_enqueued_jobs do
+        post hotel_night_audits_path(hotel), params: { night_audit: { notes: "Default run" } }
+      end
+    end
 
-    yesterday_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current - 1.day }
-    expect(NightAudit.last.business_date).to eq(yesterday_kl)
+    expect(NightAudit.last.business_date).to eq(Date.new(2026, 5, 18))
     expect(NightAudit.last.trigger_mode).to eq("manual")
   end
 
@@ -67,24 +87,141 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
 
   it "returns an alert redirect for a blocked audit" do
     sign_in(user)
-    today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
+    business_date = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current - 1.day }
     create(:booking,
       hotel: hotel,
       status: "checked_in",
       payment_status: "captured",
-      check_in: today_kl - 1.day,
-      check_out: today_kl,
+      check_in: business_date - 1.day,
+      check_out: business_date,
       checked_in_at: 1.day.ago)
 
-    today_kl = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
-    post hotel_night_audits_path(hotel), params: {
-      night_audit: {
-        business_date: today_kl.to_s
+    perform_enqueued_jobs do
+      post hotel_night_audits_path(hotel), params: {
+        night_audit: {
+          business_date: business_date.to_s
+        }
       }
-    }
+    end
 
     expect(response).to redirect_to(hotel_night_audit_path(hotel, NightAudit.last))
-    expect(flash[:alert]).to eq("Night audit completed with blockers.")
+    expect(flash[:notice]).to eq("Night audit has been scheduled in the background. Please wait while it processes.")
     expect(NightAudit.last).to be_blocked
+  end
+
+  it "does not enqueue another job for a pending audit" do
+    sign_in(user)
+    business_date = Date.new(2026, 5, 18)
+    night_audit = create(:night_audit, hotel: hotel, business_date: business_date, status: "pending")
+
+    expect do
+      post hotel_night_audits_path(hotel), params: { night_audit: { business_date: business_date.to_s } }
+    end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+
+    expect(response).to redirect_to(hotel_night_audit_path(hotel, night_audit))
+    expect(flash[:notice]).to eq("Night audit is already scheduled or running in the background.")
+  end
+
+  it "rejects an unclosable business date before enqueueing a manual audit" do
+    sign_in(user)
+    kl_zone = Time.find_zone("Kuala Lumpur")
+
+    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+      expect do
+        post hotel_night_audits_path(hotel), params: { night_audit: { business_date: Date.new(2026, 5, 21).to_s } }
+      end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+    end
+
+    expect(response).to redirect_to(hotel_night_audits_path(hotel))
+    expect(flash[:alert]).to include("cannot be audited yet")
+    expect(NightAudit.where(hotel: hotel, business_date: Date.new(2026, 5, 21))).to be_empty
+  end
+
+  it "allows a development-only manual audit for an unclosed business date" do
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("development"))
+
+    sign_in(user)
+    kl_zone = Time.find_zone("Kuala Lumpur")
+
+    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+      perform_enqueued_jobs do
+        post hotel_night_audits_path(hotel), params: {
+          night_audit: {
+            business_date: Date.new(2026, 5, 21).to_s,
+            allow_unclosable_date: "1"
+          }
+        }
+      end
+    end
+
+    expect(response).to redirect_to(hotel_night_audit_path(hotel, NightAudit.last))
+    expect(NightAudit.last.business_date).to eq(Date.new(2026, 5, 21))
+    expect(NightAudit.last).to be_completed
+  end
+
+  it "ignores the development-only override outside development" do
+    sign_in(user)
+    kl_zone = Time.find_zone("Kuala Lumpur")
+
+    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+      expect do
+        post hotel_night_audits_path(hotel), params: {
+          night_audit: {
+            business_date: Date.new(2026, 5, 21).to_s,
+            allow_unclosable_date: "1"
+          }
+        }
+      end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+    end
+
+    expect(response).to redirect_to(hotel_night_audits_path(hotel))
+    expect(flash[:alert]).to include("cannot be audited yet")
+    expect(NightAudit.where(hotel: hotel, business_date: Date.new(2026, 5, 21))).to be_empty
+  end
+
+  describe "GET #resolve" do
+    let(:night_audit) { create(:night_audit, hotel: hotel, status: "blocked") }
+
+    it "renders the resolve page when the night audit is blocked" do
+      sign_in(user)
+      get resolve_hotel_night_audit_path(hotel, night_audit)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Resolve Audit Blockers")
+    end
+
+    it "redirects to show page when the night audit is not blocked" do
+      night_audit.update!(status: "completed")
+      sign_in(user)
+      get resolve_hotel_night_audit_path(hotel, night_audit)
+      expect(response).to redirect_to(hotel_night_audit_path(hotel, night_audit))
+      expect(flash[:alert]).to eq("Night audit is not blocked.")
+    end
+
+    it "blocks access without permission" do
+      role.permissions.delete(permission)
+      sign_in(user)
+      get resolve_hotel_night_audit_path(hotel, night_audit)
+      expect(response).to redirect_to(root_path)
+    end
+  end
+
+  describe "GET #blockers" do
+    let(:night_audit) { create(:night_audit, hotel: hotel, status: "blocked") }
+
+    it "returns the blockers as JSON" do
+      sign_in(user)
+      get blockers_hotel_night_audit_path(hotel, night_audit)
+      expect(response).to have_http_status(:ok)
+      json = JSON.parse(response.body)
+      expect(json).to have_key("blocked_details")
+      expect(json).to have_key("exceptions")
+    end
+
+    it "blocks access without permission" do
+      role.permissions.delete(permission)
+      sign_in(user)
+      get blockers_hotel_night_audit_path(hotel, night_audit)
+      expect(response).to redirect_to(root_path)
+    end
   end
 end

@@ -15,7 +15,8 @@ RSpec.describe HotelPortal::Reports::FinancialBreakdownExportService do
       total_amount: 300.to_d,
       margin_amount: 30.to_d,
       net_amount: 270.to_d,
-      currency: "MYR"
+      currency: "MYR",
+      booking_folio: nil
     )
   end
   let(:service) do

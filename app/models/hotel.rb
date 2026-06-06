@@ -37,15 +37,22 @@ class Hotel < ApplicationRecord
   has_one :property_policy, dependent: :destroy
   accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
+  has_many :knowledge_documents, class_name: "HotelKnowledgeDocument", dependent: :destroy
+  has_many :knowledge_diagnostics, class_name: "HotelKnowledgeDiagnostic", dependent: :destroy
   has_many :nearby_attractions, dependent: :destroy
   has_many :pricing_rules, class_name: "HotelPricingRule", dependent: :destroy
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
+  has_many :deposits, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :destroy
   has_many :hotel_counters, dependent: :destroy
   has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy
+  has_many :hotel_business_dates, dependent: :destroy
+  has_many :hotel_general_ledger_maps, dependent: :destroy
+  has_many :journal_batches, dependent: :destroy
+  has_many :financial_audit_events, dependent: :restrict_with_error
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
@@ -58,8 +65,13 @@ class Hotel < ApplicationRecord
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
 
+  after_create :ensure_default_gl_maps
+
   validates :name, presence: true
-  validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true
+  validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
+                           length: { in: 3..6 },
+                           format: { with: /\A[A-Z0-9]+\z/, message: "must be uppercase letters and numbers only" },
+                           if: -> { hotel_prefix.present? }
 
   before_validation :normalize_default_currency
   before_create :assign_hotel_prefix
@@ -67,6 +79,8 @@ class Hotel < ApplicationRecord
   validates :status, presence: true
   validates :city, presence: true
   validates :country, presence: true
+  validates :business_starts_at, :business_ends_at, presence: true
+  validates :arrival_grace_period, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
@@ -147,6 +161,103 @@ class Hotel < ApplicationRecord
     active? && concierge_enabled?
   end
 
+  def hotel_time_zone
+    Time.find_zone(time_zone.presence || User::DEFAULT_TIME_ZONE) || Time.zone
+  end
+
+  def arrival_grace_period_hours
+    (arrival_grace_period || 0) / 3600
+  end
+
+  def arrival_grace_period_hours=(hours)
+    self.arrival_grace_period = hours.to_i * 3600
+  end
+
+  def business_starts_at
+    read_attribute(:business_starts_at)&.utc
+  end
+
+  def business_starts_at=(value)
+    if value.is_a?(String) && value.present?
+      write_attribute(:business_starts_at, Time.find_zone("UTC").parse(value))
+    else
+      super
+    end
+  end
+
+  def business_ends_at
+    read_attribute(:business_ends_at)&.utc
+  end
+
+  def business_ends_at=(value)
+    if value.is_a?(String) && value.present?
+      write_attribute(:business_ends_at, Time.find_zone("UTC").parse(value))
+    else
+      super
+    end
+  end
+
+  def business_date_for(time = Time.current)
+    local_time = time.in_time_zone(hotel_time_zone)
+    date = local_time.to_date
+
+    return date if business_day_window_for(date).cover?(local_time)
+    return date - 1.day if business_day_window_for(date - 1.day).cover?(local_time)
+
+    date
+  end
+
+  def date_closed?(date, reference_time = Time.current)
+    date = date.to_date
+
+    return true if NightAudit.exists?(hotel_id: id, business_date: date, status: "completed")
+
+    current_biz_date = business_date_for(reference_time)
+
+    return true if date < current_biz_date - 1.day
+
+    if date == current_biz_date - 1.day
+      return true if defined?(HotelBusinessDate) && HotelBusinessDate.closed_for?(hotel: id, date: date)
+      return NightAudit.exists?(hotel_id: id, business_date: date, status: "completed")
+    end
+
+    return true if defined?(HotelBusinessDate) && HotelBusinessDate.closed_for?(hotel: id, date: date)
+
+    false
+  end
+
+  def can_audit_date?(business_date, time = Time.current)
+    local_time = time.in_time_zone(hotel_time_zone)
+    window = business_day_window_for(business_date)
+
+    return false if local_time < window.end
+
+    local_time >= window.end + 5.minutes
+  end
+
+  def latest_closable_business_date(time = Time.current)
+    local_time = time.in_time_zone(hotel_time_zone)
+    current_biz_date = business_date_for(local_time)
+
+    candidate = current_biz_date - 1.day
+    candidate_end = business_day_window_for(candidate).end
+
+    if local_time >= candidate_end + 30.minutes
+      candidate
+    else
+      candidate - 1.day
+    end
+  end
+
+  def business_day_window_for(business_date)
+    date = business_date.to_date
+    start_at = hotel_time_zone.local(date.year, date.month, date.day, business_starts_at.hour, business_starts_at.min)
+    end_date = business_day_crosses_midnight? ? date + 1.day : date
+    end_at = hotel_time_zone.local(end_date.year, end_date.month, end_date.day, business_ends_at.hour, business_ends_at.min)
+
+    start_at...end_at
+  end
+
   def effective_payment_setting(gateway)
     # 1. Check hotel-level override
     setting = payment_settings.active.find_by(gateway: gateway)
@@ -221,6 +332,18 @@ class Hotel < ApplicationRecord
 
     default_rule = SetupFeeRule.active.where(settable_id: nil).find_by(settable_type: [ nil, "" ])
     default_rule&.amount&.to_f || 0.0
+  end
+
+  def business_day_crosses_midnight?
+    # Compare hours and minutes directly to avoid zone issues on the 'time' column
+    start_total_mins = (business_starts_at.hour * 60) + business_starts_at.min
+    end_total_mins = (business_ends_at.hour * 60) + business_ends_at.min
+
+    end_total_mins <= start_total_mins
+  end
+
+  def seconds_since_midnight(time)
+    (time.hour * 3600) + (time.min * 60) + time.sec
   end
 
   def onboarding?
@@ -392,8 +515,6 @@ class Hotel < ApplicationRecord
       ai_provider_name
       ai_provider_key
       ai_concierge_tone
-      faq
-      policy
     ])
   end
 
@@ -410,9 +531,11 @@ class Hotel < ApplicationRecord
     self.hotel_prefix = generate_unique_prefix
   end
 
+  PREFIX_MIN_LENGTH = 3
+  PREFIX_MAX_LENGTH = 4
+
   def generate_unique_prefix
-    # Build base from initials of each word
-    base = name.to_s.scan(/\b\w/).join.upcase.first(4).presence || name.to_s.upcase.first(2)
+    base = build_prefix_base
     candidate = base
     counter = 2
     while Hotel.exists?(hotel_prefix: candidate)
@@ -420,6 +543,24 @@ class Hotel < ApplicationRecord
       counter += 1
     end
     candidate
+  end
+
+  def build_prefix_base
+    cleaned = name.to_s.upcase.gsub(/[^A-Z\s]/, "").strip
+    words = cleaned.split(/\s+/).reject(&:empty?)
+    return "WS" if words.empty?
+
+    base =
+      if words.length >= PREFIX_MIN_LENGTH
+        words.map { |w| w[0] }.join.first(PREFIX_MAX_LENGTH)
+      elsif words.length == 2
+        first, last = words
+        "#{first[0]}#{first[1] || last[1] || 'X'}#{last[0]}"
+      else
+        words.first.first(PREFIX_MAX_LENGTH)
+      end
+
+    base.length >= PREFIX_MIN_LENGTH ? base : base.ljust(PREFIX_MIN_LENGTH, "X")
   end
 
   def saved_changes_to_synced_attributes?
@@ -463,5 +604,11 @@ class Hotel < ApplicationRecord
   def final_onboarding_session
     onboarding_sessions.completed.where(notes: "FINAL_ONBOARDING_COMPLETION").order(completed_at: :desc).first ||
       onboarding_sessions.where(notes: "FINAL_ONBOARDING_COMPLETION").order(updated_at: :desc).first
+  end
+
+  private
+
+  def ensure_default_gl_maps
+    Financials::EnsureDefaultGlMaps.call(self)
   end
 end

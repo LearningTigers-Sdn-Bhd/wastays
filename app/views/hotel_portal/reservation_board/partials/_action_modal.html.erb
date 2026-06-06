@@ -2,22 +2,7 @@
 <div data-controller="reservation-board-modal"
      data-reservation-board-modal-hotel-id-value="<%= current_hotel.id %>">
   
-  <%# 1. Dedicated Booking Sheet (Full Screen) %>
-  <%= render "hotel_portal/reservation_board/partials/modals/booking_details" %>
-
-  <%# 2. Dedicated Check-In (Normal) %>
-  <%= render "hotel_portal/reservation_board/partials/modals/check_in" %>
-
-  <%# 3. Dedicated Check-Out (Normal) %>
-  <%= render "hotel_portal/reservation_board/partials/modals/check_out" %>
-
-  <%# 4. Dedicated Notes (Normal Native Dialog) %>
-  <%= render "hotel_portal/reservation_board/partials/modals/notes" %>
-
-  <%# 5. Dedicated Edit Stay (Normal) %>
-  <%= render "hotel_portal/reservation_board/partials/modals/edit_stay" %>
-
-  <%# 6. Dedicated Extend Duration (Normal Shell) %>
+  <%# Dedicated Extend Duration (Native Dialog) %>
   <div id="reservation-board-extend-duration-overlay" 
        class="hs-overlay hidden w-full h-full fixed top-0 start-0 z-[100] overflow-x-hidden overflow-y-auto"
        role="dialog"
@@ -36,7 +21,7 @@
             <p data-extend-duration-confirm-target="currentCheckOut" class="text-sm font-bold text-slate-700"></p>
           </div>
           <div class="text-slate-300">
-            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" /></svg>
+            <%= lucide_icon "arrow-right", stroke_width: 2.5, class: "size-5" %>
           </div>
           <div class="text-center">
             <p class="text-[10px] font-bold text-slate-400 uppercase">New</p>

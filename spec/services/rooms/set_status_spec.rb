@@ -38,4 +38,26 @@ RSpec.describe Rooms::SetStatus do
     expect(result.error).to eq("Cannot change room 101 from pending_cleaning to inspection_failed.")
     expect(room_status.reload.status).to eq("pending_cleaning")
   end
+
+  it "transitions associated booking to review_due_out when status is late_checkout_detected" do
+    room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+    booking = create(:booking, hotel: hotel, status: "checked_in")
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
+    result = described_class.new(
+      room_status: room_status,
+      status: "late_checkout_detected",
+      user: user,
+      reason: "Guest still in room"
+    ).call
+
+    expect(result).to be_success
+    expect(booking.reload.status).to eq("review_due_out")
+
+    log = BookingAuditLog.last
+    expect(log.auditable).to eq(booking)
+    expect(log.action_type).to eq("status_change")
+    expect(log.metadata["to"]).to eq("review_due_out")
+    expect(log.metadata["event"]).to eq("detect_late_checkout")
+  end
 end

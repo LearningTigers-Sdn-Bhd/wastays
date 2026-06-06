@@ -2,6 +2,38 @@
 
 module HotelPortal
   module ReservationBoardHelper
+    STATUS_ICONS = {
+      "pending" => "clock",
+      "confirmed" => "check-circle",
+      "checked_in" => "log-in",
+      "completed" => "check-check",
+      "cancelled" => "x-circle",
+      "no_show" => "user-x",
+      "review_due_out" => "triangle-alert",
+      "overbooked" => "alert-octagon",
+      "not_ready" => "ban"
+    }.freeze
+
+    STATUS_ICON_CLASSES = {
+      "pending" => "text-amber-600",
+      "confirmed" => "text-blue-600",
+      "checked_in" => "text-violet-600",
+      "completed" => "text-emerald-600",
+      "cancelled" => "text-slate-500",
+      "no_show" => "text-rose-600",
+      "review_due_out" => "text-orange-600",
+      "overbooked" => "text-red-700",
+      "not_ready" => "text-red-500"
+    }.freeze
+
+    def booking_status_icon(status)
+      STATUS_ICONS.fetch(status.to_s, "circle")
+    end
+
+    def booking_icon_class(status)
+      STATUS_ICON_CLASSES.fetch(status.to_s, "text-slate-500")
+    end
+
     def reservation_board_row_height(room, row_min_base, block_step, visible_start_date)
       max_blocks_same_start = room[:blocks].group_by { |block| [ block[:check_in], visible_start_date ].max }.values.map(&:size).max || 1
       [ row_min_base, 24 + (max_blocks_same_start * block_step) ].max
@@ -19,14 +51,6 @@ module HotelPortal
       clipped_left = block[:check_in] < visible_start_date
       clipped_right = block[:check_out] > visible_end_exclusive
       [ ("rounded-l-none" if clipped_left), ("rounded-r-none" if clipped_right) ].compact.join(" ")
-    end
-
-    def booking_block_source_badge_class(block)
-      block[:source] == "internal" ? "bg-slate-200/60 text-slate-600" : "bg-blue-100 text-blue-700"
-    end
-
-    def booking_block_payment_badge_class(block)
-      block[:payment_status] == "captured" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
     end
 
     def room_status_style_classes(status)

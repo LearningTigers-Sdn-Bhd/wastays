@@ -7,6 +7,7 @@ gem "friendly_id", "~> 5.6"
 gem "propshaft"
 # Use postgresql as the database for Active Record
 gem "pg", "~> 1.1"
+gem "neighbor", "~> 1.2"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
@@ -17,11 +18,13 @@ gem "turbo-rails"
 gem "stimulus-rails"
 # Use Tailwind CSS [https://github.com/rails/tailwindcss-rails]
 gem "tailwindcss-rails"
+gem "lucide-rails"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 gem "countries"
 
 gem "csv"
+gem "rack-attack"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"
@@ -48,13 +51,14 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 2.0"
 gem "kaminari", "~> 1.2"
 gem "commonmarker", "~> 2.7"
 gem "rqrcode", "~> 2.2"
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
 gem "ruby_llm", "~> 1.14"
+gem "pdf-reader", "~> 2.12"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
@@ -95,5 +99,5 @@ group :development do
 end
 
 gem "openssl", "~> 3.1.2"
-gem "aws-sdk-s3", "~> 1.220"
+gem "aws-sdk-s3", "~> 1.225"
 gem "nokogiri", ">= 1.19.3"
