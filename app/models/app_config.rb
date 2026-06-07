@@ -1,4 +1,6 @@
 class AppConfig < ApplicationRecord
+  encrypts :value
+
   validates :key, presence: true, uniqueness: true
 
   def self.get(key)
