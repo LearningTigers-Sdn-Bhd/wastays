@@ -11,7 +11,7 @@ class HotelKnowledgeDocument < ApplicationRecord
   validates :title, :source_type, :category, presence: true
   validates :source_type, inclusion: { in: %w[text pdf] }
   validates :category, inclusion: { in: %w[policy faq general_info] }
-  validates :embedding_status, inclusion: { in: %w[pending indexed failed] }
+  validates :embedding_status, inclusion: { in: %w[pending indexing indexed failed] }
 end
 ```
 
@@ -24,7 +24,7 @@ end
 | `source_type` | string | — | `text` or `pdf` |
 | `category` | string | — | `policy`, `faq`, or `general_info` |
 | `language` | string | `"en"` | |
-| `embedding_status` | string | `"pending"` | `pending`, `indexed`, or `failed` |
+| `embedding_status` | string | `"pending"` | `pending`, `indexing`, `indexed`, or `failed` |
 | `tags` | text[] | `[]` | PG native array |
 | `version` | integer | `1` | |
 | `effective_date` | date | nullable | null = forever |

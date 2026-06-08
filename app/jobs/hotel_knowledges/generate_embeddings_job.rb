@@ -10,6 +10,7 @@ module HotelKnowledges
       document = HotelKnowledgeDocument.find_by(id: document_id)
       return unless document
 
+      document.mark_embedding_indexing!
       KnowledgeIngestionService.new(document).call
     rescue HotelKnowledges::IngestionError => e
       document.update!(embedding_status: "failed", metadata: document.metadata.merge("last_error" => e.message))
