@@ -110,6 +110,21 @@ class HotelKnowledges::GenerateEmbeddingsJob < ApplicationJob
 end
 ```
 
+## Real-Time Admin Updates
+
+Knowledge index and detail pages subscribe to each document with `turbo_stream_from`.
+When `embedding_status` or embedding error metadata changes, the document broadcasts a
+Turbo refresh stream. The subscribed page morphs to the latest server-rendered state
+while preserving scroll position, so status badges, retry controls, chunks, and errors
+update through Action Cable without polling.
+
+Manual generation and retries use `HotelKnowledgeDocument#enqueue_embedding_generation!`,
+which first changes the document to `indexing`, clears the previous error, and then
+enqueues `GenerateEmbeddingsJob`. The job also ensures directly-enqueued documents are
+marked `indexing` before ingestion starts. Embedding-only status and error updates are excluded from the
+model's automatic generation callback so an attached PDF cannot re-enqueue itself after
+finishing.
+
 ### Triggering
 
 | Event | Action | Guard |

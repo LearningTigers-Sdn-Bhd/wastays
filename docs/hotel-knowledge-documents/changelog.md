@@ -1,4 +1,18 @@
-# V1.3.1 — AI Concierge Embedding Fallback Scope (Current)
+# V1.3.2 — Real-Time Embedding Status (Current)
+
+- Added per-document Turbo Stream subscriptions to knowledge index and detail pages.
+- Embedding status, chunks, retry controls, and failure details now update through Action Cable without polling.
+- Added a distinct `indexing` status; generation and retries enter it immediately when enqueued, while directly-enqueued jobs ensure it is set before ingestion starts.
+- The UI shows a spinner only while `indexing`, and previous embedding errors are cleared before enqueueing.
+- Prevented embedding-only updates on attached PDF documents from enqueueing another generation job after completion.
+
+## Verification
+- `bundle exec rspec spec/models/hotel_knowledge_document_spec.rb spec/jobs/hotel_knowledges/generate_embeddings_job_spec.rb spec/services/hotel_knowledges spec/requests/hotel_portal/hotel_knowledge_documents_spec.rb`
+- 106 examples, 0 failures
+
+---
+
+# V1.3.1 — AI Concierge Embedding Fallback Scope
 
 - Clarified OpenAI embedding fallback behavior: the platform `openai_api_key` is only used for AI Concierge-enabled hotels whose configured AI provider is non-OpenAI.
 - Added defensive reindex guards so AI Concierge-disabled hotels cannot trigger manual embedding generation by posting directly to category reindex routes.

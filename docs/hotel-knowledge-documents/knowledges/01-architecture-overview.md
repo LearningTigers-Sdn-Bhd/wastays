@@ -17,7 +17,7 @@ Represents a single knowledge document — either manually entered text or an up
 - Scoped to a hotel
 - Has one Active Storage attachment (for PDF source type)
 - Has many chunks (destroyed on document delete)
-- Tracks embedding generation status: `pending` → `indexed` | `failed`
+- Tracks embedding generation status: `pending` → `indexing` → `indexed` | `failed`
 
 ### `hotel_knowledge_chunks`
 Represents a single content segment of a document with an optional vector embedding.
@@ -47,7 +47,9 @@ Represents a single content segment of a document with an optional vector embedd
 ```
 document created → embedding_status: "pending"
                          ↓
-    (background job) generate embeddings per chunk
+    generation enqueued → embedding_status: "indexing"
+                         ↓
+              generate embeddings per chunk
                          ↓
               success → "indexed"
               failure → "failed"
