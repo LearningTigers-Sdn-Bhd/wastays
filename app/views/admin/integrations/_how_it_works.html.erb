@@ -1,0 +1,31 @@
+<section class="rounded-lg border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 bg-slate-50/80 px-5 py-4">
+    <h2 class="text-base font-bold text-slate-950">How It Works</h2>
+    <p class="mt-1 text-sm font-medium leading-6 text-slate-600">Global integrations are stored as encrypted app config values.</p>
+  </div>
+
+  <div class="space-y-4 p-5">
+    <p class="text-sm leading-6 text-slate-600">
+      Outgoing webhooks are managed in
+      <%= link_to "Webhooks management", admin_webhook_endpoints_path, class: "font-semibold text-slate-950 underline underline-offset-4" %>.
+    </p>
+
+    <div class="space-y-3">
+      <% [
+        [ "1", "Configure", "Save provider credentials and endpoints once for the platform." ],
+        [ "2", "Connect", "Services read encrypted values from AppConfig at runtime." ],
+        [ "3", "Verify", "Use connection tests or focused tools like Observation Deck to confirm setup." ]
+      ].each do |number, title, body| %>
+        <div class="rounded-lg border border-slate-200 bg-white p-4">
+          <div class="flex items-start gap-3">
+            <span class="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-white"><%= number %></span>
+            <div>
+              <p class="text-sm font-bold text-slate-950"><%= title %></p>
+              <p class="mt-1 text-sm leading-6 text-slate-600"><%= body %></p>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</section>
