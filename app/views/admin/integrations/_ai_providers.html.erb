@@ -1,0 +1,31 @@
+<%= render "section_shell",
+    title: "AI Providers",
+    description: "Global keys used by Observation Deck and platform-level AI tools.",
+    icon_name: "sparkles" do %>
+  <%= form_with url: admin_integrations_path, method: :patch, local: true, class: "space-y-5" do %>
+    <div class="divide-y divide-slate-100 rounded-lg border border-slate-200">
+      <% [
+        [ "Gemini", :gemini_api_key, "Enter Gemini API key" ],
+        [ "OpenAI", :openai_api_key, "Enter OpenAI API key" ],
+        [ "DeepSeek", :deepseek_api_key, "Enter DeepSeek API key" ],
+        [ "Claude", :anthropic_api_key, "Enter Anthropic API key" ]
+      ].each do |label, key, placeholder| %>
+        <div class="grid grid-cols-1 gap-3 p-4 md:grid-cols-[160px_minmax(0,1fr)] md:items-center">
+          <div>
+            <p class="text-sm font-bold text-slate-900"><%= label %></p>
+            <p class="text-xs font-medium text-slate-500"><%= key %></p>
+          </div>
+          <%= render "secret_field",
+              name: key,
+              label: "#{label} API Key",
+              value: @ai_provider_keys[key.to_s],
+              placeholder: placeholder %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="flex justify-end border-t border-slate-200 pt-4">
+      <%= submit_tag "Save AI Providers", class: "cursor-pointer rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-secondary" %>
+    </div>
+  <% end %>
+<% end %>

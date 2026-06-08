@@ -39,6 +39,38 @@ RSpec.describe "Admin::Integrations", type: :request do
       expect(AppConfig.get("channex_environment")).to eq("production")
     end
 
+    it "saves R2 settings to AppConfig" do
+      patch admin_integrations_path, params: {
+        r2_access_key_id: "r2-access",
+        r2_secret_access_key: "r2-secret",
+        r2_bucket: "wastays-production",
+        r2_endpoint: "https://account.r2.cloudflarestorage.com/wastays-production",
+        r2_region: "auto",
+        r2_public_url: "https://cdn.example.com"
+      }
+
+      expect(AppConfig.get("r2_access_key_id")).to eq("r2-access")
+      expect(AppConfig.get("r2_secret_access_key")).to eq("r2-secret")
+      expect(AppConfig.get("r2_bucket")).to eq("wastays-production")
+      expect(AppConfig.get("r2_endpoint")).to eq("https://account.r2.cloudflarestorage.com")
+      expect(AppConfig.get("r2_region")).to eq("auto")
+      expect(AppConfig.get("r2_public_url")).to eq("https://cdn.example.com")
+    end
+
+    it "saves AI provider keys to AppConfig" do
+      patch admin_integrations_path, params: {
+        gemini_api_key: "gemini-key",
+        openai_api_key: "openai-key",
+        deepseek_api_key: "deepseek-key",
+        anthropic_api_key: "anthropic-key"
+      }
+
+      expect(AppConfig.get("gemini_api_key")).to eq("gemini-key")
+      expect(AppConfig.get("openai_api_key")).to eq("openai-key")
+      expect(AppConfig.get("deepseek_api_key")).to eq("deepseek-key")
+      expect(AppConfig.get("anthropic_api_key")).to eq("anthropic-key")
+    end
+
     it "redirects back to integrations page with success flash" do
       patch admin_integrations_path, params: { channex_api_key: "ch-123" }
       expect(response).to redirect_to(admin_integrations_path)

@@ -4,198 +4,24 @@
   <%= render "shared/navigation/admin_breadcrumbs", current: "Integrations" %>
 <% end %>
 
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+<div class="mx-auto flex min-h-screen max-w-[1600px] flex-col space-y-6 pb-6">
   <div class="px-4 md:px-0">
     <div class="mt-5">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Integrations</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Configure external connections for WAStays.</p>
+      <p class="text-xs font-black uppercase tracking-[0.22em] text-brand-primary">Platform Control</p>
+      <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Integrations</h1>
+      <p class="mt-1 text-sm font-medium text-slate-600">Configure external connections and global AI services for WAStays.</p>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,350px)] xl:items-start">
-    <div class="space-y-8">
-      <!-- Channel Manager Card -->
-      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5 sm:px-8 bg-brand-secondary/5">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl text-brand-primary">Channel Manager</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Configure global connectivity to OTAs through Channel Manager.</p>
-        </div>
+  <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
+    <aside class="xl:col-span-1 xl:sticky xl:top-6">
+      <%= render "how_it_works" %>
+    </aside>
 
-        <%= form_with url: admin_integrations_path, method: :patch, local: true, class: "space-y-6 p-6 sm:p-8" do |f| %>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <%= label_tag :channex_environment, "Environment", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
-              <%= select_tag :channex_environment, options_for_select([["Staging", "staging"], ["Production", "production"]], @channex_environment),
-                  class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
-            </div>
-            
-            <div>
-              <%= label_tag :channex_api_key, "User API Key", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
-              <%= password_field_tag :channex_api_key, @channex_api_key,
-                  placeholder: "Enter Channel Manager User API Key",
-                  class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
-            </div>
-          </div>
-
-          <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
-            <h4 class="text-xs font-bold text-blue-900 uppercase tracking-widest mb-1">Webhook Configuration</h4>
-            <p class="text-xs text-blue-700 leading-relaxed">
-              Ensure you have configured the following webhook URL in your Channel Manager dashboard for real-time booking delivery:
-              <code class="block mt-2 font-mono bg-white/50 p-2 rounded border border-blue-200 text-blue-900 select-all"><%= root_url %>webhooks/channex</code>
-            </p>
-          </div>
-
-          <div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
-            <%= submit_tag "Save CM Settings", class: "cursor-pointer rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-secondary transition-colors shadow-lg shadow-brand-primary/20" %>
-          </div>
-        <% end %>
-      </div>
-
-      <!-- Cloudflare R2 Card -->
-      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5 sm:px-8 bg-brand-secondary/5">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl text-brand-primary">Storage (Cloudflare R2)</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Configure S3-compatible storage for image and file uploads.</p>
-        </div>
-
-        <%= form_with url: admin_integrations_path, method: :patch, local: true, class: "space-y-6 p-6 sm:p-8" do |f| %>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <%= label_tag :r2_access_key_id, "Access Key ID", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
-              <%= text_field_tag :r2_access_key_id, @r2_access_key_id,
-                  placeholder: "Enter R2 Access Key ID",
-                  class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
-            </div>
-            
-            <div>
-              <%= label_tag :r2_secret_access_key, "Secret Access Key", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
-              <%= password_field_tag :r2_secret_access_key, @r2_secret_access_key,
-                  placeholder: "Enter R2 Secret Access Key",
-                  class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
-            </div>
-
-            <div>
-              <%= label_tag :r2_bucket, "Bucket Name", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
-              <%= text_field_tag :r2_bucket, @r2_bucket,
-                  placeholder: "e.g. wastays-production",
-                  class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
-            </div>
-
-            <div>
-              <%= label_tag :r2_region, "Region", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
-              <%= text_field_tag :r2_region, @r2_region,
-                  placeholder: "auto",
-                  class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
-            </div>
-
-            <div class="md:col-span-2">
-              <%= label_tag :r2_endpoint, "Endpoint URL", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
-              <%= text_field_tag :r2_endpoint, @r2_endpoint,
-                  placeholder: "https://<account-id>.r2.cloudflarestorage.com",
-                  class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
-              <p class="mt-1.5 text-xs text-slate-500 italic">Example: https://0123456789abcdef.r2.cloudflarestorage.com</p>
-            <div class="md:col-span-2">
-                <%= label_tag :r2_public_url, "Public URL / CDN (Optional)", class: "mb-1.5 block text-sm font-semibold text-slate-700" %>
-                <%= text_field_tag :r2_public_url, @r2_public_url,
-                    placeholder: "https://pub-xyz.r2.dev or your custom domain",
-                    class: "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/20" %>
-                <p class="mt-1.5 text-xs text-slate-500 italic">If set, this will be used for generating public file links instead of the endpoint URL.</p>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-              <button type="button" 
-                      onclick="testR2Connection()"
-                      id="test-connection-btn"
-                      class="cursor-pointer rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                Test Connection
-              </button>
-              <%= submit_tag "Save Storage Settings", class: "cursor-pointer rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-secondary transition-colors shadow-lg shadow-brand-primary/20" %>
-            </div>
-            <% end %>
-            </div>
-            </div>
-
-            <div>
-            ...
-            </div>
-
-            <script>
-            async function testR2Connection() {
-            const btn = document.getElementById('test-connection-btn');
-            const originalText = btn.innerText;
-            btn.disabled = true;
-            btn.innerText = 'Testing...';
-            btn.classList.add('opacity-50');
-
-            try {
-            const response = await fetch('<%= test_r2_connection_admin_integrations_path %>', {
-            method: 'POST',
-            headers: {
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-            }
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-            alert('✅ ' + data.message);
-            } else {
-            alert('❌ ' + data.message);
-            }
-            } catch (error) {
-            alert('❌ Error: Could not reach the server.');
-            } finally {
-            btn.disabled = false;
-            btn.innerText = originalText;
-            btn.classList.remove('opacity-50');
-            }
-            }
-            </script>
-
-      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5">
-          <h2 class="text-base font-bold text-slate-950">How It Works</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">How WAStays communicates with external services.</p>
-        </div>
-        <div class="space-y-4 p-6">
-          <p class="text-sm text-slate-600 mb-4">
-            Manage your outgoing webhooks in the new <%= link_to "Webhooks management", admin_webhook_endpoints_path, class: "text-slate-900 font-semibold underline" %> page.
-          </p>
-
-          <div class="rounded-xl border border-slate-200 bg-white p-4">
-            <div class="flex items-start gap-3">
-              <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-900 px-2 text-xs font-bold text-white">1</span>
-              <div>
-                <p class="text-sm font-semibold text-slate-900">Event Triggered</p>
-                <p class="mt-1 text-sm text-slate-600">An event occurs in WAStays (e.g. booking confirmed).</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
-            <div class="flex items-start gap-3">
-              <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-2 text-xs font-bold text-white">2</span>
-              <div>
-                <p class="text-sm font-semibold text-emerald-800">POST Request Sent</p>
-                <p class="mt-1 text-sm text-emerald-700">WAStays sends a JSON payload to your configured webhook URL.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-            <div class="flex items-start gap-3">
-              <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-500 px-2 text-xs font-bold text-white">3</span>
-              <div>
-                <p class="text-sm font-semibold text-amber-800">Your Service Responds</p>
-                <p class="mt-1 text-sm text-amber-700">Your external service receives the payload and takes action.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="min-h-0 space-y-6 xl:col-span-2 xl:max-h-[calc(100vh-12rem)] xl:overflow-y-auto xl:pr-2">
+      <%= render "channel_manager" %>
+      <%= render "storage" %>
+      <%= render "ai_providers" %>
     </div>
   </div>
 </div>

@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["input", "button", "slash"]
+  static targets = ["input", "button", "slash", "showIcon", "hideIcon"]
 
   connect() {
     this.hidePassword()
@@ -17,14 +17,18 @@ export default class extends Controller {
 
   showPassword() {
     this.inputTarget.type = "text"
-    this.slashTarget.classList.remove("hidden")
+    if (this.hasSlashTarget) this.slashTarget.classList.remove("hidden")
+    if (this.hasShowIconTarget) this.showIconTarget.classList.add("hidden")
+    if (this.hasHideIconTarget) this.hideIconTarget.classList.remove("hidden")
     this.buttonTarget.setAttribute("aria-label", "Hide password")
     this.buttonTarget.setAttribute("aria-pressed", "true")
   }
 
   hidePassword() {
     this.inputTarget.type = "password"
-    this.slashTarget.classList.add("hidden")
+    if (this.hasSlashTarget) this.slashTarget.classList.add("hidden")
+    if (this.hasShowIconTarget) this.showIconTarget.classList.remove("hidden")
+    if (this.hasHideIconTarget) this.hideIconTarget.classList.add("hidden")
     this.buttonTarget.setAttribute("aria-label", "Show password")
     this.buttonTarget.setAttribute("aria-pressed", "false")
   }
