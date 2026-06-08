@@ -17,7 +17,9 @@ module HotelPortal
         room_status_board: @room_status_board,
         start_date: @start_date,
         board_days: @board_days,
-        board_layout: @board_layout
+        board_layout: @board_layout,
+        user: current_user,
+        hotel: current_hotel
       )
     end
 

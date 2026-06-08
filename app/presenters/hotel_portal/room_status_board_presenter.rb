@@ -5,13 +5,53 @@ module HotelPortal
     include ActionView::Helpers::TagHelper
     include ActionView::Helpers::UrlHelper
 
-    attr_reader :room_status_board, :start_date, :board_days, :board_layout
+    attr_reader :room_status_board, :start_date, :board_days, :board_layout, :user, :hotel
 
-    def initialize(room_status_board:, start_date:, board_days:, board_layout:)
+    def initialize(room_status_board:, start_date:, board_days:, board_layout:, user: nil, hotel: nil)
       @room_status_board = room_status_board
       @start_date = start_date
       @board_days = board_days
       @board_layout = board_layout
+      @user = user
+      @hotel = hotel
+    end
+
+    def room_row(room)
+      RoomRow.new(room, user, hotel)
+    end
+
+    class RoomRow
+      attr_reader :room, :user, :hotel
+
+      def initialize(room, user, hotel)
+        @room = room
+        @user = user
+        @hotel = hotel
+      end
+
+      def status
+        @status ||= room.dig(:status, :status).to_s
+      end
+
+      def room_status_id
+        room.dig(:status, :room_status_id)
+      end
+
+      def failure_note
+        @failure_note ||= room.dig(:status, :notes).to_s.strip
+      end
+
+      def can_manage?
+        @can_manage ||= user&.has_permission?("manage_room_status", hotel: hotel)
+      end
+
+      def has_actions?
+        %w[ready dirty cleaning inspection_failed awaiting_inspection].include?(status)
+      end
+
+      def room_type
+        room[:room_type]
+      end
     end
 
     def comfortable_mode?
