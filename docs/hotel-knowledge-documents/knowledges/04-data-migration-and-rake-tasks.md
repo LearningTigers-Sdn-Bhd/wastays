@@ -6,8 +6,8 @@ Knowledge documents (`HotelKnowledgeDocument`) created through the admin UI or t
 
 ## Rake Task
 
-**File:** `lib/tasks/hotel_ops.rake`
-**Task:** `hotel_ops:generate_knowledge_embeddings`
+**File:** `lib/tasks/demo.rake`
+**Task:** `demo:embeddings`
 
 ### What it does
 
@@ -26,7 +26,7 @@ end
 ### Usage
 
 ```bash
-bin/rails hotel_ops:generate_knowledge_embeddings
+bin/rails demo:embeddings
 ```
 
 ### Notes
@@ -56,8 +56,8 @@ RETENTION_DAYS=30 bin/rails hotel_knowledges:prune_diagnostics
 
 ## Clean State Integration
 
-The `clean_hotel_state_records` method, called by both `hotel_ops:clean_state`
-and `hotel_ops:realtime_state`, includes two knowledge document steps:
+The `clean_hotel_state_records` method, called by both `demo:reset`
+and `demo:realtime`, includes two knowledge document steps:
 
 ### Step 6 — Clean & Seed
 
@@ -82,8 +82,8 @@ Pass `EMBED=true` to enable:
 
 ```bash
 # Clean state with default sample documents (no embeddings)
-bin/rails hotel_ops:clean_state['My Hotel']
+bin/rails demo:reset['My Hotel']
 
 # Clean state with sample documents + embeddings
-EMBED=true bin/rails hotel_ops:clean_state['My Hotel']
+EMBED=true bin/rails demo:reset['My Hotel']
 ```

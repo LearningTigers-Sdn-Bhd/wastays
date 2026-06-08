@@ -2,7 +2,7 @@
 
 class HotelKnowledgeDocument < ApplicationRecord
   belongs_to :hotel
-  has_many :chunks, class_name: "HotelKnowledgeChunk", dependent: :destroy
+  has_many :chunks, class_name: "HotelKnowledgeChunk", foreign_key: :hotel_knowledge_document_id, dependent: :destroy
   has_one_attached :file
 
   attribute :source_type, :string, default: "text"
@@ -25,6 +25,7 @@ class HotelKnowledgeDocument < ApplicationRecord
   private
 
   def enqueue_embedding_generation
+    return if Thread.current[:skip_hotel_knowledge_embedding_enqueue]
     return unless hotel.ai_concierge_enabled?
 
     content_changed = previous_changes.key?("content")

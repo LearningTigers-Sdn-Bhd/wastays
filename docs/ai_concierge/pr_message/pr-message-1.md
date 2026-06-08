@@ -27,8 +27,8 @@ The AI Concierge V3 feature needed production hardening — rate limiting to pro
   - Added auth/validation specs (401 unauthorized, 403 forbidden, blank message, max length)
   - Removed deprecated `identity_mode:` keyword from orchestrator specs
 - **Rake tasks**
-  - Added `hotel_ops:clear_ai_concierge` task for clearing concierge data per hotel
-  - Extended `hotel_ops:clean_state` to clear concierge data and recalibrate nearby attractions
+  - Added `demo:delete_ai` task for clearing concierge data per hotel
+  - Extended `demo:reset` to clear concierge data and recalibrate nearby attractions
 
 ## File Changes
 
