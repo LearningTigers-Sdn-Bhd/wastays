@@ -103,7 +103,7 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
 
   def render_notes_update(message, key, status: :ok)
     render turbo_stream: [
-      turbo_stream.replace(
+      turbo_stream.update(
         "booking_notes_panel",
         partial: "hotel_portal/bookings/show/internal_notes",
         locals: { booking: @booking }

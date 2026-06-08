@@ -51,6 +51,15 @@ module ApplicationHelper
     end
   end
 
+  def payout_status_class(status)
+    case status
+    when "paid" then "bg-emerald-50 text-emerald-700 border-emerald-200"
+    when "processing" then "bg-amber-50 text-amber-700 border-amber-200"
+    when "pending" then "bg-slate-50 text-slate-600 border-slate-200"
+    else "bg-gray-50 text-gray-600 border-gray-200"
+    end
+  end
+
   def status_badge_class(status_class)
     status_class.gsub("bg-", "border-")
   end

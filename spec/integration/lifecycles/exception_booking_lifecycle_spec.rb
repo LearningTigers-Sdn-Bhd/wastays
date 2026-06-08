@@ -285,7 +285,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 1.day, total_amount: 100.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, quantity: 1, room_number: "101")
       folio = Folios::InitializeForBooking.call(booking: booking, user: user)
-      room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+      room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
       # 1. Housekeeper detects guest still in room
       Rooms::SetStatus.new(room_status: room_status, status: "late_checkout_detected", user: user).call

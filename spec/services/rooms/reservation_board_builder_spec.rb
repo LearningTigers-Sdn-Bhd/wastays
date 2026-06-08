@@ -24,8 +24,8 @@ RSpec.describe Rooms::ReservationBoardBuilder do
       end
     end
 
-    context "when a room is pending_cleaning" do
-      let!(:room_status) { create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning") }
+    context "when a room is dirty" do
+      let!(:room_status) { create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty") }
 
       it "only spans 1 day" do
         result = builder.call

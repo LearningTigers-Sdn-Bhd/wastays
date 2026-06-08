@@ -22,7 +22,10 @@
         <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Current Stays</h2>
         <p class="mt-1 text-sm font-medium text-slate-600">Live view of guests who are currently checked in at this property.</p>
       </div>
-      <span class="text-sm font-medium text-slate-500">In-House Now <span class="font-semibold text-slate-900"><%= @in_house_count %></span></span>
+      <div class="flex items-center gap-x-6">
+        <span class="text-sm font-medium text-slate-500">In-House Now <span class="font-semibold text-slate-900"><%= @in_house_count %></span></span>
+        <span class="text-sm font-medium text-slate-500">Check-outs Today <span class="font-semibold text-slate-900"><%= @check_outs_today_count %></span></span>
+      </div>
     </div>
 
     <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 sm:px-8">

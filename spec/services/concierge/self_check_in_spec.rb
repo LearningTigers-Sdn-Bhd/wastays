@@ -83,7 +83,7 @@ RSpec.describe Concierge::SelfCheckIn do
 
     it "returns :no_room_available when all rooms are not ready" do
       with_available_room(room_number: "101")
-      RoomStatus.create!(hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+      RoomStatus.create!(hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
       result = call
       expect(result.error_code).to eq(:no_room_available)
     end

@@ -38,7 +38,7 @@
             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
               <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </span>
-            <%= f.text_field :query, value: params[:query], placeholder: "Search guests", autocomplete: "off", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "input->auto-submit#submit" } %>
+            <%= f.text_field :query, value: params[:query], placeholder: "Search guests...", autocomplete: "off", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "input->auto-submit#submit" } %>
           </label>
 
           <%= f.select :country, @country_options, { include_blank: "All Countries", selected: params[:country] }, class: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submit" } %>

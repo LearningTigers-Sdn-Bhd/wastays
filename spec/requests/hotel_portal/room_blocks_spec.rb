@@ -151,14 +151,14 @@ RSpec.describe "HotelPortal::RoomBlocks", type: :request do
       expect(flash[:notice]).to eq("Maintenance block finished.")
     end
 
-    it "updates the room status to pending_cleaning" do
+    it "updates the room status to dirty" do
       # Set initial status to out_of_service
       room_status = RoomStatus.find_or_create_by!(hotel: hotel, room_type: room_type, room_number: "101")
       room_status.update!(status: "out_of_service")
 
       post finish_hotel_room_block_path(hotel, room_block)
 
-      expect(room_status.reload.status).to eq("pending_cleaning")
+      expect(room_status.reload.status).to eq("dirty")
     end
   end
 end
