@@ -20,7 +20,7 @@ module Folios
 
           posting_date = pt.captured_at&.to_date || pt.created_at.to_date
           amount = pt.amount_subunits.to_d / 100.0
-          
+
           transaction_options = override_options.merge({
             posting_source: payment_posting_source,
             system_posting: true,
