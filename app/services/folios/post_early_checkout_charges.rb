@@ -192,7 +192,15 @@ module Folios
       }
       metadata[:tax_line] = line[:tax_line] if line[:tax_line].present?
 
-      @options.merge(metadata: (@options[:metadata] || {}).merge(metadata))
+      options = @options.merge(metadata: (@options[:metadata] || {}).merge(metadata))
+
+      if @booking.hotel.date_closed?(@departure_date) || @departure_date < @booking.hotel.business_date_for
+        options[:override_night_audit] = true
+        options[:correction_reason] ||= "early_departure_charge_on_closed_date"
+        options[:correction_note] ||= "Automated posting of early departure charges on a closed business date."
+      end
+
+      options
     end
 
     def success(transactions)

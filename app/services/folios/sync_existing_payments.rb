@@ -18,23 +18,34 @@ module Folios
         @booking.payment_transactions.where(status: "captured").find_each do |pt|
           next if already_recorded?(pt)
 
+          posting_date = pt.captured_at&.to_date || pt.created_at.to_date
           amount = pt.amount_subunits.to_d / 100.0
+          
+          transaction_options = override_options.merge({
+            posting_source: payment_posting_source,
+            system_posting: true,
+            metadata: {
+              payment_transaction_id: pt.id,
+              source: "booking_quote",
+              applied_as: "booking_payment"
+            }
+          })
+
+          if @booking.hotel.date_closed?(posting_date) || posting_date < @booking.hotel.business_date_for
+            transaction_options[:override_night_audit] = true
+            transaction_options[:correction_reason] ||= "payment_sync_on_closed_date"
+            transaction_options[:correction_note] ||= "Automated sync of captured payment on a closed business date."
+          end
+
           result = Folios::InsertTransaction.new(
             booking_folio: @folio,
             amount: amount,
             transaction_type: :payment,
             category: "booking_payment",
-            user: posting_user,
+            user: posting_user(transaction_options),
             description: "Booking payment via #{pt.gateway} (#{pt.external_reference})",
-            posting_date: pt.captured_at&.to_date || pt.created_at.to_date,
-            options: override_options.merge({
-              posting_source: payment_posting_source,
-              metadata: {
-                payment_transaction_id: pt.id,
-                source: "booking_quote",
-                applied_as: "booking_payment"
-              }
-            })
+            posting_date: posting_date,
+            options: transaction_options
           ).call
 
           next if result.success? || already_recorded?(pt)
@@ -55,8 +66,8 @@ module Folios
       )
     end
 
-    def posting_user
-      @options[:override_night_audit] ? @user : nil
+    def posting_user(options = @options)
+      options[:override_night_audit] ? @user : nil
     end
 
     def payment_posting_source
