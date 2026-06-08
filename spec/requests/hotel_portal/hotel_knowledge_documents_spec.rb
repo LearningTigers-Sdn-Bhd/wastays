@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
+  include ActiveJob::TestHelper
+
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
   let(:hotel) { create(:hotel, account: account, status: "approved") }
@@ -22,6 +24,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
     let(:new_path) { public_send("new_#{route_prefix}_path", hotel) }
     let(:show_path) { public_send("#{route_prefix}_path", hotel, doc) }
     let(:edit_path) { public_send("edit_#{route_prefix}_path", hotel, doc) }
+    let(:reindex_path) { public_send("reindex_#{route_prefix}_path", hotel, doc) }
 
     describe "GET index" do
       it "renders the index page" do
@@ -82,6 +85,33 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Test Doc")
+      end
+
+      it "does not show manual embedding controls when AI Concierge is disabled" do
+        get show_path
+
+        expect(response.body).not_to include("Generate Embeddings")
+        expect(response.body).not_to include("Retry Embeddings")
+      end
+    end
+
+    describe "POST reindex" do
+      it "does not enqueue embedding generation when AI Concierge is disabled" do
+        expect {
+          post reindex_path
+        }.not_to have_enqueued_job(HotelKnowledges::GenerateEmbeddingsJob)
+
+        expect(response).to redirect_to(show_path)
+      end
+
+      it "enqueues embedding generation when AI Concierge is enabled" do
+        hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "sk-test-key")
+
+        expect {
+          post reindex_path
+        }.to have_enqueued_job(HotelKnowledges::GenerateEmbeddingsJob).with(doc.id)
+
+        expect(response).to redirect_to(show_path)
       end
     end
 

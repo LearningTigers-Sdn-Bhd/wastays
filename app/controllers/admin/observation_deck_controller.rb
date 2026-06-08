@@ -1,5 +1,12 @@
 module Admin
   class ObservationDeckController < Admin::BaseController
+    AI_PROVIDER_OPTIONS = {
+      "gemini" => { label: "Gemini", key: "gemini_api_key" },
+      "openai" => { label: "OpenAI", key: "openai_api_key" },
+      "deepseek" => { label: "DeepSeek", key: "deepseek_api_key" },
+      "claude" => { label: "Claude", key: "anthropic_api_key" }
+    }.freeze
+
     layout "observation_deck"
     before_action :authenticate_superadmin!
 
@@ -47,6 +54,7 @@ module Admin
       end
 
       @entries = @entries.page(params[:page]).per(50)
+      load_ai_provider_config
 
       respond_to do |format|
         format.html
@@ -109,19 +117,40 @@ module Admin
     end
 
     def update_config
-      if params[:ai_provider].present?
-        AppConfig.set("ai_provider", params[:ai_provider])
+      configured_providers = configured_ai_provider_values
+      provider = params[:observation_deck_ai_provider].to_s
+
+      if configured_providers.include?(provider)
+        AppConfig.set("observation_deck_ai_provider", provider)
+        notice = "AI provider updated successfully."
+      else
+        notice = "Select a configured AI provider first."
       end
 
-      if params[:gemini_api_key].present?
-        AppConfig.set("gemini_api_key", params[:gemini_api_key])
-      end
+      redirect_to admin_observation_deck_index_path, notice: notice
+    end
 
-      if params[:openai_api_key].present?
-        AppConfig.set("openai_api_key", params[:openai_api_key])
-      end
+    private
 
-      redirect_to admin_observation_deck_index_path, notice: "AI configuration updated successfully."
+    def load_ai_provider_config
+      @configured_ai_providers = configured_ai_provider_options
+      selected_provider = AppConfig.get("observation_deck_ai_provider")
+      @observation_deck_ai_provider =
+        if @configured_ai_providers.any? { |(_label, value)| value == selected_provider }
+          selected_provider
+        else
+          @configured_ai_providers.first&.last
+        end
+    end
+
+    def configured_ai_provider_options
+      AI_PROVIDER_OPTIONS.filter_map do |value, config|
+        [ config[:label], value ] if AppConfig.get(config[:key]).present?
+      end
+    end
+
+    def configured_ai_provider_values
+      configured_ai_provider_options.map(&:last)
     end
   end
 end

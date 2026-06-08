@@ -32,6 +32,8 @@ bin/rails hotel_ops:generate_knowledge_embeddings
 ### Notes
 - Only processes documents with `embedding_status: "pending"` — already-indexed documents are skipped
 - Skips hotels that don't have AI Concierge enabled (`hotel.ai_concierge_enabled?`)
+- For AI Concierge-enabled hotels using non-OpenAI providers, embedding jobs use `AppConfig.get("openai_api_key")` as the OpenAI embedding key fallback
+- The global `openai_api_key` does not enable embedding generation for AI Concierge-disabled hotels
 - The job runs via Solid Queue on the `ai_concierge` queue
 - The old `hotel_ops:migrate_knowledges` task (which read from removed `hotel.faq`/`hotel.policy` JSONB columns) has been removed
 
