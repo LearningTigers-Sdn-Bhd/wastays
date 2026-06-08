@@ -20,7 +20,7 @@ AI Concierge-disabled hotels should not auto-index, should not see manual indexi
 - Preserved existing UI and rake behavior:
   - Manual indexing controls remain hidden for AI Concierge-disabled hotels.
   - Auto-indexing remains gated by `hotel.ai_concierge_enabled?`.
-  - `hotel_ops:generate_knowledge_embeddings` continues skipping disabled hotels.
+  - `demo:embeddings` continues skipping disabled hotels.
 - Updated hotel knowledge docs and changelog as `V1.3.1`.
 
 ## Notable Files
