@@ -42,8 +42,10 @@ module Guests
         query: query
       )
 
-      # Support exact matches on encrypted guest fields
-      scope = scope.or(Guest.where(email: raw_query)).or(Guest.where(phone: raw_query))
+      # Support exact matches on encrypted guest fields (requires deterministic encryption)
+      scope = scope.or(Guest.where(email: raw_query))
+                   .or(Guest.where(phone: raw_query))
+                   .or(Guest.where(government_id: raw_query))
     end
 
     scope = scope.where(country: @params[:country]) if @params[:country].present?

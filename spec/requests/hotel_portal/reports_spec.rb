@@ -412,7 +412,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "renders the financial breakdown table with taxes" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 320, tax_lines: [ { "name" => "SST", "amount" => "20.00" } ], margin_amount: 30, net_amount: 290, created_at: Time.zone.local(2026, 5, 6, 12, 0))
 
-      get breakdown_hotel_reports_path(hotel), params: { start_date: "2026-05-01", end_date: "2026-05-31" }
+      get breakdown_hotel_reports_path(hotel), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Taxes")
@@ -422,11 +422,11 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports xls and pdf" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
 
-      get breakdown_hotel_reports_path(hotel, format: :xls), params: { start_date: "2026-05-01", end_date: "2026-05-31" }
+      get breakdown_hotel_reports_path(hotel, format: :xls), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("application/vnd.ms-excel")
 
-      get breakdown_hotel_reports_path(hotel, format: :pdf), params: { start_date: "2026-05-01", end_date: "2026-05-31" }
+      get breakdown_hotel_reports_path(hotel, format: :pdf), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
     end

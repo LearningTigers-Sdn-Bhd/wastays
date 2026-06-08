@@ -40,11 +40,14 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
     if params[:room_type_id].present?
       room_type = current_hotel.room_types.find(params[:room_type_id])
-      @booking.total_amount = Bookings::CalculateStayPrice.new(
+      snapshot = Bookings::BuildFinancialSnapshot.new(
+        hotel: current_hotel,
         room_type: room_type,
         check_in: @booking.check_in,
-        check_out: @booking.check_out
+        check_out: @booking.check_out,
+        guest_country: current_hotel.country
       ).call
+      @booking.total_amount = snapshot.room_total + snapshot.tax_total
     end
 
     @room_types = current_hotel.room_types.order(:name)
