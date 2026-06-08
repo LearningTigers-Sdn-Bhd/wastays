@@ -1,3 +1,11 @@
+<% content_for :head do %>
+  <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
+<% end %>
+
+<% documents.each do |document| %>
+  <%= turbo_stream_from document %>
+<% end %>
+
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
   <div class="px-4 md:px-0">
     <div class="mt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -86,9 +94,18 @@
                 <% status_class = case doc.embedding_status
                   when "indexed" then "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
                   when "failed" then "bg-red-50 text-red-700 ring-red-600/20"
+                  when "indexing" then "bg-blue-50 text-blue-700 ring-blue-600/20"
                   else "bg-amber-50 text-amber-700 ring-amber-600/20"
                   end %>
-                <span class="inline-flex items-center rounded-full <%= status_class %> px-2 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset"><%= doc.embedding_status %></span>
+                <span class="inline-flex items-center gap-1.5 rounded-full <%= status_class %> px-2 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset">
+                  <% if doc.embedding_status == "indexing" %>
+                    <svg class="size-3 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"></path>
+                    </svg>
+                  <% end %>
+                  <%= doc.embedding_status %>
+                </span>
               </div>
               <div class="px-3 py-3">
                 <span class="text-sm text-slate-600" title="<%= doc.updated_at.to_fs(:long) %>"><%= time_ago_in_words(doc.updated_at) %> ago</span>

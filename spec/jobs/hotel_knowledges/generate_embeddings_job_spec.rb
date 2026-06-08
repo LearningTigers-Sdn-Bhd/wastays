@@ -16,6 +16,14 @@ RSpec.describe HotelKnowledges::GenerateEmbeddingsJob do
       expect(HotelKnowledges::KnowledgeIngestionService).to have_received(:new).with(document)
     end
 
+    it "marks the document indexing before ingestion starts" do
+      document.update_column(:embedding_status, "failed")
+
+      described_class.perform_now(document.id)
+
+      expect(document.reload.embedding_status).to eq("indexing")
+    end
+
     it "handles non-existent document gracefully" do
       expect { described_class.perform_now(0) }.not_to raise_error
     end

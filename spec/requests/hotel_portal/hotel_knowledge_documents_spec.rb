@@ -32,6 +32,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include(index_title)
+        expect(response.body).to include("turbo-cable-stream-source")
       end
 
       it "lists existing documents scoped to #{category}" do
@@ -85,6 +86,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Test Doc")
+        expect(response.body).to include("turbo-cable-stream-source")
       end
 
       it "does not show manual embedding controls when AI Concierge is disabled" do
@@ -92,6 +94,37 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
 
         expect(response.body).not_to include("Generate Embeddings")
         expect(response.body).not_to include("Retry Embeddings")
+        expect(response.body).not_to include("Generating embeddings")
+      end
+
+      it "shows the generate button while pending" do
+        hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "sk-test-key")
+
+        get show_path
+
+        expect(response.body).to include("Generate Embeddings")
+        expect(response.body).not_to include("Generating embeddings")
+      end
+
+      it "shows an indexing spinner instead of a generate button while indexing" do
+        hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "sk-test-key")
+        doc.update_column(:embedding_status, "indexing")
+
+        get show_path
+
+        expect(response.body).to include("Generating embeddings")
+        expect(response.body).to include("animate-spin")
+        expect(response.body).not_to include("Generate Embeddings")
+      end
+
+      it "shows the retry button after embedding generation fails" do
+        hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "sk-test-key")
+        doc.update_column(:embedding_status, "failed")
+
+        get show_path
+
+        expect(response.body).to include("Retry Embeddings")
+        expect(response.body).not_to include("Generating embeddings")
       end
     end
 
@@ -106,12 +139,14 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
 
       it "enqueues embedding generation when AI Concierge is enabled" do
         hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "sk-test-key")
+        doc.update_column(:embedding_status, "failed")
 
         expect {
           post reindex_path
         }.to have_enqueued_job(HotelKnowledges::GenerateEmbeddingsJob).with(doc.id)
 
         expect(response).to redirect_to(show_path)
+        expect(doc.reload.embedding_status).to eq("indexing")
       end
     end
 

@@ -59,7 +59,7 @@ module HotelPortal
         return
       end
 
-      HotelKnowledges::GenerateEmbeddingsJob.perform_later(@document.id)
+      @document.enqueue_embedding_generation!
       redirect_to kb_show_path(@document), notice: "Embedding generation started."
     end
 
