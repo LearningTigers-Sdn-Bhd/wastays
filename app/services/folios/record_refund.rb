@@ -24,12 +24,14 @@ module Folios
         return success(existing_refund_transaction) if existing_refund_transaction
 
         target_date = @posting_date
-        posting_date = target_date
         description = "Refund completed"
+        options = merged_options
 
-        if NightAudit.closed_for_date?(@booking.hotel_id, target_date)
-          posting_date = @booking.hotel.business_date_for
-          description += " (Original date: #{target_date.strftime('%d %b %Y')} - posted to current business date as original date was closed)"
+        if @booking.hotel.date_closed?(target_date) || target_date < @booking.hotel.business_date_for
+          options[:override_night_audit] = true
+          options[:system_posting] = true
+          options[:correction_reason] ||= "refund_on_closed_date"
+          options[:correction_note] ||= "Automated recording of refund on a closed business date."
         end
 
         result = Folios::InsertTransaction.new(
@@ -39,8 +41,8 @@ module Folios
           category: "refund",
           user: @user,
           description: description,
-          posting_date: posting_date,
-          options: merged_options
+          posting_date: target_date,
+          options: options
         ).call
 
         unless result.success?

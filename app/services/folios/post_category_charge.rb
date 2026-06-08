@@ -24,6 +24,22 @@ module Folios
       return failure("Invalid charge category: #{@category}") unless ALLOWED_CATEGORIES.include?(@category)
       return failure("Charge amount must be greater than zero") unless @amount.positive?
 
+      posting_date = @options[:posting_date] || @folio.hotel.business_date_for
+
+      options = @options.merge(
+        metadata: @metadata.merge(
+          posting_source: "charge_service",
+          charge_type: @category
+        )
+      )
+
+      if @folio.hotel.date_closed?(posting_date) || posting_date < @folio.hotel.business_date_for
+        options[:override_night_audit] = true
+        options[:system_posting] = true
+        options[:correction_reason] ||= "charge_on_closed_date"
+        options[:correction_note] ||= "Automated posting of #{@category.titleize} on a closed business date."
+      end
+
       Folios::InsertTransaction.new(
         booking_folio: @folio,
         amount: @amount,
@@ -31,12 +47,8 @@ module Folios
         category: @category,
         user: @user,
         description: @description,
-        options: @options.merge(
-          metadata: @metadata.merge(
-            posting_source: "charge_service",
-            charge_type: @category
-          )
-        )
+        posting_date: posting_date,
+        options: options
       ).call
     end
 

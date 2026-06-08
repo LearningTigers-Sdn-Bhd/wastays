@@ -174,7 +174,7 @@ module Bookings
             next
           end
 
-          close_result = Folios::CloseForCheckout.call(booking: @booking, user: @user, checked_out_at: @timestamp)
+          close_result = Folios::CloseForCheckout.call(booking: @booking, user: @user, checked_out_at: @timestamp, options: @options)
           unless close_result.success?
             error = close_result.error
             next

@@ -6,14 +6,15 @@ module Folios
   class CloseForCheckout
     include NightlyChargeCalculation
 
-    def self.call(booking:, user:, checked_out_at: Time.current)
-      new(booking: booking, user: user, checked_out_at: checked_out_at).call
+    def self.call(booking:, user:, checked_out_at: Time.current, options: {})
+      new(booking: booking, user: user, checked_out_at: checked_out_at, options: options).call
     end
 
-    def initialize(booking:, user:, checked_out_at: Time.current)
+    def initialize(booking:, user:, checked_out_at: Time.current, options: {})
       @booking = booking
       @user = user
       @checked_out_at = checked_out_at
+      @options = options
     end
 
     def call
@@ -46,11 +47,16 @@ module Folios
     private
 
     def validate_checkout_business_date(folio)
+      business_date = folio.hotel.business_date_for(@checked_out_at)
       FinancialControls::PostingGuard.call!(
         hotel: folio.hotel,
-        business_date: folio.hotel.business_date_for(@checked_out_at),
+        business_date: business_date,
         actor: @user,
-        posting_source: "checkout"
+        posting_source: "checkout",
+        override: @options[:override_night_audit],
+        override_reason: @options[:correction_reason],
+        permission_context: @options[:permission_context] || @user,
+        system_posting: !!@options[:system_posting]
       )
       nil
     rescue FinancialControls::PostingGuard::PostingBlocked => e
