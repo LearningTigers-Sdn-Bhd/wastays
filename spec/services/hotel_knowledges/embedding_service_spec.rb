@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe HotelKnowledges::EmbeddingService do
   subject(:service) { described_class.new(hotel: hotel) }
 
-  let(:hotel) { create(:hotel, ai_provider_name: "openai", ai_provider_key: "sk-test-key") }
+  let(:hotel) { create(:hotel, ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "sk-test-key") }
 
   describe "#call" do
     context "with an array of texts" do
@@ -56,8 +56,8 @@ RSpec.describe HotelKnowledges::EmbeddingService do
       end
     end
 
-    context "with hotel using non-OpenAI provider" do
-      let(:hotel) { create(:hotel, ai_provider_name: "claude", ai_provider_key: "sk-claude-key") }
+    context "with an AI Concierge hotel using a non-OpenAI provider" do
+      let(:hotel) { create(:hotel, ai_provider_enabled: true, ai_provider_name: "claude", ai_provider_key: "sk-claude-key") }
 
       before do
         allow(AppConfig).to receive(:get).with("openai_api_key").and_return("sk-app-config-key")
@@ -67,13 +67,15 @@ RSpec.describe HotelKnowledges::EmbeddingService do
       end
 
       it "falls back to AppConfig key" do
+        expect(AppConfig).to receive(:get).with("openai_api_key").and_return("sk-app-config-key")
+
         service.call([ "test" ])
         expect(RubyLLM::Embedding).to have_received(:embed)
       end
     end
 
-    context "with no API key available" do
-      let(:hotel) { create(:hotel, ai_provider_name: "claude", ai_provider_key: nil) }
+    context "with an AI Concierge hotel using a non-OpenAI provider and no global OpenAI key" do
+      let(:hotel) { create(:hotel, ai_provider_enabled: true, ai_provider_name: "claude", ai_provider_key: "sk-claude-key") }
 
       before do
         allow(AppConfig).to receive(:get).with("openai_api_key").and_return(nil)
@@ -81,6 +83,16 @@ RSpec.describe HotelKnowledges::EmbeddingService do
 
       it "raises EmbeddingError" do
         expect { service.call([ "test" ]) }.to raise_error(HotelKnowledges::EmbeddingError, /No OpenAI API key/)
+      end
+    end
+
+    context "with an AI Concierge-disabled hotel" do
+      let(:hotel) { create(:hotel, ai_provider_enabled: false, ai_provider_name: nil, ai_provider_key: nil) }
+
+      it "does not use the global fallback" do
+        expect(AppConfig).not_to receive(:get)
+
+        expect { service.call([ "test" ]) }.to raise_error(HotelKnowledges::EmbeddingError, /AI Concierge is not enabled/)
       end
     end
 

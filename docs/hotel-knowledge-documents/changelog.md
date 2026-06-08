@@ -1,4 +1,12 @@
-# V1.3 — Knowledge Diagnostics (Current)
+# V1.3.1 — AI Concierge Embedding Fallback Scope (Current)
+
+- Clarified OpenAI embedding fallback behavior: the platform `openai_api_key` is only used for AI Concierge-enabled hotels whose configured AI provider is non-OpenAI.
+- Added defensive reindex guards so AI Concierge-disabled hotels cannot trigger manual embedding generation by posting directly to category reindex routes.
+- Confirmed disabled hotels do not expose manual "Generate Embeddings" / "Retry Embeddings" controls.
+
+---
+
+# V1.3 — Knowledge Diagnostics
 
 ## Changes
 - Added `HotelKnowledgeDiagnostic` as a hotel-scoped, staff-facing diagnostic record for weak or unanswered knowledge retrieval turns.
