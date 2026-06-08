@@ -5,6 +5,7 @@ require_dependency Rails.root.join("app/presenters/hotel_portal/room_status_boar
 module HotelPortal
   class RoomStatusBoardController < BaseController
     before_action :authorize_room_status_board!
+    before_action -> { require_feature!("room_status_board") }
 
     def index
       @start_date = parse_start_date

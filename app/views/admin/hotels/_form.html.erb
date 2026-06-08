@@ -141,6 +141,14 @@
                 </div>
               </div>
             </div>
+            <div class="sm:col-span-2">
+              <label for="hotel_plan_id" class="mb-2 block text-sm font-medium text-slate-700">Subscription Plan</label>
+              <%= select_tag "hotel[plan_id]",
+                    options_from_collection_for_select(Plan.active.ordered, :id, :name, hotel.plan_id),
+                    include_blank: "— No plan —",
+                    id: "hotel_plan_id",
+                    class: input_classes %>
+            </div>
           <% end %>
         </div>
       </section>

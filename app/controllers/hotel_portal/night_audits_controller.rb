@@ -1,6 +1,7 @@
 module HotelPortal
   class NightAuditsController < BaseController
     before_action :authorize_night_audit_access!
+    before_action -> { require_feature!("no_show_auto_handling") }
 
     def index
       @suggested_business_date = current_hotel.latest_closable_business_date

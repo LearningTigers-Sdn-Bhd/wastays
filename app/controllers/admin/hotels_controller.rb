@@ -79,7 +79,7 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def update_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, amenities: [])
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, :plan_id, amenities: [])
   end
 
   def salesperson_name_param

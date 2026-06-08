@@ -1,11 +1,11 @@
 <%
 reports_nav_items = [
   { label: "Financial", path: hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "index" },
-  { label: "Manager Flash", path: managers_flash_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "managers_flash" },
-  { label: "Daily Revenue", path: daily_revenue_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "daily_revenue" },
-  { label: "Arrivals & Departures", path: arrivals_departures_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "arrivals_departures" },
-  { label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "daily_occupancy" },
-  { label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "outstanding_balance" },
+  { label: "Manager Flash", path: managers_flash_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "managers_flash", plan_feature: "housekeeper_productivity" },
+  { label: "Daily Revenue", path: daily_revenue_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "daily_revenue", plan_feature: "revenue_allocation_per_night" },
+  { label: "Arrivals & Departures", path: arrivals_departures_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "arrivals_departures", plan_feature: "arrivals_departures_list" },
+  { label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "daily_occupancy", plan_feature: "daily_occupancy_revenue" },
+  { label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "outstanding_balance", plan_feature: "outstanding_balance_noshow" },
   { label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "deposit_liability" },
   { label: "Journal Batches", path: journal_batches_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "journal_batches" },
   { label: "GL Mappings", path: hotel_general_ledger_maps_path(current_hotel), active: controller_name == "general_ledger_maps" }
@@ -35,10 +35,10 @@ hotel_sidebar_sections = [
       { label: "Today's Check-Outs", path: hotel_checked_out_guests_path(current_hotel), search_text: "Today's Check-Outs Checked Out Departures Operations", active: controller_name == "checked_out_guests", icon: '<path d="M16 17l5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>', permission: "view_bookings" },
       { label: "Bookings", path: hotel_bookings_path(current_hotel), search_text: "Bookings Reservations Operations", active: controller_name == "bookings", icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>', permission: "view_bookings" },
       { label: "Reservation Board", path: hotel_reservation_board_index_path(current_hotel), search_text: "Reservation Board Timeline Calendar Tape Chart Operations", active: controller_name == "reservation_board", icon: '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/><path d="M10 18h4"/><path d="M10 14h4"/><path d="M10 10h1"/>', permission: ["view_reservation_board", "view_bookings"] },
-      { label: "Room Status", path: hotel_room_status_board_path(current_hotel), search_text: "Room Status Tape Chart Housekeeping Assignment Operations", active: controller_name == "room_status_board", icon: '<path d="M3 20v-8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8"/><path d="M5 10V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/><path d="M3 18h18"/>', permission: ["view_room_readiness", "manage_room_status"] },
-      { label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Operations", active: controller_name == "requests", icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M3 10h18"/><path d="M8 14h8"/><path d="M8 18h5"/>', permission: "manage_requests" },
-      { label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory", active: controller_name == "guests", icon: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>', permission: "view_bookings" },
-      { label: "Night Audit", path: hotel_night_audits_path(current_hotel), search_text: "Night Audit Business Date Close System", active: controller_name == "night_audits", icon: '<path d="M18 5h4"/><path d="M20 3v4"/><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>', permission: "manage_night_audit" }
+      { label: "Room Status", path: hotel_room_status_board_path(current_hotel), search_text: "Room Status Tape Chart Housekeeping Assignment Operations", active: controller_name == "room_status_board", icon: '<path d="M3 20v-8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8"/><path d="M5 10V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/><path d="M3 18h18"/>', permission: ["view_room_readiness", "manage_room_status"], plan_feature: "room_status_board" },
+      { label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Operations", active: controller_name == "requests", icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M3 10h18"/><path d="M8 14h8"/><path d="M8 18h5"/>', permission: "manage_requests", plan_feature: "task_assignment_minibar_log" },
+      { label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory", active: controller_name == "guests", icon: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>', permission: "view_bookings", plan_feature: "unified_guest_profile" },
+      { label: "Night Audit", path: hotel_night_audits_path(current_hotel), search_text: "Night Audit Business Date Close System", active: controller_name == "night_audits", icon: '<path d="M18 5h4"/><path d="M20 3v4"/><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>', permission: "manage_night_audit", plan_feature: "no_show_auto_handling" }
     ]
   },
   {
@@ -55,7 +55,7 @@ hotel_sidebar_sections = [
     label: "Team Management",
     items: [
       { label: "Staff Management", path: hotel_users_path(current_hotel), search_text: "Staff Management Users Roles Access Team", active: controller_name == "users", icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', permission: "manage_users" },
-      { label: "Roles & Permissions", path: hotel_roles_path(current_hotel), search_text: "Roles Permissions Access Control Team", active: controller_name == "roles", icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>', permission: "manage_users" }
+      { label: "Roles & Permissions", path: hotel_roles_path(current_hotel), search_text: "Roles Permissions Access Control Team", active: controller_name == "roles", icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>', permission: "manage_users", plan_feature: "role_based_access_control" }
     ]
   },
   {
@@ -63,7 +63,7 @@ hotel_sidebar_sections = [
     items: [
       { label: "Reports", path: hotel_reports_path(current_hotel), search_text: "Reports Analytics Financial Arrivals Departures Daily Occupancy Outstanding Balance Journal Batches GL Mappings System", active: reports_nav_active, icon: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>', children: reports_nav_items, permission: "view_reports" },
       { label: "Payouts", path: payouts_hotel_reports_path(current_hotel), search_text: "Payouts Settlements System", active: controller_name == "reports" && action_name == "payouts", icon: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 15h.01"/><path d="M11 15h.01"/><path d="M15 15h.01"/>', permission: "view_payouts" },
-      { label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Activity System", active: controller_name == "audit_logs", icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>', permission: "view_audit_logs" },
+      { label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Activity System", active: controller_name == "audit_logs", icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>', permission: "view_audit_logs", plan_feature: "full_audit_trail" },
       { label: "Notification Logs", path: hotel_notification_logs_path(current_hotel), search_text: "Notification Logs Messaging Activity System", active: controller_name == "notification_logs", icon: '<path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M12 8v4"/><path d="M12 16h.01"/>', permission: "view_audit_logs" },
       { label: "Settings", path: hotel_settings_path(current_hotel), search_text: "Settings Preferences System", active: controller_name == "settings", icon: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1-1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>', permission: [ "manage_hotel_profile", "manage_account" ] }
     ]
@@ -77,6 +77,7 @@ hotel_sidebar_sections = [
   <nav class="flex-1 px-4 py-3 space-y-6">
     <% hotel_sidebar_sections.each do |section| %>
       <% visible_items = section[:items].select do |item| %>
+        <% next false if item[:plan_feature] && !feature_enabled_for_hotel?(item[:plan_feature]) %>
         <% permissions = Array(item[:permission]).compact %>
         <% hotel_permissions_only = item[:permission_scope] == :hotel %>
         <% permissions.blank? || permissions.any? { |permission| hotel_permissions_only ? current_user.has_permission?(permission, hotel: current_hotel) : current_user.has_permission?(permission, hotel: current_hotel) || current_user.has_permission?(permission) } %>
@@ -97,7 +98,7 @@ hotel_sidebar_sections = [
                   </svg>
                 </summary>
                 <div class="ms-6 mt-1 space-y-0.5 border-s border-slate-200 ps-3">
-                  <% item[:children].each do |child| %>
+                  <% item[:children].select { |c| c[:plan_feature].nil? || feature_enabled_for_hotel?(c[:plan_feature]) }.each do |child| %>
                     <a class="sidebar-nav-link <%= child[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= child[:path] %>">
                       <span class="text-sm"><%= child[:label] %></span>
                     </a>

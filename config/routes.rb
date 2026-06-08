@@ -222,6 +222,11 @@ Rails.application.routes.draw do
     resource :integrations, only: [ :show, :update, :destroy ] do
       post :test_r2_connection, on: :collection
     end
+    resources :plans, only: [ :index ] do
+      collection do
+        patch :update_matrix
+      end
+    end
   end
 
   # Hotel admin dashboard

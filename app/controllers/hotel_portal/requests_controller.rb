@@ -1,5 +1,6 @@
 class HotelPortal::RequestsController < HotelPortal::BaseController
   before_action :authorize_manage_requests!
+  before_action -> { require_feature!("task_assignment_minibar_log") }
 
   def index
     @board = ::HotelPortal::RequestsBoard.new(current_hotel, params)
