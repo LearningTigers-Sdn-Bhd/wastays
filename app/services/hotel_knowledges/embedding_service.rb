@@ -42,6 +42,8 @@ module HotelKnowledges
     attr_reader :hotel
 
     def embedding_api_key
+      raise EmbeddingError, "AI Concierge is not enabled for embeddings" unless hotel.ai_concierge_enabled?
+
       if hotel.ai_provider_name == "openai" && hotel.ai_concierge_api_key.present?
         hotel.ai_concierge_api_key
       else

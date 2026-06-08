@@ -35,7 +35,7 @@ KnowledgeIngestionService
                          ▼
                    EmbeddingService
                          |
-                         ├── RubyLLM.embed via hotel API key (or AppConfig fallback)
+                         ├── RubyLLM.embed via hotel OpenAI key or AI Concierge non-OpenAI fallback
                          ├── Model: text-embedding-3-small (1536 dims)
                          └── Batches of 20
                          |
@@ -87,7 +87,8 @@ ChunkingService.new(text, source_type: "text").call → [{ content:, chunk_index
 EmbeddingService.new(hotel:).call(texts) → [[float] * 1536, ...]
 ```
 - Configures RubyLLM with per-hotel context
-- API key priority: hotel's OpenAI key → `AppConfig.get("openai_api_key")`
+- Only runs for AI Concierge-enabled hotels
+- API key priority: hotel's OpenAI key when provider is OpenAI → `AppConfig.get("openai_api_key")` when the AI Concierge provider is non-OpenAI
 - Returns array of 1536-dimensional vectors
 
 ### KnowledgeIngestionService
@@ -118,6 +119,8 @@ end
 | Document updated (content change) | `after_commit` enqueues job | `hotel.ai_concierge_enabled?` |
 | Embedding failed | Manual "Retry Embeddings" button in UI | `hotel.ai_concierge_enabled?` + status `failed` |
 | Embedding pending | Manual "Generate Embeddings" button in UI | `hotel.ai_concierge_enabled?` + status `pending` |
+
+AI Concierge-disabled hotels do not auto-index and do not expose manual indexing controls. The platform `openai_api_key` fallback only supports AI Concierge-enabled hotels whose chat provider is not OpenAI.
 
 ## Vector Index
 

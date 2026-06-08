@@ -54,6 +54,11 @@ module HotelPortal
     end
 
     def reindex
+      unless @hotel.ai_concierge_enabled?
+        redirect_to kb_show_path(@document), alert: "AI Concierge must be enabled before generating embeddings."
+        return
+      end
+
       HotelKnowledges::GenerateEmbeddingsJob.perform_later(@document.id)
       redirect_to kb_show_path(@document), notice: "Embedding generation started."
     end
