@@ -259,6 +259,9 @@ Rails.application.routes.draw do
     resources :users, only: [ :index, :new, :create, :update, :destroy ], path: "staff" do
       patch :reactivate, on: :member
     end
+    resources :staff_invitations, only: [ :update, :destroy ] do
+      post :resend, on: :member
+    end
     resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions"
     resources :general_ledger_maps, only: [ :index, :edit, :update ], path: "general-ledger-mappings"
 

@@ -80,7 +80,7 @@ module Rooms
       @block.completed_at = Time.current
 
       if @block.save
-        sync_room_status_on_removal(@block.room_type, @block.room_number, target_status: "pending_cleaning") if was_active_today
+        sync_room_status_on_removal(@block.room_type, @block.room_number, target_status: "dirty") if was_active_today
         sync_inventory(start_date, end_date)
         success(@block)
       else

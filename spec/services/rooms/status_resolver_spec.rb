@@ -19,11 +19,11 @@ RSpec.describe Rooms::StatusResolver do
   it "returns persisted readiness status when the room is not occupied" do
     hotel = create(:hotel)
     room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ])
-    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
     result = described_class.new(hotel: hotel, room_type: room_type, room_number: "101", date: Date.current).call
 
-    expect(result.status).to eq("pending_cleaning")
+    expect(result.status).to eq("dirty")
     expect(result.assignable).to be(false)
   end
 end

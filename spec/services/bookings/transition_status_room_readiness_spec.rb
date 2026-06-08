@@ -14,16 +14,16 @@ RSpec.describe Bookings::TransitionStatus do
     Folios::InitializeForBooking.call(booking: booking, user: user)
   end
 
-  it "marks assigned rooms pending_cleaning when the guest checks out" do
+  it "marks assigned rooms dirty when the guest checks out" do
     result = described_class.new(booking: booking, status: "completed", timestamp: Time.current, user: user).call
 
     expect(result).to be_success
-    expect(RoomStatus.find_by!(hotel: hotel, room_number: "101").status).to eq("pending_cleaning")
+    expect(RoomStatus.find_by!(hotel: hotel, room_number: "101").status).to eq("dirty")
 
-    log = RoomOperationalAuditLog.find_by!(event_type: "checkout_marked_pending_cleaning")
+    log = RoomOperationalAuditLog.find_by!(event_type: "checkout_marked_dirty")
     expect(log.booking).to eq(booking)
     expect(log.user).to eq(user)
     expect(log.old_status).to eq("ready")
-    expect(log.new_status).to eq("pending_cleaning")
+    expect(log.new_status).to eq("dirty")
   end
 end

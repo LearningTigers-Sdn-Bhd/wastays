@@ -69,7 +69,7 @@ RSpec.describe Bookings::AvailableRoomNumbers do
 
   describe "#options" do
     it "returns non-ready rooms as non-selectable options with labels" do
-      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "pending_cleaning")
+      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
       options = described_class.new(
         hotel: hotel,
@@ -82,7 +82,7 @@ RSpec.describe Bookings::AvailableRoomNumbers do
       ready_option = options.find { |opt| opt[:room_number] == "102" }
 
       expect(dirty_option[:selectable]).to be(false)
-      expect(dirty_option[:label]).to eq("101 (Pending Cleaning)")
+      expect(dirty_option[:label]).to eq("101 (Dirty)")
       expect(ready_option[:selectable]).to be(true)
     end
   end

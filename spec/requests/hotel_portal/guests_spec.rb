@@ -110,7 +110,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
 
       expect(response).to have_http_status(:success)
       body_text = CGI.unescapeHTML(response.body)
-      expect(body_text).to include("Search guests")
+      expect(body_text).to include("Guest Directory")
+      expect(body_text).to include("Guest Records")
       expect(body_text).to include("All Countries")
       expect(body_text).to include("Ravi Menon")
       expect(body_text).not_to include("Aisha Tan")

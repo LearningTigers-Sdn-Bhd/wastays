@@ -1,43 +1,65 @@
 <% 
-  status = room.dig(:status, :status).to_s
-  room_status_id = room.dig(:status, :room_status_id)
-  failure_note = room.dig(:status, :notes).to_s.strip
-  can_manage = current_user.has_permission?("manage_room_status", hotel: current_hotel)
-  has_actions = ["pending_cleaning", "preparing", "inspection_failed", "awaiting_inspection"].include?(status)
-  room_type = room[:room_type]
+  room_row = presenter.room_row(room)
 %>
 <div class="grid border-b border-slate-100" style="grid-template-columns: <%= presenter.grid_template_columns %>; min-height: <%= presenter.row_min_height(room) %>px;">
   <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= presenter.card_padding %> flex flex-col justify-center">
     <div class="flex items-center justify-between gap-2">
       <p class="font-black leading-none text-slate-950 <%= presenter.room_number_class %>"><%= room[:room_number] %></p>
-      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-        <span data-floating-target="reference" class="inline-flex items-center justify-center rounded-full border size-6 <%= presenter.status_style(status) %> cursor-help">
-          <%= presenter.status_icon(status) %>
-        </span>
-        
-        <div data-floating-target="floating" class="hidden z-[100] <%= (status == "inspection_failed" && failure_note.present?) ? 'px-4 py-3 rounded-2xl w-64' : 'px-3 py-1.5 rounded-full' %> bg-white border border-slate-200 shadow-xl pointer-events-none">
-          <div class="flex items-center gap-2 <%= 'mb-2' if status == "inspection_failed" && failure_note.present? %>">
-            <div class="p-1 rounded-full <%= presenter.status_style(status, fallback: 'border-slate-400').split(' ').first.gsub('border-', 'bg-') %> text-white">
-              <%= presenter.status_icon(status) %>
+      
+      <div class="flex items-center gap-1">
+        <%# Housekeeping Badge %>
+        <% if room[:housekeeping_requests].any? %>
+          <div data-controller="floating" data-floating-trigger-value="click" data-floating-placement-value="top-start" class="inline-flex">
+            <div data-floating-target="reference" data-action="click->floating#toggle" class="size-4 rounded-full border border-blue-200 bg-blue-50 text-blue-500 cursor-pointer flex items-center justify-center transition-transform active:scale-90 shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700"><%= status.present? ? status.humanize.titleize : "Unknown Status" %></span>
+            <div data-floating-target="floating" class="hidden z-[100] w-40 p-3 bg-white border border-slate-200 rounded-xl shadow-xl">
+              <p class="text-[9px] font-black uppercase tracking-widest text-blue-600 mb-2">Housekeeping</p>
+              <div class="space-y-2">
+                <% room[:housekeeping_requests].each do |req| %>
+                  <div class="text-[10px] leading-snug">
+                    <div class="flex items-center justify-between gap-1 mb-0.5">
+                      <span class="font-bold text-slate-900 truncate"><%= req[:status].humanize %></span>
+                      <span class="text-[8px] font-medium text-slate-400 whitespace-nowrap"><%= req[:requested_at].strftime("%H:%M") %></span>
+                    </div>
+                    <p class="text-slate-600 italic">"<%= req[:details] %>"</p>
+                  </div>
+                <% end %>
+              </div>
+            </div>
           </div>
+        <% end %>
 
-          <% if status == "inspection_failed" && failure_note.present? %>
-            <div class="mt-2 border-t border-slate-50 pt-2">
-              <p class="text-[11px] font-medium text-rose-600 leading-relaxed italic"><%= failure_note %></p>
+        <%# Status Icon %>
+        <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top-start" class="inline-flex">
+          <span data-floating-target="reference" class="inline-flex items-center justify-center rounded-full border size-5 <%= presenter.status_style(room_row.status) %> cursor-help shadow-sm">
+            <div class="scale-90"><%= presenter.status_icon(room_row.status) %></div>
+          </span>
+          
+          <div data-floating-target="floating" class="hidden z-[100] <%= (room_row.status == "inspection_failed" && room_row.failure_note.present?) ? 'px-4 py-3 rounded-2xl w-64' : 'px-3 py-1.5 rounded-full' %> bg-white border border-slate-200 shadow-xl pointer-events-none">
+            <div class="flex items-center gap-2 <%= 'mb-2' if room_row.status == "inspection_failed" && room_row.failure_note.present? %>">
+              <div class="p-1 rounded-full <%= presenter.status_style(room_row.status, fallback: 'border-slate-400').split(' ').first.gsub('border-', 'bg-') %> text-white">
+                <%= presenter.status_icon(room_row.status) %>
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700"><%= room_row.status.present? ? room_row.status.humanize.titleize : "Unknown Status" %></span>
             </div>
-          <% end %>
+
+            <% if room_row.status == "inspection_failed" && room_row.failure_note.present? %>
+              <div class="mt-2 border-t border-slate-50 pt-2">
+                <p class="text-[11px] font-medium text-rose-600 leading-relaxed italic"><%= room_row.failure_note %></p>
+              </div>
+            <% end %>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="mt-2 flex items-center gap-2">
-      <% smoking_label = room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking" %>
-      <% smoking_color = room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400" %>
+      <% smoking_label = room_row.room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking" %>
+      <% smoking_color = room_row.room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400" %>
       <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
         <div data-floating-target="reference" class="<%= smoking_color %> cursor-help">
-          <% if room_type.smoking_allowed %>
+          <% if room_row.room_type.smoking_allowed %>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h14" /><path d="M18 8c0-2.5-2-2.5-2-5" /><path d="M21 16a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /><path d="M22 8c0-2.5-2-2.5-2-5" /><path d="M7 12v4" /></svg>
           <% else %>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h13" /><path d="M18 8c0-2.5-2-2.5-2-5" /><path d="m2 2 20 20" /><path d="M21 12a1 1 0 0 1 1 1v2a1 1 0 0 1-.5.866" /><path d="M22 8c0-2.5-2-2.5-2-5" /><path d="M7 12v4" /></svg>
@@ -48,11 +70,11 @@
         </div>
       </div>
 
-      <% pets_label = room_type.pets_allowed ? "Pets Allowed" : "No Pets" %>
-      <% pets_color = room_type.pets_allowed ? "text-emerald-500" : "text-slate-400" %>
+      <% pets_label = room_row.room_type.pets_allowed ? "Pets Allowed" : "No Pets" %>
+      <% pets_color = room_row.room_type.pets_allowed ? "text-emerald-500" : "text-slate-400" %>
       <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
         <div data-floating-target="reference" class="<%= pets_color %> cursor-help">
-          <% if room_type.pets_allowed %>
+          <% if room_row.room_type.pets_allowed %>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /></svg>
           <% else %>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /><path d="m2 2 20 20" /></svg>
@@ -64,8 +86,8 @@
       </div>
     </div>
 
-    <% if can_manage && room_status_id.present? && has_actions %>
-      <%= render "hotel_portal/room_status_board/room_actions", room_status_id: room_status_id, status: status, failure_note: failure_note, presenter: presenter %>
+    <% if room_row.can_manage? && room_row.room_status_id.present? && room_row.has_actions? %>
+      <%= render "hotel_portal/room_status_board/room_actions", room_status_id: room_row.room_status_id, status: room_row.status, failure_note: room_row.failure_note, presenter: presenter %>
     <% end %>
   </div>
 
@@ -86,8 +108,8 @@
         data-action="dblclick->room-block-modal#open"
         data-room-block-modal-date-param="<%= date.to_s %>"
         data-room-block-modal-room-number-param="<%= room[:room_number] %>"
-        data-room-block-modal-room-type-id-param="<%= room_type.id %>"
-        data-room-block-modal-room-type-name-param="<%= room_type.name %>"
+        data-room-block-modal-room-type-id-param="<%= room_row.room_type.id %>"
+        data-room-block-modal-room-type-name-param="<%= room_row.room_type.name %>"
       <% end %>
     >
       <%# Render Real Bookings %>
@@ -168,14 +190,14 @@
               </div>
             </div>
 
-            <% if can_manage %>
+            <% if room_row.can_manage? %>
               <div class="mt-4 border-t border-slate-50 pt-3 flex gap-2">
                 <button type="button"
                     data-action="click->room-block-modal#edit click->floating#hide"
                     data-room-block-modal-id-param="<%= block[:id] %>"
                     data-room-block-modal-room-number-param="<%= room[:room_number] %>"
-                    data-room-block-modal-room-type-id-param="<%= room_type.id %>"
-                    data-room-block-modal-room-type-name-param="<%= room_type.name %>"
+                    data-room-block-modal-room-type-id-param="<%= room_row.room_type.id %>"
+                    data-room-block-modal-room-type-name-param="<%= room_row.room_type.name %>"
                     data-room-block-modal-start-date-param="<%= block[:start_date].to_s %>"
                     data-room-block-modal-end-date-param="<%= block[:end_date].to_s %>"
                     data-room-block-modal-block-type-param="<%= block[:block_type] %>"

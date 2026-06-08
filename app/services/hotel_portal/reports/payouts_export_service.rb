@@ -20,14 +20,14 @@ module HotelPortal
       def generate_csv
         CSV.generate(headers: true) do |csv|
           if @active_tab == "paid"
-            csv << [ "Period", "Settled At", "Reference", "Net Amount" ]
+            csv << [ "Period", "Settled At", "Status", "Reference", "Net Amount" ]
             @payout_history.each do |batch|
-              csv << [ "#{batch.period_start} - #{batch.period_end}", batch.payout_at, batch.payout_reference, money(batch.amount) ]
+              csv << [ "#{batch.period_start} - #{batch.period_end}", batch.payout_at, batch.status.titleize, batch.payout_reference, money(batch.amount) ]
             end
           else
-            csv << [ "Booking Ref", "Checked Out At", "Net Amount" ]
+            csv << [ "Booking Ref", "Checked Out At", "Status", "Net Amount" ]
             @upcoming_bookings.each do |booking|
-              csv << [ booking.confirmation_token, booking.checked_out_at, money(booking.net_amount) ]
+              csv << [ booking.confirmation_token, booking.checked_out_at, booking.payout_status.titleize, money(booking.net_amount) ]
             end
           end
         end
@@ -53,9 +53,9 @@ module HotelPortal
         pdf.move_down 12
 
         if @active_tab == "paid"
-          rows = [ [ "Period", "Settled At", "Reference", "Net Amount" ] ] + @payout_history.map { |b| [ "#{b.period_start} - #{b.period_end}", b.payout_at&.strftime("%d %b %Y") || "Pending", b.payout_reference.presence || "-", money(b.amount) ] }
+          rows = [ [ "Period", "Settled At", "Status", "Reference", "Net Amount" ] ] + @payout_history.map { |b| [ "#{b.period_start} - #{b.period_end}", b.payout_at&.strftime("%d %b %Y") || "Pending", b.status.titleize, b.payout_reference.presence || "-", money(b.amount) ] }
         else
-          rows = [ [ "Booking Ref", "Checked Out At", "Net Amount" ] ] + @upcoming_bookings.map { |b| [ b.confirmation_token, b.checked_out_at&.strftime("%d %b %Y %I:%M %p") || "-", money(b.net_amount) ] }
+          rows = [ [ "Booking Ref", "Checked Out At", "Status", "Net Amount" ] ] + @upcoming_bookings.map { |b| [ b.confirmation_token, b.checked_out_at&.strftime("%d %b %Y %I:%M %p") || "-", b.payout_status.titleize, money(b.net_amount) ] }
         end
 
         pdf.table(rows, width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }) { row(0).font_style = :bold }
@@ -67,11 +67,11 @@ module HotelPortal
       def rows
         result = []
         if @active_tab == "paid"
-          result << row([ "Period", "Settled At", "Reference", "Net Amount" ])
-          @payout_history.each { |b| result << row([ "#{b.period_start} - #{b.period_end}", b.payout_at, b.payout_reference, money(b.amount) ]) }
+          result << row([ "Period", "Settled At", "Status", "Reference", "Net Amount" ])
+          @payout_history.each { |b| result << row([ "#{b.period_start} - #{b.period_end}", b.payout_at, b.status.titleize, b.payout_reference, money(b.amount) ]) }
         else
-          result << row([ "Booking Ref", "Checked Out At", "Net Amount" ])
-          @upcoming_bookings.each { |b| result << row([ b.confirmation_token, b.checked_out_at, money(b.net_amount) ]) }
+          result << row([ "Booking Ref", "Checked Out At", "Status", "Net Amount" ])
+          @upcoming_bookings.each { |b| result << row([ b.confirmation_token, b.checked_out_at, b.payout_status.titleize, money(b.net_amount) ]) }
         end
         result.join("\n")
       end

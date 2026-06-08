@@ -219,6 +219,22 @@ RSpec.describe "HotelPortal::InHouseGuests", type: :request do
       expect(response.body).not_to include(other_hotel_booking.guest_phone)
     end
 
+    it "shows correct summary counts for total in-house and check-outs today" do
+      # Create one booking checking out today
+      create(:booking, hotel: hotel, status: "checked_in", check_out: Date.current, checked_in_at: 1.day.ago)
+      # Create one booking checking out tomorrow
+      create(:booking, hotel: hotel, status: "checked_in", check_out: 1.day.from_now, checked_in_at: 1.day.ago)
+
+      get "/hotel/#{hotel.id}/in_house_guests"
+
+      expect(response).to have_http_status(:success)
+      # in_house_booking and newer_in_house_booking from let/before are also in-house (total 4)
+      expect(response.body).to include("In-House Now")
+      expect(response.body).to include("4")
+      expect(response.body).to include("Check-outs Today")
+      expect(response.body).to include("1")
+    end
+
     it "orders newest checked-in stays first" do
       completed_booking
       cancelled_booking
