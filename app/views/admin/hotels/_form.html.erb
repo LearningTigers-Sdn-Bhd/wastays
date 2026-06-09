@@ -41,6 +41,18 @@
             <p class="mt-1 text-xs text-slate-400">3-6 uppercase letters/numbers. Prefixes receipt, folio, invoice, reservation, and guest registration numbers (e.g. SPH-10000001). Must be unique.</p>
           </div>
 
+          <% if hotel.persisted? %>
+            <div>
+              <label for="hotel_plan_id" class="mb-2 block text-sm font-medium text-slate-700">Subscription Plan</label>
+              <%= select_tag "hotel[plan_id]",
+                    options_from_collection_for_select(Plan.active.ordered, :id, :name, hotel.plan_id),
+                    include_blank: "— No plan —",
+                    id: "hotel_plan_id",
+                    class: input_classes %>
+              <p class="mt-1 text-xs text-slate-400">Controls which features this hotel can access. Manage feature gating in Plan Access.</p>
+            </div>
+          <% end %>
+
           <div class="sm:col-span-2">
             <label for="address" class="mb-2 block text-sm font-medium text-slate-700">Address</label>
             <%= f.text_area :address, rows: 3, class: "#{input_classes} min-h-[112px]" %>
@@ -140,14 +152,6 @@
                   <%= email_field_tag "hotel[salesperson_email]", hotel.salesperson&.email, id: "hotel_salesperson_email", class: input_classes, placeholder: "email@example.com" %>
                 </div>
               </div>
-            </div>
-            <div class="sm:col-span-2">
-              <label for="hotel_plan_id" class="mb-2 block text-sm font-medium text-slate-700">Subscription Plan</label>
-              <%= select_tag "hotel[plan_id]",
-                    options_from_collection_for_select(Plan.active.ordered, :id, :name, hotel.plan_id),
-                    include_blank: "— No plan —",
-                    id: "hotel_plan_id",
-                    class: input_classes %>
             </div>
           <% end %>
         </div>

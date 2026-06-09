@@ -234,6 +234,7 @@ Rails.application.routes.draw do
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
     get "dashboard", to: "dashboard#index", as: :dashboard
+    get "plan", to: "plans#show", as: :plan
     post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
     resources :onboarding_sessions, only: [ :index ] do

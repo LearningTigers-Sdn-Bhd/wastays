@@ -1,0 +1,89 @@
+<% content_for :breadcrumbs do %>
+  <div class="flex items-center gap-x-2">
+    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900">Your Plan</span>
+  </div>
+<% end %>
+
+<div class="pb-20 space-y-8">
+  <div class="mt-5">
+    <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Your Plan</h1>
+    <p class="mt-1 text-sm font-medium text-slate-600">See what's included in your subscription and what you can unlock by upgrading.</p>
+  </div>
+
+  <!-- Current plan card -->
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex flex-col gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Current Plan</p>
+        <div class="mt-2 flex items-center gap-3">
+          <% if @plan %>
+            <span class="text-2xl font-bold tracking-tight text-slate-950"><%= @plan.name %></span>
+            <% if @plan.most_popular %>
+              <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">Most Popular</span>
+            <% end %>
+          <% else %>
+            <span class="text-2xl font-bold tracking-tight text-slate-400">No plan assigned</span>
+          <% end %>
+        </div>
+      </div>
+      <div class="rounded-xl border border-teal-100 bg-teal-50/60 px-5 py-3 text-center">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-teal-700">Features Included</p>
+        <p class="mt-1 text-xl font-bold text-slate-950"><%= @included_count %> <span class="text-sm font-medium text-slate-500">/ <%= @total_count %></span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature breakdown -->
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+      <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">What's Included</h2>
+      <p class="mt-1 text-sm font-medium text-slate-600">Features marked with a lock aren't in your current plan. <span class="font-semibold text-teal-700">Upgrade to unlock them.</span></p>
+    </div>
+
+    <div class="divide-y divide-slate-100">
+      <% @feature_groups.each do |group| %>
+        <% next if group.features.empty? %>
+        <div class="px-6 py-5 sm:px-8">
+          <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500"><%= group.name %></h3>
+          <ul class="mt-3 grid gap-2 sm:grid-cols-2">
+            <% group.features.each do |feature| %>
+              <% included = @enabled_slugs.include?(feature.slug) %>
+              <% addon = @addon_slugs.include?(feature.slug) %>
+              <li class="flex items-center gap-2.5 <%= included ? '' : 'opacity-60' %>">
+                <% if included %>
+                  <svg class="size-4 shrink-0 text-teal-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span class="text-sm font-medium text-slate-800"><%= feature.name %></span>
+                <% elsif addon %>
+                  <svg class="size-4 shrink-0 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span class="text-sm font-medium text-slate-700"><%= feature.name %></span>
+                  <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600">Add-on</span>
+                <% else %>
+                  <svg class="size-4 shrink-0 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span class="text-sm font-medium text-slate-500"><%= feature.name %></span>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Upgrade CTA -->
+  <% if @included_count < @total_count %>
+    <div class="rounded-2xl border border-teal-200 bg-teal-50 px-6 py-6 sm:px-8">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 class="text-lg font-bold text-slate-950">Unlock <%= @total_count - @included_count %> more features</h3>
+          <p class="mt-1 text-sm font-medium text-slate-600">Upgrade your plan to get full access to the WAStays platform.</p>
+        </div>
+        <a href="https://wa.me/<%= current_hotel.whatsapp_number.to_s.gsub(/\D/, '').presence || '' %>?text=I%20want%20to%20upgrade%20my%20WAStays%20plan"
+           class="inline-flex items-center justify-center rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800">
+          Contact us to upgrade
+        </a>
+      </div>
+    </div>
+  <% end %>
+</div>

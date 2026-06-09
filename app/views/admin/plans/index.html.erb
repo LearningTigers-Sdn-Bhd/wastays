@@ -1,14 +1,14 @@
 <% wired_slugs = %w[daily_occupancy_revenue arrivals_departures_list outstanding_balance_noshow housekeeper_productivity booking_source_analysis revenue_allocation_per_night task_assignment_minibar_log room_status_board unified_guest_profile role_based_access_control full_audit_trail no_show_auto_handling excel_pdf_export automated_prearrival checkin_confirmation welcoming_instay_messaging checkout_receipt_review manage_40_otas auto_sync_availability].to_set %>
 <% coming_soon_slugs = %w[backdated_checkin_rate internal_staff_alerts preference_tagging complaint_history vip_blacklist_flag whatsapp_linked_to_profile maintenance_request_tracking priority_room_flagging multi_property_view shift_handover_log min_max_stay_rules last_minute_rate_automation rate_override_reason_code instant_rate_sync live_chat e_invoice accounting_integration per_pax_booking].to_set %>
 <% content_for :breadcrumbs do %>
-  <%= render "shared/navigation/admin_breadcrumbs", current: "Plans" %>
+  <%= render "shared/navigation/admin_breadcrumbs", current: "Plan Access" %>
 <% end %>
 
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
   <div class="px-4 md:px-0">
     <div class="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Subscription Plans</h1>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Plan Access</h1>
         <p class="mt-1 text-sm font-medium text-slate-600">Manage feature access across plan tiers. Changes apply immediately to all hotels on that plan.</p>
       </div>
     </div>

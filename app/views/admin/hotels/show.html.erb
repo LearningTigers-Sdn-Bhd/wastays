@@ -34,7 +34,7 @@
         </div>
 
         <div class="px-6 py-6 sm:px-8">
-          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-4">
               <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Address</p>
               <p class="mt-2 text-sm font-medium text-slate-900"><%= @hotel.address.presence || 'N/A' %></p>
@@ -46,6 +46,19 @@
             <div class="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-4">
               <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-blue-700">Configured Margin Rate</p>
               <p class="mt-2 text-2xl font-bold tracking-tight text-slate-950"><%= number_with_precision(@configured_margin_rate, precision: 2) %>%</p>
+            </div>
+            <div class="rounded-xl border border-teal-100 bg-teal-50/60 px-4 py-4">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-teal-700">Subscription Plan</p>
+              <% if @hotel.plan %>
+                <p class="mt-2 text-sm font-bold text-slate-900">
+                  <%= @hotel.plan.name %>
+                  <% if @hotel.plan.most_popular %>
+                    <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Most Popular</span>
+                  <% end %>
+                </p>
+              <% else %>
+                <p class="mt-2 text-sm font-medium text-slate-400">No plan assigned</p>
+              <% end %>
             </div>
           </div>
         </div>
