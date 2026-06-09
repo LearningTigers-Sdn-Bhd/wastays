@@ -1,6 +1,24 @@
 # AI Concierge Changelog
 
-## V5.2 — Room Rate Intent Routing (Current)
+## V5.3 — Booking Date Range Resolver (Current)
+
+### Changes
+- Rephrased the standard booking timing prompt to `Sure, which date or month do you plan to arrive for check-in?`.
+- Added deterministic booking date-range parsing for same-month, cross-month, and cross-year guest replies such as `16-18 June`, `16 18 June`, `16 June - 18`, `31 May - 2 June`, `May 31 - June 2`, and `31 Dec - 2 Jan`.
+- Derived `check_in`, `check_out`, `nights`, and `days` from explicit date ranges so `16-18 June` becomes a 2-night stay.
+- Added month clarification for monthless ranges such as `16-18` and `16 18`: `You said 16-18, but which month?`.
+- Resolved month follow-ups for pending ranges, including `this month`, `next month`, `{n} months from now`, and month names, with month names resolving to the next occurrence around year boundaries.
+- Hardened date-range parsing so unrelated two-number slot answers, such as party-split replies, do not hijack booking state.
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge/message_builders/booking_actions_builder_spec.rb spec/services/ai_concierge/orchestration/booking/input_normalizer_spec.rb spec/services/ai_concierge/orchestration/booking/action_resolver_spec.rb spec/services/ai_concierge/orchestration/turn_orchestrator_spec.rb`
+- 69 examples, 0 failures
+- `bundle exec rubocop --cache false app/services/ai_concierge/message_builders/booking_actions_builder.rb app/services/ai_concierge/orchestration/booking/input_normalizer.rb app/services/ai_concierge/orchestration/booking/action_resolver.rb app/services/ai_concierge/orchestration/booking/orchestrator.rb spec/services/ai_concierge/message_builders/booking_actions_builder_spec.rb spec/services/ai_concierge/orchestration/booking/input_normalizer_spec.rb spec/services/ai_concierge/orchestration/booking/action_resolver_spec.rb spec/services/ai_concierge/orchestration/turn_orchestrator_spec.rb`
+- no offenses
+
+---
+
+## V5.2 — Room Rate Intent Routing
 
 ### Changes
 - Force-routed room rate/price/cost questions such as `what is room rate?`, `what is room price?`, and `how much is the room?` to the booking flow when no active booking branch exists.

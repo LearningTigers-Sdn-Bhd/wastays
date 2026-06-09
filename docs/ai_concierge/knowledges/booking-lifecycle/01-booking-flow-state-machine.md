@@ -17,27 +17,30 @@ High-level transition order:
 
 ## Booking Sub-step Rules (inside `Booking::Orchestrator` and booking handlers)
 
-1. no date window or concrete dates -> ask for booking timing
+1. no date window or concrete dates -> ask for booking timing: `Sure, which date or month do you plan to arrive for check-in?`
    - room rate/price questions with no active booking branch use a rate-specific timing prompt: `Dear guest, room rates depend on the booking dates and room types. Which date or month do you plan to arrive for check-in?`
 2. vague month without specific date or segment -> ask for specific timing (early/mid/late)
-3. booking timing exists but duration missing -> ask duration
-4. children exist without adults -> ask adult count
-5. guest count missing -> ask guest count
-6. `party_size_total` exists but adult/children split missing -> ask clarification (smart split with remainder suggestion)
-7. valid option selection with multiple rate plans -> ask which rate plan
-8. valid option selection with single/no rate plan -> auto-select, set `confirmation_candidate`, ask for confirmation
-9. valid deterministic rate plan selection -> set `selected_rate_plan_id/name`, set `confirmation_candidate`, ask for confirmation
-10. confirmation `yes` -> generate booking link and end the current conversation when URL generation succeeds
-11. confirmation `no` -> clear candidate and return to option selection
-12. failed booking URL generation -> return safe fallback and leave booking uncompleted
-13. hotel-policy or information question during booking -> librarian answer with booking task suspended
-14. return with option selection -> resume suspended branch if still valid
-15. `another booking` -> archive completed branch and start fresh branch
-16. change of month/window or party composition -> clear stale suggestions, pending selection, and confirmation state, then rerun search
-17. generic booking request after stale no-options state -> reset stale branch and ask for fresh dates/month
-18. bare `this month` without date or early/mid/late -> ask for exact check-in date or assumption range
-19. booking-ready `change rate` / `show rates again` -> preserve selected room/date option, clear selected rate-plan state and confirmation candidate, then ask rate-plan selection when multiple rates exist
-20. booking-ready `change room` / `different option` -> preserve timing, duration, guest composition, room count, and suggested options; clear selected option/rate/candidate; ask option selection or resolve the newly named option in the same turn
+3. explicit date ranges with a month -> derive `check_in`, `check_out`, `nights`, and `days`
+4. monthless date ranges such as `16-18` -> ask which month and keep the pending range
+5. pending date-range month replies such as `this month`, `next month`, `3 months from now`, or `June` -> resolve the stored range and continue slot collection
+6. booking timing exists but duration missing -> ask duration
+7. children exist without adults -> ask adult count
+8. guest count missing -> ask guest count
+9. `party_size_total` exists but adult/children split missing -> ask clarification (smart split with remainder suggestion)
+10. valid option selection with multiple rate plans -> ask which rate plan
+11. valid option selection with single/no rate plan -> auto-select, set `confirmation_candidate`, ask for confirmation
+12. valid deterministic rate plan selection -> set `selected_rate_plan_id/name`, set `confirmation_candidate`, ask for confirmation
+13. confirmation `yes` -> generate booking link and end the current conversation when URL generation succeeds
+14. confirmation `no` -> clear candidate and return to option selection
+15. failed booking URL generation -> return safe fallback and leave booking uncompleted
+16. hotel-policy or information question during booking -> librarian answer with booking task suspended
+17. return with option selection -> resume suspended branch if still valid
+18. `another booking` -> archive completed branch and start fresh branch
+19. change of month/window or party composition -> clear stale suggestions, pending selection, and confirmation state, then rerun search
+20. generic booking request after stale no-options state -> reset stale branch and ask for fresh dates/month
+21. bare `this month` without date or early/mid/late -> ask for exact check-in date or assumption range
+22. booking-ready `change rate` / `show rates again` -> preserve selected room/date option, clear selected rate-plan state and confirmation candidate, then ask rate-plan selection when multiple rates exist
+23. booking-ready `change room` / `different option` -> preserve timing, duration, guest composition, room count, and suggested options; clear selected option/rate/candidate; ask option selection or resolve the newly named option in the same turn
 
 ## Booking-Ready Revision Rules
 
@@ -64,6 +67,7 @@ A booking branch is booking-ready for scoped revision when it already has timing
 - timing or party changes clear selected rate-plan fields along with suggestions, pending selections, confirmation candidates, and selected options
 - natural active-booking cancellation phrases such as `forget the room`, `changed my mind`, and `drop the reservation` cancel only the booking attempt
 - booking-ready revision phrases such as `change rate` and `change room` revise only the relevant downstream booking state and do not cancel the booking attempt
+- date-range parsing is deterministic and scoped to timing collection so unrelated two-number replies during party/guest clarification are not treated as dates
 
 ## Booking Task Statuses
 

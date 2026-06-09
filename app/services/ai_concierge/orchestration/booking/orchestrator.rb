@@ -47,6 +47,14 @@ module AiConcierge
         booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: booking_timing_reply_type, pending_question: "booking_timing")
       when :ask_specific_timing
         booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_specific_timing, pending_question: "specific_timing", extra_context: { month_label: month_label(active_branch) })
+      when :ask_date_range_month
+        booking_response(
+          conversation_state: conversation_state,
+          active_branch: active_branch,
+          reply_type: :ask_date_range_month,
+          pending_question: "date_range_month",
+          extra_context: { date_range_label: date_range_label(active_branch) }
+        )
       when :ask_duration
         booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_duration, pending_question: "duration")
       when :ask_adult_count
@@ -322,6 +330,15 @@ module AiConcierge
       parts << "#{adults} adult#{'s' unless adults == 1}" if adults.positive?
       parts << "#{children} child#{'ren' unless children == 1}" if children.positive?
       parts.join(" and ").presence
+    end
+
+    def date_range_label(branch)
+      clarification = branch["clarification_needed"]
+      return unless clarification.is_a?(Hash)
+
+      start_day = clarification["start_day"]
+      end_day = clarification["end_day"]
+      [ start_day, end_day ].all?(&:present?) ? "#{start_day}-#{end_day}" : nil
     end
 
     def search_params_for(branch, options: branch["suggested_options"])

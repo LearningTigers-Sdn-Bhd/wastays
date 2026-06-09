@@ -49,7 +49,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     result = described_class.new(hotel: hotel, message: "hello, is there any booking for 2 adults", phone: "+60123456789").call
 
     expect(result).to be_success
-    expect(result.payload[:reply_message]).to include("what dates or month")
+    expect(result.payload[:reply_message]).to include("which date or month")
     expect(result.payload[:reply_message]).not_to include("May")
   end
 
@@ -64,7 +64,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
 
     expect(result.payload[:reply_message]).to include("Here is our hotel policy")
     expect(result.payload[:reply_message]).to include("3:00 PM")
-    expect(result.payload[:reply_message]).not_to include("what dates or month")
+    expect(result.payload[:reply_message]).not_to include("which date or month")
     expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_policy")
   end
 
@@ -79,7 +79,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
     expect(result.payload[:reply_message]).to include("Quiet hours start at 10 PM")
-    expect(result.payload[:reply_message]).not_to include("what dates or month")
+    expect(result.payload[:reply_message]).not_to include("which date or month")
     expect(result.payload[:action_name]).to be_nil
     expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_policy")
     expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
@@ -99,7 +99,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
     expect(result.payload[:reply_message]).to include("Airport transportation is available by request")
-    expect(result.payload[:reply_message]).not_to include("what dates or month")
+    expect(result.payload[:reply_message]).not_to include("which date or month")
     expect(result.payload[:action_name]).to be_nil
     expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_information")
     expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
@@ -120,7 +120,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
     expect(result.payload[:reply_message]).to include("Parking is complimentary for hotel guests")
-    expect(result.payload[:reply_message]).not_to include("what dates or month")
+    expect(result.payload[:reply_message]).not_to include("which date or month")
     expect(result.payload[:action_name]).to be_nil
     expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_information")
     expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
@@ -151,6 +151,58 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     expect(result.payload[:action_name]).to eq("request_quote")
     expect(state.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
     expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("booking_timing")
+  end
+
+  it "derives duration from a complete date range answer" do
+    travel_to Date.new(2026, 6, 3) do
+      allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return(
+        interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+      )
+
+      first_reply = described_class.new(hotel: hotel, message: "i want to make booking", phone: "+60123456789").call
+      range_reply = described_class.new(hotel: hotel, message: "16-18 June", phone: "+60123456789").call
+      state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+      expect(first_reply.payload[:reply_message]).to include("which date or month")
+      expect(range_reply.payload[:reply_message]).to include("How many guests")
+      expect(state.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-16")
+      expect(state.slots_payload.dig("booking_task", "branch", "check_out")).to eq("2026-06-18")
+      expect(state.slots_payload.dig("booking_task", "branch", "nights")).to eq(2)
+      expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("guest_count")
+    end
+  end
+
+  it "asks which month for a monthless date range answer" do
+    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+    )
+
+    described_class.new(hotel: hotel, message: "i want to make booking", phone: "+60123456789").call
+    range_reply = described_class.new(hotel: hotel, message: "16-18", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(range_reply.payload[:reply_message]).to eq("You said 16-18, but which month?")
+    expect(state.slots_payload.dig("booking_task", "branch", "clarification_needed", "type")).to eq("date_range_month")
+    expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("date_range_month")
+  end
+
+  it "resolves a pending monthless date range with a follow-up month" do
+    travel_to Date.new(2026, 6, 3) do
+      allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return(
+        interpretation(intent: "booking_search", topic: "booking_search", slots: {})
+      )
+
+      described_class.new(hotel: hotel, message: "i want to make booking", phone: "+60123456789").call
+      described_class.new(hotel: hotel, message: "16-18", phone: "+60123456789").call
+      follow_up = described_class.new(hotel: hotel, message: "next month", phone: "+60123456789").call
+      state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+      expect(follow_up.payload[:reply_message]).to include("How many guests")
+      expect(state.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-07-16")
+      expect(state.slots_payload.dig("booking_task", "branch", "check_out")).to eq("2026-07-18")
+      expect(state.slots_payload.dig("booking_task", "branch", "nights")).to eq(2)
+      expect(state.slots_payload.dig("booking_task", "branch", "clarification_needed")).to eq("")
+    end
   end
 
   it "uses this-month timing instead of stale no-options month context" do
@@ -297,7 +349,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
 
     # If party_size_total was 1, it would ask for adult/child split or timing.
     # If party_size_total is nil, it will ask for timing.
-    expect(result.payload[:reply_message]).to include("what dates or month")
+    expect(result.payload[:reply_message]).to include("which date or month")
 
     # Let's verify that it doesn't ask "For 1 people" in the next turn if we give it a month window.
     allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return(
@@ -358,7 +410,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     reactivation_reply = described_class.new(hotel: hotel, message: "hello, can i make booking", phone: "+60123456789").call
 
     # It should ask for timing because the previous branch (with July) was archived
-    expect(reactivation_reply.payload[:reply_message]).to include("what dates or month")
+    expect(reactivation_reply.payload[:reply_message]).to include("which date or month")
   end
 
   it "cancels the booking attempt and asks for the next step" do
@@ -386,7 +438,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     )
     fresh_reply = described_class.new(hotel: hotel, message: "i want to make booking", phone: "+60123456789").call
 
-    expect(fresh_reply.payload[:reply_message]).to include("what dates or month")
+    expect(fresh_reply.payload[:reply_message]).to include("which date or month")
     expect(fresh_reply.payload[:reply_message]).not_to include("couldn't find any rooms")
   end
 
@@ -510,7 +562,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     result = described_class.new(hotel: hotel, message: "i want to make booking", prospect_public_id: prospect.public_id).call
     state = prospect.prospect_conversation_state.reload
 
-    expect(result.payload[:reply_message]).to include("what dates or month")
+    expect(result.payload[:reply_message]).to include("which date or month")
     expect(result.payload[:reply_message]).not_to include("early June 2026")
     expect(state.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
     expect(state.slots_payload.dig("booking_task", "branch", "target_month")).to be_nil
