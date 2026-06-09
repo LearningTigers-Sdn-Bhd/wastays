@@ -30,6 +30,10 @@ module AiConcierge
       attr_reader :hotel, :message, :phone, :prospect_public_id, :tool_registry
 
       def process_session(session)
+        if control_handler.wait_time_end?(session.conversation_state)
+          return control_handler.wait_time_end_response(prospect: session.prospect, conversation_state: session.conversation_state)
+        end
+
         if session_loader.max_turns_exceeded?(session.conversation_state)
           return control_handler.max_turns_response(prospect: session.prospect, conversation_state: session.conversation_state)
         end

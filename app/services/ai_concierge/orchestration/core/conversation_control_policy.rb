@@ -16,6 +16,14 @@ module AiConcierge
         normalized_message.match?(/\A(?:leave it|changed my mind|i changed my mind|not that booking|not that reservation|drop it)\z/)
       end
 
+      def wait_time_end?
+        normalized_message == "codename wait time end"
+      end
+
+      def booking_progress?
+        active_booking_attempt?
+      end
+
       def explicit_end?
         normalized_message.match?(/\A(?:stop|bye|bye bye|good bye|goodbye|thanks|thank you|that's all|thats all|end chat|end conversation|nevermind|never mind|forget|forget it|no thanks|not now|cancel attempt|cancel booking attempt|cancel quotation attempt)\z/)
       end

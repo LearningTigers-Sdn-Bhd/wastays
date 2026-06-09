@@ -5,6 +5,8 @@ module AiConcierge
         greeting
         reset
         ask_booking_timing
+        ask_room_rate_timing
+        ask_date_range_month
         ask_duration
         ask_guest_count
         ask_adult_count
@@ -33,7 +35,11 @@ module AiConcierge
         when :reset
           "Sure, let's start over. What dates or month would you like to book?"
         when :ask_booking_timing
-          "Sure, what dates or month would you like to check in?"
+          "Sure, which date or month do you plan to arrive for check-in?"
+        when :ask_room_rate_timing
+          "Dear guest, room rates depend on the booking dates and room types. Which date or month do you plan to arrive for check-in?"
+        when :ask_date_range_month
+          "You said #{context[:date_range_label]}, but which month?"
         when :ask_specific_timing
           ask_specific_timing_message
         when :ask_duration

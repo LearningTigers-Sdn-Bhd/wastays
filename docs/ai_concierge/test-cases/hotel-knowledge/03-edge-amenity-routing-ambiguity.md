@@ -12,6 +12,8 @@
 8. `is parking available there?` -> hotel information, not booking flow
 9. `do you have rooms available in july?` -> booking flow, not hotel information
 10. `can i book parking view room on june 23?` -> booking flow, not hotel information
+11. `what is room rate?` / `what is room price?` / `how much is the room?` -> booking flow, not hotel information
+12. `how much is room service?` -> hotel information, not booking flow
 
 ## Contrast Examples
 
@@ -26,6 +28,10 @@
 | `is parking available there?` | hotel information |
 | `do you have rooms available in july?` | booking flow |
 | `can i book parking view room on june 23?` | booking flow |
+| `what is room rate?` | booking flow |
+| `what is room price?` | booking flow |
+| `how much is the room?` | booking flow |
+| `how much is room service?` | hotel information |
 | `what attractions are nearby` | nearby attractions |
 | `what time is check in` | hotel policy |
 

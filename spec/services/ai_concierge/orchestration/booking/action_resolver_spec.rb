@@ -21,6 +21,26 @@ RSpec.describe AiConcierge::Orchestration::Booking::ActionResolver do
     expect(action).to eq(:rate_plan_selection)
   end
 
+  it "asks for month clarification while a date range month is pending" do
+    action = described_class.new(
+      interpretation: interpretation(intent: "booking_search", slots: {}),
+      active_branch: { "clarification_needed" => { "type" => "date_range_month", "start_day" => 16, "end_day" => 18 } },
+      pending_question: "booking_timing"
+    ).call
+
+    expect(action).to eq(:ask_date_range_month)
+  end
+
+  it "does not let stale date range clarification override completed timing" do
+    action = described_class.new(
+      interpretation: interpretation(intent: "booking_search", slots: {}),
+      active_branch: branch_with_required_booking_slots.merge("clarification_needed" => { "type" => "date_range_month", "start_day" => 16, "end_day" => 18 }),
+      pending_question: "booking_timing"
+    ).call
+
+    expect(action).to eq(:search_options)
+  end
+
   it "routes confirmation yes and no from confirm selection" do
     yes_action = described_class.new(
       interpretation: interpretation(intent: "confirmation", slots: { "confirmation" => "yes" }),
