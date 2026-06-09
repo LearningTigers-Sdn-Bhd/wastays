@@ -25,14 +25,15 @@ Identity rules:
 Thin coordinator for a single concierge turn:
 
 1. ask `Conversation::SessionLoader` to resolve/create the prospect, lock the turn, load/reactivate state, and record inbound message
-2. return `Conversation::ControlHandler` max-turn response when the conversation exceeds the turn limit
-3. ask `Conversation::InterpretationPipeline` to call the interpreter and validate the structured result
-4. return `Conversation::ControlHandler` result when cancellation/end controls apply
-5. ask `Conversation::InterpretationPipeline` to guard, merge, and decide the legal route
-6. delegate booking actions to `Booking::Orchestrator`
-7. delegate information actions to `HotelKnowledge::Orchestrator`
-8. delegate existing-booking context to `Conversation::BookingContextHandler`
-9. ask `Conversation::ResponsePersister` to render, persist, record outbound, and return the public payload
+2. return `Conversation::ControlHandler` wait-time end response when the message is the n8n control sentinel `codename: wait-time-end`
+3. return `Conversation::ControlHandler` max-turn response when the conversation exceeds the turn limit
+4. ask `Conversation::InterpretationPipeline` to call the interpreter and validate the structured result
+5. return `Conversation::ControlHandler` result when cancellation/end controls apply
+6. ask `Conversation::InterpretationPipeline` to guard, merge, and decide the legal route
+7. delegate booking actions to `Booking::Orchestrator`
+8. delegate information actions to `HotelKnowledge::Orchestrator`
+9. delegate existing-booking context to `Conversation::BookingContextHandler`
+10. ask `Conversation::ResponsePersister` to render, persist, record outbound, and return the public payload
 
 ## `Booking::Orchestrator`
 
@@ -55,6 +56,7 @@ Coordinates booking sub-step execution after high-level transition is `:booking`
 ## Policy and Matcher Objects
 
 `Core::ConversationControlPolicy` owns deterministic conversation-control checks:
+- n8n wait-time end control message: `codename: wait-time-end`
 - explicit booking-attempt cancellation
 - explicit end requests
 - end-confirmation yes/no interpretation
@@ -130,3 +132,21 @@ They:
 4. ask whether the guest wants to start a new booking, ask hotel policies/information, or end the conversation
 
 A follow-up generic booking request such as `I want to make booking` starts fresh and asks for dates or month.
+
+## n8n Wait-Time End Control
+
+The exact control message `codename: wait-time-end` is reserved for n8n timeout handling.
+
+This control path:
+
+1. runs before max-turn handling and before LLM interpretation
+2. force-ends the conversation without confirmation, even during active booking flows
+3. resets incomplete `booking_task` state instead of archiving it as completed
+4. clears `active_flow`, `active_topic`, and `pending_question`
+5. persists `flow_status: "ended"`
+6. persists conversation `end_reason: "wait_time_end"`
+
+Guest-facing replies:
+
+- no booking progress: `Thank you for reaching out. Please come back again.`
+- booking progress exists: `It seems you are no longer making a booking quotation. Thank you for reaching out. Please come back again.`

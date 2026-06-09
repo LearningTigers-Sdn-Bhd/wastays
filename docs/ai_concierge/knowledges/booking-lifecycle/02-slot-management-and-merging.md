@@ -56,6 +56,10 @@ Clear:
 - guard `party_size_total`, `adults`, and `children` against LLM over-inference
 - resolve explicit `late this month` / `early this month` / `mid this month` against the current month
 - clear stale `month_segment` for bare `this month` so the flow asks for exact date or assumption range
+- resolve explicit date ranges such as `16-18 June`, `16 18 June`, `16 June - 18`, `31 May - 2 June`, and `May 31 - June 2` into `check_in`, `check_out`, `nights`, and `days`
+- preserve monthless ranges such as `16-18` as `clarification_needed={ type: "date_range_month", start_day, end_day }` and ask which month
+- resolve pending range month replies including `this month`, `next month`, `{n} months from now`, and month names; month-only answers use the next occurrence when the named month has already passed in the current year
+- ignore monthless two-number range parsing outside timing prompts so guest-count and party-split answers do not become date clarifications
 
 ## `pending_selection` Shape
 
@@ -111,6 +115,7 @@ Booking-ready revision handling lives in `Booking::RevisionPolicy`, before norma
 | `party_size_total` | Total guests |
 | `adults` | Number of adults |
 | `children` | Number of children |
+| `clarification_needed` | Pending clarification metadata, including `date_range_month` with `start_day` and `end_day` |
 | `suggested_options` | Array of option groups from `search_booking_options` |
 | `suggestion_set_version` | Incremented on each new search |
 | `pending_selection` | Disambiguation context for option/date follow-ups |

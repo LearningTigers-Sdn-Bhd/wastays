@@ -18,6 +18,7 @@ module AiConcierge
           return :confirmation_yes if confirmation_yes?
           return :confirmation_no if confirmation_no?
           return :option_selection if interpretation["intent"] == "option_selection"
+          return :ask_date_range_month if pending_date_range_month?
           return :ask_booking_timing if missing_timing?
           return :ask_specific_timing if missing_specific_timing?
           return :ask_duration if missing_duration?
@@ -46,6 +47,14 @@ module AiConcierge
 
         def missing_timing?
           active_branch["check_in"].blank? && active_branch["target_month"].blank?
+        end
+
+        def pending_date_range_month?
+          clarification = active_branch["clarification_needed"]
+          clarification.is_a?(Hash) &&
+            clarification["type"] == "date_range_month" &&
+            active_branch["check_in"].blank? &&
+            active_branch["target_month"].blank?
         end
 
         def missing_specific_timing?

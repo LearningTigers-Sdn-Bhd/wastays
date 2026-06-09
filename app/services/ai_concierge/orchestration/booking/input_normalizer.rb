@@ -13,6 +13,8 @@ module AiConcierge
     def call
       return slots if conversation_signals["is_correction"]
 
+      apply_date_range_answer!
+
       timing_keys = %w[target_month target_year month_segment check_in check_out]
       duration_keys = %w[days nights]
 
@@ -28,6 +30,8 @@ module AiConcierge
       when "specific_timing"
         # Keep timing slots when clarifying specific timing.
         apply_specific_timing_answer!
+      when "date_range_month"
+        apply_pending_date_range_month_answer!
       end
 
       strip_hallucinated_specific_dates!
@@ -38,6 +42,161 @@ module AiConcierge
     private
 
     attr_reader :message, :slots, :pending_question, :conversation_signals, :active_branch
+
+    def apply_date_range_answer!
+      range = parse_complete_date_range
+      if range
+        apply_date_range_slots!(range)
+        return
+      end
+
+      partial = parse_partial_day_range
+      return unless partial
+      return unless date_range_clarification_allowed?
+
+      slots.delete("check_in")
+      slots.delete("check_out")
+      slots.delete("target_month")
+      slots.delete("target_year")
+      slots.delete("month_segment")
+      slots.delete("days")
+      slots.delete("nights")
+      slots["clarification_needed"] = {
+        "type" => "date_range_month",
+        "start_day" => partial[:start_day],
+        "end_day" => partial[:end_day]
+      }
+    end
+
+    def apply_pending_date_range_month_answer!
+      return if slots["check_in"].present? && slots["check_out"].present?
+
+      clarification = active_branch["clarification_needed"]
+      return unless clarification.is_a?(Hash) && clarification["type"] == "date_range_month"
+
+      month_year = month_year_from_message(message.downcase)
+      return unless month_year
+
+      range = build_date_range(
+        start_day: clarification["start_day"].to_i,
+        start_month: month_year[:month],
+        start_year: month_year[:year],
+        end_day: clarification["end_day"].to_i,
+        end_month: month_year[:month],
+        end_year: month_year[:year]
+      )
+      return unless range
+
+      apply_date_range_slots!(range)
+    end
+
+    def parse_complete_date_range
+      normalized = normalized_message
+
+      range = parse_day_month_to_day_month_range(normalized)
+      return range if range
+
+      range = parse_month_day_to_month_day_range(normalized)
+      return range if range
+
+      range = parse_month_day_to_day_range(normalized)
+      return range if range
+
+      range = parse_day_month_to_day_range(normalized)
+      return range if range
+
+      parse_same_month_day_range(normalized)
+    end
+
+    def parse_same_month_day_range(normalized)
+      match = normalized.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s*(?:-|\s+)\s*(\d{1,2})(?:st|nd|rd|th)?\s+(#{month_pattern})\b/)
+      return unless match
+
+      month = month_number(match[3])
+      year = year_from_message(normalized) || Date.current.year
+      build_date_range(start_day: match[1].to_i, start_month: month, start_year: year, end_day: match[2].to_i, end_month: month, end_year: year)
+    end
+
+    def parse_day_month_to_day_month_range(normalized)
+      match = normalized.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(#{month_pattern})\s*(?:-|to|until|till)?\s+(\d{1,2})(?:st|nd|rd|th)?\s+(#{month_pattern})(?:\s+(20\d{2}))?\b/)
+      return unless match
+
+      start_month = month_number(match[2])
+      end_month = month_number(match[4])
+      years = date_range_years(start_month: start_month, end_month: end_month, explicit_end_year: match[5], normalized: normalized)
+      build_date_range(start_day: match[1].to_i, start_month: start_month, start_year: years[:start_year], end_day: match[3].to_i, end_month: end_month, end_year: years[:end_year])
+    end
+
+    def parse_month_day_to_month_day_range(normalized)
+      match = normalized.match(/\b(#{month_pattern})\s+(\d{1,2})(?:st|nd|rd|th)?\s*(?:-|to|until|till)?\s+(#{month_pattern})\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s+(20\d{2}))?\b/)
+      return unless match
+
+      start_month = month_number(match[1])
+      end_month = month_number(match[3])
+      years = date_range_years(start_month: start_month, end_month: end_month, explicit_end_year: match[5], normalized: normalized)
+      build_date_range(start_day: match[2].to_i, start_month: start_month, start_year: years[:start_year], end_day: match[4].to_i, end_month: end_month, end_year: years[:end_year])
+    end
+
+    def parse_month_day_to_day_range(normalized)
+      match = normalized.match(/\b(#{month_pattern})\s+(\d{1,2})(?:st|nd|rd|th)?\s*(?:-|to|until|till|\s+)\s*(\d{1,2})(?:st|nd|rd|th)?(?:\s+(20\d{2}))?\b/)
+      return unless match
+
+      month = month_number(match[1])
+      year = (match[4] || year_from_message(normalized) || Date.current.year).to_i
+      build_date_range(start_day: match[2].to_i, start_month: month, start_year: year, end_day: match[3].to_i, end_month: month, end_year: year)
+    end
+
+    def parse_day_month_to_day_range(normalized)
+      match = normalized.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(#{month_pattern})\s*(?:-|to|until|till)\s*(\d{1,2})(?:st|nd|rd|th)?(?:\s+(20\d{2}))?\b/)
+      return unless match
+
+      month = month_number(match[2])
+      year = (match[4] || year_from_message(normalized) || Date.current.year).to_i
+      build_date_range(start_day: match[1].to_i, start_month: month, start_year: year, end_day: match[3].to_i, end_month: month, end_year: year)
+    end
+
+    def parse_partial_day_range
+      return if normalized_message.match?(/\b#{month_pattern}\b/)
+
+      match = normalized_message.match(/\A\s*(\d{1,2})(?:st|nd|rd|th)?\s*(?:-|\s+)\s*(\d{1,2})(?:st|nd|rd|th)?\s*\z/)
+      return unless match
+
+      { start_day: match[1].to_i, end_day: match[2].to_i }
+    end
+
+    def apply_date_range_slots!(range)
+      slots["target_month"] = range[:check_in].month
+      slots["target_year"] = range[:check_in].year
+      slots["check_in"] = range[:check_in].iso8601
+      slots["check_out"] = range[:check_out].iso8601
+      slots["nights"] = (range[:check_out] - range[:check_in]).to_i
+      slots["days"] = slots["nights"] + 1
+      slots.delete("month_segment")
+      slots.delete("confirmation")
+      slots["clarification_needed"] = ""
+    end
+
+    def build_date_range(start_day:, start_month:, start_year:, end_day:, end_month:, end_year:)
+      check_in = Date.new(start_year.to_i, start_month.to_i, start_day.to_i)
+      check_out = Date.new(end_year.to_i, end_month.to_i, end_day.to_i)
+      check_out = check_out.next_year if check_out <= check_in && end_month.to_i < start_month.to_i
+      return if check_out <= check_in
+
+      { check_in: check_in, check_out: check_out }
+    rescue Date::Error
+      nil
+    end
+
+    def date_range_years(start_month:, end_month:, explicit_end_year:, normalized:)
+      year = (explicit_end_year || year_from_message(normalized) || Date.current.year).to_i
+      start_year = explicit_end_year.present? && end_month.to_i < start_month.to_i ? year - 1 : year
+
+      { start_year: start_year, end_year: year }
+    end
+
+    def date_range_clarification_allowed?
+      pending_question.blank? || %w[booking_timing specific_timing date_range_month].include?(pending_question.to_s)
+    end
 
     def apply_specific_timing_answer!
       parsed = parse_specific_date_answer
@@ -74,6 +233,24 @@ module AiConcierge
       slash_month&.to_i
     end
 
+    def month_year_from_message(normalized)
+      relative = relative_month_date
+      return { month: relative.month, year: relative.year } if relative
+
+      month = month_from_message(normalized)
+      return unless month
+
+      year = year_from_message(normalized)
+      year ||= month < Date.current.month ? Date.current.next_year.year : Date.current.year
+      { month: month, year: year }
+    end
+
+    def month_number(name)
+      MONTH_NAMES.each_with_index do |names, index|
+        return index + 1 if names.include?(name.downcase)
+      end
+    end
+
     def day_from_message(normalized)
       day = normalized[/\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/, 1] ||
             normalized[/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?\b/, 1] ||
@@ -89,6 +266,7 @@ module AiConcierge
 
     def strip_hallucinated_specific_dates!
       return unless slots["check_in"].present? && !message_contains_specific_date?
+      return if resolving_pending_date_range?
 
       begin
         parsed_date = Date.parse(slots["check_in"])
@@ -99,6 +277,11 @@ module AiConcierge
       end
       slots.delete("check_in")
       slots.delete("check_out")
+    end
+
+    def resolving_pending_date_range?
+      clarification = active_branch["clarification_needed"]
+      pending_question == "date_range_month" && clarification.is_a?(Hash) && clarification["type"] == "date_range_month"
     end
 
     def message_contains_specific_date?
@@ -119,6 +302,9 @@ module AiConcierge
 
       normalized.match?(/\b(?:early|mid|late)\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/) ||
         normalized.match?(/\b(?:this|next)\s+month\b/) ||
+        normalized.match?(/\b\d+\s+months?\s+from\s+now\b/) ||
+        parse_complete_date_range.present? ||
+        parse_partial_day_range.present? ||
         normalized.match?(/\bnext month\b/) ||
         normalized.match?(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?\b/) ||
         normalized.match?(/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/) ||
@@ -141,8 +327,17 @@ module AiConcierge
       normalized = message.downcase
       return Date.current if normalized.match?(/\bthis\s+month\b/)
       return Date.current.next_month if normalized.match?(/\bnext\s+month\b/)
+      return Date.current.advance(months: normalized[/\b(\d+)\s+months?\s+from\s+now\b/, 1].to_i) if normalized.match?(/\b\d+\s+months?\s+from\s+now\b/)
 
       nil
+    end
+
+    def normalized_message
+      message.downcase.gsub(/[–—]/, "-").squish
+    end
+
+    def month_pattern
+      @month_pattern ||= MONTH_NAMES.flatten.map { |name| Regexp.escape(name) }.join("|")
     end
 
     def explicit_duration_in_message?
@@ -150,6 +345,7 @@ module AiConcierge
 
       normalized.match?(/\b\d+\s*nights?\b/) ||
         normalized.match?(/\b\d+\s*days?\b/) ||
+        parse_complete_date_range.present? ||
         normalized.match?(/\bstay(?:ing)?\s+for\s+\d+\s*(?:days?|nights?)\b/) ||
         normalized.match?(/\bfor\s+\d+\s*(?:days?|nights?)\b/)
     end
@@ -161,6 +357,7 @@ module AiConcierge
         normalized.match?(/\bfrom\b.*\bto\b/) ||
         normalized.match?(/\buntil\b/) ||
         normalized.match?(/\btill\b/) ||
+        parse_complete_date_range.present? ||
         normalized.scan(/\b\d{4}-\d{2}-\d{2}\b/).size >= 2 ||
         normalized.scan(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?\b/).size >= 2 ||
         normalized.scan(/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/).size >= 2

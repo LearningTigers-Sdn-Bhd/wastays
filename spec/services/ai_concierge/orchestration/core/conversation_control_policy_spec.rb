@@ -36,12 +36,26 @@ RSpec.describe AiConcierge::Orchestration::Core::ConversationControlPolicy do
     expect(control).to be_cancel_attempt
   end
 
+  it "detects n8n wait-time end control messages" do
+    control = policy(message: "codename: wait-time-end", conversation_state: state)
+
+    expect(control).to be_wait_time_end
+  end
+
   it "only treats natural abandonment as cancellation during an active booking" do
     inactive = policy(message: "changed my mind", conversation_state: state)
     active = policy(message: "changed my mind", conversation_state: state(active_flow: "booking_search"))
 
     expect(inactive).not_to be_cancel_attempt
     expect(active).to be_cancel_attempt
+  end
+
+  it "detects booking progress from active booking state" do
+    inactive = policy(message: "codename: wait-time-end", conversation_state: state)
+    active = policy(message: "codename: wait-time-end", conversation_state: state(active_flow: "booking_search"))
+
+    expect(inactive).not_to be_booking_progress
+    expect(active).to be_booking_progress
   end
 
   it "detects positive end confirmation responses" do
