@@ -137,6 +137,22 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     expect(result.payload[:action_name]).to eq("request_quote")
   end
 
+  it "starts booking flow for room rate questions without an active booking branch" do
+    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return(
+      interpretation(message_type: "hotel_info_question", intent: "hotel_information", topic: "general_hotel_info", slots: {}, tool_hints: [ "get_general_hotel_info" ])
+    )
+
+    result = described_class.new(hotel: hotel, message: "what is room rate?", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result).to be_success
+    expect(result.payload[:reply_message]).to include("room rates depend on the booking dates and room types")
+    expect(result.payload[:reply_message]).to include("Which date or month do you plan to arrive for check-in?")
+    expect(result.payload[:action_name]).to eq("request_quote")
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
+    expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("booking_timing")
+  end
+
   it "uses this-month timing instead of stale no-options month context" do
     travel_to Date.new(2026, 6, 3) do
       prospect = create(:prospect, hotel: hotel)

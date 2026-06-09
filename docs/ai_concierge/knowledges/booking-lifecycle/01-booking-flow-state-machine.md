@@ -18,6 +18,7 @@ High-level transition order:
 ## Booking Sub-step Rules (inside `Booking::Orchestrator` and booking handlers)
 
 1. no date window or concrete dates -> ask for booking timing
+   - room rate/price questions with no active booking branch use a rate-specific timing prompt: `Dear guest, room rates depend on the booking dates and room types. Which date or month do you plan to arrive for check-in?`
 2. vague month without specific date or segment -> ask for specific timing (early/mid/late)
 3. booking timing exists but duration missing -> ask duration
 4. children exist without adults -> ask adult count
@@ -55,6 +56,8 @@ A booking branch is booking-ready for scoped revision when it already has timing
 
 - booking URL generation validates required option fields and dates before quote creation
 - failed booking URL generation returns a safe fallback and keeps the booking uncompleted
+- room rate/price/cost questions such as `what is room rate?`, `what is room price?`, and `how much is the room?` are force-routed to booking so rates are quoted only after date/month and room-type context is collected
+- service-price questions such as `how much is room service?` remain hotel-information questions, not booking starts
 - room-type matching supports reordered shorthand, common aliases, suffix/plural normalization, and small typos while preserving ambiguity prompts
 - rate-plan matching supports ordinals, price intent, `standard`, and refundable/non-refundable wording
 - ambiguous rate-plan matching re-asks instead of guessing

@@ -3,13 +3,14 @@
 ## Scenario: Full booking flow
 
 1. **vague booking + guest count only** -> ask booking timing
-2. **month window** -> ask duration
-3. **`2 people`** stays unresolved until adult/children split is given
-4. **grouped room-type options** are rendered with price
-5. **unique date reply** selects the shown option
-6. **`i chose option 1`** works when option number is unambiguous
-7. **confirmed option** returns booking URL with total and expiry
-8. **completed booking -> `another booking`** starts a fresh branch
+2. **room rate/price first** with no active booking branch -> ask booking timing with the room-rate-specific prompt
+3. **month window** -> ask duration
+4. **`2 people`** stays unresolved until adult/children split is given
+5. **grouped room-type options** are rendered with price
+6. **unique date reply** selects the shown option
+7. **`i chose option 1`** works when option number is unambiguous
+8. **confirmed option** returns booking URL with total and expiry
+9. **completed booking -> `another booking`** starts a fresh branch
 
 ## Scenario: Booking with interruption
 

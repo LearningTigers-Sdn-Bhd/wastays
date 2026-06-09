@@ -8,6 +8,8 @@ module AiConcierge
     end
 
     def call
+      normalized = normalize_text(message)
+      return booking_interpretation if room_rate_question?(normalized)
       return policy_interpretation if policy_question?
       return interpretation if clear_booking_request?
       return interpretation unless hotel_knowledge_question?
@@ -46,12 +48,36 @@ module AiConcierge
       end
     end
 
+    def booking_interpretation
+      interpretation.deep_dup.tap do |guarded|
+        guarded["intent"] = "booking_search"
+        guarded["topic"] = "booking_search"
+        guarded["slots"] ||= {}
+        guarded["tool_hints"] = [ "search_booking_options" ]
+      end
+    end
+
     def clear_booking_request?
       normalized = normalize_text(message)
       return true if normalized.match?(/\b(?:book|booking|reserve|reservation|quote)\b/)
+      return true if room_rate_question?(normalized)
       return true if normalized.match?(/\b(?:availability|available)\b/) && room_or_stay_reference?(normalized)
 
       room_or_stay_reference?(normalized) && timing_reference?(normalized)
+    end
+
+    def room_rate_question?(normalized)
+      return false if room_service_question?(normalized)
+
+      return true if normalized.match?(/\brooms?\s+(?:rates?|prices?|pricing|cost)\b/)
+      return true if normalized.match?(/\b(?:rates?|prices?|pricing|cost)\s+(?:for|of)\s+(?:a\s+)?rooms?\b/)
+      return true if normalized.match?(/\bhow much\b/) && room_or_stay_reference?(normalized)
+
+      normalized.match?(/\b(?:rates?|prices?|pricing|cost)\b/) && room_or_stay_reference?(normalized)
+    end
+
+    def room_service_question?(normalized)
+      normalized.match?(/\broom service\b/)
     end
 
     def hotel_knowledge_question?
@@ -71,10 +97,12 @@ module AiConcierge
     end
 
     def hotel_service_question?(normalized)
-      normalized.match?(/\b(?:parking|transport|transportation|airport transfer|transfer|shuttle|pickup|pick up|drop off|wifi|wi fi|breakfast|restaurant|spa|pool)\b/)
+      normalized.match?(/\b(?:parking|transport|transportation|airport transfer|transfer|shuttle|pickup|pick up|drop off|wifi|wi fi|breakfast|restaurant|spa|pool|room service)\b/)
     end
 
     def room_scoped_question?(normalized)
+      return false if room_service_question?(normalized)
+
       normalized.match?(/\b(room|suite|villa|penthouse|deluxe|executive|standard|superior|family)\b/)
     end
 

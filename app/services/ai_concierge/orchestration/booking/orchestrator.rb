@@ -44,7 +44,7 @@ module AiConcierge
     def process_booking_action(action, conversation_state: self.conversation_state, active_branch: self.active_branch)
       case action
       when :ask_booking_timing
-        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_booking_timing, pending_question: "booking_timing")
+        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: booking_timing_reply_type, pending_question: "booking_timing")
       when :ask_specific_timing
         booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_specific_timing, pending_question: "specific_timing", extra_context: { month_label: month_label(active_branch) })
       when :ask_duration
@@ -282,6 +282,21 @@ module AiConcierge
         reply_type: nil,
         extra_context: { message: MessageBuilders::FallbackBuilder::DEFAULT_MESSAGE }
       )
+    end
+
+    def booking_timing_reply_type
+      room_rate_question? ? :ask_room_rate_timing : :ask_booking_timing
+    end
+
+    def room_rate_question?
+      normalized = message.downcase.gsub(/[^a-z0-9]+/, " ").squish
+      return false if normalized.match?(/\broom service\b/)
+
+      return true if normalized.match?(/\brooms?\s+(?:rates?|prices?|pricing|cost)\b/)
+      return true if normalized.match?(/\b(?:rates?|prices?|pricing|cost)\s+(?:for|of)\s+(?:a\s+)?rooms?\b/)
+      return true if normalized.match?(/\bhow much\b/) && normalized.match?(/\b(?:rooms?|suite|villa|penthouse|stay|stays|night|nights)\b/)
+
+      normalized.match?(/\b(?:rates?|prices?|pricing|cost)\b/) && normalized.match?(/\b(?:rooms?|suite|villa|penthouse|stay|stays|night|nights)\b/)
     end
 
     def booking_payload(conversation_state, active_branch, pending_question:, status: nil)

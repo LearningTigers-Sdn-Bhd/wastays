@@ -9,7 +9,7 @@
   - parking stored under FAQ can still answer a general hotel information route
   - transportation stored under general info can still answer service questions
   - house rules stored under policy can still answer policy/rules questions
-- Clear booking language still stays booking, for example room availability, reserve/book/quote, and date/month booking requests
+- Clear booking language still stays booking, for example room availability, room rate/price questions, reserve/book/quote, and date/month booking requests
 
 ## V3.3 Hybrid Knowledge Search
 
@@ -26,6 +26,8 @@
 - Source titles/citations are not included in guest replies
 - `InformationIntentGuard` force-routes policy phrasing such as "booking policy", "hotel rules", "house rules", "cancellation", "check in", and "check out" to `hotel_policy`
 - `InformationIntentGuard` force-routes general hotel service questions such as parking, transportation, shuttle, WiFi, breakfast, restaurant, spa, pool, amenities, and facilities to `hotel_information` unless the message is clearly a booking request
+- `InformationIntentGuard` force-routes room rate/price/cost questions such as "what is room rate?", "what is room price?", and "how much is the room?" to `booking_search` so the booking flow can collect date/month and room-type context before quoting rates
+- Room-service cost questions remain `hotel_information` because they ask about a hotel service, not accommodation rates
 
 ## `get_hotel_policy`
 
