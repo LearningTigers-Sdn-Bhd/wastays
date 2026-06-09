@@ -2,6 +2,11 @@ class Admin::Hotels::ChannelManagersController < Admin::BaseController
   before_action :set_hotel
 
   def onboard_channex
+    unless @hotel.feature_enabled?("manage_40_otas")
+      redirect_to admin_hotel_path(@hotel), alert: "This hotel's plan does not include Channel Manager. Upgrade to Plus or Enterprise first."
+      return
+    end
+
     result = Admin::Hotels::OnboardChannexService.new(hotel: @hotel).call
 
     if result.success?

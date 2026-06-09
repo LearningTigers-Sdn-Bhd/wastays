@@ -124,13 +124,9 @@ plan_feature_defs = [
   # System & Access
   [ "system", "role_based_access_control", "Role-based access control", false, false,
     { "core"=>true,"plus"=>true,"enterprise"=>true } ],
-  [ "system", "mobile_friendly_management", "Mobile-friendly management view", false, false,
-    { "core"=>true,"plus"=>true,"enterprise"=>true } ],
   [ "system", "no_show_auto_handling", "No-show auto-handling", false, false,
     { "core"=>true,"plus"=>true,"enterprise"=>true } ],
   [ "system", "full_audit_trail", "Full audit trail", false, false,
-    { "enterprise"=>true } ],
-  [ "system", "offline_mode", "Offline mode / graceful degradation", false, false,
     { "enterprise"=>true } ],
   [ "system", "multi_property_view", "Multi-property view", false, false,
     { "enterprise"=>true } ],
