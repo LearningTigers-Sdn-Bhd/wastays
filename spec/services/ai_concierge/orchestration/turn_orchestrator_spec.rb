@@ -288,6 +288,51 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     expect(result.error).to eq("AI Concierge is temporarily unavailable.")
   end
 
+  it "force ends wait-time control messages before calling the interpreter" do
+    prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
+    create(:prospect_conversation_state, prospect: prospect)
+    expect_any_instance_of(AiConcierge::Agents::InterpreterAgent).not_to receive(:call)
+
+    result = described_class.new(hotel: hotel, message: "codename: wait-time-end", phone: "+60123456789").call
+    state = prospect.prospect_conversation_state.reload
+
+    expect(result).to be_success
+    expect(result.payload[:reply_message]).to eq("Thank you for reaching out. Please come back again.")
+    expect(state.flow_status).to eq("ended")
+    expect(state.slots_payload.dig("conversation", "end_reason")).to eq("wait_time_end")
+  end
+
+  it "force ends wait-time control messages with booking-specific copy" do
+    prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
+    branch = AiConcierge::State::SlotMerger.empty_branch.merge("target_month" => 8)
+    payload = AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(branch, pending_question: "booking_timing")
+    create(:prospect_conversation_state, prospect: prospect, active_flow: "booking_search", slots_payload: payload)
+    expect_any_instance_of(AiConcierge::Agents::InterpreterAgent).not_to receive(:call)
+
+    result = described_class.new(hotel: hotel, message: "codename: wait-time-end", phone: "+60123456789").call
+    state = prospect.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to eq("It seems you are no longer making a booking quotation. Thank you for reaching out. Please come back again.")
+    expect(state.flow_status).to eq("ended")
+    expect(state.active_flow).to be_nil
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+    expect(state.slots_payload.dig("conversation", "end_reason")).to eq("wait_time_end")
+  end
+
+  it "prioritizes wait-time control messages over max-turn handling" do
+    prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
+    slots_payload = { "conversation" => { "turn_count" => described_class::MAX_TURNS } }
+    create(:prospect_conversation_state, prospect: prospect, slots_payload: slots_payload)
+    expect_any_instance_of(AiConcierge::Agents::InterpreterAgent).not_to receive(:call)
+
+    result = described_class.new(hotel: hotel, message: "codename: wait-time-end", phone: "+60123456789").call
+    state = prospect.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to eq("Thank you for reaching out. Please come back again.")
+    expect(result.payload[:needs_human_support]).to be(false)
+    expect(state.slots_payload.dig("conversation", "end_reason")).to eq("wait_time_end")
+  end
+
   it "ends the conversation when the user repeats an explicit end request during a booking" do
     allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return(
       interpretation(slots: { "target_month" => 8 })

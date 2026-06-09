@@ -1,6 +1,22 @@
 # AI Concierge Changelog
 
-## V5.3 — Booking Date Range Resolver (Current)
+## V5.4 — n8n Wait-Time End Control (Current)
+
+### Changes
+- Added deterministic `codename: wait-time-end` handling for n8n timeout control messages.
+- The control message force-ends the conversation before max-turn handling and before LLM interpretation, so it does not ask for end confirmation during active booking flows.
+- Added separate timeout replies for generic conversations and in-progress booking quotation branches.
+- Persisted timeout endings with `flow_status: "ended"` and conversation `end_reason: "wait_time_end"` while resetting incomplete booking task state.
+
+### Verification
+- `bundle exec rspec spec/services/ai_concierge/orchestration/core/conversation_control_policy_spec.rb spec/services/ai_concierge/orchestration/conversation/control_handler_spec.rb spec/services/ai_concierge/orchestration/turn_orchestrator_spec.rb`
+- 51 examples, 0 failures
+- `bundle exec rubocop --cache false app/services/ai_concierge/orchestration/core/conversation_control_policy.rb app/services/ai_concierge/orchestration/conversation/control_handler.rb app/services/ai_concierge/orchestration/turn_orchestrator.rb spec/services/ai_concierge/orchestration/core/conversation_control_policy_spec.rb spec/services/ai_concierge/orchestration/conversation/control_handler_spec.rb spec/services/ai_concierge/orchestration/turn_orchestrator_spec.rb`
+- no offenses
+
+---
+
+## V5.3 — Booking Date Range Resolver
 
 ### Changes
 - Rephrased the standard booking timing prompt to `Sure, which date or month do you plan to arrive for check-in?`.

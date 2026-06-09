@@ -4,16 +4,17 @@
 
 High-level transition order:
 
-1. explicit or active-booking natural cancellation -> reset booking task and ask the next-step choice
-2. explicit stop/bye/thanks/nevermind message -> end or confirm ending the current conversation
-3. explicit reset -> reset current flow
-4. non-expired suspended booking selection or confirmation follow-up -> resume booking
-5. hotel-policy, hotel-information, nearby-attractions, or room-information intent -> librarian
-6. booking context intent -> booking context
-7. pending booking question -> booking
-8. greeting intent -> greeting
-9. booking, option-selection, or confirmation intent -> booking
-10. unknown intent without state -> fallback
+1. n8n wait-time end sentinel `codename: wait-time-end` -> force-end the conversation without confirmation and reset incomplete booking task state
+2. explicit or active-booking natural cancellation -> reset booking task and ask the next-step choice
+3. explicit stop/bye/thanks/nevermind message -> end or confirm ending the current conversation
+4. explicit reset -> reset current flow
+5. non-expired suspended booking selection or confirmation follow-up -> resume booking
+6. hotel-policy, hotel-information, nearby-attractions, or room-information intent -> librarian
+7. booking context intent -> booking context
+8. pending booking question -> booking
+9. greeting intent -> greeting
+10. booking, option-selection, or confirmation intent -> booking
+11. unknown intent without state -> fallback
 
 ## Booking Sub-step Rules (inside `Booking::Orchestrator` and booking handlers)
 
@@ -68,6 +69,7 @@ A booking branch is booking-ready for scoped revision when it already has timing
 - natural active-booking cancellation phrases such as `forget the room`, `changed my mind`, and `drop the reservation` cancel only the booking attempt
 - booking-ready revision phrases such as `change rate` and `change room` revise only the relevant downstream booking state and do not cancel the booking attempt
 - date-range parsing is deterministic and scoped to timing collection so unrelated two-number replies during party/guest clarification are not treated as dates
+- `codename: wait-time-end` force-ends immediately for n8n timeout handling, bypasses end confirmation, and stores `end_reason: "wait_time_end"`
 
 ## Booking Task Statuses
 

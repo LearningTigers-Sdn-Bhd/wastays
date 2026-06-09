@@ -72,6 +72,34 @@ RSpec.describe AiConcierge::Orchestration::Conversation::ControlHandler do
     expect(conversation_state.reload.flow_status).to eq("ended")
   end
 
+  it "force ends a wait-time control message without booking progress" do
+    result = described_class.new(message: "codename: wait-time-end", response_persister: response_persister).wait_time_end_response(
+      prospect: prospect,
+      conversation_state: conversation_state
+    )
+
+    conversation_state.reload
+    expect(result.payload[:reply_message]).to eq("Thank you for reaching out. Please come back again.")
+    expect(conversation_state.flow_status).to eq("ended")
+    expect(conversation_state.slots_payload.dig("conversation", "end_reason")).to eq("wait_time_end")
+  end
+
+  it "force ends a wait-time control message with booking progress" do
+    conversation_state.update!(active_flow: "booking_search")
+
+    result = described_class.new(message: "codename: wait-time-end", response_persister: response_persister).wait_time_end_response(
+      prospect: prospect,
+      conversation_state: conversation_state
+    )
+
+    conversation_state.reload
+    expect(result.payload[:reply_message]).to eq("It seems you are no longer making a booking quotation. Thank you for reaching out. Please come back again.")
+    expect(conversation_state.flow_status).to eq("ended")
+    expect(conversation_state.active_flow).to be_nil
+    expect(conversation_state.slots_payload.dig("booking_task", "status")).to eq("idle")
+    expect(conversation_state.slots_payload.dig("conversation", "end_reason")).to eq("wait_time_end")
+  end
+
   def interpretation(intent: "greeting", slots: {})
     {
       "intent" => intent,
