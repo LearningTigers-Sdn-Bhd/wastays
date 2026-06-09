@@ -103,8 +103,8 @@
 </div>
 
 <!-- Refund Request -->
-<% if (booking.status == "cancelled" || booking.status == "confirmed") && booking.refund_request.blank? %>
-  <% eligibility = Refunds::Eligibility.new(booking).call %>
+<% if presenter.can_request_refund? %>
+  <% eligibility = presenter.refund_eligibility %>
   <div class="overflow-hidden rounded-2xl border border-red-200 bg-red-50/30 shadow-sm">
     <div class="border-b border-red-200 bg-red-50 px-6 py-4">
       <h3 class="text-[11px] font-bold text-red-600 uppercase tracking-widest">Platform Refund</h3>

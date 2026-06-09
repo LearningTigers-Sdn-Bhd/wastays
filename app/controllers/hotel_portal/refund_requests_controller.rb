@@ -15,6 +15,7 @@ class HotelPortal::RefundRequestsController < HotelPortal::BaseController
       booking: @booking,
       refund_amount: @eligibility.suggested_amount
     )
+    @presenter = RefundRequestPresenter.new(@refund_request)
 
     respond_to do |format|
       format.turbo_stream
@@ -36,6 +37,7 @@ class HotelPortal::RefundRequestsController < HotelPortal::BaseController
     if @refund_request.save
       redirect_to hotel_booking_path(current_hotel, @booking), notice: "Refund request submitted to Superadmin."
     else
+      @presenter = RefundRequestPresenter.new(@refund_request)
       render :new, status: :unprocessable_entity
     end
   end

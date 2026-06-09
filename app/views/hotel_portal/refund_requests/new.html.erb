@@ -22,7 +22,7 @@
         <div class="md:col-span-2">
           <%= f.label :refund_amount, "Refund Amount (#{@booking.currency})", class: "block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" %>
           <%= f.number_field :refund_amount, step: 0.01, class: "w-full rounded-lg border-slate-200 focus:ring-amber-500 focus:border-amber-500 font-semibold pl-5" %>
-          <p class="mt-1 text-xs text-slate-400">Policy suggests <%= number_to_currency(@eligibility.suggested_amount, unit: @booking.currency + " ") %></p>
+          <p class="mt-1 text-xs text-slate-400">Policy suggests <%= @presenter.suggested_amount_label(@booking, @eligibility) %></p>
         </div>
 
         <div class="md:col-span-2">
@@ -37,7 +37,7 @@
 
         <div>
           <%= f.label :account_type, class: "block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.select :account_type, RefundRequest::ACCOUNT_TYPES.map { |t| [t.humanize, t] }, {}, class: "w-full rounded-lg border-slate-200 focus:ring-amber-500 focus:border-amber-500 pl-5" %>
+          <%= f.select :account_type, @presenter.account_type_options, {}, class: "w-full rounded-lg border-slate-200 focus:ring-amber-500 focus:border-amber-500 pl-5" %>
         </div>
 
         <div>

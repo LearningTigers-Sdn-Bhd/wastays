@@ -209,5 +209,17 @@ module HotelPortal
         }
       }.to_json
     end
+
+    def guarantee_method_options
+      Booking::GUARANTEE_METHODS.map { |m| [ m.titleize, m ] }
+    end
+
+    def can_request_refund?
+      (booking.status == "cancelled" || booking.status == "confirmed") && booking.refund_request.blank?
+    end
+
+    def refund_eligibility
+      @refund_eligibility ||= Refunds::Eligibility.new(booking).call
+    end
   end
 end
