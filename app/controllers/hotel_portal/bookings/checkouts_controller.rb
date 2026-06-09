@@ -34,12 +34,34 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
       )
 
       if result.success?
-        redirect_to hotel_booking_path(current_hotel, @booking, checkout_success: true), notice: "Guest has been checked out with early departure."
+        respond_to do |format|
+          format.turbo_stream do
+            if reservation_board_request?
+              render turbo_stream: turbo_stream.action(:reload, "reservation_board")
+            else
+              redirect_to hotel_booking_path(current_hotel, @booking, checkout_success: true), notice: "Guest has been checked out with early departure."
+            end
+          end
+          format.html { redirect_to hotel_booking_path(current_hotel, @booking, checkout_success: true), notice: "Guest has been checked out with early departure." }
+        end
       else
         @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
         set_audit_logs(@booking)
-        flash.now[:alert] = result.error
-        render "hotel_portal/bookings/show", status: :unprocessable_content
+
+        respond_to do |format|
+          format.turbo_stream do
+            if reservation_board_request?
+              render turbo_stream: turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
+            else
+              flash.now[:alert] = result.error
+              render "hotel_portal/bookings/show", formats: [ :html ], status: :unprocessable_content
+            end
+          end
+          format.html do
+            flash.now[:alert] = result.error
+            render "hotel_portal/bookings/show", status: :unprocessable_content
+          end
+        end
       end
     else
       transition_status("completed", timestamp, "Guest has been checked out.")
@@ -114,13 +136,39 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     ).call
 
     if result.success?
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice
+      respond_to do |format|
+        format.turbo_stream do
+          if reservation_board_request?
+            render turbo_stream: turbo_stream.action(:reload, "reservation_board")
+          else
+            redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice
+          end
+        end
+        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice }
+      end
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
       set_audit_logs(@booking)
-      flash.now[:alert] = result.error
-      render "hotel_portal/bookings/show", status: :unprocessable_content
+
+      respond_to do |format|
+        format.turbo_stream do
+          if reservation_board_request?
+            render turbo_stream: turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
+          else
+            flash.now[:alert] = result.error
+            render "hotel_portal/bookings/show", formats: [ :html ], status: :unprocessable_content
+          end
+        end
+        format.html do
+          flash.now[:alert] = result.error
+          render "hotel_portal/bookings/show", status: :unprocessable_content
+        end
+      end
     end
+  end
+
+  def reservation_board_request?
+    params[:source] == "reservation_board" || request.referer&.include?("reservation-board")
   end
 
   def check_out_from_sheet(timestamp)

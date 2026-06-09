@@ -14,9 +14,9 @@ RSpec.describe "Checkout Deposit Display", type: :request do
     create(:booking_room, booking: booking, subtotal: 100.0)
     # Give user permissions
     user.user_hotel_accesses.create!(hotel: hotel, role: create(:role, permissions: [
-      create(:permission, slug: "manage_bookings"),
-      create(:permission, slug: "view_bookings"),
-      create(:permission, slug: "manage_guest_arrival")
+      Permission.find_or_create_by!(slug: "manage_bookings") { |p| p.name = "Manage Bookings" },
+      Permission.find_or_create_by!(slug: "view_bookings") { |p| p.name = "View Bookings" },
+      Permission.find_or_create_by!(slug: "manage_guest_arrival") { |p| p.name = "Manage Guest Arrival" }
     ]))
   end
 
