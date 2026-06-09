@@ -57,7 +57,7 @@ gem "commonmarker", "~> 2.7"
 gem "rqrcode", "~> 2.2"
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
-gem "ruby_llm", "~> 1.14"
+gem "ruby_llm", "~> 1.16"
 gem "pdf-reader", "~> 2.12"
 gem "pgvector", "~> 0.2.0"
 
