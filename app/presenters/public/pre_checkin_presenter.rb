@@ -46,6 +46,10 @@ module Public
       [ [ "Select Document", "" ] ] + Booking::DOCUMENT_TYPES
     end
 
+    def guest_country_default
+      booking.guest_country.presence || "Malaysia"
+    end
+
     def hours_options
       (1..12).to_a
     end

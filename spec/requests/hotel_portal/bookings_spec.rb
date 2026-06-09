@@ -561,7 +561,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     end
 
     it "ignores stop-sell restrictions unless staff chooses to respect them" do
-      rate_plan = create(:rate_plan, room_type: room_type, name: "OTA Rate")
+      rate_plan = create(:rate_plan, room_type: room_type, name: "Premium Rate")
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 125, stop_sell: true)
 
       get "/hotel/#{hotel.id}/bookings/rate_options", params: {
@@ -583,6 +583,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     end
 
     it "returns a base rate option when no rate plans exist" do
+      room_type.rate_plans.destroy_all
       get "/hotel/#{hotel.id}/bookings/rate_options", params: {
         room_type_id: room_type.id,
         check_in: Date.current.to_s,

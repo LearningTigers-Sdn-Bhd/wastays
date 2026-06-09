@@ -121,7 +121,7 @@
                   <%= f.label :guest_country, "Nationality", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
                   <%= f.select :guest_country,
                         country_options,
-                        { selected: @booking.guest_country.presence || "Malaysia", prompt: "Select nationality" },
+                        { selected: @presenter.guest_country_default, prompt: "Select nationality" },
                         class: "form-input py-3 px-5 border border-neutral-border", required: true %>
                 </div>
 
@@ -145,6 +145,25 @@
               <div>
                 <%= f.label :guest_home_address, "Home Address", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
                 <%= f.text_area :guest_home_address, class: "form-input py-3 px-5 border border-neutral-border", required: true, rows: 3, placeholder: "e.g. No. 12, Jalan Ampang, 50450 Kuala Lumpur, Malaysia" %>
+              </div>
+            </section>
+
+            <section class="space-y-4 mt-8">
+              <div>
+                <h2 class="text-sm font-black uppercase tracking-widest text-neutral-text-primary">Guest Signature</h2>
+                <p class="mt-1 text-xs text-neutral-text-secondary">Please provide your signature below to confirm your check-in details.</p>
+              </div>
+
+              <div data-controller="signature" class="space-y-2">
+                <div class="rounded-xl border border-neutral-border bg-white p-2">
+                  <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
+                </div>
+                <div class="flex justify-end">
+                  <button type="button" data-action="click->signature#clear" class="text-xs font-bold uppercase tracking-widest text-brand-primary hover:underline">
+                    Clear Signature
+                  </button>
+                </div>
+                <%= f.hidden_field :signature, data: { signature_target: "input" }, required: true %>
               </div>
             </section>
 

@@ -25,6 +25,14 @@ class Booking < ApplicationRecord
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :status_transition_event
 
+  def online?
+    source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
+  end
+
+  def room_type_summary
+    booking_rooms.includes(:room_type).map { |br| br.room_type.name }.uniq.to_sentence
+  end
+
   def guest_government_id
     @guest_government_id.presence ||
       pre_checkin&.metadata&.dig("guest_government_id").presence ||
@@ -51,7 +59,7 @@ class Booking < ApplicationRecord
   validate :status_transition_must_be_allowed, if: :status_changed_on_persisted_record?
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
-  validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_nil: true }
+  validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_blank: true }
   validates :deposit_status, inclusion: { in: DEPOSIT_STATUSES, allow_nil: true }
 
   def primary_guest
@@ -167,6 +175,7 @@ class Booking < ApplicationRecord
 
   def self.for_financial_breakdown(hotel, start_date, end_date, query)
     hotel.bookings.revenue_generating
+         .includes(booking_folio: :folio_transactions)
          .created_between(start_date, end_date)
          .search(query)
          .order(created_at: :desc)

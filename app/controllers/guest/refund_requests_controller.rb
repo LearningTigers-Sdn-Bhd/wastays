@@ -48,6 +48,7 @@ class Guest::RefundRequestsController < Guest::BaseController
     else
       @refund_request = RefundRequest.new
     end
+    @presenter = RefundRequestPresenter.new(@refund_request)
   end
 
   def show
@@ -66,6 +67,7 @@ class Guest::RefundRequestsController < Guest::BaseController
     if result.success?
       redirect_to success_redirect_path, notice: "Refund request submitted. Your booking has been cancelled.", status: :see_other
     else
+      @presenter = RefundRequestPresenter.new(@refund_request)
       flash.now[:alert] = result.error
       render :new, status: :unprocessable_entity
     end

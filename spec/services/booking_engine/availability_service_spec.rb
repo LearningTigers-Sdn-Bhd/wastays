@@ -10,9 +10,13 @@ RSpec.describe BookingEngine::AvailabilityService do
   let(:stay_dates) { (check_in...check_out).to_a }
 
   before do
+    # Ensure room_type has its auto-created Standard Rate plan
+    standard_plan = room_type.rate_plans.first
     stay_dates.each do |date|
       RoomInventory.create!(room_type: room_type, date: date, quantity: 5, status: "open")
-      RoomRate.create!(room_type: room_type, date: date, price: 100, currency: "MYR")
+      # Create rates for both nil plan and standard plan
+      RoomRate.create!(room_type: room_type, rate_plan: nil, date: date, price: 100, currency: "MYR")
+      RoomRate.create!(room_type: room_type, rate_plan: standard_plan, date: date, price: 100, currency: "MYR")
     end
   end
 
@@ -73,7 +77,8 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
 
     it "respects stop_sell even if base_price exists" do
-      RoomRate.first.update!(stop_sell: true)
+      # Apply stop sell to all rates (including those for Standard Rate plan)
+      RoomRate.update_all(stop_sell: true)
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
       expect(service.calculate_total_price(room_type)).to eq(0)
     end

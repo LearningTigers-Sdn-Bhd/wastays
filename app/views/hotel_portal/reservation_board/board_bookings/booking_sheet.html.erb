@@ -64,7 +64,7 @@
 
             <%# Check In %>
             <% if @booking.status == 'confirmed' %>
-              <button onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()"
+              <button onclick="document.getElementById('check-in-modal-<%= @booking.id %>').showModal()"
                       class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-blue-700 bg-blue-50/50 hover:bg-blue-100 hover:text-blue-800 transition-all group">
                 <span class="size-8 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
                   <%= lucide_icon "log-in", stroke_width: 2.5, class: "size-4 text-blue-600" %>

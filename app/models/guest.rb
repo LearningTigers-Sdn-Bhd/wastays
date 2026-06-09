@@ -11,7 +11,7 @@ class Guest < ApplicationRecord
 
   encrypts :email, deterministic: true
   encrypts :phone, deterministic: true
-  encrypts :government_id
+  encrypts :government_id, deterministic: true
 
   OTP_EXPIRY = 10.minutes
   MAGIC_LINK_EXPIRY = 24.hours

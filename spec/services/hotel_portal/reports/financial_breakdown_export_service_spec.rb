@@ -13,6 +13,7 @@ RSpec.describe HotelPortal::Reports::FinancialBreakdownExportService do
       check_in: Date.new(2026, 5, 6),
       check_out: Date.new(2026, 5, 7),
       total_amount: 300.to_d,
+      tax_total: 20.to_d,
       margin_amount: 30.to_d,
       net_amount: 270.to_d,
       currency: "MYR",
@@ -24,11 +25,16 @@ RSpec.describe HotelPortal::Reports::FinancialBreakdownExportService do
   end
 
   it "generates csv" do
-    expect(service.generate_csv).to include("Booking Ref,Guest Name,Status")
+    csv = service.generate_csv
+    expect(csv).to include("Booking Ref,Guest Name,Status,Check In,Check Out,Gross,Taxes,Margin,Net,Currency")
+    expect(csv).to include("20.00")
   end
 
   it "generates xls" do
-    expect(service.generate_xls).to include('Worksheet ss:Name="Financial Breakdown"')
+    xls = service.generate_xls
+    expect(xls).to include('Worksheet ss:Name="Financial Breakdown"')
+    expect(xls).to include("<Data ss:Type=\"String\">Taxes</Data>")
+    expect(xls).to include("<Data ss:Type=\"String\">20.00</Data>")
   end
 
   it "generates pdf" do

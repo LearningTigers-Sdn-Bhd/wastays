@@ -4,7 +4,7 @@ require "ostruct"
 
 module Bookings
   class BuildFinancialSnapshot
-    def initialize(hotel:, check_in:, check_out:, guest_country:, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false)
+    def initialize(hotel:, check_in:, check_out:, guest_country:, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false, rate_tier: :standard)
       @hotel = hotel
       @check_in = check_in.to_date
       @check_out = check_out.to_date
@@ -15,6 +15,8 @@ module Bookings
       @manual_total_amount = manual_total_amount.presence&.to_d
       @nightly_rate_snapshot = nightly_rate_snapshot
       @room_items = room_items
+      @corporate_rate = corporate_rate
+      @rate_tier = rate_tier&.to_sym || :standard
     end
 
     def call
@@ -60,17 +62,35 @@ module Bookings
       raise ArgumentError, "Room type is required to build a rate snapshot." if @room_type.blank?
 
       currency = @rate_plan&.currency.presence || @hotel.default_currency.presence || "MYR"
-      rates = @room_type.room_rates.where(date: stay_dates, currency: currency)
-      rates = @rate_plan.present? ? rates.where(rate_plan: @rate_plan) : rates.where(rate_plan_id: nil)
-      rates_by_date = rates.index_by(&:date)
+      all_eligible_rates = @room_type.room_rates.where(date: stay_dates, currency: currency)
+      rates_by_plan_and_date = all_eligible_rates.group_by(&:rate_plan_id)
+
+      plans_to_try = [ @rate_plan, @room_type.rate_plans.first, nil ].uniq
+      plan_ids_to_try = plans_to_try.map { |p| p.respond_to?(:id) ? p.id : p }
 
       snapshot = stay_dates.index_with do |date|
-        rate = rates_by_date[date]
+        rate = nil
+        plan_ids_to_try.each do |pid|
+          rate = rates_by_plan_and_date[pid]&.find { |r| r.date == date }
+          break if rate
+        end
+
         if rate.present?
+          tier_kind = @rate_tier != :standard ? @rate_tier : rate.rate_plan&.special_tier_kind
+
+          price = case tier_kind
+          when :walk_in then rate.walk_in_price
+          when :corporate then rate.corporate_price
+          when :ota then rate.ota_price
+          else
+            @corporate_rate ? rate.corporate_price : nil
+          end
+          price ||= rate.price
+
           rate.as_json.merge(
             "room_rate_id" => rate.id,
             "source" => "room_rate",
-            "price" => rate.price.to_d.to_s("F"),
+            "price" => price.to_d.to_s("F"),
             "currency" => rate.currency
           )
         else
