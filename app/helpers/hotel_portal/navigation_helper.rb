@@ -140,6 +140,13 @@ module HotelPortal
       @_hotel_breadcrumb_trail = nil
     end
 
+    def hotel_breadcrumb_parts
+      return breadcrumb_override if respond_to?(:breadcrumbs_overridden?) && breadcrumbs_overridden?
+
+      appends = respond_to?(:breadcrumb_appends) ? breadcrumb_appends : []
+      hotel_default_breadcrumb_parts + appends
+    end
+
     def hotel_permission_granted?(permission)
       return false unless current_user
 
@@ -151,8 +158,17 @@ module HotelPortal
     end
 
     def render_hotel_breadcrumbs
+      parts = hotel_breadcrumb_parts
+      return if parts.blank?
+
+      render partial: "shared/navigation/breadcrumb_bar", locals: { parts: parts }
+    end
+
+    private
+
+    def hotel_default_breadcrumb_parts
       trail = hotel_breadcrumb_trail
-      return unless trail
+      return [] unless trail
 
       parts = []
       parts << { type: :section, label: trail[:section] }
@@ -164,7 +180,7 @@ module HotelPortal
         parts << { type: :menu, label: trail[:menu], path: trail[:menu_path], siblings: trail[:siblings] }
       end
 
-      render partial: "shared/navigation/breadcrumb_bar", locals: { parts: parts }
+      parts
     end
   end
 end

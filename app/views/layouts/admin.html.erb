@@ -72,7 +72,7 @@
       </header>
 
       <!-- ═══ Breadcrumb Bar ═══ -->
-      <% if admin_breadcrumb_trail %>
+      <% if admin_breadcrumb_parts.present? %>
         <div class="relative border-b border-layer-line bg-layer py-2 overflow-visible">
           <div class="px-4 sm:px-6 overflow-x-auto overscroll-x-contain whitespace-nowrap custom-scrollbar">
             <%= render_admin_breadcrumbs %>

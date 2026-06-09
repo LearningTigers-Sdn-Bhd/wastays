@@ -12,27 +12,59 @@
 
     <% case part[:type] %>
     <% when :section %>
-      <span class="font-medium text-slate-600"><%= part[:label] %></span>
+      <span class="cursor-default font-medium text-slate-600"><%= part[:label] %></span>
 
     <% when :menu_group %>
-      <span class="font-medium text-slate-600"><%= part[:label] %></span>
+      <span class="cursor-default font-medium text-slate-600"><%= part[:label] %></span>
 
     <% when :menu, :breakdown %>
-      <div class="relative" data-breadcrumb-dropdown-target="item">
-        <button type="button"
-                class="font-semibold text-slate-900 inline-flex items-center gap-x-1 hover:text-brand-primary transition-colors"
-                data-action="click->breadcrumb-dropdown#toggle">
-          <%= part[:label] %>
-          <%= cached_icon "chevron-down", class: "size-3 shrink-0" %>
-        </button>
-        <div class="fixed w-56 bg-layer shadow-dropdown rounded-lg hidden z-50 border border-layer-line py-1" data-breadcrumb-dropdown-target="menu">
-          <% (part[:siblings] || []).each do |sibling| %>
-            <%= link_to sibling[:label], sibling[:path],
-                        class: "block px-3 py-2 text-sm text-neutral-text-primary hover:bg-surface-hover transition-colors",
-                        data: { action: "click->breadcrumb-dropdown#close" } %>
-          <% end %>
+      <% if part[:siblings].present? %>
+        <div class="relative" data-breadcrumb-dropdown-target="item">
+          <button type="button"
+                  class="cursor-pointer font-semibold text-slate-900 inline-flex items-center gap-x-1 hover:text-brand-primary transition-colors"
+                  data-action="click->breadcrumb-dropdown#toggle">
+            <%= part[:label] %>
+            <%= cached_icon "chevron-down", class: "size-3 shrink-0" %>
+          </button>
+          <div class="fixed w-56 bg-layer shadow-dropdown rounded-lg hidden z-50 border border-layer-line py-1" data-breadcrumb-dropdown-target="menu">
+            <% part[:siblings].each do |sibling| %>
+              <%= link_to sibling[:label], sibling[:path],
+                          class: "block px-3 py-2 text-sm text-neutral-text-primary hover:bg-surface-hover transition-colors",
+                          data: { action: "click->breadcrumb-dropdown#close" } %>
+            <% end %>
+          </div>
         </div>
-      </div>
+      <% elsif part[:path].present? && index < parts.size - 1 %>
+        <%= link_to part[:label], part[:path], class: "font-medium text-slate-600 hover:text-brand-primary transition-colors" %>
+      <% else %>
+        <span class="cursor-default font-semibold text-slate-900"><%= part[:label] %></span>
+      <% end %>
+    <% else %>
+      <% if part[:siblings].present? %>
+        <div class="relative" data-breadcrumb-dropdown-target="item">
+          <button type="button"
+                  class="cursor-pointer font-semibold text-slate-900 inline-flex items-center gap-x-1 hover:text-brand-primary transition-colors"
+                  data-action="click->breadcrumb-dropdown#toggle">
+            <%= part[:label] %>
+            <%= cached_icon "chevron-down", class: "size-3 shrink-0" %>
+          </button>
+          <div class="fixed w-56 bg-layer shadow-dropdown rounded-lg hidden z-50 border border-layer-line py-1" data-breadcrumb-dropdown-target="menu">
+            <% part[:siblings].each do |sibling| %>
+              <%= link_to sibling[:label], sibling[:path],
+                          class: "block px-3 py-2 text-sm text-neutral-text-primary hover:bg-surface-hover transition-colors",
+                          data: { action: "click->breadcrumb-dropdown#close" } %>
+            <% end %>
+          </div>
+        </div>
+      <% elsif index < parts.size - 1 %>
+        <% if part[:path].present? %>
+          <%= link_to part[:label], part[:path], class: "font-medium text-slate-600 hover:text-brand-primary transition-colors" %>
+        <% else %>
+          <span class="cursor-default font-medium text-slate-600"><%= part[:label] %></span>
+        <% end %>
+      <% else %>
+        <span class="cursor-default font-semibold text-slate-900"><%= part[:label] %></span>
+      <% end %>
     <% end %>
   <% end %>
 </div>

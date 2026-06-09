@@ -92,14 +92,30 @@ module Admin::NavigationHelper
     @_admin_breadcrumb_trail = nil
   end
 
+  def admin_breadcrumb_parts
+    return breadcrumb_override if respond_to?(:breadcrumbs_overridden?) && breadcrumbs_overridden?
+
+    appends = respond_to?(:breadcrumb_appends) ? breadcrumb_appends : []
+    admin_default_breadcrumb_parts + appends
+  end
+
   def render_admin_breadcrumbs
+    parts = admin_breadcrumb_parts
+    return if parts.blank?
+
+    render partial: "shared/navigation/breadcrumb_bar", locals: { parts: parts }
+  end
+
+  private
+
+  def admin_default_breadcrumb_parts
     trail = admin_breadcrumb_trail
-    return unless trail
+    return [] unless trail
 
     parts = []
     parts << { type: :section, label: trail[:section] }
     parts << { type: :menu, label: trail[:menu], path: trail[:path], siblings: trail[:siblings] }
 
-    render partial: "shared/navigation/breadcrumb_bar", locals: { parts: parts }
+    parts
   end
 end

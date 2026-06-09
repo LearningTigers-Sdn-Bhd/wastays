@@ -1,5 +1,7 @@
 module Admin
   class ProfilesController < BaseController
+    before_action :set_breadcrumbs
+
     def edit
       @user = current_user
     end
@@ -14,6 +16,13 @@ module Admin
     end
 
     private
+
+    def set_breadcrumbs
+      override_breadcrumbs(
+        { label: "Account" },
+        { label: "My Profile", path: edit_admin_profile_path }
+      )
+    end
 
     def user_params
       params.require(:user).permit(:name, :email, :time_zone, :password, :password_confirmation)
