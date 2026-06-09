@@ -9,6 +9,8 @@
   empty_message = local_assigns.fetch(:empty_message, "No navigation matches that search.")
   search_controller = "admin-sidebar-search"
   mobile_controllers = [ (search_enabled ? search_controller : nil), "sidebar-toggle" ].compact.join(" ")
+  permanent_sidebar = local_assigns.fetch(:permanent_sidebar, [ "admin", "hotel" ].include?(sidebar_key))
+  desktop_controllers = [ (search_enabled ? search_controller : nil), (permanent_sidebar ? "sidebar-state" : nil) ].compact.join(" ")
   desktop_id = "#{sidebar_key}-sidebar"
   mobile_id = "#{sidebar_key}-sidebar-mobile"
   overlay_id = "#{sidebar_key}-sidebar-overlay"
@@ -16,7 +18,7 @@
   mobile_search_id = "#{sidebar_key}-sidebar-search-mobile"
 %>
 
-<aside id="<%= desktop_id %>" <% if sidebar_key == "hotel" %>data-turbo-permanent<% end %> <% if search_enabled %>data-controller="<%= search_controller %>"<% end %> class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full">
+<aside id="<%= desktop_id %>" <%= "data-turbo-permanent" if permanent_sidebar %> <% if desktop_controllers.present? %>data-controller="<%= desktop_controllers %>"<% end %> <% if permanent_sidebar %>data-sidebar-state-key-value="<%= sidebar_key %>"<% end %> class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full">
   <% if header_html %>
     <div class="shrink-0 border-b border-layer-line bg-sidebar-bg">
       <%= header_html %>
