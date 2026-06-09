@@ -14,9 +14,9 @@
       <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
         <div data-floating-target="reference" class="<%= smoking_color %> cursor-help">
           <% if room_type.smoking_allowed %>
-            <%= lucide_icon "smoking", stroke_width: 2, class: "size-3.5" %>
+            <%= cached_icon "alarm-smoke", stroke_width: 2, class: "size-3.5" %>
           <% else %>
-            <%= lucide_icon "ban", stroke_width: 2, class: "size-3.5" %>
+            <%= cached_icon "ban", stroke_width: 2, class: "size-3.5" %>
           <% end %>
         </div>
         <div data-floating-target="floating" class="hidden z-[100] px-3 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white">
@@ -29,9 +29,9 @@
       <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
         <div data-floating-target="reference" class="<%= pets_color %> cursor-help">
           <% if room_type.pets_allowed %>
-            <%= lucide_icon "paw-print", stroke_width: 2, class: "size-3.5" %>
+            <%= cached_icon "paw-print", stroke_width: 2, class: "size-3.5" %>
           <% else %>
-            <%= lucide_icon "ban", stroke_width: 2, class: "size-3.5" %>
+            <%= cached_icon "ban", stroke_width: 2, class: "size-3.5" %>
           <% end %>
         </div>
         <div data-floating-target="floating" class="hidden z-[100] px-3 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white">
@@ -68,7 +68,7 @@
           </div>
 
           <div class="flex-1 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity pb-1">
-            <%= lucide_icon "plus", stroke_width: 3, class: "size-3.5 text-slate-400" %>
+            <%= cached_icon "plus", stroke_width: 3, class: "size-3.5 text-slate-400" %>
           </div>
         <% end %>
       <% end %>

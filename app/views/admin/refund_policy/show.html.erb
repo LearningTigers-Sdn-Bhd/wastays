@@ -1,6 +1,4 @@
-<% content_for :breadcrumbs do %>
-  <%= render "shared/navigation/admin_breadcrumbs", current: "Refund Policy" %>
-<% end %>
+
 <% policy_configured = @refund_policy.persisted? %>
 <% min_days_value = @refund_policy.min_days_before_checkin %>
 <% refund_percentage_value = @refund_policy.refund_percentage %>

@@ -1,6 +1,7 @@
 require_relative "../app/constraints/superadmin_constraint"
 
 Rails.application.routes.draw do
+  mount RailsIcons::Engine, at: '/rails_icons'
   namespace :hotel_portal do
     get "room_blocks/create"
     get "room_blocks/destroy"

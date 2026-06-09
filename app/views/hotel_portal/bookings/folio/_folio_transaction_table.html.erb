@@ -39,7 +39,7 @@
                   <div class="flex items-center gap-2">
                     <p class="font-bold text-slate-900"><%= line[:description] %></p>
                     <span title="This projected line will be posted when checkout is completed." class="inline-flex size-5 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-                      <%= lucide_icon "info", stroke_width: 2.5, class: "size-3" %>
+                      <%= cached_icon "info", stroke_width: 2.5, class: "size-3" %>
                     </span>
                   </div>
                   <div class="flex items-center gap-2 mt-0.5">
@@ -101,7 +101,7 @@
             <td colspan="7" class="px-6 py-20 text-center">
               <div class="flex flex-col items-center">
                 <div class="size-12 rounded-full bg-slate-50 flex items-center justify-center mb-4 text-slate-300">
-                  <%= lucide_icon "circle-alert", stroke_width: 2, class: "size-6" %>
+                  <%= cached_icon "circle-alert", stroke_width: 2, class: "size-6" %>
                 </div>
                 <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">No transactions recorded yet.</p>
               </div>

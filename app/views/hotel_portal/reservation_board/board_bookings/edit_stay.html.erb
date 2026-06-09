@@ -6,7 +6,7 @@
     <%= render "hotel_portal/reservation_board/partials/content_header",
                title: "Edit Stay & Room",
                subtitle: "Update booking dates and room assignment",
-               icon: lucide_icon("pen-line", stroke_width: 2.5, class: "size-5") %>
+               icon: cached_icon("pen-line", stroke_width: 2.5, class: "size-5") %>
 
     <div class="flex-1 overflow-y-auto p-8">
       <%= form_with model: @booking, url: hotel_reservation_board_board_booking_path(current_hotel, @booking), method: :patch,

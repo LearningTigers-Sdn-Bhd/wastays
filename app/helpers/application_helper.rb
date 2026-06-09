@@ -1,4 +1,13 @@
 module ApplicationHelper
+  def cached_icon(name, library: RailsIcons.configuration.default_library, from: library, variant: nil, **arguments)
+    @_cached_icons ||= {}
+    key = [ name.to_s, library.to_s, from.to_s, variant&.to_s, arguments ]
+    return @_cached_icons[key].dup.html_safe if @_cached_icons.key?(key)
+
+    @_cached_icons[key] = icon(name, library: library, from: from, variant: variant, **arguments).to_s.freeze
+    @_cached_icons[key].dup.html_safe
+  end
+
   def booking_status_class(status)
     case status
     when "confirmed" then "bg-green-100 text-green-800"

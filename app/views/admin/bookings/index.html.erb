@@ -1,7 +1,3 @@
-<% content_for :breadcrumbs do %>
-  <%= render "shared/navigation/admin_breadcrumbs", current: "Bookings" %>
-<% end %>
-
 <% total_bookings = @all_bookings.size %>
 <% pending_bookings = @all_bookings.count { |booking| booking.status == 'pending' } %>
 <% confirmed_bookings = @all_bookings.count { |booking| booking.status == 'confirmed' } %>

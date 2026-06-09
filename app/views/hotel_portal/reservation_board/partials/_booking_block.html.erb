@@ -43,7 +43,7 @@
   <%# Status Icon (Centered) %>
   <div class="flex items-center justify-center h-full <%= 'ml-4' unless clipped_left %> <%= 'mr-4' unless clipped_right %>">
     <span class="<%= booking_icon_class(block[:status]) %>">
-      <%= lucide_icon booking_status_icon(block[:status]), stroke_width: 3, class: "size-4" %>
+      <%= cached_icon booking_status_icon(block[:status]), stroke_width: 3, class: "size-4" %>
     </span>
   </div>
 
