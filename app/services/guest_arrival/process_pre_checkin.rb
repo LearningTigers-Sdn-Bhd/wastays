@@ -1,4 +1,8 @@
+# frozen_string_literal: true
+
 require "ostruct"
+require "base64"
+require "stringio"
 
 module GuestArrival
   class ProcessPreCheckin

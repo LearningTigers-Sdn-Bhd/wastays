@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class PreCheckin < ApplicationRecord
   belongs_to :booking
   has_one_attached :signature

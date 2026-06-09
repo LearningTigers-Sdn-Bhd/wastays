@@ -23,7 +23,7 @@ class Booking < ApplicationRecord
   has_many :notification_deliveries, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :nullify
-  attr_accessor :estimated_arrival_time, :signature, :existing_guest_id, :guest_update_intent, :status_transition_event
+  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :status_transition_event
 
   def online?
     source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
@@ -175,6 +175,7 @@ class Booking < ApplicationRecord
 
   def self.for_financial_breakdown(hotel, start_date, end_date, query)
     hotel.bookings.revenue_generating
+         .includes(booking_folio: :folio_transactions)
          .created_between(start_date, end_date)
          .search(query)
          .order(created_at: :desc)

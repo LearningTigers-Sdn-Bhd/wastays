@@ -96,30 +96,30 @@
                     <%= date.strftime("%d %b %Y") %>
                   </td>
                 </tr>
-                <% bookings.each_with_index do |booking, index| %>
+                <% bookings.each_with_index do |presenter, index| %>
                   <tr class="align-top transition-colors hover:bg-slate-100/80">
                     <td class="px-6 py-4 sm:px-8">
-                      <%= link_to "##{booking.confirmation_token}", hotel_booking_path(current_hotel, booking), class: "text-sm font-mono font-bold text-slate-900 hover:underline", data: { turbo: false } %>
+                      <%= link_to "##{presenter.confirmation_token}", hotel_booking_path(current_hotel, presenter.booking), class: "text-sm font-mono font-bold text-slate-900 hover:underline", data: { turbo: false } %>
                     </td>
                     <td class="px-6 py-4">
-                      <span class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></span>
+                      <span class="text-sm font-semibold text-slate-900"><%= presenter.guest_name %></span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= booking_status_class(booking.status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10">
-                        <%= booking.status %>
+                      <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= booking_status_class(presenter.status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10">
+                        <%= presenter.status %>
                       </span>
                     </td>
                     <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-slate-600">
-                      RM <%= number_with_precision(booking.total_amount, precision: 2) %>
+                      RM <%= presenter.total_amount %>
                     </td>
                     <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-slate-500">
-                      <%= number_with_precision(booking.tax_total, precision: 2) %>
+                      <%= presenter.tax_total %>
                     </td>
                     <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-red-500">
-                      - <%= number_with_precision(booking.margin_amount || 0, precision: 2) %>
+                      - <%= presenter.margin_amount %>
                     </td>
                     <td class="px-6 py-4 text-right whitespace-nowrap sm:px-8">
-                      <span class="text-sm font-bold text-emerald-700">RM <%= number_with_precision(booking.net_amount || 0, precision: 2) %></span>
+                      <span class="text-sm font-bold text-emerald-700">RM <%= presenter.net_amount %></span>
                     </td>
                   </tr>
                 <% end %>

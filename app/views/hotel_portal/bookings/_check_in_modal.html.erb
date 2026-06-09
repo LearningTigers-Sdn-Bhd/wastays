@@ -8,6 +8,10 @@
     <h3 class="text-lg font-bold text-slate-900"><%= booking.checked_in? ? "Edit Check-In" : "Confirm Check-In" %></h3>
     <p class="text-sm text-slate-500 mt-1">Set check-in time and assign rooms for <%= booking.guest_name %>.</p>
 
+    <div class="mt-6">
+      <%= render "hotel_portal/bookings/guarantee_status_badge", booking: booking %>
+    </div>
+
     <%= form_with model: booking, url: check_in_hotel_booking_path(hotel, booking), method: :post, 
         class: "mt-4 space-y-4" do |f| %>
       <div>

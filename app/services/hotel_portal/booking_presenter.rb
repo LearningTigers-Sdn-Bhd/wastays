@@ -28,6 +28,10 @@ module HotelPortal
       end
     end
 
+    def guarantee_method_display
+      (booking.guarantee_method || "none").titleize
+    end
+
     def created_at_formatted
       booking.created_at.strftime("%d %b %Y at %H:%M")
     end
@@ -46,6 +50,10 @@ module HotelPortal
 
     def checked_out_at_form_value
       Time.current.strftime("%Y-%m-%dT%H:%M")
+    end
+
+    def check_in_title
+      booking.checked_in? ? "Edit Check-In" : "Confirm Check-In"
     end
 
     def requires_backdated_checkin_reason?

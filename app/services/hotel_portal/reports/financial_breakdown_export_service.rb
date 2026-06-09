@@ -19,7 +19,7 @@ module HotelPortal
         CSV.generate(headers: true) do |csv|
           csv << [ "Booking Ref", "Guest Name", "Status", "Check In", "Check Out", "Gross", "Taxes", "Margin", "Net", "Currency" ]
           @bookings.each do |booking|
-            gross = booking.booking_folio&.folio_transactions&.select { |t| t.charge? || t.adjustment? }&.sum(&:amount) || 0.to_d
+            gross = gross_amount(booking)
             taxes = booking.tax_total || 0.to_d
             margin = booking.margin_amount || 0.to_d
             csv << [ booking.confirmation_token, booking.guest_name, booking.status, booking.check_in, booking.check_out, money(gross), money(taxes), money(margin), money(gross - margin), booking.currency ]
@@ -59,12 +59,16 @@ module HotelPortal
         result = []
         result << row([ "Booking Ref", "Guest Name", "Status", "Check In", "Check Out", "Gross", "Taxes", "Margin", "Net", "Currency" ])
         @bookings.each do |b|
-          gross = b.booking_folio&.folio_transactions&.select { |t| t.charge? || t.adjustment? }&.sum(&:amount) || 0.to_d
+          gross = gross_amount(b)
           taxes = b.tax_total || 0.to_d
           margin = b.margin_amount || 0.to_d
           result << row([ b.confirmation_token, b.guest_name, b.status, b.check_in, b.check_out, money(gross), money(taxes), money(margin), money(gross - margin), b.currency ])
         end
         result.join("\n")
+      end
+
+      def gross_amount(booking)
+        booking.booking_folio&.folio_transactions&.select { |t| t.charge? || t.adjustment? }&.sum(&:amount) || 0.to_d
       end
 
       def row(values)

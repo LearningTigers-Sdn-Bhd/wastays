@@ -14,7 +14,7 @@
     </div>
   </div>
 
-  <% if @settings.present? %>
+  <% if @presenter %>
     <div class="space-y-6 px-4 md:px-0">
       <% tabs = [
         { key: "general", label: "General" },
@@ -27,7 +27,7 @@
       <nav class="sticky top-2 z-20 overflow-x-auto rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
         <ul class="flex min-w-max items-center gap-2">
           <% tabs.each do |tab| %>
-            <% active = @active_settings_tab == tab[:key] %>
+            <% active = @presenter.active_tab == tab[:key] %>
             <li>
               <%= link_to tab[:label], hotel_settings_path(current_hotel, tab: tab[:key]), class: "inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition #{active ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}" %>
             </li>
@@ -35,7 +35,7 @@
         </ul>
       </nav>
 
-      <% if @active_settings_tab == "general" %>
+      <% if @presenter.active_tab == "general" %>
       <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Hotel Settings</h2>
@@ -45,7 +45,7 @@
         <div class="px-6 py-5 sm:px-8">
           <%= form_with model: @hotel, url: hotel_settings_path(@hotel, tab: "general"), method: :patch, local: true, class: "space-y-6" do |f| %>
             <%= hidden_field_tag :form_id, "hotel_settings" %>
-            <% settings_errors = @hotel.errors.full_messages + @property_policy.errors.full_messages %>
+            <% settings_errors = @hotel.errors.full_messages + @presenter.property_policy.errors.full_messages %>
             <% if settings_errors.any? && params[:form_id] == "hotel_settings" %>
               <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                 <p class="font-semibold"><%= pluralize(settings_errors.count, "error") %> prohibited these settings from being saved:</p>
@@ -60,17 +60,17 @@
             <div class="grid gap-4 md:grid-cols-2">
               <div>
                 <%= f.label :hotel_status_display, "Hotel Status", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.text_field :hotel_status_display, value: @settings[:hotel_status], disabled: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500" %>
+                <%= f.text_field :hotel_status_display, value: @presenter.settings_summary[:hotel_status], disabled: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500" %>
               </div>
 
               <div>
                 <%= f.label :onboarding_stage_display, "Onboarding Stage", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.text_field :onboarding_stage_display, value: @settings[:onboarding_stage], disabled: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500" %>
+                <%= f.text_field :onboarding_stage_display, value: @presenter.settings_summary[:onboarding_stage], disabled: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500" %>
               </div>
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">
-              <%= f.fields_for :property_policy_attributes, @property_policy do |property_policy_fields| %>
+              <%= f.fields_for :property_policy_attributes, @presenter.property_policy do |property_policy_fields| %>
                 <div data-controller="time-picker" data-time-picker-next-field-selector-value="#index-check-out-dropdown" class="relative">
                   <%= property_policy_fields.label :check_in_time, "Standard Check-in Time", class: "mb-2 block text-sm font-medium text-slate-900" %>
                   <div class="relative">
@@ -79,7 +79,7 @@
                            data-action="click->time-picker#toggle"
                            class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 cursor-pointer"
                            readonly
-                           value="<%= @property_policy.check_in_time %>">
+                           value="<%= @presenter.property_policy.check_in_time %>">
                     <%= property_policy_fields.hidden_field :check_in_time, data: { time_picker_target: "hiddenInput" } %>
                     
                     <div data-time-picker-target="dropdown" 
@@ -112,7 +112,7 @@
                            data-action="click->time-picker#toggle"
                            class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 cursor-pointer"
                            readonly
-                           value="<%= @property_policy.check_out_time %>">
+                           value="<%= @presenter.property_policy.check_out_time %>">
                     <%= property_policy_fields.hidden_field :check_out_time, data: { time_picker_target: "hiddenInput" } %>
                     
                     <div data-time-picker-target="dropdown" 
@@ -167,7 +167,7 @@
                 <% can_edit_currency = current_user.has_permission?("manage_hotel_profile") %>
                 <%= f.label :default_currency, "Default Currency", class: "mb-2 block text-sm font-medium text-slate-900" %>
                 <%= f.select :default_currency, 
-                             options_for_select(CurrencyCatalog.options, @settings[:default_currency] || "MYR"), 
+                             options_for_select(CurrencyCatalog.options, @presenter.settings_summary[:default_currency] || "MYR"), 
                              {}, 
                              class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-900 #{can_edit_currency ? 'bg-white focus:border-slate-300 focus:outline-none focus:ring-0' : 'bg-slate-50 cursor-not-allowed'}", 
                              disabled: !can_edit_currency %>
@@ -273,7 +273,7 @@
       </section>
       <% end %>
 
-      <% if @active_settings_tab == "tax" %>
+      <% if @presenter.active_tab == "tax" %>
       <!-- Tax Configuration Card -->
       <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
@@ -334,10 +334,11 @@
           <!-- Add form -->
           <div>
             <h3 class="mb-4 text-sm font-semibold text-slate-900">Add New Tax</h3>
-            <%= form_with model: [ current_hotel, @hotel_tax ], local: true, class: "space-y-4" do |f| %>
-              <% if @hotel_tax.errors.any? %>
+            <% new_hotel_tax = @presenter.new_hotel_tax %>
+            <%= form_with model: [ current_hotel, new_hotel_tax ], local: true, class: "space-y-4" do |f| %>
+              <% if new_hotel_tax.errors.any? %>
                 <div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-                  <%= @hotel_tax.errors.full_messages.to_sentence %>
+                  <%= new_hotel_tax.errors.full_messages.to_sentence %>
                 </div>
               <% end %>
 
@@ -378,11 +379,12 @@
             <div class="px-4 py-3 border-b border-slate-100 bg-slate-50">
               <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest">Current Taxes</p>
             </div>
-            <% if @hotel_taxes.empty? %>
+            <% hotel_taxes = @presenter.hotel_taxes %>
+            <% if hotel_taxes.empty? %>
               <div class="px-4 py-8 text-center text-sm text-slate-400">No custom taxes configured yet.</div>
             <% else %>
               <ul class="divide-y divide-slate-100">
-                <% @hotel_taxes.each do |tax| %>
+                <% hotel_taxes.each do |tax| %>
                   <li class="px-4 py-3 flex items-center justify-between gap-4">
                     <div>
                       <p class="text-sm font-semibold text-slate-900"><%= tax.name %></p>
@@ -486,7 +488,7 @@
       </div>
       <% end %>
 
-      <% if @active_settings_tab == "ai" %>
+      <% if @presenter.active_tab == "ai" %>
       <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">AI Concierge Configuration</h2>
@@ -547,7 +549,7 @@
       </section>
       <% end %>
 
-      <% if @active_settings_tab == "notifications" %>
+      <% if @presenter.active_tab == "notifications" %>
       <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
           <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Communication & Notifications</h2>
@@ -576,7 +578,7 @@
           <div class="grid gap-4 lg:grid-cols-3">
             <%# 1. Check-In Confirmation %>
             <%= render "notification_module", 
-                       config: @check_in_notification_config, 
+                       config: @presenter.check_in_notification_config, 
                        notification_type: "check_in_confirmation",
                        title: "Check-In Confirmation",
                        subtitle: "Guest Arrival",
@@ -586,8 +588,9 @@
                        <% } %>
 
             <%# 2. Post-Stay Review Request %>
+            <% post_stay_config = @presenter.post_stay_review_notification_config %>
             <%= render "notification_module", 
-                       config: @post_stay_review_notification_config, 
+                       config: post_stay_config, 
                        notification_type: "post_stay_review_request",
                        title: "Post-Stay Review",
                        subtitle: "Guest Feedback",
@@ -598,18 +601,19 @@
               <div class="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Review Link</label>
-                  <%= text_field_tag "notification_config[settings][review_link]", @post_stay_review_notification_config.settings.to_h["review_link"], placeholder: "Google/Tripadvisor link...", class: "w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:outline-none focus:ring-0" %>
+                  <%= text_field_tag "notification_config[settings][review_link]", post_stay_config.settings.to_h["review_link"], placeholder: "Google/Tripadvisor link...", class: "w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:outline-none focus:ring-0" %>
                 </div>
                 <div>
                   <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Delay (Hours)</label>
-                  <%= number_field_tag "notification_config[settings][send_delay_hours]", @post_stay_review_notification_config.settings.to_h["send_delay_hours"], min: 0, step: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:outline-none focus:ring-0" %>
+                  <%= number_field_tag "notification_config[settings][send_delay_hours]", post_stay_config.settings.to_h["send_delay_hours"], min: 0, step: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:outline-none focus:ring-0" %>
                 </div>
               </div>
             <% end %>
 
             <%# 3. Pre-Arrival Notification %>
+            <% pre_arrival_config = @presenter.pre_arrival_notification_config %>
             <%= render "notification_module", 
-                       config: @pre_arrival_notification_config, 
+                       config: pre_arrival_config, 
                        notification_type: "pre_arrival_notification",
                        title: "Pre-Arrival Greeting",
                        subtitle: "Stay Prep",
@@ -620,7 +624,7 @@
               <div>
                 <span class="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Send Stages</span>
                 <div class="flex gap-2">
-                  <% stages = @pre_arrival_notification_config.settings.to_h["stages"] || [] %>
+                  <% stages = pre_arrival_config.settings.to_h["stages"] || [] %>
                   <%= hidden_field_tag "notification_config[settings][stages][]", "" %>
                   <% [["d2", "D-2"], ["d1", "D-1"]].each do |val, label| %>
                     <label class="flex flex-1 cursor-pointer items-center justify-between rounded-lg border border-slate-200 p-2 transition-all hover:bg-slate-50 has-[:checked]:border-slate-900 has-[:checked]:bg-slate-50/50">
@@ -634,7 +638,7 @@
 
             <%# 4. Check-Out Receipt Message %>
             <%= render "notification_module", 
-                       config: @check_out_receipt_notification_config, 
+                       config: @presenter.check_out_receipt_notification_config, 
                        notification_type: "check_out_receipt_message",
                        title: "Check-Out Invoice / Receipt",
                        subtitle: "Billing",
@@ -644,9 +648,10 @@
                        <% } %>
 
             <%# 5. In-Stay Guest Messaging %>
+            <% in_stay_config = @presenter.in_stay_guest_notification_config %>
             <div class="lg:col-span-3">
               <%= render "notification_module", 
-                         config: @in_stay_guest_notification_config, 
+                         config: in_stay_config, 
                          notification_type: "in_stay_guest_messaging",
                          title: "In-Stay Guest Engagement",
                          subtitle: "Experience",
@@ -656,7 +661,7 @@
                          <% } do |f| %>
                 <div class="space-y-5">
                   <div class="grid gap-4 md:grid-cols-3">
-                    <% in_stay_rules = @in_stay_guest_notification_config.settings.to_h.fetch("rules", {}) %>
+                    <% in_stay_rules = in_stay_config.settings.to_h.fetch("rules", {}) %>
                     <% [["mid_stay", "Mid-stay Check", "Satisfaction survey"], 
                         ["upsell", "Upsell Prompt", "F&B or Spa offers"], 
                         ["activity", "Activity Suggestion", "Local attractions"]].each do |rule_key, label, sub| %>
@@ -682,7 +687,7 @@
                   </div>
 
                   <div class="rounded-lg border border-slate-200 bg-slate-50/30 p-4">
-                    <% quiet_hours = @in_stay_guest_notification_config.settings.to_h.fetch("quiet_hours", {}) %>
+                    <% quiet_hours = in_stay_config.settings.to_h.fetch("quiet_hours", {}) %>
                     <div class="flex items-center justify-between mb-3">
                       <div class="flex items-center gap-2 text-slate-700">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
@@ -713,7 +718,7 @@
       </section>
       <% end %>
 
-      <% if @active_settings_tab == "banking" && current_user.has_permission?("manage_account") %>
+      <% if @presenter.active_tab == "banking" && current_user.has_permission?("manage_account") %>
         <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
             <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Banking Details</h2>
@@ -762,7 +767,7 @@
         </section>
       <% end %>
 
-      <% if @active_settings_tab == "general" %>
+      <% if @presenter.active_tab == "general" %>
       <!-- Concierge QR -->
       <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-5 sm:px-8">

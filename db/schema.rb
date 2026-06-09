@@ -530,7 +530,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_08_004427) do
     t.index ["hotel_knowledge_document_id"], name: "index_hotel_knowledge_chunks_on_hotel_knowledge_document_id"
   end
 
-
   create_table "hotel_knowledge_diagnostics", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.bigint "prospect_id"

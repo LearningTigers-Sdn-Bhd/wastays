@@ -275,27 +275,28 @@ Rails.application.routes.draw do
     resources :nearby_attractions, except: [ :show ]
     resources :bookings, only: [ :index, :show, :update, :new, :create ] do
       collection do
-        get :availability
-        get :rate_options
-        get :stay_price
-        post :sync
+        post :sync, to: "bookings/syncs#create"
+        get :availability, to: "bookings/availabilities#show"
+        get :rate_options, to: "bookings/rate_options#show"
+        get :stay_price, to: "bookings/prices#show"
       end
+
       member do
-        get  :folio
-        get  :checkout
-        patch :move
-        post :check_in
-        post :check_out
-        post :reinstate
-        post :cancel
-        post :add_guest
-        post :process_late_checkout
-        get  :folio_invoice
-        delete "guests/:guest_id", action: :remove_guest, as: :remove_guest
-        post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings#complete_housekeeping_request", as: :complete_housekeeping_request
-        patch "complaint_requests/:complaint_request_id", to: "bookings#update_complaint_request", as: :update_complaint_request
-        post "complaint_requests/:complaint_request_id/resolve", to: "bookings#resolve_complaint_request", as: :resolve_complaint_request
+        get  :folio, to: "bookings/folios#show"
+        get  :checkout, to: "bookings/checkouts#show"
+        patch :move, to: "bookings/moves#update"
+        post :check_in, to: "bookings/check_ins#create"
+        post :check_out, to: "bookings/checkouts#create"
+        post :reinstate, to: "bookings/reinstatements#create"
+        post :cancel, to: "bookings/cancellations#create"
+        post :add_guest, to: "bookings/guests#create"
+        post :process_late_checkout, to: "bookings/checkouts#process_late_checkout"
+        get  :folio_invoice, to: "bookings/folios#invoice"
+        delete "guests/:guest_id", to: "bookings/guests#destroy", as: :remove_guest
+        post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings/housekeeping_requests#complete", as: :complete_housekeeping_request
+        post "complaint_requests/:complaint_request_id/resolve", to: "bookings/complaint_requests#resolve", as: :resolve_complaint_request
       end
+
       resources :refund_requests, only: [ :new, :create ]
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
       resources :folio_transactions, only: [ :create ] do

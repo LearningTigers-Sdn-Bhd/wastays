@@ -121,7 +121,7 @@
                   <%= f.label :guest_country, "Nationality", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
                   <%= f.select :guest_country,
                         country_options,
-                        { selected: @booking.guest_country.presence || "Malaysia", prompt: "Select nationality" },
+                        { selected: @presenter.guest_country_default, prompt: "Select nationality" },
                         class: "form-input py-3 px-5 border border-neutral-border", required: true %>
                 </div>
 

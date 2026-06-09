@@ -6,16 +6,18 @@
 
       <%# Modal Header %>
       <%= render "hotel_portal/reservation_board/partials/content_header",
-                 title: (@booking.checked_in? ? "Edit Check-In" : "Confirm Check-In"),
+                 title: @presenter.check_in_title,
                  subtitle: "Set check-in time and assign rooms for #{@booking.guest_name}.",
                  icon: lucide_icon("log-in", stroke_width: 2.5, class: "size-5") %>
 
       <%# Modal Content %>
       <div class="flex-1 p-6 space-y-6">
+        <%= render "hotel_portal/bookings/guarantee_status_badge", booking: @booking %>
+
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
           <%= f.datetime_local_field :checked_in_at,
-              value: (@booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M"),
+              value: @presenter.checked_in_at_form_value,
               class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Public::PreCheckinsController < ApplicationController
   skip_before_action :authenticate_user! if respond_to?(:authenticate_user!)
 
