@@ -27,6 +27,7 @@ Maps folio transaction categories to accounting General Ledger Codes (GL Codes) 
 - Journal batch creation fails fast if any business-day folio transaction is missing a General Ledger Code (GL Code).
 - Journal batch CSV export supports accounting reconciliation.
 - `no_show_charge` maps separately from accommodation revenue for deterministic no-show accounting.
+- General Ledger Mappings are surfaced in the hotel portal under `System > Accounting` alongside Journal Batches.
 
 ## Known Follow-Ups
 

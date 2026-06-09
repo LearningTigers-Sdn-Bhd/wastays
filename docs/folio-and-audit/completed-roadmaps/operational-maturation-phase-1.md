@@ -27,6 +27,8 @@ This document records the completed milestones from the Operational Maturation r
   - Implementation of `DailyRevenueReport` with support for PDF, CSV, and Excel exports.
   - Revenue is broken down by category and department as specified.
   - `daily_revenue` access is protected by the same `view_reports` authorization as the rest of the reports package.
+- **Navigation Alignment**:
+  - Sidebar and breadcrumbs now group Financial reports, Audit workflows, and Accounting tools into separate navigation paths for clearer operator access.
 
 ---
 

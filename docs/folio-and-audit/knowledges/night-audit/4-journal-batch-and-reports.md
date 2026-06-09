@@ -36,6 +36,7 @@ Turns closed business-day activity into financial summaries, journal batches, an
 - Journal batch creation fails fast when any included transaction is missing a General Ledger Code (GL Code).
 - Journal batch CSV export supports external accounting workflows.
 - Deposit Liability Report tracks unearned advance-deposit balances.
+- Sidebar and breadcrumb navigation now separates this surface into `Reports > Financial`, `Reports > Audit`, and `System > Accounting`, keeping Night Audit, financial reports, and accounting exports distinct for operators.
 
 ## Known Follow-Ups
 
