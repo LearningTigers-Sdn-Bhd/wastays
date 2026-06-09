@@ -370,7 +370,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "can i make booking?", prospect_public_id: prospect.public_id).call
 
-    expect(result.payload[:reply_message]).to eq("Sure, what dates or month would you like to check in?")
+    expect(result.payload[:reply_message]).to eq("Sure, which date or month do you plan to arrive for check-in?")
     expect(result.payload[:action_name]).to eq("request_quote")
   end
 end
