@@ -7,7 +7,7 @@ This document records the completed milestones from the Operational Maturation r
 ## 1. Accounting Foundation & Governance
 **Status**: Completed May 20, 2026
 
-- **Manage General Ledger Labels**: 
+- **General Ledger Mappings**: 
   - Implemented automated mapping for all transaction categories (Accommodation, Tax, Food and Beverage (F&B), No-Show, etc.).
   - Added management UI for hotel-specific General Ledger Code (GL Code) configuration.
 - **Journal Batching**: 

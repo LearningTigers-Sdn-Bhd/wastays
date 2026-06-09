@@ -1,4 +1,4 @@
-# Financial Contracts: Manage General Ledger Labels
+# Financial Contracts: General Ledger Mapping
 
 ## Status
 
@@ -32,7 +32,7 @@ Maps folio transaction categories to accounting General Ledger Codes (GL Codes) 
 
 - Align folio ledger export fallback behavior with hotel-specific General Ledger (GL) mappings so export issues fail visibly instead of using generic fallback codes.
 
-## Default General Ledger Labels
+## Default General Ledger Mappings
 
 | Transaction Category | General Ledger Code (GL Code) | System Description | Detailed Explanation |
 | :--- | :--- | :--- | :--- |

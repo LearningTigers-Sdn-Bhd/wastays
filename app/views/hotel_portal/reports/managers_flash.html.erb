@@ -4,7 +4,9 @@
     <span class="text-sm text-slate-400">/</span>
     <%= link_to "Reports", hotel_reports_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
     <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900">Manager Flash Report</span>
+    <%= link_to "Financial", hotel_reports_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-semibold text-slate-900">Manager's Flash Report</span>
   </div>
 <% end %>
 

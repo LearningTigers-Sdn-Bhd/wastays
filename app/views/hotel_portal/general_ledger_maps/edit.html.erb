@@ -2,7 +2,11 @@
   <div class="flex items-center gap-x-2">
     <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
     <span class="text-sm text-slate-400">/</span>
-    <%= link_to "Manage General Ledger Labels", hotel_general_ledger_maps_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
+    <span class="text-sm font-medium text-slate-600">System</span>
+    <span class="text-sm text-slate-400">/</span>
+    <span class="text-sm font-medium text-slate-600">Accounting</span>
+    <span class="text-sm text-slate-400">/</span>
+    <%= link_to "General Ledger Mappings", hotel_general_ledger_maps_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
     <span class="text-sm text-slate-400">/</span>
     <span class="text-sm font-semibold text-slate-900">Edit Mapping</span>
   </div>
