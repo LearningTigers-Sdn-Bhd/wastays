@@ -1,6 +1,6 @@
 # Enterprise Vision: The Future of Wastays
 
-The features outlined in this planning document represent the strategic transition of Wastays from a boutique PMS into a globally scalable, enterprise-grade Property Management System.
+The features outlined in this planning document represent the strategic transition of Wastays from a boutique Property Management System (PMS) into a globally scalable, enterprise-grade Property Management System.
 
 ---
 
@@ -20,7 +20,7 @@ The features outlined in this planning document represent the strategic transiti
 
 - **City Ledger / Accounts Receivable (AR)**: 
   - Direct invoicing for B2B partners, enabling "Credit Billing" where guests stay now and companies pay later.
-  - AR Aging Reports (30/60/90 days) to manage collections and credit risk.
+  - Accounts Receivable (AR) Aging Reports (30/60/90 days) to manage collections and credit risk.
 - **Enterprise Accounting Exports**: 
   - Certified data exports for major ERPs (Oracle, SAP, Xero) to bridge the gap between hospitality and finance.
 

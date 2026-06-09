@@ -2,9 +2,9 @@
 
 ## Background
 
-WAStays is a multi-tenant hotel property management system (PMS) handling booking lifecycle, financial folios, payment processing, night audit, and reporting for hotel operators across Malaysia. The system has evolved through several maturation phases — from core booking engine and payment gateway integration through to enterprise-grade financial controls with immutable audit trails, general ledger mapping, and comprehensive reporting.
+WAStays is a multi-tenant Property Management System (PMS) handling booking lifecycle, financial folios, payment processing, night audit, and reporting for hotel operators across Malaysia. The system has evolved through several maturation phases — from core booking engine and payment gateway integration through to enterprise-grade financial controls with immutable audit trails, General Ledger (GL) mapping, and comprehensive reporting.
 
-This PR captures the entirety of the Folio & Audit domain: the booking lifecycle state machine, the folio-based financial ledger, financial controls (posting guard, audit events, GL mapping), night audit orchestration, and the reporting suite.
+This PR captures the entirety of the Folio & Audit domain: the booking lifecycle state machine, the folio-based financial ledger, financial controls (posting guard, audit events, General Ledger (GL) mapping), night audit orchestration, and the reporting suite.
 
 ## Proposal
 
@@ -26,7 +26,7 @@ All revenue analytics reconcile to `FolioTransaction` (charges + adjustments) as
   - `current-progress-roadmaps/operational-maturation.md` — Remaining priorities
   - `knowledges/` — Feature-level knowledge records (booking lifecycle, folio, financial controls, night audit, reporting)
   - `planning/enterprise-features.md` — Forward-looking enterprise planning
-  - `reference/night-audit-reference.md` — Target PMS operating model
+  - `reference/night-audit-reference.md` — Target Property Management System (PMS) operating model
 - Folio models: `BookingFolio`, `FolioTransaction`, `Deposit`, `HotelGeneralLedgerMap`, `JournalBatch`, `JournalBatchEntry`
 - Financial controls: `FinancialAuditEvent`, `HotelBusinessDate`, `PostingGuard`, `AuditEventRecorder`
 - Night audit: `NightAudit`, `NightAuditLog`, `NightAuditFinancialSummary`, `RunNightAudit`, `EvaluateNightAudit`
@@ -48,7 +48,7 @@ All revenue analytics reconcile to `FolioTransaction` (charges + adjustments) as
 ### Destroyed
 
 - Legacy `post_folio_transactions` permission — Replaced by granular folio permissions
-- Legacy `no_show_penalty` transaction category — Renamed to `no_show_charge` for GL/report consistency
+- Legacy `no_show_penalty` transaction category — Renamed to `no_show_charge` for General Ledger (GL)/report consistency
 - No-show accounting from metadata — Source of truth moved to `folio_transaction.category`
 - Full-stay upfront charging model — Replaced by automated nightly charges via night audit
 
@@ -64,7 +64,7 @@ app/models/
 ├── folio_transaction.rb                 # Immutable charge/payment/adjustment
 ├── deposit.rb                           # Security deposits
 ├── hotel_business_date.rb               # State machine: open/audit_running/closed
-├── hotel_general_ledger_map.rb          # GL code mappings per hotel
+├── hotel_general_ledger_map.rb          # General Ledger Code (GL Code) mappings per hotel
 ├── journal_batch.rb                     # Night audit journal aggregation
 ├── journal_batch_entry.rb               # Individual journal debit/credit lines
 ├── financial_audit_event.rb             # Immutable audit trail
@@ -113,8 +113,8 @@ app/services/financial_controls/
 └── evaluate_anomalies.rb               # Background anomaly detection
 
 app/services/financials/
-├── create_journal_batch.rb              # GL journal aggregation
-└── ensure_default_gl_maps.rb            # Default GL code seeding
+├── create_journal_batch.rb              # General Ledger (GL) journal aggregation
+└── ensure_default_gl_maps.rb            # Default General Ledger Code (GL Code) seeding
 
 app/services/payments/
 ├── base_adapter.rb                      # Gateway adapter interface
@@ -322,5 +322,5 @@ docs/
 | HotelBusinessDate state machine | Prevents financial postings into closed/in-flight periods |
 | Granular folio permissions | Replaces broad `post_folio_transactions` with charge/payment/adjustment/correction/reversal-specific permissions |
 | Per-night charge posting | Replaces full-stay upfront charging for accurate per-date revenue recognition |
-| Automated journal batching | Groups folio transactions by GL code for direct accounting export |
+| Automated journal batching | Groups folio transactions by General Ledger Code (GL Code) for direct accounting export |
 | Force Roll capability | Prevents operational standstill when night audit is blocked; recorded as `force_closed` audit event |

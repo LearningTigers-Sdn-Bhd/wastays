@@ -1,4 +1,4 @@
-# Financial Contracts: General Ledger Mapping
+# Financial Contracts: Manage General Ledger Labels
 
 ## Status
 
@@ -6,7 +6,7 @@ Completed foundation with remaining export alignment work.
 
 ## Purpose
 
-Maps folio transaction categories to accounting GL codes and supports hotel-specific configuration for journal exports.
+Maps folio transaction categories to accounting General Ledger Codes (GL Codes) and supports hotel-specific configuration for journal exports.
 
 ## Key Files
 
@@ -21,25 +21,25 @@ Maps folio transaction categories to accounting GL codes and supports hotel-spec
 
 ## Rules Made So Far
 
-- Hotels can manage GL mappings for supported financial categories.
-- Default GL mappings exist for every valid folio transaction category.
+- Hotels can manage General Ledger (GL) mappings for supported financial categories.
+- Default General Ledger (GL) mappings exist for every valid folio transaction category.
 - Journal batches can be created from business-day financial activity.
-- Journal batch creation fails fast if any business-day folio transaction is missing a GL code.
+- Journal batch creation fails fast if any business-day folio transaction is missing a General Ledger Code (GL Code).
 - Journal batch CSV export supports accounting reconciliation.
 - `no_show_charge` maps separately from accommodation revenue for deterministic no-show accounting.
 
 ## Known Follow-Ups
 
-- Align folio ledger export fallback behavior with hotel-specific GL mappings so export issues fail visibly instead of using generic fallback codes.
+- Align folio ledger export fallback behavior with hotel-specific General Ledger (GL) mappings so export issues fail visibly instead of using generic fallback codes.
 
-## Default GL Mappings
+## Default General Ledger Labels
 
-| Transaction Category | GL Code | System Description | Detailed Explanation |
+| Transaction Category | General Ledger Code (GL Code) | System Description | Detailed Explanation |
 | :--- | :--- | :--- | :--- |
 | `accommodation` | `4010` | Room Revenue | Nightly room rates, room upgrades, and standard stay charges applied to guest folios. |
 | `tax` | `2010` | Tax Liabilities | State, local, and occupancy taxes collected from guests that the hotel owes to the government. |
 | `fb` | `4020` | Food & Beverage Revenue | Charges from hotel restaurants, bars, room service, or minibar consumption. |
-| `no_show_charge` | `4030` | No-Show Charge Revenue | Fees captured when a guest fails to arrive for a guaranteed reservation. Kept separate from `accommodation` to avoid skewing average daily rate (ADR) and occupancy metrics. |
+| `no_show_charge` | `4030` | No-Show Charge Revenue | Fees captured when a guest fails to arrive for a guaranteed reservation. Kept separate from `accommodation` to avoid skewing Average Daily Rate (ADR) and occupancy metrics. |
 | `other` | `4090` | Other Revenue | Miscellaneous ancillary services like parking, spa, laundry, or pet fees. |
 | `gateway_payment` | `1010` | Bank - Gateway | Electronic payments (credit/debit cards) processed automatically through external payment gateways like Stripe. |
 | `cash` | `1020` | Bank - Cash | Physical currency (bills and coins) collected in person at the front desk. |

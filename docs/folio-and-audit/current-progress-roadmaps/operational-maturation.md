@@ -13,8 +13,8 @@ This roadmap outlines the remaining priorities required to transition from a fun
   - Closed business-date override remains separately controlled by `override_financial_date_lock`.
 - **Completed Financial Hardening**:
   - Completed May 20, 2026: `daily_revenue` report requests now require `view_reports` permission.
-  - Completed May 20, 2026: journal batch creation fails fast when folio transactions are missing GL codes instead of excluding them from the batch.
-  - Completed May 22, 2026: reporting expanded to include all charge categories (F&B, No-Show, Late Checkout, etc.) in `DailyRevenueReport` and `ManagersFlashReport`.
+  - Completed May 20, 2026: journal batch creation fails fast when folio transactions are missing General Ledger Codes (GL Codes) instead of excluding them from the batch.
+  - Completed May 22, 2026: reporting expanded to include all charge categories (Food and Beverage (F&B), No-Show, Late Checkout, etc.) in `DailyRevenueReport` and `ManagersFlashReport`.
   - Completed May 22, 2026: granular folio permissions enforced at the service layer (`InsertTransaction`) to prevent permission bypass.
   - Completed May 22, 2026: `PostingGuard` refined to support system-level bypasses for automated retroactive processing and overrides for `force_closed` dates.
 - **Completed Financial Observability**:
@@ -40,7 +40,7 @@ This roadmap outlines the remaining priorities required to transition from a fun
 **Objective**: Provide actionable insights and a frictionless staff experience.
 
 - **Enterprise Report Package**: 
-  - Completed May 22, 2026: "Manager's Flash Report" (Occupancy, ADR, RevPAR, and Daily Revenue) with PDF, Excel, and CSV exports.
+  - Completed May 22, 2026: "Manager's Flash Report" (Occupancy, Average Daily Rate (ADR), Revenue per Available Room (RevPAR), and Daily Revenue) with PDF, Excel, and CSV exports.
   - Completed: "Deposit Liability Report" tracks unearned advance-deposit revenue.
   - Completed May 22, 2026: Multi-page post-close Audit Packet PDF containing daily financial summary, itemized manual adjustments, and audit blockers.
 - **UX & Validation Polish**:

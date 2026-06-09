@@ -20,8 +20,8 @@ Provides a unified daily management view of the property's performance, combinin
 
 ## Rules Made So Far
 
-- **Optimized Data Aggregation:** Uses custom SQL queries to efficiently calculate Occupancy %, ADR, RevPAR, and Daily Revenue in a single pass.
-- **Prorated Booking Revenue:** Calculates ADR and RevPAR based on prorated booking subtotals to align with industry standards and the `DailyOccupancyReport`.
+- **Optimized Data Aggregation:** Uses custom SQL queries to efficiently calculate Occupancy %, Average Daily Rate (ADR), Revenue per Available Room (RevPAR), and Daily Revenue in a single pass.
+- **Prorated Booking Revenue:** Calculates Average Daily Rate (ADR) and Revenue per Available Room (RevPAR) based on prorated booking subtotals to align with industry standards and the `DailyOccupancyReport`.
 - **Actual Posted Revenue:** Displays actual room revenue and tax posted to guest folios, aligning with the `DailyRevenueReport`.
 - **Multi-Format Exports:** Supports professional PDF (landscape), Excel (multi-sheet), and CSV exports.
 - **Access Control:** Protected by the `view_reports` permission.
@@ -37,8 +37,8 @@ These metrics use **prorated booking subtotals** to evaluate how effectively the
 | Metric | Definition | Calculation |
 | :--- | :--- | :--- |
 | **Occupancy %** | The percentage of available rooms that were sold for the night. | `Rooms Sold / Rooms Available` |
-| **ADR** | Average Daily Rate. The average price paid for each sold room. | `Total Prorated Booking Revenue / Rooms Sold` |
-| **RevPAR** | Revenue Per Available Room. Measures total revenue generation against total capacity. | `Total Prorated Booking Revenue / Total Rooms Available` |
+| **Average Daily Rate (ADR)** | The average price paid for each sold room. | `Total Prorated Booking Revenue / Rooms Sold` |
+| **Revenue per Available Room (RevPAR)** | Measures total revenue generation against total capacity. | `Total Prorated Booking Revenue / Total Rooms Available` |
 
 ### 2. Financial Actuals (Ledger Totals)
 These metrics represent the **actual money posted to folios** on that specific business date. They are the "source of truth" for accounting and reconciliation.
@@ -47,10 +47,10 @@ These metrics represent the **actual money posted to folios** on that specific b
 | :--- | :--- | :--- |
 | **Room Revenue** | The total amount of `accommodation` charges (and related adjustments) posted to folios. | `SUM(Folio Transactions where category = 'accommodation')` |
 | **Tax** | Total taxes (VAT, City Tax, etc.) collected on the business date. | `SUM(Folio Transactions where category = 'tax')` |
-| **Other Revenue** | All ancillary charges (F&B, No-Show, Late Checkout, etc.) posted to folios. | `SUM(Folio Transactions where category NOT IN ('accommodation', 'tax'))` |
+| **Other Revenue** | All ancillary charges (Food and Beverage (F&B), No-Show, Late Checkout, etc.) posted to folios. | `SUM(Folio Transactions where category NOT IN ('accommodation', 'tax'))` |
 | **Total Revenue** | The sum of all room, tax, and other revenue posted to the property's ledger. | `Room Revenue + Tax + Other Revenue` |
 
 ## Known Follow-Ups
 
-- Align folio ledger export fallback behavior with hotel-specific GL mappings.
+- Align folio ledger export fallback behavior with hotel-specific General Ledger (GL) mappings.
 - Deepen guided blocker-resolution actions beyond the existing night audit blocker views and endpoint.

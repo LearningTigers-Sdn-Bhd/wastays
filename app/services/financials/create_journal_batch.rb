@@ -24,7 +24,7 @@ module Financials
 
         missing_gl_count = transactions.where(gl_code: nil).count
         if missing_gl_count.positive?
-          batch.errors.add(:base, "Cannot create journal batch: #{missing_gl_count} folio transactions are missing GL codes")
+          batch.errors.add(:base, "Cannot create journal batch: #{missing_gl_count} folio transactions are missing General Ledger Codes (GL Codes)")
           raise ActiveRecord::RecordInvalid, batch
         end
 

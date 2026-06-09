@@ -7,13 +7,13 @@ This document records the completed milestones from the Operational Maturation r
 ## 1. Accounting Foundation & Governance
 **Status**: Completed May 20, 2026
 
-- **General Ledger (GL) Mappings**: 
-  - Implemented automated mapping for all transaction categories (Accommodation, Tax, F&B, No-Show, etc.).
-  - Added management UI for hotel-specific GL code configuration.
+- **Manage General Ledger Labels**: 
+  - Implemented automated mapping for all transaction categories (Accommodation, Tax, Food and Beverage (F&B), No-Show, etc.).
+  - Added management UI for hotel-specific General Ledger Code (GL Code) configuration.
 - **Journal Batching**: 
   - Automated creation of Journal Batches during the Night Audit process.
   - Implemented CSV export for streamlined reconciliation with external accounting software.
-  - Journal batch creation now fails fast when business-day folio transactions are missing GL codes, preventing silent omission from accounting exports.
+  - Journal batch creation now fails fast when business-day folio transactions are missing General Ledger Codes (GL Codes), preventing silent omission from accounting exports.
 
 ---
 
