@@ -2,14 +2,17 @@
 <% footer_items = hotel_sidebar_footer_items %>
 
 <% hotel_sidebar_header = capture do %>
-  <div class="flex items-center justify-between px-4 py-3 min-h-12">
-    <div class="flex items-center gap-x-2 min-w-0">
-      <%= cached_icon "building-2", class: "size-4 shrink-0 text-neutral-text-secondary" %>
+  <div class="flex flex-col gap-y-2 px-4 py-3 min-h-12">
+    <div class="flex items-center gap-x-2.5 min-w-0" title="<%= current_hotel.name %>" aria-label="Hotel: <%= current_hotel.name %>">
+      <span class="inline-flex justify-center items-center size-7 rounded-lg bg-slate-100 text-slate-700 shadow-xs ring-1 ring-slate-200 shrink-0">
+        <%= cached_icon "building-2", class: "size-4 shrink-0" %>
+      </span>
       <span class="text-sm font-semibold text-neutral-text-primary truncate"><%= current_hotel.name.truncate(24) %></span>
     </div>
-    <% if current_user.superadmin? %>
-      <a href="<%= admin_dashboard_path %>" class="shrink-0 inline-flex items-center justify-center size-7 rounded-lg text-muted-foreground hover:bg-surface-hover hover:text-neutral-text-primary transition-colors" title="Go to Admin Panel">
-        <%= cached_icon "settings", class: "size-3.5 shrink-0" %>
+    <% if current_user.admin_panel_user? %>
+      <a href="<%= admin_dashboard_path %>" target="_blank" rel="noopener noreferrer" class="sidebar-nav-link sidebar-nav-link-default">
+        <%= cached_icon "external-link", class: "size-4 shrink-0" %>
+        <span>Go to Admin Panel</span>
       </a>
     <% end %>
   </div>

@@ -25,7 +25,7 @@
     </div>
   <% end %>
 
-  <div class="flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
+  <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
     <% if search_enabled %>
       <div class="p-4 pb-2">
         <label class="block" for="<%= desktop_search_id %>">
@@ -42,15 +42,15 @@
 
     <%= nav_html %>
 
-    <div <% if search_enabled %>data-admin-sidebar-search-target="section"<% end %> class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
-      <%= footer_html %>
-    </div>
-
     <% if search_enabled %>
       <div data-admin-sidebar-search-target="empty" class="hidden mx-4 mb-4 rounded-xl border border-dashed border-layer-line bg-layer-alt px-4 py-5 text-center text-sm text-muted-foreground-2">
         <%= empty_message %>
       </div>
     <% end %>
+  </div>
+
+  <div class="shrink-0 px-4 py-4 border-t border-layer-line bg-sidebar-bg space-y-0.5">
+    <%= footer_html %>
   </div>
 </aside>
 
@@ -72,7 +72,7 @@
     </div>
   <% end %>
 
-  <div class="flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
+  <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
     <% if search_enabled %>
       <div class="p-4 pb-2">
         <label class="block" for="<%= mobile_search_id %>">
@@ -89,14 +89,14 @@
 
     <%= nav_html %>
 
-    <div <% if search_enabled %>data-admin-sidebar-search-target="section"<% end %> class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
-      <%= footer_html %>
-    </div>
-
     <% if search_enabled %>
       <div data-admin-sidebar-search-target="empty" class="hidden mx-4 mb-4 rounded-xl border border-dashed border-layer-line bg-layer-alt px-4 py-5 text-center text-sm text-muted-foreground-2">
         <%= empty_message %>
       </div>
     <% end %>
+  </div>
+
+  <div class="shrink-0 px-4 py-4 border-t border-layer-line bg-sidebar-bg space-y-0.5">
+    <%= footer_html %>
   </div>
 </aside>
