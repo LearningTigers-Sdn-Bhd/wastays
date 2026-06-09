@@ -11,6 +11,7 @@ class HotelPortal::ReportsController < HotelPortal::BaseController
   before_action -> { require_feature!("housekeeper_productivity") }, only: %i[managers_flash]
   before_action -> { require_feature!("booking_source_analysis") }, only: %i[breakdown]
   before_action -> { require_feature!("revenue_allocation_per_night") }, only: %i[daily_revenue]
+  before_action -> { require_feature!("excel_pdf_export") }, if: -> { %i[csv xls pdf].include?(request.format.symbol) }
 
   def index
     # Note: FinancialFiltering sets @start_date and @end_date
