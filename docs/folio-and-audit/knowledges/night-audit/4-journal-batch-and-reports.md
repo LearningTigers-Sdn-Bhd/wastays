@@ -40,4 +40,4 @@ Turns closed business-day activity into financial summaries, journal batches, an
 ## Known Follow-Ups
 
 - Align folio ledger export with hotel-specific GL mappings.
-- Implement the "Blocker Dashboard" UX for interactive exception resolution.
+- Deepen guided blocker-resolution actions beyond the existing night audit blocker views and endpoint.

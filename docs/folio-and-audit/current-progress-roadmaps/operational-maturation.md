@@ -44,10 +44,10 @@ This roadmap outlines the remaining priorities required to transition from a fun
   - Completed: "Deposit Liability Report" tracks unearned advance-deposit revenue.
   - Completed May 22, 2026: Multi-page post-close Audit Packet PDF containing daily financial summary, itemized manual adjustments, and audit blockers.
 - **UX & Validation Polish**:
-  - Completed May 22, 2026: Real-time "Blocker Dashboard" that guides staff through resolving night audit exceptions.
+  - Completed May 22, 2026: Night audit blocker review views and blocker details endpoint for staff exception review.
   - Completed May 22, 2026: "Force Roll" escape hatch for authorized managers to bypass blockers and prevent operational standstill.
 
-**Success Indicator**: Management can view a complete "Audit Packet" (Daily Summary, Adjustments, Blockers) immediately after the night audit closes via a high-fidelity PDF preview. Audit Packet sections are separated by page for professional archival. If blockers cannot be resolved, an authorized manager can "Force Roll" to advance the business date.
+**Success Indicator**: Management can view a complete "Audit Packet" (Daily Summary, Adjustments, Blockers) immediately after the night audit closes via a high-fidelity PDF preview. Audit Packet sections are separated by page for professional archival. If blockers cannot be resolved, an authorized manager can "Force Roll" to advance the business date. Remaining UX polish should deepen guided resolution actions for blocker categories that still require staff interpretation.
 
 ---
 
@@ -107,5 +107,9 @@ All 13 folio services have solid specs (3–12 examples each), but can be streng
 **Success Indicator**: Every folio/audit/report service has >=5 examples covering happy path, validation, and at least one error case. Missing model/controller specs filled. Zero pending stubs.
 
 - **Refund Lifecycle**:
-  - Multi-stage refund approval process for high-value transactions.
-  - Direct linking of ledger entries to original payment gateway IDs for easier tracing.
+  - Completed foundation: basic refund request lifecycle exists for guest, hotel portal, and admin flows.
+  - Completed foundation: admin refund completion records immutable folio refund transactions through `Folios::RecordRefund` with `refund_request_id` metadata.
+  - Completed foundation: night audit detects completed refunds that have not been synced to folios as `refund_not_synced` blockers.
+  - Remaining: multi-stage refund approval process for high-value transactions.
+  - Remaining: direct linking of refund ledger entries to original payment gateway IDs for easier staff-facing tracing.
+  - Remaining: decide whether refund completion should execute automated gateway refunds or stay as an administrative/manual settlement confirmation.
