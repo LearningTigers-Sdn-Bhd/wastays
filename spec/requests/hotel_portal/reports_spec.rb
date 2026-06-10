@@ -1,9 +1,15 @@
 require 'rails_helper'
 
 RSpec.describe "HotelPortal::Reports", type: :request do
-  let(:hotel) { create(:hotel) }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, plan: plan) }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
+
+  def enable_plan_feature(slug)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: slug), enabled: true)
+  end
 
   before do
     [ "view_reports", "view_payouts" ].each do |slug|
@@ -11,6 +17,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       role.permissions << permission
     end
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+    %w[
+      daily_occupancy_revenue
+      arrivals_departures_list
+      outstanding_balance_noshow
+      housekeeper_productivity
+      booking_source_analysis
+      revenue_allocation_per_night
+      excel_pdf_export
+    ].each { |slug| enable_plan_feature(slug) }
     sign_in_as(user)
   end
 

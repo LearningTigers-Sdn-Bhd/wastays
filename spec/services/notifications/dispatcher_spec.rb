@@ -3,11 +3,16 @@ require "rails_helper"
 RSpec.describe Notifications::Dispatcher do
   include ActiveJob::TestHelper
 
-  let(:hotel) { create(:hotel) }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, plan: plan) }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", checked_in_at: Time.zone.local(2026, 5, 8, 15, 0)) }
 
   before do
     ActiveJob::Base.queue_adapter = :test
+    %w[checkin_confirmation checkout_receipt_review automated_prearrival welcoming_instay_messaging].each do |slug|
+      create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: slug), enabled: true)
+    end
     NotificationConfig.create!(hotel: hotel, notification_type: "check_in_confirmation", enabled: true, channels: %w[whatsapp email], settings: {})
   end
 

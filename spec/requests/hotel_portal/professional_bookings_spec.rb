@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
-  let(:hotel) { create(:hotel) }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, plan: plan) }
   let(:user) { create(:user, account: hotel.account) }
   let(:room_type) { create(:room_type, hotel: hotel, base_price: 100, room_numbers: [ "101", "102" ]) }
   let(:existing_guest) { create(:guest, created_by_hotel: hotel, name: "Existing Guest", email: "existing@example.com") }
@@ -14,6 +16,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
     role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings', name: 'View Bookings'))
     role.permissions << (Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings', name: 'Manage Bookings'))
     user.user_hotel_accesses.create!(hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "unified_guest_profile"), enabled: true)
     sign_in_as(user)
   end
 

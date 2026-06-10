@@ -4,7 +4,9 @@ require "rails_helper"
 
 RSpec.describe "HotelPortal::Roles", type: :request do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account) }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, account: account, plan: plan) }
   let(:user) { create(:user, account: account) }
   let(:manager_role) { create(:role, account: account, name: "General Manager", slug: "general_manager") }
   let(:manage_users_permission) { Permission.find_by(slug: 'manage_users') || create(:permission, slug: 'manage_users', name: 'Manage Users') }
@@ -12,6 +14,7 @@ RSpec.describe "HotelPortal::Roles", type: :request do
   before do
     create(:role_permission, role: manager_role, permission: manage_users_permission)
     create(:user_hotel_access, user: user, hotel: hotel, role: manager_role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "role_based_access_control"), enabled: true)
     sign_in_as(user)
   end
 

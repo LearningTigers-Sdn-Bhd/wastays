@@ -2,7 +2,9 @@ require 'rails_helper'
 
 RSpec.describe "Platform Smoke Tests", type: :request do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: 'live') }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, account: account, plan: plan, status: 'live') }
   let(:staff_user) { create(:user, account: account, role: 'hotel_staff') }
   let(:superadmin) { create(:user, :superadmin) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner') }
@@ -23,6 +25,8 @@ RSpec.describe "Platform Smoke Tests", type: :request do
 
     # Give staff user access to the hotel
     create(:user_hotel_access, user: staff_user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "unified_guest_profile"), enabled: true)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "full_audit_trail"), enabled: true)
 
     # Setup some basic data to avoid nil errors in views
     create(:property_policy, hotel: hotel)

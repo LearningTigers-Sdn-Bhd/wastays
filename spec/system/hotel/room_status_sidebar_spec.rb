@@ -4,7 +4,9 @@ require "rails_helper"
 
 RSpec.describe "Hotel room status sidebar", type: :system do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, account: account, plan: plan, status: "approved") }
 
   def grant_permission(role, slug)
     permission = Permission.find_by(slug: slug) || create(:permission, slug: slug, name: slug.tr("_", " ").titleize)
@@ -27,6 +29,7 @@ RSpec.describe "Hotel room status sidebar", type: :system do
 
   before do
     driven_by(:rack_test)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "room_status_board"), enabled: true)
   end
 
   it "shows the Room Status link for users with view_room_readiness permission" do

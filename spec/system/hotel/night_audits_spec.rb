@@ -5,7 +5,9 @@ RSpec.describe "Hotel night audits", type: :system do
 
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "hotel_staff", email: "frontdesk@example.com") }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, account: account, plan: plan, status: "approved") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
   let!(:permission) do
     Permission.find_or_create_by!(slug: "manage_night_audit") do |record|
@@ -20,6 +22,7 @@ RSpec.describe "Hotel night audits", type: :system do
       role.permissions << permission
       UserRole.create!(user: user, role: role)
       UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+      create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "no_show_auto_handling"), enabled: true)
 
       visit login_path
       fill_in "Email Address", with: user.email
@@ -102,6 +105,7 @@ RSpec.describe "Hotel night audits", type: :system do
       role.permissions << permission
       UserRole.create!(user: user, role: role)
       UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+      create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "no_show_auto_handling"), enabled: true)
 
       visit login_path
       fill_in "Email Address", with: user.email
