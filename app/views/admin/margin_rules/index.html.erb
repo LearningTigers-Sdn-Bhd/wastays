@@ -1,7 +1,3 @@
-<% content_for :breadcrumbs do %>
-  <%= render "shared/navigation/admin_breadcrumbs", current: "Margin Settings" %>
-<% end %>
-
 <% all_rules = @all_margin_rules.to_a %>
 <% total_rules = all_rules.size %>
 <% active_rules = all_rules.count { |rule| rule.status == "active" } %>

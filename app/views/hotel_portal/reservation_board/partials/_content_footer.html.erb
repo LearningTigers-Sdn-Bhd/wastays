@@ -3,7 +3,7 @@
   <div class="max-w-[1000px] mx-auto flex items-center justify-between">
     <% if show_full_page_link %>
       <%= link_to full_page_path, class: "text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-2", data: { turbo: false } do %>
-        <%= lucide_icon "external-link", stroke_width: 2.5, class: "size-3.5" %>
+        <%= cached_icon "external-link", stroke_width: 2.5, class: "size-3.5" %>
         <%= full_page_label %>
       <% end %>
     <% else %>

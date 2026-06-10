@@ -22,7 +22,7 @@ RSpec.describe 'Room Setup', type: :system do
   end
 
   it 'allows the user to add a room type' do
-    expect(page).to have_content('Hotel Dashboard')
+    visit hotel_dashboard_path(hotel)
     within('#hotel-sidebar') { click_link 'Room Categories' }
 
     expect(page).to have_content('No room categories found')

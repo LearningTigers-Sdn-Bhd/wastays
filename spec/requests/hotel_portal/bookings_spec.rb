@@ -1,6 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe "HotelPortal::Bookings", type: :request do
+  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
+
   let(:hotel) { create(:hotel, status: 'approved') }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }

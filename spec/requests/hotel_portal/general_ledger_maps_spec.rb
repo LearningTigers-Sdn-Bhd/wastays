@@ -24,7 +24,7 @@ RSpec.describe "HotelPortal::GeneralLedgerMaps", type: :request do
       expect(response).to have_http_status(:success)
     end
 
-    it "backfills missing default GL mappings for existing hotels" do
+    it "backfills missing default General Ledger (GL) mappings for existing hotels" do
       hotel.hotel_general_ledger_maps.find_by!(transaction_category: "write_off").destroy!
 
       expect {

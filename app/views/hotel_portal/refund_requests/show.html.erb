@@ -1,14 +1,4 @@
 <% content_for :title, "Refund Request | WAStays" %>
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <%= link_to "Refund Requests", hotel_refund_requests_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900"><%= @refund_request.booking.confirmation_token %></span>
-  </div>
-<% end %>
-
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
   <div class="px-4 md:px-0">
     <div class="mt-5 flex items-start justify-between gap-4">

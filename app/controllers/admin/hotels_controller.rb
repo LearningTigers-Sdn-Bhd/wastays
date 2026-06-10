@@ -3,6 +3,7 @@
 class Admin::HotelsController < Admin::BaseController
   before_action :set_hotel, only: [ :show, :edit, :update ]
   before_action :load_salespersons, only: [ :new, :create, :edit, :update ]
+  before_action :set_breadcrumbs, only: [ :show, :new, :edit, :create, :update ]
 
   def index
     @all_hotels = HotelsQuery.new.call(params)
@@ -60,6 +61,15 @@ class Admin::HotelsController < Admin::BaseController
 
   def load_salespersons
     @salespersons = current_user.account.users.where(role: "salesperson").order(:name)
+  end
+
+  def set_breadcrumbs
+    if @hotel&.persisted?
+      append_breadcrumb @hotel.name, admin_hotel_path(@hotel)
+      append_breadcrumb "Edit" if action_name.in?([ "edit", "update" ])
+    else
+      append_breadcrumb "New"
+    end
   end
 
   def create_params

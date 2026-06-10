@@ -3,7 +3,7 @@
     <div class="flex items-start gap-3">
       <% if local_assigns[:icon_name].present? %>
         <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-brand-primary ring-1 ring-slate-200">
-          <%= lucide_icon icon_name, stroke_width: 2.25, class: "size-4" %>
+          <%= cached_icon icon_name, stroke_width: 2.25, class: "size-4" %>
         </span>
       <% end %>
       <div>

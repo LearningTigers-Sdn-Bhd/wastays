@@ -16,9 +16,9 @@ RSpec.describe HotelPortal::Reports::JournalBatchCsvExportService, type: :servic
 
       parsed_csv = CSV.parse(csv_data, headers: true)
       expect(parsed_csv.length).to eq(2)
-      expect(parsed_csv[0]['GL Code']).to eq('4010')
+      expect(parsed_csv[0]['General Ledger Code (GL Code)']).to eq('4010')
       expect(parsed_csv[0]['Credit']).to eq('100.0')
-      expect(parsed_csv[1]['GL Code']).to eq('1000')
+      expect(parsed_csv[1]['General Ledger Code (GL Code)']).to eq('1000')
       expect(parsed_csv[1]['Debit']).to eq('100.0')
     end
   end

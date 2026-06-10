@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe Concierge::SelfCheckIn do
+  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
+
   let(:hotel) { create(:hotel, status: "live") }
   let(:room_type) { create(:room_type, hotel: hotel) }
   let(:booking) do

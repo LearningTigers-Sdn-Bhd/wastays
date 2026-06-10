@@ -22,7 +22,7 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
   end
 
   it 'allows the user to update the hotel profile' do
-    expect(page).to have_content('Hotel Dashboard')
+    visit hotel_dashboard_path(hotel)
     within('#hotel-sidebar') { click_link 'Hotel Details' }
 
     within('#hotel-profile-section') do

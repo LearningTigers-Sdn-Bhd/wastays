@@ -11,7 +11,7 @@ To ensure enterprise-grade reliability, the financial system was built on three 
 ## 2. Booking & Folio Transaction Engine
 The system handles the full lifecycle of guest financial transactions:
 - **Booking Payments**: Securely syncs booking-time payments into guest folios upon check-in, ensuring accurate opening balances while keeping security deposits separate.
-- **Granular Folio Actions**: Empowers staff to post charges (Room, Tax, F&B, Other), record payments, issue refunds, and apply adjustments with strict category validation.
+- **Granular Folio Actions**: Empowers staff to post charges (Room, Tax, Food and Beverage (F&B), Other), record payments, issue refunds, and apply adjustments with strict category validation.
 - **Automated Nightly Charges**: The Night Audit engine automatically posts daily room revenue and taxes, moving away from "full-stay" upfront charging.
 - **Checkout Settlement Gates**: Prevents departures until the folio is balanced, settled, and officially closed.
 - **Professional Invoicing**: Generates itemized, ledger-based PDF invoices and receipts via the `FolioInvoicePdfService`.

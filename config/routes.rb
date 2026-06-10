@@ -1,6 +1,7 @@
 require_relative "../app/constraints/superadmin_constraint"
 
 Rails.application.routes.draw do
+  mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
     get "room_blocks/create"
     get "room_blocks/destroy"
@@ -152,7 +153,7 @@ Rails.application.routes.draw do
         post :full_refresh, to: "hotels/channel_managers#full_refresh"
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
       end
-      resources :onboarding_sessions, module: :hotels do
+      resources :onboarding_sessions, module: :hotels, only: [ :create, :show, :edit, :update, :destroy ] do
         member do
           post :complete
           post :cancel
@@ -195,7 +196,7 @@ Rails.application.routes.draw do
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
     end
-    resources :webhook_endpoints do
+    resources :webhook_endpoints, only: [ :index, :create, :update, :destroy ] do
       member do
         post :test_ping
         patch :toggle
@@ -265,7 +266,7 @@ Rails.application.routes.draw do
     resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions"
     resources :general_ledger_maps, only: [ :index, :edit, :update ], path: "general-ledger-mappings"
 
-    resources :room_types do
+    resources :room_types, except: [ :show ] do
       member do
         delete :destroy_photo
         delete :bulk_destroy_photos

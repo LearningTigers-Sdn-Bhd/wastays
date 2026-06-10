@@ -31,8 +31,8 @@ RSpec.describe FolioLedgerExportService do
     end
   end
 
-  describe "GL code export" do
-    it "uses the transaction GL code snapshot first" do
+  describe "General Ledger Code (GL Code) export" do
+    it "uses the transaction General Ledger Code (GL Code) snapshot first" do
       create(:folio_transaction,
         booking_folio: folio,
         transaction_type: :charge,
@@ -43,10 +43,10 @@ RSpec.describe FolioLedgerExportService do
 
       csv = CSV.parse(service.generate_csv, headers: true)
 
-      expect(csv.first["GL Code"]).to eq("SNAP-ROOM")
+      expect(csv.first["General Ledger Code (GL Code)"]).to eq("SNAP-ROOM")
     end
 
-    it "falls back to the hotel GL mapping for legacy transactions without a GL snapshot" do
+    it "falls back to the hotel General Ledger (GL) mapping for legacy transactions without a General Ledger Code (GL Code) snapshot" do
       hotel.hotel_general_ledger_maps.find_by!(transaction_category: "fb").update!(gl_code: "HOTEL-FB")
       transaction = create(:folio_transaction,
         booking_folio: folio,
@@ -58,10 +58,10 @@ RSpec.describe FolioLedgerExportService do
 
       csv = CSV.parse(service.generate_csv, headers: true)
 
-      expect(csv.first["GL Code"]).to eq("HOTEL-FB")
+      expect(csv.first["General Ledger Code (GL Code)"]).to eq("HOTEL-FB")
     end
 
-    it "uses the unmapped fallback only when no transaction or hotel GL code exists" do
+    it "uses the unmapped fallback only when no transaction or hotel General Ledger Code (GL Code) exists" do
       transaction = create(:folio_transaction,
         booking_folio: folio,
         transaction_type: :charge,
@@ -73,7 +73,7 @@ RSpec.describe FolioLedgerExportService do
 
       csv = CSV.parse(service.generate_csv, headers: true)
 
-      expect(csv.first["GL Code"]).to eq("9999")
+      expect(csv.first["General Ledger Code (GL Code)"]).to eq("9999")
     end
   end
 end

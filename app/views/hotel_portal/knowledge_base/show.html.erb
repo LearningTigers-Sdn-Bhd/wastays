@@ -1,13 +1,3 @@
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <%= link_to kb_index_path, class: "text-sm font-medium text-slate-600 hover:text-blue-600" do %><%= controller_name.humanize.titleize %><% end %>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900"><%= @document.title %></span>
-  </div>
-<% end %>
-
 <% content_for :head do %>
   <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
 <% end %>

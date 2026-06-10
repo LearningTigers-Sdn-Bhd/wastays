@@ -1,8 +1,8 @@
-# Night Audit — PMS Reference
+# Night Audit — Property Management System (PMS) Reference
 
 ## What Is Night Audit?
 
-Night audit is a **batch process** that runs once per day, usually at midnight or during low-occupancy hours. It closes the current business day and opens the next. It is the heartbeat of the PMS — what keeps folios accurate day by day.
+Night audit is a **batch process** that runs once per day, usually at midnight or during low-occupancy hours. It closes the current business day and opens the next. It is the heartbeat of the Property Management System (PMS) — what keeps folios accurate day by day.
 
 ---
 
@@ -64,7 +64,7 @@ Implementation guarantees:
 - Business-date rows are locked before their state is trusted, and duplicate-row races are retried through the existing unique hotel/date constraint.
 
 ### Step 6: Reconciliation & Reports
-- Revenue report (rooms, F&B, tax)
+- Revenue report (rooms, Food and Beverage (F&B), tax)
 - Occupancy report
 - Departure list for next day
 - Folio balance report (any negative or unusual balances flagged)
@@ -125,7 +125,7 @@ Rate Plan: RACK_SUMMER
 ├── Base rate:          $100
 ├── Weekend surcharge:  +$20 (Fri/Sat)
 ├── Tax rule:           10% room tax + 5% tourism levy
-└── Package:            Breakfast included → post $15 F&B credit
+└── Package:            Breakfast included → post $15 Food and Beverage (F&B) credit
 ```
 
 Each night audit run:
@@ -152,7 +152,7 @@ Each cycle creates **multiple line items**, not just one:
 | ...    | ...                      | ...      | ...      |
 
 This granularity matters for:
-- **Revenue reporting** — room revenue, tax, F&B separated
+- **Revenue reporting** — room revenue, tax, and Food and Beverage (F&B) separated
 - **Tax remittance** — each tax type tracked independently
 - **Folio disputes** — guest can see exactly what was charged and when
 

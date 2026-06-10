@@ -79,19 +79,26 @@ export default class extends Controller {
     sidebar.classList.toggle("w-[260px]", !collapsed)
     sidebar.classList.toggle("w-[84px]", collapsed)
 
-    const labels = sidebar.querySelectorAll(".sidebar-section-label, a.sidebar-nav-link span")
+    const labels = sidebar.querySelectorAll(".sidebar-section-label, .sidebar-nav-link span, .sidebar-label")
     labels.forEach((node) => node.classList.toggle("hidden", collapsed))
 
-    const links = sidebar.querySelectorAll("a.sidebar-nav-link")
+    const chevrons = sidebar.querySelectorAll(".sidebar-chevron")
+    chevrons.forEach((node) => node.classList.toggle("hidden", collapsed))
+
+    const links = sidebar.querySelectorAll(".sidebar-nav-link, .sidebar-header")
     links.forEach((link) => {
       link.classList.toggle("justify-center", collapsed)
-      const label = link.querySelector("span")?.textContent?.trim()
+      const labelNode = link.querySelector(".sidebar-label") || link.querySelector("span")
+      const label = labelNode?.textContent?.trim()
       if (collapsed && label) {
         link.setAttribute("title", label)
       } else {
         link.removeAttribute("title")
       }
     })
+
+    const detailsContent = sidebar.querySelectorAll(".sidebar-details-content")
+    detailsContent.forEach((node) => node.classList.toggle("ps-6", !collapsed))
 
     const searchInput = sidebar.querySelector('input[type="search"]')
     const searchContainer = searchInput?.closest("div.p-4.pb-2")

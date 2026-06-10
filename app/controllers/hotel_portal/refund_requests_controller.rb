@@ -2,6 +2,7 @@
 
 class HotelPortal::RefundRequestsController < HotelPortal::BaseController
   before_action :set_booking
+  before_action :set_breadcrumbs
 
   def new
     @eligibility = Refunds::Eligibility.new(@booking).call
@@ -46,6 +47,15 @@ class HotelPortal::RefundRequestsController < HotelPortal::BaseController
 
   def set_booking
     @booking = current_hotel.bookings.find(params[:booking_id])
+  end
+
+  def set_breadcrumbs
+    override_breadcrumbs(
+      { label: "Operations" },
+      { label: "Bookings", path: hotel_bookings_path(current_hotel) },
+      { label: @booking.confirmation_token, path: hotel_booking_path(current_hotel, @booking) },
+      { label: "Refund Request" }
+    )
   end
 
   def refund_request_params

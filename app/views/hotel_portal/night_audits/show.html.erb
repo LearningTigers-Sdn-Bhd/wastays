@@ -4,16 +4,6 @@
   <% end %>
 <% end %>
 
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <%= link_to "Night Audit", hotel_night_audits_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900"><%= @night_audit.business_date.strftime("%d %b %Y") %></span>
-  </div>
-<% end %>
-
 <% status_class = case @night_audit.status
   when "completed" then "border-emerald-200 bg-emerald-50 text-emerald-700"
   when "blocked" then "border-amber-200 bg-amber-50 text-amber-700"

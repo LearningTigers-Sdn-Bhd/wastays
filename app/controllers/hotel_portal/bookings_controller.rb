@@ -78,6 +78,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
   def show
     @booking = current_hotel.bookings.includes(:booking_folio).find(params[:id])
+    set_breadcrumbs
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
     set_audit_logs(@booking)
   end
@@ -102,6 +103,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       respond_to do |format|
         format.html do
           @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+          set_breadcrumbs
           set_audit_logs(@booking)
           @booking.errors.add(:base, result.errors.to_sentence)
           render :show, status: :unprocessable_content
@@ -116,6 +118,10 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def release_room_locks(booking)
     room_number = booking.hotel_snapshot.is_a?(Hash) ? (booking.hotel_snapshot["room_number"] || booking.hotel_snapshot.dig("assignment", "room_number")) : nil
     RoomLock.where(hotel: current_hotel, user: current_user, room_number: room_number).destroy_all if room_number.present?
+  end
+
+  def set_breadcrumbs
+    append_breadcrumb @booking.confirmation_token, hotel_booking_path(current_hotel, @booking)
   end
 
   def booking_params
