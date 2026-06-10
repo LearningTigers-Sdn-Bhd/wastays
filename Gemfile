@@ -18,7 +18,7 @@ gem "turbo-rails"
 gem "stimulus-rails"
 # Use Tailwind CSS [https://github.com/rails/tailwindcss-rails]
 gem "tailwindcss-rails"
-gem "lucide-rails"
+gem "rails_icons"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 gem "countries"
@@ -59,6 +59,7 @@ gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
 gem "ruby_llm", "~> 1.14"
 gem "pdf-reader", "~> 2.12"
+gem "pgvector", "~> 0.2.0"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem

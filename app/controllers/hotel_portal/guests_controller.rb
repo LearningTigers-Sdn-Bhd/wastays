@@ -8,6 +8,7 @@ module HotelPortal
     before_action :authorize_view_bookings!, only: %i[index show]
     before_action :authorize_manage_bookings!, only: %i[search new create edit update destroy]
     before_action :set_guest, only: [ :show, :edit, :update, :destroy ]
+    before_action :set_breadcrumbs, only: [ :show, :new, :create, :edit, :update ]
 
     def index
       unless current_hotel
@@ -107,6 +108,15 @@ module HotelPortal
       return if @guest.bookings.where(hotel_id: current_hotel.id).exists?
 
       raise ActiveRecord::RecordNotFound
+    end
+
+    def set_breadcrumbs
+      if @guest&.persisted?
+        append_breadcrumb safe_guest_attr(@guest, :name), hotel_guest_path(current_hotel, @guest)
+        append_breadcrumb "Edit" if action_name.in?([ "edit", "update" ])
+      else
+        append_breadcrumb "New"
+      end
     end
 
     def guest_params

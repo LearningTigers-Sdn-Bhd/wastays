@@ -14,8 +14,11 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     requested_currencies << @hotel_base_currency if requested_currencies.empty?
     @view_currencies = requested_currencies.uniq.select { |c| CurrencyCatalog.valid?(c) }
 
-    # Primary display currency is the first one in the list
-    @display_currency = @view_currencies.first
+    # Primary display currency
+    @display_currency = normalized_currency(params[:display_currency], fallback: @view_currencies.first)
+
+    # Ensure display currency is in the view list if it was explicitly requested
+    @view_currencies = ([ @display_currency ] + @view_currencies).uniq if params[:display_currency].present?
 
     # Check if exchange rates are set for all view currencies (relative to base)
     @missing_rates = @view_currencies.reject do |currency|

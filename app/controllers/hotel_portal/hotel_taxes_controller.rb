@@ -5,8 +5,7 @@ class HotelPortal::HotelTaxesController < HotelPortal::BaseController
   before_action :set_tax, only: %i[update destroy]
 
   def index
-    @hotel_taxes = current_hotel.hotel_taxes.order(:name)
-    @hotel_tax   = current_hotel.hotel_taxes.build
+    redirect_to hotel_settings_path(current_hotel, tab: "tax")
   end
 
   def create

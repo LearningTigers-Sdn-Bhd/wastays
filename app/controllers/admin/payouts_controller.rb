@@ -1,4 +1,6 @@
 class Admin::PayoutsController < Admin::BaseController
+  before_action :set_breadcrumbs, only: [ :index ]
+
   def index
     # Friday cutoff logic (Friday end of day)
     cutoff_date = Booking.last_friday.end_of_day
@@ -45,5 +47,14 @@ class Admin::PayoutsController < Admin::BaseController
     end
 
     redirect_to admin_payouts_path, notice: "Selected bookings marked as paid with reference: #{reference}"
+  end
+
+  private
+
+  def set_breadcrumbs
+    override_breadcrumbs(
+      { label: "Finance" },
+      { label: "Payouts", path: admin_payouts_path }
+    )
   end
 end

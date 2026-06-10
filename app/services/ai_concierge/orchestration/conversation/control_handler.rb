@@ -4,6 +4,8 @@ module AiConcierge
       class ControlHandler
         END_CONVERSATION_MESSAGE = "No problem, please let me know if you need anything.".freeze
         TURN_LIMIT_REACHED_MESSAGE = "I've reached my limit for this conversation. Please contact the hotel directly for further assistance.".freeze
+        WAIT_TIME_END_MESSAGE = "Thank you for reaching out. Please come back again.".freeze
+        WAIT_TIME_END_BOOKING_MESSAGE = "It seems you are no longer making a booking quotation. Thank you for reaching out. Please come back again.".freeze
 
         def initialize(message:, response_persister:)
           @message = message.to_s
@@ -28,8 +30,34 @@ module AiConcierge
           Core::Result.success(payload: payload)
         end
 
+        def wait_time_end?(conversation_state)
+          conversation_control(conversation_state: conversation_state, interpretation: {}).wait_time_end?
+        end
+
+        def wait_time_end_response(prospect:, conversation_state:)
+          control = conversation_control(conversation_state: conversation_state, interpretation: {})
+          slots_payload = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).reset_booking_task
+          reply_message = control.booking_progress? ? WAIT_TIME_END_BOOKING_MESSAGE : WAIT_TIME_END_MESSAGE
+
+          payload = response_persister.persist_static_response(
+            prospect: prospect,
+            conversation_state: conversation_state,
+            interpretation: { "intent" => "end_conversation" },
+            slots_payload: slots_payload,
+            reply_message: reply_message,
+            needs_human_support: false,
+            action_name: nil,
+            active_topic: nil,
+            active_flow: nil,
+            pending_question: nil,
+            flow_status: "ended",
+            end_reason: "wait_time_end"
+          )
+          Core::Result.success(payload: payload)
+        end
+
         def handle(prospect:, conversation_state:, interpretation:)
-          conversation_control = Core::ConversationControlPolicy.new(message: message, conversation_state: conversation_state, interpretation: interpretation)
+          conversation_control = conversation_control(conversation_state: conversation_state, interpretation: interpretation)
 
           if conversation_control.cancel_attempt?
             return Core::Result.success(payload: handle_cancel_booking_attempt(prospect:, conversation_state:, interpretation: interpretation))
@@ -132,6 +160,10 @@ module AiConcierge
 
         def end_confirmation_pending?(conversation_state)
           conversation_state.pending_question == "confirm_to_end_conversation"
+        end
+
+        def conversation_control(conversation_state:, interpretation:)
+          Core::ConversationControlPolicy.new(message: message, conversation_state: conversation_state, interpretation: interpretation)
         end
       end
     end

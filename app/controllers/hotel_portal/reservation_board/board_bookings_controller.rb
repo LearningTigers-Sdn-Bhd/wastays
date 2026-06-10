@@ -20,11 +20,14 @@ module HotelPortal
         # Calculate initial price if room type is provided
         if @room_type_id.present?
           room_type = current_hotel.room_types.find(@room_type_id)
-          @booking.total_amount = ::Bookings::CalculateStayPrice.new(
+          snapshot = ::Bookings::BuildFinancialSnapshot.new(
+            hotel: current_hotel,
             room_type: room_type,
             check_in: @booking.check_in,
-            check_out: @booking.check_out
+            check_out: @booking.check_out,
+            guest_country: current_hotel.country
           ).call
+          @booking.total_amount = snapshot.room_total + snapshot.tax_total
         end
 
         @room_types = current_hotel.room_types.order(:name)
@@ -78,10 +81,13 @@ module HotelPortal
 
       def update
         @booking = current_hotel.bookings.find(params[:id])
+        result = ::Bookings::UpdateStayService.new(
+          booking: @booking,
+          params: booking_params,
+          user: current_user
+        ).call
 
-        if @booking.update(booking_params)
-          ::Bookings::RecordAuditLog.call(auditable: @booking, user: current_user)
-
+        if result.success?
           respond_to do |format|
             format.turbo_stream do
               @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
@@ -96,6 +102,7 @@ module HotelPortal
         else
           @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
           @room_types = current_hotel.room_types.order(:name)
+          @booking.errors.add(:base, result.errors.to_sentence)
           render :edit_stay, status: :unprocessable_content
         end
       end
@@ -166,7 +173,7 @@ module HotelPortal
       def booking_params
         params.fetch(:booking, {}).permit(
           :guest_name, :guest_email, :guest_phone, :status,
-          :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount
+          :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount, :rate_plan_id
         )
       end
 

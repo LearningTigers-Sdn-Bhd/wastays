@@ -17,6 +17,7 @@ class RoomType < ApplicationRecord
 
   before_validation :set_default_room_number_mode, on: :create
 
+  after_create :ensure_standard_rate_plan
   after_commit :sync_with_channel_manager, on: [ :create, :update ]
   after_destroy_commit :delete_from_channel_manager, if: :synced_with_channel_manager?
 
@@ -46,6 +47,16 @@ class RoomType < ApplicationRecord
   end
 
   private
+
+  def ensure_standard_rate_plan
+    return if rate_plans.exists?
+
+    rate_plans.create!(
+      name: "Standard Rate",
+      sell_mode: "per_room",
+      currency: hotel.default_currency || "MYR"
+    )
+  end
 
   def amenities_must_be_from_list
     return if amenities.blank?

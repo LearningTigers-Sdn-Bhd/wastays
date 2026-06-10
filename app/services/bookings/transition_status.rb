@@ -39,7 +39,7 @@ module Bookings
       Booking.transaction do
         @booking.with_lock do
           @booking.reload
-          @booking.transition_status_to!(new_status, event: event)
+          @booking.transition_status_to!(new_status, event: event, attributes: @options[:attributes] || {})
           Bookings::RecordAuditLog.call(
             auditable: @booking,
             user: @user,
@@ -100,13 +100,15 @@ module Bookings
             @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => room_number)
           end
 
+          attributes = (@options[:attributes] || {}).merge(
+            checked_in_at: @timestamp,
+            guest_registration_number: guest_reg
+          )
+
           @booking.transition_status_to!(
             "checked_in",
             event: was_no_show ? "reinstate" : "check_in",
-            attributes: {
-              checked_in_at: @timestamp,
-              guest_registration_number: guest_reg
-            }
+            attributes: attributes
           )
 
           Folios::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
@@ -117,6 +119,10 @@ module Bookings
             raise ActiveRecord::Rollback
           end
           @security_deposit = deposit_result.deposit
+
+          if @security_deposit.present?
+            @booking.update_columns(deposit_status: "collected")
+          end
 
           if is_retroactive || was_no_show
             Folios::ProcessCatchUpCharges.call(booking: @booking, user: @user, is_reinstate: was_no_show)
@@ -180,7 +186,11 @@ module Bookings
             next
           end
 
-          @booking.transition_status_to!("completed", event: "check_out", attributes: { checked_out_at: @timestamp })
+          @booking.transition_status_to!(
+            "completed",
+            event: "check_out",
+            attributes: (@options[:attributes] || {}).merge(checked_out_at: @timestamp)
+          )
           Bookings::RecordAuditLog.call(
             auditable: @booking,
             user: @user,
@@ -227,7 +237,7 @@ module Bookings
           end
 
           previous_status = @booking.status
-          @booking.transition_status_to!("cancelled", event: "cancel")
+          @booking.transition_status_to!("cancelled", event: "cancel", attributes: @options[:attributes] || {})
           InventoryManager.new(@booking).release if release_inventory_on_cancel?(previous_status)
           Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "cancel")
           transitioned = true

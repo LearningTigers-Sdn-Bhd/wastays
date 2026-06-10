@@ -4,13 +4,13 @@ module HotelPortal
   module ReservationBoardHelper
     STATUS_ICONS = {
       "pending" => "clock",
-      "confirmed" => "check-circle",
+      "confirmed" => "circle-check",
       "checked_in" => "log-in",
       "completed" => "check-check",
-      "cancelled" => "x-circle",
+      "cancelled" => "circle-x",
       "no_show" => "user-x",
       "review_due_out" => "triangle-alert",
-      "overbooked" => "alert-octagon",
+      "overbooked" => "octagon-alert",
       "not_ready" => "ban"
     }.freeze
 

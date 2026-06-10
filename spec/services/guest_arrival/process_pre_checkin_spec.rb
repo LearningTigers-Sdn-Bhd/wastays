@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rails_helper"
 
 RSpec.describe GuestArrival::ProcessPreCheckin do
@@ -37,6 +39,17 @@ RSpec.describe GuestArrival::ProcessPreCheckin do
     expect(booking.booking_guests.find_by(is_primary: true)).to be_present
     expect(booking.id_front).to be_attached
     expect(booking.id_back).to be_attached
+  end
+
+  it "attaches a signature when provided as data URL" do
+    signature_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    params_with_sig = params.merge("signature" => signature_data)
+
+    result = described_class.new(booking: booking, pre_checkin: pre_checkin, params: params_with_sig).call
+
+    expect(result.success?).to be(true)
+    expect(pre_checkin.reload.signature).to be_attached
+    expect(pre_checkin.signature.filename.to_s).to eq("signature.png")
   end
 
   it "returns failure when already completed" do

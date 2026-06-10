@@ -15,6 +15,8 @@ RSpec.describe Bookings::RateOptions do
 
   describe "#call" do
     context "when no rate plans exist" do
+      before { room_type.rate_plans.destroy_all }
+
       it "returns base rate option" do
         options = service.call
         expect(options.size).to eq(1)

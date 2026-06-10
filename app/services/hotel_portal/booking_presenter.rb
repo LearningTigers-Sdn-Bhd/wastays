@@ -28,6 +28,10 @@ module HotelPortal
       end
     end
 
+    def guarantee_method_display
+      (booking.guarantee_method || "none").titleize
+    end
+
     def created_at_formatted
       booking.created_at.strftime("%d %b %Y at %H:%M")
     end
@@ -46,6 +50,10 @@ module HotelPortal
 
     def checked_out_at_form_value
       Time.current.strftime("%Y-%m-%dT%H:%M")
+    end
+
+    def check_in_title
+      booking.checked_in? ? "Edit Check-In" : "Confirm Check-In"
     end
 
     def requires_backdated_checkin_reason?
@@ -200,6 +208,18 @@ module HotelPortal
           date: n.created_at.strftime("%b %d, %Y %H:%M")
         }
       }.to_json
+    end
+
+    def guarantee_method_options
+      Booking::GUARANTEE_METHODS.map { |m| [ m.titleize, m ] }
+    end
+
+    def can_request_refund?
+      (booking.status == "cancelled" || booking.status == "confirmed") && booking.refund_request.blank?
+    end
+
+    def refund_eligibility
+      @refund_eligibility ||= Refunds::Eligibility.new(booking).call
     end
   end
 end

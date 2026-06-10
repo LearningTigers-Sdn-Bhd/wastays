@@ -44,9 +44,17 @@ module AiConcierge
     def process_booking_action(action, conversation_state: self.conversation_state, active_branch: self.active_branch)
       case action
       when :ask_booking_timing
-        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_booking_timing, pending_question: "booking_timing")
+        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: booking_timing_reply_type, pending_question: "booking_timing")
       when :ask_specific_timing
         booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_specific_timing, pending_question: "specific_timing", extra_context: { month_label: month_label(active_branch) })
+      when :ask_date_range_month
+        booking_response(
+          conversation_state: conversation_state,
+          active_branch: active_branch,
+          reply_type: :ask_date_range_month,
+          pending_question: "date_range_month",
+          extra_context: { date_range_label: date_range_label(active_branch) }
+        )
       when :ask_duration
         booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_duration, pending_question: "duration")
       when :ask_adult_count
@@ -284,6 +292,21 @@ module AiConcierge
       )
     end
 
+    def booking_timing_reply_type
+      room_rate_question? ? :ask_room_rate_timing : :ask_booking_timing
+    end
+
+    def room_rate_question?
+      normalized = message.downcase.gsub(/[^a-z0-9]+/, " ").squish
+      return false if normalized.match?(/\broom service\b/)
+
+      return true if normalized.match?(/\brooms?\s+(?:rates?|prices?|pricing|cost)\b/)
+      return true if normalized.match?(/\b(?:rates?|prices?|pricing|cost)\s+(?:for|of)\s+(?:a\s+)?rooms?\b/)
+      return true if normalized.match?(/\bhow much\b/) && normalized.match?(/\b(?:rooms?|suite|villa|penthouse|stay|stays|night|nights)\b/)
+
+      normalized.match?(/\b(?:rates?|prices?|pricing|cost)\b/) && normalized.match?(/\b(?:rooms?|suite|villa|penthouse|stay|stays|night|nights)\b/)
+    end
+
     def booking_payload(conversation_state, active_branch, pending_question:, status: nil)
       State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).activate_booking(active_branch, pending_question: pending_question, status: status)
     end
@@ -307,6 +330,15 @@ module AiConcierge
       parts << "#{adults} adult#{'s' unless adults == 1}" if adults.positive?
       parts << "#{children} child#{'ren' unless children == 1}" if children.positive?
       parts.join(" and ").presence
+    end
+
+    def date_range_label(branch)
+      clarification = branch["clarification_needed"]
+      return unless clarification.is_a?(Hash)
+
+      start_day = clarification["start_day"]
+      end_day = clarification["end_day"]
+      [ start_day, end_day ].all?(&:present?) ? "#{start_day}-#{end_day}" : nil
     end
 
     def search_params_for(branch, options: branch["suggested_options"])

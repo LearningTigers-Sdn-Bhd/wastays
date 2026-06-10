@@ -1,0 +1,83 @@
+<%# app/views/hotel_portal/dashboard/_onboarding_wizard.html.erb %>
+
+<div class="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-6 shadow-sm mb-8">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="space-y-1">
+      <h2 class="text-xl font-bold text-slate-900">Welcome to WAStays!</h2>
+      <p class="text-sm text-slate-600">Complete the following steps to submit your property for review and go live.</p>
+    </div>
+    
+    <div class="shrink-0">
+      <% if @current_hotel.ready_for_review? %>
+        <%= button_to hotel_submit_for_review_path(@current_hotel), 
+                      method: :post,
+                      class: "inline-flex items-center gap-x-2 rounded-xl bg-brand-primary px-6 py-3 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 hover:bg-brand-primary/90 transition-all",
+                      data: { turbo_confirm: "Are you sure you want to submit your hotel for review? You won't be able to edit some settings until approved." } do %>
+          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Submit for Review
+        <% end %>
+      <% else %>
+        <button disabled class="inline-flex items-center gap-x-2 rounded-xl bg-slate-200 px-6 py-3 text-sm font-bold text-slate-500 cursor-not-allowed">
+          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Steps Incomplete
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <%# Step 1: Profile %>
+    <div class="flex items-start gap-x-4 p-4 rounded-xl border <%= @current_hotel.property_profile_ready? ? 'border-emerald-100 bg-emerald-50/50' : 'border-slate-200 bg-white' %> transition-colors">
+      <div class="flex-none mt-0.5">
+        <% if @current_hotel.property_profile_ready? %>
+          <div class="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        <% else %>
+          <div class="flex size-6 items-center justify-center rounded-full border-2 border-slate-300 text-slate-400 font-bold text-[10px]">1</div>
+        <% end %>
+      </div>
+      <div>
+        <p class="text-sm font-bold <%= @current_hotel.property_profile_ready? ? 'text-emerald-900' : 'text-slate-900' %>">Property Profile</p>
+        <p class="text-xs text-slate-500 mb-2">Address, contact, and featured photo.</p>
+        <%= link_to "Edit Profile", edit_hotel_profile_path(@current_hotel), class: "text-xs font-bold text-brand-primary hover:underline" %>
+      </div>
+    </div>
+
+    <%# Step 2: Rooms %>
+    <div class="flex items-start gap-x-4 p-4 rounded-xl border <%= @current_hotel.rooms_ready? ? 'border-emerald-100 bg-emerald-50/50' : 'border-slate-200 bg-white' %> transition-colors">
+      <div class="flex-none mt-0.5">
+        <% if @current_hotel.rooms_ready? %>
+          <div class="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        <% else %>
+          <div class="flex size-6 items-center justify-center rounded-full border-2 border-slate-300 text-slate-400 font-bold text-[10px]">2</div>
+        <% end %>
+      </div>
+      <div>
+        <p class="text-sm font-bold <%= @current_hotel.rooms_ready? ? 'text-emerald-900' : 'text-slate-900' %>">Room Setup</p>
+        <p class="text-xs text-slate-500 mb-2">Define room types and quantities.</p>
+        <%= link_to "Setup Rooms", hotel_room_types_path(@current_hotel), class: "text-xs font-bold text-brand-primary hover:underline" %>
+      </div>
+    </div>
+
+    <%# Step 3: Inventory %>
+    <div class="flex items-start gap-x-4 p-4 rounded-xl border <%= @current_hotel.inventory_ready? ? 'border-emerald-100 bg-emerald-50/50' : 'border-slate-200 bg-white' %> transition-colors">
+      <div class="flex-none mt-0.5">
+        <% if @current_hotel.inventory_ready? %>
+          <div class="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        <% else %>
+          <div class="flex size-6 items-center justify-center rounded-full border-2 border-slate-300 text-slate-400 font-bold text-[10px]">3</div>
+        <% end %>
+      </div>
+      <div>
+        <p class="text-sm font-bold <%= @current_hotel.inventory_ready? ? 'text-emerald-900' : 'text-slate-900' %>">Inventory & Rates</p>
+        <p class="text-xs text-slate-500 mb-2">Set availability and pricing.</p>
+        <%= link_to "Set Rates", hotel_inventory_index_path(@current_hotel), class: "text-xs font-bold text-brand-primary hover:underline" %>
+      </div>
+    </div>
+  </div>
+</div>

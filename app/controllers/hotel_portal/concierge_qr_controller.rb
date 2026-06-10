@@ -1,4 +1,6 @@
 class HotelPortal::ConciergeQrController < HotelPortal::BaseController
+  before_action :set_breadcrumbs, only: [ :show ]
+
   def show
     @concierge_url = ::Concierge::ConciergeUrl.for(
       current_hotel,
@@ -21,5 +23,15 @@ class HotelPortal::ConciergeQrController < HotelPortal::BaseController
                        filename: "concierge-qr-#{current_hotel.slug}.png"
       end
     end
+  end
+
+  private
+
+  def set_breadcrumbs
+    override_breadcrumbs(
+      { label: "System" },
+      { label: "Settings", path: hotel_settings_path(current_hotel) },
+      { label: "Concierge QR", path: hotel_concierge_qr_path(current_hotel) }
+    )
   end
 end

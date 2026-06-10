@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe HotelOps::BulkUpdateRatesAndInventory do
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel) }
-  let!(:rate_plan) { create(:rate_plan, room_type: room_type) }
+  let!(:rate_plan) { room_type.rate_plans.first }
   let(:user) { create(:user, account: hotel.account) }
 
   it "delegates to bulk rate and inventory updaters" do

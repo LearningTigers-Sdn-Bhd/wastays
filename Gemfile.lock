@@ -239,6 +239,8 @@ GEM
       multi_xml (>= 0.5.2)
     i18n (1.14.8)
       concurrent-ruby (~> 1.0)
+    icons (0.8.1)
+      nokogiri (~> 1.16, >= 1.16.4)
     image_processing (2.0.2)
     importmap-rails (2.2.3)
       actionpack (>= 6.0.0)
@@ -299,8 +301,6 @@ GEM
     loofah (2.25.1)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
-    lucide-rails (0.7.4)
-      railties (>= 4.1.0)
     mail (2.9.0)
       logger
       mini_mime (>= 0.1.1)
@@ -375,6 +375,7 @@ GEM
     pg (1.6.3-arm64-darwin)
     pg (1.6.3-x86_64-linux)
     pg (1.6.3-x86_64-linux-musl)
+    pgvector (0.2.2)
     pp (0.6.3)
       prettyprint
     prawn (2.5.0)
@@ -437,6 +438,9 @@ GEM
       logger (~> 1.7)
       puma (~> 7.1)
       rack (~> 3.2)
+    rails_icons (1.8.0)
+      icons (~> 0.8.1)
+      rails (>= 7.0)
     railties (8.0.5)
       actionpack (= 8.0.5)
       activesupport (= 8.0.5)
@@ -646,13 +650,13 @@ DEPENDENCIES
   kamal
   kaminari (~> 1.2)
   letter_opener_web
-  lucide-rails
   neighbor (~> 1.2)
   nokogiri (>= 1.19.3)
   openssl (~> 3.1.2)
   parallel_tests
   pdf-reader (~> 2.12)
   pg (~> 1.1)
+  pgvector (~> 0.2.0)
   prawn (~> 2.5)
   prawn-table (~> 0.2)
   propshaft
@@ -661,6 +665,7 @@ DEPENDENCIES
   rack-attack
   rails (~> 8.0.4)
   rails-mcp-server
+  rails_icons
   resend (~> 0.8)
   rqrcode (~> 2.2)
   rspec-rails

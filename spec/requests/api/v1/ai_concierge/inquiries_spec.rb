@@ -190,7 +190,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "hello, is there any booking for 2 adults", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("what dates or month")
+      expect(parsed_body["reply_message"]).to include("which date or month")
       expect(parsed_body["reply_message"]).not_to include("May")
       expect(parsed_body["reply_message"]).not_to include("August")
     end
@@ -430,7 +430,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "another booking", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("what dates or month")
+      expect(parsed_body["reply_message"]).to include("which date or month")
       expect(parsed_body["reply_message"]).not_to include("Quotation link:")
       expect(parsed_body["reply_message"]).not_to include("Please reply *Yes* to confirm the book")
       expect(parsed_body["action_name"]).to eq("request_quote")

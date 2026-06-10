@@ -1,7 +1,3 @@
-<% content_for :breadcrumbs do %>
-  <%= render "shared/navigation/admin_breadcrumbs", current: "Hotels" %>
-<% end %>
-
 <% total_hotels = @all_hotels.size %>
 <% pending_hotels = @all_hotels.count { |hotel| hotel.status == "pending_review" } %>
 <% active_hotels = @all_hotels.count { |hotel| ["approved", "live"].include?(hotel.status) } %>

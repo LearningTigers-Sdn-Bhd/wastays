@@ -6,7 +6,7 @@ Completed foundation, with remaining operational exception workflows tracked in 
 
 ## Purpose
 
-Controls reservation state changes so bookings move through explicit PMS states instead of ad hoc status updates.
+Controls reservation state changes so bookings move through explicit Property Management System (PMS) states instead of ad hoc status updates.
 
 ## Key Files
 

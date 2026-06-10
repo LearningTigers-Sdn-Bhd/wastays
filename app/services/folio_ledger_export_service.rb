@@ -7,7 +7,7 @@ require "cgi"
 # Sources data from FolioTransaction records (not booking snapshots) to give
 # a true accounting-ready view of charges, payments, adjustments, and taxes.
 #
-# Uses transaction-level GL snapshots first, then hotel GL mappings, so exports
+# Uses transaction-level General Ledger (GL) snapshots first, then hotel General Ledger (GL) mappings, so exports
 # preserve historical accounting codes while supporting legacy rows.
 class FolioLedgerExportService
   CSV_HEADERS = [
@@ -19,7 +19,7 @@ class FolioLedgerExportService
     "Room Number",
     "Transaction Type",
     "Category",
-    "GL Code",
+    "General Ledger Code (GL Code)",
     "Description",
     "Amount",
     "Currency",

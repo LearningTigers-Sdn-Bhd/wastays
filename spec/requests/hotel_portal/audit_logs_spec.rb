@@ -4,6 +4,7 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:hotel) { create(:hotel, status: 'approved', plan: plan) }
+  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
   let(:user) { create(:user) }
 
   before do
@@ -40,7 +41,7 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request do
       expect(response.body).to include("2026-04-01: Qty 3 / Open -&gt; Qty 5 / Closed")
       expect(response.body).not_to include("Target")
       expect(response.body).not_to include("Dates:")
-      expect(response.body).to include("Operation Logs")
+      expect(response.body).to include("Operation Audit Logs")
     end
 
     it "exports csv/xls/pdf" do

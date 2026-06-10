@@ -6,7 +6,7 @@
       <%= render "hotel_portal/reservation_board/partials/content_header",
                  title: "Review Late Checkout",
                  subtitle: "Calculate and post a charge for #{@booking.guest_name}.",
-                 icon: lucide_icon("clock-alert", stroke_width: 2.5, class: "size-5") %>
+                  icon: cached_icon("clock-alert", stroke_width: 2.5, class: "size-5") %>
 
       <%# Modal Content %>
       <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50"

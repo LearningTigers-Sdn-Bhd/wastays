@@ -1,12 +1,13 @@
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900">Room Categories</span>
-  </div>
-<% end %>
-
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+  <% if current_hotel.status == 'inventory_incomplete' %>
+    <div class="px-4 md:px-0 mb-6">
+      <%= link_to hotel_dashboard_path(current_hotel), class: "inline-flex items-center gap-x-1.5 py-1.5 px-3 text-xs font-bold text-brand-primary border border-brand-primary/20 bg-brand-primary/5 rounded-lg hover:bg-brand-primary/10 transition-colors" do %>
+        <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        Back to Onboarding
+      <% end %>
+    </div>
+  <% end %>
+
   <div class="px-4 md:px-0">
     <div class="mt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
@@ -18,13 +19,6 @@
         <%= link_to hotel_inventory_index_path(current_hotel), class: "inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100" do %>
           <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M9 9h6v6H9z"/><path d="M3 9h6"/><path d="M15 9h6"/><path d="M9 3v6"/><path d="M15 15v6"/></svg>
           Open Rates & Availability
-        <% end %>
-
-        <% if locked_hotel_portal_shell? %>
-          <%= link_to hotel_dashboard_path(current_hotel), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" do %>
-            <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            Back to Onboarding
-          <% end %>
         <% end %>
 
         <%= link_to new_hotel_room_type_path(current_hotel), class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>

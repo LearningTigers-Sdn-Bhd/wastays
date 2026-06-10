@@ -1,6 +1,7 @@
 class HotelPortal::RequestsController < HotelPortal::BaseController
   before_action :authorize_manage_requests!
   before_action -> { require_feature!("task_assignment_minibar_log") }
+  before_action :set_breadcrumbs, only: [ :archive ]
 
   def index
     @board = ::HotelPortal::RequestsBoard.new(current_hotel, params)
@@ -129,5 +130,9 @@ class HotelPortal::RequestsController < HotelPortal::BaseController
 
   def authorize_manage_requests!
     raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_requests", hotel: current_hotel)
+  end
+
+  def set_breadcrumbs
+    append_breadcrumb "Archive", hotel_request_archive_path(current_hotel)
   end
 end

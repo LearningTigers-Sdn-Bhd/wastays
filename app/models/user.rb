@@ -34,6 +34,10 @@ class User < ApplicationRecord
     role == "admin"
   end
 
+  def admin_panel_user?
+    superadmin? || admin?
+  end
+
   def has_permission?(permission_slug, hotel: nil)
     return true if superadmin?
 

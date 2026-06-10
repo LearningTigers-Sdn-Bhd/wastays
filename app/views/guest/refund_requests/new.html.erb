@@ -110,7 +110,7 @@ end %>
 
         <div>
           <%= f.label :account_type, "Account Type", class: "block text-sm font-medium text-neutral-text-primary mb-1.5" %>
-          <%= f.select :account_type, [["Savings", "savings"], ["Current", "current"]], { prompt: "Select type" },
+          <%= f.select :account_type, @presenter.account_type_options, { prompt: "Select type" },
               required: true,
               class: "w-full px-3 py-2.5 text-sm border border-layer-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
         </div>

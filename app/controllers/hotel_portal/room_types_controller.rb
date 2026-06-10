@@ -3,14 +3,13 @@
 class HotelPortal::RoomTypesController < HotelPortal::BaseController
   before_action :set_hotel
   before_action :authorize_hotel
-  before_action :set_room_type, only: [ :show, :edit, :update, :destroy, :destroy_photo, :bulk_destroy_photos ]
+  before_action :set_room_type, only: [ :edit, :update, :destroy, :destroy_photo, :bulk_destroy_photos ]
+  before_action :set_breadcrumbs, only: [ :new, :create, :edit, :update ]
 
   def index
     @all_room_types = RoomTypesQuery.new(@hotel.room_types).call(params)
     @room_types = @all_room_types.page(params[:page]).per(25)
   end
-
-  def show; end
 
   def new
     @room_type = @hotel.room_types.build
@@ -92,6 +91,15 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
 
   def set_room_type
     @room_type = @hotel.room_types.find(params[:id])
+  end
+
+  def set_breadcrumbs
+    if @room_type&.persisted?
+      append_breadcrumb @room_type.name
+      append_breadcrumb "Edit" if action_name.in?([ "edit", "update" ])
+    else
+      append_breadcrumb "New"
+    end
   end
 
   def room_type_params

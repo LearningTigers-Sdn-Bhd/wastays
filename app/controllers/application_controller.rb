@@ -79,6 +79,13 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  def authenticate_admin_panel_user!
+    return unless authenticate_user!
+    unless current_user.admin_panel_user?
+      redirect_to root_path, alert: "You are not authorized to access this page"
+    end
+  end
+
   def current_hotel
     @current_hotel ||= if current_user.superadmin? && params[:hotel_id]
       find_hotel_for_scope(Hotel.all, params[:hotel_id])

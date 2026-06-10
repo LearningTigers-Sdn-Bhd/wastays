@@ -13,8 +13,8 @@ This roadmap outlines the remaining priorities required to transition from a fun
   - Closed business-date override remains separately controlled by `override_financial_date_lock`.
 - **Completed Financial Hardening**:
   - Completed May 20, 2026: `daily_revenue` report requests now require `view_reports` permission.
-  - Completed May 20, 2026: journal batch creation fails fast when folio transactions are missing GL codes instead of excluding them from the batch.
-  - Completed May 22, 2026: reporting expanded to include all charge categories (F&B, No-Show, Late Checkout, etc.) in `DailyRevenueReport` and `ManagersFlashReport`.
+  - Completed May 20, 2026: journal batch creation fails fast when folio transactions are missing General Ledger Codes (GL Codes) instead of excluding them from the batch.
+  - Completed May 22, 2026: reporting expanded to include all charge categories (Food and Beverage (F&B), No-Show, Late Checkout, etc.) in `DailyRevenueReport` and `ManagersFlashReport`.
   - Completed May 22, 2026: granular folio permissions enforced at the service layer (`InsertTransaction`) to prevent permission bypass.
   - Completed May 22, 2026: `PostingGuard` refined to support system-level bypasses for automated retroactive processing and overrides for `force_closed` dates.
 - **Completed Financial Observability**:
@@ -40,14 +40,14 @@ This roadmap outlines the remaining priorities required to transition from a fun
 **Objective**: Provide actionable insights and a frictionless staff experience.
 
 - **Enterprise Report Package**: 
-  - Completed May 22, 2026: "Manager's Flash Report" (Occupancy, ADR, RevPAR, and Daily Revenue) with PDF, Excel, and CSV exports.
+  - Completed May 22, 2026: "Manager's Flash Report" (Occupancy, Average Daily Rate (ADR), Revenue per Available Room (RevPAR), and Daily Revenue) with PDF, Excel, and CSV exports.
   - Completed: "Deposit Liability Report" tracks unearned advance-deposit revenue.
   - Completed May 22, 2026: Multi-page post-close Audit Packet PDF containing daily financial summary, itemized manual adjustments, and audit blockers.
 - **UX & Validation Polish**:
-  - Completed May 22, 2026: Real-time "Blocker Dashboard" that guides staff through resolving night audit exceptions.
+  - Completed May 22, 2026: Night audit blocker review views and blocker details endpoint for staff exception review.
   - Completed May 22, 2026: "Force Roll" escape hatch for authorized managers to bypass blockers and prevent operational standstill.
 
-**Success Indicator**: Management can view a complete "Audit Packet" (Daily Summary, Adjustments, Blockers) immediately after the night audit closes via a high-fidelity PDF preview. Audit Packet sections are separated by page for professional archival. If blockers cannot be resolved, an authorized manager can "Force Roll" to advance the business date.
+**Success Indicator**: Management can view a complete "Audit Packet" (Daily Summary, Adjustments, Blockers) immediately after the night audit closes via a high-fidelity PDF preview. Audit Packet sections are separated by page for professional archival. If blockers cannot be resolved, an authorized manager can "Force Roll" to advance the business date. Remaining UX polish should deepen guided resolution actions for blocker categories that still require staff interpretation.
 
 ---
 
@@ -107,5 +107,9 @@ All 13 folio services have solid specs (3–12 examples each), but can be streng
 **Success Indicator**: Every folio/audit/report service has >=5 examples covering happy path, validation, and at least one error case. Missing model/controller specs filled. Zero pending stubs.
 
 - **Refund Lifecycle**:
-  - Multi-stage refund approval process for high-value transactions.
-  - Direct linking of ledger entries to original payment gateway IDs for easier tracing.
+  - Completed foundation: basic refund request lifecycle exists for guest, hotel portal, and admin flows.
+  - Completed foundation: admin refund completion records immutable folio refund transactions through `Folios::RecordRefund` with `refund_request_id` metadata.
+  - Completed foundation: night audit detects completed refunds that have not been synced to folios as `refund_not_synced` blockers.
+  - Remaining: multi-stage refund approval process for high-value transactions.
+  - Remaining: direct linking of refund ledger entries to original payment gateway IDs for easier staff-facing tracing.
+  - Remaining: decide whether refund completion should execute automated gateway refunds or stay as an administrative/manual settlement confirmation.

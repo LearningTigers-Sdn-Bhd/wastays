@@ -1,89 +1,27 @@
-<% dashboard_active = controller_name == 'dashboard' && action_name != 'analytics' %>
-<% analytics_active = controller_name == 'dashboard' && action_name == 'analytics' %>
-<% hotels_active = controller_name == 'hotels' %>
-<% bookings_active = controller_name == 'bookings' %>
-<% onboarding_active = controller_path == 'admin/hotels/onboarding' || controller_path == 'admin/hotels/onboarding_sessions' %>
-<% salespersons_active = controller_name == 'salespersons' %>
-<% margin_rules_active = controller_name == 'margin_rules' %>
-<% setup_fee_rules_active = controller_name == 'setup_fee_rules' %>
-<% exchange_rates_active = controller_name == 'exchange_rates' %>
-<% reconciliations_active = controller_name == 'reconciliations' %>
-<% refund_requests_active = controller_name == 'refund_requests' %>
-<% payouts_active = controller_name == 'payout_batches' %>
-<% audit_logs_active = controller_name == 'audit_logs' %>
-<% observation_deck_active = controller_name == 'observation_deck' %>
-<% refund_policy_active = controller_name == 'refund_policies' %>
-<% integrations_active = controller_name == 'integrations' %>
-<% webhooks_active = controller_name == 'webhook_endpoints' %>
-<% plans_active = controller_name == 'plans' %>
-<% api_keys_active = controller_name == 'api_keys' && action_name != 'docs' %>
-<% api_docs_active = controller_name == 'api_keys' && action_name == 'docs' %>
+<% sections = admin_sidebar_sections %>
+<% footer_items = admin_sidebar_footer_items %>
 
-<% admin_sidebar_sections = [
-  {
-    label: 'Home',
-    items: [
-      { label: 'Dashboard', path: admin_dashboard_path, search_text: 'Dashboard', active: dashboard_active, icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
-      { label: 'Analytics', path: admin_analytics_path, search_text: 'Analytics Revenue Margin Reports', active: analytics_active, icon: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>' }
-    ]
-  },
-  {
-    label: 'Operations',
-    items: [
-      { label: 'Hotels', path: admin_hotels_path, search_text: 'Hotels Manage Hotels', active: hotels_active && !onboarding_active, icon: '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>' },
-      { label: 'Onboarding', path: onboarding_admin_hotels_path, search_text: 'Onboarding Training Setup', active: onboarding_active, icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/>' },
-      { label: 'Bookings', path: admin_bookings_path, search_text: 'Bookings Platform Bookings', active: bookings_active, icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
-      { label: 'Salespersons', path: admin_salespersons_path, search_text: 'Salespersons Hotel Assignment', active: salespersons_active, icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' }
-    ]
-  },
-  {
-    label: 'Finance',
-    items: [
-      { label: 'Payouts', path: admin_payout_batches_path, search_text: 'Payouts Settlements Hotel Payments', active: payouts_active, icon: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 15h.01"/><path d="M11 15h.01"/><path d="M15 15h.01"/>' },
-      { label: 'Margin Settings', path: admin_margin_rules_path, search_text: 'Margin Settings Margin Rules', active: margin_rules_active, icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/>' },
-      { label: 'Exchange Rates', path: admin_exchange_rates_path, search_text: 'Exchange Rates Currency FX Display Prices', active: exchange_rates_active, icon: '<path d="M16 3h5v5"/><path d="m21 3-7 7"/><path d="M8 21H3v-5"/><path d="m3 21 7-7"/><path d="M21 16v5h-5"/><path d="m21 21-7-7"/><path d="M3 8V3h5"/><path d="m3 3 7 7"/>' },
-      { label: 'Setup Fee Settings', path: admin_setup_fee_rules_path, search_text: 'Setup Fee Settings Hotel Setup Fees', active: setup_fee_rules_active, icon: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/><path d="M7 14h3"/><path d="M14 14h3"/>' },
-      { label: "Refund Policy", path: admin_refund_policy_path, search_text: "Refund Policy Guest Refunds Finance", active: refund_policy_active, icon: '<rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>' },
-      { label: "Refund Requests", path: admin_refund_requests_path, search_text: "Refund Requests Guest Refunds Finance", active: refund_requests_active, icon: '<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/>' },
-      { label: 'Payment Issues', path: admin_reconciliation_dashboard_path, search_text: 'Payment Issues Reconciliations', active: reconciliations_active, icon: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' }
-    ]
-  },
-  {
-    label: 'System',
-    items: [
-      { label: 'Plan Access', path: admin_plans_path, search_text: 'Plan Access Plans Subscription Features Pricing Tiers Gating', active: plans_active, icon: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>' },
-      { label: 'Audit Logs', path: admin_audit_logs_path, search_text: 'Audit Logs System Activity', active: audit_logs_active, icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>' },
-      { label: 'Observation Deck', path: admin_observation_deck_index_path, search_text: 'Observation Deck Telescope Debug Mission Control', active: observation_deck_active, icon: '<path d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><circle cx="12" cy="12" r="3"/>', external: true }
-    ]
-  },
-  {
-    label: 'Developers',
-    items: [
-      { label: 'API Access', path: admin_api_keys_path, search_text: 'API Access Keys Integrations', active: api_keys_active, icon: '<path d="M21 2l-2 2"/><path d="M7.61 11.39a5.5 5.5 0 1 1 7.78 7.78 5.5 5.5 0 0 1-7.78-7.78z"/><path d="m15.5 7.5 3 3L22 7l-3-3-3.5 3.5"/>' },
-      { label: 'Webhooks', path: admin_webhook_endpoints_path, search_text: 'Integrations Webhook WhatsApp n8n', active: webhooks_active, icon: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>' },
-      { label: 'Integrations', path: admin_integrations_path, search_text: 'Cloudflare R2 Storage Channel Manager', active: integrations_active, icon: '<path d="M12 20v-6M9 20V10M15 20V4M3 20h18"/>' },
-      { label: 'Developer Guide', path: docs_admin_api_keys_path, search_text: 'API Developer Guide Docs', active: api_docs_active, icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' }
-    ]
-  }
-] %>
-
-<% admin_sidebar_footer_items = [
-  { label: 'Homepage', path: root_path, search_text: 'Homepage Website', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
-  { label: 'Help & support', path: help_center_path, search_text: 'Help Support', icon: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' }
-] %>
+<% admin_sidebar_header = capture do %>
+  <div class="flex items-center gap-x-2.5 px-4 py-3 sidebar-header">
+    <span class="inline-flex justify-center items-center size-7 rounded-lg bg-slate-100 text-slate-700 shadow-xs ring-1 ring-slate-200">
+      <%= cached_icon "settings", class: "size-4 shrink-0" %>
+    </span>
+    <span class="text-sm font-semibold text-neutral-text-primary sidebar-label">Admin Panel</span>
+  </div>
+<% end %>
 
 <% render_sidebar_nav = lambda do %>
   <nav class="flex-1 px-4 py-3 space-y-6">
-    <% admin_sidebar_sections.each do |section| %>
+    <% sections.each do |section| %>
       <div class="sidebar-nav-group">
-        <span class="sidebar-section-label"><%= section[:label] %></span>
+        <span class="sidebar-section-label"><%= section.label %></span>
         <div class="space-y-0.5">
-          <% section[:items].each do |item| %>
-            <a class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" 
-               href="<%= item[:path] %>"
-               <%= 'target="_blank"'.html_safe if item[:external] %>>
-              <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
-              <span><%= item[:label] %></span>
+          <% section.items.each do |item| %>
+            <a class="sidebar-nav-link <%= item.active ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>"
+               href="<%= item.path %>"
+               <%= 'target="_blank" rel="noopener noreferrer"'.html_safe if item.external %>>
+              <%= cached_icon item.icon, class: "size-4 shrink-0" %>
+              <span><%= item.label %></span>
             </a>
           <% end %>
         </div>
@@ -94,10 +32,10 @@
 
 <% admin_nav_html = capture(&render_sidebar_nav) %>
 <% admin_footer_html = capture do %>
-  <% admin_sidebar_footer_items.each do |item| %>
-    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
-      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
-      <span><%= item[:label] %></span>
+  <% footer_items.each do |item| %>
+    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item.path %>">
+      <%= cached_icon item.icon, class: "size-4 shrink-0" %>
+      <span><%= item.label %></span>
     </a>
   <% end %>
 <% end %>
@@ -105,5 +43,6 @@
 <%= render "shared/navigation/sidebar_shell",
            sidebar_key: "admin",
            home_path: admin_dashboard_path,
+           header_html: admin_sidebar_header,
            nav_html: admin_nav_html,
            footer_html: admin_footer_html %>

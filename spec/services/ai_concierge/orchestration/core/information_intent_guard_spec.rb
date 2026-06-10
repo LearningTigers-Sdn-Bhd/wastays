@@ -50,6 +50,41 @@ RSpec.describe AiConcierge::Orchestration::Core::InformationIntentGuard do
     expect(result["intent"]).to eq("booking_search")
   end
 
+  it "keeps room rate questions on booking" do
+    input = interpretation(intent: "hotel_information", topic: "general_hotel_info")
+
+    result = described_class.new(message: "what is room rate?", interpretation: input).call
+
+    expect(result["intent"]).to eq("booking_search")
+    expect(result["topic"]).to eq("booking_search")
+    expect(result["tool_hints"]).to eq([ "search_booking_options" ])
+  end
+
+  it "keeps room price questions on booking" do
+    input = interpretation(intent: "hotel_information", topic: "general_hotel_info")
+
+    result = described_class.new(message: "what is room price?", interpretation: input).call
+
+    expect(result["intent"]).to eq("booking_search")
+  end
+
+  it "keeps how much room questions on booking" do
+    input = interpretation(intent: "hotel_information", topic: "general_hotel_info")
+
+    result = described_class.new(message: "how much is the room?", interpretation: input).call
+
+    expect(result["intent"]).to eq("booking_search")
+  end
+
+  it "routes room service cost questions to hotel information" do
+    input = interpretation(intent: "booking_search", topic: "booking_search")
+
+    result = described_class.new(message: "how much is room service?", interpretation: input).call
+
+    expect(result["intent"]).to eq("hotel_information")
+    expect(result["topic"]).to eq("general_hotel_info")
+  end
+
   it "keeps clear room booking requests on booking even when a service word is present" do
     input = interpretation(intent: "booking_search", topic: "booking_search")
 

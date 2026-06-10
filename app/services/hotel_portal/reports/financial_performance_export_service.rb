@@ -42,7 +42,7 @@ module HotelPortal
       def generate_pdf
         pdf = Prawn::Document.new(page_size: "A4", margin: [ 32, 32, 32, 32 ])
         draw_header(pdf)
-        pdf.text "Financial Performance Report", size: 18, style: :bold
+        pdf.text "Financial Summary Report", size: 18, style: :bold
         pdf.move_down 4
         pdf.text @hotel.name.to_s, size: 11, style: :bold
         pdf.text "#{@start_date.strftime('%d %b %Y')} - #{@end_date.strftime('%d %b %Y')}", size: 10

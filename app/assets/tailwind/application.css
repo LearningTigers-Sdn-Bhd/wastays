@@ -300,8 +300,12 @@
     @apply pt-1;
   }
 
+  .sidebar-collapsed .sidebar-nav-link {
+    @apply size-10 mx-auto justify-center p-0;
+  }
+
   .sidebar-collapsed .sidebar-nav-group + .sidebar-nav-group {
-    @apply border-t border-layer-line pt-3;
+    @apply border-t border-layer-line !mt-3 pt-3 -mx-4 px-4;
   }
 
   /* ─── Navbar Items (Preline CMS Style) ─── */

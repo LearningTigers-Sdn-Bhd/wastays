@@ -29,7 +29,7 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
   describe '#rows' do
     it 'filters out walk-in named rate plans from regular rows' do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: [ "101" ], quantity: 1)
-      create(:rate_plan, room_type: room_type, name: "Standard Rate", currency: "MYR")
+      # room_type already has one "Standard Rate" plan from after_create callback
       create(:rate_plan, room_type: room_type, name: "Walk-in Rate", currency: "MYR")
 
       presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
@@ -44,7 +44,8 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
   describe '#cell_for' do
     it 'falls back to the standard rate for walk-in and corporate rows when special prices are missing' do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: [ "101" ], quantity: 1)
-      rate_plan = create(:rate_plan, room_type: room_type, name: "Standard Rate", currency: "MYR")
+      rate_plan = room_type.rate_plans.first # Use auto-created Standard Rate plan
+      rate_plan.update!(name: "Standard Rate") # Ensure it has the right name if needed
       create(:room_rate, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150, walk_in_price: nil, corporate_price: nil)
 
       presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")

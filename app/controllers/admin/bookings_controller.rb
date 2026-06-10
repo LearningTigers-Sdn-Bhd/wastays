@@ -1,6 +1,7 @@
 module Admin
   class BookingsController < BaseController
     before_action :set_booking, only: [ :show, :receipt, :invoice ]
+    before_action :set_breadcrumbs, only: [ :show ]
 
     def index
       @all_bookings = Booking.all.includes(:hotel, :booking_folio).order(created_at: :desc)
@@ -43,6 +44,10 @@ module Admin
 
     def set_booking
       @booking = Booking.includes(:booking_folio).find(params[:id])
+    end
+
+    def set_breadcrumbs
+      append_breadcrumb @booking.confirmation_token, admin_booking_path(@booking)
     end
   end
 end

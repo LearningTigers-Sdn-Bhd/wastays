@@ -37,13 +37,17 @@ module Guests
       raw_query = @params[:query].to_s.downcase.strip
       query = "%#{raw_query}%"
 
-      scope = scope.where(
+      search_conditions = Guest.where(
         "LOWER(guests.name) LIKE :query OR LOWER(bookings.guest_email) LIKE :query OR bookings.guest_phone LIKE :query",
         query: query
       )
 
-      # Support exact matches on encrypted guest fields
-      scope = scope.or(Guest.where(email: raw_query)).or(Guest.where(phone: raw_query))
+      # Support exact matches on encrypted guest fields (requires deterministic encryption)
+      search_conditions = search_conditions.or(Guest.where(email: raw_query))
+                                           .or(Guest.where(phone: raw_query))
+                                           .or(Guest.where(government_id: raw_query))
+
+      scope = scope.merge(search_conditions)
     end
 
     scope = scope.where(country: @params[:country]) if @params[:country].present?

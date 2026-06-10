@@ -7,7 +7,7 @@ RSpec.describe Financials::CreateJournalBatch, type: :service do
   let(:folio) { create(:booking_folio, hotel: hotel, booking: booking) }
 
   before do
-    # Set up GL mappings
+    # Set up General Ledger (GL) mappings
     hotel.hotel_general_ledger_maps.find_by(transaction_category: 'accommodation').update!(gl_code: 'REV-ROOM')
     hotel.hotel_general_ledger_maps.find_by(transaction_category: 'tax').update!(gl_code: 'TAX-LIAB')
     hotel.hotel_general_ledger_maps.find_by(transaction_category: 'no_show_charge').update!(gl_code: 'REV-NOSHOW')
@@ -63,7 +63,7 @@ RSpec.describe Financials::CreateJournalBatch, type: :service do
       expect(batch.finalized_at).to be_within(1.minute).of(Time.current)
     end
 
-    it 'groups transactions by GL code and transaction type' do
+    it 'groups transactions by General Ledger Code (GL Code) and transaction type' do
       batch = described_class.call(hotel: hotel, business_date: business_date)
 
       expect(batch.entries.count).to eq(4)
@@ -106,7 +106,7 @@ RSpec.describe Financials::CreateJournalBatch, type: :service do
       expect(JournalBatchEntry.count).to eq(4)
     end
 
-    it 'fails when a transaction for the business date has no GL code' do
+    it 'fails when a transaction for the business date has no General Ledger Code (GL Code)' do
       create(:folio_transaction,
         booking_folio: folio,
         transaction_type: 'charge',
@@ -117,7 +117,7 @@ RSpec.describe Financials::CreateJournalBatch, type: :service do
 
       expect {
         described_class.call(hotel: hotel, business_date: business_date)
-      }.to raise_error(ActiveRecord::RecordInvalid, /missing GL codes/)
+      }.to raise_error(ActiveRecord::RecordInvalid, /missing General Ledger Codes \(GL Codes\)/)
 
       expect(JournalBatch.count).to eq(0)
       expect(JournalBatchEntry.count).to eq(0)

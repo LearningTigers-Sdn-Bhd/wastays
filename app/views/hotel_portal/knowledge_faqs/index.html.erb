@@ -1,11 +1,3 @@
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900">FAQs Management</span>
-  </div>
-<% end %>
-
 <%= render "hotel_portal/knowledge_base/documents_table",
   documents: @documents,
   title: "FAQs Management",

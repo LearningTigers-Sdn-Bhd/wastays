@@ -406,6 +406,29 @@ class Hotel < ApplicationRecord
     update(status: "inventory_incomplete") if status == "rooms_incomplete"
   end
 
+  def ready_for_review?
+    property_profile_ready? && rooms_ready? && inventory_ready?
+  end
+
+  def property_profile_ready?
+    name.present? &&
+      city.present? &&
+      country.present? &&
+      address.present? &&
+      featured_photo_attachment_id.present?
+  end
+
+  def rooms_ready?
+    room_types.exists? && room_types.all? { |rt| rt.name.present? && rt.quantity.positive? }
+  end
+
+  def inventory_ready?
+    # Check if there are rates set for at least some days in the next 30 days
+    room_rates.where(date: Date.current..30.days.from_now.to_date)
+              .where("price > 0")
+              .exists?
+  end
+
   def submit_for_review!
     update(status: "pending_review") if ready_for_review?
   end

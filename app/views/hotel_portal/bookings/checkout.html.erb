@@ -1,3 +1,3 @@
 <%= turbo_frame_tag "offcanvas_drawer" do %>
-  <%= render "checkout_sheet", booking: @booking, presenter: @presenter, hotel: current_hotel, checkout_error: @checkout_error %>
+  <%= render "hotel_portal/bookings/checkout_sheet", booking: @booking, presenter: @presenter, hotel: current_hotel, checkout_error: @checkout_error %>
 <% end %>

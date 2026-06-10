@@ -42,12 +42,19 @@
             </div>
 
             <div class="space-y-6">
-              <div>
-                <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Guests</p>
-                <p class="text-sm font-semibold text-neutral-text-primary">
-                  <%= @booking.adults %> adult<%= @booking.adults != 1 ? "s" : "" %>
-                  <% if @booking.children > 0 %>, <%= @booking.children %> child<%= @booking.children != 1 ? "ren" : "" %><% end %>
-                </p>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Guests</p>
+                  <p class="text-sm font-semibold text-neutral-text-primary">
+                    <%= @booking.adults %> adult<%= @booking.adults != 1 ? "s" : "" %>
+                    <% if @booking.children > 0 %>, <%= @booking.children %> child<%= @booking.children != 1 ? "ren" : "" %><% end %>
+                  </p>
+                </div>
+
+                <div>
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Room Category</p>
+                  <p class="text-sm font-semibold text-neutral-text-primary"><%= @booking.room_type_summary %></p>
+                </div>
               </div>
 
               <div>
