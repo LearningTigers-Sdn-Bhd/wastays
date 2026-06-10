@@ -2,8 +2,6 @@
 
 module Folios
   class SyncForecastedCharges
-    include NightlyChargeCalculation
-
     def self.call(booking_folio:)
       new(booking_folio:).call
     end
@@ -56,39 +54,7 @@ module Folios
     end
 
     def expected_lines
-      (@booking.check_in.to_date...@booking.check_out.to_date).flat_map do |date|
-        accommodation_lines(date) + tax_lines(date)
-      end
-    end
-
-    def accommodation_lines(date)
-      @booking.booking_rooms.filter_map do |room|
-        amount = nightly_room_amount(room, date)
-        next if amount.zero?
-
-        {
-          stay_date: date,
-          charge_kind: "accommodation",
-          identity: room.id.to_s,
-          amount: amount,
-          description: "Room Charge - #{date}"
-        }
-      end
-    end
-
-    def tax_lines(date)
-      tax_postings_for(@booking, date).each_with_index.filter_map do |tax_line, index|
-        amount = tax_line_amount(tax_line)
-        next if amount.zero?
-
-        {
-          stay_date: date,
-          charge_kind: "tax",
-          identity: tax_line_identity(tax_line, index),
-          amount: amount,
-          description: "Tax: #{tax_line_name(tax_line)} - #{date}"
-        }
-      end
+      ForecastedChargeLines.call(booking: @booking)
     end
 
     def active_forecast_exists?(line)
@@ -116,15 +82,24 @@ module Folios
     end
 
     def posted_charge_scope(line)
-      date = line[:stay_date].to_date.iso8601
-      nightly_key = [ @booking.id, date, line[:charge_kind], line[:identity] ].join(":")
-      catch_up_key = [ "catch_up", @booking.id, date, line[:charge_kind], line[:identity] ].join(":")
+      nightly_key = ChargePostingKeys.nightly_charge_key(
+        booking: @booking,
+        date: line[:stay_date],
+        charge_kind: line[:charge_kind],
+        identity: line[:identity]
+      )
+      catch_up_key = ChargePostingKeys.catch_up_charge_key(
+        booking: @booking,
+        date: line[:stay_date],
+        charge_kind: line[:charge_kind],
+        identity: line[:identity]
+      )
 
       @booking_folio.folio_transactions.charge.where(
         "metadata->>'nightly_charge_key' = :nightly_key OR metadata->>'catch_up_key' = :catch_up_key",
         nightly_key: nightly_key,
         catch_up_key: catch_up_key
-      )
+      ).where(voided_by_transaction_id: nil)
     end
 
     def forecast_key(record)

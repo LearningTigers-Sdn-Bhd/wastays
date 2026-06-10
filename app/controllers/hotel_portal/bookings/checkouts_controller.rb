@@ -238,7 +238,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     return OpenStruct.new(success?: false, error: "Checkout payment method is not supported.") unless checkout_payment_method == "cash"
 
     balance = @booking.booking_folio.outstanding_balance.to_d
-    return OpenStruct.new(success?: false, error: "Checkout payment can only be posted for a positive outstanding balance.") unless balance.positive?
+    return OpenStruct.new(success?: true) unless balance.positive?
     return OpenStruct.new(success?: false, error: "Checkout payment cannot exceed the outstanding balance.") if checkout_payment_amount > balance
 
     Folios::PostStaffTransaction.call(

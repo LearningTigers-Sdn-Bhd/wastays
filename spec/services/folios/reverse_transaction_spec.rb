@@ -157,4 +157,89 @@ RSpec.describe Folios::ReverseTransaction, type: :service do
       "posted_by_user_id" => user.id
     )
   end
+
+  it "supersedes the actualized forecast for a reversed nightly charge and creates a new pending forecast" do
+    booking = create(:booking, status: "checked_in", check_in: Date.current, check_out: Date.current + 1.day)
+    booking_room = create(:booking_room, booking: booking, subtotal: 120)
+    folio = create(:booking_folio, booking: booking, hotel: booking.hotel)
+    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+    forecast = folio.folio_forecasted_charges.forecast.sole
+    transaction = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "charge",
+      category: "accommodation",
+      amount: 120,
+      posting_date: Date.current,
+      metadata: {
+        "nightly_charge_key" => Folios::ChargePostingKeys.nightly_charge_key(
+          booking: booking,
+          date: Date.current,
+          charge_kind: "accommodation",
+          identity: booking_room.id
+        ),
+        "stay_date" => Date.current.iso8601,
+        "charge_kind" => "accommodation",
+        "forecast_identity" => booking_room.id.to_s
+      }
+    )
+    forecast.actualize!(transaction: transaction)
+
+    result = described_class.call(
+      transaction: transaction,
+      user: user,
+      correction_reason: "Posting error",
+      correction_note: "Wrong room charge"
+    )
+
+    expect(result).to be_success
+    expect(forecast.reload.status).to eq("superseded")
+    pending = folio.folio_forecasted_charges.forecast.sole
+    expect(pending).to have_attributes(
+      stay_date: Date.current,
+      charge_kind: "accommodation",
+      identity: booking_room.id.to_s,
+      amount: 120.to_d
+    )
+  end
+
+  it "does not recreate a pending forecast when reversing a nightly charge for a terminal booking" do
+    booking = create(:booking, status: "checked_in", check_in: Date.current, check_out: Date.current + 1.day)
+    booking_room = create(:booking_room, booking: booking, subtotal: 120)
+    folio = create(:booking_folio, booking: booking, hotel: booking.hotel)
+    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+    forecast = folio.folio_forecasted_charges.forecast.sole
+    transaction = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "charge",
+      category: "accommodation",
+      amount: 120,
+      posting_date: Date.current,
+      metadata: {
+        "nightly_charge_key" => Folios::ChargePostingKeys.nightly_charge_key(
+          booking: booking,
+          date: Date.current,
+          charge_kind: "accommodation",
+          identity: booking_room.id
+        ),
+        "stay_date" => Date.current.iso8601,
+        "charge_kind" => "accommodation",
+        "forecast_identity" => booking_room.id.to_s
+      }
+    )
+    forecast.actualize!(transaction: transaction)
+    booking.transition_status_to!("completed", event: "check_out")
+
+    result = described_class.call(
+      transaction: transaction,
+      user: user,
+      correction_reason: "Posting error",
+      correction_note: "Wrong room charge"
+    )
+
+    expect(result).to be_success
+    expect(forecast.reload.status).to eq("superseded")
+    expect(folio.folio_forecasted_charges.forecast).to be_none
+  end
 end

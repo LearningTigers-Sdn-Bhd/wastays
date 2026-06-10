@@ -44,6 +44,18 @@ module HotelPortal
       booking.check_out.strftime("%d %b %Y")
     end
 
+    def nights_count
+      (booking.check_out.to_date - booking.check_in.to_date).to_i
+    end
+
+    def stay_summary
+      "#{nights_count} #{'night'.pluralize(nights_count)} · #{booking.check_in.strftime('%d %b')}–#{booking.check_out.strftime('%d %b')}"
+    end
+
+    def guest_count_summary
+      "#{booking.adults} #{'adult'.pluralize(booking.adults)} · #{booking.children.to_i} #{'child'.pluralize(booking.children.to_i)}"
+    end
+
     def checked_in_at_form_value
       (booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M")
     end
@@ -70,6 +82,34 @@ module HotelPortal
 
     def additional_guests
       @additional_guests ||= booking.booking_guests.where(is_primary: false).includes(:guest)
+    end
+
+    def primary_guest
+      @primary_guest ||= booking.primary_guest
+    end
+
+    def primary_guest_name
+      primary_guest&.name.presence || booking.guest_name
+    end
+
+    def primary_guest_email
+      primary_guest&.email.presence || booking.guest_email
+    end
+
+    def primary_guest_phone
+      primary_guest&.phone.presence || booking.guest_phone
+    end
+
+    def primary_guest_country
+      primary_guest&.country.presence || booking.guest_country.presence || "—"
+    end
+
+    def primary_guest_document_type
+      primary_guest&.document_type.presence || booking.guest_document_type.presence || "IC/Passport"
+    end
+
+    def primary_guest_government_id
+      primary_guest&.government_id.presence || booking.guest_government_id.presence || "—"
     end
 
     def guest_document_type_label(guest)
@@ -138,6 +178,50 @@ module HotelPortal
 
     def booking_rooms
       @booking_rooms ||= booking.booking_rooms
+    end
+
+    def room_total
+      booking_rooms.sum { |room| room.subtotal.to_d }
+    end
+
+    def taxes_total
+      booking.tax_total.to_d
+    end
+
+    def projected_outstanding_balance
+      (booking.booking_folio&.projected_outstanding_balance || 0).to_d
+    end
+
+    def balance_due?
+      projected_outstanding_balance.positive?
+    end
+
+    def folio_forecast_count
+      booking.booking_folio&.projected_forecasts&.count.to_i
+    end
+
+    def source_label
+      booking.source.to_s.presence&.tr("_", " ")&.titleize || "—"
+    end
+
+    def room_summary
+      summaries = booking_rooms.map do |room|
+        name = room.room_type_snapshot["name"].presence || room.room_type&.name
+        number = room_number_for(room)
+        [ name, number.present? ? "Room #{number}" : nil ].compact.join(" · ")
+      end
+
+      summaries.reject(&:blank?).to_sentence.presence || "—"
+    end
+
+    def rate_plan_label
+      booking_rooms.map { |room| room.rate_plan&.name }.compact.uniq.to_sentence.presence
+    end
+
+    def room_rate_label
+      return 0.to_d unless nights_count.positive?
+
+      (room_total / nights_count).round(2)
     end
 
     def room_number_for(room)

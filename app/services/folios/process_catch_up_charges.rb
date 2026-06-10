@@ -84,7 +84,12 @@ module Folios
     def post_accommodation_catch_up(date)
       @booking.booking_rooms.each do |room|
         # Unique key to prevent double-posting if they check in, out, and in again (unlikely but safe)
-        charge_key = [ "catch_up", @booking.id, date.iso8601, "accommodation", room.id ].join(":")
+        charge_key = ChargePostingKeys.catch_up_charge_key(
+          booking: @booking,
+          date: date,
+          charge_kind: "accommodation",
+          identity: room.id
+        )
         next if already_posted?(charge_key)
 
         amount = nightly_room_amount(room, date)
@@ -122,7 +127,12 @@ module Folios
     def post_tax_catch_up(date)
       tax_postings_for(@booking, date).each_with_index do |tax_line, index|
         tax_identity = tax_line_identity(tax_line, index)
-        charge_key = [ "catch_up", @booking.id, date.iso8601, "tax", tax_identity ].join(":")
+        charge_key = ChargePostingKeys.catch_up_charge_key(
+          booking: @booking,
+          date: date,
+          charge_kind: "tax",
+          identity: tax_identity
+        )
         next if already_posted?(charge_key)
 
         amount = tax_line_amount(tax_line)
@@ -168,8 +178,10 @@ module Folios
 
     def already_posted?(charge_key)
       # Check both standard audit keys and catch-up keys to be safe
+      nightly_key = charge_key.sub("catch_up:", "")
       @folio.folio_transactions.charge
-        .where("metadata->>'catch_up_key' = ? OR metadata->>'nightly_charge_key' = ?", charge_key, charge_key.sub("catch_up:", ""))
+        .where("metadata->>'catch_up_key' = ? OR metadata->>'nightly_charge_key' = ?", charge_key, nightly_key)
+        .where(voided_by_transaction_id: nil)
         .exists?
     end
   end

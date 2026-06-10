@@ -1,0 +1,22 @@
+<nav class="overflow-x-auto border-b border-slate-200" aria-label="Tabs" role="tablist">
+  <ul class="flex min-w-max items-center gap-4">
+    <li>
+      <button type="button" data-booking-tabs-target="tab" data-tab-name="booking-details" data-action="click->booking-tabs#switch" class="inline-flex items-center gap-1.5 border-b-2 border-transparent px-1 py-2 text-sm font-semibold text-slate-600 hover:text-slate-950 data-[active=true]:border-slate-900 data-[active=true]:text-slate-950" role="tab">
+        <%= cached_icon "file-text", class: "size-4" %> Booking Details
+      </button>
+    </li>
+    <li>
+      <button type="button" data-booking-tabs-target="tab" data-tab-name="requests" data-action="click->booking-tabs#switch" class="inline-flex items-center gap-1.5 border-b-2 border-transparent px-1 py-2 text-sm font-semibold text-slate-600 hover:text-slate-950 data-[active=true]:border-slate-900 data-[active=true]:text-slate-950" role="tab">
+        <%= cached_icon "inbox", class: "size-4" %> Requests
+        <% if presenter.pending_requests_count > 0 %>
+          <span class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800"><%= presenter.pending_requests_count %></span>
+        <% end %>
+      </button>
+    </li>
+    <li>
+      <button type="button" data-booking-tabs-target="tab" data-tab-name="history" data-action="click->booking-tabs#switch" class="inline-flex items-center gap-1.5 border-b-2 border-transparent px-1 py-2 text-sm font-semibold text-slate-600 hover:text-slate-950 data-[active=true]:border-slate-900 data-[active=true]:text-slate-950" role="tab">
+        <%= cached_icon "history", class: "size-4" %> History
+      </button>
+    </li>
+  </ul>
+</nav>

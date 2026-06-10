@@ -1,0 +1,107 @@
+<section class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+  <div class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+    <div class="flex items-start gap-2">
+      <span class="mt-0.5 inline-flex size-6 items-center justify-center rounded-md bg-blue-50 text-blue-700"><%= cached_icon "bed", class: "size-3.5" %></span>
+      <div>
+        <h2 class="text-sm font-semibold text-slate-950">Stay Details</h2>
+        <p class="text-xs text-slate-500">Operational stay, room, and rate information.</p>
+      </div>
+    </div>
+    <% if presenter.can_manage_bookings?(current_user) %>
+      <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" onclick="document.getElementById('edit-stay-details-modal').showModal()">
+        <%= cached_icon "pencil", class: "size-3" %> Edit Stay
+      </button>
+    <% end %>
+  </div>
+
+  <div class="grid divide-y divide-slate-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
+    <div class="px-4 py-3">
+      <p class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500"><%= cached_icon "calendar", class: "size-3" %> Check-in</p>
+      <p class="mt-1 text-sm font-medium text-slate-950"><%= presenter.check_in_formatted %></p>
+    </div>
+    <div class="px-4 py-3">
+      <p class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500"><%= cached_icon "calendar", class: "size-3" %> Check-out</p>
+      <p class="mt-1 text-sm font-medium text-slate-950"><%= presenter.check_out_formatted %></p>
+    </div>
+    <div class="px-4 py-3">
+      <p class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500"><%= cached_icon "moon", class: "size-3" %> Nights</p>
+      <p class="mt-1 text-sm font-medium text-slate-950"><%= presenter.nights_count %></p>
+    </div>
+    <div class="px-4 py-3">
+      <p class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500"><%= cached_icon "bed", class: "size-3" %> Room</p>
+      <p class="mt-1 text-sm font-medium text-slate-950"><%= presenter.room_summary %></p>
+    </div>
+    <div class="px-4 py-3">
+      <p class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500"><%= cached_icon "users", class: "size-3" %> Occupancy</p>
+      <p class="mt-1 text-sm font-medium text-slate-950"><%= presenter.guest_count_summary %></p>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-slate-50/70 px-4 py-2 text-xs text-slate-600">
+    <span class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 font-medium text-slate-700 ring-1 ring-slate-200"><%= cached_icon "coins", class: "size-3" %> Rate: <%= presenter.currency %> <%= number_with_precision(presenter.room_rate_label, precision: 2) %> / night</span>
+    <% if presenter.rate_plan_label.present? %>
+      <span class="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 font-medium text-blue-700 ring-1 ring-blue-100"><%= cached_icon "badge-percent", class: "size-3" %> <%= presenter.rate_plan_label %></span>
+    <% end %>
+    <span class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 font-medium text-slate-700 ring-1 ring-slate-200"><%= cached_icon "receipt", class: "size-3" %> Room Total: <%= presenter.currency %> <%= number_with_precision(presenter.room_total, precision: 2) %></span>
+  </div>
+
+  <dialog id="edit-stay-details-modal" class="fixed inset-0 m-auto w-[min(92vw,32rem)] max-w-lg rounded-xl p-0 shadow-xl backdrop:bg-slate-900/40" onclick="if(event.target===this){this.close()}">
+    <div class="bg-white p-5" onclick="event.stopPropagation()">
+      <h3 class="text-base font-semibold text-slate-900">Edit Stay & Room Details</h3>
+      <p class="mt-1 text-sm text-slate-500">Update booking dates and room assignment.</p>
+
+      <%= form_with model: booking, url: hotel_booking_path(current_hotel, booking), method: :patch, local: true,
+          class: "mt-5 space-y-4",
+          data: {
+            controller: "booking-calc",
+            booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
+            booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel),
+            booking_calc_exclude_booking_id_value: booking.id
+          } do |f| %>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Check-in Date</label>
+            <%= f.date_field :check_in, class: "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0", data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
+          </div>
+          <div>
+            <label class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Check-out Date</label>
+            <%= f.date_field :check_out, class: "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0", data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
+          </div>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Room Category</label>
+          <% current_room_type_id = booking.booking_rooms.first&.room_type_id %>
+          <%= f.collection_select :room_type_id, presenter.room_types, :id, :name, { selected: current_room_type_id },
+              { class: "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0",
+                data: {
+                  booking_calc_target: "roomType",
+                  action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate",
+                  prices: presenter.room_type_prices_json,
+                  room_numbers: presenter.room_type_numbers_json
+                }
+              } %>
+        </div>
+
+        <div data-controller="room-lock"
+             data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
+             data-room-lock-room-type-id-value="<%= current_room_type_id %>"
+             data-room-lock-current-room-value="<%= presenter.current_room_number %>"
+             data-booking-calc-target="roomNumberContainer">
+          <label for="booking_room_number" class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Room Number</label>
+          <%= f.select :room_number, [[presenter.current_room_number, presenter.current_room_number]], { selected: presenter.current_room_number },
+              { id: "booking_room_number",
+                class: "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0",
+                data: { booking_calc_target: "roomNumberSelect", action: "change->room-lock#lock" }
+              } %>
+          <p class="mt-1 text-[11px] text-slate-500">Only available rooms for the selected dates are shown.</p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" class="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onclick="this.closest('dialog').close()">Cancel</button>
+          <%= f.submit "Save Changes", class: "rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700" %>
+        </div>
+      <% end %>
+    </div>
+  </dialog>
+</section>

@@ -64,12 +64,12 @@ RSpec.describe Folios::GenerateForecastedCharges do
       expect(folio.folio_forecasted_charges.forecast.first.stay_date).to eq(Date.current)
     end
 
-    it "is idempotent due to unique index" do
+    it "is idempotent" do
       described_class.call(booking_folio: folio)
 
       expect {
         described_class.call(booking_folio: folio)
-      }.to raise_error(ActiveRecord::RecordNotUnique)
+      }.not_to change { folio.folio_forecasted_charges.count }
     end
 
     it "uses nightly_rate_snapshot when available" do

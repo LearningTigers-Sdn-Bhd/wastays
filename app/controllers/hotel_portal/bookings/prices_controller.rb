@@ -23,7 +23,7 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
     ).call
     total = snapshot.room_total + snapshot.tax_total
 
-    render json: { 
+    render json: {
       total_amount: total,
       room_total: snapshot.room_total,
       tax_total: snapshot.tax_total,

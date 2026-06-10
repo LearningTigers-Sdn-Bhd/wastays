@@ -153,7 +153,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).not_to include("Post Payment")
       expect(response.body).not_to include("Post Adjustment")
       expect(response.body).to include("Pending")
-      expect(response.body).to include("This projected line will be posted when checkout is completed.")
+      expect(response.body).to include("This projected line is expected to post during night audit.")
       expect(response.body).to include("Early checkout charge - Night 1")
     end
   end
@@ -505,7 +505,12 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       }
 
       expect(response).to have_http_status(:success)
-      expect(JSON.parse(response.body)).to eq({ "total_amount" => "200.0" })
+      expect(JSON.parse(response.body)).to include(
+        "total_amount" => "200.0",
+        "room_total" => "200.0",
+        "tax_total" => 0,
+        "tax_lines" => []
+      )
     end
 
     it "returns 0 if params are missing" do

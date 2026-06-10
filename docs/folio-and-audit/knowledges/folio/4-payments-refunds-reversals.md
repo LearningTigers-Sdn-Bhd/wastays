@@ -26,6 +26,7 @@ Keeps money movement auditable by recording gateway payments, manual payments, r
 - Completed refund requests are recorded through `Folios::RecordRefund` as negative `payment/refund` folio transactions.
 - Refund folio postings include `metadata["refund_request_id"]` for traceability and idempotency.
 - Reversals create explicit reversing transactions and preserve the original transaction.
+- Reversing an actualized nightly charge supersedes the linked forecast and runs `Folios::SyncForecastedCharges`, allowing checkout validation to detect the night as missing again when the booking still requires a posted charge.
 - Reversal and refund actions flow through audit controls.
 - Manual refunds require `execute_folio_refunds`.
 - Reversals require `post_folio_corrections`.

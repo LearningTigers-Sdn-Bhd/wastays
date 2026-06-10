@@ -6,7 +6,11 @@
 <% early_departure = checkout_business_date < booking.check_out.to_date %>
 <% early_checkout_lines = early_departure ? Folios::PostEarlyCheckoutCharges.pending_preview(booking: booking, folio: folio, departure_date: checkout_business_date, original_check_out: booking.check_out) : [] %>
 <% early_checkout_total = early_checkout_lines.sum { |line| line[:amount].to_d } %>
-<% projected_checkout_balance = early_departure ? balance + early_checkout_total : balance %>
+<% projected_checkout_balance = if early_departure && folio
+  Folios::PostEarlyCheckoutCharges.projected_checkout_balance(folio: folio, departure_date: checkout_business_date, original_check_out: booking.check_out)
+else
+  balance
+end %>
 <% can_record_checkout_refund = projected_checkout_balance.negative? && folio&.status == "open" && current_user.has_permission?("execute_folio_refunds", hotel: hotel) %>
 
 <div class="flex h-full flex-col bg-slate-50/50">

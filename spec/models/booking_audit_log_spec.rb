@@ -31,6 +31,51 @@ RSpec.describe BookingAuditLog, type: :model do
     end
   end
 
+  describe '#action_label' do
+    it 'returns human friendly labels' do
+      expect(build(:booking_audit_log, action_type: 'create').action_label).to eq('Created')
+      expect(build(:booking_audit_log, action_type: 'check_in').action_label).to eq('Checked In')
+      expect(build(:booking_audit_log, action_type: 'unknown').action_label).to eq('Unknown')
+    end
+  end
+
+  describe '#action_icon' do
+    it 'returns correct icons' do
+      expect(build(:booking_audit_log, action_type: 'create').action_icon).to eq('plus')
+      expect(build(:booking_audit_log, action_type: 'cancel').action_icon).to eq('circle-x')
+    end
+  end
+
+  describe '#formatted_changes' do
+    it 'returns structured changes for simple types' do
+      log = build(:booking_audit_log,
+        old_value: { 'status' => 'pending' },
+        new_value: { 'status' => 'confirmed' }
+      )
+
+      changes = log.formatted_changes
+      expect(changes).to eq([ { field: "Status", old: "pending", new: "confirmed" } ])
+    end
+
+    it 'summarizes large hashes' do
+      log = build(:booking_audit_log,
+        old_value: {},
+        new_value: { 'snapshot' => { 'a' => 1, 'b' => 2, 'c' => 3, 'd' => 4, 'e' => 5, 'f' => 6 } }
+      )
+
+      expect(log.formatted_changes.first[:new]).to include("A, B, C ...")
+    end
+
+    it 'summarizes arrays of hashes' do
+      log = build(:booking_audit_log,
+        old_value: [],
+        new_value: { 'items' => [ { id: 1 }, { id: 2 } ] }
+      )
+
+      expect(log.formatted_changes.first[:new]).to eq("2 items")
+    end
+  end
+
   describe '#display_value_change' do
     it 'formats changes correctly' do
       log = build(:booking_audit_log,

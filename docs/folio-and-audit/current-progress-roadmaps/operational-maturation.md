@@ -31,6 +31,8 @@ This roadmap outlines the remaining priorities required to transition from a fun
 - **Operational Exceptions**:
   - Completed May 22, 2026: Late Checkout "Approve/Reject" workflow. Triggered by housekeeping status, transitions booking to `review_due_out`. Front desk can explicitly approve (with standard room rate + custom adjustment) or reject the request. Supports direct update of the booking's checkout period within the resolution modal.
   - Completed May 22, 2026: "Early Departure" charge processing and rate correction workflows via `Bookings::ProcessEarlyDeparture`.
+  - Completed June 10, 2026: Fixed double-counting in checkout sheet's projected balance for early departures. When a prepaid booking checks out early, the Resolve Balance card no longer inflates the balance by counting both regular forecasted charges and early departure charges for the same unused nights. Added `Folios::PostEarlyCheckoutCharges.projected_checkout_balance` to compute the correct projection.
+  - Completed June 11, 2026: Forecasted charge lifecycle hardening. Shared forecast-line and posting-key helpers now prevent drift between generation, sync, and posting paths; generation is retry-safe; and reversing actualized nightly charges supersedes the linked forecast before syncing so checkout can detect missing charges again.
 
 **Success Indicator**: Zero manual adjustments required for common guest exceptions (late checkouts, stay extensions).
 
@@ -102,7 +104,7 @@ All 13 folio services have solid specs (3–12 examples each), but can be streng
 - `CloseForCheckout` (11) — add partial-payment and zero-balance edge cases
 - `InsertTransaction` (12) — add reversal-id threading edge cases
 - `PostStaffTransaction` (10) — add permission-denied scenarios
-- `ReverseTransaction` (7) — add already-reversed double-reversal guard
+- `ReverseTransaction` — add/maintain reversal edge-case coverage, including forecast reconciliation for reversed nightly charges
 
 **Success Indicator**: Every folio/audit/report service has >=5 examples covering happy path, validation, and at least one error case. Missing model/controller specs filled. Zero pending stubs.
 

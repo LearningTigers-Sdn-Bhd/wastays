@@ -207,7 +207,7 @@ module Bookings
     end
 
     def already_posted?(folio, no_show_charge_key)
-      folio.folio_transactions.charge.where("metadata->>'no_show_charge_key' = ?", no_show_charge_key).exists?
+      folio.folio_transactions.charge.where(voided_by_transaction_id: nil).where("metadata->>'no_show_charge_key' = ?", no_show_charge_key).exists?
     end
 
     def no_show_metadata(booking, charge_kind, identity)
@@ -217,7 +217,12 @@ module Bookings
         stay_date: @business_date.iso8601,
         booking_id: booking.id,
         charge_kind: charge_kind,
-        no_show_charge_key: [ booking.id, @business_date.iso8601, "no_show_charge", charge_kind, identity ].join(":")
+        no_show_charge_key: Folios::ChargePostingKeys.no_show_charge_key(
+          booking: booking,
+          date: @business_date,
+          charge_kind: charge_kind,
+          identity: identity
+        )
       }
     end
   end

@@ -103,7 +103,7 @@ module Folios
     end
 
     def posted_transaction(folio, nightly_charge_key)
-      folio.folio_transactions.charge.find_by("metadata->>'nightly_charge_key' = ?", nightly_charge_key)
+      folio.folio_transactions.charge.where(voided_by_transaction_id: nil).find_by("metadata->>'nightly_charge_key' = ?", nightly_charge_key)
     end
 
     def actualize_forecast!(booking, transaction, metadata)
@@ -127,7 +127,12 @@ module Folios
     end
 
     def nightly_charge_key(booking, charge_kind, identity)
-      [ booking.id, @business_date.iso8601, charge_kind, identity ].join(":")
+      ChargePostingKeys.nightly_charge_key(
+        booking: booking,
+        date: @business_date,
+        charge_kind: charge_kind,
+        identity: identity
+      )
     end
   end
 end

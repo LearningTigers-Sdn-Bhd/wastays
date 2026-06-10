@@ -1,0 +1,57 @@
+<% balance = presenter.projected_outstanding_balance %>
+<% payment_icon_class = case presenter.payment_status_display.to_s
+  when "captured", "completed" then "bg-emerald-50 text-emerald-700"
+  when "pending", "authorized", "partial" then "bg-amber-50 text-amber-700"
+  when "failed", "cancelled", "refunded" then "bg-red-50 text-red-700"
+  else "bg-slate-100 text-slate-600"
+end %>
+<div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+  <div class="grid divide-y divide-slate-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
+    <div class="px-4 py-3 <%= presenter.balance_due? ? 'bg-amber-50/70' : 'bg-white' %>">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex size-6 items-center justify-center rounded-md <%= presenter.balance_due? ? 'bg-amber-100 text-amber-700' : 'bg-emerald-50 text-emerald-700' %>"><%= cached_icon "wallet", class: "size-3.5" %></span>
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Balance</p>
+      </div>
+      <p class="mt-1 text-sm font-semibold <%= presenter.balance_due? ? 'text-amber-800' : 'text-slate-900' %>"><%= presenter.currency %> <%= number_with_precision(balance, precision: 2) %></p>
+      <span class="mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold <%= presenter.balance_due? ? 'bg-amber-100 text-amber-800' : 'bg-emerald-50 text-emerald-700' %>"><%= presenter.balance_due? ? 'Due' : 'No due' %></span>
+    </div>
+
+    <div class="px-4 py-3">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex size-6 items-center justify-center rounded-md <%= payment_icon_class %>"><%= cached_icon "badge-check", class: "size-3.5" %></span>
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Payment</p>
+      </div>
+      <p class="mt-1 text-sm font-semibold text-slate-900"><%= presenter.payment_status_display.to_s.tr("_", " ").titleize %></p>
+      <p class="text-xs text-slate-500"><%= booking.guarantee_method.to_s.presence&.tr("_", " ")&.titleize || "No guarantee" %></p>
+    </div>
+
+    <div class="px-4 py-3">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex size-6 items-center justify-center rounded-md <%= presenter.folio_forecast_count.positive? ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600' %>"><%= cached_icon "file-text", class: "size-3.5" %></span>
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Folio</p>
+      </div>
+      <p class="mt-1 text-sm font-semibold text-slate-900"><%= presenter.folio_forecast_count %> unposted</p>
+      <%= link_to folio_hotel_booking_path(current_hotel, booking), class: "inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-slate-950" do %>
+        Manage <%= cached_icon "chevron-right", class: "size-3" %>
+      <% end %>
+    </div>
+
+    <div class="px-4 py-3">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex size-6 items-center justify-center rounded-md bg-blue-50 text-blue-700"><%= cached_icon "calendar-days", class: "size-3.5" %></span>
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Stay</p>
+      </div>
+      <p class="mt-1 text-sm font-semibold text-slate-900"><%= presenter.nights_count %> <%= "night".pluralize(presenter.nights_count) %></p>
+      <p class="text-xs text-slate-500"><%= booking.check_in.strftime("%d %b") %>–<%= booking.check_out.strftime("%d %b") %></p>
+    </div>
+
+    <div class="px-4 py-3">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex size-6 items-center justify-center rounded-md bg-indigo-50 text-indigo-700"><%= cached_icon "users", class: "size-3.5" %></span>
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Guests</p>
+      </div>
+      <p class="mt-1 text-sm font-semibold text-slate-900"><%= booking.adults %> adults · <%= booking.children.to_i %> children</p>
+      <p class="text-xs text-slate-500"><%= pluralize(1 + presenter.additional_guests.size, "registered guest") %></p>
+    </div>
+  </div>
+</div>

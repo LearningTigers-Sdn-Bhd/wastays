@@ -1,7 +1,5 @@
 module Folios
   class GenerateForecastedCharges
-    include NightlyChargeCalculation
-
     def self.call(booking_folio:)
       new(booking_folio:).call
     end
@@ -11,45 +9,51 @@ module Folios
     end
 
     def call
-      booking = @booking_folio.booking
-      nights = (booking.check_in.to_date...booking.check_out.to_date).to_a
+      ForecastedChargeLines.call(booking: @booking_folio.booking).each do |line|
+        next if forecast_exists?(line)
+        next if posted?(line)
 
-      nights.each do |date|
-        forecast_accommodation(date, booking)
-        forecast_taxes(date, booking)
+        create_forecast!(line)
       end
     end
 
     private
 
-    def forecast_accommodation(date, booking)
-      booking.booking_rooms.each do |room|
-        amount = nightly_room_amount(room, date)
-        next if amount.zero?
-
-        @booking_folio.folio_forecasted_charges.create!(
-          stay_date: date,
-          charge_kind: "accommodation",
-          identity: room.id.to_s,
-          amount: amount,
-          description: "Room Charge - #{date}"
-        )
-      end
+    def create_forecast!(line)
+      @booking_folio.folio_forecasted_charges.create!(line)
+    rescue ActiveRecord::RecordNotUnique
+      # The partial unique index is the final guard for concurrent generation.
+      nil
     end
 
-    def forecast_taxes(date, booking)
-      tax_postings_for(booking, date).each_with_index do |tax_line, index|
-        amount = tax_line_amount(tax_line)
-        next if amount.zero?
+    def forecast_exists?(line)
+      @booking_folio.folio_forecasted_charges.where(
+        stay_date: line[:stay_date],
+        charge_kind: line[:charge_kind],
+        identity: line[:identity]
+      ).where(status: %w[forecast actualized]).exists?
+    end
 
-        @booking_folio.folio_forecasted_charges.create!(
-          stay_date: date,
-          charge_kind: "tax",
-          identity: tax_line_identity(tax_line, index),
-          amount: amount,
-          description: "Tax: #{tax_line_name(tax_line)} - #{date}"
-        )
-      end
+    def posted?(line)
+      booking = @booking_folio.booking
+      nightly_key = ChargePostingKeys.nightly_charge_key(
+        booking: booking,
+        date: line[:stay_date],
+        charge_kind: line[:charge_kind],
+        identity: line[:identity]
+      )
+      catch_up_key = ChargePostingKeys.catch_up_charge_key(
+        booking: booking,
+        date: line[:stay_date],
+        charge_kind: line[:charge_kind],
+        identity: line[:identity]
+      )
+
+      @booking_folio.folio_transactions.charge.where(
+        "metadata->>'nightly_charge_key' = :nightly_key OR metadata->>'catch_up_key' = :catch_up_key",
+        nightly_key: nightly_key,
+        catch_up_key: catch_up_key
+      ).where(voided_by_transaction_id: nil).exists?
     end
   end
 end

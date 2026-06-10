@@ -77,7 +77,14 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   end
 
   def show
-    @booking = current_hotel.bookings.includes(:booking_folio).find(params[:id])
+    @booking = current_hotel.bookings
+                            .includes(
+                              booking_folio: [ :folio_transactions, :folio_forecasted_charges ],
+                              booking_rooms: [ :room_type, :rate_plan ],
+                              booking_guests: :guest,
+                              booking_notes: :user
+                            )
+                            .find(params[:id])
     set_breadcrumbs
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
     set_audit_logs(@booking)

@@ -1,58 +1,88 @@
-<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-    <h2 class="text-lg font-bold tracking-tight text-slate-950">Audit History</h2>
-    <p class="mt-1 text-sm font-medium text-slate-600">Track all changes made to this booking.</p>
-  </div>
-  <div class="p-0">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left">
-        <thead class="bg-slate-50/50 border-b border-slate-200">
-          <tr>
-            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Date & Time</th>
-            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">User</th>
-            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Target</th>
-            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Action</th>
-            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Changes</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <% if audit_logs.any? %>
-            <% audit_logs.each do |log| %>
-              <tr class="hover:bg-slate-50/50 transition-colors">
-                <td class="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
-                  <%= log.created_at.strftime("%d %b %Y, %H:%M") %>
-                </td>
-                <td class="px-6 py-4 text-sm font-medium text-slate-900 whitespace-nowrap">
-                  <% if log.user.present? %>
-                    <%= log.user.name %>
-                  <% elsif %w[convert create pre_checkin_completed].include?(log.action_type) %>
-                    <span class="text-blue-600">Guest</span>
-                  <% else %>
-                    <span class="text-slate-400">System</span>
-                  <% end %>
-                </td>
-                <td class="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">
-                  <%= log.display_auditable_name %>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 uppercase">
-                    <%= log.action_type %>
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-sm text-slate-600">
-                  <%= log.display_value_change %>
-                </td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr>
-              <td colspan="4" class="px-6 py-10 text-center text-sm font-medium text-slate-500">
-                No audit logs found for this booking.
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+<div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+  <div class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+    <div>
+      <h2 class="inline-flex items-center gap-2 text-sm font-semibold tracking-tight text-slate-950"><span class="inline-flex size-6 items-center justify-center rounded-md bg-slate-100 text-slate-700"><%= cached_icon "history", class: "size-3.5" %></span> Audit History</h2>
+      <p class="mt-1 text-sm font-medium text-slate-600">Track all changes made to this booking.</p>
     </div>
+    <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+      <%= cached_icon "list", class: "size-3" %>
+      <%= pluralize(audit_logs.size, "event") %>
+    </span>
+  </div>
+
+  <div class="px-4 py-4">
+    <% if audit_logs.any? %>
+      <div class="relative">
+        <!-- Vertical Line -->
+        <div class="absolute left-3.5 top-0 h-full w-px bg-slate-200" aria-hidden="true"></div>
+
+        <div class="space-y-5">
+          <% audit_logs.each do |log| %>
+            <div class="relative pl-10">
+              <!-- Icon Circle -->
+              <div class="absolute left-0 top-0 flex size-8 items-center justify-center rounded-full border-2 border-white ring-1 ring-slate-100 shadow-sm <%= log.action_color %>">
+                <%= cached_icon log.action_icon, variant: :outline, class: "size-4" %>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <!-- Header: Action and Time -->
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span class="text-sm font-bold text-slate-900"><%= log.action_label %></span>
+                  <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">•</span>
+                  <time class="inline-flex items-center gap-1 text-xs font-medium text-slate-500" datetime="<%= log.created_at.iso8601 %>">
+                    <%= cached_icon "clock", class: "size-3 text-slate-400" %>
+                    <%= log.created_at.strftime("%d %b %Y, %H:%M") %>
+                  </time>
+                </div>
+
+                <!-- Actor and Target -->
+                <div class="flex flex-wrap items-center gap-1 text-xs font-medium text-slate-600">
+                  <%= cached_icon "user", class: "size-3 text-slate-400" %>
+                  <span class="text-slate-400">By</span>
+                  <span class="text-slate-900 font-bold">
+                    <% if log.user.present? %>
+                      <%= log.user.name %>
+                    <% elsif %w[convert create pre_checkin_completed].include?(log.action_type) %>
+                      Guest
+                    <% else %>
+                      System
+                    <% end %>
+                  </span>
+                  <span class="mx-1 text-slate-300">on</span>
+                  <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700"><%= log.display_auditable_name %></span>
+                </div>
+
+                <!-- Changes -->
+                <% if log.formatted_changes.any? %>
+                  <div class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 p-3">
+                    <ul class="space-y-2">
+                      <% log.formatted_changes.each do |change| %>
+                        <li class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2 text-[11px]">
+                          <span class="font-black text-slate-400 uppercase tracking-widest min-w-[120px] shrink-0 pt-0.5"><%= change[:field] %></span>
+                          <div class="flex items-start gap-2 min-w-0 overflow-hidden">
+                            <span class="text-slate-500 line-through decoration-slate-300 break-words"><%= change[:old] %></span>
+                            <div class="pt-1 shrink-0">
+                              <%= cached_icon "arrow-right", variant: :outline, class: "size-3 text-slate-400" %>
+                            </div>
+                            <span class="font-bold text-slate-900 break-words"><%= change[:new] %></span>
+                          </div>
+                        </li>
+                      <% end %>
+                    </ul>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <div class="flex flex-col items-center justify-center py-6 text-center">
+        <div class="mb-3 inline-flex size-8 items-center justify-center rounded-md bg-slate-100 text-slate-400">
+          <%= cached_icon "history", variant: :outline, class: "size-4" %>
+        </div>
+        <p class="text-sm font-medium text-slate-500">No audit logs found for this booking.</p>
+      </div>
+    <% end %>
   </div>
 </div>
