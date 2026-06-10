@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["checkIn", "checkOut", "roomType", "guestCountry", "ratePlanSelect", "restrictionCheckbox", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput", "rateOverrideFlag", "corporateRate"]
+  static targets = ["checkIn", "checkOut", "roomType", "guestCountry", "ratePlanSelect", "restrictionCheckbox", "totalInput", "displayTotal", "displayRoomTotal", "displayTaxTotal", "priceDetailsSection", "adjustPriceSection", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput", "rateOverrideFlag", "corporateRate", "ratesBreakdown", "taxesBreakdown"]
   static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, bookingId: String, excludeBookingId: String }
 
   connect() {
@@ -24,7 +24,7 @@ export default class extends Controller {
     }
 
     const currentSelection = this.ratePlanSelectTarget.value
-    this.populateRateOptions([], "Loading rates...")
+    this.populateRateOptions([], "Loading rates…")
     this.ratePlanSelectTarget.disabled = true
 
     try {
@@ -94,7 +94,7 @@ export default class extends Controller {
     this.roomNumberSelectTarget.required = true
     
     const currentSelection = this.roomNumberSelectTarget.value
-    this.roomNumberSelectTarget.innerHTML = '<option value="">Checking availability...</option>'
+    this.roomNumberSelectTarget.innerHTML = '<option value="">Checking availability…</option>'
     this.roomNumberSelectTarget.disabled = true
 
     try {
@@ -177,7 +177,7 @@ export default class extends Controller {
     const roomTypeId = this.roomTypeTarget.value
 
     if (!checkIn || !checkOut || !roomTypeId) {
-      if (this.hasDisplayTotalTarget) this.updateDisplay(0)
+      if (this.hasDisplayTotalTarget) this.updateDisplay({ total_amount: 0 })
       return
     }
 
@@ -188,12 +188,12 @@ export default class extends Controller {
     if (!this.hasPriceUrlValue) return
 
     // Skip price calculation if manual override is active
-    if (this.hasRateOverrideFlagTarget && this.rateOverrideFlagTarget.value === "1") {
+    if (this.hasRateOverrideFlagTarget && this.rateOverrideFlagTarget.value) {
       return
     }
 
     try {
-      this.displayTotalTarget.textContent = "Calculating..."
+      this.displayTotalTarget.textContent = "Calculating…"
       const params = new URLSearchParams({
         room_type_id: roomTypeId,
         check_in: checkIn,
@@ -212,18 +212,38 @@ export default class extends Controller {
       const url = `${this.priceUrlValue}?${params}`
       const response = await fetch(url)
       const data = await response.json()
-      this.updateDisplay(parseFloat(data.total_amount || 0))
+      this.updateDisplay(data)
     } catch (error) {
       console.error("Price calculation failed:", error)
-      this.updateDisplay(0)
+      this.updateDisplay({ total_amount: 0 })
     }
   }
 
-  updateDisplay(amount) {
+  updateDisplay(data) {
     if (!this.hasDisplayTotalTarget || !this.hasTotalInputTarget) return
+    data = data || {}
+    
+    const amount = parseFloat(data.total_amount || 0)
     const formatted = amount.toFixed(2)
+    
     this.displayTotalTarget.textContent = formatted
     this.totalInputTarget.value = formatted
+    
+    if (this.hasDisplayRoomTotalTarget) {
+      this.displayRoomTotalTarget.textContent = parseFloat(data.room_total || 0).toFixed(2)
+    }
+    
+    if (this.hasDisplayTaxTotalTarget) {
+      this.displayTaxTotalTarget.textContent = parseFloat(data.tax_total || 0).toFixed(2)
+    }
+
+    if (this.hasRatesBreakdownTarget) {
+      this.populateRatesBreakdown(data.nightly_rate_snapshot || {})
+    }
+
+    if (this.hasTaxesBreakdownTarget) {
+      this.populateTaxesBreakdown(data.tax_lines || [])
+    }
     
     // Also update the manual payment amount field if it exists
     if (this.hasPaymentAmountInputTarget) {
@@ -231,10 +251,109 @@ export default class extends Controller {
     }
   }
 
+  populateRatesBreakdown(snapshot) {
+    const container = this.ratesBreakdownTarget
+    container.innerHTML = ""
+    let subtotal = 0
+    
+    Object.entries(snapshot).forEach(([date, details]) => {
+      const amount = parseFloat(details.price || 0)
+      subtotal += amount
+
+      const row = document.createElement("div")
+      row.className = "flex justify-between items-center gap-4 py-0.5"
+      
+      const label = document.createElement("span")
+      label.className = "min-w-0 truncate pr-2"
+      label.textContent = this.formatDate(date)
+      
+      const value = document.createElement("span")
+      value.className = "font-medium text-slate-700 whitespace-nowrap tabular-nums"
+      value.textContent = `MYR ${amount.toFixed(2)}`
+      
+      row.appendChild(label)
+      row.appendChild(value)
+      container.appendChild(row)
+    })
+
+    container.appendChild(this.buildSubtotalRow("Room Rate Subtotal", subtotal))
+  }
+
+  populateTaxesBreakdown(taxLines) {
+    const container = this.taxesBreakdownTarget
+    container.innerHTML = ""
+    
+    if (taxLines.length === 0) {
+      container.appendChild(this.buildSubtotalRow("Taxes Subtotal", 0))
+      return
+    }
+
+    let subtotal = 0
+    taxLines.forEach(tax => {
+      const amount = parseFloat(tax.amount || 0)
+      subtotal += amount
+
+      const row = document.createElement("div")
+      row.className = "flex justify-between items-center gap-4 py-0.5"
+      
+      const label = document.createElement("span")
+      label.className = "min-w-0 truncate pr-2"
+      label.textContent = tax.name
+      
+      const value = document.createElement("span")
+      value.className = "font-medium text-slate-700 whitespace-nowrap tabular-nums"
+      value.textContent = `MYR ${amount.toFixed(2)}`
+      
+      row.appendChild(label)
+      row.appendChild(value)
+      container.appendChild(row)
+    })
+
+    container.appendChild(this.buildSubtotalRow("Taxes Subtotal", subtotal))
+  }
+
+  buildSubtotalRow(labelText, amount) {
+    const row = document.createElement("div")
+    row.className = "mt-2 flex justify-between items-center gap-4 border-t border-slate-200 pt-2"
+
+    const label = document.createElement("span")
+    label.className = "min-w-0 truncate pr-2 font-bold text-slate-700"
+    label.textContent = labelText
+
+    const value = document.createElement("span")
+    value.className = "font-bold text-slate-900 whitespace-nowrap tabular-nums"
+    value.textContent = `MYR ${amount.toFixed(2)}`
+
+    row.appendChild(label)
+    row.appendChild(value)
+    return row
+  }
+
+  formatDate(dateString) {
+    const date = new Date(dateString)
+    return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })
+  }
+
+  toggleAdjustPrice(event) {
+    if (this.hasAdjustPriceSectionTarget) {
+      this.adjustPriceSectionTarget.classList.toggle("hidden", !event.target.checked)
+    }
+
+    if (!event.target.checked) {
+      this.clearOverride()
+    }
+  }
+
+  togglePriceDetails(event) {
+    if (this.hasPriceDetailsSectionTarget) {
+      this.priceDetailsSectionTarget.classList.toggle("hidden", !event.target.checked)
+    }
+  }
+
   // Called when user manually edits the total input
   setOverride() {
     if (this.hasRateOverrideFlagTarget) {
-      this.rateOverrideFlagTarget.value = "1"
+      this.rateOverrideFlagTarget.value = this.totalInputTarget.value
     }
   }
 

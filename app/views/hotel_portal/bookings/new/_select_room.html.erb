@@ -1,0 +1,70 @@
+<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+    <h3 class="text-sm font-bold text-slate-900">Select Room</h3>
+  </div>
+  <div class="p-6 space-y-6">
+    <div class="grid sm:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Category</label>
+        <%= f.collection_select :room_type_id, @room_types, :id, :name, { selected: @room_type_id, prompt: "Select a category" },
+            { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+              data: {
+                booking_calc_target: "roomType",
+                action: "change->booking-calc#calculate",
+                prices: @room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
+                room_numbers: @room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
+              }
+            } %>
+      </div>
+      <div data-booking-calc-target="roomNumberContainer">
+        <label for="booking_room_number" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Number</label>
+        <%= f.select :room_number, (@room_number.present? ? [[@room_number, @room_number]] : []), { selected: @room_number, prompt: "Select a room" },
+            { id: "booking_room_number",
+              required: true,
+              disabled: @room_number.blank?,
+              class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+              data: {
+                booking_calc_target: "roomNumberSelect",
+                action: "change->room-lock#lock"
+              }
+            } %>
+      </div>
+    </div>
+
+    <div>
+      <%= f.label :rate_plan_id, "Select Rates", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+      <%= f.select :rate_plan_id, [], { prompt: "Select room category and dates first" },
+          { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+            data: { booking_calc_target: "ratePlanSelect", action: "change->booking-calc#calculate" } } %>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+      <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Respect Rate Restrictions</p>
+      <div class="mt-3 grid gap-3 sm:grid-cols-3">
+        <label class="flex items-start gap-2 text-xs font-semibold text-slate-700">
+          <%= f.check_box :apply_stop_sell_restriction, class: "mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900", data: { booking_calc_target: "restrictionCheckbox", action: "change->booking-calc#calculate" } %>
+          <span>Stop sell</span>
+        </label>
+        <label class="flex items-start gap-2 text-xs font-semibold text-slate-700">
+          <%= f.check_box :apply_arrival_departure_restrictions, class: "mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900", data: { booking_calc_target: "restrictionCheckbox", action: "change->booking-calc#calculate" } %>
+          <span>Closed arrival/departure</span>
+        </label>
+        <label class="flex items-start gap-2 text-xs font-semibold text-slate-700">
+          <%= f.check_box :apply_stay_length_restrictions, class: "mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900", data: { booking_calc_target: "restrictionCheckbox", action: "change->booking-calc#calculate" } %>
+          <span>Min/max stay</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
+      <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Apply Corporate Rate</span>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox"
+               class="sr-only peer"
+               data-booking-calc-target="corporateRate"
+               data-action="change->booking-calc#calculate">
+        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+      </label>
+    </div>
+  </div>
+</div>

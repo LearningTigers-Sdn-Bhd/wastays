@@ -75,7 +75,7 @@ module HotelPortal
       end
 
       def folio
-        @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(params[:id])
+        @booking = current_hotel.bookings.includes(booking_folio: [ :folio_transactions, :folio_forecasted_charges ]).find(params[:id])
         @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
       end
 
@@ -108,10 +108,14 @@ module HotelPortal
       end
 
       def create
+        room_type = current_hotel.room_types.find(booking_params[:room_type_id])
+        rate_plan, rate_tier = parse_rate_selection(room_type, booking_params[:rate_plan_id])
+
         result = ::Bookings::CreateManualBooking.new(
           hotel: current_hotel,
-          params: booking_params,
-          user: current_user
+          params: booking_params.merge(rate_plan_id: rate_plan&.id),
+          user: current_user,
+          rate_tier: rate_tier
         ).call
 
         if result.success?
@@ -125,7 +129,7 @@ module HotelPortal
             format.html { redirect_to hotel_reservation_board_index_path(current_hotel), notice: "Booking created successfully." }
           end
         else
-          @booking = current_hotel.bookings.build(booking_params.except(:room_type_id, :room_number))
+          @booking = current_hotel.bookings.build(booking_params.except(*manual_booking_form_only_param_keys))
           @room_types = current_hotel.room_types.order(:name)
           flash.now[:alert] = result.errors.to_sentence
           render :new, status: :unprocessable_content
@@ -173,8 +177,37 @@ module HotelPortal
       def booking_params
         params.fetch(:booking, {}).permit(
           :guest_name, :guest_email, :guest_phone, :status,
-          :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount, :rate_plan_id
+          :guest_country, :guest_gender, :guest_document_type, :guest_government_id, :guest_update_intent,
+          :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
+          :record_payment, :payment_method, :payment_amount, :payment_reference,
+          :id_front, :id_back, :source, :internal_notes, :manual_rate_override, :existing_guest_id,
+          :rate_plan_id, :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
+          :guarantee_method,
+          booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ]
         )
+      end
+
+      def parse_rate_selection(room_type, rate_plan_id)
+        return [ nil, :standard ] if rate_plan_id.blank?
+
+        if rate_plan_id.to_s.start_with?("tier_")
+          parts = rate_plan_id.to_s.split("_")
+          kind = parts[1] == "walk" ? :walk_in : parts[1].to_sym
+          real_plan_id = parts.last
+          plan = room_type.rate_plans.find_by(id: real_plan_id)
+          [ plan, kind ]
+        else
+          plan = room_type.rate_plans.find_by(id: rate_plan_id)
+          [ plan, :standard ]
+        end
+      end
+
+      def manual_booking_form_only_param_keys
+        %i[
+          room_type_id room_number record_payment payment_method payment_amount payment_reference
+          existing_guest_id guest_update_intent rate_plan_id
+          apply_stop_sell_restriction apply_arrival_departure_restrictions apply_stay_length_restrictions
+        ]
       end
 
       def authorize_manage_bookings!
