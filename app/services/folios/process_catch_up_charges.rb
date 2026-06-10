@@ -22,6 +22,8 @@ module Folios
       @folio.with_lock do
         reverse_no_show_charges
         post_missing_nightly_charges
+
+        Folios::SyncForecastedCharges.call(booking_folio: @folio)
       end
     end
 

@@ -14,6 +14,8 @@ Creates the guest financial ledger for a booking and applies existing captured p
 - `app/services/folios/initialize_for_booking.rb`
 - `app/services/folios/sync_existing_payments.rb`
 - `app/services/folios/record_payment_from_gateway.rb`
+- `app/services/folios/generate_forecasted_charges.rb`
+- `app/services/folios/sync_forecasted_charges.rb`
 - `spec/integration/lifecycles/standard_booking_lifecycle_spec.rb`
 
 ## Rules Made So Far
@@ -23,6 +25,8 @@ Creates the guest financial ledger for a booking and applies existing captured p
 - Booking-payment transactions feed Deposit Liability reporting for unearned revenue visibility.
 - Actual security deposits are tracked separately in `deposits` with General Ledger (GL) category `security_deposits` and do not reduce folio balances unless applied later.
 - Initialization is idempotent enough to avoid duplicate folio setup during normal check-in flows.
+- Forecast charges for each nightly stay period are generated at check-in by `GenerateForecastedCharges`, reusing the same calculation logic as night audit.
+- After initialization, lifecycle changes use `SyncForecastedCharges` rather than blind regeneration so actualized or already-posted nights are preserved.
 
 ## Known Follow-Ups
 

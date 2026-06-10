@@ -1,5 +1,5 @@
 <% folio = booking.booking_folio %>
-<% balance = folio&.outstanding_balance.to_d %>
+<% balance = (folio&.projected_outstanding_balance || 0).to_d %>
 <% currency = booking.currency.presence || "MYR" %>
 
 <dialog id="check-out-modal-show-<%= booking.id %>" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,32rem)] max-w-lg shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">

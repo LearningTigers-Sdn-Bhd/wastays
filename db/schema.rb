@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_08_072417) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_10_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -428,6 +428,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_08_072417) do
     t.index ["payment_transaction_id"], name: "index_financial_audit_events_on_payment_transaction_id"
     t.index ["refund_request_id"], name: "index_financial_audit_events_on_refund_request_id"
     t.index ["request_id"], name: "index_financial_audit_events_on_request_id"
+  end
+
+  create_table "folio_forecasted_charges", force: :cascade do |t|
+    t.bigint "booking_folio_id", null: false
+    t.date "stay_date", null: false
+    t.string "charge_kind", null: false
+    t.string "identity", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "description", null: false
+    t.string "status", default: "forecast", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.bigint "actualizing_transaction_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actualizing_transaction_id"], name: "index_folio_forecasted_charges_on_actualizing_transaction_id"
+    t.index ["booking_folio_id", "charge_kind", "identity", "stay_date"], name: "idx_forecasted_charges_on_unique_forecast", unique: true, where: "((status)::text = 'forecast'::text)"
+    t.index ["booking_folio_id", "status"], name: "index_folio_forecasted_charges_on_booking_folio_id_and_status"
+    t.index ["booking_folio_id", "stay_date"], name: "idx_on_booking_folio_id_stay_date_5ee8190530"
+    t.index ["booking_folio_id"], name: "index_folio_forecasted_charges_on_booking_folio_id"
   end
 
   create_table "folio_transactions", force: :cascade do |t|
@@ -1350,6 +1369,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_08_072417) do
   add_foreign_key "financial_audit_events", "night_audits"
   add_foreign_key "financial_audit_events", "payment_transactions"
   add_foreign_key "financial_audit_events", "refund_requests"
+  add_foreign_key "folio_forecasted_charges", "booking_folios"
+  add_foreign_key "folio_forecasted_charges", "folio_transactions", column: "actualizing_transaction_id"
   add_foreign_key "folio_transactions", "booking_folios"
   add_foreign_key "folio_transactions", "folio_transactions", column: "reversal_of_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "voided_by_transaction_id"

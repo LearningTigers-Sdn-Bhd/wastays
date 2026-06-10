@@ -27,9 +27,10 @@
     </div>
   </div>
 
-  <%= render "hotel_portal/bookings/folio/folio_balance_summary", booking: @booking %>
+  <% projected_lines = (@booking.booking_folio&.projected_forecasts || []).map { |f| { date: f.stay_date, description: f.description, amount: f.amount, category: f.charge_kind } } %>
+  <%= render "hotel_portal/bookings/folio/folio_balance_summary", booking: @booking, projected_lines: projected_lines %>
   <%= render "hotel_portal/bookings/folio/folio_actions", booking: @booking, hotel: current_hotel, redirect_to_folio: true %>
-  <%= render "hotel_portal/bookings/folio/folio_transaction_table", booking: @booking %>
+  <%= render "hotel_portal/bookings/folio/folio_transaction_table", booking: @booking, projected_lines: projected_lines %>
 </div>
 
 <%= render "hotel_portal/bookings/show/modals/action_modals", booking: @booking, presenter: @presenter %>

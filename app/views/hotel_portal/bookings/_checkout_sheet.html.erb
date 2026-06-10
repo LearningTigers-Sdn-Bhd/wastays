@@ -1,5 +1,5 @@
 <% folio = booking.booking_folio %>
-<% balance = (folio&.outstanding_balance || 0).to_d %>
+<% balance = (folio&.projected_outstanding_balance || 0).to_d %>
 <% currency = booking.currency.presence || "MYR" %>
 <% checkout_error ||= nil %>
 <% checkout_business_date = hotel.business_date_for(Time.current).to_date %>

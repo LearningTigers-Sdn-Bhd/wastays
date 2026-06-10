@@ -71,7 +71,11 @@ module Folios
     end
 
     def insert_transaction!(booking:, amount:, category:, description:, metadata:)
-      return if already_posted?(booking.booking_folio, metadata[:nightly_charge_key])
+      existing_transaction = posted_transaction(booking.booking_folio, metadata[:nightly_charge_key])
+      if existing_transaction
+        actualize_forecast!(booking, existing_transaction, metadata)
+        return
+      end
 
       result = Folios::InsertTransaction.new(
         booking_folio: booking.booking_folio,
@@ -80,17 +84,34 @@ module Folios
         category: category,
         user: @user,
         description: description,
-          posting_date: @business_date,
-          options: @options.merge(posting_source: "night_audit", metadata: metadata)
+        posting_date: @business_date,
+        options: @options.merge(posting_source: "night_audit", metadata: metadata)
       ).call
 
-      return if result.success? || already_posted?(booking.booking_folio, metadata[:nightly_charge_key])
+      if result.success?
+        actualize_forecast!(booking, result.transaction, metadata)
+        return
+      end
+
+      existing_transaction = posted_transaction(booking.booking_folio, metadata[:nightly_charge_key])
+      if existing_transaction
+        actualize_forecast!(booking, existing_transaction, metadata)
+        return
+      end
 
       raise "Failed to post nightly folio charge: #{result.error}"
     end
 
-    def already_posted?(folio, nightly_charge_key)
-      folio.folio_transactions.charge.where("metadata->>'nightly_charge_key' = ?", nightly_charge_key).exists?
+    def posted_transaction(folio, nightly_charge_key)
+      folio.folio_transactions.charge.find_by("metadata->>'nightly_charge_key' = ?", nightly_charge_key)
+    end
+
+    def actualize_forecast!(booking, transaction, metadata)
+      forecast = booking.booking_folio.folio_forecasted_charges
+        .forecast
+        .find_by(stay_date: @business_date, charge_kind: metadata[:charge_kind], identity: metadata[:forecast_identity])
+
+      forecast&.actualize!(transaction: transaction)
     end
 
     def nightly_metadata(booking, charge_kind, identity)
@@ -100,6 +121,7 @@ module Folios
         stay_date: @business_date.iso8601,
         booking_id: booking.id,
         charge_kind: charge_kind,
+        forecast_identity: identity.to_s,
         nightly_charge_key: nightly_charge_key(booking, charge_kind, identity)
       }
     end

@@ -82,6 +82,11 @@ module Bookings
 
             # Deduct new inventory
             InventoryManager.new(@booking).deduct
+
+            # Reconcile forecasts against the changed stay without recreating already-posted nights.
+            if @booking.booking_folio.present?
+              Folios::SyncForecastedCharges.call(booking_folio: @booking.booking_folio)
+            end
           end
 
           # 4. Handle Room Assignment if room number changed or dates changed

@@ -4,7 +4,7 @@ class HotelPortal::Bookings::FoliosController < HotelPortal::BaseController
   before_action :authorize_view_bookings!
 
   def show
-    @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(params[:id])
+    @booking = current_hotel.bookings.includes(booking_folio: [ :folio_transactions, :folio_forecasted_charges ]).find(params[:id])
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
     render "hotel_portal/bookings/folio"
   end

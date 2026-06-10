@@ -48,7 +48,7 @@
           </div>
           <div class="p-6">
             <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Final Balance</p>
-            <p class="mt-2 text-lg font-black text-emerald-700"><%= currency %> <%= number_with_precision(folio&.outstanding_balance || 0, precision: 2) %></p>
+            <p class="mt-2 text-lg font-black text-emerald-700"><%= currency %> <%= number_with_precision(folio&.projected_outstanding_balance || 0, precision: 2) %></p>
             <p class="mt-1 text-sm font-semibold text-slate-500"><%= folio&.status&.humanize || "Closed" %></p>
           </div>
         </div>

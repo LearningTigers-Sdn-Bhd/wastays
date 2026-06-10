@@ -120,4 +120,52 @@ RSpec.describe Folios::PostNightlyCharges do
 
     expect(folio.folio_transactions.charge.sole.amount).to eq(33.34)
   end
+
+  it "actualizes forecast charges when posting nightly charges" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 2.days,
+      tax_lines: [ { "name" => "SST", "amount" => "20.00", "type" => "sst" } ])
+    create(:booking_room, booking: booking, subtotal: 200.0)
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+
+    expect {
+      described_class.call(night_audit: night_audit, user: user)
+    }.to change { folio.folio_forecasted_charges.forecast.count }
+      .from(4)  # 2 accommodation + 2 tax
+      .to(2)    # 2 remaining forecasts for future nights
+
+    actualized = folio.folio_forecasted_charges.actualized
+    expect(actualized.count).to eq(2)
+    expect(actualized.map(&:actualizing_transaction)).to all(be_present)
+  end
+
+  it "actualizes a forecast when retrying after the nightly charge already exists" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day)
+    booking_room = create(:booking_room, booking: booking, subtotal: 100.0)
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+    existing_transaction = create(:folio_transaction,
+      booking_folio: folio,
+      transaction_type: :charge,
+      category: "accommodation",
+      amount: 100.0,
+      posting_date: business_date,
+      metadata: { nightly_charge_key: [ booking.id, business_date.iso8601, "accommodation", booking_room.id ].join(":") })
+
+    expect {
+      described_class.call(night_audit: night_audit, user: user)
+    }.not_to change { folio.folio_transactions.charge.count }
+
+    forecast = folio.folio_forecasted_charges.sole
+    expect(forecast.reload.status).to eq("actualized")
+    expect(forecast.actualizing_transaction).to eq(existing_transaction)
+  end
 end

@@ -43,6 +43,7 @@ module Bookings
 
           folio = Folios::InitializeForBooking.call(booking: booking, user: @user, options: { posting_source: "no_show" }, lock: false)
           post_no_show_charges(booking, folio)
+          folio.folio_forecasted_charges.supersede_all!
           booking.transition_status_to!("no_show", event: "mark_no_show")
           Bookings::InventoryManager.new(booking).release_by_dates(@business_date + 1.day, booking.check_out)
           release_assigned_rooms_to_ready(booking)

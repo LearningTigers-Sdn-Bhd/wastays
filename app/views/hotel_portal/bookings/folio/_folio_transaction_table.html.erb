@@ -38,7 +38,7 @@
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-2">
                     <p class="font-bold text-slate-900"><%= line[:description] %></p>
-                    <span title="This projected line will be posted when checkout is completed." class="inline-flex size-5 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                    <span title="This projected line is expected to post during night audit." class="inline-flex size-5 items-center justify-center rounded-full bg-amber-100 text-amber-700">
                       <%= cached_icon "info", stroke_width: 2.5, class: "size-3" %>
                     </span>
                   </div>
@@ -48,10 +48,10 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 font-mono text-[11px] text-slate-500">-</td>
-                <td class="px-6 py-4">
-                  <p class="text-[12px] font-bold text-amber-800">Checkout Preview</p>
-                  <p class="text-[10px] text-amber-500 uppercase tracking-widest font-bold">Pending</p>
-                </td>
+                  <td class="px-6 py-4">
+                    <p class="text-[12px] font-bold text-amber-800">Forecast</p>
+                    <p class="text-[10px] text-amber-500 uppercase tracking-widest font-bold">Pending</p>
+                  </td>
                 <td class="px-6 py-4 text-right font-black text-amber-900 text-[15px]">
                   + <%= booking.currency.presence || "MYR" %> <%= number_with_precision(line[:amount].to_d, precision: 2) %>
                 </td>

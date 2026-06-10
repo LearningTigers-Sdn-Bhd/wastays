@@ -59,6 +59,71 @@ RSpec.describe "HotelPortal::ReservationBoard::BoardBookings", type: :request do
       expect(response).to redirect_to(hotel_reservation_board_index_path(hotel))
       expect(hotel.bookings.last.guest_name).to eq("Board Guest")
     end
+
+    it "persists the shared manual booking fields" do
+      sign_in_with_permissions("manage_bookings")
+      create(:room_rate, room_type: room_type, date: Date.current, price: 100, currency: hotel.default_currency.presence || "MYR")
+
+      booking_params = {
+        guest_name: "Board Guest",
+        guest_email: "board@example.com",
+        guest_phone: "+60123456789",
+        guest_country: "Singapore",
+        guest_gender: "female",
+        guest_document_type: "passport",
+        guest_government_id: "A12345678",
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 1.day).to_s,
+        room_type_id: room_type.id,
+        room_number: "101",
+        adults: 2,
+        children: 1,
+        source: "whatsapp",
+        internal_notes: "Late arrival",
+        manual_rate_override: "150.00",
+        record_payment: "1",
+        payment_method: "cash",
+        payment_amount: "50.00",
+        payment_reference: "RCPT-BOARD-1",
+        apply_stop_sell_restriction: "1",
+        apply_arrival_departure_restrictions: "1",
+        apply_stay_length_restrictions: "1"
+      }
+
+      expect {
+        post hotel_reservation_board_board_bookings_path(hotel), params: { booking: booking_params }
+      }.to change(Booking, :count).by(1)
+        .and change(PaymentTransaction, :count).by(1)
+
+      booking = hotel.bookings.order(:created_at).last
+      transaction = booking.payment_transactions.last
+
+      expect(response).to redirect_to(hotel_reservation_board_index_path(hotel))
+      expect(booking).to have_attributes(
+        guest_name: "Board Guest",
+        guest_email: "board@example.com",
+        guest_phone: "+60123456789",
+        guest_country: "Singapore",
+        guest_gender: "female",
+        source: "whatsapp",
+        internal_notes: "Late arrival",
+        manual_rate_override: 150.0,
+        total_amount: 150.0,
+        payment_status: "partial"
+      )
+      expect(booking.primary_guest).to have_attributes(
+        country: "Singapore",
+        gender: "female",
+        document_type: "passport",
+        government_id: "a12345678"
+      )
+      expect(transaction).to have_attributes(
+        gateway: "manual",
+        payment_method: "cash",
+        amount_subunits: 5_000,
+        external_reference: "RCPT-BOARD-1"
+      )
+    end
   end
 
   describe "GET /hotel/:hotel_id/reservation-board/bookings/:id" do

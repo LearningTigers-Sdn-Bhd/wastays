@@ -64,6 +64,30 @@ RSpec.describe BookingFolio, type: :model do
     end
   end
 
+  describe "#projected_forecasts" do
+    it "excludes forecasts on or after the booking checkout date" do
+      booking = create(:booking, status: "checked_in", check_in: Date.current, check_out: Date.current + 1.day)
+      folio = create(:booking_folio, hotel: booking.hotel, booking: booking)
+      included = create(:folio_forecasted_charge, booking_folio: folio, stay_date: Date.current, identity: "included")
+      create(:folio_forecasted_charge, booking_folio: folio, stay_date: Date.current + 1.day, identity: "excluded")
+
+      expect(folio.projected_forecasts).to contain_exactly(included)
+    end
+
+    it "excludes forecasts for closed or terminal lifecycle folios" do
+      booking = create(:booking, status: "completed", check_in: Date.current, check_out: Date.current + 1.day)
+      folio = create(:booking_folio, hotel: booking.hotel, booking: booking)
+      create(:folio_forecasted_charge, booking_folio: folio, stay_date: Date.current)
+
+      expect(folio.projected_forecasts).to be_none
+
+      booking.update_column(:status, "checked_in")
+      folio.update!(status: "closed")
+
+      expect(folio.projected_forecasts).to be_none
+    end
+  end
+
   describe "immutability interaction" do
     it "prevents destroying a folio with transactions" do
       folio = create(:booking_folio)
