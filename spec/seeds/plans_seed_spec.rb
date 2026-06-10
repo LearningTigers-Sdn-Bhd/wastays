@@ -24,10 +24,27 @@ RSpec.describe "plans seed", type: :model do
   it "sets front desk levels correctly" do
     feature = Feature.find_by(slug: "front_desk_operations")
     levels = PlanFeature.where(feature: feature).joins(:plan).pluck("plans.slug", :level).to_h
-    expect(levels["direct"]).to eq("manual")
+    expect(levels["direct"]).to be_nil
     expect(levels["core"]).to eq("basic")
     expect(levels["plus"]).to eq("basic")
     expect(levels["enterprise"]).to eq("advanced")
+  end
+
+  it "does not include manual PMS and rate rows for direct plan" do
+    expectation_map = {
+      "reservation_management" => nil,
+      "room_management_availability" => nil,
+      "front_desk_operations" => nil,
+      "rate_plan_hierarchy" => nil,
+      "date_range_dow_pricing" => nil
+    }
+
+    expectation_map.each do |slug, expected_level|
+      feature = Feature.find_by(slug: slug)
+      plan_feature = PlanFeature.joins(:plan).find_by(feature: feature, plans: { slug: "direct" })
+
+      expect(plan_feature).to be_nil, "expected no direct plan row for #{slug}"
+    end
   end
 
   it "marks add-ons as addon cells, not enabled" do

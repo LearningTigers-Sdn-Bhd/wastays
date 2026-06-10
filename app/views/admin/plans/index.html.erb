@@ -1,5 +1,7 @@
-<% wired_slugs = %w[daily_occupancy_revenue arrivals_departures_list outstanding_balance_noshow housekeeper_productivity booking_source_analysis revenue_allocation_per_night task_assignment_minibar_log room_status_board unified_guest_profile role_based_access_control full_audit_trail no_show_auto_handling excel_pdf_export automated_prearrival checkin_confirmation welcoming_instay_messaging checkout_receipt_review manage_40_otas auto_sync_availability].to_set %>
+<% wired_slugs = %w[daily_occupancy_revenue arrivals_departures_list outstanding_balance_noshow housekeeper_productivity booking_source_analysis revenue_allocation_per_night task_assignment_minibar_log room_status_board unified_guest_profile role_based_access_control full_audit_trail no_show_auto_handling excel_pdf_export automated_prearrival checkin_confirmation welcoming_instay_messaging checkout_receipt_review manage_40_otas auto_sync_availability ai_concierge_page].to_set %>
 <% coming_soon_slugs = %w[backdated_checkin_rate internal_staff_alerts preference_tagging complaint_history vip_blacklist_flag whatsapp_linked_to_profile maintenance_request_tracking priority_room_flagging multi_property_view shift_handover_log min_max_stay_rules last_minute_rate_automation rate_override_reason_code instant_rate_sync live_chat e_invoice accounting_integration per_pax_booking].to_set %>
+<% locked_slugs = %w[payment_system billing_invoicing_system direct_booking_flow].to_set %>
+<% external_aic_slugs = Admin::PlansController::EXTERNAL_AIC_SLUGS.to_set %>
 <% content_for :breadcrumbs do %>
   <%= render "shared/navigation/admin_breadcrumbs", current: "Plan Access" %>
 <% end %>
@@ -54,6 +56,13 @@
                   <span class="text-xs font-bold uppercase tracking-widest text-slate-200"><%= group.name %></span>
                 </td>
               </tr>
+              <% if group.slug == "aic" %>
+                <tr>
+                  <td colspan="<%= @plans.size + 1 %>" class="bg-amber-50 px-6 py-2 border-b border-amber-100">
+                    <span class="text-[11px] text-amber-700">Some AIC rows are managed outside WAStays today. These controls are disabled until the flows are wired inside WAStays.</span>
+                  </td>
+                </tr>
+              <% end %>
               <% if group.slug == "cm" %>
                 <tr>
                   <td colspan="<%= @plans.size + 1 %>" class="bg-amber-50 px-6 py-2 border-b border-amber-100">
@@ -65,8 +74,12 @@
                 <tr class="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
                   <td class="sticky left-0 z-10 bg-white px-6 py-3 font-medium text-slate-700 min-w-64 border-r border-slate-100">
                     <%= feature.name %>
-                    <% if coming_soon_slugs.include?(feature.slug) %>
+                    <% if external_aic_slugs.include?(feature.slug) %>
+                      <span class="ml-2 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 align-middle">External</span>
+                    <% elsif coming_soon_slugs.include?(feature.slug) %>
                       <span class="ml-2 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 align-middle">Coming Soon</span>
+                    <% elsif locked_slugs.include?(feature.slug) %>
+                      <span class="ml-2 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-500 align-middle">Plan default</span>
                     <% elsif !wired_slugs.include?(feature.slug) %>
                       <span class="text-amber-400 font-bold ml-1" title="Feature exists but gating is blocked (level-logic / guest-context / external)">*</span>
                     <% end %>
@@ -74,16 +87,19 @@
                   <% @plans.each do |plan| %>
                     <% pf = @plan_features[[ plan.id, feature.id ]] %>
                     <% cs = coming_soon_slugs.include?(feature.slug) %>
+                    <% locked = locked_slugs.include?(feature.slug) %>
+                    <% external = external_aic_slugs.include?(feature.slug) %>
+                    <% disabled = cs || locked || external %>
                     <td class="px-4 py-3 text-center align-middle">
                       <input type="hidden" name="cells[<%= idx %>][plan_id]" value="<%= plan.id %>">
                       <input type="hidden" name="cells[<%= idx %>][feature_id]" value="<%= feature.id %>">
-                      <input type="hidden" name="cells[<%= idx %>][enabled]" value="<%= cs && pf&.enabled ? '1' : '0' %>">
-                      <input type="hidden" name="cells[<%= idx %>][addon]" value="<%= cs && pf&.addon ? '1' : '0' %>">
+                      <input type="hidden" name="cells[<%= idx %>][enabled]" value="<%= disabled && pf&.enabled ? '1' : '0' %>">
+                      <input type="hidden" name="cells[<%= idx %>][addon]" value="<%= disabled && pf&.addon ? '1' : '0' %>">
                       <div class="flex flex-col items-center gap-1.5">
                         <% unless feature.addon %>
                           <input type="checkbox" name="cells[<%= idx %>][enabled]" value="1"
-                                 class="size-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 <%= cs ? 'cursor-not-allowed opacity-40' : 'cursor-pointer' %>"
-                                 <%= "checked" if pf&.enabled %> <%= "disabled" if cs %>>
+                                 class="size-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 <%= disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer' %>"
+                                 <%= "checked" if pf&.enabled %> <%= "disabled" if disabled %>>
                         <% end %>
                         <input type="hidden" name="cells[<%= idx %>][level]" value="<%= pf&.level %>">
                         <% if feature.addon %>

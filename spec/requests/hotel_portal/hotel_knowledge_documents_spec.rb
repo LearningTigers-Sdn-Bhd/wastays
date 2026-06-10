@@ -7,7 +7,10 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
 
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
+  let(:hotel) { create(:hotel, account: account, status: "approved", plan: plan) }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
 
   before do
@@ -15,6 +18,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
     RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: "manage_hotel_profile"))
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
     sign_in_as(user)
   end
 
@@ -39,6 +43,15 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
         get index_path
 
         expect(response.body).to include("Test Doc")
+      end
+
+      it "redirects when AI concierge page is excluded from plan" do
+        hotel.plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
+
+        get index_path
+
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq("This feature isn't included in your plan. Upgrade to access it.")
       end
     end
 

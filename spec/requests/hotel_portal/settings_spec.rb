@@ -3,7 +3,10 @@ require 'rails_helper'
 RSpec.describe 'HotelPortal::Settings', type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  let(:hotel) { create(:hotel, account: account, status: 'registered') }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
+  let(:hotel) { create(:hotel, account: account, status: 'registered', plan: plan) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -13,6 +16,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: 'manage_hotel_profile'))
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
     sign_in_as(user)
   end
 

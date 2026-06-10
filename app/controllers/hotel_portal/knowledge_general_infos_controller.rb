@@ -2,6 +2,7 @@
 
 module HotelPortal
   class KnowledgeGeneralInfosController < HotelPortal::BaseController
+    before_action -> { require_feature!("ai_concierge_page") }
     before_action :set_hotel
     before_action :authorize_hotel
     before_action :set_document, only: %i[show edit update destroy reindex]
