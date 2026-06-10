@@ -2,11 +2,11 @@
 <% footer_items = admin_sidebar_footer_items %>
 
 <% admin_sidebar_header = capture do %>
-  <div class="flex items-center gap-x-2.5 px-4 py-3">
+  <div class="flex items-center gap-x-2.5 px-4 py-3 sidebar-header">
     <span class="inline-flex justify-center items-center size-7 rounded-lg bg-slate-100 text-slate-700 shadow-xs ring-1 ring-slate-200">
       <%= cached_icon "settings", class: "size-4 shrink-0" %>
     </span>
-    <span class="text-sm font-semibold text-neutral-text-primary">Admin Panel</span>
+    <span class="text-sm font-semibold text-neutral-text-primary sidebar-label">Admin Panel</span>
   </div>
 <% end %>
 

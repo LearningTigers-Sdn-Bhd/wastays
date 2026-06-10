@@ -3,16 +3,16 @@
 
 <% hotel_sidebar_header = capture do %>
   <div class="flex flex-col gap-y-2 px-4 py-3 min-h-12">
-    <div class="flex items-center gap-x-2.5 min-w-0" title="<%= current_hotel.name %>" aria-label="Hotel: <%= current_hotel.name %>">
+    <div class="flex items-center gap-x-2.5 min-w-0 sidebar-header" title="<%= current_hotel.name %>" aria-label="Hotel: <%= current_hotel.name %>">
       <span class="inline-flex justify-center items-center size-7 rounded-lg bg-slate-100 text-slate-700 shadow-xs ring-1 ring-slate-200 shrink-0">
         <%= cached_icon "building-2", class: "size-4 shrink-0" %>
       </span>
-      <span class="text-sm font-semibold text-neutral-text-primary truncate"><%= current_hotel.name.truncate(24) %></span>
+      <span class="text-sm font-semibold text-neutral-text-primary truncate sidebar-label"><%= current_hotel.name.truncate(24) %></span>
     </div>
     <% if current_user.admin_panel_user? %>
       <a href="<%= admin_dashboard_path %>" target="_blank" rel="noopener noreferrer" class="sidebar-nav-link sidebar-nav-link-default">
         <%= cached_icon "external-link", class: "size-4 shrink-0" %>
-        <span>Go to Admin Panel</span>
+        <span class="sidebar-label">Go to Admin Panel</span>
       </a>
     <% end %>
   </div>
@@ -31,16 +31,17 @@
             <% if item.children.present? %>
               <% visible_children = hotel_visible_items(item.children) %>
               <% next if visible_children.blank? %>
-              <details class="group" <%= "open" if item.active %>>
+              <details class="group bg-slate-100/80 rounded-xl p-1" <%= "open" if item.active %> data-sidebar-state-target="details">
                 <summary class="sidebar-nav-link list-none cursor-pointer <%= item.active ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>">
                   <%= cached_icon item.icon, class: "size-4 shrink-0" %>
-                  <span class="flex-1"><%= item.label %></span>
-                  <%= cached_icon "chevron-down", class: "size-4 shrink-0 transition-transform group-open:rotate-180" %>
+                  <span class="flex-1 sidebar-label"><%= item.label %></span>
+                  <%= cached_icon "chevron-down", class: "size-4 shrink-0 transition-transform group-open:rotate-180 sidebar-chevron" %>
                 </summary>
-                <div class="ms-6 mt-1 space-y-0.5 border-s border-slate-200 ps-3">
+                <div class="mt-1 space-y-0.5 sidebar-details-content ps-6">
                   <% visible_children.each do |child| %>
                     <a class="sidebar-nav-link <%= child.active ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= child.path %>">
-                      <span class="text-sm"><%= child.label %></span>
+                      <%= cached_icon child.icon, class: "size-4 shrink-0" %>
+                      <span class="text-sm sidebar-label"><%= child.label %></span>
                     </a>
                   <% end %>
                 </div>

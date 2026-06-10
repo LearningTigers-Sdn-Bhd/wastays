@@ -4,7 +4,12 @@ module ApplicationHelper
     key = [ name.to_s, library.to_s, from.to_s, variant&.to_s, arguments ]
     return @_cached_icons[key].dup.html_safe if @_cached_icons.key?(key)
 
-    @_cached_icons[key] = icon(name, library: library, from: from, variant: variant, **arguments).to_s.freeze
+    @_cached_icons[key] = begin
+      icon(name, library: library, from: from, variant: variant, **arguments).to_s.freeze
+    rescue StandardError => e
+      Rails.logger.error("Icon not found: #{name} (#{e.message})")
+      ""
+    end
     @_cached_icons[key].dup.html_safe
   end
 

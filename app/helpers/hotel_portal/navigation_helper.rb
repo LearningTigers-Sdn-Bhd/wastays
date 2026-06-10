@@ -7,32 +7,32 @@ module HotelPortal
       return @_hotel_sidebar_sections if defined?(@_hotel_sidebar_sections)
 
       financial_nav_items = [
-        NavItem.new(label: "Summary", path: hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "index"),
-        NavItem.new(label: "Manager's Flash Report", path: managers_flash_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "managers_flash"),
-        NavItem.new(label: "Daily Revenue", path: daily_revenue_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "daily_revenue"),
-        NavItem.new(label: "Arrivals & Departures", path: arrivals_departures_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "arrivals_departures"),
-        NavItem.new(label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "daily_occupancy"),
-        NavItem.new(label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "outstanding_balance"),
-        NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "deposit_liability")
+        NavItem.new(label: "Summary", path: hotel_reports_path(current_hotel), icon: "file-spreadsheet", active: controller_name == "reports" && action_name == "index"),
+        NavItem.new(label: "Manager's Flash Report", path: managers_flash_hotel_reports_path(current_hotel), icon: "trending-up", active: controller_name == "reports" && action_name == "managers_flash"),
+        NavItem.new(label: "Daily Revenue", path: daily_revenue_hotel_reports_path(current_hotel), icon: "arrow-down-right", active: controller_name == "reports" && action_name == "daily_revenue"),
+        NavItem.new(label: "Arrivals & Departures", path: arrivals_departures_hotel_reports_path(current_hotel), icon: "arrow-up-right", active: controller_name == "reports" && action_name == "arrivals_departures"),
+        NavItem.new(label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), icon: "pie-chart", active: controller_name == "reports" && action_name == "daily_occupancy"),
+        NavItem.new(label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), icon: "credit-card", active: controller_name == "reports" && action_name == "outstanding_balance"),
+        NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "banknote", active: controller_name == "reports" && action_name == "deposit_liability")
       ]
       financial_nav_active = financial_nav_items.any?(&:active)
 
       audit_nav_items = [
-        NavItem.new(label: "Night Audit", path: hotel_night_audits_path(current_hotel), active: controller_name == "night_audits")
+        NavItem.new(label: "Night Audit", path: hotel_night_audits_path(current_hotel), icon: "moon", active: controller_name == "night_audits")
       ]
       audit_nav_active = audit_nav_items.any?(&:active)
 
       accounting_nav_items = [
-        NavItem.new(label: "Journal Batches", path: journal_batches_hotel_reports_path(current_hotel), active: controller_name == "reports" && action_name == "journal_batches", permission: "view_reports"),
-        NavItem.new(label: "General Ledger Mappings", path: hotel_general_ledger_maps_path(current_hotel), active: controller_name == "general_ledger_maps", permission: "manage_general_ledger_maps")
+        NavItem.new(label: "Journal Batches", path: journal_batches_hotel_reports_path(current_hotel), icon: "book-open", active: controller_name == "reports" && action_name == "journal_batches", permission: "view_reports"),
+        NavItem.new(label: "General Ledger Mappings", path: hotel_general_ledger_maps_path(current_hotel), icon: "git-merge", active: controller_name == "general_ledger_maps", permission: "manage_general_ledger_maps")
       ]
       accounting_nav_active = accounting_nav_items.any?(&:active)
 
       knowledge_nav_items = [
-        NavItem.new(label: "Policy Management", path: hotel_knowledge_policies_path(current_hotel), active: controller_name == "knowledge_policies"),
-        NavItem.new(label: "FAQs Management", path: hotel_knowledge_faqs_path(current_hotel), active: controller_name == "knowledge_faqs"),
-        NavItem.new(label: "General Info", path: hotel_knowledge_general_infos_path(current_hotel), active: controller_name == "knowledge_general_infos"),
-        NavItem.new(label: "Knowledge Diagnostics", path: hotel_knowledge_diagnostics_path(current_hotel), active: controller_name == "knowledge_diagnostics")
+        NavItem.new(label: "Policy Management", path: hotel_knowledge_policies_path(current_hotel), icon: "file-text", active: controller_name == "knowledge_policies"),
+        NavItem.new(label: "FAQs Management", path: hotel_knowledge_faqs_path(current_hotel), icon: "circle-question-mark", active: controller_name == "knowledge_faqs"),
+        NavItem.new(label: "General Info", path: hotel_knowledge_general_infos_path(current_hotel), icon: "info", active: controller_name == "knowledge_general_infos"),
+        NavItem.new(label: "Knowledge Diagnostics", path: hotel_knowledge_diagnostics_path(current_hotel), icon: "activity", active: controller_name == "knowledge_diagnostics")
       ]
       knowledge_nav_active = knowledge_nav_items.any?(&:active)
 
