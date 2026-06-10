@@ -10,7 +10,7 @@
     <%= render "hotel_portal/reservation_board/partials/content_header",
                title: @booking.confirmation_token,
                subtitle: @booking.guest_name,
-               icon: lucide_icon("user", stroke_width: 2.5, class: "size-5"),
+               icon: cached_icon("user", stroke_width: 2.5, class: "size-5"),
                status_badge: status_badge %>
 
     <%# Body — Single Column %>
@@ -64,13 +64,13 @@
 
             <%# Check In %>
             <% if @booking.status == 'confirmed' %>
-              <button onclick="document.getElementById('check-in-modal-show-<%= @booking.id %>').showModal()"
+              <button onclick="document.getElementById('check-in-modal-<%= @booking.id %>').showModal()"
                       class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-blue-700 bg-blue-50/50 hover:bg-blue-100 hover:text-blue-800 transition-all group">
                 <span class="size-8 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
-                  <%= lucide_icon "log-in", stroke_width: 2.5, class: "size-4 text-blue-600" %>
+                  <%= cached_icon "log-in", stroke_width: 2.5, class: "size-4 text-blue-600" %>
                 </span>
                 <span class="flex-1 text-left">Check In</span>
-                <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-blue-400 group-hover:text-blue-600 transition-colors" %>
+                <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-blue-400 group-hover:text-blue-600 transition-colors" %>
               </button>
             <% end %>
 
@@ -79,10 +79,10 @@
               <button onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').showModal()"
                       class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 hover:text-emerald-800 transition-all group">
                 <span class="size-8 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
-                  <%= lucide_icon "log-out", stroke_width: 2.5, class: "size-4 text-emerald-600" %>
+                  <%= cached_icon "log-out", stroke_width: 2.5, class: "size-4 text-emerald-600" %>
                 </span>
                 <span class="flex-1 text-left">Check Out</span>
-                <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-emerald-400 group-hover:text-emerald-600 transition-colors" %>
+                <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-emerald-400 group-hover:text-emerald-600 transition-colors" %>
               </button>
             <% end %>
 
@@ -91,10 +91,10 @@
               <button onclick="document.getElementById('late-checkout-modal-show-<%= @booking.id %>').showModal()"
                       class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-amber-700 bg-amber-50/50 hover:bg-amber-100 hover:text-amber-800 transition-all group">
                 <span class="size-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0 group-hover:bg-amber-200 transition-colors">
-                  <%= lucide_icon "clock-alert", stroke_width: 2.5, class: "size-4 text-amber-600" %>
+                  <%= cached_icon "clock-alert", stroke_width: 2.5, class: "size-4 text-amber-600" %>
                 </span>
                 <span class="flex-1 text-left">Review Late Checkout</span>
-                <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-amber-400 group-hover:text-amber-600 transition-colors" %>
+                <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-amber-400 group-hover:text-amber-600 transition-colors" %>
               </button>
             <% end %>
 
@@ -104,20 +104,20 @@
             <button onclick="document.getElementById('edit-stay-modal-<%= @booking.id %>').showModal()"
                     class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-all group">
               <span class="size-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 group-hover:bg-slate-200 transition-colors">
-                <%= lucide_icon "pen-line", stroke_width: 2.5, class: "size-4 text-slate-500" %>
+                <%= cached_icon "pen-line", stroke_width: 2.5, class: "size-4 text-slate-500" %>
               </span>
               <span class="flex-1 text-left">Edit Stay</span>
-              <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-slate-300 group-hover:text-slate-500 transition-colors" %>
+              <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-slate-300 group-hover:text-slate-500 transition-colors" %>
             </button>
 
             <%# Guest Notes %>
             <button onclick="document.getElementById('notes-modal-<%= @booking.id %>').showModal()"
                     class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-amber-600 hover:bg-amber-50 hover:text-amber-700 transition-all group">
               <span class="size-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0 group-hover:bg-amber-100 transition-colors">
-                <%= lucide_icon "sticky-note", stroke_width: 2.5, class: "size-4 text-amber-500" %>
+                <%= cached_icon "sticky-note", stroke_width: 2.5, class: "size-4 text-amber-500" %>
               </span>
               <span class="flex-1 text-left">Guest Notes</span>
-              <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-amber-300 group-hover:text-amber-500 transition-colors" %>
+              <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-amber-300 group-hover:text-amber-500 transition-colors" %>
             </button>
 
             <hr class="border-slate-100 my-2">
@@ -127,10 +127,10 @@
                         class: "flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-all group",
                         data: { turbo: false } do %>
               <span class="size-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 group-hover:bg-slate-200 transition-colors">
-                <%= lucide_icon "external-link", stroke_width: 2.5, class: "size-4 text-slate-500" %>
+                <%= cached_icon "external-link", stroke_width: 2.5, class: "size-4 text-slate-500" %>
               </span>
               <span class="flex-1 text-left">View Full Page</span>
-              <%= lucide_icon "arrow-up-right", stroke_width: 2.5, class: "size-4 text-slate-300 group-hover:text-slate-500 transition-colors" %>
+              <%= cached_icon "arrow-up-right", stroke_width: 2.5, class: "size-4 text-slate-300 group-hover:text-slate-500 transition-colors" %>
             <% end %>
 
             <%# View Folio %>
@@ -138,10 +138,10 @@
                         class: "flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-all group",
                         data: { turbo: false } do %>
               <span class="size-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 group-hover:bg-slate-200 transition-colors">
-                <%= lucide_icon "book-open", stroke_width: 2.5, class: "size-4 text-slate-500" %>
+                <%= cached_icon "book-open", stroke_width: 2.5, class: "size-4 text-slate-500" %>
               </span>
               <span class="flex-1 text-left">View Folio</span>
-              <%= lucide_icon "arrow-up-right", stroke_width: 2.5, class: "size-4 text-slate-300 group-hover:text-slate-500 transition-colors" %>
+              <%= cached_icon "arrow-up-right", stroke_width: 2.5, class: "size-4 text-slate-300 group-hover:text-slate-500 transition-colors" %>
             <% end %>
 
           </div>
@@ -168,7 +168,7 @@
             <p class="text-sm text-slate-500 mt-1">Update booking dates and room assignment</p>
           </div>
           <button type="button" onclick="this.closest('dialog').close()" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all">
-            <%= lucide_icon "x", stroke_width: 2.5, class: "size-5" %>
+            <%= cached_icon "x", stroke_width: 2.5, class: "size-5" %>
           </button>
         </div>
 
@@ -246,7 +246,7 @@
             <p class="text-sm text-slate-500 mt-1">Internal staff notes for <%= @booking.guest_name %></p>
           </div>
           <button type="button" onclick="this.closest('dialog').close()" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all">
-            <%= lucide_icon "x", stroke_width: 2.5, class: "size-5" %>
+            <%= cached_icon "x", stroke_width: 2.5, class: "size-5" %>
           </button>
         </div>
 

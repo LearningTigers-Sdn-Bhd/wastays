@@ -32,10 +32,10 @@ Stores immutable folio ledger entries for guest charges, credits, payments, refu
   - `post_folio_write_offs` for write-off postings.
 - The legacy `post_folio_transactions` permission is no longer used for authorization.
 - Reversal logic is append-only; reversing a refund (negative payment) correctly negates the amount to create a positive correction, ensuring folio balance integrity.
-- Valid folio categories are covered by default GL mappings, including `no_show_charge`, `late_checkout_charge`, and `early_departure_charge`.
+- Valid folio categories are covered by default General Ledger (GL) mappings, including `no_show_charge`, `late_checkout_charge`, and `early_departure_charge`.
 - Reporting and dashboards include all charge categories by default in revenue calculations.
 
 ## Known Follow-Ups
 
-- Expand staff posting categories if operations require manual Room, Tax, F&B, and Other postings.
-- Keep hotel-specific GL mapping behavior aligned across journal batches and folio ledger exports.
+- Expand staff posting categories if operations require manual Room, Tax, Food and Beverage (F&B), and Other postings.
+- Keep hotel-specific General Ledger (GL) mapping behavior aligned across journal batches and folio ledger exports.

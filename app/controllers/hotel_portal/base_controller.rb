@@ -2,6 +2,8 @@
 
 module HotelPortal
   class BaseController < ApplicationController
+    include Breadcrumbable
+
     layout "hotel"
     before_action :authenticate_user!
     before_action :ensure_hotel_access!

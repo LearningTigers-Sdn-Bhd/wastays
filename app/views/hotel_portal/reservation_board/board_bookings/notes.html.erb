@@ -6,7 +6,7 @@
     <%= render "hotel_portal/reservation_board/partials/content_header",
                title: "Guest Notes",
                subtitle: "Internal staff notes for #{@booking.guest_name}",
-               icon: lucide_icon("sticky-note", stroke_width: 2.5, class: "size-5 text-amber-500") %>
+               icon: cached_icon("sticky-note", stroke_width: 2.5, class: "size-5 text-amber-500") %>
 
     <%# Modal Content %>
     <div class="flex-1 overflow-y-auto p-8 space-y-4">

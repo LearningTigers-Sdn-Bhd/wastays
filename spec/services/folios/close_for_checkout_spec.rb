@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Folios::CloseForCheckout do
+  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
+
   let(:booking) { create(:booking, status: "checked_in", currency: "MYR") }
   let(:user) { create(:user) }
 

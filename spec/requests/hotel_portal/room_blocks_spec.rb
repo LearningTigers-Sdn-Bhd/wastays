@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::RoomBlocks", type: :request do
+  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
+
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101" ]) }
   let(:user) { create(:user) }

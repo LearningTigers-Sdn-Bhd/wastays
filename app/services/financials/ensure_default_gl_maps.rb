@@ -31,7 +31,7 @@ module Financials
       }
 
       missing_categories = FolioTransaction.gl_mappable_categories - mappings.keys
-      raise KeyError, "Missing default GL mappings for: #{missing_categories.join(', ')}" if missing_categories.any?
+      raise KeyError, "Missing default General Ledger (GL) mappings for: #{missing_categories.join(', ')}" if missing_categories.any?
 
       mappings.each do |category, data|
         ensure_mapping!(category, data)

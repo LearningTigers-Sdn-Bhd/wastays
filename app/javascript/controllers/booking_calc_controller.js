@@ -38,6 +38,10 @@ export default class extends Controller {
         params.set(checkbox.name.replace(/^booking\[|\]$/g, ""), checkbox.checked ? "1" : "0")
       })
 
+      if (this.hasCorporateRateTarget) {
+        params.set("corporate_rate", this.corporateRateTarget.checked)
+      }
+
       const response = await fetch(`${this.rateOptionsUrlValue}?${params}`)
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
 

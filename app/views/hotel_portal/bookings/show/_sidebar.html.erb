@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Outstanding Balance</h3>
       <div class="size-6 rounded-lg bg-white/10 flex items-center justify-center text-slate-300">
-        <%= lucide_icon "credit-card", stroke_width: 2.5, class: "size-3.5" %>
+        <%= cached_icon "credit-card", stroke_width: 2.5, class: "size-3.5" %>
       </div>
     </div>
     <div class="flex items-baseline gap-1.5">
@@ -14,7 +14,7 @@
     
     <%= link_to folio_hotel_booking_path(current_hotel, booking), class: "mt-6 flex items-center justify-center gap-2 w-full rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-slate-900 transition hover:bg-slate-100 shadow-sm" do %>
       Manage Folio
-      <%= lucide_icon "external-link", stroke_width: 2.5, class: "size-3.5" %>
+      <%= cached_icon "external-link", stroke_width: 2.5, class: "size-3.5" %>
     <% end %>
   </div>
 </div>
@@ -66,12 +66,12 @@
   <div class="p-4 space-y-1">
     <%= link_to receipt_booking_path(booking.confirmation_token), target: "_blank", class: "w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors", data: { turbo: false } do %>
       Download Receipt
-      <%= lucide_icon "download", stroke_width: 2.5, class: "size-3.5 text-slate-400" %>
+      <%= cached_icon "download", stroke_width: 2.5, class: "size-3.5 text-slate-400" %>
     <% end %>
     <% if booking.status == "completed" %>
       <%= link_to invoice_booking_path(booking.confirmation_token), target: "_blank", class: "w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors", data: { turbo: false } do %>
         Download Invoice
-        <%= lucide_icon "download", stroke_width: 2.5, class: "size-3.5 text-slate-400" %>
+        <%= cached_icon "download", stroke_width: 2.5, class: "size-3.5 text-slate-400" %>
       <% end %>
     <% end %>
   </div>
@@ -85,19 +85,74 @@
   <div class="p-4 space-y-2">
     <button type="button" class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
       Resend Confirmation
-      <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-3.5 text-slate-400" %>
+      <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-3.5 text-slate-400" %>
     </button>
     <button type="button" class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
       Resend Pre-Check-in
-      <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-3.5 text-slate-400" %>
+      <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-3.5 text-slate-400" %>
     </button>
     <% if booking.status == "no_show" %>
       <button type="button" 
               onclick="document.getElementById('reinstate-modal-show-<%= booking.id %>').showModal()"
               class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors">
         Reinstate Reservation
-        <%= lucide_icon "chevron-right", stroke_width: 2.5, class: "size-3.5 text-blue-400" %>
+        <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-3.5 text-blue-400" %>
       </button>
     <% end %>
   </div>
 </div>
+
+<!-- Refund Request -->
+<% if presenter.can_request_refund? %>
+  <% eligibility = presenter.refund_eligibility %>
+  <div class="overflow-hidden rounded-2xl border border-red-200 bg-red-50/30 shadow-sm">
+    <div class="border-b border-red-200 bg-red-50 px-6 py-4">
+      <h3 class="text-[11px] font-bold text-red-600 uppercase tracking-widest">Platform Refund</h3>
+    </div>
+    <div class="p-6 space-y-4">
+      <% if eligibility.success? %>
+        <p class="text-xs text-red-600 leading-relaxed font-medium">
+          This is an online booking. You can initiate a platform refund request if it follows the hotel's refund policy.
+        </p>
+        <%= link_to new_hotel_booking_refund_request_path(current_hotel, booking), 
+            class: "flex items-center justify-center gap-2 w-full rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 shadow-sm",
+            data: { turbo_frame: "offcanvas_drawer" } do %>
+          Initiate Refund Request
+          <%= cached_icon "arrow-right", stroke_width: 2.5, class: "size-3.5" %>
+        <% end %>
+      <% else %>
+        <p class="text-xs text-red-600 leading-relaxed font-medium">
+          <%= eligibility.error %>
+        </p>
+        <div class="p-3 bg-red-100/50 rounded-lg text-[10px] text-red-700 font-bold uppercase tracking-wider text-center border border-red-200">
+          Ineligible for Platform Refund
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% elsif booking.refund_request.present? %>
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+      <h3 class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Refund Status</h3>
+    </div>
+    <div class="p-6 space-y-4">
+      <div class="flex justify-between items-center text-sm">
+        <span class="text-slate-500 font-medium">Status</span>
+        <% rr = booking.refund_request %>
+        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider 
+          <%= case rr.status
+              when "pending" then "bg-yellow-100 text-yellow-700 border-yellow-200"
+              when "approved" then "bg-blue-100 text-blue-700 border-blue-200"
+              when "completed" then "bg-green-100 text-green-700 border-green-200"
+              when "rejected" then "bg-red-100 text-red-700 border-red-200"
+              end %> bg-opacity-10 uppercase">
+          <%= rr.status %>
+        </span>
+      </div>
+      <div class="flex justify-between items-center text-sm">
+        <span class="text-slate-500 font-medium">Refund Amount</span>
+        <span class="font-bold text-slate-900"><%= number_to_currency(rr.refund_amount, unit: booking.currency + " ") %></span>
+      </div>
+    </div>
+  </div>
+<% end %>

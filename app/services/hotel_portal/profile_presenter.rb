@@ -34,6 +34,10 @@ module HotelPortal
       photo_queue.summary
     end
 
+    def star_rating_options
+      (1..5).map { |rating| [ "#{rating} #{'★' * rating}", rating ] }
+    end
+
     def serialize_queued_blob(blob)
       {
         signed_id: blob.signed_id,

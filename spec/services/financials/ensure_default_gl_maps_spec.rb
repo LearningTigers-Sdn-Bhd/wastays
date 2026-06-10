@@ -4,7 +4,7 @@ RSpec.describe Financials::EnsureDefaultGlMaps, type: :service do
   let(:hotel) { create(:hotel) }
 
   describe '.call' do
-    it 'creates default GL mappings for every folio transaction category' do
+    it 'creates default General Ledger (GL) mappings for every folio transaction category' do
       # The after_create callback already calls this service.
       expect(hotel.hotel_general_ledger_maps.pluck(:transaction_category)).to match_array(FolioTransaction.gl_mappable_categories)
 

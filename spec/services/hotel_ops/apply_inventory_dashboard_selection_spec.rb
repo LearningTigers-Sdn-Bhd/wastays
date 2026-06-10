@@ -203,7 +203,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
 
     it "updates only the corporate price when only corporate tier is selected" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
-      rate_plan = create(:rate_plan, room_type: room_type, name: "Standard Plan")
+      rate_plan = room_type.rate_plans.first # Use auto-created plan
       # Pre-create a rate record with some standard price
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150)
 
@@ -229,7 +229,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
 
     it "updates only the standard price when only standard plan is selected" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
-      rate_plan = create(:rate_plan, room_type: room_type, name: "Standard Plan")
+      rate_plan = room_type.rate_plans.first # Use auto-created plan
       # Pre-create a rate record with some corporate price
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150, corporate_price: 200)
 
@@ -255,7 +255,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
 
     it "updates only the ota price when only ota tier is selected" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
-      rate_plan = create(:rate_plan, room_type: room_type, name: "Standard Plan")
+      rate_plan = room_type.rate_plans.first # Use auto-created plan
       # Pre-create a rate record with standard and corporate prices
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150, corporate_price: 200)
 

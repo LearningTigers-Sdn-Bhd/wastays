@@ -15,10 +15,15 @@
       <div>
         <p class="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Step 1 of 2</p>
         <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">Checkout <%= booking.guest_name %></h2>
-        <p class="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500"><%= booking.confirmation_token %> - <%= booking.check_in.strftime("%d %b") %> - <%= booking.check_out.strftime("%d %b %Y") %></p>
+        <div class="mt-1.5 flex items-center gap-2">
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-500"><%= booking.confirmation_token %> - <%= booking.check_in.strftime("%d %b") %> - <%= booking.check_out.strftime("%d %b %Y") %></p>
+          <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+            Deposit: <%= (booking.deposit_status || 'not_required').titleize %>
+          </span>
+        </div>
       </div>
       <button type="button" class="text-slate-400 transition hover:text-slate-600" data-action="click->offcanvas#close">
-        <%= lucide_icon "x", stroke_width: 2.5, class: "size-6" %>
+        <%= cached_icon "x", stroke_width: 2.5, class: "size-6" %>
       </button>
     </div>
   </div>
@@ -106,6 +111,58 @@
             </div>
           <% end %>
 
+          <% held_deposits = booking.deposits.where(status: "collected") %>
+          <% show_deposit_section = held_deposits.any? || (booking.deposit_status.present? && booking.deposit_status != "not_required") %>
+          
+          <% if show_deposit_section %>
+            <div class="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
+              <div class="border-b border-amber-100 bg-amber-50/50 px-6 py-4 flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-black uppercase tracking-widest text-amber-900">Security Deposit Status</h3>
+                  <p class="text-[11px] font-bold text-amber-700">Tracking for damages and incidentals.</p>
+                </div>
+                <div class="size-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                  <%= cached_icon "shield-check", stroke_width: 2.5, class: "size-4" %>
+                </div>
+              </div>
+              <div class="p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Status</span>
+                  <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black text-amber-700 uppercase tracking-widest">
+                    <%= (booking.deposit_status || 'not_required').titleize %>
+                  </span>
+                </div>
+
+                <% if held_deposits.any? %>
+                  <div class="pt-4 border-t border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-3">Collected Records</p>
+                    <table class="w-full text-left text-sm">
+                      <tbody class="divide-y divide-slate-100">
+                        <% held_deposits.each do |deposit| %>
+                          <tr>
+                            <td class="py-2">
+                              <p class="text-xs font-bold text-slate-900"><%= deposit.payment_method.to_s.titleize %> Deposit</p>
+                              <p class="text-[10px] text-slate-500 font-medium"><%= deposit.collected_at&.strftime("%d %b %Y, %H:%M") || deposit.created_at.strftime("%d %b %Y, %H:%M") %></p>
+                            </td>
+                            <td class="py-2 text-right font-black text-slate-900">
+                              <%= deposit.currency %> <%= number_with_precision(deposit.amount, precision: 2) %>
+                            </td>
+                          </tr>
+                        <% end %>
+                      </tbody>
+                    </table>
+                  </div>
+                <% end %>
+
+                <div class="rounded-xl bg-slate-50 p-3 border border-slate-100">
+                  <p class="text-[11px] font-semibold leading-relaxed text-slate-600 italic">
+                    Reminder: Security deposits are tracked independently from the folio. Ensure they are returned or settled before the guest leaves.
+                  </p>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
           <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
               <h3 class="text-sm font-black uppercase tracking-widest text-slate-900">Resolve Balance</h3>
@@ -127,7 +184,7 @@
                   <%= select_tag :checkout_payment_method,
                       options_for_select([["Cash", "cash"]], "cash"),
                       class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
-                  <p class="mt-1.5 text-[11px] font-medium text-slate-500">Additional payment categories can be enabled once GL mappings are configured.</p>
+                  <p class="mt-1.5 text-[11px] font-medium text-slate-500">Additional payment categories can be enabled once General Ledger (GL) mappings are configured.</p>
                 </div>
 
                 <div>

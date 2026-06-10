@@ -11,7 +11,7 @@ module HotelPortal
 
       def generate
         CSV.generate(headers: true) do |csv|
-          csv << [ "Business Date", "GL Code", "Type", "Debit", "Credit", "Description", "Finalized At" ]
+          csv << [ "Business Date", "General Ledger Code (GL Code)", "Type", "Debit", "Credit", "Description", "Finalized At" ]
 
           @batches.each do |batch|
             batch.entries.each do |entry|

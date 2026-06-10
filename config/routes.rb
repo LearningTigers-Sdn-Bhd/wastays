@@ -1,6 +1,7 @@
 require_relative "../app/constraints/superadmin_constraint"
 
 Rails.application.routes.draw do
+  mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
     get "room_blocks/create"
     get "room_blocks/destroy"
@@ -152,7 +153,7 @@ Rails.application.routes.draw do
         post :full_refresh, to: "hotels/channel_managers#full_refresh"
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
       end
-      resources :onboarding_sessions, module: :hotels do
+      resources :onboarding_sessions, module: :hotels, only: [ :create, :show, :edit, :update, :destroy ] do
         member do
           post :complete
           post :cancel
@@ -195,7 +196,7 @@ Rails.application.routes.draw do
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
     end
-    resources :webhook_endpoints do
+    resources :webhook_endpoints, only: [ :index, :create, :update, :destroy ] do
       member do
         post :test_ping
         patch :toggle
@@ -265,7 +266,7 @@ Rails.application.routes.draw do
     resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions"
     resources :general_ledger_maps, only: [ :index, :edit, :update ], path: "general-ledger-mappings"
 
-    resources :room_types do
+    resources :room_types, except: [ :show ] do
       member do
         delete :destroy_photo
         delete :bulk_destroy_photos
@@ -275,27 +276,29 @@ Rails.application.routes.draw do
     resources :nearby_attractions, except: [ :show ]
     resources :bookings, only: [ :index, :show, :update, :new, :create ] do
       collection do
-        get :availability
-        get :rate_options
-        get :stay_price
-        post :sync
+        post :sync, to: "bookings/syncs#create"
+        get :availability, to: "bookings/availabilities#show"
+        get :rate_options, to: "bookings/rate_options#show"
+        get :stay_price, to: "bookings/prices#show"
       end
+
       member do
-        get  :folio
-        get  :checkout
-        patch :move
-        post :check_in
-        post :check_out
-        post :reinstate
-        post :cancel
-        post :add_guest
-        post :process_late_checkout
-        get  :folio_invoice
-        delete "guests/:guest_id", action: :remove_guest, as: :remove_guest
-        post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings#complete_housekeeping_request", as: :complete_housekeeping_request
-        patch "complaint_requests/:complaint_request_id", to: "bookings#update_complaint_request", as: :update_complaint_request
-        post "complaint_requests/:complaint_request_id/resolve", to: "bookings#resolve_complaint_request", as: :resolve_complaint_request
+        get  :folio, to: "bookings/folios#show"
+        get  :checkout, to: "bookings/checkouts#show"
+        patch :move, to: "bookings/moves#update"
+        post :check_in, to: "bookings/check_ins#create"
+        post :check_out, to: "bookings/checkouts#create"
+        post :reinstate, to: "bookings/reinstatements#create"
+        post :cancel, to: "bookings/cancellations#create"
+        post :add_guest, to: "bookings/guests#create"
+        post :process_late_checkout, to: "bookings/checkouts#process_late_checkout"
+        get  :folio_invoice, to: "bookings/folios#invoice"
+        delete "guests/:guest_id", to: "bookings/guests#destroy", as: :remove_guest
+        post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings/housekeeping_requests#complete", as: :complete_housekeeping_request
+        post "complaint_requests/:complaint_request_id/resolve", to: "bookings/complaint_requests#resolve", as: :resolve_complaint_request
       end
+
+      resources :refund_requests, only: [ :new, :create ]
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
       resources :folio_transactions, only: [ :create ] do
         post :reverse, on: :member

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Folios::ReverseTransaction, type: :service do
+  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
+
   let(:user) { create(:user, :superadmin) }
   let(:folio) { create(:booking_folio) }
 

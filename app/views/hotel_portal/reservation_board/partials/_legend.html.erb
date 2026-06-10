@@ -4,7 +4,7 @@
   <div class="flex items-center gap-2">
     <% status_list.each do |status| %>
       <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide <%= legend_style_for(status, booking_styles) %> transition-all hover:shadow-sm">
-        <%= lucide_icon booking_status_icon(status), stroke_width: 2.5, class: "size-3.5" %>
+        <%= cached_icon booking_status_icon(status), stroke_width: 2.5, class: "size-3.5" %>
         <%= status == "all" ? "All" : status.humanize.titleize %>
         <span class="opacity-60 font-black">(<%= legend_count_for(reservation_board, status) %>)</span>
       </span>

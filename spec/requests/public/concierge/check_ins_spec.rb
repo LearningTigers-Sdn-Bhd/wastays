@@ -88,6 +88,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     end
 
     context "wrong date" do
+      around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
       before { booking.update!(check_in: Date.tomorrow, check_out: Date.tomorrow + 1) }
 
       it "re-renders with wrong date message" do

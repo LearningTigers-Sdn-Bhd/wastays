@@ -23,6 +23,7 @@
             controller: "booking-calc",
             booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
             booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel),
+            booking_calc_rate_options_url_value: rate_options_hotel_bookings_path(current_hotel),
             booking_calc_booking_id_value: booking.id
           } do |f| %>
         <div class="grid sm:grid-cols-2 gap-4">
@@ -50,6 +51,14 @@
               } %>
         </div>
 
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Select Rates</label>
+          <% current_rate_plan = booking.booking_rooms.first&.rate_plan %>
+          <%= f.select :rate_plan_id, (current_rate_plan ? [[current_rate_plan.name, current_rate_plan.id]] : []), { selected: current_rate_plan&.id, prompt: "Select room category and dates first" },
+              { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                data: { booking_calc_target: "ratePlanSelect", action: "change->booking-calc#calculate" } } %>
+        </div>
+
         <div data-controller="room-lock"
              data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
              data-room-lock-room-type-id-value="<%= current_room_type_id %>"
@@ -67,6 +76,19 @@
                 }
               } %>
           <p class="text-[10px] text-slate-400 mt-1.5 italic">Only available rooms for the selected dates are shown.</p>
+        </div>
+
+        <div class="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estimated Total</p>
+              <p class="text-[10px] text-slate-400">Includes taxes & fees</p>
+            </div>
+            <p class="text-xl font-black text-slate-950">MYR <span data-booking-calc-target="displayTotal"><%= number_with_precision(booking.total_amount, precision: 2) %></span></p>
+          </div>
+          <%= f.hidden_field :total_amount, data: { booking_calc_target: "totalInput" } %>
+          <%= f.hidden_field :manual_rate_override, data: { booking_calc_target: "rateOverrideFlag" } %>
+          <%= f.hidden_field :guest_country, value: booking.guest_country, data: { booking_calc_target: "guestCountry" } %>
         </div>
 
         <div class="flex items-center justify-end gap-x-3 pt-4">

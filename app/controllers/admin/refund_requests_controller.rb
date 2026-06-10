@@ -1,6 +1,7 @@
 module Admin
   class RefundRequestsController < Admin::BaseController
     before_action :set_refund_request, only: [ :show, :approve, :reject, :complete ]
+    before_action :set_breadcrumbs, only: [ :show ]
 
     def index
       @all_refund_requests = RefundRequest.includes(booking: :hotel).order(created_at: :desc)
@@ -48,6 +49,10 @@ module Admin
 
     def set_refund_request
       @refund_request = RefundRequest.includes(booking: :hotel).find(params[:id])
+    end
+
+    def set_breadcrumbs
+      append_breadcrumb @refund_request.booking.confirmation_token, admin_refund_request_path(@refund_request)
     end
   end
 end

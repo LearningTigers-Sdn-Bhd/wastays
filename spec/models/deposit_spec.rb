@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Deposit do
-  it "records collected security deposits with GL mapping" do
+  it "records collected security deposits with General Ledger labels" do
     booking = create(:booking)
     folio = create(:booking_folio, booking: booking)
 

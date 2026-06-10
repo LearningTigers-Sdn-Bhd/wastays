@@ -1,7 +1,3 @@
-<% content_for :breadcrumbs do %>
-  <%= render "shared/navigation/admin_breadcrumbs", current: "Salespersons" %>
-<% end %>
-
 <% total_salespersons = @salespersons.size %>
 <% total_assignments = @hotels.count { |hotel| hotel.salesperson_id.present? } %>
 <% unassigned_salespersons = @salespersons.count { |salesperson| @hotels.none? { |hotel| hotel.salesperson_id == salesperson.id } } %>

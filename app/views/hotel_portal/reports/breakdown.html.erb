@@ -1,13 +1,3 @@
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <%= link_to "Reports", hotel_reports_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900">Financial Breakdown</span>
-  </div>
-<% end %>
-
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
   <!-- Header -->
   <div class="px-4 md:px-0">
@@ -66,16 +56,16 @@
         <% end %>
       </div>
 
-      <!-- Table -->
       <div class="overflow-x-auto">
         <table class="min-w-full table-fixed">
           <colgroup>
+            <col class="w-[15%]">
             <col class="w-[20%]">
-            <col class="w-[25%]">
-            <col class="w-[15%]">
             <col class="w-[13%]">
-            <col class="w-[12%]">
-            <col class="w-[15%]">
+            <col class="w-[13%]">
+            <col class="w-[13%]">
+            <col class="w-[13%]">
+            <col class="w-[13%]">
           </colgroup>
           <thead class="bg-slate-100">
             <tr>
@@ -83,6 +73,7 @@
               <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Guest Name</th>
               <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
               <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Gross Price</th>
+              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Taxes</th>
               <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Margin</th>
               <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Net Payout</th>
             </tr>
@@ -91,38 +82,41 @@
             <% if @grouped_bookings.any? %>
               <% @grouped_bookings.each do |date, bookings| %>
                 <tr class="bg-slate-50/80">
-                  <td colspan="6" class="px-6 py-2.5 sm:px-8 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                  <td colspan="7" class="px-6 py-2.5 sm:px-8 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
                     <%= date.strftime("%d %b %Y") %>
                   </td>
                 </tr>
-                <% bookings.each_with_index do |booking, index| %>
+                <% bookings.each_with_index do |presenter, index| %>
                   <tr class="align-top transition-colors hover:bg-slate-100/80">
                     <td class="px-6 py-4 sm:px-8">
-                      <%= link_to "##{booking.confirmation_token}", hotel_booking_path(current_hotel, booking), class: "text-sm font-mono font-bold text-slate-900 hover:underline", data: { turbo: false } %>
+                      <%= link_to "##{presenter.confirmation_token}", hotel_booking_path(current_hotel, presenter.booking), class: "text-sm font-mono font-bold text-slate-900 hover:underline", data: { turbo: false } %>
                     </td>
                     <td class="px-6 py-4">
-                      <span class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></span>
+                      <span class="text-sm font-semibold text-slate-900"><%= presenter.guest_name %></span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= booking_status_class(booking.status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10">
-                        <%= booking.status %>
+                      <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= booking_status_class(presenter.status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10">
+                        <%= presenter.status %>
                       </span>
                     </td>
                     <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-slate-600">
-                      RM <%= number_with_precision(booking.total_amount, precision: 2) %>
+                      RM <%= presenter.total_amount %>
+                    </td>
+                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-slate-500">
+                      <%= presenter.tax_total %>
                     </td>
                     <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-red-500">
-                      - <%= number_with_precision(booking.margin_amount || 0, precision: 2) %>
+                      - <%= presenter.margin_amount %>
                     </td>
                     <td class="px-6 py-4 text-right whitespace-nowrap sm:px-8">
-                      <span class="text-sm font-bold text-emerald-700">RM <%= number_with_precision(booking.net_amount || 0, precision: 2) %></span>
+                      <span class="text-sm font-bold text-emerald-700">RM <%= presenter.net_amount %></span>
                     </td>
                   </tr>
                 <% end %>
               <% end %>
             <% else %>
               <tr>
-                <td colspan="6" class="px-6 py-20 text-center sm:px-8">
+                <td colspan="7" class="px-6 py-20 text-center sm:px-8">
                   <p class="text-sm font-medium text-slate-500 italic">No bookings found for the selected criteria.</p>
                 </td>
               </tr>

@@ -72,16 +72,16 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
 
       # Simulating a race condition via the Check-In modal (which uses text fields)
       click_button "Check In Guest"
-      expect(page).to have_css("#check-in-modal-show-#{booking.id}[open]", visible: :all)
+      expect(page).to have_css("#check-in-modal-#{booking.id}[open]", visible: :all)
 
-      within("#check-in-modal-show-#{booking.id}") do
+      within("#check-in-modal-#{booking.id}") do
         # We need to set the room_type_id for the controller to work
         container = find("div[data-controller='room-lock']", match: :first)
         execute_script("arguments[0].dataset.roomLockRoomTypeIdValue = '#{room_type.id}'", container)
 
         find("input[name*='room_number']").set "206"
         # Trigger change
-        execute_script("document.querySelector('#check-in-modal-show-#{booking.id} [name*=\"room_number\"]').dispatchEvent(new Event('change', { bubbles: true }))")
+        execute_script("document.querySelector('#check-in-modal-#{booking.id} [name*=\"room_number\"]').dispatchEvent(new Event('change', { bubbles: true }))")
       end
 
       # Wait for the alert modal to be opened

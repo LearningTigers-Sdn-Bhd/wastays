@@ -77,7 +77,7 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario do
     end
 
     it "returns failure when room setup is invalid after reset" do
-      rate_plan.destroy!
+      room_type.rate_plans.destroy_all
 
       result = described_class.new(hotel: hotel, logger: logger).call
 
