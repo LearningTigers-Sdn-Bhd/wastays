@@ -58,7 +58,7 @@ module Admin::NavigationHelper
       AdminSection.new(
         label: "System",
         items: [
-          AdminItem.new(label: "Plan Access", path: admin_plans_path, search_text: "Plan Access Plans Subscription Features Pricing Tiers Gating", active: plans_active, icon: "layers-3"),
+          AdminItem.new(label: "Plan Access", path: admin_plans_path, search_text: "Plan Access Plans Subscription Features Pricing Tiers Gating", active: plans_active, icon: "layers"),
           AdminItem.new(label: "Audit Logs", path: admin_audit_logs_path, search_text: "Audit Logs System Activity", active: audit_logs_active, icon: "file-text"),
           AdminItem.new(label: "Observation Deck", path: admin_observation_deck_index_path, search_text: "Observation Deck Telescope Debug Mission Control", active: observation_deck_active, icon: "eye", external: true)
         ]

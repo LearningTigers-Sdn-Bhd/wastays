@@ -88,7 +88,7 @@ module HotelPortal
             NavItem.new(label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Activity System", active: controller_name == "audit_logs", icon: "file-text", permission: "view_audit_logs", plan_feature: "full_audit_trail"),
             NavItem.new(label: "Notification Logs", path: hotel_notification_logs_path(current_hotel), search_text: "Notification Logs Messaging Activity System", active: controller_name == "notification_logs", icon: "bell", permission: "view_audit_logs"),
             NavItem.new(label: "Settings", path: hotel_settings_path(current_hotel), search_text: "Settings Preferences System", active: controller_name == "settings", icon: "settings", permission: [ "manage_hotel_profile", "manage_account" ]),
-            NavItem.new(label: "Your Plan", path: hotel_plan_path(current_hotel), search_text: "Your Plan Subscription Features Upgrade System", active: controller_name == "plans", icon: "layers-3")
+            NavItem.new(label: "Your Plan", path: hotel_plan_path(current_hotel), search_text: "Your Plan Subscription Features Upgrade System", active: controller_name == "plans", icon: "layers")
           ]
         )
       ]

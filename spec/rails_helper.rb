@@ -114,7 +114,11 @@ Capybara.register_driver :cuprite do |app|
     headless: true,
     timeout: 60,
     process_timeout: 120,
-    pending_connection_errors: false
+    pending_connection_errors: false,
+    url_blacklist: %w[
+      fonts.googleapis.com
+      fonts.gstatic.com
+    ]
   )
 end
 
