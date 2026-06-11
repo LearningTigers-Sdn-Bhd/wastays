@@ -7,11 +7,11 @@ export default class extends Controller {
     this.pendingAction = null
     this.overlayRequestId = 0
     this.boundOpen = this.open.bind(this)
-    window.addEventListener("reservation-board:confirm-extend", this.boundOpen)
+    window.addEventListener("booking-timeline-board:confirm-extend", this.boundOpen)
   }
 
   disconnect() {
-    window.removeEventListener("reservation-board:confirm-extend", this.boundOpen)
+    window.removeEventListener("booking-timeline-board:confirm-extend", this.boundOpen)
   }
 
   async open(event) {
@@ -21,7 +21,7 @@ export default class extends Controller {
     this.newCheckOutTarget.textContent = event.detail.newCheckOut || "-"
 
     // Dispatch global event to open the extend duration overlay
-    window.dispatchEvent(new CustomEvent("reservation-board:open-extend-duration"))
+    window.dispatchEvent(new CustomEvent("booking-timeline-board:open-extend-duration"))
   }
 
   async confirm() {
@@ -46,6 +46,6 @@ export default class extends Controller {
   }
 
   close() {
-    window.dispatchEvent(new CustomEvent("reservation-board:close-all"))
+    window.dispatchEvent(new CustomEvent("booking-timeline-board:close-all"))
   }
 }

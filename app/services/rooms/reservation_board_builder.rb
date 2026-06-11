@@ -13,6 +13,7 @@ module Rooms
       @all_bookings = fetch_all_bookings
       @all_room_statuses = fetch_all_room_statuses
       @all_rates = fetch_all_rates
+      @relevant_bookings_by_room = fetch_relevant_bookings_by_room
       groups = room_groups
       {
         dates: dates,
@@ -56,7 +57,7 @@ module Rooms
 
     def fetch_all_bookings
       scope = @hotel.bookings
-        .includes(:booking_notes, booking_rooms: :room_type)
+        .includes(booking_notes: :user, booking_rooms: :room_type)
         .joins(:booking_rooms)
         .where("bookings.check_in < ? AND bookings.check_out > ?", dates.last + 1.day, @start_date)
         .select("bookings.*, booking_rooms.room_number, booking_rooms.room_type_id")
@@ -64,6 +65,20 @@ module Rooms
 
       scope = apply_filters(scope)
       scope.to_a.group_by { |b| [ b.room_type_id, b.room_number.to_s ] }
+    end
+
+    def fetch_relevant_bookings_by_room
+      return {} unless dates.include?(Date.current)
+
+      @hotel.bookings
+        .joins(:booking_rooms)
+        .where(check_out: Date.current..dates.last)
+        .where.not(status: "cancelled")
+        .order("bookings.check_out ASC")
+        .select("bookings.*, booking_rooms.room_number, booking_rooms.room_type_id")
+        .to_a
+        .group_by { |booking| [ booking.room_type_id, booking.room_number.to_s ] }
+        .transform_values(&:first)
     end
 
     def dates
@@ -95,21 +110,8 @@ module Rooms
             start_offset: 0
           }
         elsif dates.include?(Date.current)
-          # Look for the booking that checks out on or after today for this room
-          # We check the database directly because 'completed' bookings are filtered out of 'blocks'
-          relevant_booking = @hotel.bookings.joins(:booking_rooms)
-            .where(booking_rooms: { room_type_id: room_type.id, room_number: room_number })
-            .where("bookings.check_out >= ?", Date.current)
-            .where.not(status: "cancelled")
-            .order("bookings.check_out ASC")
-            .first
-
-          # Start on checkout day if a relevant booking is found, otherwise start today
+          relevant_booking = @relevant_bookings_by_room[[ room_type.id, room_number.to_s ]]
           start_date = relevant_booking ? relevant_booking.check_out : Date.current
-
-          # If the user wants to "drag from today until checkout", we need to adjust display_start
-          # But your last request said "place it on that day instead of that fucking today"
-          # which implies starting on the checkout day.
 
           if dates.include?(start_date) || (start_date < @start_date && (start_date + 1.day) > @start_date)
             display_start = [ start_date, @start_date ].max
@@ -159,7 +161,7 @@ module Rooms
           payment_status: booking.payment_status,
           currency: booking.currency,
           has_notes: booking.booking_notes.any?,
-          notes: booking.booking_notes.includes(:user).map { |n| { body: n.body, author: n.user.name, date: n.created_at.strftime("%b %d, %Y %H:%M") } }.to_json,
+          notes: booking.booking_notes.map { |n| { body: n.body, author: n.user.name, date: n.created_at.strftime("%b %d, %Y %H:%M") } }.to_json,
           room_type_name: room_type.name,
           room_number: room_number,
           booking_room_id: booking_room&.id,

@@ -1,0 +1,26 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="flex flex-col h-full bg-white">
+    <%= form_with url: process_late_checkout_hotel_booking_path(current_hotel, @booking), method: :post, class: "flex flex-col h-full" do |f| %>
+      <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
+
+      <%# Modal Header %>
+      <%= render "hotel_portal/bookings/board/partials/content_header",
+                 title: "Review Late Checkout",
+                 subtitle: "Calculate and post a charge for #{@booking.guest_name}.",
+                  icon: cached_icon("clock-alert", stroke_width: 2.5, class: "size-5") %>
+
+      <%# Modal Content %>
+      <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50"
+           data-controller="late-checkout"
+           data-late-checkout-base-amount-value="<%= @presenter.suggested_late_checkout_amount %>"
+           data-late-checkout-currency-value="<%= @presenter.currency %>">
+        <%= render "hotel_portal/bookings/transactions/late_checkout/partials/form_fields", form: f, booking: @booking, presenter: @presenter, carded: true %>
+      </div>
+
+      <%# Modal Footer %>
+      <%= render "hotel_portal/bookings/board/partials/content_footer",
+                 show_full_page_link: false,
+                 submit_button: f.submit("Process Late Checkout", class: "px-6 py-2 bg-amber-600 text-white rounded-xl text-sm font-bold hover:bg-amber-700 transition-colors shadow-sm") %>
+    <% end %>
+  </div>
+<% end %>

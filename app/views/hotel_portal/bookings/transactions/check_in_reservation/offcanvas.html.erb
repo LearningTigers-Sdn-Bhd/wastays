@@ -1,0 +1,84 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="flex flex-col h-full">
+    <%= form_with model: @booking, url: check_in_hotel_booking_path(current_hotel, @booking), method: :post,
+        class: "flex flex-col h-full" do |f| %>
+      <%= hidden_field_tag :source, @transaction_source if @transaction_source.present? %>
+      <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
+
+      <%# Modal Header %>
+      <%= render "hotel_portal/bookings/board/partials/content_header",
+                 title: @presenter.check_in_title,
+                 subtitle: "Set check-in time and assign rooms for #{@booking.guest_name}.",
+                  icon: cached_icon("log-in", stroke_width: 2.5, class: "size-5") %>
+
+      <%# Modal Content %>
+      <div class="flex-1 p-6 space-y-6">
+        <%= render "hotel_portal/bookings/guarantee_status_badge", booking: @booking %>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
+          <%= f.datetime_local_field :checked_in_at,
+              value: @presenter.checked_in_at_form_value,
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Guarantee Method</label>
+          <%= f.select :guarantee_method,
+              @presenter.guarantee_method_options,
+              { prompt: "Select Method" },
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div class="space-y-3">
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Room Assignments</label>
+          <%= f.fields_for :booking_rooms do |rf| %>
+            <div class="flex items-center gap-3"
+                 data-controller="room-lock"
+                 data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
+                 data-room-lock-room-type-id-value="<%= rf.object.room_type_id %>"
+                 data-room-lock-current-room-value="<%= rf.object.room_number %>">
+              <div class="flex-1">
+                <p class="text-[10px] font-medium text-slate-400 uppercase mb-1"><%= rf.object.room_type.name %></p>
+                <%= rf.text_field :room_number,
+                    placeholder: "Room No.",
+                    class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                    data: { action: "change->room-lock#lock" } %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <% if @presenter.requires_backdated_checkin_reason? %>
+          <div class="mt-4 pt-4 border-t border-slate-100">
+            <div class="flex gap-3">
+              <div class="flex-shrink-0 mt-0.5">
+                <%= cached_icon "triangle-alert", stroke_width: 2, class: "size-4 text-orange-500" %>
+              </div>
+              <div class="flex-1">
+                <h4 class="text-xs font-bold text-slate-900">Backdated Check-in</h4>
+                <p class="text-[11px] text-slate-500 mt-1 mb-3">Night audit has already run for this check-in date. This operation is for unexpected arrivals after the audit.</p>
+                
+                <div class="space-y-3">
+                  <label class="flex items-center gap-2">
+                    <%= check_box_tag :override_night_audit, "1", false, class: "rounded text-slate-900 focus:ring-slate-900 border-slate-300" %>
+                    <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Override Night Audit</span>
+                  </label>
+
+                  <div>
+                    <%= text_field_tag :retroactive_reason, nil, placeholder: "Provide a reason (e.g. system offline, missed check-in)", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <%# Modal Footer %>
+      <%= render "hotel_portal/bookings/board/partials/content_footer",
+                 show_full_page_link: false,
+                 submit_button: f.submit((@booking.checked_in? ? "Save Changes" : "Confirm Check In"), class: "px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors shadow-sm") %>
+    <% end %>
+  </div>
+<% end %>

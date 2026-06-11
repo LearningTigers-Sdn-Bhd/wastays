@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class HotelPortal::Bookings::ReinstatementsController < HotelPortal::BaseController
+  include OffcanvasTransactionCompletion
+
   before_action :authorize_manage_bookings!
 
   def create
@@ -17,7 +19,10 @@ class HotelPortal::Bookings::ReinstatementsController < HotelPortal::BaseControl
     ).call
 
     if result.success?
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking reinstated and checked in successfully."
+      offcanvas_transaction_response(
+        destination: offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking)),
+        notice: "Booking reinstated and checked in successfully."
+      )
     else
       redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to reinstate booking: #{result.error}"
     end

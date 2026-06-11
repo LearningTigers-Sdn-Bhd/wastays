@@ -280,17 +280,17 @@ Rails.application.routes.draw do
     end
 
     resources :nearby_attractions, except: [ :show ]
-    resources :bookings, only: [ :index, :show, :update, :new, :create ] do
+
+    resources :bookings, only: [ :index, :show, :update ] do
       collection do
         post :sync, to: "bookings/syncs#create"
         get :availability, to: "bookings/availabilities#show"
         get :rate_options, to: "bookings/rate_options#show"
         get :stay_price, to: "bookings/prices#show"
+        get :board, to: "bookings/board#index"
       end
 
       member do
-        get  :folio, to: "bookings/folios#show"
-        get  :checkout, to: "bookings/checkouts#show"
         patch :move, to: "bookings/moves#update"
         post :check_in, to: "bookings/check_ins#create"
         post :check_out, to: "bookings/checkouts#create"
@@ -298,7 +298,6 @@ Rails.application.routes.draw do
         post :cancel, to: "bookings/cancellations#create"
         post :add_guest, to: "bookings/guests#create"
         post :process_late_checkout, to: "bookings/checkouts#process_late_checkout"
-        get  :folio_invoice, to: "bookings/folios#invoice"
         delete "guests/:guest_id", to: "bookings/guests#destroy", as: :remove_guest
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings/housekeeping_requests#complete", as: :complete_housekeeping_request
         post "complaint_requests/:complaint_request_id/resolve", to: "bookings/complaint_requests#resolve", as: :resolve_complaint_request
@@ -306,7 +305,24 @@ Rails.application.routes.draw do
 
       resources :refund_requests, only: [ :new, :create ]
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
-      resources :folio_transactions, only: [ :create ] do
+    end
+    scope "booking-transactions", as: :booking_transaction, module: "bookings/transactions" do
+      match "new-booking", to: "new_bookings#show", via: [ :get, :post ], as: :new_booking
+      match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in
+      match "backdated-check-in", to: "backdated_check_ins#show", via: [ :get, :post ], as: :backdated_check_in
+      match "backdated-check-in/:booking_id", to: "backdated_check_ins#show", via: [ :get, :post ], as: :booking_backdated_check_in
+      match "edit-booking/:booking_id", to: "edit_bookings#show", via: [ :get, :patch ], as: :edit_booking
+      match "amend-stay/:booking_id", to: "amend_stays#show", via: [ :get, :patch ], as: :amend_stay
+      get "check-in-reservation/:booking_id", to: "check_in_reservations#show", as: :check_in_reservation
+      get "check-out/:booking_id", to: "check_outs#show", as: :check_out
+      get "late-checkout/:booking_id", to: "late_checkouts#show", as: :late_checkout
+      get "reinstate-no-show/:booking_id", to: "reinstate_no_shows#show", as: :reinstate_no_show
+      get "cancel-booking/:booking_id", to: "cancel_bookings#show", as: :cancel_booking
+    end
+
+    resources :folios, only: [ :show ], param: :booking_id do
+      get :invoice, on: :member
+      resources :transactions, only: [ :create ], controller: "folios/transactions" do
         post :reverse, on: :member
       end
     end
@@ -374,21 +390,6 @@ Rails.application.routes.draw do
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board
-    namespace :reservation_board, path: "reservation-board" do
-      get "/", to: "boards#index", as: :index
-      resources :board_bookings, path: "bookings", only: [ :new, :create, :show, :update ] do
-        member do
-          get :check_in
-          get :check_out
-          get :edit_stay
-          get :notes
-          get :late_checkout
-          get :folio
-          get :booking_sheet
-          patch :transition
-        end
-      end
-    end
     resources :room_statuses, only: [ :update ]
     resources :room_blocks, only: [ :create, :update, :destroy ] do
       post :finish, on: :member

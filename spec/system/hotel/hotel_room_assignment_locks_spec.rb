@@ -36,10 +36,10 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
       login_as(user1)
       visit hotel_booking_path(hotel, booking)
 
-      find("button[onclick*='edit-stay-details-modal']").click
-      expect(page).to have_css("#edit-stay-details-modal[open]", visible: :all)
+      click_link "Edit Stay"
+      expect(page).to have_css("#offcanvas_drawer #booking_room_number")
 
-      within("#edit-stay-details-modal") do
+      within("#offcanvas_drawer") do
         expect(page).to have_select("Room Number", disabled: false)
         find("#booking_room_number").find(:option, "206").select_option
         execute_script("document.getElementById('booking_room_number').dispatchEvent(new Event('change', { bubbles: true }))")
@@ -60,28 +60,27 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
       login_as(user2)
       visit hotel_booking_path(hotel, booking)
 
-      find("button[onclick*='edit-stay-details-modal']").click
-      expect(page).to have_css("#edit-stay-details-modal[open]", visible: :all)
+      click_link "Edit Stay"
+      expect(page).to have_css("#offcanvas_drawer #booking_room_number")
 
-      within("#edit-stay-details-modal") do
+      within("#offcanvas_drawer") do
         expect(page).to have_select("Room Number", disabled: false)
         expect(page).to have_select("Room Number", with_options: [ "206 (Locked by another staff)" ])
         expect(page).to have_select("Room Number", with_options: [ "207" ])
-        click_button "Cancel"
       end
 
-      # Simulating a race condition via the Check-In modal (which uses text fields)
-      click_button "Check In Guest"
-      expect(page).to have_css("#check-in-modal-#{booking.id}[open]", visible: :all)
+      # Simulating a race condition via the shared Check-In transaction sheet.
+      page.execute_script("document.getElementById('offcanvas_drawer').src = '#{hotel_booking_transaction_check_in_reservation_path(hotel, booking)}'")
+      expect(page).to have_css("#offcanvas_drawer input[name*='room_number']")
 
-      within("#check-in-modal-#{booking.id}") do
+      within("#offcanvas_drawer") do
         # We need to set the room_type_id for the controller to work
         container = find("div[data-controller='room-lock']", match: :first)
         execute_script("arguments[0].dataset.roomLockRoomTypeIdValue = '#{room_type.id}'", container)
 
         find("input[name*='room_number']").set "206"
         # Trigger change
-        execute_script("document.querySelector('#check-in-modal-#{booking.id} [name*=\"room_number\"]').dispatchEvent(new Event('change', { bubbles: true }))")
+        execute_script("document.querySelector('#offcanvas_drawer [name*=\"room_number\"]').dispatchEvent(new Event('change', { bubbles: true }))")
       end
 
       # Wait for the alert modal to be opened
@@ -98,9 +97,7 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
 
     # Now Admin One releases the lock (closes modal)
     using_session("Admin One") do
-      within("#edit-stay-details-modal") do
-        click_button "Cancel"
-      end
+      execute_script("document.querySelector('[data-action=\"click->offcanvas#close\"]').click()")
     end
 
     max_retries = 10
@@ -114,10 +111,10 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
 
     using_session("Admin Two") do
       visit hotel_booking_path(hotel, booking)
-      find("button[onclick*='edit-stay-details-modal']").click
-      expect(page).to have_css("#edit-stay-details-modal[open]", visible: :all)
+      click_link "Edit Stay"
+      expect(page).to have_css("#offcanvas_drawer #booking_room_number")
 
-      within("#edit-stay-details-modal") do
+      within("#offcanvas_drawer") do
         expect(page).to have_select("Room Number", disabled: false)
         expect(page).to have_select("Room Number", with_options: [ "206" ])
       end

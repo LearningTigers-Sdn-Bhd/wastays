@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class HotelPortal::Bookings::CancellationsController < HotelPortal::BaseController
+  include OffcanvasTransactionCompletion
+
   before_action :authorize_manage_bookings!
 
   def create
@@ -13,7 +15,10 @@ class HotelPortal::Bookings::CancellationsController < HotelPortal::BaseControll
     ).call
 
     if result.success?
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking cancelled successfully."
+      offcanvas_transaction_response(
+        destination: offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking)),
+        notice: "Booking cancelled successfully."
+      )
     else
       redirect_to hotel_booking_path(current_hotel, @booking), alert: result.error
     end

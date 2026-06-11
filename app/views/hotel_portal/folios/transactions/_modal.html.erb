@@ -1,0 +1,51 @@
+<dialog id="<%= modal_id %>" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,30rem)] max-w-md shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
+  <div class="bg-white" onclick="event.stopPropagation()">
+    <div class="border-b border-slate-100 px-6 py-5">
+      <h3 class="text-lg font-bold text-slate-900"><%= title %></h3>
+      <p class="mt-1 text-sm text-slate-500"><%= description %></p>
+    </div>
+
+    <%= form_with url: hotel_folio_transactions_path(hotel, booking), method: :post, local: true, class: "p-6 space-y-4" do |f| %>
+      <%= hidden_field_tag "folio_transaction[transaction_type]", transaction_type %>
+      <% if local_assigns[:redirect_to_folio] %>
+        <%= hidden_field_tag "redirect_to_folio", "true" %>
+      <% end %>
+      <% if local_assigns[:redirect_to_checkout] %>
+        <%= hidden_field_tag "redirect_to_checkout", "true" %>
+      <% end %>
+      <% if category.present? %>
+        <%= hidden_field_tag "folio_transaction[category]", category %>
+      <% else %>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Category</label>
+          <%= select_tag "folio_transaction[category]",
+              options_for_select(category_options.map { |option| [ option.humanize, option ] }),
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      <% end %>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Amount</label>
+        <%= number_field_tag "folio_transaction[amount]", local_assigns[:amount], step: "0.01", min: (signed_amount ? nil : "0.01"), required: true, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        <% if signed_amount %>
+          <p class="mt-1 text-[11px] font-medium text-slate-500">Use a negative amount for discounts, write-offs, or rebates.</p>
+        <% end %>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Posting Date</label>
+        <%= date_field_tag "folio_transaction[posting_date]", Date.current, required: true, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Description</label>
+        <%= text_field_tag "folio_transaction[description]", nil, required: true, placeholder: "e.g., Mini-bar, Late Checkout Fee", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+      </div>
+
+      <div class="flex items-center justify-end gap-x-3 pt-2">
+        <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>
+        <%= f.submit submit_label, class: "px-4 py-2 text-sm font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-sm" %>
+      </div>
+    <% end %>
+  </div>
+</dialog>

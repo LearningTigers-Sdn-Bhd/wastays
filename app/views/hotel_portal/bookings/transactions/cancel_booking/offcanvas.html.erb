@@ -1,0 +1,14 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="flex h-full flex-col bg-white">
+    <%= render "hotel_portal/bookings/board/partials/content_header",
+      title: "Cancel Booking",
+      subtitle: @booking.guest_name,
+      icon: cached_icon("circle-x", class: "size-5 text-red-600") %>
+    <div class="flex flex-1 flex-col p-8">
+      <p class="text-sm text-slate-600">Cancellation releases the reservation inventory and cannot be reinstated.</p>
+      <div class="mt-auto flex justify-end pt-6">
+        <%= button_to "Confirm Cancellation", cancel_hotel_booking_path(current_hotel, @booking), method: :post, params: { return_to: @transaction_return_to }, class: "rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white" %>
+      </div>
+    </div>
+  </div>
+<% end %>

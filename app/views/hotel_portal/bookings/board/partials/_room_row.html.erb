@@ -1,0 +1,103 @@
+<%# app/views/hotel_portal/bookings/board/partials/_room_row.html.erb %>
+<%
+  row_min_height = booking_timeline_board_row_height(room, row_min_base, block_step, visible_start_date)
+  room_type = room[:room_type]
+%>
+
+<div class="grid border-b border-slate-100" style="grid-template-columns: <%= grid_template_columns %>; min-height: <%= row_min_height %>px;">
+  <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= card_padding %> flex items-center justify-between gap-4">
+    <p class="font-black leading-none text-slate-950 <%= room_number_class %>"><%= room[:room_number] %></p>
+
+    <div class="flex items-center gap-2">
+      <% smoking_label = room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking" %>
+      <% smoking_color = room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400" %>
+      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+        <div data-floating-target="reference" class="<%= smoking_color %> cursor-help">
+          <% if room_type.smoking_allowed %>
+            <%= cached_icon "alarm-smoke", stroke_width: 2, class: "size-3.5" %>
+          <% else %>
+            <%= cached_icon "ban", stroke_width: 2, class: "size-3.5" %>
+          <% end %>
+        </div>
+        <div data-floating-target="floating" class="hidden z-[100] px-3 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white">
+          <span class="text-[10px] font-bold uppercase tracking-wider"><%= smoking_label %></span>
+        </div>
+      </div>
+
+      <% pets_label = room_type.pets_allowed ? "Pets Allowed" : "No Pets" %>
+      <% pets_color = room_type.pets_allowed ? "text-emerald-500" : "text-slate-400" %>
+      <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+        <div data-floating-target="reference" class="<%= pets_color %> cursor-help">
+          <% if room_type.pets_allowed %>
+            <%= cached_icon "paw-print", stroke_width: 2, class: "size-3.5" %>
+          <% else %>
+            <%= cached_icon "ban", stroke_width: 2, class: "size-3.5" %>
+          <% end %>
+        </div>
+        <div data-floating-target="floating" class="hidden z-[100] px-3 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white">
+          <span class="text-[10px] font-bold uppercase tracking-wider"><%= pets_label %></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% board_dates.each_with_index do |date, index| %>
+    <div class="relative border-l <%= 'border-r' if index == board_dates.size - 1 %> border-slate-100 <%= summary_padding %> <%= date == Date.current ? 'bg-slate-50/50' : 'bg-white' %> group/cell"
+         data-booking-timeline-target="cell"
+         data-date="<%= date %>"
+         data-room-number="<%= room[:room_number] %>"
+         data-room-type-id="<%= room_type.id %>"
+         <%= 'data-action="dragover->booking-timeline#onDragOver dragleave->booking-timeline#onDragLeave drop->booking-timeline#onDrop"'.html_safe if can_manage_bookings %>>
+      <%# Quick Creation Link & Rate Display %>
+      <% is_occupied = room[:blocks].any? { |b| b[:check_in] <= date && b[:check_out] > date } %>
+      <% rate = booking_timeline_board_rate_for(booking_timeline_board, room_type.id, date) %>
+
+      <% if !is_occupied && can_manage_bookings %>
+        <%= link_to hotel_booking_transaction_new_booking_path(current_hotel, check_in: date, room_type_id: room_type.id, room_number: room[:room_number]),
+                    class: "absolute inset-0 z-0 flex flex-col justify-between p-1 hover:bg-slate-50/80 transition-colors",
+                    aria: { label: "Create booking for room #{room[:room_number]} on #{date.strftime('%B %-d, %Y')}" },
+                    data: {
+                      turbo_frame: "offcanvas_drawer",
+                      offcanvas_variant: "fullscreen-bottom"
+                    } do %>
+          <div class="flex justify-center items-center h-4">
+            <% if rate %>
+              <div class="flex items-center gap-0.5 <%= rate_text_class %> font-bold text-slate-400/60 tracking-tight transition-opacity">
+                <span class="<%= currency_text_class %> uppercase"><%= rate[:currency] == "MYR" ? "RM" : rate[:currency] %></span>
+                <span><%= number_with_precision(rate[:price], precision: 0) %></span>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="flex-1 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity pb-1">
+            <%= cached_icon "plus", stroke_width: 3, class: "size-3.5 text-slate-400" %>
+          </div>
+        <% end %>
+      <% end %>
+
+      <% room[:blocks].select { |block| [ block[:check_in], visible_start_date ].max == date }.each_with_index do |block, block_index| %>
+        <% if block[:type] == "room_status" %>
+          <%= render "hotel_portal/bookings/board/partials/room_status_block",
+                block: block,
+                block_index: block_index,
+                visible_start_date: visible_start_date,
+                visible_end_exclusive: visible_end_exclusive,
+                block_left_pad: block_left_pad,
+                block_top: block_top,
+                block_step: block_step %>
+        <% else %>
+          <%= render "hotel_portal/bookings/board/partials/booking_block",
+                block: block,
+                block_index: block_index,
+                visible_start_date: visible_start_date,
+                visible_end_exclusive: visible_end_exclusive,
+                block_left_pad: block_left_pad,
+                block_top: block_top,
+                block_step: block_step,
+                booking_styles: booking_styles,
+                current_hotel: current_hotel,
+                can_manage_bookings: can_manage_bookings %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

@@ -23,6 +23,7 @@ export default class extends Controller {
   disconnect() {
     document.removeEventListener("click", this.handleTriggerClick)
     clearTimeout(this.closeTimeout)
+    clearTimeout(this.completeTimeout)
   }
 
   handleTriggerClick(event) {
@@ -58,6 +59,13 @@ export default class extends Controller {
       `
       document.body.classList.remove("overflow-hidden")
     }, 300)
+  }
+
+  complete(url) {
+    this.close()
+    this.completeTimeout = setTimeout(() => {
+      if (url) Turbo.visit(url, { action: "replace" })
+    }, 325)
   }
 
   applyVariant(variant) {

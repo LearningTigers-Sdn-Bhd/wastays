@@ -30,7 +30,7 @@ RSpec.describe "Checkout Deposit Display", type: :request do
       payment_method: "cash"
     )
 
-    get checkout_hotel_booking_path(hotel, booking), headers: { "Accept" => "text/html" }
+    get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Accept" => "text/html" }
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include("Held security deposit")
@@ -39,7 +39,7 @@ RSpec.describe "Checkout Deposit Display", type: :request do
   end
 
   it "does not render the deposits section if no deposits are held" do
-    get checkout_hotel_booking_path(hotel, booking), headers: { "Accept" => "text/html" }
+    get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Accept" => "text/html" }
 
     expect(response).to have_http_status(:success)
     expect(response.body).not_to include("Held security deposit")

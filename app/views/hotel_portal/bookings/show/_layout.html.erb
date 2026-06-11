@@ -4,10 +4,7 @@
     <%= render "hotel_portal/bookings/show/booking_summary_strip", booking: booking, presenter: presenter %>
     <%= render "hotel_portal/bookings/show/stay_details", booking: booking, presenter: presenter %>
 
-    <%= render "hotel_portal/bookings/check_in_modal", booking: booking, hotel: current_hotel, presenter: presenter %>
-    <%= render "hotel_portal/bookings/show/modals/reinstate_modal", booking: booking %>
-    <%= render "hotel_portal/bookings/show/modals/late_checkout_modal", booking: booking %>
-    <%= render "hotel_portal/bookings/checkout/success_modal", booking: booking, presenter: presenter, hotel: current_hotel if params[:checkout_success] %>
+    <%= render "hotel_portal/bookings/transactions/check_out/partials/success_modal", booking: booking, presenter: presenter, hotel: current_hotel if params[:checkout_success] %>
 
     <div data-controller="booking-tabs" class="space-y-4">
       <%= render "hotel_portal/bookings/show/booking_tabs", presenter: presenter %>

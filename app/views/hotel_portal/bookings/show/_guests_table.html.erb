@@ -128,7 +128,7 @@
   <dialog id="edit-primary-guest-modal" class="fixed inset-0 m-auto w-[min(92vw,34rem)] max-w-xl rounded-xl p-0 shadow-xl backdrop:bg-slate-900/40" onclick="if(event.target===this){this.close()}">
     <div class="bg-white p-5" onclick="event.stopPropagation()">
       <h3 class="text-base font-semibold text-slate-900">Edit Primary Guest</h3>
-      <%= form_with model: booking, url: hotel_booking_path(current_hotel, booking), method: :patch, local: true, class: "mt-4 space-y-4" do |f| %>
+      <%= form_with model: booking, url: hotel_booking_transaction_edit_booking_path(current_hotel, booking), method: :patch, local: true, class: "mt-4 space-y-4" do |f| %>
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="sm:col-span-2">
             <%= f.label :guest_name, "Full Guest Name", class: "mb-1 block text-xs font-medium text-slate-700" %>

@@ -1,0 +1,27 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="flex h-full flex-col bg-white">
+    <%= render "hotel_portal/bookings/board/partials/content_header",
+      title: "Backdated Check In",
+      subtitle: @booking.guest_name,
+      icon: cached_icon("history", class: "size-5") %>
+    <%= form_with model: @booking,
+      url: hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, @booking),
+      method: :post,
+      class: "flex flex-1 flex-col p-8" do |f| %>
+      <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
+      <div class="space-y-5">
+        <div>
+          <%= f.label :checked_in_at, "Backdated check-in time", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+          <%= f.datetime_local_field :checked_in_at, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+        </div>
+        <div>
+          <%= label_tag :retroactive_reason, "Override reason", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+          <%= text_area_tag :retroactive_reason, nil, required: true, rows: 4, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+        </div>
+      </div>
+      <div class="mt-auto flex justify-end pt-6">
+        <%= f.submit "Complete Backdated Check In", class: "rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white" %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

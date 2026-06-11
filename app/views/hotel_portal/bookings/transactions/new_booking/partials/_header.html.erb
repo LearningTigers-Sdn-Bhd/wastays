@@ -1,0 +1,95 @@
+<div class="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-sm">
+  <div class="flex items-center justify-between gap-4 px-6 py-4">
+    <div class="min-w-0 flex flex-col">
+      <h2 class="truncate text-xl font-bold text-slate-900"><%= @transaction.to_s.humanize %></h2>
+      <p class="text-xs font-medium text-slate-500">Booking transaction</p>
+    </div>
+    <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors p-2" aria-label="Close booking form" data-action="click->offcanvas#close">
+      <svg class="size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <div class="border-t border-slate-100 px-6 py-3">
+    <div class="grid grid-cols-2 gap-x-8 gap-y-3 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-start">
+      <div>
+        <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Total</span>
+        <span class="mt-1 block text-xl font-black leading-none text-slate-950 tabular-nums">MYR <span data-booking-calc-target="displayTotal">0.00</span></span>
+      </div>
+
+      <div>
+        <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Room Rates</span>
+        <span class="mt-1 block text-sm font-black text-slate-900 tabular-nums">MYR <span data-booking-calc-target="displayRoomTotal">0.00</span></span>
+      </div>
+
+      <div>
+        <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Taxes</span>
+        <span class="mt-1 block text-sm font-black text-slate-900 tabular-nums">MYR <span data-booking-calc-target="displayTaxTotal">0.00</span></span>
+      </div>
+
+      <div class="col-span-2 flex flex-col gap-2 lg:col-span-1 lg:min-w-72">
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Show Price Details</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer" aria-label="Show price details" data-action="change->booking-calc#togglePriceDetails">
+            <span class="block h-6 w-11 rounded-full bg-slate-200 peer-checked:bg-slate-900 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Adjust Price</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer" aria-label="Adjust price" data-action="change->booking-calc#toggleAdjustPrice">
+            <span class="block h-6 w-11 rounded-full bg-slate-200 peer-checked:bg-slate-900 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="hidden mt-3 border-t border-slate-200 pt-3 text-xs text-slate-600" data-booking-calc-target="priceDetailsSection">
+      <div class="ml-auto max-w-3xl space-y-4">
+        <div>
+          <div class="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <span>Rates</span>
+            <span>Amount</span>
+          </div>
+          <div data-booking-calc-target="ratesBreakdown" class="space-y-1.5">
+            <div class="flex items-center justify-between gap-4 py-0.5">
+              <span class="min-w-0 truncate pr-2">Room Rate Subtotal</span>
+              <span class="font-bold text-slate-900 whitespace-nowrap tabular-nums">MYR 0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <span>Taxes & Fees</span>
+            <span>Amount</span>
+          </div>
+          <div data-booking-calc-target="taxesBreakdown" class="space-y-1.5">
+            <div class="flex items-center justify-between gap-4 py-0.5">
+              <span class="min-w-0 truncate pr-2">Taxes Subtotal</span>
+              <span class="font-bold text-slate-900 whitespace-nowrap tabular-nums">MYR 0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hidden mt-3 border-t border-slate-200 pt-3" data-booking-calc-target="adjustPriceSection">
+      <div class="ml-auto max-w-sm">
+        <%= f.label :total_amount, "Adjusted Total Price (MYR)", class: "block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-sm font-bold">MYR</span>
+          <%= f.number_field :total_amount, step: 0.01,
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-12 pr-4 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+              data: {
+                booking_calc_target: "totalInput",
+                action: "input->booking-calc#setOverride"
+              } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

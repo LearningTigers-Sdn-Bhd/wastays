@@ -7,12 +7,15 @@ export default class extends Controller {
 
   connect() {
     this.timeout = null
+    this.cleanupBound = this.cleanupEmptyInputs.bind(this)
+    this.element.addEventListener("submit", this.cleanupBound)
   }
 
   disconnect() {
     if (this.timeout) {
       clearTimeout(this.timeout)
     }
+    this.element.removeEventListener("submit", this.cleanupBound)
   }
 
   submit(event) {
@@ -36,5 +39,35 @@ export default class extends Controller {
     } else {
       this.element.submit()
     }
+  }
+
+  cleanupEmptyInputs(event) {
+    const form = this.element
+    if (form.getAttribute("method")?.toLowerCase() !== "get") return
+
+    const inputs = Array.from(form.querySelectorAll("input, select, textarea"))
+    const disabledInputs = []
+
+    inputs.forEach(input => {
+      if (input.name && !input.disabled) {
+        const isRadioOrCheckbox = input.type === "radio" || input.type === "checkbox"
+        const isEmpty = !input.value || input.value.trim() === ""
+
+        if (!isRadioOrCheckbox && isEmpty) {
+          input.disabled = true
+          disabledInputs.push(input)
+        } else if (input.type === "radio" && input.checked && input.value === "") {
+          input.disabled = true
+          disabledInputs.push(input)
+        }
+      }
+    })
+
+    // Re-enable them immediately in the next event loop tick so they remain usable
+    setTimeout(() => {
+      disabledInputs.forEach(input => {
+        input.disabled = false
+      })
+    }, 0)
   }
 }

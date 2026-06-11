@@ -1,0 +1,19 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="flex h-full flex-col bg-white">
+    <%= render "hotel_portal/bookings/board/partials/content_header",
+      title: "Reinstate No-show",
+      subtitle: @booking.guest_name,
+      icon: cached_icon("rotate-ccw", class: "size-5") %>
+    <%= form_with model: @booking, url: reinstate_hotel_booking_path(current_hotel, @booking), method: :post, class: "flex flex-1 flex-col p-8" do |f| %>
+      <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
+      <p class="text-sm text-slate-600">Reinstate this no-show reservation and check the guest in.</p>
+      <div class="mt-5">
+        <%= label_tag :retroactive_reason, "Reason for reinstatement", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+        <%= text_area_tag :retroactive_reason, "Guest arrived late after night audit.", required: true, rows: 4, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+      </div>
+      <div class="mt-auto flex justify-end pt-6">
+        <%= f.submit "Reinstate & Check In", class: "rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white" %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

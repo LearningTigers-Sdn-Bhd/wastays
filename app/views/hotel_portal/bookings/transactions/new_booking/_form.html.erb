@@ -1,0 +1,66 @@
+<% form_url = case @transaction
+when :walk_in_check_in then hotel_booking_transaction_walk_in_check_in_path(current_hotel)
+when :backdated_check_in then hotel_booking_transaction_backdated_check_in_path(current_hotel)
+else hotel_booking_transaction_new_booking_path(current_hotel)
+end %>
+
+<div class="flex flex-col h-full" 
+     data-controller="booking-calc room-lock guest-change-confirmation"
+     data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
+     data-booking-calc-availability-url-value="<%= availability_hotel_bookings_path(current_hotel) %>"
+     data-booking-calc-rate-options-url-value="<%= rate_options_hotel_bookings_path(current_hotel) %>"
+     data-booking-calc-price-url-value="<%= stay_price_hotel_bookings_path(current_hotel) %>"
+     data-action="submit->guest-change-confirmation#confirm guest:selected->guest-change-confirmation#storeOriginalGuest">
+  
+  <%= form_with model: @booking, url: form_url, local: true, class: "flex flex-col flex-1 min-h-0",
+      id: "manual_booking_form" do |f| %>
+    <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
+    <%= render "hotel_portal/bookings/transactions/new_booking/partials/header", f: f %>
+
+    <!-- Body -->
+    <div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/50">
+      <div class="mx-auto max-w-[1500px] space-y-6">
+        <%= f.hidden_field :guest_update_intent, data: { guest_change_confirmation_target: "intent" } %>
+        <%= f.hidden_field :manual_rate_override, value: @booking.manual_rate_override, data: { booking_calc_target: "rateOverrideFlag" } %>
+        
+        <%= render "hotel_portal/bookings/transactions/new_booking/partials/errors", booking: @booking %>
+
+        <% if @transaction.in?([:walk_in_check_in, :backdated_check_in]) %>
+          <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 class="text-sm font-bold text-slate-900"><%= @transaction.to_s.humanize %> Details</h3>
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <%= f.label :checked_in_at, "Check-in date and time", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+                <%= f.datetime_local_field :checked_in_at, required: @transaction == :backdated_check_in, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" %>
+              </div>
+              <% if @transaction == :backdated_check_in %>
+                <div>
+                  <%= label_tag :retroactive_reason, "Override reason", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+                  <%= text_field_tag :retroactive_reason, nil, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" %>
+                </div>
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <%= render "hotel_portal/bookings/transactions/new_booking/partials/stay_details", f: f %>
+          <%= render "hotel_portal/bookings/transactions/new_booking/partials/select_room", f: f %>
+        </div>
+
+        <div class="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-3">
+          <div class="h-full xl:col-span-2">
+            <%= render "hotel_portal/bookings/transactions/new_booking/partials/guest_information", f: f %>
+          </div>
+          <div class="h-full xl:col-span-1">
+            <%= render "hotel_portal/bookings/transactions/new_booking/partials/payment", f: f %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%= render "hotel_portal/bookings/transactions/new_booking/partials/footer", f: f %>
+  <% end %>
+
+  <%= render "hotel_portal/bookings/transactions/new_booking/partials/guest_change_modal" %>
+</div>
