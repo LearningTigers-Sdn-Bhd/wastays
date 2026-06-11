@@ -4,7 +4,8 @@ class HotelPortal::Bookings::FoliosController < HotelPortal::BaseController
   before_action :authorize_view_bookings!
 
   def show
-    @booking = current_hotel.bookings.includes(booking_folio: [ :folio_transactions, :folio_forecasted_charges ]).find(params[:id])
+    @booking = current_hotel.bookings.includes(booking_folio: [ { folio_transactions: :user }, :folio_forecasted_charges ]).find(params[:id])
+    set_breadcrumbs
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
     render "hotel_portal/bookings/folio"
   end
@@ -35,6 +36,15 @@ class HotelPortal::Bookings::FoliosController < HotelPortal::BaseController
   end
 
   private
+
+  def set_breadcrumbs
+    override_breadcrumbs(
+      { label: "Operations" },
+      { label: "Bookings", path: hotel_bookings_path(current_hotel) },
+      { label: @booking.confirmation_token, path: hotel_booking_path(current_hotel, @booking) },
+      { label: "Folio Ledger" }
+    )
+  end
 
   def authorize_view_bookings!
     raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)

@@ -79,6 +79,9 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Stay & Room Details")
       expect(response.body).to include("Room 101")
+      expect(response.body).to include("Operations")
+      expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
+      expect(response.body).to include(booking.confirmation_token)
     end
 
     it "renders successfully when booking has complaint requests" do
@@ -97,10 +100,10 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get folio_hotel_booking_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Post Payment")
-      expect(response.body).to include("Post Charge")
-      expect(response.body).not_to include("Record Refund")
-      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).to include("Add Payment")
+      expect(response.body).to include("Add Charge")
+      expect(response.body).not_to include("Issue Refund")
+      expect(response.body).not_to include("Add Adjustment")
     end
 
     it "filters folio adjustment categories by granular permission" do
@@ -110,10 +113,44 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get folio_hotel_booking_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Post Adjustment")
+      expect(response.body).to include("Add Adjustment")
       expect(response.body).to include('value="write_off"')
       expect(response.body).not_to include('value="correction"')
       expect(response.body).not_to include('value="discount"')
+    end
+
+    it "renders the compact folio summary and grouped ledger" do
+      booking.update!(currency: "SGD", check_out: Date.current + 2.days)
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      charge = create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 125, description: "Room charge")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 50, description: "Booking payment")
+      create(:folio_forecasted_charge, booking_folio: folio, stay_date: Date.current + 1.day, amount: 75, description: "Future room charge")
+
+      get folio_hotel_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Folio #{booking.confirmation_token}")
+      expect(response.body).to include("Guest")
+      expect(response.body).to include("Stay")
+      expect(response.body).to include("Back to Booking")
+      expect(response.body).to include("Operations")
+      expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
+      expect(response.body).to include(%(href="#{hotel_booking_path(hotel, booking)}"))
+      expect(response.body).to include("Folio Ledger")
+      expect(response.body).to include("Outstanding")
+      expect(response.body).to include("Posted Charges")
+      expect(response.body).to include("Forecasted")
+      expect(response.body).to include("Stay Total")
+      expect(response.body).to include("SGD 150.00")
+      expect(response.body).to include("SGD 200.00")
+      expect(response.body).to include("Posted Transactions")
+      expect(response.body).to include("Upcoming / Forecasted Charges")
+      expect(response.body).to include("##{charge.id}")
+      expect(response.body).to include('data-section="posted"')
+      expect(response.body).to include('aria-expanded="true"')
+      expect(response.body).to include('data-section="forecasted"')
+      expect(response.body).to include('aria-expanded="false"')
+      expect(response.body).to include("Future room charge")
     end
   end
 

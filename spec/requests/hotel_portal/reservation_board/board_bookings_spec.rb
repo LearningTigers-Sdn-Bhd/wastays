@@ -137,6 +137,34 @@ RSpec.describe "HotelPortal::ReservationBoard::BoardBookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Booking")
       expect(response.body).to include(booking.confirmation_token)
+      expect(response.body).to include("Operations")
+      expect(response.body).to include(%(href="#{hotel_reservation_board_index_path(hotel)}">Reservation Board</a>))
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/reservation-board/bookings/:id/folio" do
+    let(:booking) { create(:booking, hotel: hotel, check_out: Date.current + 2.days) }
+
+    it "renders the shared compact folio page" do
+      sign_in_with_permissions("manage_bookings", "post_folio_payments")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, amount: 100)
+      create(:folio_forecasted_charge, booking_folio: folio, stay_date: Date.current + 1.day, amount: 50)
+
+      get folio_hotel_reservation_board_board_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Folio #{booking.confirmation_token}")
+      expect(response.body).to include("Back to Booking")
+      expect(response.body).to include("Operations")
+      expect(response.body).to include(%(href="#{hotel_reservation_board_index_path(hotel)}">Reservation Board</a>))
+      expect(response.body).to include(%(href="#{hotel_reservation_board_board_booking_path(hotel, booking)}"))
+      expect(response.body).to include("Folio Ledger")
+      expect(response.body).to include("Transaction Ledger")
+      expect(response.body).to include("Posted Transactions")
+      expect(response.body).to include("Upcoming / Forecasted Charges")
+      expect(response.body).to include("Add Payment")
+      expect(response.body).to include(hotel_reservation_board_board_booking_path(hotel, booking))
     end
   end
 

@@ -43,6 +43,7 @@ module HotelPortal
                                   booking_notes: :user
                                 )
                                 .find(params[:id])
+        set_show_breadcrumbs
         @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
         set_audit_logs
         render :show_page
@@ -82,7 +83,8 @@ module HotelPortal
       end
 
       def folio
-        @booking = current_hotel.bookings.includes(booking_folio: [ :folio_transactions, :folio_forecasted_charges ]).find(params[:id])
+        @booking = current_hotel.bookings.includes(booking_folio: [ { folio_transactions: :user }, :folio_forecasted_charges ]).find(params[:id])
+        set_folio_breadcrumbs
         @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
       end
 
@@ -165,6 +167,23 @@ module HotelPortal
       end
 
       private
+
+      def set_show_breadcrumbs
+        override_breadcrumbs(
+          { label: "Operations" },
+          { label: "Reservation Board", path: hotel_reservation_board_index_path(current_hotel) },
+          { label: @booking.confirmation_token }
+        )
+      end
+
+      def set_folio_breadcrumbs
+        override_breadcrumbs(
+          { label: "Operations" },
+          { label: "Reservation Board", path: hotel_reservation_board_index_path(current_hotel) },
+          { label: @booking.confirmation_token, path: hotel_reservation_board_board_booking_path(current_hotel, @booking) },
+          { label: "Folio Ledger" }
+        )
+      end
 
       def set_audit_logs
         # Fetch audit logs for this booking and its related entities

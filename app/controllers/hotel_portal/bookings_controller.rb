@@ -128,7 +128,11 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   end
 
   def set_breadcrumbs
-    append_breadcrumb @booking.confirmation_token, hotel_booking_path(current_hotel, @booking)
+    override_breadcrumbs(
+      { label: "Operations" },
+      { label: "Bookings", path: hotel_bookings_path(current_hotel) },
+      { label: @booking.confirmation_token }
+    )
   end
 
   def booking_params
