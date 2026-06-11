@@ -53,7 +53,7 @@ module HotelPortal
             NavItem.new(label: "Booking Timeline Board", path: board_hotel_bookings_path(current_hotel), search_text: "Booking Timeline Board Calendar Tape Chart Operations", active: controller_path == "hotel_portal/bookings/board", icon: "table-2", permission: [ "view_reservation_board", "manage_bookings" ]),
             NavItem.new(label: "Room Status", path: hotel_room_status_board_path(current_hotel), search_text: "Room Status Tape Chart Housekeeping Assignment Operations", active: controller_name == "room_status_board", icon: "layout-grid", permission: [ "view_room_readiness", "manage_room_status" ], plan_feature: "room_status_board"),
             NavItem.new(label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Operations", active: controller_name == "requests", icon: "clipboard-list", permission: "manage_requests", plan_feature: "task_assignment_minibar_log"),
-            NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory", active: controller_name == "guests", icon: "user", permission: "view_bookings", plan_feature: "unified_guest_profile")
+            NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory", active: controller_name == "guests", icon: "user", permission: "view_guest_records", plan_feature: "unified_guest_profile")
           ]
         ),
         NavSection.new(

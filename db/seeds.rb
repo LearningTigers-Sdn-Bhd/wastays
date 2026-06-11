@@ -134,6 +134,7 @@ platform_permissions = [
   { name: 'Manage Inventory', slug: 'manage_inventory' },
   { name: 'View Bookings', slug: 'view_bookings' },
   { name: 'Manage Bookings', slug: 'manage_bookings' },
+  { name: 'View Guest Records', slug: 'view_guest_records' },
   { name: 'View Guest Phone', slug: 'view_guest_phone' },
   { name: 'Manage Guest Arrival', slug: 'manage_guest_arrival' },
   { name: 'View Audit Logs', slug: 'view_audit_logs' },

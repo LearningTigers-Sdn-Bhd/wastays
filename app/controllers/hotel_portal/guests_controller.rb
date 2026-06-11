@@ -5,7 +5,7 @@ module HotelPortal
     helper_method :safe_guest_attr, :guest_stays_count, :guest_currency_totals
 
     before_action -> { require_feature!("unified_guest_profile") }
-    before_action :authorize_view_bookings!, only: %i[index show]
+    before_action :authorize_view_guest_records!, only: %i[index show]
     before_action :authorize_manage_bookings!, only: %i[search new create edit update]
     before_action :authorize_delete_guest_record!, only: %i[destroy]
     before_action :set_guest, only: [ :show, :edit, :update, :destroy ]
@@ -126,8 +126,8 @@ module HotelPortal
 
     private
 
-    def authorize_view_bookings!
-      raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
+    def authorize_view_guest_records!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_guest_records", hotel: current_hotel)
     end
 
     def authorize_manage_bookings!

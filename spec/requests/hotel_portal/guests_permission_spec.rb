@@ -16,7 +16,7 @@ RSpec.describe "HotelPortal::Guests Permissions", type: :request do
       before do
         role = create(:role, account: account)
         role.permissions << (Permission.find_by(slug: 'delete_guest_record') || create(:permission, slug: 'delete_guest_record'))
-        role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings'))
+        role.permissions << (Permission.find_by(slug: 'view_guest_records') || create(:permission, slug: 'view_guest_records'))
         UserHotelAccess.create!(user: user, hotel: hotel, role: role)
         sign_in_as(user)
       end
@@ -33,7 +33,7 @@ RSpec.describe "HotelPortal::Guests Permissions", type: :request do
       before do
         role = create(:role, account: account)
         role.permissions << (Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings'))
-        role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings'))
+        role.permissions << (Permission.find_by(slug: 'view_guest_records') || create(:permission, slug: 'view_guest_records'))
         UserHotelAccess.create!(user: user, hotel: hotel, role: role)
         sign_in_as(user)
       end
