@@ -107,6 +107,27 @@ RSpec.describe "StaticPages", type: :request do
       expect(response.body).not_to include("Featured Hotel 7")
     end
 
+    it "does not render easy plan hotels in featured stays" do
+      easy_plan = create(:plan, slug: "easy", name: "Easy")
+      easy_hotel = create(:hotel, status: "approved", name: "Easy Hidden", city: "Kuala Lumpur", country: "Malaysia", plan: easy_plan)
+      visible_hotel = create(:hotel, status: "approved", name: "Visible Explore", city: "Kuala Lumpur", country: "Malaysia")
+
+      create(:room_type, hotel: easy_hotel, max_adults: 2)
+      create(:room_type, hotel: visible_hotel, max_adults: 2)
+
+      availability_service = instance_double(BookingEngine::AvailabilityService)
+      allow(BookingEngine::AvailabilityService).to receive(:new).and_return(availability_service)
+      allow(availability_service).to receive(:find_available_hotels).and_return([ easy_hotel, visible_hotel ])
+      allow(availability_service).to receive(:available_rooms_for_hotel).with(easy_hotel).and_return([ easy_hotel.room_types.first ])
+      allow(availability_service).to receive(:available_rooms_for_hotel).with(visible_hotel).and_return([ visible_hotel.room_types.first ])
+      allow(availability_service).to receive(:calculate_total_price).and_return(200)
+
+      get "/explore"
+
+      expect(response.body).to include("Visible Explore")
+      expect(response.body).not_to include("Easy Hidden")
+    end
+
     it "links the footer back to the landing page sections" do
       get "/explore"
 

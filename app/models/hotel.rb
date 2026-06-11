@@ -158,6 +158,10 @@ class Hotel < ApplicationRecord
     %w[approved live].include?(status)
   end
 
+  def publicly_bookable?
+    active? && plan&.slug != "easy"
+  end
+
   def concierge_available?
     active? && concierge_enabled?
   end

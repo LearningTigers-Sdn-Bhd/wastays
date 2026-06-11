@@ -7,8 +7,11 @@ RSpec.describe "Admin::Plans", type: :request do
   let!(:feature_group) { create(:feature_group, slug: "aic", name: "AI Concierge (AIC)") }
   let!(:external_feature) { create(:feature, feature_group: feature_group, slug: "whatsapp_automation_flows", name: "WhatsApp automation flows") }
   let!(:gated_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page", name: "AI Concierge Page") }
+  let!(:be_group) { create(:feature_group, slug: "be", name: "Booking Engine (BE)") }
+  let!(:folio_feature) { create(:feature, feature_group: be_group, slug: "folio_management_billing", name: "Folio Management & Billing") }
   let!(:external_plan_feature) { create(:plan_feature, plan: plan, feature: external_feature, enabled: true) }
   let!(:gated_plan_feature) { create(:plan_feature, plan: plan, feature: gated_feature, enabled: true) }
+  let!(:folio_plan_feature) { create(:plan_feature, plan: plan, feature: folio_feature, enabled: true) }
 
   before do
     sign_in_as(superadmin)
@@ -27,6 +30,18 @@ RSpec.describe "Admin::Plans", type: :request do
 
       expect(external_row.css('input[type="checkbox"][disabled]').count).to be >= 1
       expect(gated_row.css('input[type="checkbox"][disabled]').count).to eq(0)
+    end
+
+    it "marks folio row as plan default and disables editing" do
+      get admin_plans_path
+
+      expect(response).to have_http_status(:ok)
+
+      document = Nokogiri::HTML(response.body)
+      folio_row = document.css("tr").find { |row| row.text.include?("Folio Management & Billing") }
+
+      expect(folio_row.text).to include("Plan default")
+      expect(folio_row.css('input[type="checkbox"][disabled]').count).to be >= 1
     end
   end
 
