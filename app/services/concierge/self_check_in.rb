@@ -10,12 +10,22 @@ module Concierge
       return build_failure(:wrong_date) unless on_check_in_date?
       return build_failure(:too_early)  if too_early?
 
-      room_number = find_available_room
-      return build_failure(:no_room_available) unless room_number
+      room_type = @booking.booking_rooms.first&.room_type
+      return build_failure(:no_room_available) unless room_type
 
+      room_number = nil
       error_message = nil
+      no_room = false
 
-      ActiveRecord::Base.transaction do
+      # Lock the room_type row so concurrent self check-ins serialize and
+      # cannot both pick the same available room number.
+      room_type.with_lock do
+        room_number = find_available_room
+        if room_number.nil?
+          no_room = true
+          next
+        end
+
         assign = Bookings::AssignRoom.new(booking: @booking, room_number: room_number, user: nil).call
         unless assign.success?
           error_message = assign.error
@@ -29,6 +39,7 @@ module Concierge
         end
       end
 
+      return build_failure(:no_room_available) if no_room
       return build_failure(:error, message: error_message) if error_message.present?
 
       Result.success(booking: @booking, room_number: room_number)
@@ -58,17 +69,15 @@ module Concierge
       room_type = @booking.booking_rooms.first&.room_type
       return nil unless room_type
 
-      inventory = RoomInventory.find_by(room_type: room_type, date: Time.zone.today)
-      return nil unless inventory
+      available = Bookings::AvailableRoomNumbers.new(
+        hotel: @hotel,
+        room_type: room_type,
+        check_in: @booking.check_in.to_date,
+        check_out: @booking.check_out.to_date,
+        exclude_booking_id: @booking.id
+      ).call
 
-      candidates = inventory.available_room_numbers
-      return nil if candidates.blank?
-
-      occupied = RoomStatus.where(hotel: @hotel, room_type: room_type, room_number: candidates)
-                           .where.not(status: RoomStatus::ASSIGNABLE_STATUSES)
-                           .pluck(:room_number)
-
-      (candidates - occupied).first
+      available.min_by { |room_number| [ room_number.to_i, room_number ] }
     end
 
     def build_failure(code, message: nil)

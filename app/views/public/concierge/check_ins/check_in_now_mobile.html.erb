@@ -79,7 +79,7 @@
     </div>
 
     <%# Guest registration form %>
-    <%= form_with url: concierge_submit_check_in_path(@hotel.slug), method: :post, scope: :booking, class: "space-y-6" do |f| %>
+    <%= form_with model: @booking, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: { controller: "scanner" } do |f| %>
       <% unless @booking&.pre_checkin&.completed? %>
         <div class="rounded-2xl border border-neutral-border/50 bg-white p-6 shadow-sm space-y-8">
           <div>
@@ -174,10 +174,41 @@
 
             <div class="space-y-2">
               <%= f.label :guest_home_address, "Home Address", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-neutral-text-secondary ml-1" %>
-              <%= f.text_area :guest_home_address, value: @booking.guest_home_address, 
-                    class: "w-full bg-neutral-bg border-neutral-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all", 
+              <%= f.text_area :guest_home_address, value: @booking.guest_home_address,
+                    class: "w-full bg-neutral-bg border-neutral-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all",
                     required: true, rows: 3, placeholder: "e.g. No. 12, Jalan Ampang, 50450 Kuala Lumpur" %>
             </div>
+          </div>
+        </div>
+
+        <%# ID document photos %>
+        <div class="rounded-2xl border border-neutral-border/50 bg-white p-6 shadow-sm space-y-6">
+          <div>
+            <h2 class="text-sm font-black uppercase tracking-[0.2em] text-neutral-text-primary">Identity Document</h2>
+            <p class="text-[11px] text-neutral-text-secondary mt-2 leading-relaxed">Upload or scan your IC / passport.</p>
+          </div>
+          <div class="grid gap-4">
+            <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: "Front ID / Passport" %>
+            <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID / Passport" %>
+          </div>
+        </div>
+
+        <%# Guest signature %>
+        <div class="rounded-2xl border border-neutral-border/50 bg-white p-6 shadow-sm space-y-4">
+          <div>
+            <h2 class="text-sm font-black uppercase tracking-[0.2em] text-neutral-text-primary">Guest Signature</h2>
+            <p class="text-[11px] text-neutral-text-secondary mt-2 leading-relaxed">Sign below to confirm your check-in details.</p>
+          </div>
+          <div data-controller="signature" class="space-y-2">
+            <div class="rounded-xl border border-neutral-border bg-white p-2">
+              <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
+            </div>
+            <div class="flex justify-end">
+              <button type="button" data-action="click->signature#clear" class="text-xs font-bold uppercase tracking-widest text-brand-primary hover:underline">
+                Clear Signature
+              </button>
+            </div>
+            <%= f.hidden_field :signature, data: { signature_target: "input" }, required: true %>
           </div>
         </div>
       <% end %>
@@ -188,6 +219,8 @@
               class: "w-full bg-brand-primary text-white font-black py-5 rounded-xl shadow-xl shadow-brand-primary/30 active:scale-[0.98] transition-all cursor-pointer tracking-widest text-sm" %>
       </div>
     <% end %>
+
+    <%= render "shared/scanner_modal" %>
   </div>
 
 </div>

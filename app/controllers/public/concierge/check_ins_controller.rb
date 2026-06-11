@@ -1,3 +1,6 @@
+require "base64"
+require "stringio"
+
 module Public
   module Concierge
     class CheckInsController < BaseController
@@ -91,11 +94,33 @@ module Public
           :guest_country,
           :guest_document_type,
           :guest_government_id,
-          :guest_home_address
+          :guest_home_address,
+          :id_front,
+          :id_back
         )
-        @booking.update(permitted)
+        return false unless @booking.update(permitted)
+
+        attach_signature
+        true
       rescue ActionController::ParameterMissing
         false
+      end
+
+      def attach_signature
+        signature_data = params.dig(:booking, :signature)
+        return if signature_data.blank? || !signature_data.start_with?("data:image")
+
+        pre_checkin = @booking.pre_checkin || @booking.create_pre_checkin!(
+          status: "pending", document_status: "pending", signature_status: "pending"
+        )
+
+        _format, encoded = signature_data.split(",")
+        pre_checkin.signature.attach(
+          io: StringIO.new(Base64.decode64(encoded)),
+          filename: "signature.png",
+          content_type: "image/png"
+        )
+        pre_checkin.update!(signature_status: "signed")
       end
 
       def past_check_in_time?(booking)

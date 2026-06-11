@@ -12,8 +12,8 @@ RSpec.describe Concierge::SelfCheckIn do
     b
   end
 
-  def with_available_room(room_number: "101")
-    create(:room_inventory, room_type: room_type, date: Date.today,
+  def with_available_room(room_number: "101", date: Date.today)
+    create(:room_inventory, room_type: room_type, date: date,
            quantity: 1, status: "open", available_room_numbers: [ room_number ])
     room_number
   end
@@ -100,7 +100,7 @@ RSpec.describe Concierge::SelfCheckIn do
       b
     end
 
-    before { with_available_room }
+    before { with_available_room(date: Date.yesterday) }
 
     it "allows check-in" do
       result = call
@@ -120,23 +120,33 @@ RSpec.describe Concierge::SelfCheckIn do
     end
   end
 
-  context "when room assignment fails inside the transaction" do
+  context "when a room is occupied by another active booking" do
     before do
-      with_available_room
+      with_available_room(room_number: "101")
 
-      failed_assignment = Struct.new(:success?, :error, keyword_init: true).new(
-        success?: false,
-        error: "Assignment failed"
-      )
-      allow_any_instance_of(Bookings::AssignRoom).to receive(:call).and_return(failed_assignment)
+      other = create(:booking, hotel: hotel, status: "checked_in",
+                     check_in: Date.today, check_out: Date.today + 1)
+      other.booking_rooms.create!(room_type: room_type, quantity: 1, subtotal: 200,
+                                  room_number: "101",
+                                  room_type_snapshot: { "name" => room_type.name })
     end
 
-    it "returns a failure result and leaves the booking unchanged" do
+    it "does not assign that room to this booking" do
       result = call
+      expect(result.error_code).to eq(:no_room_available)
+    end
+  end
 
-      expect(result.success?).to be false
-      expect(result.error_code).to eq(:error)
-      expect(booking.reload.status).to eq("confirmed")
+  context "when several rooms are available" do
+    before do
+      create(:room_inventory, room_type: room_type, date: Date.today,
+             quantity: 3, status: "open", available_room_numbers: %w[105 101 110])
+    end
+
+    it "picks the lowest room number" do
+      result = call
+      expect(result.success?).to be true
+      expect(result.room_number).to eq("101")
     end
   end
 end
