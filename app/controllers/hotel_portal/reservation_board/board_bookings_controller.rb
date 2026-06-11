@@ -62,7 +62,7 @@ module HotelPortal
       end
 
       def check_out
-        @booking = current_hotel.bookings.find(params[:id])
+        @booking = current_hotel.bookings.includes(booking_folio: { folio_transactions: :user }).find(params[:id])
         @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
       end
 

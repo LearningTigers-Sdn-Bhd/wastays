@@ -121,12 +121,13 @@ RSpec.describe "Reservation Board Booking Lifecycle", type: :system do
 
     within "#offcanvas_drawer" do
       expect(page).to have_content(/Checked In/i)
-      click_button "Check Out"
+      click_link "Check Out"
     end
 
-    within "dialog#check-out-modal-show-#{@booking.id}" do
-      expect(page).to have_content(/Confirm Check-Out/i)
-      click_button "Confirm Check-Out"
+    within "#offcanvas_drawer" do
+      expect(page).to have_content(/Step 1 of 2/i)
+      expect(page).to have_content(/Transaction Ledger/i)
+      click_button "Complete Checkout"
     end
 
     # After checkout, the board should reload via Turbo Stream.

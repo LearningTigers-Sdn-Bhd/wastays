@@ -33,4 +33,4 @@
   <%= render "hotel_portal/bookings/folio/page_ledger", booking: booking, projected_lines: projected_lines %>
 </div>
 
-<%= render "hotel_portal/bookings/show/modals/action_modals", booking: booking, presenter: presenter %>
+<%= render "hotel_portal/bookings/check_in_modal", booking: booking, hotel: current_hotel, presenter: presenter %>

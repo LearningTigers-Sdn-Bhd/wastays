@@ -7,7 +7,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   before_action :authorize_manage_bookings!, only: [ :create, :process_late_checkout ]
 
   def show
-    @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(params[:id])
+    @booking = current_hotel.bookings.includes(booking_folio: { folio_transactions: :user }).find(params[:id])
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
     render "hotel_portal/bookings/checkout"
   end
@@ -154,7 +154,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   end
 
   def check_out_from_sheet(timestamp)
-    @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(params[:id])
+    @booking = current_hotel.bookings.includes(booking_folio: { folio_transactions: :user }).find(params[:id])
     error = nil
 
     ActiveRecord::Base.transaction do
@@ -208,7 +208,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     end
 
     dispatch_checkout_side_effects
-    redirect_to hotel_booking_path(current_hotel, @booking, checkout_success: true), notice: "Guest has been checked out."
+    redirect_to checkout_success_path, notice: "Guest has been checked out."
   end
 
   def post_checkout_settlement_payment
@@ -256,7 +256,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
       format.turbo_stream do
         render turbo_stream: turbo_stream.update(
           "offcanvas_drawer",
-          partial: "hotel_portal/bookings/checkout_sheet",
+          partial: "hotel_portal/bookings/checkout/sheet",
           locals: { booking: @booking, presenter: @presenter, hotel: current_hotel, checkout_error: error }
         ), status: :unprocessable_content
       end
@@ -268,6 +268,12 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
     Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
     SendInvoiceEmailJob.perform_later(@booking.id)
+  end
+
+  def checkout_success_path
+    return hotel_reservation_board_index_path(current_hotel) if reservation_board_request?
+
+    hotel_booking_path(current_hotel, @booking, checkout_success: true)
   end
 
   def authorize_view_bookings!

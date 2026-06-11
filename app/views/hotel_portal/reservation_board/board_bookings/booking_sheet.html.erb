@@ -76,14 +76,15 @@
 
             <%# Check Out %>
             <% if @booking.status.in?(%w[checked_in review_due_out]) %>
-              <button onclick="document.getElementById('check-out-modal-show-<%= @booking.id %>').showModal()"
-                      class="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 hover:text-emerald-800 transition-all group">
+              <%= link_to check_out_hotel_reservation_board_board_booking_path(current_hotel, @booking),
+                    data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" },
+                    class: "flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 hover:text-emerald-800 transition-all group" do %>
                 <span class="size-8 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
                   <%= cached_icon "log-out", stroke_width: 2.5, class: "size-4 text-emerald-600" %>
                 </span>
                 <span class="flex-1 text-left">Check Out</span>
                 <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 text-emerald-400 group-hover:text-emerald-600 transition-colors" %>
-              </button>
+              <% end %>
             <% end %>
 
             <%# Late Checkout %>
@@ -153,7 +154,7 @@
     <% booking = @booking %>
     <% presenter = @presenter %>
 
-    <%= render "hotel_portal/bookings/show/modals/action_modals", booking: booking, presenter: presenter %>
+    <%= render "hotel_portal/bookings/check_in_modal", booking: booking, hotel: current_hotel, presenter: presenter %>
     <%= render "hotel_portal/bookings/show/modals/late_checkout_modal", booking: booking %>
     <%= render "hotel_portal/bookings/show/modals/reinstate_modal", booking: booking %>
 

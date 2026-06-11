@@ -149,7 +149,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include('data-section="posted"')
       expect(response.body).to include('aria-expanded="true"')
       expect(response.body).to include('data-section="forecasted"')
-      expect(response.body).to include('aria-expanded="false"')
+      expect(response.body).to include('data-folio-ledger-section-param="forecasted"')
+      expect(response.body).not_to include('aria-expanded="false"')
       expect(response.body).to include("Future room charge")
     end
   end
@@ -190,8 +191,29 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).not_to include("Post Payment")
       expect(response.body).not_to include("Post Adjustment")
       expect(response.body).to include("Pending")
-      expect(response.body).to include("This projected line is expected to post during night audit.")
+      expect(response.body).to include("Forecast charges to post")
+      expect(response.body).to include("Existing transactions")
       expect(response.body).to include("Early checkout charge - Night 1")
+      expect(response.body).to include("Outstanding balance")
+      expect(response.body).to include('data-checkout-summary="true"')
+      expect(response.body).to include('data-checkout-card="details"')
+      expect(response.body).to include('data-checkout-card="early-departure"')
+      expect(response.body).to include("border-t border-slate-200 bg-white")
+      expect(response.body).not_to include("Checkout Time")
+      expect(response.body).not_to include("Resolve Balance")
+    end
+
+    it "renders only the checkout details card for a scheduled checkout" do
+      booking.update!(check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+
+      get checkout_hotel_booking_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('data-checkout-card="details"')
+      expect(response.body).not_to include('data-checkout-card="early-departure"')
+      expect(response.body.scan("Ready for checkout").size).to eq(1)
     end
   end
 
@@ -329,6 +351,21 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(booking.reload.status).to eq("completed")
       expect(folio.reload.status).to eq("closed")
       expect(folio.folio_transactions.payment.last.description).to include("RCPT-1")
+    end
+
+    it "returns reservation-board checkout-sheet submissions to the reservation board" do
+      booking.transition_status_to!("checked_in", event: "check_in")
+      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          source: "reservation_board",
+          checked_out_at: Time.current.to_s
+        }
+
+      expect(response).to redirect_to(hotel_reservation_board_index_path(hotel))
+      expect(booking.reload.status).to eq("completed")
     end
 
     it "posts early departure charge before checkout-sheet settlement and redirects" do

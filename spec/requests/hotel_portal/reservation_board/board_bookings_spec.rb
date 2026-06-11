@@ -168,6 +168,29 @@ RSpec.describe "HotelPortal::ReservationBoard::BoardBookings", type: :request do
     end
   end
 
+  describe "GET /hotel/:hotel_id/reservation-board/bookings/:id/check_out" do
+    let(:booking) { create(:booking, hotel: hotel, status: "checked_in", check_out: Date.current + 1.day) }
+
+    it "renders the shared fullscreen checkout sheet" do
+      sign_in_with_permissions("manage_bookings")
+      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+
+      get check_out_hotel_reservation_board_board_booking_path(hotel, booking),
+        headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
+      expect(response.body).to include("Step 1 of 2")
+      expect(response.body).to include("Complete Checkout")
+      expect(response.body).to include('name="source"')
+      expect(response.body).to include('value="reservation_board"')
+      expect(response.body).to include('data-checkout-card="details"')
+      expect(response.body).to include('data-checkout-card="early-departure"')
+      expect(response.body.scan("Ready for checkout").size).to eq(1)
+      expect(response.body).not_to include("Confirm Check-Out")
+    end
+  end
+
   describe "PATCH /hotel/:hotel_id/bookings/:id" do
     let(:booking) { create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 1.day) }
 

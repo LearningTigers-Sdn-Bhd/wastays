@@ -86,16 +86,17 @@ RSpec.describe "Operational Exceptions", type: :system do
 
       visit hotel_booking_path(hotel, booking)
 
-      # Click Check Out Guest - using the link with turbo_frame
-      click_link "Check Out Guest"
+      # Open the shared fullscreen checkout sheet.
+      click_link "Check Out"
 
-      # Wait for content to appear (even if cuprite thinks it's non-visible)
-      expect(page).to have_selector("h3", text: "Early Departure Review", visible: :all, wait: 10)
+      # Wait for the compact early-departure controls to appear.
+      expect(page).to have_content(/Early departure/i, wait: 10)
+      expect(page).to have_content("Forecast charges to post")
 
       # Select Apply Charge
       find("input[name='apply_charge'][value='true']", visible: :all).trigger("click")
 
-      expect(page).to have_selector("[data-early-departure-target='customFields']", visible: :all)
+      expect(page).to have_selector("[data-early-departure-target='customFields']", visible: true)
 
       # Fill in details
       input = find("[name='early_departure[value]']", visible: :all)

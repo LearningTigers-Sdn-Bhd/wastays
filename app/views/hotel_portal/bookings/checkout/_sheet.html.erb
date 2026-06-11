@@ -1,0 +1,158 @@
+<% folio = booking.booking_folio %>
+<% balance = (folio&.projected_outstanding_balance || 0).to_d %>
+<% currency = booking.currency.presence || "MYR" %>
+<% checkout_error ||= nil %>
+<% checkout_business_date = hotel.business_date_for(Time.current).to_date %>
+<% early_departure = checkout_business_date < booking.check_out.to_date %>
+<% early_checkout_lines = early_departure ? Folios::PostEarlyCheckoutCharges.pending_preview(booking: booking, folio: folio, departure_date: checkout_business_date, original_check_out: booking.check_out) : [] %>
+<% projected_checkout_balance = if early_departure && folio
+  Folios::PostEarlyCheckoutCharges.projected_checkout_balance(folio: folio, departure_date: checkout_business_date, original_check_out: booking.check_out)
+else
+  balance
+end %>
+<% held_deposits = booking.deposits.where(status: "collected") %>
+<% held_deposit_total = held_deposits.sum(:amount).to_d %>
+<% can_record_checkout_refund = projected_checkout_balance.negative? && folio&.status == "open" && current_user.has_permission?("execute_folio_refunds", hotel: hotel) %>
+<% refund_action = if can_record_checkout_refund
+  capture do
+    button_tag "Record Refund", type: "button", class: "rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-50", onclick: "document.getElementById('checkout-refund-modal-#{booking.id}').showModal()"
+  end
+end %>
+
+<div class="flex h-full min-h-0 flex-col bg-slate-100">
+  <header class="z-10 shrink-0 border-b border-slate-200 bg-white">
+    <div class="flex items-start justify-between gap-4 px-4 py-3 sm:px-6">
+      <div class="min-w-0">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Step 1 of 2</p>
+        <h2 class="mt-0.5 truncate text-lg font-bold tracking-tight text-slate-950">Checkout <%= booking.guest_name %></h2>
+        <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <span><%= booking.confirmation_token %> · <%= booking.check_in.strftime("%d %b") %> – <%= booking.check_out.strftime("%d %b %Y") %></span>
+          <span class="rounded-md bg-slate-100 px-2 py-0.5 text-[9px] font-bold tracking-wider text-slate-600">
+            Deposit: <%= (booking.deposit_status || "not_required").titleize %>
+          </span>
+        </div>
+      </div>
+      <button type="button" class="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" data-action="click->offcanvas#close" aria-label="Close checkout">
+        <%= cached_icon "x", stroke_width: 2.5, class: "size-5" %>
+      </button>
+    </div>
+    <%= render "hotel_portal/bookings/checkout/summary", booking: booking, projected_lines: early_checkout_lines %>
+  </header>
+
+  <%= form_with url: check_out_hotel_booking_path(hotel, booking), method: :post, class: "flex min-h-0 flex-1 flex-col", data: { turbo_frame: "_top" } do |f| %>
+    <%= hidden_field_tag :checkout_sheet, "1" %>
+    <%= hidden_field_tag :source, local_assigns[:checkout_source] if local_assigns[:checkout_source].present? %>
+
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      <div class="mx-auto max-w-[1500px] space-y-3 p-3 sm:p-4 lg:p-5">
+        <% if checkout_error.present? %>
+          <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800" data-controller="auto-scroll-top">
+            <%= checkout_error %>
+          </div>
+        <% end %>
+
+        <div class="grid items-stretch gap-3 <%= "lg:grid-cols-2" if early_departure %>">
+          <%= render "hotel_portal/bookings/checkout/details", form: f, booking: booking, presenter: presenter %>
+          <% if early_departure %>
+            <%= render "hotel_portal/bookings/checkout/early_departure", booking: booking, currency: currency %>
+          <% end %>
+        </div>
+
+        <% if held_deposits.any? %>
+          <div class="flex flex-col gap-2 border border-amber-200 bg-amber-50 px-4 py-2.5 text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-2">
+              <%= cached_icon "shield-check", stroke_width: 2.25, class: "mt-0.5 size-4 shrink-0 text-amber-700" %>
+              <div>
+                <p class="text-xs font-bold">Held security deposit · <%= held_deposits.size %> <%= "record".pluralize(held_deposits.size) %> · <%= currency %> <%= number_with_precision(held_deposit_total, precision: 2) %></p>
+                <p class="mt-0.5 text-[11px] text-amber-800">Security deposits are tracked independently from the folio. Return or settle them before the guest leaves.</p>
+              </div>
+            </div>
+            <span class="self-start rounded-md border border-amber-300 bg-white px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-800 sm:self-center"><%= (booking.deposit_status || "collected").titleize %></span>
+          </div>
+        <% end %>
+
+        <% unless folio&.status == "open" && projected_checkout_balance.zero? %>
+        <section>
+          <% if folio.blank? %>
+            <div class="flex items-start gap-2 border border-red-200 bg-red-50 px-4 py-3">
+              <%= cached_icon "circle-alert", class: "mt-0.5 size-4 shrink-0 text-red-700" %>
+              <div><p class="text-xs font-bold text-red-900">Folio required</p><p class="mt-0.5 text-[11px] text-red-700">This booking must have a folio before checkout can be completed.</p></div>
+            </div>
+          <% elsif projected_checkout_balance.positive? %>
+            <div class="border border-amber-200 bg-amber-50">
+              <div class="flex items-start gap-2 px-4 py-3">
+                <%= cached_icon "circle-alert", class: "mt-0.5 size-4 shrink-0 text-amber-700" %>
+                <div><p class="text-xs font-bold text-amber-950">Payment required before checkout</p><p class="mt-0.5 text-[11px] text-amber-800">Post a settlement payment below. Checkout will run immediately after payment is recorded.</p></div>
+              </div>
+              <div class="grid gap-2 border-t border-amber-200 bg-white p-3 sm:grid-cols-[160px_180px_1fr]">
+                <div>
+                  <%= label_tag :checkout_payment_method, "Payment method", class: "mb-1 block text-[9px] font-bold uppercase tracking-wider text-slate-500" %>
+                  <%= select_tag :checkout_payment_method, options_for_select([["Cash", "cash"]], "cash"), class: "w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 focus:border-slate-500 focus:outline-none" %>
+                </div>
+                <div>
+                  <%= label_tag :checkout_payment_amount, "Amount (#{currency})", class: "mb-1 block text-[9px] font-bold uppercase tracking-wider text-slate-500" %>
+                  <%= number_field_tag :checkout_payment_amount, number_with_precision(projected_checkout_balance, precision: 2), step: "0.01", min: "0.01", max: projected_checkout_balance, required: true, class: "w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 focus:border-slate-500 focus:outline-none" %>
+                </div>
+                <div>
+                  <%= label_tag :checkout_payment_reference, "Receipt / reference no.", class: "mb-1 block text-[9px] font-bold uppercase tracking-wider text-slate-500" %>
+                  <%= text_field_tag :checkout_payment_reference, nil, placeholder: "Optional receipt number", class: "w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none" %>
+                </div>
+              </div>
+            </div>
+          <% elsif projected_checkout_balance.negative? %>
+            <div class="flex items-center justify-between gap-3 border border-amber-200 bg-amber-50 px-4 py-3">
+              <div class="flex items-start gap-2">
+                <%= cached_icon "circle-alert", class: "mt-0.5 size-4 shrink-0 text-amber-700" %>
+                <div><p class="text-xs font-bold text-amber-950">Credit balance detected</p><p class="mt-0.5 text-[11px] text-amber-800">Record a refund for the remaining credit before checking out this guest.</p></div>
+              </div>
+              <%= refund_action %>
+            </div>
+          <% elsif folio.status == "closed" %>
+            <div class="flex items-start gap-2 border border-slate-300 bg-slate-50 px-4 py-3">
+              <%= cached_icon "circle-alert", class: "mt-0.5 size-4 shrink-0 text-slate-600" %>
+              <div><p class="text-xs font-bold text-slate-900">Folio already closed</p><p class="mt-0.5 text-[11px] text-slate-600">This folio has already been closed.</p></div>
+            </div>
+          <% end %>
+        </section>
+        <% end %>
+
+        <%= render "hotel_portal/bookings/checkout/ledger", booking: booking, projected_lines: early_checkout_lines, header_action: refund_action %>
+      </div>
+    </div>
+
+    <footer class="z-10 shrink-0 border-t border-slate-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.06)] sm:px-6">
+      <div class="mx-auto flex max-w-[1500px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <% if folio&.status == "open" && projected_checkout_balance.zero? %>
+          <div class="flex min-w-0 items-start gap-2">
+            <%= cached_icon "circle-check", class: "mt-0.5 size-4 shrink-0 text-emerald-700" %>
+            <div class="min-w-0">
+              <p class="text-xs font-bold text-emerald-950">Ready for checkout</p>
+              <p class="mt-0.5 truncate text-[11px] text-emerald-800">Balance is settled. Completing checkout will post pending charges, close the folio, and move the room to pending cleaning.</p>
+            </div>
+          </div>
+        <% else %>
+          <div></div>
+        <% end %>
+        <div class="flex shrink-0 items-center justify-end gap-2">
+          <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100" data-action="click->offcanvas#close">Cancel</button>
+          <%= f.submit "Complete Checkout", class: "cursor-pointer rounded-md bg-slate-900 px-5 py-2 text-sm font-bold text-white transition hover:bg-slate-700", data: { turbo_submits_with: "Checking out..." } %>
+        </div>
+      </div>
+    </footer>
+  <% end %>
+
+  <% if can_record_checkout_refund %>
+    <%= render "hotel_portal/bookings/folio/modals/folio_transaction_modal",
+        booking: booking,
+        hotel: hotel,
+        modal_id: "checkout-refund-modal-#{booking.id}",
+        title: "Record Refund",
+        description: "Record a refund for the remaining guest credit before checkout.",
+        transaction_type: "payment",
+        category: "refund",
+        signed_amount: false,
+        amount: projected_checkout_balance.abs,
+        submit_label: "Record Refund",
+        redirect_to_checkout: true %>
+  <% end %>
+</div>
