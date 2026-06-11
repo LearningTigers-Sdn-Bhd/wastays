@@ -129,6 +129,39 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
       expect(response.body).to include("Ready")
     end
 
+    it "renders the late checkout detected action for manageable ready rooms" do
+      sign_in_with_permissions("view_room_readiness", "manage_room_status")
+      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
+
+      get hotel_room_status_board_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Late Checkout Detected")
+      expect(response.body).to include("late_checkout_detected")
+    end
+
+    it "renders review due out bookings on the board" do
+      sign_in_with_permissions("view_room_readiness", "manage_room_status")
+      start_date = Date.new(2026, 6, 10)
+      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "late_checkout_detected")
+      booking = create(
+        :booking,
+        hotel: hotel,
+        status: "checked_in",
+        guest_name: "Late Guest",
+        check_in: start_date,
+        check_out: start_date + 2.days
+      )
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+
+      get hotel_room_status_board_path(hotel), params: { start_date: start_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Late Guest")
+      expect(response.body).to include("Review Due Out")
+    end
+
     it "renders status notes in the tooltip when present" do
       sign_in_with_permissions("view_room_readiness")
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "inspection_failed", notes: "Dust on headboard")

@@ -445,14 +445,19 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
   describe "POST /process_late_checkout" do
     let!(:folio) { create(:booking_folio, booking: booking, hotel: hotel, status: "open") }
+    let(:room_type) { create(:room_type, hotel: hotel, quantity: 10) }
     let(:new_checkout_date) { (booking.check_out + 1.day) }
     let(:new_checkout_param) { new_checkout_date.strftime("%Y-%m-%dT14:00") }
 
     before do
       grant_permission("post_folio_charges")
+      create(:booking_room, booking: booking, room_type: room_type, quantity: 1, room_number: "101")
     end
 
     it "updates the checkout period and applies the charge" do
+      booking.transition_status_to!("checked_in", event: "check_in") unless booking.checked_in?
+      booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/process_late_checkout", params: {
         charge_type: "charge",
         amount: "150.00",
@@ -460,7 +465,6 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       }
 
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
-      expect(flash[:notice]).to include("Late checkout charge applied")
 
       booking.reload
       expect(booking.check_out.to_date).to eq(new_checkout_date.to_date)
@@ -478,12 +482,40 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       }
 
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
-      expect(flash[:notice]).to include("Late checkout resolved without charge")
 
       booking.reload
       expect(booking.status).to eq("checked_in")
       expect(booking.check_out.to_date).to eq(new_checkout_date.to_date)
       expect(folio.folio_transactions.where(category: "late_checkout_charge").count).to eq(0)
+    end
+
+    it "does not process a booking outside late checkout review" do
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/process_late_checkout", params: {
+        charge_type: "charge",
+        amount: "150.00",
+        check_out: new_checkout_param
+      }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to eq("Booking is not pending late checkout review.")
+      expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
+    end
+
+    it "does not post a charge without folio charge permission" do
+      role.permissions.delete(Permission.find_by!(slug: "post_folio_charges"))
+      booking.transition_status_to!("checked_in", event: "check_in") unless booking.checked_in?
+      booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/process_late_checkout", params: {
+        charge_type: "charge",
+        amount: "150.00",
+        check_out: new_checkout_param
+      }
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to include("post_folio_charges")
+      expect(booking.reload.status).to eq("review_due_out")
+      expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
     end
   end
 

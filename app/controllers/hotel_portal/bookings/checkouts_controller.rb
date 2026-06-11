@@ -70,37 +70,15 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
   def process_late_checkout
     @booking = current_hotel.bookings.find(params[:id])
-
-    if params[:check_out].present?
-      unless @booking.update(check_out: params[:check_out])
-        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to update checkout period: #{@booking.errors.full_messages.to_sentence}"
-      end
-    end
-
-    should_charge = params[:charge_type] != "none" && params[:amount].to_f > 0
-
-    if should_charge
-      result = Folios::PostCategoryCharge.call(
-        folio: @booking.booking_folio,
-        user: current_user,
-        category: "late_checkout_charge",
-        amount: params[:amount],
-        description: "Late Checkout Charge"
-      )
-
-      unless result.success?
-        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to apply late checkout charge: #{result.error}"
-      end
-    end
-
-    Bookings::TransitionStatus.new(
+    result = Bookings::ProcessLateCheckout.call(
       booking: @booking,
-      status: "checked_in",
       user: current_user,
-      options: { event: "resolve_late_checkout" }
-    ).call
+      params: late_checkout_params
+    )
 
-    notice = should_charge ? "Late checkout charge applied." : "Late checkout resolved without charge."
+    return redirect_to hotel_booking_path(current_hotel, @booking), alert: result.error unless result.success?
+
+    notice = result.charged? ? "Late checkout charge applied." : "Late checkout resolved without charge."
     redirect_to hotel_booking_path(current_hotel, @booking), notice: notice
   end
 
@@ -114,6 +92,10 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     params.fetch(:booking, {}).permit(
       :checked_in_at, :checked_out_at
     )
+  end
+
+  def late_checkout_params
+    params.permit(:charge_type, :amount, :check_out, :charge_calculation, :custom_type, :custom_value)
   end
 
   def early_departure_checkout?(timestamp)
