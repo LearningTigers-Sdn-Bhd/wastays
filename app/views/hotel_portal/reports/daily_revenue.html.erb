@@ -22,6 +22,7 @@
           <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">End Date</label>
           <%= f.date_field :end_date, value: @report.end_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
         </div>
+        <% if feature_enabled_for_hotel?("excel_pdf_export") %>
         <% export_disabled = @report.rows.empty? %>
         <% if export_disabled %>
           <button type="button" disabled class="inline-flex min-w-[170px] cursor-not-allowed items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-400 shadow-sm" title="No data available to export">
@@ -40,6 +41,7 @@
               <%= link_to "Export CSV", daily_revenue_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, format: :csv), class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
             </div>
           </details>
+        <% end %>
         <% end %>
       <% end %>
     </div>

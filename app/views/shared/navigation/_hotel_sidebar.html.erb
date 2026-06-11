@@ -9,7 +9,7 @@
       </span>
       <span class="text-sm font-semibold text-neutral-text-primary truncate sidebar-label"><%= current_hotel.name.truncate(24) %></span>
     </div>
-    <% if current_user.admin_panel_user? %>
+    <% if current_user.superadmin? %>
       <a href="<%= admin_dashboard_path %>" target="_blank" rel="noopener noreferrer" class="sidebar-nav-link sidebar-nav-link-default">
         <%= cached_icon "external-link", class: "size-4 shrink-0" %>
         <span class="sidebar-label">Go to Admin Panel</span>

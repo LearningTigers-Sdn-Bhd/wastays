@@ -3,7 +3,10 @@ require 'rails_helper'
 RSpec.describe 'HotelPortal::Settings', type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  let(:hotel) { create(:hotel, account: account, status: 'registered') }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
+  let(:hotel) { create(:hotel, account: account, status: 'registered', plan: plan) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -13,6 +16,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: 'manage_hotel_profile'))
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
     sign_in_as(user)
   end
 
@@ -21,6 +25,36 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       get legacy_hotel_settings_path, params: { hotel_id: hotel.id }
 
       expect(response).to redirect_to(hotel_settings_path(hotel))
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/settings" do
+    it "shows concierge QR entry when AI concierge page is enabled" do
+      get hotel_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("View QR Code")
+    end
+
+    it "hides concierge QR entry when AI concierge page is excluded from plan" do
+      hotel.plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
+
+      get hotel_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("View QR Code")
+      expect(response.body).not_to include("Concierge Pages")
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/concierge_qr" do
+    it "redirects when AI concierge page is excluded from plan" do
+      hotel.plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
+
+      get hotel_concierge_qr_path(hotel)
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("This feature isn't included in your plan. Upgrade to access it.")
     end
   end
 

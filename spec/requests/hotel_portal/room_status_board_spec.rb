@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
-  let(:hotel) { create(:hotel) }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, plan: plan) }
   let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101" ]) }
 
   def grant_permission(role, slug)
@@ -16,6 +18,7 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
     role = create(:role, account: hotel.account)
     slugs.each { |slug| grant_permission(role, slug) }
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "room_status_board"), enabled: true)
     sign_in_as(user)
   end
 
@@ -27,6 +30,7 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
     account_role = create(:role, account: user.account)
     slugs.each { |slug| grant_permission(account_role, slug) }
     create(:user_role, user: user, role: account_role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "room_status_board"), enabled: true)
     sign_in_as(user)
   end
 

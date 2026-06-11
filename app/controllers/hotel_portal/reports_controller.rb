@@ -8,6 +8,13 @@ module HotelPortal
 
     before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches]
     before_action :authorize_view_payouts!, only: %i[payouts]
+    before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
+    before_action -> { require_feature!("arrivals_departures_list") }, only: %i[arrivals_departures]
+    before_action -> { require_feature!("outstanding_balance_noshow") }, only: %i[outstanding_balance]
+    before_action -> { require_feature!("housekeeper_productivity") }, only: %i[managers_flash]
+    before_action -> { require_feature!("booking_source_analysis") }, only: %i[breakdown]
+    before_action -> { require_feature!("revenue_allocation_per_night") }, only: %i[daily_revenue]
+    before_action -> { require_feature!("excel_pdf_export") }, if: -> { %i[csv xls pdf].include?(request.format.symbol) }
 
     def index
       # Note: FinancialFiltering sets @start_date and @end_date

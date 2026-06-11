@@ -3,6 +3,6 @@ module Admin
     include Breadcrumbable
 
     layout "admin"
-    before_action :authenticate_admin_panel_user!
+    before_action :authenticate_superadmin!
   end
 end

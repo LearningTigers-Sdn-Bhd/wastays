@@ -16,9 +16,9 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
     { title: "Room Categories", subtitle: "Manage room types", route: :hotel_room_types_path, keywords: "room categories room types" },
     { title: "Rates & Inventory", subtitle: "Rates calendar and inventory", route: :hotel_inventory_index_path, keywords: "rates inventory calendar" },
     { title: "Hotel Details", subtitle: "Property profile and public information", route: :edit_hotel_profile_path, keywords: "hotel details profile property" },
-    { title: "Policy Management", subtitle: "Property policies for AI concierge", route: :hotel_knowledge_policies_path, keywords: "policy management property rules regulations" },
-    { title: "FAQs Management", subtitle: "Frequently asked questions for AI concierge", route: :hotel_knowledge_faqs_path, keywords: "faq frequently asked questions answers" },
-    { title: "General Info Management", subtitle: "General property information for AI concierge", route: :hotel_knowledge_general_infos_path, keywords: "general info information property hotel" },
+    { title: "Policy Management", subtitle: "Property policies for AI concierge", route: :hotel_knowledge_policies_path, keywords: "policy management property rules regulations", plan_feature: "ai_concierge_page" },
+    { title: "FAQs Management", subtitle: "Frequently asked questions for AI concierge", route: :hotel_knowledge_faqs_path, keywords: "faq frequently asked questions answers", plan_feature: "ai_concierge_page" },
+    { title: "General Info Management", subtitle: "General property information for AI concierge", route: :hotel_knowledge_general_infos_path, keywords: "general info information property hotel", plan_feature: "ai_concierge_page" },
     { title: "My Profile", subtitle: "Signed-in user account profile", route: :edit_hotel_user_profile_path, keywords: "my profile user profile account" },
     { title: "Reports", subtitle: "Financial performance", route: :hotel_reports_path, keywords: "reports financial performance" },
     { title: "Night Audit", subtitle: "Close day and review blockers", route: :hotel_night_audits_path, keywords: "night audit business date day close blockers warnings" },
@@ -57,6 +57,8 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
 
   def page_results
     PAGE_RESULTS.filter_map do |entry|
+      next if entry[:plan_feature].present? && !@hotel.feature_enabled?(entry[:plan_feature])
+
       text = [ entry[:title], entry[:subtitle], entry[:keywords] ].join(" ").downcase
       score = search_score(text, @query)
       next if @query.present? && score.zero?

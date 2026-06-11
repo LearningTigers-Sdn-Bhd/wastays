@@ -1,7 +1,14 @@
 require "rails_helper"
 
 RSpec.describe "Public::Concierge::CheckIns", type: :request do
-  let(:hotel) { create(:hotel, status: "live", concierge_enabled: true) }
+  let(:feature_group) { create(:feature_group) }
+  let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
+  let(:plan) { create(:plan) }
+  let(:hotel) { create(:hotel, status: "live", concierge_enabled: true, plan: plan) }
+
+  before do
+    create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
+  end
   let(:room_type) { create(:room_type, hotel: hotel) }
   let(:booking) do
     b = create(:booking, hotel: hotel, guest_name: "Ahmad Zulkifli", status: "confirmed",

@@ -10,6 +10,14 @@ module Notifications
       booking_cancelled: []
     }.freeze
 
+    NOTIFICATION_FEATURE = {
+      "pre_arrival_notification" => "automated_prearrival",
+      "check_in_confirmation" => "checkin_confirmation",
+      "in_stay_guest_messaging" => "welcoming_instay_messaging",
+      "check_out_receipt_message" => "checkout_receipt_review",
+      "post_stay_review_request" => "checkout_receipt_review"
+    }.freeze
+
     def initialize(event:, booking:)
       @event = event.to_sym
       @booking = booking
@@ -23,6 +31,7 @@ module Notifications
       end
 
       notification_types = Array(EVENT_TO_NOTIFICATION_TYPE.fetch(@event))
+      notification_types = notification_types.select { |type| feature_enabled_for_type?(type) }
       return dispatch_scheduled_notifications(notification_types) if scheduled_only_events?
 
       notification_types.flat_map do |notification_type|
@@ -43,6 +52,13 @@ module Notifications
     end
 
     private
+
+    def feature_enabled_for_type?(notification_type)
+      slug = NOTIFICATION_FEATURE[notification_type]
+      return true if slug.nil?
+
+      @booking.hotel.feature_enabled?(slug)
+    end
 
     def dispatch_pre_arrival(event)
       scheduler = Notifications::PreArrivalScheduler.new(booking: @booking)

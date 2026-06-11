@@ -3,6 +3,7 @@
 module HotelPortal
   class RolesController < HotelPortal::BaseController
     before_action :authorize_manage_users!
+    before_action -> { require_feature!("role_based_access_control") }
     before_action :set_role, only: %i[edit update destroy]
     before_action :load_permissions, only: %i[new create edit update]
 

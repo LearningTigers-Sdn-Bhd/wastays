@@ -5,9 +5,12 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
   include ActiveJob::TestHelper
 
   let(:account) { create(:account) }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
   let(:hotel) do
     create(:hotel,
       account: account,
+      plan: plan,
       status: "live",
       time_zone: "Kuala Lumpur",
       business_starts_at: "08:00",
@@ -25,6 +28,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
   before do
     role.permissions << permission
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "no_show_auto_handling"), enabled: true)
   end
 
   def sign_in(current_user)

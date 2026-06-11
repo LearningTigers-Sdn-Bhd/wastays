@@ -2,7 +2,9 @@ require "rails_helper"
 
 RSpec.describe "Hotel portal request pages", type: :request do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "live") }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, account: account, status: "live", plan: plan) }
   let(:user) { create(:user, account: account, role: "admin") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
   let(:permission) { Permission.find_or_create_by!(slug: "manage_requests") { |record| record.name = "Manage Requests" } }
@@ -11,6 +13,7 @@ RSpec.describe "Hotel portal request pages", type: :request do
     RolePermission.find_or_create_by!(role: role, permission: permission)
     UserRole.find_or_create_by!(user: user, role: role)
     UserHotelAccess.find_or_create_by!(user: user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "task_assignment_minibar_log"), enabled: true)
     sign_in_as(user)
   end
 
