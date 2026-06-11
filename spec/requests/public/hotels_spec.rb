@@ -2,7 +2,6 @@ require 'rails_helper'
 
 RSpec.describe "Public::Hotels", type: :request do
   let(:hotel) { create(:hotel, status: 'approved') }
-  let(:easy_plan) { create(:plan, slug: "easy", name: "Easy") }
 
   describe "GET /index" do
     it "returns http success" do
@@ -29,25 +28,6 @@ RSpec.describe "Public::Hotels", type: :request do
       expect(response.body).to include("check_in=#{today}")
       expect(response.body).to include("check_out=#{today + 1.day}")
     end
-
-    it "does not render easy plan hotels in public listing" do
-      easy_hotel = create(:hotel, status: "approved", name: "Easy Hidden", city: "Kota Kinabalu", country: "Malaysia", plan: easy_plan)
-      visible_hotel = create(:hotel, status: "approved", name: "Visible Stay", city: "Kota Kinabalu", country: "Malaysia")
-      create(:room_type, hotel: easy_hotel, max_adults: 2)
-      create(:room_type, hotel: visible_hotel, max_adults: 2)
-
-      availability_service = instance_double(BookingEngine::AvailabilityService)
-      allow(BookingEngine::AvailabilityService).to receive(:new).and_return(availability_service)
-      allow(availability_service).to receive(:find_available_hotels).and_return([ easy_hotel, visible_hotel ])
-      allow(availability_service).to receive(:available_rooms_for_hotel).with(easy_hotel).and_return([ easy_hotel.room_types.first ])
-      allow(availability_service).to receive(:available_rooms_for_hotel).with(visible_hotel).and_return([ visible_hotel.room_types.first ])
-      allow(availability_service).to receive(:calculate_total_price).and_return(180)
-
-      get "/hotels", params: { city: "Kota Kinabalu" }
-
-      expect(response.body).to include("Visible Stay")
-      expect(response.body).not_to include("Easy Hidden")
-    end
   end
 
   describe "GET /show" do
@@ -68,15 +48,6 @@ RSpec.describe "Public::Hotels", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Check-In / Out")
       expect(response.body).to include("rate-calendar")
-    end
-
-    it "redirects when hotel is on easy plan" do
-      hotel.update!(plan: easy_plan)
-
-      get "/hotels/#{hotel.id}"
-
-      expect(response).to redirect_to(hotels_path)
-      expect(flash[:alert]).to eq("Hotel not found")
     end
   end
 end

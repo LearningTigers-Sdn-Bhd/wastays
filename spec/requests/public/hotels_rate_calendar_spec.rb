@@ -4,7 +4,6 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
   let!(:account)   { Account.create!(name: "RC Req", slug: "rc-req", status: "active") }
   let!(:hotel)     { Hotel.create!(name: "RC Hotel", city: "KL", country: "Malaysia", account: account, status: "approved") }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Standard", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
-  let!(:easy_plan) { create(:plan, slug: "easy", name: "Easy") }
 
   let(:today) { Date.current }
   let(:base_params) { { start_date: today.to_s, end_date: (today + 6).to_s } }
@@ -25,14 +24,6 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
     it "returns 404 when hotel is not active" do
       hotel.update!(status: "draft")
       get "/hotels/#{hotel.slug}/rate_calendar", params: base_params
-      expect(response).to have_http_status(:not_found)
-    end
-
-    it "returns 404 when hotel is on easy plan" do
-      hotel.update!(plan: easy_plan)
-
-      get "/hotels/#{hotel.slug}/rate_calendar", params: base_params
-
       expect(response).to have_http_status(:not_found)
     end
 

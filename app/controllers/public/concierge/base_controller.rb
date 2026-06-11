@@ -29,13 +29,7 @@ module Public
       end
 
       def ensure_concierge_enabled
-        return if @hotel&.concierge_available? && @hotel.feature_enabled?("ai_concierge_page")
-
-        if @hotel&.concierge_available?
-          redirect_to hotel_path(@hotel.slug), alert: "AI concierge is not available for this hotel."
-          return
-        end
-
+        return if @hotel&.concierge_available?
         render file: Rails.public_path.join("404.html"), status: :not_found, layout: false
       end
     end

@@ -1,14 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Public::Concierge::Home", type: :request do
-  let(:feature_group) { create(:feature_group) }
-  let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
-  let(:plan) { create(:plan) }
-  let(:hotel) { create(:hotel, status: "live", concierge_enabled: true, plan: plan) }
-
-  before do
-    create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
-  end
+  let(:hotel) { create(:hotel, status: "live", concierge_enabled: true) }
 
   describe "GET /h/:hotel_slug/concierge" do
     it "returns 200 for a live hotel with concierge enabled" do
@@ -35,15 +28,6 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       hotel.update!(concierge_enabled: false)
       get concierge_home_path(hotel.slug)
       expect(response).to have_http_status(:not_found)
-    end
-
-    it "redirects to public hotel page when AI concierge page is excluded from plan" do
-      hotel.plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
-
-      get concierge_home_path(hotel.slug)
-
-      expect(response).to redirect_to(hotel_path(hotel.slug))
-      expect(flash[:alert]).to eq("AI concierge is not available for this hotel.")
     end
 
     it "returns 404 for an unknown slug" do

@@ -3,14 +3,14 @@ class Public::HotelsController < ApplicationController
 
   def index
     @availability_service = BookingEngine::AvailabilityService.new(params)
-    @hotels = @availability_service.find_available_hotels.select(&:publicly_bookable?)
+    @hotels = @availability_service.find_available_hotels
     @display_currency = display_currency_for_request
   end
 
   def show
     @hotel = Hotel.friendly.find(params[:id])
     # Ensure only active hotels are viewable
-    unless @hotel.publicly_bookable?
+    unless @hotel.active?
       redirect_to hotels_path, alert: "Hotel not found"
       return
     end
@@ -56,7 +56,7 @@ class Public::HotelsController < ApplicationController
 
   def rate_calendar
     @hotel = Hotel.friendly.find(params[:id])
-    return head :not_found unless @hotel.publicly_bookable?
+    return head :not_found unless @hotel.active?
 
     start_date = parse_date(params[:start_date]) || Date.current
     end_date   = parse_date(params[:end_date])   || (start_date + 90)
