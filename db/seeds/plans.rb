@@ -46,6 +46,8 @@ plan_feature_defs = [
     { "direct"=>true, "core"=>true, "plus"=>true, "enterprise"=>true } ],
   [ "be", "direct_booking_flow", "Direct booking flow", false, false,
     { "direct"=>true, "core"=>true, "plus"=>true, "enterprise"=>true } ],
+  [ "be", "folio_management_billing", "Folio Management & Billing", false, false,
+    { "direct"=>true, "core"=>true, "plus"=>true, "enterprise"=>true } ],
   # CM
   [ "cm", "manage_40_otas", "Manage 40+ OTAs at one go", false, false,
     { "plus"=>true, "enterprise"=>true } ],
@@ -58,8 +60,6 @@ plan_feature_defs = [
     { "core"=>"room_allotment", "plus"=>true, "enterprise"=>true } ],
   [ "pms", "front_desk_operations", "Front Desk Operations", true, false,
     { "core"=>"basic", "plus"=>"basic", "enterprise"=>"advanced" } ],
-  [ "pms", "folio_management_billing", "Folio Management & Billing", false, false,
-    { "enterprise"=>true } ],
   # Rate Management
   [ "rate", "rate_plan_hierarchy", "Rate plan hierarchy", true, false,
     { "core"=>"basic", "plus"=>"basic", "enterprise"=>"full" } ],

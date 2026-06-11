@@ -28,6 +28,36 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
   end
 
+  describe "GET /hotel/:hotel_id/settings" do
+    it "shows concierge QR entry when AI concierge page is enabled" do
+      get hotel_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("View QR Code")
+    end
+
+    it "hides concierge QR entry when AI concierge page is excluded from plan" do
+      hotel.plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
+
+      get hotel_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("View QR Code")
+      expect(response.body).not_to include("Concierge Pages")
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/concierge_qr" do
+    it "redirects when AI concierge page is excluded from plan" do
+      hotel.plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
+
+      get hotel_concierge_qr_path(hotel)
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("This feature isn't included in your plan. Upgrade to access it.")
+    end
+  end
+
   describe 'PATCH /hotel/settings' do
     it 'updates check-in notification settings and channels' do
       patch hotel_settings_path(hotel), params: {

@@ -21,6 +21,13 @@ RSpec.describe "plans seed", type: :model do
     expect(slugs).to match_array(%w[plus enterprise])
   end
 
+  it "puts folio access under booking engine default plans" do
+    feature = Feature.find_by(slug: "folio_management_billing")
+    slugs = PlanFeature.where(feature: feature, enabled: true).joins(:plan).pluck("plans.slug")
+    expect(slugs).to match_array(%w[direct core plus enterprise])
+    expect(feature.feature_group.slug).to eq("be")
+  end
+
   it "sets front desk levels correctly" do
     feature = Feature.find_by(slug: "front_desk_operations")
     levels = PlanFeature.where(feature: feature).joins(:plan).pluck("plans.slug", :level).to_h

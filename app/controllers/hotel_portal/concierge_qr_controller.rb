@@ -1,4 +1,5 @@
 class HotelPortal::ConciergeQrController < HotelPortal::BaseController
+  before_action -> { require_feature!("ai_concierge_page") }
   before_action :set_breadcrumbs, only: [ :show ]
 
   def show
