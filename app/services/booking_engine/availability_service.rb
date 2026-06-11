@@ -143,6 +143,7 @@ module BookingEngine
       nightly_total = 0.to_d
       winning_rule = "base"
       highest_priority = 0
+      complete_rates_by_date = {}
 
       stay_dates.each do |date|
         rate = rates_by_date[date]
@@ -150,6 +151,15 @@ module BookingEngine
         return nil if price.nil? # Stay is restricted or unpriced on this date
 
         nightly_total += price
+
+        complete_rates_by_date[date] = rate || {
+          "date" => date,
+          "price" => price,
+          "currency" => currency,
+          "rate_plan_id" => rate_plan&.id,
+          "room_type_id" => room_type.id,
+          "applied_rule_type" => "base"
+        }
 
         rule_type = rate&.applied_rule_type || "base"
         priority = RULE_PRIORITY[rule_type] || 0
@@ -164,7 +174,7 @@ module BookingEngine
         currency: currency,
         total_price: nightly_total * @room_count,
         nightly_price: nightly_total / nights,
-        nightly_rates: rates_by_date,
+        nightly_rates: complete_rates_by_date,
         winning_rule: winning_rule
       )
     end

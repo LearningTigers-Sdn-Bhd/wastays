@@ -1,4 +1,4 @@
-<div class="mt-2 flex flex-wrap gap-1.5">
+<div class="flex flex-wrap gap-1.5">
   <div data-controller="floating" data-floating-placement-value="bottom-end" class="relative z-[1000] isolate inline-flex overflow-visible">
     <button data-floating-target="reference" data-action="click->floating#toggle" id="room-actions-<%= room_status_id %>" type="button" 
       title="<%= (status == 'inspection_failed' && failure_note.present?) ? "Failure Reason: #{failure_note}" : '' %>"
