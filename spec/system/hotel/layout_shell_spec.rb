@@ -3,7 +3,9 @@ require 'rails_helper'
 RSpec.describe 'Hotel layout shell', type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin', email: 'owner@example.com') }
-  let(:hotel) { create(:hotel, account: account, status: 'approved') }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, account: account, plan: plan, status: 'approved') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -21,6 +23,9 @@ RSpec.describe 'Hotel layout shell', type: :system do
 
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+    %w[unified_guest_profile no_show_auto_handling].each do |slug|
+      create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: slug), enabled: true)
+    end
 
     visit login_path
     fill_in 'Email Address', with: user.email

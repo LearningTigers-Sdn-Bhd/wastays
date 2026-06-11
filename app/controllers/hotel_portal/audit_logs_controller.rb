@@ -4,6 +4,8 @@ require "prawn"
 require "prawn/table"
 
 class HotelPortal::AuditLogsController < HotelPortal::BaseController
+  before_action -> { require_feature!("full_audit_trail") }
+
   def index
     @logs = current_hotel.inventory_audit_logs.includes(:room_type, :user).order(created_at: :desc)
 

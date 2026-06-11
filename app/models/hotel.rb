@@ -34,6 +34,7 @@ class Hotel < ApplicationRecord
   has_many :staff_invitations, dependent: :destroy
   has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
+  belongs_to :plan, optional: true
   has_one :property_policy, dependent: :destroy
   accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
@@ -157,8 +158,39 @@ class Hotel < ApplicationRecord
     %w[approved live].include?(status)
   end
 
+  def publicly_bookable?
+    active? && plan&.slug != "easy"
+  end
+
   def concierge_available?
     active? && concierge_enabled?
+  end
+
+  def plan_feature_map
+    @plan_feature_map ||= if plan
+      plan.plan_features
+          .joins(:feature)
+          .pluck("features.slug", :enabled, :level, :addon)
+          .each_with_object({}) { |(slug, enabled, level, addon), h|
+            h[slug] = { enabled: enabled, level: level, addon: addon }
+          }
+    else
+      {}
+    end
+  end
+
+  def feature_enabled?(slug)
+    !!plan_feature_map.dig(slug.to_s, :enabled)
+  end
+
+  def feature_level(slug)
+    row = plan_feature_map[slug.to_s]
+    return nil unless row && row[:enabled]
+    row[:level]
+  end
+
+  def feature_addon?(slug)
+    !!plan_feature_map.dig(slug.to_s, :addon)
   end
 
   def hotel_time_zone

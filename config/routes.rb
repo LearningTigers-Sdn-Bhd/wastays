@@ -223,6 +223,11 @@ Rails.application.routes.draw do
     resource :integrations, only: [ :show, :update, :destroy ] do
       post :test_r2_connection, on: :collection
     end
+    resources :plans, only: [ :index ] do
+      collection do
+        patch :update_matrix
+      end
+    end
   end
 
   # Hotel admin dashboard
@@ -230,6 +235,7 @@ Rails.application.routes.draw do
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
     get "dashboard", to: "dashboard#index", as: :dashboard
+    get "plan", to: "plans#show", as: :plan
     post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
     resources :onboarding_sessions, only: [ :index ] do

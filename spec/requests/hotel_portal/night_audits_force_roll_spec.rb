@@ -5,7 +5,9 @@ RSpec.describe "HotelPortal::NightAudits Force Roll", type: :request do
   include ActiveJob::TestHelper
 
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "live") }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, account: account, plan: plan, status: "live") }
   let(:user) { create(:user, account: account, role: "hotel_staff") }
   let(:role) { create(:role, account: account, slug: "manager", name: "Manager") }
   let!(:manage_permission) { Permission.find_or_create_by!(slug: "manage_night_audit") { |p| p.name = "Manage Night Audit" } }
@@ -14,6 +16,7 @@ RSpec.describe "HotelPortal::NightAudits Force Roll", type: :request do
   before do
     role.permissions << manage_permission
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "no_show_auto_handling"), enabled: true)
   end
 
   def sign_in(current_user)

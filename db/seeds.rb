@@ -495,6 +495,8 @@ end
 SeedLog.section('Seeding complete')
 end
 
+load Rails.root.join("db", "seeds", "plans.rb") unless Rails.env.test?
+
 Hotel.find_each do |hotel|
   NotificationConfig.find_or_create_by!(hotel: hotel, notification_type: "check_in_confirmation") do |config|
     config.enabled = true

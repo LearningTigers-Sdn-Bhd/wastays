@@ -1,14 +1,16 @@
 require 'rails_helper'
 
 RSpec.describe "HotelPortal::AuditLogs", type: :request do
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, status: 'approved', plan: plan) }
   around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
-
-  let(:hotel) { create(:hotel, status: 'approved') }
   let(:user) { create(:user) }
 
   before do
     role = create(:role, account: hotel.account)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "full_audit_trail"), enabled: true)
     sign_in_as(user)
   end
 

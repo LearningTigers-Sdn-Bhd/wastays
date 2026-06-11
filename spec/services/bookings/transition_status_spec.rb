@@ -7,11 +7,23 @@ RSpec.describe Bookings::TransitionStatus do
   let(:user) { create(:user, role: "superadmin") }
   let(:timestamp) { Time.current }
 
+  def enable_feature_for(hotel, slug)
+    plan = hotel.plan || create(:plan).tap { |record| hotel.update!(plan: record) }
+    feature = Feature.find_or_create_by!(slug: slug) do |record|
+      record.name = slug.humanize
+      record.feature_group = FeatureGroup.first || create(:feature_group)
+    end
+    plan_feature = PlanFeature.find_or_initialize_by(plan: plan, feature: feature)
+    plan_feature.enabled = true
+    plan_feature.save!
+  end
+
   describe "#call" do
     context "when status is checked_in" do
       subject { described_class.new(booking: booking, status: "checked_in", timestamp: timestamp) }
 
       it "updates status and checked_in_at" do
+        enable_feature_for(booking.hotel, "checkin_confirmation")
         NotificationConfig.create!(hotel: booking.hotel, notification_type: "check_in_confirmation", enabled: true, channels: %w[whatsapp email], settings: {})
 
         expect {
@@ -201,6 +213,7 @@ RSpec.describe Bookings::TransitionStatus do
 
       it "updates status and checked_out_at" do
         folio = create_settled_folio
+        enable_feature_for(booking.hotel, "checkout_receipt_review")
         NotificationConfig.create!(
           hotel: booking.hotel,
           notification_type: "post_stay_review_request",

@@ -2,6 +2,7 @@
 
 class ApplicationController < ActionController::Base
   include Pundit::Authorization
+  include PlanGated
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
@@ -74,13 +75,6 @@ class ApplicationController < ActionController::Base
   def authenticate_superadmin!
     return unless authenticate_user!
     unless current_user.superadmin?
-      redirect_to root_path, alert: "You are not authorized to access this page"
-    end
-  end
-
-  def authenticate_admin_panel_user!
-    return unless authenticate_user!
-    unless current_user.admin_panel_user?
       redirect_to root_path, alert: "You are not authorized to access this page"
     end
   end

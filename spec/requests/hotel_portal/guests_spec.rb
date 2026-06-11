@@ -2,7 +2,9 @@ require "rails_helper"
 require "cgi"
 
 RSpec.describe "HotelPortal::Guests", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, status: "approved", plan: plan) }
   let(:user) { create(:user) }
 
   before do
@@ -10,6 +12,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings'))
     role.permissions << (Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings'))
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "unified_guest_profile"), enabled: true)
     sign_in_as(user)
   end
 
