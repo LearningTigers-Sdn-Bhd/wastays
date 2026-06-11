@@ -27,6 +27,7 @@ module Rooms
     def call
       return success if @room_status.status == @status
       return failure("Unsupported room status: #{@status}.") unless RoomStatus::STATUSES.include?(@status)
+      return failure("Notes are mandatory when marking a room as ready.") if @status == "ready" && @reason.blank?
       return failure(transition_error) unless allowed_transition?
 
       old_status = @room_status.status

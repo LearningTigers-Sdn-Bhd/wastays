@@ -138,6 +138,7 @@ platform_permissions = [
   { name: 'Manage Guest Arrival', slug: 'manage_guest_arrival' },
   { name: 'View Audit Logs', slug: 'view_audit_logs' },
   { name: 'Export Audit Logs', slug: 'export_audit_logs' },
+  { name: 'Delete Guest Record', slug: 'delete_guest_record' },
   { name: 'Manage Night Audit', slug: 'manage_night_audit' },
   { name: 'Manage Users', slug: 'manage_users' },
   { name: 'Manage Room Status', slug: 'manage_room_status' },

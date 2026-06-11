@@ -6,7 +6,8 @@ module HotelPortal
 
     before_action -> { require_feature!("unified_guest_profile") }
     before_action :authorize_view_bookings!, only: %i[index show]
-    before_action :authorize_manage_bookings!, only: %i[search new create edit update destroy]
+    before_action :authorize_manage_bookings!, only: %i[search new create edit update]
+    before_action :authorize_delete_guest_record!, only: %i[destroy]
     before_action :set_guest, only: [ :show, :edit, :update, :destroy ]
     before_action :set_breadcrumbs, only: [ :show, :new, :create, :edit, :update ]
 
@@ -131,6 +132,10 @@ module HotelPortal
 
     def authorize_manage_bookings!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
+    end
+
+    def authorize_delete_guest_record!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("delete_guest_record", hotel: current_hotel)
     end
   end
 end
