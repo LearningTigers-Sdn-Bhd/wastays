@@ -19,7 +19,7 @@ module HotelPortal
     end
 
     def check_outs_today_count
-      base_scope.where(check_out: Date.current).count
+      base_scope.checking_out_on(Date.current, @hotel.hotel_time_zone).count
     end
 
     private

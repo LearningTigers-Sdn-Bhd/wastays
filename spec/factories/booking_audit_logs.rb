@@ -4,6 +4,9 @@ FactoryBot.define do
     association :auditable, factory: :booking
     association :user
     action_type { "update" }
+    category { "stay" }
+    source { "staff" }
+    occurred_at { Time.current }
     old_value { { "status" => "pending" } }
     new_value { { "status" => "confirmed" } }
     metadata { {} }

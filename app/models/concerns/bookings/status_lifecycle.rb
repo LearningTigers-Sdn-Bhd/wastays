@@ -10,8 +10,14 @@ module Bookings
       "confirmed" => {
         "check_in" => "checked_in",
         "cancel" => "cancelled",
-        "mark_no_show" => "no_show",
+        "review_no_show" => "review_no_show",
         "mark_overbooked" => "overbooked"
+      },
+      "review_no_show" => {
+        "backdated_check_in" => "checked_in",
+        "mark_no_show" => "no_show",
+        "auto_mark_no_show" => "no_show",
+        "cancel" => "cancelled"
       },
       "overbooked" => {
         "resolve_overbooking" => "confirmed",

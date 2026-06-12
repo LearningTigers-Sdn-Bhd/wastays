@@ -37,7 +37,7 @@
 
         <div class="flex items-center gap-3">
           <label for="booking-status-filter" class="text-sm font-medium text-slate-600">Status</label>
-          <%= f.select :status, options_for_select(["All Status", "Pending", "Confirmed", "Checked In", "Completed", "Cancelled"], params[:status]), {}, id: "booking-status-filter", class: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submitNow" } %>
+          <%= f.select :status, options_for_select(["All Status", "Pending", "Confirmed", "Review No Show", "No Show", "Checked In", "Completed", "Cancelled"], params[:status]), {}, id: "booking-status-filter", class: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submitNow" } %>
         </div>
       <% end %>
     </div>

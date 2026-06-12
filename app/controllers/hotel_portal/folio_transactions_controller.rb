@@ -20,7 +20,7 @@ module HotelPortal
         return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
       end
 
-      result = Folios::PostStaffTransaction.call(
+      result = ::Folios::PostStaffTransaction.call(
         folio: @booking.booking_folio,
         user: current_user,
         transaction_type: folio_transaction_params[:transaction_type],
@@ -43,7 +43,7 @@ module HotelPortal
       end
 
       transaction = @booking.booking_folio.folio_transactions.find(params[:id])
-      result = Folios::ReverseTransaction.call(
+      result = ::Folios::ReverseTransaction.call(
         transaction: transaction,
         user: current_user,
         correction_reason: reversal_params[:correction_reason],
@@ -63,9 +63,9 @@ module HotelPortal
 
     def redirect_after_post(options = {})
       if params[:redirect_to_checkout] == "true"
-        redirect_to checkout_hotel_booking_path(current_hotel, @booking), options
+        redirect_to hotel_booking_transaction_check_out_path(current_hotel, @booking), options
       elsif params[:redirect_to_folio] == "true"
-        redirect_to folio_hotel_booking_path(current_hotel, @booking), options
+        redirect_to hotel_folio_path(current_hotel, @booking), options
       else
         redirect_to hotel_booking_path(current_hotel, @booking), options
       end

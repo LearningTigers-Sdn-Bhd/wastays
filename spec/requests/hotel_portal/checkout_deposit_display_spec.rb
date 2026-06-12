@@ -30,19 +30,18 @@ RSpec.describe "Checkout Deposit Display", type: :request do
       payment_method: "cash"
     )
 
-    get checkout_hotel_booking_path(hotel, booking), headers: { "Accept" => "text/html" }
+    get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Accept" => "text/html" }
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Security Deposit Status")
-    expect(response.body).to include("Current Status")
-    expect(response.body).to include("Collected")
+    expect(response.body).to include("Held security deposit")
+    expect(response.body).to include("MYR 250.00")
     expect(response.body).to include("Security deposits are tracked independently from the folio")
   end
 
   it "does not render the deposits section if no deposits are held" do
-    get checkout_hotel_booking_path(hotel, booking), headers: { "Accept" => "text/html" }
+    get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Accept" => "text/html" }
 
     expect(response).to have_http_status(:success)
-    expect(response.body).not_to include("Held Security Deposits")
+    expect(response.body).not_to include("Held security deposit")
   end
 end

@@ -18,12 +18,14 @@ module Bookings
 
     def call
       return OpenStruct.new(success?: false, errors: [ "Status cannot be changed through stay update." ]) if @params.key?(:status)
+      normalize_scheduled_stay!
 
       failure_error = nil
       assigned_room_number = extract_assigned_room_number
       result = nil
 
       result = ActiveRecord::Base.transaction do
+        old_audit_values = audit_values
         # 1. Store old state for inventory management and change detection
         old_check_in = @booking.check_in
         old_check_out = @booking.check_out
@@ -72,7 +74,7 @@ module Bookings
             end
 
             # Update booking totals (including taxes)
-            @booking.update_columns(
+            @booking.update!(
               total_amount: financial_snapshot.room_total + financial_snapshot.tax_total,
               tax_lines: financial_snapshot.tax_lines,
               tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
@@ -82,6 +84,11 @@ module Bookings
 
             # Deduct new inventory
             InventoryManager.new(@booking).deduct
+
+            # Reconcile forecasts against the changed stay without recreating already-posted nights.
+            if @booking.booking_folio.present?
+              Folios::SyncForecastedCharges.call(booking_folio: @booking.booking_folio)
+            end
           end
 
           # 4. Handle Room Assignment if room number changed or dates changed
@@ -136,10 +143,13 @@ module Bookings
           end
 
           # Record Audit Log
-          Bookings::RecordAuditLog.call(
+          Bookings::RecordAuditLog.call!(
             auditable: @booking,
             user: @user,
-            action_type: "update"
+            action_type: "update",
+            old_value: old_audit_values,
+            new_value: audit_values,
+            reason: @override_reason.presence
           )
 
           sync_guest(@booking)
@@ -157,6 +167,26 @@ module Bookings
 
 
     private
+
+    def audit_values
+      room = @booking.booking_rooms.first
+      @booking.attributes.slice(
+        "guest_name", "guest_email", "guest_phone", "guest_country", "check_in", "check_out",
+        "adults", "children", "total_amount", "payment_status", "guarantee_method"
+      ).merge(
+        "room_category" => room&.room_type&.name,
+        "rate_plan" => room&.rate_plan&.name,
+        "room_number" => room&.room_number
+      )
+    end
+
+    def normalize_scheduled_stay!
+      %i[check_in check_out].each do |kind|
+        next if @params[kind].blank?
+
+        @params[kind] = ScheduledStay.at_hotel_time(hotel: @hotel, value: @params[kind], kind: kind)
+      end
+    end
 
     def extract_assigned_room_number
       from_nested_params = @params.dig(:booking_rooms_attributes, "0", :room_number) ||

@@ -10,6 +10,11 @@ RSpec.describe GuestArrival::SyncWorkflowEvent do
     expect(result.success?).to be(true)
     expect(pre_checkin.reload.status).to eq("in_progress")
     expect(booking.reload.pre_checkin_status).to eq("in_progress")
+    expect(BookingAuditLog.where(auditable: booking).last).to have_attributes(
+      action_type: "pre_checkin_updated",
+      source: "system",
+      category: "stay"
+    )
   end
 
   it "finalizes pre-checkin on flow_completed" do
@@ -19,6 +24,10 @@ RSpec.describe GuestArrival::SyncWorkflowEvent do
     expect(pre_checkin.reload.status).to eq("completed")
     expect(pre_checkin.metadata["final_payload"]).to eq({ "foo" => "bar" })
     expect(booking.reload.guarantee_method).to eq("pre_checkin_completed")
+    expect(BookingAuditLog.where(auditable: booking).last).to have_attributes(
+      action_type: "pre_checkin_completed",
+      source: "system"
+    )
   end
 
   it "updates document status on document_uploaded event" do

@@ -7,7 +7,7 @@ class HotelPortal::ArrivalsController < HotelPortal::BaseController
 
     arrivals_scope = current_hotel.bookings
                                   .active
-                                  .where(check_in: @date)
+                                  .checking_in_on(@date, current_hotel.hotel_time_zone)
                                   .includes(:booking_rooms, :pre_checkin, :booking_guests, :guests)
 
     if @query.present?
@@ -21,8 +21,8 @@ class HotelPortal::ArrivalsController < HotelPortal::BaseController
     @all_arrivals = arrivals_scope.order(created_at: :asc)
     @arrivals = @all_arrivals.page(params[:page]).per(25)
 
-    @today_count = current_hotel.bookings.active.where(check_in: Date.today).count
-    @tomorrow_count = current_hotel.bookings.active.where(check_in: Date.tomorrow).count
+    @today_count = current_hotel.bookings.active.checking_in_on(Date.today, current_hotel.hotel_time_zone).count
+    @tomorrow_count = current_hotel.bookings.active.checking_in_on(Date.tomorrow, current_hotel.hotel_time_zone).count
   end
 
   private

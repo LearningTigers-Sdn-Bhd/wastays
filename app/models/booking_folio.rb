@@ -4,6 +4,7 @@ class BookingFolio < ApplicationRecord
   belongs_to :hotel
   belongs_to :booking
   has_many :folio_transactions, dependent: :restrict_with_error
+  has_many :folio_forecasted_charges, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_many :financial_audit_events, dependent: :restrict_with_error
 
@@ -14,6 +15,27 @@ class BookingFolio < ApplicationRecord
 
   def outstanding_balance
     total_charges - total_payments + total_adjustments
+  end
+
+  def unsettled_forecasts
+    folio_forecasted_charges.forecast
+  end
+
+  def projected_forecasts
+    return folio_forecasted_charges.none if status == "closed" || booking.blank?
+    return folio_forecasted_charges.none if booking.status.in?(%w[cancelled completed no_show])
+
+    unsettled_forecasts
+      .where(FolioForecastedCharge.arel_table[:stay_date].lt(booking.check_out.to_date))
+      .order(:stay_date, :charge_kind, :identity)
+  end
+
+  def all_charges_posted?
+    folio_forecasted_charges.forecast.none?
+  end
+
+  def projected_outstanding_balance
+    outstanding_balance + projected_forecasts.sum(:amount)
   end
 
   def total_charges

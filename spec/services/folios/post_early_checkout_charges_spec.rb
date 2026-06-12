@@ -83,4 +83,42 @@ RSpec.describe Folios::PostEarlyCheckoutCharges do
     expect(folio.folio_transactions.find_by(description: "Early checkout charge - Night 1").amount).to eq(150.0)
     expect(folio.folio_transactions.find_by(description: "Early checkout charge - Night 2").amount).to eq(150.0)
   end
+
+  describe ".projected_checkout_balance" do
+    it "excludes overlapping forecasted charges to avoid double-counting with early departure charges" do
+      create(:folio_transaction,
+             booking_folio: folio,
+             transaction_type: "payment",
+             category: "booking_payment",
+             amount: 320.0,
+             posting_date: Date.current,
+             user: user)
+
+      projected = described_class.projected_checkout_balance(
+        folio: folio.reload,
+        departure_date: departure_date,
+        original_check_out: original_check_out
+      )
+
+      expect(projected).to eq(0.0)
+    end
+
+    it "reflects partial payments accurately" do
+      create(:folio_transaction,
+             booking_folio: folio,
+             transaction_type: "payment",
+             category: "cash",
+             amount: 100.0,
+             posting_date: Date.current,
+             user: user)
+
+      projected = described_class.projected_checkout_balance(
+        folio: folio.reload,
+        departure_date: departure_date,
+        original_check_out: original_check_out
+      )
+
+      expect(projected).to eq(220.0)
+    end
+  end
 end

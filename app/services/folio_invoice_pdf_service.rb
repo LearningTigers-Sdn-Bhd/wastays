@@ -159,7 +159,7 @@ class FolioInvoicePdfService
   # ──────────────────────────────────────────────
 
   def draw_stay_summary(pdf)
-    nights = ((@booking.check_out - @booking.check_in).to_i rescue 0)
+    nights = ((@booking.check_out.to_date - @booking.check_in.to_date).to_i rescue 0)
     nights_label = nights == 1 ? "1 Night" : "#{nights} Nights"
     room_label   = @booking.booking_rooms.includes(:room_type).map { |br|
       [ br.room_type_snapshot["name"].presence || br.room_type&.name, br.room_number.presence ].compact.join(" · ")

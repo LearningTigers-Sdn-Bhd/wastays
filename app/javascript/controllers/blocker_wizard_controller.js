@@ -368,7 +368,7 @@ export default class extends Controller {
         `
       } else if (stepKey === "captured_payment_not_synced" || stepKey === "refund_not_synced") {
         const formattedAmount = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.amount)
-        actionBtn = `<a href="/hotel/${hotelId}/bookings/${item.booking_id}/folio" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition">Go to Folio &rarr;</a>`
+        actionBtn = `<a href="/hotel/${hotelId}/folios/${item.booking_id}" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition">Go to Folio &rarr;</a>`
         cols = `
           <td class="px-6 py-4 text-sm font-semibold text-slate-900">${item.guest_name}</td>
           <td class="px-6 py-4 text-sm text-slate-600 font-mono">${item.confirmation_token}</td>
@@ -379,7 +379,7 @@ export default class extends Controller {
         const formattedBalance = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.balance)
         const isCredit = item.balance < 0
         const balClass = isCredit ? "text-emerald-600 font-semibold" : "text-amber-600 font-semibold"
-        actionBtn = `<a href="/hotel/${hotelId}/bookings/${item.booking_id}/folio" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition">Go to Folio &rarr;</a>`
+        actionBtn = `<a href="/hotel/${hotelId}/folios/${item.booking_id}" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition">Go to Folio &rarr;</a>`
         cols = `
           <td class="px-6 py-4 text-sm font-semibold text-slate-900">${item.guest_name}</td>
           <td class="px-6 py-4 text-sm text-slate-600 font-mono">${item.confirmation_token}</td>
@@ -390,7 +390,7 @@ export default class extends Controller {
         // default bookings
         const dates = `${item.check_in} &ndash; ${item.check_out}`
         const isFolioAction = ["missing_nightly_charges", "outstanding_folio_balance"].includes(stepKey)
-        const destUrl = isFolioAction ? `/hotel/${hotelId}/bookings/${item.booking_id}/folio` : `/hotel/${hotelId}/bookings/${item.booking_id}`
+        const destUrl = isFolioAction ? `/hotel/${hotelId}/folios/${item.booking_id}` : `/hotel/${hotelId}/bookings/${item.booking_id}`
         const btnText = isFolioAction ? "Go to Folio &rarr;" : "Go to Booking &rarr;"
         actionBtn = `<a href="${destUrl}" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition">${btnText}</a>`
         cols = `

@@ -172,7 +172,7 @@
                       </div>
                     <% end %>
 
-                    <%= render "hotel_portal/bookings/check_in_modal", booking: booking, hotel: current_hotel %>
+                    <%= render "hotel_portal/bookings/transactions/check_in_reservation/partials/legacy_modal", booking: booking, hotel: current_hotel %>
                   </div>
                 </td>
               </tr>
@@ -265,7 +265,7 @@
               <% end %>
             </div>
 
-            <%= render "hotel_portal/bookings/check_in_modal", booking: booking, hotel: current_hotel, id_suffix: "mob" %>
+            <%= render "hotel_portal/bookings/transactions/check_in_reservation/partials/legacy_modal", booking: booking, hotel: current_hotel, id_suffix: "mob" %>
           </div>
         <% end %>
       <% else %>

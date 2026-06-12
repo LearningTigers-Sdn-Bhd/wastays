@@ -20,11 +20,12 @@ module HotelOps
 
     def build_summary
       {
-        "arrivals_count" => hotel_bookings.where(check_in: @business_date).count,
-        "no_show_count" => hotel_bookings.no_show.where(check_in: @business_date).count,
-        "due_out_count" => hotel_bookings.where(check_out: @business_date).count,
+        "arrivals_count" => hotel_bookings.checking_in_on(@business_date, @hotel.hotel_time_zone).count,
+        "review_no_show_count" => hotel_bookings.where(status: "review_no_show").count,
+        "no_show_count" => hotel_bookings.no_show.checking_in_on(@business_date, @hotel.hotel_time_zone).count,
+        "due_out_count" => hotel_bookings.checking_out_on(@business_date, @hotel.hotel_time_zone).count,
         "checked_out_count" => hotel_bookings.completed.where(checked_out_at: @hotel.business_day_window_for(@business_date)).count,
-        "in_house_count" => hotel_bookings.checked_in.where("check_in <= ? AND check_out >= ?", @business_date, @business_date).count,
+        "in_house_count" => hotel_bookings.checked_in.where("check_in::date <= ? AND check_out::date >= ?", @business_date, @business_date).count,
         "payment_status_counts" => payment_status_counts
       }
     end
@@ -75,7 +76,7 @@ module HotelOps
     end
 
     def due_out_not_checked_out
-      @due_out_not_checked_out ||= hotel_bookings.where(check_out: @business_date).where(status: [ "checked_in", "review_due_out" ])
+      @due_out_not_checked_out ||= hotel_bookings.checking_out_on(@business_date, @hotel.hotel_time_zone).where(status: [ "checked_in", "review_due_out" ])
     end
 
     def checked_in_missing_timestamp
@@ -90,7 +91,7 @@ module HotelOps
       @financially_relevant_bookings ||= hotel_bookings
         .includes(:payment_transactions, :refund_request, :booking_rooms, booking_folio: :folio_transactions)
         .where(
-          "(status IN (?) AND check_in <= ? AND check_out >= ?) OR (status = ? AND check_in = ?)",
+          "(status IN (?) AND check_in::date <= ? AND check_out::date >= ?) OR (status = ? AND check_in::date = ?)",
           %w[checked_in completed], @business_date, @business_date, "no_show", @business_date
         )
         .to_a
@@ -104,7 +105,7 @@ module HotelOps
       @nightly_charge_bookings ||= hotel_bookings
         .includes(:booking_rooms, booking_folio: :folio_transactions)
         .checked_in
-        .where("check_in <= ? AND check_out > ?", @business_date, @business_date)
+        .where("check_in::date <= ? AND check_out::date > ?", @business_date, @business_date)
         .to_a
     end
 
@@ -121,7 +122,7 @@ module HotelOps
       @outstanding_balance_bookings ||= financially_relevant_bookings.select do |booking|
         next false unless booking.booking_folio
         next false if booking.status == "no_show"
-        next false unless booking.check_out == @business_date || booking.status == "completed"
+        next false unless booking.check_out.to_date == @business_date || booking.status == "completed"
 
         folio_outstanding_balance(booking.booking_folio) != 0.to_d
       end

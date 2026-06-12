@@ -151,6 +151,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.reload.guest_home_address).to eq("No. 12, Jalan Ampang, 50450 KL")
+      expect(BookingAuditLog.where(auditable: booking, action_type: "guest_updated", source: "guest").count).to eq(1)
     end
 
     it "submit_check_in re-renders with error when guest fields missing" do

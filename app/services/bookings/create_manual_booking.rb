@@ -20,12 +20,14 @@ module Bookings
       @apply_stop_sell_restriction = @params.delete(:apply_stop_sell_restriction)
       @apply_arrival_departure_restrictions = @params.delete(:apply_arrival_departure_restrictions)
       @apply_stay_length_restrictions = @params.delete(:apply_stay_length_restrictions)
+      @posting_date = @params.delete(:posting_date)
 
       @user = user
       @rate_tier = rate_tier
     end
 
     def call
+      normalize_scheduled_stay!
       booking = @hotel.bookings.build(@params)
       selected_guest = selected_guest_from_param
       room_type = @hotel.room_types.find(@room_type_id)
@@ -103,13 +105,23 @@ module Bookings
 
         booking.payment_status = (payment_amount_value.to_d >= booking.total_amount.to_d) ? "captured" : "partial"
 
+        captured_at_time = if @posting_date.present?
+          begin
+            @posting_date.to_date.in_time_zone(@hotel.hotel_time_zone) + 12.hours
+          rescue
+            Time.current
+          end
+        else
+          Time.current
+        end
+
         booking.payment_transactions.build(
           gateway: "manual",
           payment_method: @payment_method.presence || "cash",
           amount_subunits: (payment_amount_value.to_d * 100).to_i,
           currency: booking.currency || "MYR",
           status: "captured",
-          captured_at: Time.current,
+          captured_at: captured_at_time,
           external_reference: @payment_reference.presence,
           event_source: "manual_booking",
           metadata: { recorded_by_user_id: @user&.id }
@@ -144,10 +156,11 @@ module Bookings
             sync_guest(booking, selected_guest)
 
             # Record Audit Log
-            Bookings::RecordAuditLog.call(
+            Bookings::RecordAuditLog.call!(
               auditable: booking,
               user: @user,
-              action_type: "create"
+              action_type: "create",
+              source: "staff"
             )
 
             # Trigger Webhooks
@@ -170,6 +183,14 @@ module Bookings
     end
 
     private
+
+    def normalize_scheduled_stay!
+      %i[check_in check_out].each do |kind|
+        next if @params[kind].blank?
+
+        @params[kind] = ScheduledStay.at_hotel_time(hotel: @hotel, value: @params[kind], kind: kind)
+      end
+    end
 
     def selected_guest_from_param
       return if @existing_guest_id.blank?

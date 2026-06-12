@@ -13,8 +13,8 @@ class HotelPortal::Bookings::AvailabilitiesController < HotelPortal::BaseControl
     service = Bookings::AvailableRoomNumbers.new(
       hotel: current_hotel,
       room_type: room_type,
-      check_in: Date.parse(params[:check_in]),
-      check_out: Date.parse(params[:check_out]),
+      check_in: ::Bookings::ScheduledStay.at_hotel_time(hotel: current_hotel, value: params[:check_in], kind: :check_in),
+      check_out: ::Bookings::ScheduledStay.at_hotel_time(hotel: current_hotel, value: params[:check_out], kind: :check_out),
       exclude_booking_id: params[:exclude_booking_id].presence
     )
 

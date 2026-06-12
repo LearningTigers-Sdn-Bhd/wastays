@@ -50,19 +50,18 @@ module Concierge
     private
 
     def on_check_in_date?
-      Time.zone.today >= @booking.check_in.to_date
+      hotel_now.to_date >= @booking.check_in.to_date
     end
 
     def too_early?
       return false if @policy&.check_in_time.blank?
-      return false if Time.zone.today > @booking.check_in.to_date
+      return false if hotel_now.to_date > @booking.check_in.to_date
 
-      check_in_dt = Time.zone.parse("#{Time.zone.today} #{@policy.check_in_time}")
-      return false unless check_in_dt
+      hotel_now < @booking.check_in.in_time_zone(@hotel.hotel_time_zone)
+    end
 
-      Time.current < check_in_dt
-    rescue ArgumentError, TypeError
-      false
+    def hotel_now
+      @hotel_now ||= Time.current.in_time_zone(@hotel.hotel_time_zone)
     end
 
     def find_available_room

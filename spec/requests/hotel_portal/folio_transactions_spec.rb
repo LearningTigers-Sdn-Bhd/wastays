@@ -22,11 +22,11 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
   end
 
   def post_transaction(params)
-    post hotel_booking_folio_transactions_path(hotel, booking), params: { folio_transaction: params }
+    post hotel_folio_transactions_path(hotel, booking), params: { folio_transaction: params }
   end
 
   def reverse_transaction(transaction, params)
-    post reverse_hotel_booking_folio_transaction_path(hotel, booking, transaction), params: { folio_transaction: params }
+    post reverse_hotel_folio_transaction_path(hotel, booking, transaction), params: { folio_transaction: params }
   end
 
   context "with granular folio permissions" do

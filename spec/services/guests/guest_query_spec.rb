@@ -10,10 +10,10 @@ RSpec.describe Guests::GuestQuery do
   let!(:guest3) { create(:guest, name: "Charlie", country: "Malaysia") }
 
   before do
-    booking1 = create(:booking, hotel: hotel)
+    booking1 = create(:booking, hotel: hotel, guest_email: "bob@example.com", guest_name: "Bob", guest_phone: "+6599999999")
     create(:booking_guest, booking: booking1, guest: guest2, is_primary: true)
 
-    booking2 = create(:booking, hotel: other_hotel)
+    booking2 = create(:booking, hotel: other_hotel, guest_email: "charlie@example.com", guest_name: "Charlie", guest_phone: "+6099999999")
     create(:booking_guest, booking: booking2, guest: guest3, is_primary: true)
   end
 

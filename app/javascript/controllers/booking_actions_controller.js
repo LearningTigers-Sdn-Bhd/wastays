@@ -14,10 +14,11 @@ export default class extends Controller {
   }
 
   openBookingSheet(event) {
+    if (event?.target?.closest('[data-booking-timeline-target="dragHandle"], [data-booking-timeline-target="resizeHandle"]')) return
     if (event) { event.preventDefault(); event.stopPropagation() }
 
     const hotelId = window.location.pathname.split('/')[2]
-    const url = `/hotel/${hotelId}/reservation-board/bookings/${this.idValue}/booking_sheet`
+    const url = `/hotel/${hotelId}/booking-transactions/edit-booking/${this.idValue}?source=booking_timeline_board`
 
     this.triggerOffcanvas(url, "compact-right")
   }
@@ -26,7 +27,7 @@ export default class extends Controller {
     if (event) { event.preventDefault(); event.stopPropagation() }
 
     const url = event?.currentTarget?.dataset?.bookingActionsUrlValue ||
-      `/hotel/${window.location.pathname.split('/')[2]}/reservation-board/bookings/${this.idValue}/check_in`
+      `/hotel/${window.location.pathname.split('/')[2]}/booking-transactions/check-in-reservation/${this.idValue}?source=booking_timeline_board`
 
     this.triggerOffcanvas(url, "right")
   }
@@ -35,7 +36,7 @@ export default class extends Controller {
     if (event) { event.preventDefault(); event.stopPropagation() }
 
     const url = event?.currentTarget?.dataset?.bookingActionsUrlValue ||
-      `/hotel/${window.location.pathname.split('/')[2]}/reservation-board/bookings/${this.idValue}/check_out`
+      `/hotel/${window.location.pathname.split('/')[2]}/booking-transactions/check-out/${this.idValue}?source=booking_timeline_board`
 
     this.triggerOffcanvas(url, "right")
   }
@@ -44,7 +45,7 @@ export default class extends Controller {
     if (event) { event.preventDefault(); event.stopPropagation() }
 
     const hotelId = window.location.pathname.split('/')[2]
-    const url = `/hotel/${hotelId}/reservation-board/bookings/${this.idValue}/notes`
+    const url = `/hotel/${hotelId}/bookings/${this.idValue}`
 
     this.triggerOffcanvas(url, "right")
   }
@@ -53,7 +54,7 @@ export default class extends Controller {
     if (event) { event.preventDefault(); event.stopPropagation() }
 
     const hotelId = window.location.pathname.split('/')[2]
-    const url = `/hotel/${hotelId}/reservation-board/bookings/${this.idValue}/edit_stay`
+    const url = `/hotel/${hotelId}/booking-transactions/amend-stay/${this.idValue}?source=booking_timeline_board`
 
     this.triggerOffcanvas(url, "right")
   }
@@ -62,7 +63,7 @@ export default class extends Controller {
     if (event) { event.preventDefault(); event.stopPropagation() }
 
     const hotelId = window.location.pathname.split('/')[2]
-    const url = `/hotel/${hotelId}/reservation-board/bookings/${this.idValue}/late_checkout`
+    const url = `/hotel/${hotelId}/booking-transactions/late-checkout/${this.idValue}?source=booking_timeline_board`
 
     this.triggerOffcanvas(url, "right")
   }

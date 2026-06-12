@@ -30,7 +30,7 @@ module HotelOps
               # 2. Calculate net quantity (Selected - Already Booked)
               occupied_count = @hotel.bookings.revenue_generating
                                      .joins(:booking_rooms)
-                                     .where(":date >= bookings.check_in AND :date < bookings.check_out", date: date)
+                                     .where(":date >= bookings.check_in::date AND :date < bookings.check_out::date", date: date)
                                      .where(booking_rooms: { room_number: valid_rooms })
                                      .distinct
                                      .count(:id)

@@ -74,4 +74,40 @@ RSpec.describe Bookings::RecordAuditLog do
       expect(result).to be false
     end
   end
+
+  describe ".call!" do
+    after { Current.reset }
+
+    it "records source, category, request id, and occurrence time" do
+      Current.request_id = "request-123"
+      occurred_at = Time.zone.parse("2026-06-12 10:30")
+
+      log = described_class.call!(
+        auditable: booking,
+        user: user,
+        action_type: "cancel",
+        source: "staff",
+        reason: "Guest requested cancellation",
+        old_value: { "status" => "confirmed" },
+        new_value: { "status" => "cancelled" },
+        occurred_at: occurred_at
+      )
+
+      expect(log).to have_attributes(
+        category: "status",
+        source: "staff",
+        request_id: "request-123",
+        occurred_at: occurred_at
+      )
+      expect(log.metadata["reason"]).to eq("Guest requested cancellation")
+    end
+
+    it "raises when the audit record cannot be persisted" do
+      allow(BookingAuditLog).to receive(:create!).and_raise(ActiveRecord::RecordInvalid.new(BookingAuditLog.new))
+
+      expect {
+        described_class.call!(auditable: booking, action_type: "update")
+      }.to raise_error(ActiveRecord::RecordInvalid)
+    end
+  end
 end

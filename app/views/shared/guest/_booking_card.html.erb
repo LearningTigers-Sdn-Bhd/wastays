@@ -7,8 +7,8 @@
       </p>
     </div>
     <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
-      <%= booking.status == 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-600' %>">
-      <%= booking.status.humanize %>
+      <%= guest_booking_status(booking) == 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-600' %>">
+      <%= guest_booking_status(booking).humanize %>
     </span>
   </div>
 <% end %>

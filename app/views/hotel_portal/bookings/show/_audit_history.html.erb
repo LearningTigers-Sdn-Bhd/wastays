@@ -1,58 +1,95 @@
-<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-    <h2 class="text-lg font-bold tracking-tight text-slate-950">Audit History</h2>
-    <p class="mt-1 text-sm font-medium text-slate-600">Track all changes made to this booking.</p>
-  </div>
-  <div class="p-0">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left">
-        <thead class="bg-slate-50/50 border-b border-slate-200">
-          <tr>
-            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Date & Time</th>
-            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">User</th>
-            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Target</th>
-            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Action</th>
-            <th class="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Changes</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <% if audit_logs.any? %>
-            <% audit_logs.each do |log| %>
-              <tr class="hover:bg-slate-50/50 transition-colors">
-                <td class="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
-                  <%= log.created_at.strftime("%d %b %Y, %H:%M") %>
-                </td>
-                <td class="px-6 py-4 text-sm font-medium text-slate-900 whitespace-nowrap">
-                  <% if log.user.present? %>
-                    <%= log.user.name %>
-                  <% elsif %w[convert create pre_checkin_completed].include?(log.action_type) %>
-                    <span class="text-blue-600">Guest</span>
-                  <% else %>
-                    <span class="text-slate-400">System</span>
-                  <% end %>
-                </td>
-                <td class="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">
-                  <%= log.display_auditable_name %>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 uppercase">
-                    <%= log.action_type %>
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-sm text-slate-600">
-                  <%= log.display_value_change %>
-                </td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr>
-              <td colspan="4" class="px-6 py-10 text-center text-sm font-medium text-slate-500">
-                No audit logs found for this booking.
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+<% history = local_assigns[:audit_history] || audit_logs.map { |log| HotelPortal::BookingAuditLogPresenter.new(log, hotel: current_hotel) } %>
+<div class="overflow-hidden rounded-lg border border-slate-200 bg-white" data-controller="booking-history-filter">
+  <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 class="inline-flex items-center gap-2 text-sm font-semibold tracking-tight text-slate-950">
+          <span class="inline-flex size-6 items-center justify-center rounded-md bg-slate-100 text-slate-700"><%= cached_icon "history", class: "size-3.5" %></span>
+          Booking History
+        </h2>
+        <p class="mt-1 text-sm font-medium text-slate-600">A record of important booking activity and changes.</p>
+      </div>
+      <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+        <span data-booking-history-filter-target="filteredCount"><%= history.size %></span> of <%= pluralize(history.size, "event") %>
+      </span>
     </div>
+
+    <% if history.any? %>
+      <div class="mt-3 flex flex-wrap gap-2" aria-label="Filter booking history">
+        <% [["All", "all"], ["Status", "status"], ["Stay & Guest", "stay"], ["Rooms", "room"], ["Financial", "financial"], ["Notes", "notes"]].each do |label, category| %>
+          <button type="button"
+                  data-booking-history-filter-target="filter"
+                  data-action="booking-history-filter#filter"
+                  data-category="<%= category %>"
+                  data-active="<%= category == "all" %>"
+                  aria-pressed="<%= category == "all" %>"
+                  class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 data-[active=true]:border-blue-600 data-[active=true]:bg-blue-600 data-[active=true]:text-white">
+            <%= label %>
+          </button>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="px-4 py-4">
+    <% if history.any? %>
+      <div class="relative">
+        <div class="absolute left-3.5 top-0 h-full w-px bg-slate-200" aria-hidden="true"></div>
+        <div class="space-y-5">
+          <% history.each do |event| %>
+            <article class="relative pl-10" data-booking-history-filter-target="event" data-category="<%= event.category %>">
+              <div class="absolute left-0 top-0 flex size-8 items-center justify-center rounded-full border-2 border-white ring-1 ring-slate-100 shadow-sm <%= event.color %>">
+                <%= cached_icon event.icon, variant: :outline, class: "size-4" %>
+              </div>
+
+              <div class="rounded-lg border border-slate-100 bg-white p-3 shadow-sm">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h3 class="text-sm font-bold text-slate-950"><%= event.title %></h3>
+                    <p class="mt-1 text-sm text-slate-700"><%= event.summary %></p>
+                  </div>
+                  <time class="text-xs font-medium text-slate-500" datetime="<%= event.log.occurred_at&.iso8601 || event.log.created_at.iso8601 %>"><%= event.occurred_at_label %></time>
+                </div>
+
+                <p class="mt-2 text-xs font-medium text-slate-500">
+                  By <span class="font-bold text-slate-800"><%= event.actor_name %></span>
+                  <% if event.log.user.present? && event.source_label != "Staff" %>
+                    via <span class="font-bold text-slate-800"><%= event.source_label %></span>
+                  <% end %>
+                </p>
+
+                <% if event.context_details.any? %>
+                  <dl class="mt-3 grid gap-2 rounded-lg bg-amber-50/70 p-3 text-xs sm:grid-cols-2">
+                    <% event.context_details.each do |label, value| %>
+                      <div><dt class="font-semibold text-amber-800"><%= label %></dt><dd class="mt-0.5 text-slate-700"><%= value %></dd></div>
+                    <% end %>
+                  </dl>
+                <% end %>
+
+                <% if event.formatted_changes.any? %>
+                  <details class="mt-3 border-t border-slate-100 pt-3">
+                    <summary class="cursor-pointer text-xs font-bold text-blue-700">View changes</summary>
+                    <ul class="mt-3 space-y-2">
+                      <% event.formatted_changes.each do |change| %>
+                        <li class="grid gap-1 text-xs sm:grid-cols-[140px_1fr]">
+                          <span class="font-semibold text-slate-500"><%= change[:field] %></span>
+                          <span class="text-slate-700"><span class="line-through text-slate-400"><%= change[:old] %></span> to <strong><%= change[:new] %></strong></span>
+                        </li>
+                      <% end %>
+                    </ul>
+                  </details>
+                <% end %>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      </div>
+      <div class="hidden py-8 text-center text-sm font-medium text-slate-500" data-booking-history-filter-target="filteredEmpty">No events match this filter.</div>
+    <% else %>
+      <div class="py-8 text-center">
+        <p class="text-sm font-semibold text-slate-700">No history recorded</p>
+        <p class="mt-1 text-sm text-slate-500">Important booking activity will appear here.</p>
+      </div>
+    <% end %>
   </div>
 </div>

@@ -136,8 +136,8 @@ module ChannelManagers
           property_id: property_id,
           ota_name: "WAStays (Manual)",
           status: "new",
-          arrival_date: booking.check_in.to_s,
-          departure_date: booking.check_out.to_s,
+          arrival_date: booking.check_in.to_date.to_s,
+          departure_date: booking.check_out.to_date.to_s,
           amount: format("%.2f", booking.total_amount.to_f),
           currency: booking.currency,
           customer: {
@@ -160,8 +160,18 @@ module ChannelManagers
       response = client.post("/bookings", payload)
 
       if response["data"] && response["data"]["id"]
-        # Save the external ID to prevent duplicates if we ever fetch it back
-        booking.update!(channel_manager_reference: response["data"]["id"], revision_number: response["data"]["revision_id"])
+        Booking.transaction do
+          old_value = booking.slice("channel_manager_reference", "revision_number")
+          booking.update!(channel_manager_reference: response["data"]["id"], revision_number: response["data"]["revision_id"])
+          Bookings::RecordAuditLog.call!(
+            auditable: booking,
+            action_type: "external_modification",
+            source: "channel_manager",
+            old_value: old_value,
+            new_value: booking.slice("channel_manager_reference", "revision_number"),
+            metadata: { "source" => "Channex", "external_reference" => response["data"]["id"] }
+          )
+        end
         success("Manual booking pushed to Channel Manager")
       else
         failure("CRS Sync failed: #{response[:details] || response['details'] || response}")

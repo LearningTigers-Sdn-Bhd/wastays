@@ -1,0 +1,86 @@
+<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+    <h3 class="text-sm font-bold text-slate-900">
+      <% if local_assigns[:transaction] == :backdated_check_in %>
+        Stay and Backdated Details
+      <% else %>
+        Stay Details
+      <% end %>
+    </h3>
+  </div>
+  <div class="p-6 space-y-6">
+    <div class="grid sm:grid-cols-2 gap-6">
+      <div>
+        <%= f.label :check_in, local_assigns[:transaction] == :backdated_check_in ? "Actual Check-In" : "Scheduled Check-in", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.datetime_local_field :check_in, value: @booking.check_in&.in_time_zone(current_hotel.hotel_time_zone)&.strftime("%Y-%m-%dT%H:%M"), required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
+      </div>
+      <div>
+        <%= f.label :check_out, "Scheduled Check-out", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.datetime_local_field :check_out, value: @booking.check_out&.in_time_zone(current_hotel.hotel_time_zone)&.strftime("%Y-%m-%dT%H:%M"), required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-6">
+      <div>
+        <%= f.label :adults, class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.number_field :adults, required: true, min: 1, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+      </div>
+      <div>
+        <%= f.label :children, class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.number_field :children, required: true, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+      </div>
+    </div>
+
+    <% if local_assigns[:transaction] == :backdated_check_in %>
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div>
+          <%= label_tag :posting_date, "Posting Date", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= date_field_tag :posting_date, params[:posting_date] || current_hotel.business_date_for(Time.current), required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+        <div>
+          <%= f.label :source, "Booking Source", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.select :source, [["Phone", "phone"], ["Walk-in", "walk_in"], ["Email", "email"], ["WhatsApp", "whatsapp"], ["Other", "internal"]], { selected: @booking.source || "walk_in" },
+              { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" } %>
+        </div>
+      </div>
+
+      <div data-controller="backdate-reason-validation" class="space-y-6">
+        <div>
+          <%= label_tag :backdate_reason, "Backdate Reason", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= select_tag :backdate_reason, options_for_select([
+            ["Guest arrived earlier but was not checked in", "Guest arrived earlier but was not checked in"],
+            ["System / internet issue", "System / internet issue"],
+            ["Manual offline check-in", "Manual offline check-in"],
+            ["Night audit correction", "Night audit correction"],
+            ["Booking was created late", "Booking was created late"],
+            ["Room was occupied before system update", "Room was occupied before system update"],
+            ["Other", "Other"]
+          ], params[:backdate_reason]), required: true,
+              data: { backdate_reason_validation_target: "select", action: "change->backdate-reason-validation#toggle" },
+              class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <%= label_tag :retroactive_reason, "Reason Details", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider" %>
+            <span data-backdate-reason-validation-target="optionalBadge" class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Optional</span>
+          </div>
+          <%= text_area_tag :retroactive_reason, params[:retroactive_reason], rows: 5, placeholder: "Explain why this check-in is being recorded after the business date was closed.",
+              data: { backdate_reason_validation_target: "details" },
+              class: "w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      </div>
+    <% else %>
+      <div>
+        <%= f.label :source, "Booking Source", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.select :source, [["Phone", "phone"], ["Walk-in", "walk_in"], ["Email", "email"], ["WhatsApp", "whatsapp"], ["Other", "internal"]], { selected: @booking.source || "phone" },
+            { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" } %>
+      </div>
+    <% end %>
+
+    <div>
+      <%= f.label :internal_notes, "Internal Notes", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+      <%= f.text_area :internal_notes, rows: 4, placeholder: "Special requests...", class: "w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+    </div>
+  </div>
+</div>

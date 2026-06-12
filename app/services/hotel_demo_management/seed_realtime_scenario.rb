@@ -163,7 +163,7 @@ module HotelDemoManagement
     end
 
     def check_in_bookings(date, zone, acting_user, system_posting)
-      @hotel.bookings.where(check_in: date).each do |booking|
+      @hotel.bookings.checking_in_on(date, @hotel.hotel_time_zone).each do |booking|
         profile_index = guest_profiles.index { |profile| profile[:email] == booking.guest_email }
         is_no_show = [ 12, 20 ].include?(profile_index)
         next if is_no_show
@@ -181,7 +181,7 @@ module HotelDemoManagement
     end
 
     def check_out_bookings(date, zone, acting_user, system_posting)
-      @hotel.bookings.where(check_out: date).each do |booking|
+      @hotel.bookings.checking_out_on(date, @hotel.hotel_time_zone).each do |booking|
         profile_index = guest_profiles.index { |profile| profile[:email] == booking.guest_email }
         is_late_checkout = [ 2, 4 ].include?(profile_index)
 

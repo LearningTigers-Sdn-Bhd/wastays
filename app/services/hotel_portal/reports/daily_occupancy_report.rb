@@ -41,7 +41,7 @@ module HotelPortal
         revenue = 0.to_d
 
         sold_bookings.each do |booking|
-          next unless (booking.check_in...booking.check_out).cover?(date)
+          next unless (booking.check_in.to_date...booking.check_out.to_date).cover?(date)
 
           sold += booked_room_quantity(booking)
           revenue += nightly_room_revenue(booking)
@@ -63,7 +63,7 @@ module HotelPortal
       def sold_bookings
         @sold_bookings ||= @hotel.bookings
                                .where(status: SOLD_STATUSES)
-                               .where("check_in <= ? AND check_out > ?", @end_date, @start_date)
+                               .where("check_in::date <= ? AND check_out::date > ?", @end_date, @start_date)
                                .includes(:booking_rooms)
       end
 
@@ -94,7 +94,7 @@ module HotelPortal
       end
 
       def nightly_room_revenue(booking)
-        nights = [ (booking.check_out - booking.check_in).to_i, 1 ].max
+        nights = [ (booking.check_out.to_date - booking.check_in.to_date).to_i, 1 ].max
         subtotal_sum = booking.booking_rooms.sum { |room| room.subtotal.to_d }
         total_revenue = subtotal_sum.positive? ? subtotal_sum : booking.total_amount.to_d
         total_revenue / nights

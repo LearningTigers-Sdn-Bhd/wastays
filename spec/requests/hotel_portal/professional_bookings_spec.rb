@@ -31,7 +31,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
     end
   end
 
-  describe "POST /hotel/:hotel_id/bookings" do
+  describe "POST /hotel/:hotel_id/booking-transactions/new-booking" do
     let(:valid_params) do
       {
         booking: {
@@ -52,7 +52,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
     end
 
     it "creates a booking with manual rate override and internal notes" do
-      post hotel_bookings_path(hotel), params: valid_params
+      post hotel_booking_transaction_new_booking_path(hotel), params: valid_params
       expect(response).to redirect_to(hotel_booking_path(hotel, Booking.last)) if Booking.last
 
       expect(Booking.count).to eq(1)
@@ -66,7 +66,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
       params = valid_params.deep_merge(booking: { existing_guest_id: existing_guest.id })
 
       expect {
-        post hotel_bookings_path(hotel), params: params
+        post hotel_booking_transaction_new_booking_path(hotel), params: params
       }.to change(Booking, :count).by(1)
 
       booking = Booking.last

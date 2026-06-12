@@ -7,15 +7,15 @@ module HotelPortal
     end
 
     def today_arrivals
-      @hotel.bookings.active.where(check_in: Date.current)
+      @hotel.bookings.active.checking_in_on(Date.current, @hotel.hotel_time_zone)
     end
 
     def tomorrow_arrivals
-      @hotel.bookings.active.where(check_in: Date.tomorrow)
+      @hotel.bookings.active.checking_in_on(Date.tomorrow, @hotel.hotel_time_zone)
     end
 
     def today_checkouts
-      @hotel.bookings.active.where(check_out: Date.current)
+      @hotel.bookings.active.checking_out_on(Date.current, @hotel.hotel_time_zone)
     end
 
     def bookings_this_month_count
@@ -31,7 +31,7 @@ module HotelPortal
       @hotel.bookings.active
         .joins(:pre_checkin)
         .where(pre_checkins: { status: "pending" })
-        .where(check_in: arrival_window)
+        .checking_in_between(arrival_window.begin, arrival_window.end, @hotel.hotel_time_zone)
         .count
     end
 
@@ -47,7 +47,7 @@ module HotelPortal
         sold = @hotel.bookings.revenue_generating
                      .joins(:booking_rooms)
                      .where(booking_rooms: { room_type_id: room_type.id })
-                     .where(":date >= check_in AND :date < check_out", date: date)
+                     .where(":date >= check_in::date AND :date < check_out::date", date: date)
                      .count
 
         percentage = total_capacity > 0 ? (sold.to_f / total_capacity * 100).round : 0
@@ -70,7 +70,7 @@ module HotelPortal
                                 .where(room_inventories: { date: date })
                                 .sum("room_inventories.quantity")
 
-        rooms_sold = @hotel.bookings.revenue_generating.where(":date >= check_in AND :date < check_out", date: date).count
+        rooms_sold = @hotel.bookings.revenue_generating.where(":date >= check_in::date AND :date < check_out::date", date: date).count
         {
           date: date,
           total: total_inventory,

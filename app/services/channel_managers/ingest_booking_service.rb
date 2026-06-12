@@ -17,6 +17,7 @@ module ChannelManagers
         booking = find_or_initialize_booking
         is_existing_booking = booking.persisted?
         booking.lock! if is_existing_booking
+        old_audit_value = audit_values(booking)
 
         # 0. Basic Validation: Ensure we have enough data to even attempt ingestion
         effective_check_in = @data[:check_in] || booking.check_in
@@ -40,6 +41,7 @@ module ChannelManagers
         end
 
         incoming_status = resolved_status(effective_check_in, effective_check_out)
+        incoming_status = "review_no_show" if previous_status == "review_no_show" && incoming_status == "confirmed"
 
         if is_existing_booking && previous_status != incoming_status
           event = status_transition_event_for(previous_status, incoming_status)
@@ -59,8 +61,8 @@ module ChannelManagers
           guest_email: @data[:guest_details][:email],
           guest_phone: @data[:guest_details][:phone],
           guest_country: @data[:guest_details][:country],
-          check_in: effective_check_in,
-          check_out: effective_check_out,
+          check_in: Bookings::ScheduledStay.at_hotel_time(hotel: @hotel, value: effective_check_in, kind: :check_in),
+          check_out: Bookings::ScheduledStay.at_hotel_time(hotel: @hotel, value: effective_check_out, kind: :check_out),
           status: incoming_status,
           adults: @data[:adults] || 1,
           total_amount: @data[:total_amount],
@@ -75,6 +77,7 @@ module ChannelManagers
         if booking.save
           sync_guest(booking)
           sync_rooms(booking)
+          release_review_rooms(booking) if previous_status == "review_no_show" && booking.status == "cancelled"
 
           # 5. Deduct New Inventory: If the new state is active, deduct the rooms
           if inventory_held_status?(booking.status)
@@ -83,9 +86,12 @@ module ChannelManagers
 
           # Record Audit Log
           action = is_existing_booking ? "external_modification" : "external_creation"
-          Bookings::RecordAuditLog.call(
+          Bookings::RecordAuditLog.call!(
             auditable: booking,
             action_type: action,
+            source: "channel_manager",
+            old_value: old_audit_value,
+            new_value: audit_values(booking),
             metadata: { "source" => booking.source, "external_reference" => booking.external_reference, "revision" => booking.revision_number }
           )
 
@@ -114,7 +120,7 @@ module ChannelManagers
     end
 
     def inventory_insufficient?(check_in, check_out)
-      (check_in...check_out).each do |date|
+      (check_in.to_date...check_out.to_date).each do |date|
         @data[:rooms].each do |room_item|
           inventory = room_item[:room_type].room_inventories.lock.find_by(date: date)
           return true if !inventory || inventory.quantity < room_item[:quantity]
@@ -134,7 +140,7 @@ module ChannelManagers
       return if check_in.blank? || check_out.blank?
 
       rooms.each do |room|
-        (check_in...check_out).each do |date|
+        (check_in.to_date...check_out.to_date).each do |date|
           inventory = room[:room_type].room_inventories.lock.find_by(date: date)
           inventory&.update!(quantity: inventory.quantity + room[:quantity])
         end
@@ -142,7 +148,18 @@ module ChannelManagers
     end
 
     def inventory_held_status?(status)
-      status.in?(%w[confirmed checked_in])
+      status.in?(%w[confirmed review_no_show checked_in])
+    end
+
+    def release_review_rooms(booking)
+      result = Bookings::ReleaseAssignedRooms.call(
+        booking: booking,
+        user: nil,
+        event_type: "review_no_show_cancelled",
+        reason: "Channel manager cancelled booking pending no-show review",
+        metadata: { "source" => "channel_manager", "external_reference" => booking.external_reference }
+      )
+      raise IngestionFailure, result.error unless result.success?
     end
 
     def status_transition_event_for(previous_status, new_status)
@@ -150,6 +167,8 @@ module ChannelManagers
       when [ "pending", "confirmed" ]
         "confirm"
       when [ "pending", "cancelled" ], [ "confirmed", "cancelled" ], [ "overbooked", "cancelled" ]
+        "cancel"
+      when [ "review_no_show", "cancelled" ]
         "cancel"
       when [ "confirmed", "overbooked" ]
         "mark_overbooked"
@@ -211,6 +230,19 @@ module ChannelManagers
           # snapshots to be added if needed
         )
       end
+    end
+
+    def audit_values(booking)
+      booking.slice(
+        "guest_name", "guest_email", "guest_phone", "guest_country", "check_in", "check_out",
+        "status", "adults", "total_amount", "currency", "payment_status"
+      ).merge("rooms" => booking.booking_rooms.map { |room| room_summary(room) })
+    end
+
+    def room_summary(room)
+      parts = [ "#{room.quantity}x #{room.room_type&.name || 'Room category not provided'}" ]
+      parts << room.rate_plan.name if room.rate_plan
+      parts.join(" - ")
     end
   end
 end

@@ -1,0 +1,24 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="flex h-full flex-col bg-white">
+    <%= render "hotel_portal/bookings/board/partials/content_header",
+      title: "Cancel Booking",
+      subtitle: @booking.guest_name,
+      icon: cached_icon("circle-x", class: "size-5 text-red-600") %>
+    <%= form_with url: cancel_hotel_booking_path(current_hotel, @booking), method: :post, class: "flex min-h-0 flex-1 flex-col" do |f| %>
+      <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
+      <div class="flex-1 overflow-y-auto p-8">
+      <% if @booking.errors.any? %>
+        <div class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><%= @booking.errors.full_messages.to_sentence %></div>
+      <% end %>
+      <p class="text-sm text-slate-600">Cancellation releases the reservation inventory and cannot be reinstated.</p>
+      <div class="mt-5">
+        <%= label_tag :cancellation_reason, "Cancellation Reason", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+        <%= text_area_tag :cancellation_reason, params[:cancellation_reason], required: true, rows: 5, class: "w-full rounded-xl border border-slate-200 px-4 py-3", placeholder: "Explain why this reservation is being cancelled." %>
+      </div>
+      </div>
+      <%= render "hotel_portal/bookings/board/partials/content_footer",
+        show_full_page_link: false,
+        submit_button: f.submit("Confirm Cancellation", class: "rounded-xl bg-red-600 px-6 py-2.5 text-sm font-bold text-white") %>
+    <% end %>
+  </div>
+<% end %>

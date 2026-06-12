@@ -39,9 +39,10 @@ module PayoutEngine
 
           bookings.each do |booking|
             booking.update!(payout_batch: batch, payout_status: "processing")
-            Bookings::RecordAuditLog.call(
+            Bookings::RecordAuditLog.call!(
               auditable: booking,
               action_type: "payout_processing",
+              source: "system",
               metadata: { "payout_batch_id" => batch.id }
             )
           end

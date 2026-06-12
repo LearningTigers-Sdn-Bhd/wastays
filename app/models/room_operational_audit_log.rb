@@ -8,6 +8,8 @@ class RoomOperationalAuditLog < ApplicationRecord
     room_blocked_auto_status
     room_block_removed_auto_status
     no_show_released_after_night_audit
+    no_show_released
+    review_no_show_cancelled
     housekeeping_request_dispatched
   ].freeze
 

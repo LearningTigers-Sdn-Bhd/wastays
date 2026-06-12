@@ -1,0 +1,74 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="flex h-full flex-col bg-white">
+    <%= render "hotel_portal/bookings/board/partials/content_header",
+      title: "Reinstate No-show",
+      subtitle: @booking.guest_name,
+      icon: cached_icon("rotate-ccw", class: "size-5") %>
+
+    <%= form_with model: @booking, url: reinstate_hotel_booking_path(current_hotel, @booking), method: :post,
+      class: "flex min-h-0 flex-1 flex-col",
+      data: {
+        controller: "booking-calc",
+        booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
+        booking_calc_rate_options_url_value: rate_options_hotel_bookings_path(current_hotel),
+        booking_calc_exclude_booking_id_value: @booking.id
+      } do |f| %>
+      <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
+      <div class="flex-1 space-y-6 overflow-y-auto p-8">
+        <section class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Scheduled Stay</h3>
+          <div class="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Check-in</p>
+              <p class="mt-1 text-sm font-bold text-slate-800"><%= @booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Check-out</p>
+              <p class="mt-1 text-sm font-bold text-slate-800"><%= @booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
+            </div>
+          </div>
+          <%= hidden_field_tag :reinstate_check_in, @booking.check_in.to_date, data: { booking_calc_target: "checkIn" } %>
+          <%= hidden_field_tag :reinstate_check_out, @booking.check_out.to_date, data: { booking_calc_target: "checkOut" } %>
+        </section>
+
+        <%= f.fields_for :booking_rooms do |rf| %>
+          <section class="space-y-5">
+            <%= rf.hidden_field :id %>
+            <div>
+              <%= rf.label :room_type_id, "Room Category", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+              <%= rf.collection_select :room_type_id, current_hotel.room_types.order(:name), :id, :name, {},
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm",
+                data: { booking_calc_target: "roomType", action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate" } %>
+            </div>
+            <div>
+              <%= rf.label :rate_plan_id, "Rate", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+              <%= rf.select :rate_plan_id, (rf.object.rate_plan ? [[rf.object.rate_plan.name, rf.object.rate_plan.id]] : []),
+                { include_blank: "Select a rate" },
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm",
+                data: { booking_calc_target: "ratePlanSelect" } %>
+            </div>
+            <div data-controller="room-lock"
+                 data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
+                 data-room-lock-room-type-id-value="<%= rf.object.room_type_id %>"
+                 data-room-lock-current-room-value="<%= rf.object.room_number %>"
+                 data-booking-calc-target="roomNumberContainer">
+              <%= rf.label :room_number, "Room Number", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+              <%= rf.select :room_number, [[rf.object.room_number, rf.object.room_number]], {},
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm",
+                data: { booking_calc_target: "roomNumberSelect", action: "change->room-lock#lock" } %>
+            </div>
+          </section>
+        <% end %>
+
+        <div>
+          <%= label_tag :retroactive_reason, "Reason for Reinstatement", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+          <%= text_area_tag :retroactive_reason, params[:retroactive_reason].presence || "Guest arrived late after night audit.", required: true, rows: 5, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+        </div>
+      </div>
+
+      <%= render "hotel_portal/bookings/board/partials/content_footer",
+        show_full_page_link: false,
+        submit_button: f.submit("Reinstate & Check In", class: "rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white") %>
+    <% end %>
+  </div>
+<% end %>

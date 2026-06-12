@@ -1,0 +1,89 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="flex h-full flex-col bg-white">
+    <% moving = @timeline_action == "move" %>
+    <%= render "hotel_portal/bookings/board/partials/content_header",
+      title: moving ? "Move Stay" : "Extend Stay",
+      subtitle: @booking.guest_name,
+      icon: cached_icon(moving ? "move" : "calendar-plus", class: "size-5") %>
+
+    <%= form_with model: @booking,
+      url: hotel_booking_transaction_edit_booking_timeline_path(current_hotel, @booking),
+      method: :patch,
+      class: "flex min-h-0 flex-1 flex-col" do |f| %>
+      <%= hidden_field_tag :timeline_action, @timeline_action %>
+      <%= hidden_field_tag :source, @transaction_source if @transaction_source.present? %>
+      <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
+
+      <div class="min-h-0 flex-1 space-y-6 overflow-y-auto p-6 sm:p-8">
+        <% if @booking.errors.any? %>
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert" aria-live="polite">
+            <p class="font-bold"><%= moving ? "Booking could not be moved." : "Stay could not be extended." %></p>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <% @booking.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Current Stay</p>
+          <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+            <div>
+              <dt class="text-slate-500">Dates</dt>
+              <dd class="mt-1 font-bold text-slate-900"><%= l(@original_check_in.in_time_zone(current_hotel.hotel_time_zone), format: :short) %> – <%= l(@original_check_out.in_time_zone(current_hotel.hotel_time_zone), format: :short) %></dd>
+            </div>
+            <div>
+              <dt class="text-slate-500">Room</dt>
+              <dd class="mt-1 font-bold text-slate-900"><%= @original_room&.room_type&.name %> · <%= @original_room&.room_number %></dd>
+            </div>
+          </dl>
+        </div>
+
+        <% if moving %>
+          <div class="space-y-5" data-controller="timeline-move-form"
+               data-timeline-move-form-room-numbers-value="<%= @room_types.to_h { |room_type| [room_type.id, room_type.room_numbers] }.to_json %>">
+            <div>
+              <%= f.label :check_in, "New Check-in", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+              <%= f.datetime_local_field :check_in,
+                value: @proposed_check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M"),
+                required: true,
+                class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+              <p class="mt-2 text-xs text-slate-500">The current stay duration will be preserved.</p>
+            </div>
+            <div>
+              <%= f.label :room_type_id, "Room Category", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+              <%= f.collection_select :room_type_id, @room_types, :id, :name,
+                { selected: @proposed_room_type_id },
+                { required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3",
+                  data: { timeline_move_form_target: "roomType", action: "change->timeline-move-form#updateRoomNumbers" } } %>
+            </div>
+            <div>
+              <%= f.label :room_number, "Room Number", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+              <%= f.select :room_number,
+                @room_types.find { |room_type| room_type.id.to_s == @proposed_room_type_id.to_s }&.room_numbers || [],
+                { selected: @proposed_room_number },
+                { required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3",
+                  data: { timeline_move_form_target: "roomNumber" } } %>
+            </div>
+          </div>
+        <% else %>
+          <div>
+            <%= f.label :check_out, "New Check-out", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+            <%= f.datetime_local_field :check_out,
+              value: @proposed_check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M"),
+              min: @original_check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M"),
+              required: true,
+              class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+            <p class="mt-2 text-xs text-slate-500">The new check-out must be later than the current check-out.</p>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 border-t border-slate-200 p-6">
+        <button type="button" data-action="click->offcanvas#close" class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900">Cancel</button>
+        <%= f.submit(moving ? "Confirm Move" : "Confirm Extension", class: "rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white hover:bg-slate-700 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2") %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

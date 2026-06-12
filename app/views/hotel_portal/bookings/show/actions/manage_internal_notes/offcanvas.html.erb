@@ -1,0 +1,14 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="flex h-full flex-col bg-white">
+    <%= render "hotel_portal/bookings/board/partials/content_header",
+      title: @mode == "add" ? "Add Internal Note" : (@mode == "edit" ? "Edit Internal Note" : "Note Edit History"),
+      subtitle: @booking.guest_name,
+      icon: cached_icon(@mode == "history" ? "history" : "sticky-note", class: "size-5") %>
+
+    <% if @mode == "history" %>
+      <%= render "hotel_portal/bookings/show/actions/manage_internal_notes/partials/history", note: @note %>
+    <% else %>
+      <%= render "hotel_portal/bookings/show/actions/manage_internal_notes/partials/form", booking: @booking, note: @note, mode: @mode %>
+    <% end %>
+  </div>
+<% end %>

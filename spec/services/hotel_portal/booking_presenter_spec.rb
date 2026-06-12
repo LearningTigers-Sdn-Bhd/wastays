@@ -58,4 +58,42 @@ RSpec.describe HotelPortal::BookingPresenter do
       expect(subject.requires_backdated_checkin_reason?).to be false
     end
   end
+
+  describe "guest record counts" do
+    it "counts the primary booking guest and additional guest records" do
+      create(:booking_guest, booking: booking, is_primary: false)
+
+      expect(subject.registered_guest_count).to eq(2)
+      expect(subject.missing_guest_record_count).to eq(0)
+    end
+
+    it "returns the occupancy gap without going below zero" do
+      booking.update!(adults: 3, children: 1)
+
+      expect(subject.missing_guest_record_count).to eq(3)
+
+      4.times { create(:booking_guest, booking: booking, is_primary: false) }
+
+      expect(described_class.new(booking.reload, hotel).missing_guest_record_count).to eq(0)
+    end
+  end
+
+  describe "#reference_ids" do
+    it "returns the booking's internal and channel references" do
+      booking.update!(
+        reservation_number: 12,
+        guest_registration_number: 34,
+        external_reference: "OTA-55",
+        channel_manager_reference: "CM-66"
+      )
+
+      expect(subject.reference_ids).to include(
+        [ "Confirmation", booking.confirmation_token ],
+        [ "Reservation", booking.formatted_reservation_number ],
+        [ "Guest Registration", booking.formatted_guest_registration_number ],
+        [ "External", "OTA-55" ],
+        [ "Channel Manager", "CM-66" ]
+      )
+    end
+  end
 end

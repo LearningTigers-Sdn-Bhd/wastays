@@ -184,7 +184,7 @@ module HotelPortal
         counts = hotel.bookings.revenue_generating
                       .joins(:booking_rooms)
                       .where(booking_rooms: { room_type_id: active_room_type_ids })
-                      .where("check_in < :end_date AND check_out > :start_date", start_date: start_date, end_date: end_date + 1.day)
+                      .where("check_in::date < :end_date AND check_out::date > :start_date", start_date: start_date, end_date: end_date + 1.day)
                       .group("booking_rooms.room_type_id", "check_in", "check_out")
                       .count
 

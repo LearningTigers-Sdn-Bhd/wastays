@@ -23,7 +23,13 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
     ).call
     total = snapshot.room_total + snapshot.tax_total
 
-    render json: { total_amount: total }
+    render json: {
+      total_amount: total,
+      room_total: snapshot.room_total,
+      tax_total: snapshot.tax_total,
+      tax_lines: snapshot.tax_lines,
+      nightly_rate_snapshot: snapshot.nightly_rate_snapshot
+    }
   rescue ArgumentError => e
     render json: { error: e.message, total_amount: 0 }, status: :unprocessable_content
   end

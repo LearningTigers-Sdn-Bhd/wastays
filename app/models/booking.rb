@@ -29,6 +29,16 @@ class Booking < ApplicationRecord
     source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
   end
 
+  def check_in=(value)
+    value = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: :check_in) if hotel && value.present?
+    super(value)
+  end
+
+  def check_out=(value)
+    value = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: :check_out) if hotel && value.present?
+    super(value)
+  end
+
   def room_type_summary
     booking_rooms.includes(:room_type).map { |br| br.room_type.name }.uniq.to_sentence
   end
@@ -43,7 +53,7 @@ class Booking < ApplicationRecord
     @guest_government_id = value
   end
 
-  STATUSES = %w[pending confirmed checked_in review_due_out cancelled completed overbooked no_show].freeze
+  STATUSES = %w[pending confirmed review_no_show checked_in review_due_out cancelled completed overbooked no_show].freeze
   PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
@@ -57,6 +67,7 @@ class Booking < ApplicationRecord
 
   validates :status, presence: true, inclusion: { in: STATUSES }
   validate :status_transition_must_be_allowed, if: :status_changed_on_persisted_record?
+  validates :no_show_review_business_date, presence: true, if: -> { status == "review_no_show" }
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
   validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_blank: true }
@@ -78,8 +89,8 @@ class Booking < ApplicationRecord
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
   scope :no_show, -> { where(status: "no_show") }
-  scope :active, -> { where(status: [ "confirmed", "checked_in" ]) }
-  scope :revenue_generating, -> { where(status: [ "confirmed", "checked_in", "completed", "no_show" ]) }
+  scope :active, -> { where(status: [ "confirmed", "review_no_show", "checked_in" ]) }
+  scope :revenue_generating, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "completed", "no_show" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
 
   scope :search, ->(query) {
@@ -93,6 +104,14 @@ class Booking < ApplicationRecord
 
   scope :created_between, ->(start_date, end_date) {
     where(created_at: start_date.beginning_of_day..end_date.end_of_day)
+  }
+  scope :checking_in_on, ->(date, zone = Time.zone) { where(check_in: date.to_date.in_time_zone(zone).all_day) }
+  scope :checking_out_on, ->(date, zone = Time.zone) { where(check_out: date.to_date.in_time_zone(zone).all_day) }
+  scope :checking_in_between, ->(start_date, end_date, zone = Time.zone) {
+    where(check_in: start_date.to_date.in_time_zone(zone).beginning_of_day..end_date.to_date.in_time_zone(zone).end_of_day)
+  }
+  scope :checking_out_between, ->(start_date, end_date, zone = Time.zone) {
+    where(check_out: start_date.to_date.in_time_zone(zone).beginning_of_day..end_date.to_date.in_time_zone(zone).end_of_day)
   }
 
   scope :unbatched_upcoming, ->(cutoff_date) {

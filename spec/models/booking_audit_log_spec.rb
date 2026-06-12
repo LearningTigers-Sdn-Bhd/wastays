@@ -9,6 +9,23 @@ RSpec.describe BookingAuditLog, type: :model do
 
   describe 'validations' do
     it { is_expected.to validate_presence_of(:action_type) }
+    it { is_expected.to validate_presence_of(:category) }
+    it { is_expected.to validate_presence_of(:source) }
+    it { is_expected.to validate_presence_of(:occurred_at) }
+  end
+
+  it "prevents updates" do
+    log = create(:booking_audit_log)
+
+    expect(log.update(action_type: "cancel")).to be(false)
+    expect(log.errors[:base]).to include("Booking audit logs are immutable.")
+  end
+
+  it "prevents deletes" do
+    log = create(:booking_audit_log)
+
+    expect(log.destroy).to be(false)
+    expect(log.errors[:base]).to include("Booking audit logs are immutable and cannot be deleted.")
   end
 
   describe '#display_auditable_name' do
@@ -28,6 +45,51 @@ RSpec.describe BookingAuditLog, type: :model do
       room = create(:booking_room)
       log = create(:booking_audit_log, auditable: room)
       expect(log.display_auditable_name).to eq("Room Assignment")
+    end
+  end
+
+  describe '#action_label' do
+    it 'returns human friendly labels' do
+      expect(build(:booking_audit_log, action_type: 'create').action_label).to eq('Created')
+      expect(build(:booking_audit_log, action_type: 'check_in').action_label).to eq('Checked In')
+      expect(build(:booking_audit_log, action_type: 'unknown').action_label).to eq('Unknown')
+    end
+  end
+
+  describe '#action_icon' do
+    it 'returns correct icons' do
+      expect(build(:booking_audit_log, action_type: 'create').action_icon).to eq('plus')
+      expect(build(:booking_audit_log, action_type: 'cancel').action_icon).to eq('circle-x')
+    end
+  end
+
+  describe '#formatted_changes' do
+    it 'returns structured changes for simple types' do
+      log = build(:booking_audit_log,
+        old_value: { 'status' => 'pending' },
+        new_value: { 'status' => 'confirmed' }
+      )
+
+      changes = log.formatted_changes
+      expect(changes).to eq([ { field: "Status", old: "pending", new: "confirmed" } ])
+    end
+
+    it 'summarizes large hashes' do
+      log = build(:booking_audit_log,
+        old_value: {},
+        new_value: { 'snapshot' => { 'a' => 1, 'b' => 2, 'c' => 3, 'd' => 4, 'e' => 5, 'f' => 6 } }
+      )
+
+      expect(log.formatted_changes.first[:new]).to include("A, B, C ...")
+    end
+
+    it 'summarizes arrays of hashes' do
+      log = build(:booking_audit_log,
+        old_value: [],
+        new_value: { 'items' => [ { id: 1 }, { id: 2 } ] }
+      )
+
+      expect(log.formatted_changes.first[:new]).to eq("2 items")
     end
   end
 

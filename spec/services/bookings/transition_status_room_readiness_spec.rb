@@ -8,7 +8,7 @@ RSpec.describe Bookings::TransitionStatus do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user) }
   let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101" ]) }
-  let(:booking) { create(:booking, hotel: hotel, status: "checked_in", checked_in_at: 1.day.ago) }
+  let(:booking) { create(:booking, hotel: hotel, status: "checked_in", checked_in_at: 1.day.ago, check_out: Date.current) }
 
   before do
     create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")

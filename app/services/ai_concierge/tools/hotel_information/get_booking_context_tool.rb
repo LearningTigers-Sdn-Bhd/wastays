@@ -25,7 +25,7 @@ module AiConcierge
         def bookings
           @bookings ||= hotel.bookings.includes(booking_rooms: :room_type)
                             .lookup_by_phone(phone)
-                            .where(status: %w[checked_in confirmed])
+                            .where(status: %w[checked_in confirmed review_no_show])
                             .order(Arel.sql("CASE WHEN status = 'checked_in' THEN 0 ELSE 1 END"))
                             .order(check_in: :asc)
         end
