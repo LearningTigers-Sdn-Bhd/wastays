@@ -44,22 +44,31 @@
         </div>
       </div>
 
-      <div>
-        <%= label_tag :backdate_reason, "Backdate Reason", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-        <%= select_tag :backdate_reason, options_for_select([
-          ["Guest arrived earlier but was not checked in", "Guest arrived earlier but was not checked in"],
-          ["System / internet issue", "System / internet issue"],
-          ["Manual offline check-in", "Manual offline check-in"],
-          ["Night audit correction", "Night audit correction"],
-          ["Booking was created late", "Booking was created late"],
-          ["Room was occupied before system update", "Room was occupied before system update"],
-          ["Other", "Other"]
-        ], params[:backdate_reason]), required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
-      </div>
+      <div data-controller="backdate-reason-validation" class="space-y-6">
+        <div>
+          <%= label_tag :backdate_reason, "Backdate Reason", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= select_tag :backdate_reason, options_for_select([
+            ["Guest arrived earlier but was not checked in", "Guest arrived earlier but was not checked in"],
+            ["System / internet issue", "System / internet issue"],
+            ["Manual offline check-in", "Manual offline check-in"],
+            ["Night audit correction", "Night audit correction"],
+            ["Booking was created late", "Booking was created late"],
+            ["Room was occupied before system update", "Room was occupied before system update"],
+            ["Other", "Other"]
+          ], params[:backdate_reason]), required: true,
+              data: { backdate_reason_validation_target: "select", action: "change->backdate-reason-validation#toggle" },
+              class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
 
-      <div>
-        <%= label_tag :retroactive_reason, "Reason Details", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-        <%= text_area_tag :retroactive_reason, params[:retroactive_reason], required: true, rows: 5, placeholder: "Explain why this check-in is being recorded after the business date was closed.", class: "w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <%= label_tag :retroactive_reason, "Reason Details", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider" %>
+            <span data-backdate-reason-validation-target="optionalBadge" class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Optional</span>
+          </div>
+          <%= text_area_tag :retroactive_reason, params[:retroactive_reason], rows: 5, placeholder: "Explain why this check-in is being recorded after the business date was closed.",
+              data: { backdate_reason_validation_target: "details" },
+              class: "w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
       </div>
     <% else %>
       <div>

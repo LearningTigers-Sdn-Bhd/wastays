@@ -387,4 +387,66 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(log.metadata["backdate_reason_category"]).to eq("Manual offline check-in")
     expect(log.metadata["backdate_reason_details"]).to eq("Router was down")
   end
+
+  it "allows backdated check-in with a standard category and blank reason details" do
+    past_date = 1.day.ago.to_date
+    create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
+
+    signed_in_user = User.joins(:user_hotel_accesses).where(user_hotel_accesses: { hotel_id: hotel.id }).first
+    user_role = signed_in_user.user_hotel_accesses.first.role
+    grant_permission(user_role, "post_folio_charges")
+    grant_permission(user_role, "override_financial_date_lock")
+
+    booking = create(
+      :booking,
+      hotel: hotel,
+      status: "review_no_show",
+      no_show_review_business_date: past_date,
+      check_in: past_date,
+      check_out: Date.current
+    )
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 100.0)
+
+    post hotel_booking_transaction_booking_backdated_check_in_path(hotel, booking), params: {
+      booking: { checked_in_at: past_date.to_time },
+      backdate_reason: "System / internet issue",
+      retroactive_reason: ""
+    }
+
+    expect(booking.reload.status).to eq("checked_in")
+    log = BookingAuditLog.where(auditable: booking, action_type: "check_in").last
+    expect(log.metadata["backdate_reason_category"]).to eq("System / internet issue")
+    expect(log.metadata["backdate_reason_details"]).to be_blank
+    expect(log.metadata["retroactive_reason"]).to eq("System / internet issue")
+  end
+
+  it "requires reason details when backdate_reason is Other" do
+    past_date = 1.day.ago.to_date
+    create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
+
+    signed_in_user = User.joins(:user_hotel_accesses).where(user_hotel_accesses: { hotel_id: hotel.id }).first
+    user_role = signed_in_user.user_hotel_accesses.first.role
+    grant_permission(user_role, "post_folio_charges")
+    grant_permission(user_role, "override_financial_date_lock")
+
+    booking = create(
+      :booking,
+      hotel: hotel,
+      status: "review_no_show",
+      no_show_review_business_date: past_date,
+      check_in: past_date,
+      check_out: Date.current
+    )
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 100.0)
+
+    post hotel_booking_transaction_booking_backdated_check_in_path(hotel, booking), params: {
+      booking: { checked_in_at: past_date.to_time },
+      backdate_reason: "Other",
+      retroactive_reason: ""
+    }
+
+    expect(response).to redirect_to(hotel_bookings_path(hotel))
+    expect(flash[:alert]).to include("Please provide details for the backdated check-in reason")
+    expect(booking.reload.status).to eq("review_no_show")
+  end
 end

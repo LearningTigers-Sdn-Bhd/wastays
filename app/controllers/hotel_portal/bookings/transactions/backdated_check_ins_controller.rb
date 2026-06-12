@@ -22,7 +22,11 @@ module HotelPortal
         private
 
         def submit
-          return redirect_back fallback_location: hotel_bookings_path(current_hotel), alert: "Backdated check-in reason is required." if params[:retroactive_reason].blank?
+          if params[:backdate_reason] == "Other" && params[:retroactive_reason].blank?
+            return redirect_back fallback_location: hotel_bookings_path(current_hotel), alert: "Please provide details for the backdated check-in reason."
+          elsif params[:backdate_reason].blank? && params[:retroactive_reason].blank?
+            return redirect_back fallback_location: hotel_bookings_path(current_hotel), alert: "Backdated check-in reason is required."
+          end
 
           booking = params[:booking_id].present? ? current_hotel.bookings.find(params[:booking_id]) : create_backdated_walk_in
           return unless booking
@@ -37,7 +41,7 @@ module HotelPortal
             user: current_user,
             options: {
               override_night_audit: true,
-              reason: params[:retroactive_reason],
+              reason: params[:retroactive_reason].presence || params[:backdate_reason],
               backdate_reason_category: params[:backdate_reason],
               backdate_reason_details: params[:retroactive_reason],
               posting_date: params[:posting_date]

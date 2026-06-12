@@ -9,18 +9,42 @@
       method: :post,
       class: "flex flex-1 flex-col p-8" do |f| %>
       <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
-      <div class="space-y-5">
+      <%= f.hidden_field :checked_in_at, value: @booking.check_in&.in_time_zone(current_hotel.hotel_time_zone)&.strftime("%Y-%m-%dT%H:%M") %>
+      <div class="space-y-5" data-controller="backdate-reason-validation">
         <div>
-          <%= f.label :checked_in_at, "Backdated check-in time", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-          <%= f.datetime_local_field :checked_in_at, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+          <span class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Scheduled Check-in</span>
+          <p class="text-sm font-semibold text-slate-800"><%= @booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
         </div>
         <div>
-          <%= label_tag :retroactive_reason, "Override reason", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-          <%= text_area_tag :retroactive_reason, nil, required: true, rows: 4, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+          <%= label_tag :posting_date, "Posting Date", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+          <%= date_field_tag :posting_date, params[:posting_date] || current_hotel.business_date_for(Time.current), required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+        <div>
+          <%= label_tag :backdate_reason, "Backdate Reason", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+          <%= select_tag :backdate_reason, options_for_select([
+            ["Guest arrived earlier but was not checked in", "Guest arrived earlier but was not checked in"],
+            ["System / internet issue", "System / internet issue"],
+            ["Manual offline check-in", "Manual offline check-in"],
+            ["Night audit correction", "Night audit correction"],
+            ["Booking was created late", "Booking was created late"],
+            ["Room was occupied before system update", "Room was occupied before system update"],
+            ["Other", "Other"]
+          ], params[:backdate_reason]), required: true,
+              data: { backdate_reason_validation_target: "select", action: "change->backdate-reason-validation#toggle" },
+              class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <%= label_tag :retroactive_reason, "Reason Details", class: "block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+            <span data-backdate-reason-validation-target="optionalBadge" class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Optional</span>
+          </div>
+          <%= text_area_tag :retroactive_reason, params[:retroactive_reason], rows: 4, placeholder: "Explain why this check-in is being recorded after the business date was closed.",
+              data: { backdate_reason_validation_target: "details" },
+              class: "w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
       </div>
       <div class="mt-auto flex justify-end pt-6">
-        <%= f.submit "Complete Backdated Check In", class: "rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white" %>
+        <%= f.submit "Complete Backdated Check In", class: "rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 cursor-pointer" %>
       </div>
     <% end %>
   </div>
