@@ -12,7 +12,7 @@ module Payments
 
     def initialize(quote:, callback_url:, gateway: nil, guest_details: {})
       @quote = quote
-      @gateway = gateway || quote.hotel.checkout_payment_gateway || "mock"
+      @gateway = gateway || quote.hotel.checkout_payment_gateway || "razorpay"
       @guest_details = guest_details.to_h.symbolize_keys
       @callback_url = callback_url
     end
