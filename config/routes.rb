@@ -306,6 +306,11 @@ Rails.application.routes.draw do
       resources :refund_requests, only: [ :new, :create ]
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
     end
+    scope "bookings/:booking_id/show/actions", as: :booking_show_action, module: "bookings/show/actions" do
+      match "manage-guest", to: "manage_guests#show", via: [ :get, :post, :patch ], as: :manage_guest
+      match "confirmation", to: "confirmation_actions#show", via: [ :get, :delete ], as: :confirmation
+      match "manage-internal-notes", to: "manage_internal_notes#show", via: [ :get, :post, :patch ], as: :manage_internal_notes
+    end
     scope "booking-transactions", as: :booking_transaction, module: "bookings/transactions" do
       match "new-booking", to: "new_bookings#show", via: [ :get, :post ], as: :new_booking
       match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in

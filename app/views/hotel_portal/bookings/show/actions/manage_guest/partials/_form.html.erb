@@ -1,0 +1,49 @@
+<% method = mode == "add" ? :post : :patch %>
+<% url = hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: mode, booking_guest_id: booking_guest&.id) %>
+
+<%= form_with model: guest, url: url, method: method, class: "flex min-h-0 flex-1 flex-col" do |f| %>
+  <%= hidden_field_tag :return_to, @return_to %>
+  <div class="flex-1 space-y-5 overflow-y-auto p-6">
+    <% if guest.errors.any? %>
+      <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+        <p class="font-bold">Guest could not be saved.</p>
+        <p class="mt-1"><%= guest.errors.full_messages.to_sentence %></p>
+      </div>
+    <% end %>
+
+    <div>
+      <%= f.label :name, "Full Name", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+      <%= f.text_field :name, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+    </div>
+    <div class="grid gap-5 sm:grid-cols-2">
+      <div>
+        <%= f.label :email, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+        <%= f.email_field :email, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+      </div>
+      <div>
+        <%= f.label :phone, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+        <%= f.telephone_field :phone, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+      </div>
+      <div>
+        <%= f.label :country, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+        <%= f.select :country, options_for_select(COUNTRY_OPTIONS, guest.country.presence || current_hotel.country), {}, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+      </div>
+      <div>
+        <%= f.label :gender, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+        <%= f.select :gender, options_for_select([ [ "— Select —", "" ], [ "Male", "male" ], [ "Female", "female" ], [ "Other", "other" ] ], guest.gender), {}, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+      </div>
+      <div>
+        <%= f.label :document_type, "Document Type", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+        <%= f.select :document_type, options_for_select([ [ "IC", "ic" ], [ "Passport", "passport" ] ], guest.document_type.presence || "ic"), {}, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+      </div>
+      <div>
+        <%= f.label :government_id, "IC / Passport No.", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+        <%= f.text_field :government_id, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+      </div>
+    </div>
+  </div>
+
+  <%= render "hotel_portal/bookings/board/partials/content_footer",
+    show_full_page_link: false,
+    submit_button: f.submit(mode == "add" ? "Add Guest" : "Save Guest", class: "rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white") %>
+<% end %>

@@ -81,7 +81,26 @@ module HotelPortal
     end
 
     def additional_guests
-      @additional_guests ||= booking.booking_guests.where(is_primary: false).includes(:guest)
+      @additional_guests ||= booking.booking_guests.select { |booking_guest| !booking_guest.is_primary? }
+    end
+
+    def registered_guest_count
+      1 + additional_guests.size
+    end
+
+    def missing_guest_record_count
+      [ booking.adults.to_i + booking.children.to_i - registered_guest_count, 0 ].max
+    end
+
+    def reference_ids
+      [
+        [ "Confirmation", confirmation_token ],
+        [ "Reservation", booking.formatted_reservation_number ],
+        [ "Folio", booking.formatted_folio_number ],
+        [ "Guest Registration", booking.formatted_guest_registration_number ],
+        [ "External", booking.external_reference ],
+        [ "Channel Manager", booking.channel_manager_reference ]
+      ]
     end
 
     def primary_guest

@@ -51,7 +51,7 @@ end %>
         <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Guests</p>
       </div>
       <p class="mt-1 text-sm font-semibold text-slate-900"><%= booking.adults %> adults · <%= booking.children.to_i %> children</p>
-      <p class="text-xs text-slate-500"><%= pluralize(1 + presenter.additional_guests.size, "registered guest") %></p>
+      <p class="text-xs text-slate-500"><%= pluralize(presenter.registered_guest_count, "registered guest") %></p>
     </div>
   </div>
 </div>

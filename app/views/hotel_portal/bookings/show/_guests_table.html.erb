@@ -1,40 +1,52 @@
 <section class="overflow-hidden rounded-lg border border-slate-200 bg-white">
-  <div class="flex flex-col gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+  <div class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
     <div>
       <h2 class="inline-flex items-center gap-2 text-sm font-semibold text-slate-950"><span class="inline-flex size-6 items-center justify-center rounded-md bg-indigo-50 text-indigo-700"><%= cached_icon "users", class: "size-3.5" %></span> Guests</h2>
-      <p class="text-xs text-slate-500">Guest Reg. No. <span class="font-medium text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></span></p>
+      <p class="text-xs text-slate-500"><%= pluralize(presenter.registered_guest_count, "registered guest") %></p>
     </div>
-    <p class="text-xs text-slate-500"><%= pluralize(1 + presenter.additional_guests.size, "registered guest") %></p>
+    <% if presenter.can_add_guests?(current_user) %>
+      <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "add"), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" do %>
+        <%= cached_icon "plus", class: "size-3" %> Add Additional Guest
+      <% end %>
+    <% end %>
   </div>
 
   <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-slate-200 text-sm">
+    <table class="w-full table-fixed min-w-[1100px] divide-y divide-slate-200 text-sm">
       <thead class="bg-white text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
         <tr>
-          <th class="px-4 py-2">Guest</th>
-          <th class="px-4 py-2">Contact</th>
-          <th class="px-4 py-2">Identity</th>
-          <th class="px-4 py-2 text-right">Action</th>
+          <th class="w-[13%] px-4 py-2">Guest</th>
+          <th class="w-[10%] px-4 py-2">Guest Type</th>
+          <th class="w-[22%] px-4 py-2">Contact</th>
+          <th class="w-[16%] px-4 py-2">Identity</th>
+          <th class="w-[12%] px-4 py-2">Guest Reg No.</th>
+          <th class="w-[10%] px-4 py-2">Country</th>
+          <th class="w-[17%] sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-2 text-right shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">Action</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100 bg-white">
         <tr>
           <td class="px-4 py-3 align-top">
             <p class="font-semibold text-slate-950"><%= presenter.primary_guest_name %></p>
+          </td>
+          <td class="px-4 py-3 align-top">
             <span class="mt-1 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Primary</span>
           </td>
           <td class="px-4 py-3 align-top text-slate-700">
-            <p class="inline-flex items-center gap-1"><%= cached_icon "mail", class: "size-3 text-slate-400" %><%= presenter.primary_guest_email.presence || "—" %></p>
-            <p class="inline-flex items-center gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "size-3 text-slate-400" %><%= presenter.primary_guest_phone.presence || "—" %></p>
+            <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= presenter.primary_guest_email.presence || "—" %></span></p>
+            <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= presenter.primary_guest_phone.presence || "—" %></span></p>
           </td>
           <td class="px-4 py-3 align-top text-slate-700">
             <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-slate-400" %><%= presenter.primary_guest_document_type.to_s.upcase %></p>
             <p class="text-xs text-slate-500"><%= presenter.primary_guest_government_id %></p>
-            <p class="text-xs text-slate-500"><%= presenter.primary_guest_country %></p>
           </td>
-          <td class="px-4 py-3 text-right align-top">
+          <td class="px-4 py-3 align-top text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></td>
+          <td class="px-4 py-3 align-top text-slate-700"><%= presenter.primary_guest_country %></td>
+          <td class="sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
             <% if presenter.can_manage_bookings?(current_user) %>
-              <button type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-800" onclick="document.getElementById('edit-primary-guest-modal').showModal()"><%= cached_icon "pencil", class: "size-3" %> Edit</button>
+              <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "edit_primary"), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100" do %>
+                <%= cached_icon "pencil", class: "size-3" %> Edit
+              <% end %>
             <% else %>
               <span class="text-xs text-slate-400">—</span>
             <% end %>
@@ -46,22 +58,30 @@
           <tr>
             <td class="px-4 py-3 align-top">
               <p class="font-semibold text-slate-950"><%= guest.name %></p>
+            </td>
+            <td class="px-4 py-3 align-top">
               <span class="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Additional</span>
             </td>
             <td class="px-4 py-3 align-top text-slate-700">
-              <p class="inline-flex items-center gap-1"><%= cached_icon "mail", class: "size-3 text-slate-400" %><%= guest.email.presence || "—" %></p>
-              <p class="inline-flex items-center gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "size-3 text-slate-400" %><%= guest.phone.presence || "—" %></p>
+              <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest.email.presence || "—" %></span></p>
+              <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest.phone.presence || "—" %></span></p>
             </td>
             <td class="px-4 py-3 align-top text-slate-700">
               <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-slate-400" %><%= guest.document_type.presence&.upcase || "IC/PASSPORT" %></p>
               <p class="text-xs text-slate-500"><%= guest.government_id.presence || "—" %></p>
-              <p class="text-xs text-slate-500"><%= guest.country.presence || "—" %></p>
             </td>
-            <td class="px-4 py-3 text-right align-top">
+            <td class="px-4 py-3 align-top text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></td>
+            <td class="px-4 py-3 align-top text-slate-700"><%= guest.country.presence || "—" %></td>
+            <td class="sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
               <% if presenter.can_manage_bookings?(current_user) %>
-                <%= button_to remove_guest_hotel_booking_path(current_hotel, booking, guest_id: booking_guest.id), method: :delete, data: { turbo_confirm: "Remove this guest?" }, class: "inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700" do %>
-                  <%= cached_icon "trash-2", class: "size-3" %> Remove
-                <% end %>
+                <div class="flex justify-end gap-1.5">
+                  <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "edit_additional", booking_guest_id: booking_guest.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100" do %>
+                    <%= cached_icon "pencil", class: "size-3" %> Edit
+                  <% end %>
+                  <%= link_to hotel_booking_show_action_confirmation_path(current_hotel, booking, action_type: "remove_guest", target_id: booking_guest.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100" do %>
+                    <%= cached_icon "trash-2", class: "size-3" %> Remove
+                  <% end %>
+                </div>
               <% else %>
                 <span class="text-xs text-slate-400">—</span>
               <% end %>
@@ -72,98 +92,11 @@
     </table>
   </div>
 
-  <% unless presenter.additional_guests.any? %>
-    <div class="border-t border-slate-100 px-4 py-3 text-sm text-slate-500">No additional guests added.</div>
-  <% end %>
-
-  <% if presenter.can_add_guests?(current_user) %>
-    <details class="border-t border-slate-200">
-      <summary class="cursor-pointer list-none px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
-        <span class="inline-flex items-center gap-1.5"><%= cached_icon "user-plus", class: "size-3.5 text-indigo-600" %> + Add Additional Guest</span>
-      </summary>
-      <div class="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
-        <h3 class="mb-3 text-sm font-semibold text-slate-950">Add Additional Guest</h3>
-        <%= form_with url: add_guest_hotel_booking_path(current_hotel, booking), method: :post, local: true, class: "space-y-4" do %>
-          <div class="grid gap-4 md:grid-cols-2">
-            <div>
-              <%= label_tag :name, "Full Name *", class: "mb-1 block text-xs font-medium text-slate-700" %>
-              <%= text_field_tag :name, nil, required: true, placeholder: "Ahmad bin Ali", class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-            </div>
-            <div>
-              <%= label_tag :phone, "Phone", class: "mb-1 block text-xs font-medium text-slate-700" %>
-              <%= text_field_tag :phone, nil, placeholder: "0123456789", class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-            </div>
-            <div>
-              <%= label_tag :email, "Email", class: "mb-1 block text-xs font-medium text-slate-700" %>
-              <%= email_field_tag :email, nil, placeholder: "ahmad@email.com", class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-            </div>
-            <div>
-              <%= label_tag :country, "Country", class: "mb-1 block text-xs font-medium text-slate-700" %>
-              <%= select_tag :country, options_for_select(COUNTRY_OPTIONS, current_hotel.country.presence || "Malaysia"), class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-            </div>
-          </div>
-          <div class="grid gap-4 md:grid-cols-3">
-            <div>
-              <%= label_tag :gender, "Gender", class: "mb-1 block text-xs font-medium text-slate-700" %>
-              <%= select_tag :gender, options_for_select([["— Select —", ""], ["Male", "male"], ["Female", "female"], ["Other", "other"]]), class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-            </div>
-            <div>
-              <%= label_tag :document_type, "Document Type", class: "mb-1 block text-xs font-medium text-slate-700" %>
-              <%= select_tag :document_type, options_for_select([["IC", "ic"], ["Passport", "passport"]], "ic"), class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-            </div>
-            <div>
-              <%= label_tag :government_id, "IC / Passport No.", class: "mb-1 block text-xs font-medium text-slate-700" %>
-              <%= text_field_tag :government_id, nil, placeholder: "900101-10-1234", class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-            </div>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button type="button" class="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onclick="this.closest('details').removeAttribute('open')">Cancel</button>
-            <%= submit_tag "Save Guest", class: "rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700" %>
-          </div>
-        <% end %>
-      </div>
-    </details>
-  <% end %>
-
-  <dialog id="edit-primary-guest-modal" class="fixed inset-0 m-auto w-[min(92vw,34rem)] max-w-xl rounded-xl p-0 shadow-xl backdrop:bg-slate-900/40" onclick="if(event.target===this){this.close()}">
-    <div class="bg-white p-5" onclick="event.stopPropagation()">
-      <h3 class="text-base font-semibold text-slate-900">Edit Primary Guest</h3>
-      <%= form_with model: booking, url: hotel_booking_transaction_edit_booking_path(current_hotel, booking), method: :patch, local: true, class: "mt-4 space-y-4" do |f| %>
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div class="sm:col-span-2">
-            <%= f.label :guest_name, "Full Guest Name", class: "mb-1 block text-xs font-medium text-slate-700" %>
-            <%= f.text_field :guest_name, class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-          </div>
-          <div>
-            <%= f.label :guest_email, "Email", class: "mb-1 block text-xs font-medium text-slate-700" %>
-            <%= f.email_field :guest_email, class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-          </div>
-          <div>
-            <%= f.label :guest_phone, "Phone", class: "mb-1 block text-xs font-medium text-slate-700" %>
-            <%= f.telephone_field :guest_phone, class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-          </div>
-          <div>
-            <%= f.label :guest_country, "Country", class: "mb-1 block text-xs font-medium text-slate-700" %>
-            <%= f.select :guest_country, options_for_select(COUNTRY_OPTIONS, booking.guest_country.presence || presenter.primary_guest_country), {}, class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-          </div>
-          <div>
-            <%= f.label :guest_gender, "Gender", class: "mb-1 block text-xs font-medium text-slate-700" %>
-            <%= f.select :guest_gender, options_for_select([["— Select —", ""], ["Male", "male"], ["Female", "female"], ["Other", "other"]], booking.guest_gender), {}, class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-          </div>
-          <div>
-            <%= f.label :guest_document_type, "Document Type", class: "mb-1 block text-xs font-medium text-slate-700" %>
-            <%= f.select :guest_document_type, options_for_select([["IC", "ic"], ["Passport", "passport"]], booking.guest_document_type.presence || "ic"), {}, class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-          </div>
-          <div>
-            <%= f.label :guest_government_id, "IC / Passport No.", class: "mb-1 block text-xs font-medium text-slate-700" %>
-            <%= f.text_field :guest_government_id, value: presenter.primary_guest_government_id == "—" ? nil : presenter.primary_guest_government_id, class: "w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-0" %>
-          </div>
-        </div>
-        <div class="flex justify-end gap-2">
-          <button type="button" class="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onclick="this.closest('dialog').close()">Cancel</button>
-          <%= f.submit "Save Changes", class: "rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700" %>
-        </div>
-      <% end %>
+  <% if presenter.missing_guest_record_count.positive? %>
+    <div class="flex items-center gap-2 border-t border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+      <%= cached_icon "triangle-alert", class: "size-4 shrink-0" %>
+      <span>This booking has <%= pluralize(presenter.missing_guest_record_count, "guest") %> that have not been added to the guest records.</span>
     </div>
-  </dialog>
+  <% end %>
+
 </section>

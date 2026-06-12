@@ -1,0 +1,16 @@
+<% method = mode == "add" ? :post : :patch %>
+<% url = hotel_booking_show_action_manage_internal_notes_path(current_hotel, booking, mode: mode, note_id: note.id) %>
+
+<%= form_with model: note, url: url, method: method, class: "flex min-h-0 flex-1 flex-col" do |f| %>
+  <%= hidden_field_tag :return_to, @return_to %>
+  <div class="flex-1 overflow-y-auto p-6">
+    <% if note.errors.any? %>
+      <div class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert"><%= note.errors.full_messages.to_sentence %></div>
+    <% end %>
+    <%= f.label :body, "Internal Note", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+    <%= f.text_area :body, rows: 10, required: true, class: "w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm" %>
+  </div>
+  <%= render "hotel_portal/bookings/board/partials/content_footer",
+    show_full_page_link: false,
+    submit_button: f.submit(mode == "add" ? "Add Note" : "Save Note", class: "rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white") %>
+<% end %>
