@@ -106,14 +106,14 @@ module Bookings
         booking.payment_status = (payment_amount_value.to_d >= booking.total_amount.to_d) ? "captured" : "partial"
 
         captured_at_time = if @posting_date.present?
-                             begin
-                               @posting_date.to_date.in_time_zone(@hotel.hotel_time_zone) + 12.hours
-                             rescue
-                               Time.current
-                             end
-                           else
-                             Time.current
-                           end
+          begin
+            @posting_date.to_date.in_time_zone(@hotel.hotel_time_zone) + 12.hours
+          rescue
+            Time.current
+          end
+        else
+          Time.current
+        end
 
         booking.payment_transactions.build(
           gateway: "manual",

@@ -13,7 +13,7 @@ module HotelPortal
           def show
             return create_additional if request.post? && @mode == "add"
             return update_guest if request.patch? && @mode != "add"
-            raise ActiveRecord::RecordNotFound unless request.get?
+            raise ActiveRecord::RecordNotFound unless request.get? || request.head?
 
             prepare_guest
             render_sheet

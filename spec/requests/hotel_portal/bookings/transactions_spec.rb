@@ -75,6 +75,23 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(response.body).to include("Extend Stay", "Confirm Extension")
   end
 
+  it "does not mutate a booking when rendering a timeline move proposal" do
+    booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 2.days)
+    booking_room = create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+    original_check_in = booking.check_in
+    original_check_out = booking.check_out
+
+    expect {
+      get hotel_booking_transaction_edit_booking_timeline_path(hotel, booking),
+        params: { timeline_action: "move", check_in: Date.current + 1.day, room_type_id: room_type.id, room_number: "102" },
+        headers: { "Turbo-Frame" => "offcanvas_drawer" }
+    }.not_to change { BookingAuditLog.where(auditable: booking, action_type: "update").count }
+
+    expect(response).to have_http_status(:success)
+    expect(booking.reload).to have_attributes(check_in: original_check_in, check_out: original_check_out)
+    expect(booking_room.reload.room_number).to eq("101")
+  end
+
   it "rejects unknown timeline actions" do
     booking = create(:booking, hotel: hotel)
 

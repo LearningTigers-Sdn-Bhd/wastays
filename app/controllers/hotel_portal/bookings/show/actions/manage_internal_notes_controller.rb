@@ -13,7 +13,7 @@ module HotelPortal
           def show
             return create_note if request.post? && @mode == "add"
             return update_note if request.patch? && @mode == "edit"
-            raise ActiveRecord::RecordNotFound unless request.get?
+            raise ActiveRecord::RecordNotFound unless request.get? || request.head?
 
             @note ||= @booking.booking_notes.build
             render_sheet

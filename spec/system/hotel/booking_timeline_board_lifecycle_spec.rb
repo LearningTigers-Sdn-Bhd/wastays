@@ -24,6 +24,46 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     ]
   end
 
+  def drag_booking_to(booking:, room_number:, date:)
+    page.execute_script(<<~JS)
+      const source = document.querySelector("[data-booking-actions-id-value='#{booking.id}']")
+      const handle = source.querySelector("[data-action*='onDragHandleMouseDown']")
+      const target = document.querySelector("[data-room-number='#{room_number}'][data-date='#{date}']")
+      const transfer = new DataTransfer()
+      handle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }))
+      source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer: transfer }))
+      target.dispatchEvent(new DragEvent("dragover", { bubbles: true, dataTransfer: transfer }))
+      target.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer }))
+      source.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer: transfer }))
+    JS
+  end
+
+  def expect_offcanvas_to_finish_closing
+    expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)
+    expect(page).to have_selector("#offcanvas_drawer:not([src])", visible: :all)
+    expect(page).to have_no_content("Move Stay")
+  end
+
+  def expect_offcanvas_to_finish_opening
+    expect(page).to have_selector(
+      "#offcanvas_drawer_container.block [data-offcanvas-target='panel'].translate-x-0",
+      visible: :all
+    )
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + Capybara.default_max_wait_time
+
+    loop do
+      transform = page.evaluate_script(<<~JS)
+        window.getComputedStyle(
+          document.querySelector("#offcanvas_drawer_container [data-offcanvas-target='panel']")
+        ).transform
+      JS
+      break if transform == "none" || transform == "matrix(1, 0, 0, 1, 0, 0)"
+      raise "Offcanvas panel did not finish opening" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      sleep 0.01
+    end
+  end
+
   before do
     driven_by(:cuprite, options: { window_size: [ 1400, 1000 ], process_timeout: 10 })
 
@@ -211,8 +251,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     expect(trigger["aria-expanded"]).to eq("false")
   end
 
-  it "does not open Edit Booking from a timeline handle and cancels a proposed move", js: true do
-    target_date = @business_date + 1.day
+  it "does not open Edit Booking from a timeline handle", js: true do
     visit board_hotel_bookings_path(hotel, start_date: @business_date)
 
     page.execute_script(<<~JS)
@@ -220,25 +259,24 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
       source.querySelector("[data-booking-timeline-target='dragHandle']").click()
     JS
     expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)
+    expect(page).to have_no_content("Edit Booking")
+  end
 
-    page.execute_script(<<~JS)
-      const source = document.querySelector("[data-booking-actions-id-value='#{@booking.id}']")
-      const handle = source.querySelector("[data-action*='onDragHandleMouseDown']")
-      const target = document.querySelector("[data-room-number='102'][data-date='#{target_date}']")
-      const transfer = new DataTransfer()
-      handle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }))
-      source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer: transfer }))
-      target.dispatchEvent(new DragEvent("dragover", { bubbles: true, dataTransfer: transfer }))
-      target.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer }))
-    JS
+  it "cancels a proposed move without changing the booking", js: true do
+    target_date = @business_date + 1.day
+    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+
+    drag_booking_to(booking: @booking, room_number: "102", date: target_date)
+    expect_offcanvas_to_finish_opening
 
     within "#offcanvas_drawer" do
       expect(page).to have_content(/Move Stay/i)
-      click_button "Cancel"
+      find_button("Cancel", exact: true).trigger("click")
     end
 
-    expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)
+    expect_offcanvas_to_finish_closing
     expect(@booking.reload.check_in.to_date).to eq(@business_date)
+    expect(@booking.check_out.to_date).to eq(@business_date + 1.day)
     expect(@booking.booking_rooms.first.room_number).to eq("101")
   end
 
@@ -246,16 +284,8 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     target_date = @business_date + 1.day
     visit board_hotel_bookings_path(hotel, start_date: @business_date)
 
-    page.execute_script(<<~JS)
-      const source = document.querySelector("[data-booking-actions-id-value='#{@booking.id}']")
-      const handle = source.querySelector("[data-action*='onDragHandleMouseDown']")
-      const target = document.querySelector("[data-room-number='102'][data-date='#{target_date}']")
-      const transfer = new DataTransfer()
-      handle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }))
-      source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer: transfer }))
-      target.dispatchEvent(new DragEvent("dragover", { bubbles: true, dataTransfer: transfer }))
-      target.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer }))
-    JS
+    drag_booking_to(booking: @booking, room_number: "102", date: target_date)
+    expect_offcanvas_to_finish_opening
 
     within "#offcanvas_drawer" do
       expect(page).to have_content(/Move Stay/i)
@@ -285,6 +315,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
       document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: targetRect.left + 4, clientY: targetRect.top + 4 }))
     JS
 
+    expect_offcanvas_to_finish_opening
     within "#offcanvas_drawer" do
       expect(page).to have_content(/Extend Stay/i)
       click_button "Confirm Extension"
