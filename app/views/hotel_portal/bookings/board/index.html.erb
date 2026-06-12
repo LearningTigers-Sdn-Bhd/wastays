@@ -11,8 +11,6 @@
 <% page_spacing = comfortable_mode ? "space-y-6" : "space-y-4" %>
 <% container_padding = comfortable_mode ? "px-4 md:px-0" : "px-3 md:px-0" %>
 <% card_padding = comfortable_mode ? "px-4 py-1.5" : "px-3 py-1" %>
-<% title_class = comfortable_mode ? "text-xl sm:text-2xl" : "text-lg sm:text-xl" %>
-<% subtitle_class = comfortable_mode ? "text-sm" : "text-[11px]" %>
 <% summary_padding = comfortable_mode ? "px-4 py-3" : "px-3 py-2" %>
 <% room_number_class = comfortable_mode ? "text-xl" : "text-base" %>
 <% rate_text_class = comfortable_mode ? "text-[13px]" : "text-[11px]" %>
@@ -38,12 +36,12 @@
 <div class="max-w-[1600px] mx-auto pb-20">
   <%= turbo_frame_tag "booking_timeline_board" do %>
     <div class="<%= page_spacing %>">
-      <div class="<%= container_padding %> mt-5">
+      <div class="mt-5 <%= container_padding %>">
       <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div class="space-y-3">
           <div>
-            <h1 class="font-bold tracking-tight text-slate-950 <%= title_class %>">Booking Timeline Board</h1>
-            <p class="mt-1 font-medium text-slate-600 <%= subtitle_class %>"><%= current_hotel.name %> · Centralized reservation management and planning</p>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Booking Timeline Board</h1>
+            <p class="mt-1 text-sm font-medium text-slate-600"><%= current_hotel.name %> · Centralized reservation management and planning</p>
           </div>
 
           <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">

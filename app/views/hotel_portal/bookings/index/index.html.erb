@@ -1,14 +1,13 @@
 <div class="max-w-[1600px] mx-auto pb-10 space-y-4">
-  <%# 1. Compact Page Header %>
-  <div class="px-4 md:px-0 mt-4 flex items-center justify-between">
+  <div class="mt-5 flex items-center justify-between px-4 md:px-0">
     <div>
-      <h1 class="text-xl font-bold tracking-tight text-slate-900">Bookings</h1>
-      <p class="text-xs font-medium text-slate-500">Manage property reservations and guest stays.</p>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Bookings</h1>
+      <p class="mt-1 text-sm font-medium text-slate-600">Manage property reservations and guest stays.</p>
     </div>
     
     <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
       <div class="relative inline-block text-left" data-controller="dropdown">
-      <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center gap-x-1.5 rounded-lg bg-slate-900 px-2 md:px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition active:scale-95" id="add-booking-menu-button" aria-expanded="false" aria-haspopup="true">
+      <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center gap-x-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 active:scale-95 md:px-4" id="add-booking-menu-button" aria-expanded="false" aria-haspopup="true">
         <svg class="size-4 text-slate-300" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
         <span class="hidden md:inline">New</span>
         <svg class="-mr-1 size-4 text-slate-400 hidden md:inline-block" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
@@ -16,7 +15,7 @@
 
       <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-60 origin-top-right rounded-2xl bg-slate-900 border border-slate-800 p-1.5 shadow-xl shadow-slate-950/20 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="add-booking-menu-button" tabindex="-1">
         <div class="py-0.5" role="none">
-          <div class="px-3.5 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-800 mb-1">Create New</div>
+          <div class="px-3.5 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-800 mb-1">Insert Transaction</div>
           
           <%= link_to hotel_booking_transaction_new_booking_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
             <%= cached_icon "calendar-plus", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
