@@ -10,7 +10,7 @@ module HotelPortal::BookingsHelper
     payment_status_class(display_status)
   end
 
-  def folio_transaction_amount_label(transaction)
+  def folio_transaction_amount_label(transaction, currency: nil)
     amount = transaction.amount.to_d
     signed_amount = case transaction.transaction_type
     when "charge" then amount
@@ -19,7 +19,8 @@ module HotelPortal::BookingsHelper
     end
 
     sign = signed_amount.negative? ? "-" : "+"
-    "#{sign} MYR #{number_with_precision(signed_amount.abs, precision: 2)}"
+    currency_label = currency ? currency : " MYR"
+    "#{sign}#{currency_label} #{number_with_precision(signed_amount.abs, precision: 2)}"
   end
 
   def folio_transaction_amount_class(transaction)

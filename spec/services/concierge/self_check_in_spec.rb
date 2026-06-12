@@ -56,7 +56,7 @@ RSpec.describe Concierge::SelfCheckIn do
 
   context "too early" do
     before do
-      future_time = (Time.current + 2.hours).strftime("%H:%M")
+      future_time = (Time.current.in_time_zone(hotel.hotel_time_zone) + 2.hours).strftime("%H:%M")
       hotel.create_property_policy!(check_in_time: future_time, check_out_time: "12:00",
                                     currency: "MYR") unless hotel.property_policy
       hotel.property_policy.update!(check_in_time: future_time)

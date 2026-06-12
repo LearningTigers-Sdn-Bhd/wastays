@@ -2,6 +2,7 @@
 
 class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
   include BookingAuditable
+  include OffcanvasTransactionCompletion
 
   before_action :authorize_manage_bookings!
 
@@ -33,13 +34,10 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
 
       respond_to do |format|
         format.turbo_stream do
-          if reservation_board_request?
-            render turbo_stream: turbo_stream.action(:reload, "reservation_board")
-          else
-            redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest checked in successfully.", status: :see_other
-          end
+          flash[:notice] = "Guest checked in successfully."
+          render_offcanvas_completion(check_in_success_path)
         end
-        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest checked in successfully." }
+        format.html { redirect_to check_in_success_path, notice: "Guest checked in successfully." }
       end
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
@@ -47,8 +45,8 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
 
       respond_to do |format|
         format.turbo_stream do
-          if reservation_board_request?
-            render turbo_stream: turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
+          if booking_timeline_board_request?
+            render turbo_stream: turbo_stream.append("booking_timeline_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
           else
             flash.now[:alert] = result.error
             render "hotel_portal/bookings/show", formats: [ :html ], status: :unprocessable_content
@@ -93,8 +91,16 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
     RoomLock.where(hotel: current_hotel, user: current_user, room_number: room_number).destroy_all if room_number.present?
   end
 
-  def reservation_board_request?
-    params[:source] == "reservation_board" || request.referer&.include?("reservation-board")
+  def check_in_success_path
+    fallback = hotel_booking_path(current_hotel, @booking)
+    return offcanvas_return_to(fallback: fallback) if params[:return_to].present?
+    return board_hotel_bookings_path(current_hotel) if booking_timeline_board_request?
+
+    fallback
+  end
+
+  def booking_timeline_board_request?
+    params[:source] == "booking_timeline_board" || request.referer&.include?("bookings/board")
   end
 
   def authorize_manage_bookings!

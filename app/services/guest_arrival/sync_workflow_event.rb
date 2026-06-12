@@ -13,6 +13,8 @@ module GuestArrival
       return OpenStruct.new(success?: false, message: "Pre-checkin record not found") unless @pre_checkin
 
       ActiveRecord::Base.transaction do
+        old_value = booking_audit_values
+
         case @event_type
         when "flow_started"
           update_status("in_progress")
@@ -26,6 +28,7 @@ module GuestArrival
           update_status("failed")
         end
 
+        record_audit!(old_value)
         OpenStruct.new(success?: true)
       end
     rescue => e
@@ -48,6 +51,24 @@ module GuestArrival
       @booking.update!(
         pre_checkin_status: "completed",
         guarantee_method: "pre_checkin_completed" # Default if flow completed
+      )
+    end
+
+    def booking_audit_values
+      {
+        "pre_checkin_status" => @booking.pre_checkin_status,
+        "guarantee_method" => @booking.guarantee_method
+      }
+    end
+
+    def record_audit!(old_value)
+      Bookings::RecordAuditLog.call!(
+        auditable: @booking,
+        action_type: @event_type == "flow_completed" ? "pre_checkin_completed" : "pre_checkin_updated",
+        source: "system",
+        old_value: old_value,
+        new_value: booking_audit_values,
+        metadata: { "workflow_event" => @event_type }
       )
     end
   end

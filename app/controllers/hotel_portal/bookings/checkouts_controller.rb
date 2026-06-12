@@ -2,14 +2,15 @@
 
 class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   include BookingAuditable
+  include OffcanvasTransactionCompletion
 
   before_action :authorize_view_bookings!, only: [ :show ]
   before_action :authorize_manage_bookings!, only: [ :create, :process_late_checkout ]
 
   def show
-    @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(params[:id])
+    @booking = current_hotel.bookings.includes(booking_folio: { folio_transactions: :user }).find(params[:id])
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-    render "hotel_portal/bookings/checkout"
+    render "hotel_portal/bookings/transactions/check_out/offcanvas"
   end
 
   def create
@@ -36,11 +37,8 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
       if result.success?
         respond_to do |format|
           format.turbo_stream do
-            if reservation_board_request?
-              render turbo_stream: turbo_stream.action(:reload, "reservation_board")
-            else
-              redirect_to hotel_booking_path(current_hotel, @booking, checkout_success: true), notice: "Guest has been checked out with early departure."
-            end
+            flash[:notice] = "Guest has been checked out with early departure."
+            render_offcanvas_completion(checkout_success_path)
           end
           format.html { redirect_to hotel_booking_path(current_hotel, @booking, checkout_success: true), notice: "Guest has been checked out with early departure." }
         end
@@ -50,8 +48,8 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
         respond_to do |format|
           format.turbo_stream do
-            if reservation_board_request?
-              render turbo_stream: turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
+            if booking_timeline_board_request?
+              render turbo_stream: turbo_stream.append("booking_timeline_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
             else
               flash.now[:alert] = result.error
               render "hotel_portal/bookings/show", formats: [ :html ], status: :unprocessable_content
@@ -70,38 +68,19 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
   def process_late_checkout
     @booking = current_hotel.bookings.find(params[:id])
-
-    if params[:check_out].present?
-      unless @booking.update(check_out: params[:check_out])
-        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to update checkout period: #{@booking.errors.full_messages.to_sentence}"
-      end
-    end
-
-    should_charge = params[:charge_type] != "none" && params[:amount].to_f > 0
-
-    if should_charge
-      result = Folios::PostCategoryCharge.call(
-        folio: @booking.booking_folio,
-        user: current_user,
-        category: "late_checkout_charge",
-        amount: params[:amount],
-        description: "Late Checkout Charge"
-      )
-
-      unless result.success?
-        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Failed to apply late checkout charge: #{result.error}"
-      end
-    end
-
-    Bookings::TransitionStatus.new(
+    result = Bookings::ProcessLateCheckout.call(
       booking: @booking,
-      status: "checked_in",
       user: current_user,
-      options: { event: "resolve_late_checkout" }
-    ).call
+      params: late_checkout_params
+    )
 
-    notice = should_charge ? "Late checkout charge applied." : "Late checkout resolved without charge."
-    redirect_to hotel_booking_path(current_hotel, @booking), notice: notice
+    return redirect_to hotel_booking_path(current_hotel, @booking), alert: result.error unless result.success?
+
+    notice = result.charged? ? "Late checkout charge applied." : "Late checkout resolved without charge."
+    offcanvas_transaction_response(
+      destination: offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking)),
+      notice: notice
+    )
   end
 
   private
@@ -114,6 +93,10 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     params.fetch(:booking, {}).permit(
       :checked_in_at, :checked_out_at
     )
+  end
+
+  def late_checkout_params
+    params.permit(:charge_type, :amount, :check_out, :charge_calculation, :custom_type, :custom_value)
   end
 
   def early_departure_checkout?(timestamp)
@@ -138,11 +121,8 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     if result.success?
       respond_to do |format|
         format.turbo_stream do
-          if reservation_board_request?
-            render turbo_stream: turbo_stream.action(:reload, "reservation_board")
-          else
-            redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice
-          end
+          flash[:notice] = success_notice
+          render_offcanvas_completion(checkout_success_path)
         end
         format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice }
       end
@@ -152,8 +132,8 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
       respond_to do |format|
         format.turbo_stream do
-          if reservation_board_request?
-            render turbo_stream: turbo_stream.append("reservation_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
+          if booking_timeline_board_request?
+            render turbo_stream: turbo_stream.append("booking_timeline_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
           else
             flash.now[:alert] = result.error
             render "hotel_portal/bookings/show", formats: [ :html ], status: :unprocessable_content
@@ -167,12 +147,12 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     end
   end
 
-  def reservation_board_request?
-    params[:source] == "reservation_board" || request.referer&.include?("reservation-board")
+  def booking_timeline_board_request?
+    params[:source] == "booking_timeline_board" || request.referer&.include?("bookings/board")
   end
 
   def check_out_from_sheet(timestamp)
-    @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions).find(params[:id])
+    @booking = current_hotel.bookings.includes(booking_folio: { folio_transactions: :user }).find(params[:id])
     error = nil
 
     ActiveRecord::Base.transaction do
@@ -226,7 +206,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     end
 
     dispatch_checkout_side_effects
-    redirect_to hotel_booking_path(current_hotel, @booking, checkout_success: true), notice: "Guest has been checked out."
+    offcanvas_transaction_response(destination: checkout_success_path, notice: "Guest has been checked out.")
   end
 
   def post_checkout_settlement_payment
@@ -238,7 +218,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     return OpenStruct.new(success?: false, error: "Checkout payment method is not supported.") unless checkout_payment_method == "cash"
 
     balance = @booking.booking_folio.outstanding_balance.to_d
-    return OpenStruct.new(success?: false, error: "Checkout payment can only be posted for a positive outstanding balance.") unless balance.positive?
+    return OpenStruct.new(success?: true) unless balance.positive?
     return OpenStruct.new(success?: false, error: "Checkout payment cannot exceed the outstanding balance.") if checkout_payment_amount > balance
 
     Folios::PostStaffTransaction.call(
@@ -274,11 +254,18 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
       format.turbo_stream do
         render turbo_stream: turbo_stream.update(
           "offcanvas_drawer",
-          partial: "hotel_portal/bookings/checkout_sheet",
-          locals: { booking: @booking, presenter: @presenter, hotel: current_hotel, checkout_error: error }
+          partial: "hotel_portal/bookings/transactions/check_out/partials/sheet",
+          locals: {
+            booking: @booking,
+            presenter: @presenter,
+            hotel: current_hotel,
+            checkout_error: error,
+            checkout_source: params[:source],
+            transaction_return_to: offcanvas_return_to(fallback: nil)
+          }
         ), status: :unprocessable_content
       end
-      format.html { render "hotel_portal/bookings/checkout", status: :unprocessable_content }
+      format.html { render "hotel_portal/bookings/transactions/check_out/offcanvas", status: :unprocessable_content }
     end
   end
 
@@ -286,6 +273,14 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
     Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
     SendInvoiceEmailJob.perform_later(@booking.id)
+  end
+
+  def checkout_success_path
+    fallback = hotel_booking_path(current_hotel, @booking, checkout_success: true)
+    return offcanvas_return_to(fallback: fallback) if params[:return_to].present?
+    return board_hotel_bookings_path(current_hotel) if booking_timeline_board_request?
+
+    fallback
   end
 
   def authorize_view_bookings!

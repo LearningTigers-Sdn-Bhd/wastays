@@ -45,7 +45,7 @@ module Rooms
       # We count rooms taken by bookings for this room type on this date
       occupied_count = @hotel.bookings.revenue_generating
                              .joins(:booking_rooms)
-                             .where(":date >= bookings.check_in AND :date < bookings.check_out", date: date)
+                             .where(":date >= bookings.check_in::date AND :date < bookings.check_out::date", date: date)
                              .where(booking_rooms: { room_type_id: @room_type.id })
                              .sum("booking_rooms.quantity")
 

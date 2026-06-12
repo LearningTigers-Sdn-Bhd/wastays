@@ -15,6 +15,7 @@ module BookingAuditable
 
     @audit_logs = @audit_logs.or(base_query.where(auditable_type: "BookingRoom", auditable_id: booking.booking_rooms.select(:id)))
                             .includes(:user, :auditable)
-                            .order(created_at: :desc)
+                            .order(occurred_at: :desc, created_at: :desc)
+    @audit_history = @audit_logs.map { |log| HotelPortal::BookingAuditLogPresenter.new(log, hotel: current_hotel) }
   end
 end

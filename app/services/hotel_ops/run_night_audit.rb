@@ -41,6 +41,14 @@ module HotelOps
       record_night_audit_event!(night_audit, business_date, "night_audit_started", "Night audit started")
       record_night_audit_event!(night_audit, business_date, "business_date_audit_started", "Business date moved to audit_running")
 
+      no_show_result = Bookings::ProcessNoShowReviews.call(night_audit: night_audit, user: @performed_by_user)
+      night_audit.night_audit_logs.where(action_type: "process_started").order(:id).last&.update!(
+        metadata: {
+          reviewed_no_show_count: no_show_result.reviewed_count,
+          finalized_no_show_count: no_show_result.finalized_count
+        }
+      )
+
       pre_evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :pre_close).call
 
       if blocked?(pre_evaluation) && !@force_roll
@@ -66,7 +74,6 @@ module HotelOps
         return Result.new(success?: night_audit.completed?, night_audit: night_audit)
       end
 
-      Bookings::ProcessNoShows.call(night_audit: night_audit, user: @performed_by_user)
       Folios::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
 
       # Use the evaluation service to get blockers and exceptions

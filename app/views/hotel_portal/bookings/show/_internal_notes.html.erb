@@ -1,129 +1,86 @@
-<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-  <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-    <h2 class="text-lg font-semibold text-gray-800">Internal Notes</h2>
-    <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Hotel Staff Only</span>
-  </div>
-  <div class="p-6 space-y-6">
-    <% all_notes = booking.booking_notes.includes(:user).order(created_at: :desc).to_a %>
-    <% preview_notes = all_notes.first(2) %>
+<% all_notes = booking.booking_notes.sort_by(&:created_at).reverse %>
+<% preview_notes = all_notes.first(2) %>
+<% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
 
-    <div class="space-y-3">
-      <% if preview_notes.any? %>
-        <% preview_notes.each do |note| %>
-          <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-            <div class="flex justify-between items-start mb-2 gap-2">
-              <div>
-                <span class="text-xs font-bold text-blue-800"><%= note.user.name %></span>
-                <div class="text-[10px] text-blue-600 inline-flex items-center gap-x-1">
-                  <span><%= note.created_at.strftime("%d %b %Y") %></span>
-                  <% if Array(note.edit_history).any? %>
-                    <button type="button" class="underline hover:text-blue-800" onclick="document.getElementById('note-history-modal-<%= note.id %>').showModal()">(Edited)</button>
+<section class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+  <div class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+    <div>
+      <h2 class="inline-flex items-center gap-2 text-sm font-semibold text-slate-950"><span class="inline-flex size-6 items-center justify-center rounded-md bg-blue-50 text-blue-700"><%= cached_icon "sticky-note", class: "size-3.5" %></span> Internal Notes</h2>
+      <p class="text-xs text-slate-500">Hotel staff only.</p>
+    </div>
+    <% if can_manage %>
+      <%= link_to hotel_booking_show_action_manage_internal_notes_path(current_hotel, booking, mode: "add"), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" do %>
+        <%= cached_icon "plus", class: "size-3" %> Add Note
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="divide-y divide-slate-100">
+    <% if preview_notes.any? %>
+      <% preview_notes.each do |note| %>
+        <div class="px-4 py-3">
+          <div class="mb-1 flex items-start justify-between gap-3">
+            <div>
+              <p class="inline-flex items-center gap-1 text-xs font-semibold text-slate-900"><%= cached_icon "user", class: "size-3 text-slate-400" %><%= note.user.name %></p>
+              <p class="mt-0.5 inline-flex items-center gap-1 text-[11px] text-slate-500"><%= cached_icon "clock", class: "size-3 text-slate-400" %><%= note.created_at.strftime("%d %b %Y") %></p>
+            </div>
+            <% if can_manage %>
+              <div class="flex items-center gap-2 text-xs">
+                <% if Array(note.edit_history).any? %>
+                  <%= link_to hotel_booking_show_action_manage_internal_notes_path(current_hotel, booking, mode: "history", note_id: note.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" do %>
+                    History
                   <% end %>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button type="button" class="text-blue-700 hover:text-blue-900" title="Edit note" onclick="document.getElementById('edit-note-modal-<%= note.id %>').showModal()">
-                  <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 3.487 1.65-1.65a2.25 2.25 0 1 1 3.182 3.182l-1.65 1.65M18 5 7.5 15.5 3 21l5.5-4.5L19 6z" /></svg>
-                </button>
-                <%= link_to hotel_booking_booking_note_path(booking.hotel, booking, note), data: { turbo_method: :delete, turbo_confirm: "Delete this note?" }, class: "text-red-600 hover:text-red-800", title: "Delete note" do %>
-                  <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M9 7V4h6v3m-7 4v6m4-6v6m4-6v6M5 7h14l-1 13H6L5 7z" /></svg>
+                <% end %>
+                <%= link_to hotel_booking_show_action_manage_internal_notes_path(current_hotel, booking, mode: "edit", note_id: note.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100" do %>
+                  <%= cached_icon "pencil", class: "size-3" %> Edit
+                <% end %>
+                <%= link_to hotel_booking_show_action_confirmation_path(current_hotel, booking, action_type: "delete_internal_note", target_id: note.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100" do %>
+                  <%= cached_icon "trash-2", class: "size-3" %> Delete
                 <% end %>
               </div>
+            <% end %>
+          </div>
+          <p class="whitespace-pre-wrap text-sm text-slate-700"><%= note.body %></p>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="flex items-center gap-2 px-4 py-3 text-sm text-slate-500">
+        <span class="inline-flex size-6 items-center justify-center rounded-md bg-slate-100 text-slate-400"><%= cached_icon "sticky-note", class: "size-3.5" %></span>
+        No internal notes for this booking.
+      </div>
+    <% end %>
+  </div>
+
+  <% if all_notes.size > 2 %>
+    <details class="border-t border-slate-100">
+      <summary class="cursor-pointer list-none px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+        <span class="inline-flex items-center gap-1.5"><%= cached_icon "list", class: "size-3" %> View all <%= all_notes.size %> notes</span>
+      </summary>
+      <div class="max-h-96 divide-y divide-slate-100 overflow-y-auto border-t border-slate-100">
+        <% all_notes.drop(2).each do |note| %>
+          <div class="px-4 py-3">
+            <div class="mb-1 flex items-start justify-between gap-3">
+              <p class="text-xs font-semibold text-slate-900"><%= note.user.name %> · <%= note.created_at.strftime("%d %b %Y") %></p>
+              <% if can_manage %>
+                <div class="flex gap-2 text-xs">
+                  <% if Array(note.edit_history).any? %>
+                    <%= link_to hotel_booking_show_action_manage_internal_notes_path(current_hotel, booking, mode: "history", note_id: note.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" do %>
+                      History
+                    <% end %>
+                  <% end %>
+                  <%= link_to hotel_booking_show_action_manage_internal_notes_path(current_hotel, booking, mode: "edit", note_id: note.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100" do %>
+                    <%= cached_icon "pencil", class: "size-3" %> Edit
+                  <% end %>
+                  <%= link_to hotel_booking_show_action_confirmation_path(current_hotel, booking, action_type: "delete_internal_note", target_id: note.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100" do %>
+                    <%= cached_icon "trash-2", class: "size-3" %> Delete
+                  <% end %>
+                </div>
+              <% end %>
             </div>
-            <p class="text-sm text-gray-800 whitespace-pre-wrap"><%= note.body %></p>
+            <p class="whitespace-pre-wrap text-sm text-slate-700"><%= note.body %></p>
           </div>
         <% end %>
-      <% else %>
-        <p class="text-sm text-gray-500 text-center italic py-4">No internal notes for this booking.</p>
-      <% end %>
-    </div>
-
-    <% if all_notes.size > 2 %>
-      <div>
-        <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50" onclick="document.getElementById('all-notes-modal').showModal()">
-          View all <%= all_notes.size %> notes
-        </button>
       </div>
-      <dialog id="all-notes-modal" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,46rem)] max-w-3xl backdrop:bg-black/40" onclick="if(event.target===this){this.close()}">
-        <div class="p-5 bg-white rounded-xl">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-base font-bold text-gray-800">All Internal Notes</h3>
-            <button type="button" class="text-sm font-semibold text-gray-500 hover:text-gray-700" onclick="document.getElementById('all-notes-modal').close()">Close</button>
-          </div>
-          <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-            <% all_notes.each do |note| %>
-              <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <div class="flex justify-between items-start mb-2 gap-2">
-                  <div>
-                    <span class="text-xs font-bold text-blue-800"><%= note.user.name %></span>
-                    <div class="text-[10px] text-blue-600 inline-flex items-center gap-x-1">
-                      <span><%= note.created_at.strftime("%d %b %Y") %></span>
-                      <% if Array(note.edit_history).any? %>
-                        <button type="button" class="underline hover:text-blue-800" onclick="document.getElementById('note-history-modal-<%= note.id %>').showModal()">(Edited)</button>
-                      <% end %>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <button type="button" class="text-blue-700 hover:text-blue-900" title="Edit note" onclick="document.getElementById('all-notes-modal').close(); document.getElementById('edit-note-modal-<%= note.id %>').showModal()">
-                      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 3.487 1.65-1.65a2.25 2.25 0 1 1 3.182 3.182l-1.65 1.65M18 5 7.5 15.5 3 21l5.5-4.5L19 6z" /></svg>
-                    </button>
-                    <%= link_to hotel_booking_booking_note_path(booking.hotel, booking, note), data: { turbo_method: :delete, turbo_confirm: "Delete this note?" }, class: "text-red-600 hover:text-red-800", title: "Delete note" do %>
-                      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M9 7V4h6v3m-7 4v6m4-6v6m4-6v6M5 7h14l-1 13H6L5 7z" /></svg>
-                    <% end %>
-                  </div>
-                </div>
-                <p class="text-sm text-gray-800 whitespace-pre-wrap"><%= note.body %></p>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      </dialog>
-    <% end %>
-
-    <%# Render individual modals only once per note %>
-    <% all_notes.each do |note| %>
-      <dialog id="edit-note-modal-<%= note.id %>" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,32rem)] max-w-lg backdrop:bg-black/40" onclick="if(event.target===this){this.close()}">
-        <div class="p-5 bg-white rounded-xl">
-          <h3 class="text-base font-bold text-gray-800">Edit Note</h3>
-          <%= form_with model: [:hotel, booking, note], url: hotel_booking_booking_note_path(booking.hotel, booking, note), method: :patch, class: "mt-4 space-y-4" do |f| %>
-            <%= f.text_area :body, rows: 5, class: "w-full py-2.5 px-3 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500" %>
-            <div class="flex items-center justify-end gap-x-2">
-              <button type="button" class="py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="document.getElementById('edit-note-modal-<%= note.id %>').close()">Cancel</button>
-              <%= f.submit "Save", class: "py-2 px-3 text-sm font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700" %>
-            </div>
-          <% end %>
-        </div>
-      </dialog>
-
-      <dialog id="note-history-modal-<%= note.id %>" class="fixed inset-0 m-auto rounded-xl p-0 w-[min(92vw,36rem)] max-w-xl backdrop:bg-black/40" onclick="if(event.target===this){this.close()}">
-        <div class="p-5 bg-white rounded-xl">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-base font-bold text-gray-800">Edit History</h3>
-            <button type="button" class="text-sm font-semibold text-gray-500 hover:text-gray-700" onclick="document.getElementById('note-history-modal-<%= note.id %>').close()">Close</button>
-          </div>
-          <div class="space-y-2 max-h-72 overflow-y-auto">
-            <% Array(note.edit_history).reverse_each do |entry| %>
-              <% edited_time = Time.zone.parse(entry["edited_at"].to_s) rescue nil %>
-              <div class="p-2 rounded-md bg-gray-50 border border-gray-100">
-                <p class="text-[11px] text-gray-600"><%= entry["edited_by_name"].presence || "User" %> • <%= edited_time ? edited_time.strftime("%d %b %Y, %I:%M %p") : "-" %></p>
-                <p class="text-xs text-gray-800 whitespace-pre-wrap"><%= entry["body"] %></p>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      </dialog>
-    <% end %>
-
-    <div class="pt-6 border-t border-gray-100">
-      <%= form_with model: [:hotel, booking, BookingNote.new], url: hotel_booking_booking_notes_path(booking.hotel, booking) do |f| %>
-        <div>
-          <label class="block text-sm font-medium mb-2 text-gray-700">Add Note</label>
-          <%= f.text_area :body, rows: 3, placeholder: "Type internal note here...", class: "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 border" %>
-        </div>
-        <div class="mt-3 flex justify-end">
-          <%= f.submit "Save Note", class: "py-2 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 transition" %>
-        </div>
-      <% end %>
-    </div>
-  </div>
-</div>
+    </details>
+  <% end %>
+</section>

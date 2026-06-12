@@ -27,13 +27,18 @@ RSpec.describe "Retroactive Check-in", type: :service do
     expect(result.error).to include("Reason required for backdated check-in")
   end
 
-  it "allows check-in on a closed date with override and posts charges" do
+  it "allows check-in on a closed date with override, posts charges, and records category/details in audit log" do
     result = Bookings::TransitionStatus.new(
       booking: booking,
       status: "checked_in",
       timestamp: timestamp,
       user: user,
-      options: { override_night_audit: true, reason: "Manual reservation missed" }
+      options: {
+        override_night_audit: true,
+        reason: "Manual reservation missed",
+        backdate_reason_category: "Booking was created late",
+        backdate_reason_details: "Manual reservation missed"
+      }
     ).call
 
     expect(result.success?).to be true
@@ -48,6 +53,30 @@ RSpec.describe "Retroactive Check-in", type: :service do
     log = BookingAuditLog.last
     expect(log.metadata["retroactive_checkin"]).to be true
     expect(log.metadata["retroactive_reason"]).to eq("Manual reservation missed")
+    expect(log.metadata["backdate_reason_category"]).to eq("Booking was created late")
+    expect(log.metadata["backdate_reason_details"]).to eq("Manual reservation missed")
+  end
+
+  it "posts all catch-up charges on the selected posting date instead of original stay dates" do
+    selected_posting_date = Date.current
+    result = Bookings::TransitionStatus.new(
+      booking: booking,
+      status: "checked_in",
+      timestamp: timestamp,
+      user: user,
+      options: {
+        override_night_audit: true,
+        reason: "Manual reservation missed",
+        posting_date: selected_posting_date
+      }
+    ).call
+
+    expect(result.success?).to be true
+    folio = booking.booking_folio
+    expect(folio.folio_transactions.charge.count).to be >= 2 # Room charge + SST
+    folio.folio_transactions.charge.each do |tx|
+      expect(tx.posting_date).to eq(selected_posting_date)
+    end
   end
 
   it "syncs existing captured payments during check-in" do

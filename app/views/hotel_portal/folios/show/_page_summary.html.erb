@@ -1,0 +1,31 @@
+<% folio = booking.booking_folio %>
+<% currency = booking.currency.presence || "MYR" %>
+<% projected_lines = Array(local_assigns[:projected_lines]) %>
+<% posted_charges = (folio&.total_charges || 0).to_d %>
+<% payments = (folio&.total_payments || 0).to_d %>
+<% forecasted = projected_lines.sum { |line| line[:amount].to_d } %>
+<% stay_total = posted_charges + forecasted %>
+<% outstanding = (folio&.outstanding_balance || 0).to_d + forecasted %>
+<% summary_items = [
+  [ "Outstanding", outstanding, "font-bold text-slate-950" ],
+  [ "Status", folio&.status&.humanize || "N/A", "font-semibold text-slate-800" ],
+  [ "Posted Charges", posted_charges, "font-semibold text-slate-800" ],
+  [ "Payments", payments, "font-semibold text-slate-800" ],
+  [ "Forecasted", forecasted, "font-semibold text-slate-800" ],
+  [ "Stay Total", stay_total, "font-semibold text-slate-800" ]
+] %>
+
+<div class="grid grid-cols-2 divide-x divide-y divide-slate-200 bg-slate-50/60 sm:grid-cols-3 lg:grid-cols-6 lg:divide-y-0">
+  <% summary_items.each do |label, value, value_class| %>
+    <div class="min-w-0 px-4 py-3">
+      <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500"><%= label %></p>
+      <p class="mt-1 truncate text-sm tabular-nums <%= value_class %>">
+        <% if value.is_a?(Numeric) %>
+          <%= currency %> <%= number_with_precision(value, precision: 2) %>
+        <% else %>
+          <%= value %>
+        <% end %>
+      </p>
+    </div>
+  <% end %>
+</div>

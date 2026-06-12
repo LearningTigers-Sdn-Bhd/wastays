@@ -31,7 +31,7 @@ module Bookings
           # 3. Reserve inventory (released by no-show)
           # We need to reserve from today (current business date) until check-out
           business_date = @booking.hotel.business_date_for(Time.current)
-          Bookings::InventoryManager.new(@booking).reserve_by_dates(business_date, @booking.check_out)
+          Bookings::InventoryManager.new(@booking).reserve_by_dates(business_date, @booking.check_out.to_date)
 
           # 4. Transition status to checked_in
           @booking.transition_status_to!(
@@ -53,7 +53,15 @@ module Bookings
             retroactive_reason: @options[:reason],
             reinstated: true
           }
-          Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "reinstate", metadata: metadata)
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            user: @user,
+            action_type: "reinstate",
+            old_value: { "status" => "no_show" },
+            new_value: { "status" => "checked_in", "checked_in_at" => @booking.checked_in_at },
+            reason: @options[:reason],
+            metadata: metadata.merge("room_number" => @booking.booking_rooms.first&.room_number)
+          )
         end
       end
 
@@ -94,6 +102,7 @@ module Bookings
 
     def rooms_available?
       business_date = @booking.hotel.business_date_for(Time.current)
+      return @booking.booking_rooms.all? { |booking_room| booking_room.room_number.present? } if @booking.check_out.to_date <= business_date
 
       @booking.booking_rooms.all? do |booking_room|
         next false if booking_room.room_number.blank?

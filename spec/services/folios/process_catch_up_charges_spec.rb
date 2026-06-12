@@ -21,20 +21,20 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
       create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
     end
 
-    it "posts missing nightly charges with unexpected check-in description by default" do
+    it "posts missing nightly charges with backdated check-in descriptions by default" do
       expect {
         described_class.call(booking: booking, user: user)
       }.to change { folio.folio_transactions.count }.by(2) # Room charge + SST
 
       room_charge = folio.folio_transactions.find_by(category: "accommodation")
       expect(room_charge.amount).to eq(200.0)
-      expect(room_charge.description).to include("Unexpected Check-in")
+      expect(room_charge.description).to eq("Backdated Check-in (Room Charge) - #{past_date.strftime('%d %b %Y')}")
       expect(room_charge.metadata["stay_date"]).to eq(past_date.iso8601)
       expect(room_charge.metadata["posting_source"]).to eq("catch_up")
 
       tax_charge = folio.folio_transactions.find_by(category: "tax")
       expect(tax_charge.amount).to eq(12.0)
-      expect(tax_charge.description).to include("Unexpected Check-in")
+      expect(tax_charge.description).to eq("Backdated Check-in Tax: SST - #{past_date.strftime('%d %b %Y')}")
     end
 
     it "posts charges with reinstate description when is_reinstate is true" do

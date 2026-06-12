@@ -144,11 +144,23 @@ module HotelDemoManagement
       booking_ids = @hotel.bookings.pluck(:id)
       folio_ids = BookingFolio.where(booking_id: booking_ids).pluck(:id)
 
+      forecasted_count = FolioForecastedCharge.where(booking_folio_id: folio_ids).count
+      if forecasted_count > 0
+        @logger.puts "Destroying #{forecasted_count} forecasted charges..."
+        FolioForecastedCharge.where(booking_folio_id: folio_ids).delete_all
+      end
+
       @logger.puts "Force deleting #{FolioTransaction.where(booking_folio_id: folio_ids).count} immutable transactions..."
       FolioTransaction.where(booking_folio_id: folio_ids).delete_all
 
       @logger.puts "Deleting #{PaymentTransaction.where(booking_id: booking_ids).count} payment transactions..."
       PaymentTransaction.where(booking_id: booking_ids).destroy_all
+
+      deposit_count = Deposit.where(booking_id: booking_ids).count
+      if deposit_count > 0
+        @logger.puts "Deleting #{deposit_count} deposits..."
+        Deposit.where(booking_id: booking_ids).delete_all
+      end
 
       booking_count = @hotel.bookings.count
       @logger.puts "Destroying #{booking_count} bookings..."

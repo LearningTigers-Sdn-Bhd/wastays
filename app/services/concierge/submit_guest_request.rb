@@ -12,7 +12,7 @@ module Concierge
       return Result.failure(message: "Invalid request type.") unless ALLOWED_KINDS.include?(@kind)
       return Result.failure(message: "Details cannot be blank.") if @details.blank?
 
-      unless @booking.status.in?(%w[confirmed checked_in])
+      unless @booking.status.in?(%w[confirmed review_no_show checked_in])
         return Result.failure(message: "Requests can only be submitted for active bookings.")
       end
 

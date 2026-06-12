@@ -21,6 +21,20 @@ RSpec.describe Bookings::AvailableRoomNumbers do
     expect(subject.call).to match_array([ "102", "103" ])
   end
 
+  it "keeps room numbers reserved while a booking is pending no-show review" do
+    booking = create(
+      :booking,
+      hotel: hotel,
+      check_in: check_in,
+      check_out: check_out,
+      status: "review_no_show",
+      no_show_review_business_date: check_in
+    )
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
+    expect(subject.call).to match_array([ "102", "103" ])
+  end
+
   it "includes room numbers of excluded booking id (for editing)" do
     booking = create(:booking, hotel: hotel, check_in: check_in, check_out: check_out, status: "confirmed")
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101")

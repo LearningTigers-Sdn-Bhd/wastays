@@ -5,7 +5,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
   PAGE_RESULTS = [
     { title: "Hotel Dashboard", subtitle: "Overview and recent activity", route: :hotel_dashboard_path, keywords: "dashboard overview recent bookings" },
     { title: "Arrival Board", subtitle: "Check-ins and arrivals", route: :hotel_arrivals_path, keywords: "arrival board arrivals check in" },
-    { title: "Reservation Board", subtitle: "Centralized reservation management and planning", route: :hotel_reservation_board_index_path, keywords: "reservation board timeline calendar tape chart bookings" },
+    { title: "Booking Timeline Board", subtitle: "Centralized booking management and planning", route: :board_hotel_bookings_path, keywords: "booking timeline board calendar tape chart" },
     { title: "Room Status", subtitle: "Live room status and occupancy timeline", route: :hotel_room_status_board_path, keywords: "tape chart room status housekeeping assignment" },
     { title: "In-House Guests", subtitle: "Current in-house guests", route: :hotel_in_house_guests_path, keywords: "in house guests" },
     { title: "Today's Check-Outs", subtitle: "Guests checked out today", route: :hotel_checked_out_guests_path, keywords: "today check outs checked out departures" },

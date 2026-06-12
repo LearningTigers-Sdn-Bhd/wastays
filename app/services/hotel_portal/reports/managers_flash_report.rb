@@ -107,14 +107,14 @@ module HotelPortal
           FROM generate_series(?::date, ?::date, '1 day'::interval) gs(date)
           INNER JOIN bookings b ON b.hotel_id = ?#{' '}
             AND b.status IN ('confirmed', 'checked_in', 'completed')
-            AND b.check_in <= gs.date#{' '}
-            AND b.check_out > gs.date
+            AND b.check_in::date <= gs.date#{' '}
+            AND b.check_out::date > gs.date
           INNER JOIN booking_rooms br ON br.booking_id = b.id
           GROUP BY gs.date
         SQL
 
         # DATEDIFF is not standard Postgres, use subtraction
-        bookings_sql.gsub!("DATEDIFF(b.check_out, b.check_in)", "(b.check_out - b.check_in)")
+        bookings_sql.gsub!("DATEDIFF(b.check_out, b.check_in)", "(b.check_out::date - b.check_in::date)")
 
         occupancy = ActiveRecord::Base.connection.execute(
           ActiveRecord::Base.sanitize_sql_array([ bookings_sql, @start_date, @end_date, @hotel.id ])

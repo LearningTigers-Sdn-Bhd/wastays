@@ -25,6 +25,17 @@ RSpec.describe Folios::InitializeForBooking do
     expect(folio.outstanding_balance).to eq(-100.0)
   end
 
+  it "generates forecasted charges after folio creation" do
+    folio = described_class.call(booking: booking, user: user)
+
+    forecasts = folio.folio_forecasted_charges.forecast.order(:charge_kind)
+    expect(forecasts.count).to eq(2)
+    expect(forecasts[0].charge_kind).to eq("accommodation")
+    expect(forecasts[0].amount).to eq(200.0)
+    expect(forecasts[0].stay_date).to eq(Date.current)
+    expect(forecasts[1].charge_kind).to eq("tax")
+  end
+
   it "returns an existing folio without posting duplicate transactions" do
     existing_folio = create(:booking_folio, booking: booking)
 

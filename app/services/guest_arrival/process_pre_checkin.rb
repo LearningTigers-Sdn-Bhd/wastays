@@ -62,7 +62,7 @@ module GuestArrival
         )
 
         @booking.update!(pre_checkin_status: "completed")
-        Bookings::RecordAuditLog.call(auditable: @booking, action_type: "pre_checkin_completed")
+        Bookings::RecordAuditLog.call!(auditable: @booking, action_type: "pre_checkin_completed", source: "guest")
       end
 
       OpenStruct.new(success?: true)

@@ -57,6 +57,24 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
       expect(room_status.reload.notes).to eq("Need to reclean the bathroom.")
     end
 
+    it "detects late checkout and moves the active booking to review due out" do
+      grant_manage_room_status
+      room_status = room_status_for
+      booking = create(:booking, hotel: hotel, status: "checked_in")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
+      patch hotel_room_status_path(hotel, room_status), params: {
+        room_status: { status: "late_checkout_detected", notes: "Guest still in room" },
+        start_date: Date.new(2026, 5, 7).to_s,
+        days: 21,
+        layout: "compact"
+      }
+
+      expect(response).to redirect_to(hotel_room_status_board_path(hotel, start_date: "2026-05-07", days: "21", layout: "compact"))
+      expect(room_status.reload.status).to eq("late_checkout_detected")
+      expect(booking.reload.status).to eq("review_due_out")
+    end
+
     it "blocks users without manage_room_status permission" do
       room_status = room_status_for
 

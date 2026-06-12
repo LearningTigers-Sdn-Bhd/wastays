@@ -98,11 +98,21 @@ module Public
           :id_front,
           :id_back
         )
-        return false unless @booking.update(permitted)
-
-        attach_signature
+        Booking.transaction do
+          old_value = @booking.attributes.slice(*permitted.keys)
+          @booking.update!(permitted)
+          attach_signature
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            action_type: "guest_updated",
+            source: "guest",
+            old_value: old_value,
+            new_value: @booking.attributes.slice(*permitted.keys),
+            metadata: { "context" => "concierge_check_in" }
+          )
+        end
         true
-      rescue ActionController::ParameterMissing
+      rescue ActionController::ParameterMissing, ActiveRecord::RecordInvalid
         false
       end
 

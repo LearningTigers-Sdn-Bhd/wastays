@@ -46,7 +46,7 @@ module HotelPortal
       end
 
       def has_actions?
-        %w[ready dirty cleaning inspection_failed awaiting_inspection].include?(status)
+        %w[ready dirty cleaning inspection_failed awaiting_inspection late_checkout_detected].include?(status)
       end
 
       def room_type
@@ -158,6 +158,7 @@ module HotelPortal
         "occupied" => "border-sky-200 bg-sky-50 text-sky-700",
         "dirty" => "border-orange-200 bg-orange-50 text-orange-700",
         "cleaning" => "border-blue-200 bg-blue-50 text-blue-700",
+        "late_checkout_detected" => "border-amber-200 bg-amber-50 text-amber-700",
         "awaiting_inspection" => "border-indigo-200 bg-indigo-50 text-indigo-700",
         "inspection_failed" => "border-rose-200 bg-rose-50 text-rose-700",
         "out_of_service" => "border-slate-300 bg-slate-100 text-slate-700"
@@ -184,6 +185,8 @@ module HotelPortal
         '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'.html_safe
       when "cleaning"
         '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" /></svg>'.html_safe
+      when "late_checkout_detected"
+        '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 22a10 10 0 1 0-10-10" /></svg>'.html_safe
       when "awaiting_inspection"
         '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>'.html_safe
       when "inspection_failed"
@@ -199,6 +202,7 @@ module HotelPortal
       {
         "confirmed" => "border-blue-200 bg-blue-50 text-blue-700",
         "checked_in" => "border-violet-200 bg-violet-50 text-violet-700",
+        "review_due_out" => "border-amber-200 bg-amber-50 text-amber-700",
         "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
         "cancelled" => "border-slate-300 bg-slate-100 text-slate-600"
       }.fetch(status.to_s, "border-sky-200 bg-sky-50 text-sky-700")

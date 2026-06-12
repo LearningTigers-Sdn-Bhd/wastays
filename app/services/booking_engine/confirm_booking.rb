@@ -30,8 +30,8 @@ module BookingEngine
 
         financial_snapshot = Bookings::BuildFinancialSnapshot.new(
           hotel: @quote.hotel,
-          check_in: @quote.check_in,
-          check_out: @quote.check_out,
+          check_in: Bookings::ScheduledStay.at_hotel_time(hotel: @quote.hotel, value: @quote.check_in, kind: :check_in),
+          check_out: Bookings::ScheduledStay.at_hotel_time(hotel: @quote.hotel, value: @quote.check_out, kind: :check_out),
           guest_country: guest_country,
           room_items: @quote.booking_quote_items.map do |item|
             {
@@ -114,8 +114,8 @@ module BookingEngine
           @quote.update!(status: "converted")
 
           # Record Audit Logs
-          Bookings::RecordAuditLog.call(auditable: @quote, action_type: "convert")
-          Bookings::RecordAuditLog.call(auditable: booking, action_type: "create")
+          Bookings::RecordAuditLog.call!(auditable: @quote, action_type: "convert", source: "guest")
+          Bookings::RecordAuditLog.call!(auditable: booking, action_type: "create", source: "guest")
 
           # 5. Trigger Webhooks
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)

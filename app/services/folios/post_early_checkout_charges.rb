@@ -4,6 +4,8 @@ require "ostruct"
 
 module Folios
   class PostEarlyCheckoutCharges
+    include NightlyChargeCalculation
+
     def self.call(booking:, folio:, user:, departure_date:, original_check_out:, options: {})
       new(
         booking: booking,
@@ -35,6 +37,17 @@ module Folios
         original_check_out: original_check_out,
         options: {}
       ).pending_preview
+    end
+
+    def self.projected_checkout_balance(folio:, departure_date:, original_check_out:)
+      actual_balance = folio.outstanding_balance
+      pending = pending_preview(
+        booking: folio.booking,
+        folio: folio,
+        departure_date: departure_date,
+        original_check_out: original_check_out
+      )
+      actual_balance + pending.sum { |l| l[:amount].to_d }
     end
 
     def initialize(booking:, folio:, user:, departure_date:, original_check_out:, options: {})
@@ -162,25 +175,17 @@ module Folios
       [ { "name" => "Tourism Tax", "amount" => @booking.tourism_tax_amount, "type" => "tourism_tax" } ]
     end
 
-    def tax_line_amount(tax_line)
-      (tax_line["amount"].presence || tax_line[:amount]).to_d
-    end
-
-    def tax_line_name(tax_line)
-      tax_line["name"].presence || tax_line[:name].presence || "Tax"
-    end
-
-    def tax_line_identity(tax_line, index)
-      identity = tax_line["type"].presence || tax_line[:type].presence || tax_line_name(tax_line).parameterize.presence || "tax"
-      "#{identity}:#{index}"
-    end
-
     def idempotency_key(date, kind, identity = nil)
-      [ "early_checkout", @booking.id, date.iso8601, kind, identity ].compact.join(":")
+      ChargePostingKeys.early_checkout_charge_key(
+        booking: @booking,
+        date: date,
+        charge_kind: kind,
+        identity: identity
+      )
     end
 
     def already_posted?(key)
-      @folio.folio_transactions.where("metadata->>'early_checkout_charge_key' = ?", key).exists?
+      @folio.folio_transactions.where(voided_by_transaction_id: nil).where("metadata->>'early_checkout_charge_key' = ?", key).exists?
     end
 
     def transaction_options(line)

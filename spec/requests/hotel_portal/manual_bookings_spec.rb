@@ -54,14 +54,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     end
   end
 
-  describe "GET /new" do
-    it "returns http success" do
-      get "/hotel/#{hotel.id}/bookings/new", headers: { "Turbo-Frame" => "offcanvas_drawer" }
-      expect(response).to have_http_status(:success)
-    end
-  end
-
-  describe "POST /create" do
+  describe "POST /booking-transactions/new-booking" do
     let(:valid_params) do
       {
         booking: {
@@ -79,7 +72,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
 
     it "creates a new booking and deducts inventory" do
       expect {
-        post "/hotel/#{hotel.id}/bookings", params: valid_params
+        post hotel_booking_transaction_new_booking_path(hotel), params: valid_params
       }.to change(Booking, :count).by(1)
 
       expect(response).to redirect_to(hotel_booking_path(hotel, Booking.last))

@@ -64,10 +64,15 @@ RSpec.describe Booking, type: :model do
 
   describe "status lifecycle" do
     def expect_transition(from:, to:, event:)
-      booking = create(:booking, status: from)
+      booking = create(
+        :booking,
+        status: from,
+        no_show_review_business_date: (Date.current if from == "review_no_show")
+      )
+      attributes = { no_show_review_business_date: Date.current } if to == "review_no_show"
 
       expect {
-        booking.transition_status_to!(to, event: event)
+        booking.transition_status_to!(to, event: event, attributes: attributes || {})
       }.to change { booking.reload.status }.from(from).to(to)
     end
 
@@ -76,7 +81,11 @@ RSpec.describe Booking, type: :model do
       expect_transition(from: "pending", to: "cancelled", event: "cancel")
       expect_transition(from: "confirmed", to: "checked_in", event: "check_in")
       expect_transition(from: "confirmed", to: "cancelled", event: "cancel")
-      expect_transition(from: "confirmed", to: "no_show", event: "mark_no_show")
+      expect_transition(from: "confirmed", to: "review_no_show", event: "review_no_show")
+      expect_transition(from: "review_no_show", to: "no_show", event: "mark_no_show")
+      expect_transition(from: "review_no_show", to: "no_show", event: "auto_mark_no_show")
+      expect_transition(from: "review_no_show", to: "checked_in", event: "backdated_check_in")
+      expect_transition(from: "review_no_show", to: "cancelled", event: "cancel")
       expect_transition(from: "confirmed", to: "overbooked", event: "mark_overbooked")
       expect_transition(from: "overbooked", to: "confirmed", event: "resolve_overbooking")
       expect_transition(from: "overbooked", to: "cancelled", event: "cancel")
@@ -123,6 +132,13 @@ RSpec.describe Booking, type: :model do
       booking = create(:booking, status: "completed")
 
       expect(booking.reload.status).to eq("completed")
+    end
+
+    it "requires a business date while pending no-show review" do
+      booking = build(:booking, status: "review_no_show", no_show_review_business_date: nil)
+
+      expect(booking).not_to be_valid
+      expect(booking.errors[:no_show_review_business_date]).to include("can't be blank")
     end
   end
 

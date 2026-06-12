@@ -49,6 +49,7 @@ module Folios
         return result unless result.success?
 
         @transaction.update!(voided_by_transaction: result.transaction)
+        reconcile_forecast_after_reversal!
         success(result.transaction)
       end
     rescue StandardError => e
@@ -91,6 +92,33 @@ module Folios
         correction_note: @correction_note,
         currency: @options[:currency] || @transaction.currency || @folio.booking.currency
       )
+    end
+
+    def reconcile_forecast_after_reversal!
+      return unless nightly_charge_transaction?
+
+      forecast = @folio.folio_forecasted_charges.actualized.find_by(
+        stay_date: nightly_metadata.fetch("stay_date").to_date,
+        charge_kind: nightly_metadata.fetch("charge_kind"),
+        identity: nightly_metadata.fetch("forecast_identity"),
+        actualizing_transaction: @transaction
+      )
+      return unless forecast
+
+      forecast.supersede!
+      Folios::SyncForecastedCharges.call(booking_folio: @folio)
+    end
+
+    def nightly_charge_transaction?
+      @transaction.charge? &&
+        nightly_metadata["nightly_charge_key"].present? &&
+        nightly_metadata["stay_date"].present? &&
+        nightly_metadata["charge_kind"].present? &&
+        nightly_metadata["forecast_identity"].present?
+    end
+
+    def nightly_metadata
+      @nightly_metadata ||= @transaction.metadata.to_h
     end
 
     def success(transaction)

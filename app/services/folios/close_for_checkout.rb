@@ -4,8 +4,6 @@ require "ostruct"
 
 module Folios
   class CloseForCheckout
-    include NightlyChargeCalculation
-
     def self.call(booking:, user:, checked_out_at: Time.current, options: {})
       new(booking: booking, user: user, checked_out_at: checked_out_at, options: options).call
     end
@@ -27,6 +25,8 @@ module Folios
 
         posting_guard_error = validate_checkout_business_date(folio)
         return failure(posting_guard_error, folio: folio) if posting_guard_error.present?
+
+        Folios::SyncForecastedCharges.call(booking_folio: folio)
 
         missing_charges_error = validate_all_nights_posted(folio)
         return failure(missing_charges_error, folio: folio) if missing_charges_error.present?
@@ -64,41 +64,17 @@ module Folios
     end
 
     def validate_all_nights_posted(folio)
-      business_date = folio.hotel.business_date_for(@checked_out_at)
-      expected_dates = (@booking.check_in.to_date...business_date).to_a
+      checkout_date = @booking.check_out.to_date
+      unsettled = folio.unsettled_forecasts
+        .where(arel_table[:stay_date].lt(checkout_date))
+      return if unsettled.none?
 
-      return if expected_dates.empty?
-
-      missing_dates = expected_dates.select do |date|
-        missing_accommodation_charge?(folio, date) || missing_tax_charge?(folio, date)
-      end
-
-      if missing_dates.any?
-        "Missing nightly charges for: #{missing_dates.uniq.map { |d| d.strftime('%d %b') }.join(', ')}. Please ensure all nightly charges are posted before checkout."
-      end
+      dates = unsettled.pluck(:stay_date).uniq.sort
+      "Missing nightly charges for: #{dates.map { |d| d.strftime('%d %b') }.join(', ')}. Please ensure all nightly charges are posted before checkout."
     end
 
-    def missing_accommodation_charge?(folio, date)
-      expected_total = @booking.booking_rooms.to_a.sum { |room| nightly_room_amount(room, date) }
-      return false if expected_total.zero?
-
-      posted_charge_total(folio, "accommodation", date) != expected_total
-    end
-
-    def missing_tax_charge?(folio, date)
-      expected_total = tax_postings_for(@booking, date).sum { |tax_line| tax_line_amount(tax_line) }
-      return false unless expected_total.positive?
-
-      posted_charge_total(folio, "tax", date) != expected_total
-    end
-
-    def posted_charge_total(folio, category, date)
-      FolioTransaction.charge
-        .where(booking_folio_id: folio.id)
-        .where(category: category)
-        .where("metadata->>'stay_date' = ?", date.iso8601)
-        .sum(:amount)
-        .to_d
+    def arel_table
+      FolioForecastedCharge.arel_table
     end
 
     def calculate_fresh_balance(folio)

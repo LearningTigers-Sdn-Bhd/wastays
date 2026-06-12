@@ -14,7 +14,7 @@ class SendWhatsappReceiptJob < ApplicationJob
   private
 
   def build_payload(booking)
-    nights = (booking.check_out - booking.check_in).to_i
+    nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
     host_options = Rails.application.config.action_mailer.default_url_options || {}
 
     {

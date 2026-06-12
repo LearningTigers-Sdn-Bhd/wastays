@@ -13,6 +13,7 @@ module Rooms
       @all_bookings = fetch_all_bookings
       @all_room_statuses = fetch_all_room_statuses
       @all_rates = fetch_all_rates
+      @relevant_bookings_by_room = fetch_relevant_bookings_by_room
       groups = room_groups
       {
         dates: dates,
@@ -56,14 +57,28 @@ module Rooms
 
     def fetch_all_bookings
       scope = @hotel.bookings
-        .includes(:booking_notes, booking_rooms: :room_type)
+        .includes(booking_notes: :user, booking_rooms: :room_type)
         .joins(:booking_rooms)
-        .where("bookings.check_in < ? AND bookings.check_out > ?", dates.last + 1.day, @start_date)
+        .where("bookings.check_in::date < ? AND bookings.check_out::date > ?", dates.last + 1.day, @start_date)
         .select("bookings.*, booking_rooms.room_number, booking_rooms.room_type_id")
         .distinct
 
       scope = apply_filters(scope)
       scope.to_a.group_by { |b| [ b.room_type_id, b.room_number.to_s ] }
+    end
+
+    def fetch_relevant_bookings_by_room
+      return {} unless dates.include?(Date.current)
+
+      @hotel.bookings
+        .joins(:booking_rooms)
+        .checking_out_between(Date.current, dates.last, @hotel.hotel_time_zone)
+        .where.not(status: "cancelled")
+        .order("bookings.check_out ASC")
+        .select("bookings.*, booking_rooms.room_number, booking_rooms.room_type_id")
+        .to_a
+        .group_by { |booking| [ booking.room_type_id, booking.room_number.to_s ] }
+        .transform_values(&:first)
     end
 
     def dates
@@ -95,21 +110,8 @@ module Rooms
             start_offset: 0
           }
         elsif dates.include?(Date.current)
-          # Look for the booking that checks out on or after today for this room
-          # We check the database directly because 'completed' bookings are filtered out of 'blocks'
-          relevant_booking = @hotel.bookings.joins(:booking_rooms)
-            .where(booking_rooms: { room_type_id: room_type.id, room_number: room_number })
-            .where("bookings.check_out >= ?", Date.current)
-            .where.not(status: "cancelled")
-            .order("bookings.check_out ASC")
-            .first
-
-          # Start on checkout day if a relevant booking is found, otherwise start today
-          start_date = relevant_booking ? relevant_booking.check_out : Date.current
-
-          # If the user wants to "drag from today until checkout", we need to adjust display_start
-          # But your last request said "place it on that day instead of that fucking today"
-          # which implies starting on the checkout day.
+          relevant_booking = @relevant_bookings_by_room[[ room_type.id, room_number.to_s ]]
+          start_date = relevant_booking ? relevant_booking.check_out.to_date : Date.current
 
           if dates.include?(start_date) || (start_date < @start_date && (start_date + 1.day) > @start_date)
             display_start = [ start_date, @start_date ].max
@@ -152,19 +154,19 @@ module Rooms
           booking: booking,
           guest_name: booking.guest_name,
           status: booking.status,
-          check_in: booking.check_in,
-          check_out: booking.check_out,
+          check_in: booking.check_in.to_date,
+          check_out: booking.check_out.to_date,
           total_amount: booking.total_amount,
           source: booking.source,
           payment_status: booking.payment_status,
           currency: booking.currency,
           has_notes: booking.booking_notes.any?,
-          notes: booking.booking_notes.includes(:user).map { |n| { body: n.body, author: n.user.name, date: n.created_at.strftime("%b %d, %Y %H:%M") } }.to_json,
+          notes: booking.booking_notes.map { |n| { body: n.body, author: n.user.name, date: n.created_at.strftime("%b %d, %Y %H:%M") } }.to_json,
           room_type_name: room_type.name,
           room_number: room_number,
           booking_room_id: booking_room&.id,
-          start_offset: [ (booking.check_in - @start_date).to_i, 0 ].max,
-          span: [ ([ booking.check_out, dates.last + 1.day ].min - [ booking.check_in, @start_date ].max).to_i, 1 ].max
+          start_offset: [ (booking.check_in.to_date - @start_date).to_i, 0 ].max,
+          span: [ ([ booking.check_out.to_date, dates.last + 1.day ].min - [ booking.check_in.to_date, @start_date ].max).to_i, 1 ].max
         }
       end
     end
@@ -178,7 +180,7 @@ module Rooms
         scope = scope.where(status: @filters[:status])
       else
         # Default statuses for reservation board
-        scope = scope.where(status: %w[confirmed checked_in pending review_due_out no_show])
+        scope = scope.where(status: %w[confirmed review_no_show checked_in pending review_due_out no_show])
       end
 
       # Add more filters here as needed (e.g. source, channel)

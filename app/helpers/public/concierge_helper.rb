@@ -4,7 +4,7 @@ module Public::ConciergeHelper
   end
 
   def concierge_booking_nights(booking)
-    pluralize((booking.check_out - booking.check_in).to_i, "night")
+    pluralize((booking.check_out.to_date - booking.check_in.to_date).to_i, "night")
   end
 
   def concierge_contact_address(hotel)

@@ -1,0 +1,263 @@
+<div class="max-w-[1600px] mx-auto pb-10 space-y-4">
+  <div class="mt-5 flex items-center justify-between px-4 md:px-0">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Bookings</h1>
+      <p class="mt-1 text-sm font-medium text-slate-600">Manage property reservations and guest stays.</p>
+    </div>
+    
+    <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+      <div class="relative inline-block text-left" data-controller="dropdown">
+      <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center gap-x-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 active:scale-95 md:px-4" id="add-booking-menu-button" aria-expanded="false" aria-haspopup="true">
+        <svg class="size-4 text-slate-300" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
+        <span class="hidden md:inline">New</span>
+        <svg class="-mr-1 size-4 text-slate-400 hidden md:inline-block" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
+      </button>
+
+      <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-60 origin-top-right rounded-2xl bg-slate-900 border border-slate-800 p-1.5 shadow-xl shadow-slate-950/20 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="add-booking-menu-button" tabindex="-1">
+        <div class="py-0.5" role="none">
+          <div class="px-3.5 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-800 mb-1">Insert Transaction</div>
+          
+          <%= link_to hotel_booking_transaction_new_booking_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+            <%= cached_icon "calendar-plus", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
+            Booking
+          <% end %>
+          <%= link_to hotel_booking_transaction_walk_in_check_in_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+            <%= cached_icon "user-check", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
+            Walk-in Check-in
+          <% end %>
+          <%= link_to hotel_booking_transaction_backdated_check_in_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+            <%= cached_icon "calendar-clock", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
+            Backdated Check-in
+          <% end %>
+        </div>
+      </div>
+      </div>
+    <% end %>
+  </div>
+
+  <%# 3. Filter Area %>
+  <%
+    booking_styles = {
+      "pending" => "border-amber-200 bg-amber-50 text-amber-700 peer-checked:bg-amber-100 peer-checked:border-amber-400",
+      "confirmed" => "border-blue-200 bg-blue-50 text-blue-700 peer-checked:bg-blue-100 peer-checked:border-blue-400",
+      "review_no_show" => "border-amber-300 bg-amber-50 text-amber-800 peer-checked:bg-amber-100 peer-checked:border-amber-500",
+      "checked_in" => "border-violet-200 bg-violet-50 text-violet-700 peer-checked:bg-violet-100 peer-checked:border-violet-400",
+      "review_due_out" => "border-orange-200 bg-orange-50 text-orange-700 peer-checked:bg-orange-100 peer-checked:border-orange-400",
+      "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700 peer-checked:bg-emerald-100 peer-checked:border-emerald-400",
+      "cancelled" => "border-slate-300 bg-slate-100 text-slate-600 peer-checked:bg-slate-200 peer-checked:border-slate-500",
+      "no_show" => "border-rose-200 bg-rose-50 text-rose-700 peer-checked:bg-rose-100 peer-checked:border-rose-400",
+      "overbooked" => "border-red-200 bg-red-50 text-red-700 peer-checked:bg-red-100 peer-checked:border-red-400",
+      "not_ready" => "border-red-200 bg-red-50 text-red-700 peer-checked:bg-red-100 peer-checked:border-red-400"
+    }
+
+    booking_pill_styles = {
+      "pending" => "peer-checked:border-amber-400 peer-checked:bg-amber-50 peer-checked:text-amber-700 peer-checked:hover:bg-amber-100",
+      "confirmed" => "peer-checked:border-blue-400 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:hover:bg-blue-100",
+      "review_no_show" => "peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-800 peer-checked:hover:bg-amber-100",
+      "checked_in" => "peer-checked:border-violet-400 peer-checked:bg-violet-50 peer-checked:text-violet-700 peer-checked:hover:bg-violet-100",
+      "review_due_out" => "peer-checked:border-orange-400 peer-checked:bg-orange-50 peer-checked:text-orange-700 peer-checked:hover:bg-orange-100",
+      "completed" => "peer-checked:border-emerald-400 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 peer-checked:hover:bg-emerald-100",
+      "cancelled" => "peer-checked:border-slate-500 peer-checked:bg-slate-100 peer-checked:text-slate-700 peer-checked:hover:bg-slate-200",
+      "no_show" => "peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 peer-checked:hover:bg-rose-100",
+      "overbooked" => "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:hover:bg-red-100",
+      "not_ready" => "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:hover:bg-red-100"
+    }
+  %>
+
+  <div class="space-y-4">
+    <%= form_with url: hotel_bookings_path(current_hotel), method: :get, class: "space-y-4", data: { controller: "auto-submit", turbo_frame: "bookings_results", turbo_action: "advance" } do |f| %>
+      <%# First Row: Search + Check-in Date %>
+      <div class="flex flex-col md:flex-row gap-3">
+        <div class="relative flex-1">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+          </div>
+          <%= f.text_field :query, value: params[:query], placeholder: "Search guest name, ref, or contact...", class: "block w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900/10 focus:outline-none transition-all shadow-sm", data: { action: "input->auto-submit#submit" } %>
+        </div>
+        <div class="relative w-full md:w-64">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
+          </div>
+          <%= f.date_field :check_in_date, value: params[:check_in_date], class: "block w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900/10 focus:outline-none transition-all shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
+        </div>
+      </div>
+
+      <%# Second Row: Status Pills (Horizontally Scrollable) %>
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-2 px-0.5 -mx-0.5">
+        <div class="shrink-0">
+          <input type="radio" name="status" value="" id="status_all" class="sr-only peer" <%= "checked" if params[:status].blank? %> data-action="change->auto-submit#submitNow">
+          <label for="status_all" class="cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white uppercase tracking-wider inline-flex items-center gap-1.5">
+            <%= cached_icon "filter", stroke_width: 2.5, class: "size-3.5" %>
+            ALL
+          </label>
+        </div>
+        
+        <% Booking::STATUSES.each do |status| %>
+          <% next if status == "overbooked" # hide overbooked filter pill for now %>
+          <div class="shrink-0">
+            <input type="radio" name="status" value="<%= status %>" id="status_<%= status %>" class="sr-only peer" <%= "checked" if params[:status] == status %> data-action="change->auto-submit#submitNow">
+            <% variant = booking_pill_styles.fetch(status, "peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900") %>
+            <label for="status_<%= status %>" class="cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 uppercase tracking-wider <%= variant %> inline-flex items-center gap-1.5">
+              <%= cached_icon booking_status_icon(status), stroke_width: 2.5, class: "size-3.5" %>
+              <%= status.upcase.gsub('_', ' ') %>
+            </label>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%= turbo_frame_tag "bookings_results" do %>
+      <%# 4. Desktop Table %>
+      <div class="hidden lg:block overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm overflow-visible">
+        <table class="min-w-full divide-y divide-slate-200">
+          <thead class="bg-slate-50/50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Reference</th>
+              <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</th>
+              <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Guest</th>
+              <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Stay Dates</th>
+              <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Amount</th>
+              <th scope="col" class="sticky right-0 bg-slate-50/50 z-10 px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500 border-l border-slate-200/50 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 bg-white">
+            <% if @bookings.any? %>
+              <% @bookings.each do |booking| %>
+                <tr class="hover:bg-slate-50/80 transition-colors">
+                  <td class="px-6 py-3">
+                    <div class="flex flex-col">
+                      <span class="text-sm font-bold text-slate-900"><%= booking.confirmation_token %></span>
+                      <span class="text-[10px] font-medium text-slate-400 mt-0.5"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3">
+                    <% status_variant = booking_styles.fetch(booking.status, "border-slate-200 bg-slate-50 text-slate-600").gsub('peer-checked:', 'dummy:') %>
+                    <span class="inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider <%= status_variant %>">
+                      <%= booking.status.humanize %>
+                    </span>
+                  </td>
+                  <td class="px-6 py-3">
+                    <div class="flex flex-col">
+                      <span class="text-sm font-bold text-slate-900"><%= booking.guest_name %></span>
+                      <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-[11px] font-medium text-slate-500"><%= booking.guest_email %></span>
+                        <span class="size-1 rounded-full bg-slate-300"></span>
+                        <span class="text-[11px] font-medium text-slate-500 font-mono"><%= booking.guest_phone %></span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3">
+                    <div class="flex flex-col">
+                      <div class="flex items-center gap-1.5 text-sm font-bold text-slate-900">
+                        <span><%= booking.check_in.strftime("%d %b") %></span>
+                        <svg class="size-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
+                        <span><%= booking.check_out.strftime("%d %b %Y") %></span>
+                      </div>
+                      <span class="mt-0.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                        <%= pluralize((booking.check_out.to_date - booking.check_in.to_date).to_i, 'night') %>
+                      </span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3 whitespace-nowrap">
+                    <span class="text-sm font-black text-slate-900"><%= booking.currency %> <%= number_with_precision(booking.total_amount, precision: 2) %></span>
+                  </td>
+                  <td class="sticky right-0 z-10 bg-white group-hover:bg-slate-50 px-6 py-3 text-right border-l border-slate-100 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
+                    <%= link_to hotel_booking_path(current_hotel, booking), class: "group inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50 active:scale-95", data: { turbo_frame: "_top" } do %>
+                      Open
+                      <%= cached_icon "arrow-right", stroke_width: 2.5, class: "size-3 text-slate-400 group-hover:text-slate-800 transition-colors" %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="6" class="px-6 py-4">
+                  <div class="flex flex-col items-center justify-center text-center py-12 px-4">
+                    <div class="p-3 bg-slate-50 rounded-full text-slate-400 mb-3">
+                      <%= cached_icon "calendar-x", stroke_width: 2, class: "size-6" %>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-900">No bookings found</h3>
+                    <p class="text-xs text-slate-500 max-w-[280px] mt-1">Try adjusting your filters or search keywords to find the reservation.</p>
+                    <% if params[:query].present? || params[:check_in_date].present? || params[:status].present? %>
+                      <%= link_to hotel_bookings_path(current_hotel), class: "mt-4 inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition active:scale-95", data: { turbo_frame: "_top" } do %>
+                        <%= cached_icon "rotate-ccw", stroke_width: 2.5, class: "size-3" %>
+                        Reset Filters
+                      <% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <%# 6. Mobile Layout %>
+      <div class="lg:hidden space-y-3 px-4 sm:px-0">
+        <% if @bookings.any? %>
+          <% @bookings.each do |booking| %>
+            <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div class="flex items-start justify-between">
+                <div class="space-y-1">
+                  <span class="text-xs font-black text-slate-500 uppercase tracking-wider">Ref</span>
+                  <p class="text-sm font-black text-slate-900"><%= booking.confirmation_token %></p>
+                </div>
+                <% status_variant = booking_styles.fetch(booking.status, "border-slate-200 bg-slate-50 text-slate-600").gsub('peer-checked:', 'dummy:') %>
+                <span class="inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider <%= status_variant %>">
+                  <%= booking.status.humanize %>
+                </span>
+              </div>
+              
+              <div class="mt-4 grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Guest</span>
+                  <p class="text-sm font-bold text-slate-900 truncate"><%= booking.guest_name %></p>
+                  <p class="text-[10px] text-slate-500 truncate"><%= booking.guest_email %></p>
+                  <p class="text-[10px] text-slate-500 font-mono"><%= booking.guest_phone %></p>
+                </div>
+                <div class="space-y-1 text-right">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Amount</span>
+                  <p class="text-sm font-black text-slate-900"><%= booking.currency %> <%= number_with_precision(booking.total_amount, precision: 2) %></p>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div class="space-y-1">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stay Dates</span>
+                  <p class="text-xs font-bold text-slate-800"><%= booking.check_in.strftime("%d %b") %> – <%= booking.check_out.strftime("%d %b %Y") %></p>
+                </div>
+                <%= link_to hotel_booking_path(current_hotel, booking), class: "group inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50 active:scale-95", data: { turbo_frame: "_top" } do %>
+                  Open
+                  <%= cached_icon "arrow-right", stroke_width: 2.5, class: "size-3 text-slate-400 group-hover:text-slate-800 transition-colors" %>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="rounded-xl border border-dashed border-slate-200 bg-white p-6 shadow-sm">
+            <div class="flex flex-col items-center justify-center text-center py-8 px-4">
+              <div class="p-3 bg-slate-50 rounded-full text-slate-400 mb-3">
+                <%= cached_icon "calendar-x", stroke_width: 2, class: "size-6" %>
+              </div>
+              <h3 class="text-sm font-bold text-slate-900">No bookings found</h3>
+              <p class="text-xs text-slate-500 max-w-[280px] mt-1">Try adjusting your filters or search keywords to find the reservation.</p>
+              <% if params[:query].present? || params[:check_in_date].present? || params[:status].present? %>
+                <%= link_to hotel_bookings_path(current_hotel), class: "mt-4 inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition active:scale-95", data: { turbo_frame: "_top" } do %>
+                  <%= cached_icon "rotate-ccw", stroke_width: 2.5, class: "size-3" %>
+                  Reset Filters
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <%# 7. Pagination %>
+      <% if @bookings.total_pages > 1 %>
+        <div class="mt-6 flex justify-center">
+          <%= paginate @bookings %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

@@ -16,7 +16,7 @@ class VoucherPdfService
   def initialize(booking)
     @booking      = booking
     @hotel        = booking.hotel
-    @nights       = (booking.check_out - booking.check_in).to_i
+    @nights       = (booking.check_out.to_date - booking.check_in.to_date).to_i
     @booking_rooms = booking.booking_rooms.includes(:room_type)
     @snapshot     = booking.hotel_snapshot || {}
     @policy       = @snapshot["property_policy"] || {}

@@ -60,7 +60,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
     result = described_class.new(booking_data: data).call
 
     expect(result.success?).to be(true)
-    expect(existing.reload.check_in).to eq(Date.current + 6.days)
+    expect(existing.reload.check_in.to_date).to eq(Date.current + 6.days)
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_updated, booking: existing)
   end
 
@@ -84,6 +84,42 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 2, 2 ])
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_cancelled, booking: existing)
     expect(Notifications::Dispatcher).not_to have_received(:new).with(event: :booking_confirmed, booking: existing)
+  end
+
+  it "preserves internal no-show review when the channel still reports confirmed" do
+    existing = create(
+      :booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "review_no_show",
+      no_show_review_business_date: booking_data[:check_in]
+    )
+    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+
+    result = described_class.new(booking_data: booking_data.merge(revision_number: 2)).call
+
+    expect(result.success?).to be(true)
+    expect(existing.reload.status).to eq("review_no_show")
+  end
+
+  it "allows the channel to cancel a booking pending no-show review" do
+    existing = create(
+      :booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "review_no_show",
+      no_show_review_business_date: booking_data[:check_in]
+    )
+    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+
+    result = described_class.new(booking_data: booking_data.merge(status: "cancelled", revision_number: 2)).call
+
+    expect(result.success?).to be(true)
+    expect(existing.reload.status).to eq("cancelled")
   end
 
   it "marks OTA booking overbooked without deducting inventory when inventory is insufficient" do
@@ -179,5 +215,32 @@ RSpec.describe ChannelManagers::IngestBookingService do
 
     expect(result.success?).to be(true)
     expect(existing.reload.total_amount).to eq(250.0)
+  end
+
+  it "records one semantic event with readable room revisions" do
+    other_room_type = create(:room_type, hotel: hotel, name: "Suite")
+    existing = create(
+      :booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "confirmed"
+    )
+    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    data = booking_data.merge(
+      rooms: [ { room_type: other_room_type, quantity: 2, amount: 200.0 } ],
+      revision_number: 2
+    )
+    (data[:check_in]...data[:check_out]).each do |date|
+      create(:room_inventory, room_type: other_room_type, date: date, quantity: 3, status: "open")
+    end
+
+    expect { described_class.new(booking_data: data).call }
+      .to change { BookingAuditLog.where(auditable: existing).count }.by(1)
+
+    audit = BookingAuditLog.where(auditable: existing).last
+    expect(audit.old_value["rooms"]).to include(a_string_including(room_type.name))
+    expect(audit.new_value["rooms"]).to eq([ "2x Suite" ])
   end
 end
