@@ -38,6 +38,46 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     JS
   end
 
+  def wait_for_booking_timeline_controller
+    expect(page).to have_selector("[data-controller~='booking-timeline']")
+    page.document.synchronize do
+      connected = page.evaluate_script(<<~JS)
+        (() => {
+          const element = document.querySelector("[data-controller~='booking-timeline']")
+          return Boolean(element && window.Stimulus?.getControllerForElementAndIdentifier(element, "booking-timeline"))
+        })()
+      JS
+      raise Capybara::ElementNotFound, "booking-timeline Stimulus controller is not connected" unless connected
+    end
+  end
+
+  def resize_booking_to(booking:, room_number:, date:)
+    source_selector = "[data-booking-actions-id-value='#{booking.id}']"
+    handle_selector = "#{source_selector} [data-booking-timeline-target='resizeHandle']"
+    target_selector = "[data-room-number='#{room_number}'][data-date='#{date}']"
+
+    expect(page).to have_selector(source_selector)
+    expect(page).to have_selector(handle_selector)
+    expect(page).to have_selector(target_selector)
+    wait_for_booking_timeline_controller
+
+    page.execute_script(<<~JS)
+      const source = document.querySelector("#{source_selector}")
+      const handle = document.querySelector("#{handle_selector}")
+      const target = document.querySelector("#{target_selector}")
+      target.scrollIntoView({ block: "center", inline: "center" })
+
+      const startRect = handle.getBoundingClientRect()
+      const targetRect = target.getBoundingClientRect()
+      const start = { x: startRect.left + (startRect.width / 2), y: startRect.top + (startRect.height / 2) }
+      const finish = { x: targetRect.left + (targetRect.width / 2), y: targetRect.top + (targetRect.height / 2) }
+
+      handle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: start.x, clientY: start.y }))
+      document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: finish.x, clientY: finish.y }))
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: finish.x, clientY: finish.y }))
+    JS
+  end
+
   def expect_offcanvas_to_finish_closing
     expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)
     expect(page).to have_selector("#offcanvas_drawer:not([src])", visible: :all)
@@ -303,21 +343,12 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
 
   it "extends a booking by resizing it and confirming the timeline sheet", js: true do
     target_date = @business_date + 2.days
+    proposed_check_out = target_date.next_day
     visit board_hotel_bookings_path(hotel, start_date: @business_date)
 
-    # Ensure the booking block is fully loaded and positioned before resizing
-    expect(page).to have_selector("[data-booking-actions-id-value='#{@booking.id}']")
+    resize_booking_to(booking: @booking, room_number: "101", date: target_date)
 
-    page.execute_script(<<~JS)
-      const source = document.querySelector("[data-booking-actions-id-value='#{@booking.id}']")
-      const handle = source.querySelector("[data-action*='onResizeStart']")
-      const target = document.querySelector("[data-room-number='101'][data-date='#{target_date}']")
-      const startRect = handle.getBoundingClientRect()
-      const targetRect = target.getBoundingClientRect()
-      handle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: startRect.left, clientY: startRect.top }))
-      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: targetRect.left + (targetRect.width / 2), clientY: targetRect.top + (targetRect.height / 2) }))
-    JS
-
+    expect(page).to have_selector("#offcanvas_drawer[src*='timeline_action=extend'][src*='check_out=#{proposed_check_out}']", visible: :all)
     expect_offcanvas_to_finish_opening
     within "#offcanvas_drawer" do
       expect(page).to have_content(/Extend Stay/i)
@@ -325,6 +356,6 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     end
 
     expect(page).to have_selector("[data-booking-actions-id-value='#{@booking.id}']", wait: 5)
-    expect(@booking.reload.check_out.to_date).to eq(target_date.next_day)
+    expect(@booking.reload.check_out.to_date).to eq(proposed_check_out)
   end
 end
