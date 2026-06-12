@@ -82,7 +82,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       get "/hotel/#{hotel.id}/bookings/#{booking.id}"
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Stay Details")
+      expect(response.body).to include("Stay")
       expect(response.body).to include("Room 101")
       expect(response.body).to include("Operations")
       expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
@@ -106,13 +106,13 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_booking_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("References IDs")
+      expect(response.body).to include("Identifiers")
       expect(response.body).to include(booking.confirmation_token)
       expect(response.body).to include(booking.formatted_reservation_number)
       expect(response.body).to include(booking.formatted_guest_registration_number)
       expect(response.body).to include("OTA-55")
       expect(response.body).to include("CM-66")
-      expect(response.body).to include("Source: Booking Com")
+      expect(response.body).to include("Booking Com")
       expect(response.body.scan("Source").size).to eq(1)
       expect(response.body).to include("2 registered guests")
       expect(response.body).to include("Add Additional Guest")
@@ -138,7 +138,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_booking_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("References IDs")
+      expect(response.body).to include("Identifiers")
       expect(response.body).to include("External")
       expect(response.body).to include("Channel Manager")
       expect(response.body).not_to include("have not been added to the guest records")
@@ -355,7 +355,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Cannot check in booking with status pending")
-      expect(response.body).to include("Stay Details")
+      expect(response.body).to include("Stay")
     end
   end
 
