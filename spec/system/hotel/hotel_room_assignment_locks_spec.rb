@@ -75,10 +75,11 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
 
       within("#offcanvas_drawer") do
         # We need to set the room_type_id for the controller to work
-        container = find("div[data-controller='room-lock']", match: :first)
+        container = find("div[data-controller~='room-lock']", match: :first)
         execute_script("arguments[0].dataset.roomLockRoomTypeIdValue = '#{room_type.id}'", container)
 
-        find("input[name*='room_number']").set "206"
+        # Use JS to set value since it might not be in the select options due to the lock
+        execute_script("document.querySelector('#check-in-modal-#{booking.id} [name*=\"room_number\"]').value = '206'")
         # Trigger change
         execute_script("document.querySelector('#offcanvas_drawer [name*=\"room_number\"]').dispatchEvent(new Event('change', { bubbles: true }))")
       end
