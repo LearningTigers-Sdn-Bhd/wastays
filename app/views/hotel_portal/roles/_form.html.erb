@@ -13,32 +13,7 @@
   <div>
     <%= f.label :name, "Role Name", class: "mb-2 block text-sm font-medium text-slate-900" %>
     <%= f.text_field :name, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm transition focus:border-slate-900 focus:ring-0", placeholder: "Night Manager" %>
-    <p class="mt-2 text-xs text-slate-500">The role slug is generated from the name when the role is created.</p>
-  </div>
-
-  <div>
-    <div class="mb-3">
-      <h2 class="text-sm font-bold text-slate-900">Permissions</h2>
-      <p class="mt-1 text-xs text-slate-500">Select the capabilities this role should grant to assigned staff.</p>
-    </div>
-
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-      <% @assignable_permissions.each do |permission| %>
-        <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/30 p-3 transition hover:border-slate-300 hover:bg-white">
-          <%= check_box_tag "role[permission_ids][]", permission.id, @role.permission_ids.include?(permission.id), class: "mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900" %>
-          <span>
-            <span class="block text-sm font-bold leading-none text-slate-900"><%= permission.name %></span>
-            <span class="mt-1 block text-[10px] font-medium uppercase tracking-wider text-slate-500"><%= permission.slug %></span>
-          </span>
-        </label>
-      <% end %>
-    </div>
-
-    <% if @assignable_permissions.empty? %>
-      <p class="mt-3 text-sm text-slate-500">You do not have permission to assign any role capabilities.</p>
-    <% end %>
-
-    <%= hidden_field_tag "role[permission_ids][]", "" %>
+    <p class="mt-2 text-xs text-slate-500">The role slug is generated from the name when the role is created. You can manage this role's permissions in the matrix after saving.</p>
   </div>
 
   <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">

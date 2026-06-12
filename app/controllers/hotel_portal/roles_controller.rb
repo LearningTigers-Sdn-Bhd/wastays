@@ -5,10 +5,31 @@ module HotelPortal
     before_action :authorize_manage_users!
     before_action -> { require_feature!("role_based_access_control") }
     before_action :set_role, only: %i[edit update destroy]
-    before_action :load_permissions, only: %i[new create edit update]
+    before_action :load_permissions, only: %i[new create edit update], if: -> { false } # Removed, kept index and bulk_update calls
 
     def index
       @roles = current_hotel.account.roles.includes(:permissions, :user_hotel_accesses).order(:name)
+      load_permissions
+    end
+
+    def bulk_update
+      roles_params = params.require(:roles)
+      @roles = current_hotel.account.roles.where(id: roles_params.keys)
+      load_permissions
+
+      Role.transaction do
+        @roles.each do |role|
+          role_data = roles_params[role.id.to_s]
+          next unless role_data
+
+          permission_ids = extract_permission_ids(role_data[:permission_ids])
+          role.permission_ids = permission_ids
+        end
+      end
+
+      redirect_to hotel_roles_path(current_hotel), notice: "Permissions updated successfully."
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to hotel_roles_path(current_hotel), alert: "Failed to update permissions: #{e.message}"
     end
 
     def new
@@ -75,14 +96,16 @@ module HotelPortal
       role_params.except(:permission_ids)
     end
 
-    def permission_ids
-      requested_ids = Array(role_params[:permission_ids]).reject(&:blank?).uniq
+    def extract_permission_ids(ids_param, role = nil)
+      requested_ids = Array(ids_param).reject(&:blank?).uniq
       permitted_ids = @assignable_permissions.map(&:id).map(&:to_s)
       disallowed_ids = requested_ids - permitted_ids
 
       if disallowed_ids.any?
-        disallowed_names = Permission.where(id: disallowed_ids).order(:name).pluck(:name).to_sentence
-        @role.errors.add(:permissions, "include permissions you cannot assign: #{disallowed_names}")
+        if role
+          disallowed_names = Permission.where(id: disallowed_ids).order(:name).pluck(:name).to_sentence
+          role.errors.add(:permissions, "include permissions you cannot assign: #{disallowed_names}")
+        end
         return nil
       end
 
@@ -91,11 +114,13 @@ module HotelPortal
 
     def save_role
       Role.transaction do
-        permission_ids = permission_ids()
-        raise ActiveRecord::RecordInvalid, @role if permission_ids.nil?
-
         @role.save!
-        @role.permission_ids = permission_ids
+        if params[:role].key?(:permission_ids)
+          load_permissions
+          p_ids = extract_permission_ids(role_params[:permission_ids], @role)
+          raise ActiveRecord::RecordInvalid, @role if p_ids.nil?
+          @role.permission_ids = p_ids
+        end
       end
       true
     rescue ActiveRecord::RecordInvalid

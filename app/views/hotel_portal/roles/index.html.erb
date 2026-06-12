@@ -3,10 +3,10 @@
     <div class="mt-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Roles & Permissions</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Create roles, assign permissions, and manage access levels for this account.</p>
+        <p class="mt-1 text-sm font-medium text-slate-600">Assign capabilities to staff roles using the matrix below.</p>
       </div>
-      <div>
-        <%= link_to new_hotel_role_path(current_hotel), class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
+      <div class="flex items-center gap-3">
+        <%= link_to new_hotel_role_path(current_hotel), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" do %>
           <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
           New Role
         <% end %>
@@ -14,51 +14,73 @@
     </div>
   </div>
 
-  <div class="px-4 md:px-0 space-y-6">
-    <% @roles.each do |role| %>
-      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 bg-slate-50/50 px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div>
-            <h2 class="text-lg font-bold tracking-tight text-slate-950"><%= role.name %></h2>
-            <div class="mt-1 flex items-center gap-2">
-              <span class="inline-flex items-center rounded-md bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                <%= role.slug %>
-              </span>
-              <span class="text-xs font-semibold text-slate-500"><%= pluralize(role.user_hotel_accesses.size, "assigned staff member") %></span>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700">
-              <%= pluralize(role.permissions.size, "Permission") %>
-            </span>
-            <%= link_to "Edit", edit_hotel_role_path(current_hotel, role), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" %>
-            <% if role.user_hotel_accesses.empty? %>
-              <%= button_to "Delete", hotel_role_path(current_hotel, role), method: :delete, data: { confirm: "Delete #{role.name}?" }, class: "inline-flex items-center rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-600 shadow-sm transition hover:bg-red-50" %>
-            <% else %>
-              <span class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-400" title="Remove assigned staff before deleting this role.">Delete</span>
-            <% end %>
-          </div>
+  <div class="px-4 md:px-0">
+    <%= form_with url: bulk_update_hotel_roles_path(current_hotel), method: :patch, local: true do %>
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-slate-50/50">
+              <tr>
+                <th scope="col" class="sticky left-0 z-10 bg-slate-50 px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500 border-r border-slate-200">
+                  Permission
+                </th>
+                <% @roles.each do |role| %>
+                  <th scope="col" class="px-6 py-4 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                      <span class="text-sm font-bold text-slate-900"><%= role.name %></span>
+                      <%= link_to edit_hotel_role_path(current_hotel, role),
+                                  class: "text-slate-400 hover:text-slate-600 transition",
+                                  title: "Edit Role",
+                                  data: { turbo_frame: "role_modal_content", hs_overlay: "#role-modal" } do %>
+                        <svg class="size-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                      <% end %>
+                    </div>
+                  </th>
+                <% end %>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-white">
+              <% @assignable_permissions.each do |permission| %>
+                <tr class="hover:bg-slate-50/50 transition">
+                  <td class="sticky left-0 z-10 bg-white px-6 py-4 border-r border-slate-200">
+                    <p class="text-sm font-bold text-slate-900"><%= permission.name %></p>
+                    <p class="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-400"><%= permission.slug %></p>
+                  </td>
+                  <% @roles.each do |role| %>
+                    <td class="px-6 py-4 text-center">
+                      <%= check_box_tag "roles[#{role.id}][permission_ids][]", permission.id, role.permission_ids.include?(permission.id), class: "rounded border-slate-300 text-slate-900 focus:ring-slate-900 size-4 transition cursor-pointer" %>
+                    </td>
+                  <% end %>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
         </div>
 
-        <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <% role.permissions.sort_by(&:name).each do |permission| %>
-              <div class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-                <div class="mt-0.5 text-slate-400">
-                  <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                </div>
-                <div>
-                  <p class="text-sm font-bold text-slate-900 leading-none"><%= permission.name %></p>
-                  <p class="mt-1 text-[10px] font-medium text-slate-500 uppercase tracking-wider"><%= permission.slug %></p>
-                </div>
-              </div>
+        <div class="border-t border-slate-200 bg-slate-50/50 px-6 py-4 flex items-center justify-between">
+          <p class="text-xs text-slate-500 font-medium">Changes made to this matrix will be applied to all staff members assigned to each role.</p>
+          <div class="flex items-center gap-3">
+            <% @roles.each do |role| %>
+              <%= hidden_field_tag "roles[#{role.id}][permission_ids][]", "" %>
             <% end %>
-            <% if role.permissions.empty? %>
-              <p class="text-sm text-slate-500 italic">No permissions assigned to this role.</p>
-            <% end %>
+            <%= submit_tag "Save Permissions Matrix", class: "inline-flex items-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 cursor-pointer" %>
           </div>
         </div>
-      </section>
+      </div>
     <% end %>
+  </div>
+
+  <div id="role-modal" class="hs-overlay hidden w-full h-full fixed top-0 start-0 z-[120] overflow-x-hidden overflow-y-auto" role="dialog" tabindex="-1">
+    <div class="hs-overlay-open:mt-7 hs-overlay-open:opacity-100 hs-overlay-open:duration-500 mt-0 opacity-0 ease-out transition-all sm:max-w-lg sm:w-full m-3 sm:mx-auto min-h-[calc(100%-3.5rem)] flex items-center">
+      <div class="w-full flex flex-col bg-white border shadow-sm rounded-2xl pointer-events-auto overflow-hidden">
+        <%= turbo_frame_tag "role_modal_content" do %>
+          <div class="p-10 text-center">
+            <div class="animate-spin inline-block size-6 border-[3px] border-current border-t-transparent text-slate-600 rounded-full" role="status" aria-label="loading">
+              <span class="sr-only">Loading...</span>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
   </div>
 </div>
