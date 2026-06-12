@@ -9,6 +9,23 @@ RSpec.describe BookingAuditLog, type: :model do
 
   describe 'validations' do
     it { is_expected.to validate_presence_of(:action_type) }
+    it { is_expected.to validate_presence_of(:category) }
+    it { is_expected.to validate_presence_of(:source) }
+    it { is_expected.to validate_presence_of(:occurred_at) }
+  end
+
+  it "prevents updates" do
+    log = create(:booking_audit_log)
+
+    expect(log.update(action_type: "cancel")).to be(false)
+    expect(log.errors[:base]).to include("Booking audit logs are immutable.")
+  end
+
+  it "prevents deletes" do
+    log = create(:booking_audit_log)
+
+    expect(log.destroy).to be(false)
+    expect(log.errors[:base]).to include("Booking audit logs are immutable and cannot be deleted.")
   end
 
   describe '#display_auditable_name' do

@@ -8,13 +8,7 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
     @note = @booking.booking_notes.build(note_params)
     @note.user = current_user
 
-    if @note.save
-      Bookings::RecordAuditLog.call(
-        auditable: @booking,
-        user: current_user,
-        action_type: "note_added",
-        metadata: { "note_id" => @note.id }
-      )
+    if persist_note_with_audit("note_added", old_value: {}, new_value: { "body" => @note.body }) { @note.save! }
       respond_to do |format|
         format.turbo_stream { render_notes_update("Note added.", :notice) }
         format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Note added." }
@@ -48,13 +42,8 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
       ]
     end
 
-    if @note.update(body: updated_body)
-      Bookings::RecordAuditLog.call(
-        auditable: @booking,
-        user: current_user,
-        action_type: "note_updated",
-        metadata: { "note_id" => @note.id }
-      )
+    old_body = @note.body
+    if persist_note_with_audit("note_updated", old_value: { "body" => old_body }, new_value: { "body" => updated_body }) { @note.update!(body: updated_body) }
       respond_to do |format|
         format.turbo_stream { render_notes_update("Note updated.", :notice) }
         format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Note updated." }
@@ -68,13 +57,8 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
   end
 
   def destroy
-    if @note.destroy
-      Bookings::RecordAuditLog.call(
-        auditable: @booking,
-        user: current_user,
-        action_type: "note_deleted",
-        metadata: { "note_id" => @note.id }
-      )
+    old_body = @note.body
+    if persist_note_with_audit("note_deleted", old_value: { "body" => old_body }, new_value: {}) { @note.destroy! }
       respond_to do |format|
         format.turbo_stream { render_notes_update("Note deleted.", :notice) }
         format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Note deleted." }
@@ -88,6 +72,23 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
   end
 
   private
+
+  def persist_note_with_audit(action_type, old_value:, new_value:)
+    Booking.transaction do
+      yield
+      Bookings::RecordAuditLog.call!(
+        auditable: @booking,
+        user: current_user,
+        action_type: action_type,
+        old_value: old_value,
+        new_value: new_value,
+        metadata: { "note_id" => @note.id }
+      )
+    end
+    true
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
+    false
+  end
 
   def set_booking
     @booking = current_hotel.bookings.find(params[:booking_id])

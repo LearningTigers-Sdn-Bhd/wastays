@@ -198,4 +198,26 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(result[:guest_details][:name]).to eq("John Doe")
     end
   end
+
+  describe "#push_booking" do
+    it "records the channel reference revision in the booking history" do
+      rate_plan = create(:rate_plan, room_type: room_type)
+      booking = create(:booking, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, rate_plan: rate_plan)
+      hotel.create_channel_mapping!(provider: "channex", external_id: "ch_prop_123")
+      room_type.create_channel_mapping!(provider: "channex", external_id: "ch_rt_123")
+      rate_plan.create_channel_mapping!(provider: "channex", external_id: "ch_rp_123")
+      allow(client_double).to receive(:post).and_return(
+        { "data" => { "id" => "ch_booking_123", "revision_id" => 7 } }
+      )
+
+      result = adapter.push_booking(booking)
+
+      expect(result.success?).to be(true)
+      expect(BookingAuditLog.where(auditable: booking).last).to have_attributes(
+        action_type: "external_modification",
+        source: "channel_manager"
+      )
+    end
+  end
 end

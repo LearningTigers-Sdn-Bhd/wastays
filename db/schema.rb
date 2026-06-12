@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_12_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -108,8 +108,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_12_000001) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "category", null: false
+    t.string "source", null: false
+    t.string "request_id"
+    t.datetime "occurred_at", null: false
+    t.index ["auditable_type", "auditable_id", "occurred_at"], name: "idx_booking_audit_logs_on_auditable_time"
     t.index ["auditable_type", "auditable_id"], name: "index_booking_audit_logs_on_auditable"
+    t.index ["category", "occurred_at"], name: "idx_booking_audit_logs_on_category_time"
+    t.index ["hotel_id", "category", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_category_time"
+    t.index ["hotel_id", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_time"
     t.index ["hotel_id"], name: "index_booking_audit_logs_on_hotel_id"
+    t.index ["request_id"], name: "index_booking_audit_logs_on_request_id"
+    t.index ["source"], name: "index_booking_audit_logs_on_source"
     t.index ["user_id"], name: "index_booking_audit_logs_on_user_id"
   end
 

@@ -20,7 +20,7 @@
       </div>
 
       <div data-booking-tabs-target="panel" data-tab-panel="history" class="hidden">
-        <%= render "hotel_portal/bookings/show/audit_history", audit_logs: audit_logs %>
+        <%= render "hotel_portal/bookings/show/audit_history", audit_logs: audit_logs, audit_history: @audit_history %>
       </div>
     </div>
   </div>

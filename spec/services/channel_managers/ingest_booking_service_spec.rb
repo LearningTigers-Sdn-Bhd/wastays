@@ -216,4 +216,31 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(result.success?).to be(true)
     expect(existing.reload.total_amount).to eq(250.0)
   end
+
+  it "records one semantic event with readable room revisions" do
+    other_room_type = create(:room_type, hotel: hotel, name: "Suite")
+    existing = create(
+      :booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "confirmed"
+    )
+    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    data = booking_data.merge(
+      rooms: [ { room_type: other_room_type, quantity: 2, amount: 200.0 } ],
+      revision_number: 2
+    )
+    (data[:check_in]...data[:check_out]).each do |date|
+      create(:room_inventory, room_type: other_room_type, date: date, quantity: 3, status: "open")
+    end
+
+    expect { described_class.new(booking_data: data).call }
+      .to change { BookingAuditLog.where(auditable: existing).count }.by(1)
+
+    audit = BookingAuditLog.where(auditable: existing).last
+    expect(audit.old_value["rooms"]).to include(a_string_including(room_type.name))
+    expect(audit.new_value["rooms"]).to eq([ "2x Suite" ])
+  end
 end

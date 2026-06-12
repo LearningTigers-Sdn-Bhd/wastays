@@ -38,10 +38,13 @@ module Bookings
           @booking.transition_status_to!("no_show", event: @automatic ? "auto_mark_no_show" : "mark_no_show")
           Bookings::InventoryManager.new(@booking).release_by_dates(@business_date + 1.day, @booking.check_out.to_date)
           release_assigned_rooms_to_ready
-          Bookings::RecordAuditLog.call(
+          Bookings::RecordAuditLog.call!(
             auditable: @booking,
             user: @user,
             action_type: "no_show",
+            source: @night_audit.present? ? "night_audit" : (@user.present? ? "staff" : "system"),
+            old_value: { "status" => "review_no_show" },
+            new_value: { "status" => "no_show" },
             metadata: audit_metadata
           )
         end

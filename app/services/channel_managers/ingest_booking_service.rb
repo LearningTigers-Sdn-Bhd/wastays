@@ -17,6 +17,7 @@ module ChannelManagers
         booking = find_or_initialize_booking
         is_existing_booking = booking.persisted?
         booking.lock! if is_existing_booking
+        old_audit_value = audit_values(booking)
 
         # 0. Basic Validation: Ensure we have enough data to even attempt ingestion
         effective_check_in = @data[:check_in] || booking.check_in
@@ -85,9 +86,12 @@ module ChannelManagers
 
           # Record Audit Log
           action = is_existing_booking ? "external_modification" : "external_creation"
-          Bookings::RecordAuditLog.call(
+          Bookings::RecordAuditLog.call!(
             auditable: booking,
             action_type: action,
+            source: "channel_manager",
+            old_value: old_audit_value,
+            new_value: audit_values(booking),
             metadata: { "source" => booking.source, "external_reference" => booking.external_reference, "revision" => booking.revision_number }
           )
 
@@ -226,6 +230,19 @@ module ChannelManagers
           # snapshots to be added if needed
         )
       end
+    end
+
+    def audit_values(booking)
+      booking.slice(
+        "guest_name", "guest_email", "guest_phone", "guest_country", "check_in", "check_out",
+        "status", "adults", "total_amount", "currency", "payment_status"
+      ).merge("rooms" => booking.booking_rooms.map { |room| room_summary(room) })
+    end
+
+    def room_summary(room)
+      parts = [ "#{room.quantity}x #{room.room_type&.name || 'Room category not provided'}" ]
+      parts << room.rate_plan.name if room.rate_plan
+      parts.join(" - ")
     end
   end
 end

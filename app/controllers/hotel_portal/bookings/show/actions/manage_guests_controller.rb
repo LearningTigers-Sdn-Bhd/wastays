@@ -46,6 +46,7 @@ module HotelPortal
               ActiveRecord::Base.transaction do
                 @guest.save!
                 @booking.booking_guests.create!(guest: @guest, is_primary: false)
+                record_guest_audit("guest_added", old_value: {}, new_value: guest_audit_values(@guest))
               end
               return complete_action(notice: "Guest added.")
             end
@@ -57,7 +58,15 @@ module HotelPortal
             return update_primary if @mode == "edit_primary"
 
             @guest = @booking_guest.guest
-            return complete_action(notice: "Guest updated.") if @guest.update(guest_params)
+            old_values = guest_audit_values(@guest)
+            @guest.assign_attributes(guest_params)
+            if @guest.valid?
+              Booking.transaction do
+                @guest.save!
+                record_guest_audit("guest_updated", old_value: old_values, new_value: guest_audit_values(@guest))
+              end
+              return complete_action(notice: "Guest updated.")
+            end
 
             render_sheet(status: :unprocessable_content)
           end
@@ -106,6 +115,20 @@ module HotelPortal
 
           def guest_params
             params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id)
+          end
+
+          def guest_audit_values(guest)
+            guest.attributes.slice("name", "email", "phone", "country", "gender", "document_type")
+          end
+
+          def record_guest_audit(action_type, old_value:, new_value:)
+            ::Bookings::RecordAuditLog.call!(
+              auditable: @booking,
+              user: current_user,
+              action_type: action_type,
+              old_value: old_value,
+              new_value: new_value
+            )
           end
 
           def render_sheet(status: :ok)

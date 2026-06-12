@@ -34,10 +34,11 @@ module Admin
 
         @refund_request.update!(status: "completed")
         @refund_request.booking.update!(payment_status: "refunded")
-        Bookings::RecordAuditLog.call(
+        Bookings::RecordAuditLog.call!(
           auditable: @refund_request.booking,
           user: current_user,
           action_type: "refund_completed",
+          source: "staff",
           metadata: { "refund_request_id" => @refund_request.id }
         )
       end

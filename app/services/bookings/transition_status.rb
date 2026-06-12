@@ -40,11 +40,15 @@ module Bookings
         @booking.with_lock do
           @booking.reload
           @booking.transition_status_to!(new_status, event: event, attributes: @options[:attributes] || {})
-          Bookings::RecordAuditLog.call(
+          Bookings::RecordAuditLog.call!(
             auditable: @booking,
             user: @user,
             action_type: "status_change",
-            metadata: { from: @booking.status_was, to: new_status, event: event, reason: @options[:reason] }
+            source: @options[:source],
+            old_value: { "status" => @booking.status_before_last_save },
+            new_value: { "status" => new_status },
+            reason: @options[:reason],
+            metadata: { from: @booking.status_before_last_save, to: new_status, event: event }
           )
         end
       end
@@ -110,7 +114,7 @@ module Bookings
           @security_deposit = deposit_result.deposit
 
           if @security_deposit.present?
-            @booking.update_columns(deposit_status: "collected")
+            @booking.update!(deposit_status: "collected")
           end
 
           if is_retroactive || was_review_no_show
@@ -122,6 +126,16 @@ module Bookings
             )
           end
 
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            user: @user,
+            action_type: "check_in",
+            source: @options[:source],
+            old_value: { "status" => was_review_no_show ? "review_no_show" : "confirmed" },
+            new_value: { "status" => "checked_in", "checked_in_at" => @booking.checked_in_at },
+            reason: @options[:reason],
+            metadata: check_in_audit_metadata(is_retroactive).merge("room_number" => @booking.booking_rooms.first&.room_number)
+          )
           transitioned = true
         end
       end
@@ -129,19 +143,6 @@ module Bookings
       return failure(error) if error.present?
       return success unless transitioned
 
-      metadata = {}
-      if is_retroactive
-        metadata[:retroactive_checkin] = true
-        metadata[:retroactive_reason] = @options[:reason]
-        metadata[:backdate_reason_category] = @options[:backdate_reason_category]
-        metadata[:backdate_reason_details] = @options[:backdate_reason_details]
-      end
-      if @security_deposit.present?
-        metadata[:security_deposit_id] = @security_deposit.id
-        metadata[:security_deposit_amount] = @security_deposit.amount.to_d.to_s("F")
-      end
-
-      Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "check_in", metadata: metadata)
       Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
       Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
       success
@@ -161,6 +162,21 @@ module Bookings
         payment_method: deposit_options[:payment_method],
         external_reference: deposit_options[:external_reference]
       )
+    end
+
+    def check_in_audit_metadata(is_retroactive)
+      metadata = {}
+      if is_retroactive
+        metadata[:retroactive_checkin] = true
+        metadata[:retroactive_reason] = @options[:reason]
+        metadata[:backdate_reason_category] = @options[:backdate_reason_category]
+        metadata[:backdate_reason_details] = @options[:backdate_reason_details]
+      end
+      if @security_deposit.present?
+        metadata[:security_deposit_id] = @security_deposit.id
+        metadata[:security_deposit_amount] = @security_deposit.amount.to_d.to_s("F")
+      end
+      metadata
     end
 
     def check_out
@@ -187,10 +203,13 @@ module Bookings
             event: "check_out",
             attributes: (@options[:attributes] || {}).merge(checked_out_at: @timestamp)
           )
-          Bookings::RecordAuditLog.call(
+          Bookings::RecordAuditLog.call!(
             auditable: @booking,
             user: @user,
             action_type: "check_out",
+            source: @options[:source],
+            old_value: { "status" => @booking.status_before_last_save },
+            new_value: { "status" => "completed", "checked_out_at" => @booking.checked_out_at },
             metadata: {
               folio_id: close_result.folio.id,
               folio_number: close_result.folio.folio_number,
@@ -236,11 +255,14 @@ module Bookings
           @booking.transition_status_to!("cancelled", event: "cancel", attributes: @options[:attributes] || {})
           InventoryManager.new(@booking).release if release_inventory_on_cancel?(previous_status)
           release_review_rooms_to_ready if previous_status == "review_no_show"
-          Bookings::RecordAuditLog.call(
+          Bookings::RecordAuditLog.call!(
             auditable: @booking,
             user: @user,
             action_type: "cancel",
-            metadata: { reason: @options[:reason] }.compact
+            source: @options[:source],
+            old_value: { "status" => previous_status },
+            new_value: { "status" => "cancelled" },
+            reason: @options[:reason]
           )
           transitioned = true
         end

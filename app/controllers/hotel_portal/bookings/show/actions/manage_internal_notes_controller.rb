@@ -32,10 +32,14 @@ module HotelPortal
           def create_note
             @note = @booking.booking_notes.build(note_params)
             @note.user = current_user
-            return render_sheet(status: :unprocessable_content) unless @note.save
-
-            record_note_audit("note_added", old_value: {}, new_value: { "body" => @note.body })
+            saved = Booking.transaction do
+              @note.save! &&
+                record_note_audit("note_added", old_value: {}, new_value: { "body" => @note.body })
+            end
+            return render_sheet(status: :unprocessable_content) unless saved
             complete_action(notice: "Note added.")
+          rescue ActiveRecord::RecordInvalid
+            render_sheet(status: :unprocessable_content)
           end
 
           def update_note
@@ -50,14 +54,17 @@ module HotelPortal
               ]
             end
 
-            return render_sheet(status: :unprocessable_content) unless @note.update(body: updated_body)
-
-            record_note_audit("note_updated", old_value: { "body" => previous_body }, new_value: { "body" => updated_body })
+            Booking.transaction do
+              @note.update!(body: updated_body)
+              record_note_audit("note_updated", old_value: { "body" => previous_body }, new_value: { "body" => updated_body })
+            end
             complete_action(notice: "Note updated.")
+          rescue ActiveRecord::RecordInvalid
+            render_sheet(status: :unprocessable_content)
           end
 
           def record_note_audit(action_type, old_value:, new_value:)
-            ::Bookings::RecordAuditLog.call(
+            ::Bookings::RecordAuditLog.call!(
               auditable: @booking,
               user: current_user,
               action_type: action_type,

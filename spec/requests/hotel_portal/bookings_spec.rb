@@ -75,6 +75,31 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
   end
 
   describe "GET /show" do
+    it "renders a staff-friendly filtered booking history" do
+      create(
+        :booking_audit_log,
+        hotel: hotel,
+        auditable: booking,
+        user: user,
+        action_type: "cancel",
+        category: "status",
+        source: "staff",
+        old_value: { "status" => "confirmed" },
+        new_value: { "status" => "cancelled" },
+        metadata: { "reason" => "Guest requested cancellation" }
+      )
+
+      get hotel_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Booking History")
+      expect(response.body).to include("Booking cancelled")
+      expect(response.body).to include("Guest requested cancellation")
+      expect(response.body).to include("View changes")
+      expect(response.body).to include("Stay &amp; Guest")
+      expect(response.body).to include("data-controller=\"booking-history-filter\"")
+    end
+
     it "returns http success" do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101", room_type_snapshot: { "name" => room_type.name }, quantity: 1, subtotal: booking.total_amount)

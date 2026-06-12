@@ -17,8 +17,17 @@ module Bookings
       return failure(blocked_message) if blocked_without_valid_override?
 
       BookingRoom.transaction do
+        previous_room_number = booking_room.room_number
         booking_room.update!(room_number: @room_number)
-        ::Bookings::RecordAuditLog.call(auditable: booking_room, user: @user, action_type: "room_assignment")
+        ::Bookings::RecordAuditLog.call!(
+          auditable: booking_room,
+          user: @user,
+          action_type: "room_assignment",
+          old_value: { "room_number" => previous_room_number },
+          new_value: { "room_number" => @room_number },
+          reason: @override_reason.presence,
+          metadata: { "room_number" => @room_number, "override" => override_assignment? }
+        )
         write_override_audit_log if override_assignment?
         RoomLock.where(hotel: @booking.hotel, user: @user, room_number: @room_number).destroy_all
       end

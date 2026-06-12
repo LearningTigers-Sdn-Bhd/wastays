@@ -53,7 +53,15 @@ module Bookings
             retroactive_reason: @options[:reason],
             reinstated: true
           }
-          Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "reinstate", metadata: metadata)
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            user: @user,
+            action_type: "reinstate",
+            old_value: { "status" => "no_show" },
+            new_value: { "status" => "checked_in", "checked_in_at" => @booking.checked_in_at },
+            reason: @options[:reason],
+            metadata: metadata.merge("room_number" => @booking.booking_rooms.first&.room_number)
+          )
         end
       end
 

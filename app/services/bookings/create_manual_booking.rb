@@ -156,10 +156,11 @@ module Bookings
             sync_guest(booking, selected_guest)
 
             # Record Audit Log
-            Bookings::RecordAuditLog.call(
+            Bookings::RecordAuditLog.call!(
               auditable: booking,
               user: @user,
-              action_type: "create"
+              action_type: "create",
+              source: "staff"
             )
 
             # Trigger Webhooks

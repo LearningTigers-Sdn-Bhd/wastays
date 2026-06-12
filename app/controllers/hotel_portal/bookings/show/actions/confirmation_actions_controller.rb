@@ -34,21 +34,32 @@ module HotelPortal
           def destroy_target
             if @action_type == "remove_guest"
               guest = @booking_guest.guest
-              @booking_guest.destroy!
-              guest.destroy! if guest.booking_guests.empty?
+              Booking.transaction do
+                @booking_guest.destroy!
+                guest.destroy! if guest.booking_guests.empty?
+                ::Bookings::RecordAuditLog.call!(
+                  auditable: @booking,
+                  user: current_user,
+                  action_type: "guest_removed",
+                  old_value: guest.attributes.slice("name", "email", "phone", "country"),
+                  new_value: {}
+                )
+              end
               complete_action(notice: "Guest removed.")
             else
               deleted_body = @note.body
               deleted_note_id = @note.id
-              @note.destroy!
-              ::Bookings::RecordAuditLog.call(
-                auditable: @booking,
-                user: current_user,
-                action_type: "note_deleted",
-                old_value: { "body" => deleted_body },
-                new_value: {},
-                metadata: { "note_id" => deleted_note_id }
-              )
+              Booking.transaction do
+                @note.destroy!
+                ::Bookings::RecordAuditLog.call!(
+                  auditable: @booking,
+                  user: current_user,
+                  action_type: "note_deleted",
+                  old_value: { "body" => deleted_body },
+                  new_value: {},
+                  metadata: { "note_id" => deleted_note_id }
+                )
+              end
               complete_action(notice: "Note deleted.")
             end
           end

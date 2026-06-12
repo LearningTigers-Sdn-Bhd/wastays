@@ -41,11 +41,16 @@ module Bookings
             event: "review_no_show",
             attributes: { no_show_review_business_date: @business_date }
           )
-          Bookings::RecordAuditLog.call(
+          Bookings::RecordAuditLog.call!(
             auditable: booking,
             user: @user,
             action_type: "status_change",
+            source: "night_audit",
+            old_value: { "status" => "confirmed" },
+            new_value: { "status" => "review_no_show" },
             metadata: {
+              from: "confirmed",
+              to: "review_no_show",
               event: "review_no_show",
               night_audit_id: @night_audit.id,
               business_date: @business_date.iso8601

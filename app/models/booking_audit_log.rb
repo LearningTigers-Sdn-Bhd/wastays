@@ -1,9 +1,16 @@
 class BookingAuditLog < ApplicationRecord
+  CATEGORIES = %w[status stay room financial notes other].freeze
+
   belongs_to :hotel
   belongs_to :auditable, polymorphic: true
   belongs_to :user, optional: true
 
   validates :action_type, presence: true
+  validates :category, presence: true, inclusion: { in: CATEGORIES }
+  validates :source, :occurred_at, presence: true
+
+  before_update :prevent_update
+  before_destroy :prevent_destroy
 
   def display_auditable_name
     case auditable_type
@@ -92,6 +99,16 @@ class BookingAuditLog < ApplicationRecord
   end
 
   private
+
+  def prevent_update
+    errors.add(:base, "Booking audit logs are immutable.")
+    throw :abort
+  end
+
+  def prevent_destroy
+    errors.add(:base, "Booking audit logs are immutable and cannot be deleted.")
+    throw :abort
+  end
 
   def format_value(value)
     case value

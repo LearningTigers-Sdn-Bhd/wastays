@@ -114,8 +114,8 @@ module BookingEngine
           @quote.update!(status: "converted")
 
           # Record Audit Logs
-          Bookings::RecordAuditLog.call(auditable: @quote, action_type: "convert")
-          Bookings::RecordAuditLog.call(auditable: booking, action_type: "create")
+          Bookings::RecordAuditLog.call!(auditable: @quote, action_type: "convert", source: "guest")
+          Bookings::RecordAuditLog.call!(auditable: booking, action_type: "create", source: "guest")
 
           # 5. Trigger Webhooks
           Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
