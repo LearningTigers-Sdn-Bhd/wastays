@@ -10,7 +10,13 @@ export default class extends Controller {
   }
 
   onDragHandleMouseDown(event) {
+    event.stopPropagation()
     this.canDrag = true
+  }
+
+  onHandleClick(event) {
+    event.preventDefault()
+    event.stopPropagation()
   }
 
   onResizeStart(event) {
@@ -72,54 +78,14 @@ export default class extends Controller {
       const bookingId = this.draggedElement.dataset.id
       
       const currentCheckOut = this.draggedElement.dataset.bookingActionsCheckOutValue
-      const guestName = this.draggedElement.dataset.bookingActionsGuestNameValue
-      const resizedElement = this.draggedElement
-      const originalWidthStyle = this.originalWidthStyle
+      this.draggedElement.style.width = this.originalWidthStyle
 
-      window.dispatchEvent(new CustomEvent("booking-timeline-board:confirm-extend", {
-        detail: {
-          guestName,
-          currentCheckOut,
-          newCheckOut: newCheckOutStr,
-          onConfirm: () => this.resizeBooking(bookingId, newCheckOutStr),
-          onSuccess: (response) => {
-            if (response.success) {
-              Turbo.visit(window.location.href, { action: "replace" })
-            } else {
-              alert(`Failed to extend stay: ${response.errors.join(", ")}`)
-              resizedElement.style.width = originalWidthStyle
-            }
-          },
-          onError: () => {
-            resizedElement.style.width = originalWidthStyle
-          },
-          onCancel: () => {
-            resizedElement.style.width = originalWidthStyle
-          }
-        }
-      }))
+      if (newCheckOutStr !== currentCheckOut) {
+        this.openTimelineSheet(bookingId, "extend", { check_out: newCheckOutStr })
+      }
     } else {
       this.draggedElement.style.width = this.originalWidthStyle
     }
-  }
-
-  async resizeBooking(id, checkOutDate) {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-    const hotelId = window.location.pathname.split('/')[2]
-    
-    const response = await fetch(`/hotel/${hotelId}/bookings/${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken,
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({
-        booking: { check_out: checkOutDate }
-      })
-    })
-
-    return await response.json()
   }
 
   onDragStart(event) {
@@ -155,7 +121,7 @@ export default class extends Controller {
     event.currentTarget.classList.remove("bg-blue-50")
   }
 
-  async onDrop(event) {
+  onDrop(event) {
     event.preventDefault()
     const cell = event.currentTarget
     cell.classList.remove("bg-blue-50")
@@ -167,49 +133,29 @@ export default class extends Controller {
 
     if (!bookingId || !newDateStr || !newRoomNumber) return
 
-    // Find the original booking to calculate duration
-    const checkIn = new Date(this.draggedElement.dataset.bookingActionsCheckInValue)
-    const checkOut = new Date(this.draggedElement.dataset.bookingActionsCheckOutValue)
-    const durationMs = checkOut.getTime() - checkIn.getTime()
-    
-    const newCheckIn = new Date(newDateStr)
-    const newCheckOut = new Date(newCheckIn.getTime() + durationMs)
-    const newCheckOutStr = newCheckOut.toISOString().split('T')[0]
-    
-    if (confirm(`Move booking to ${newRoomNumber} on ${newDateStr}?`)) {
-      try {
-        const response = await this.moveBooking(bookingId, newDateStr, newCheckOutStr, newRoomNumber, newRoomTypeId)
-        if (response.success) {
-          Turbo.visit(window.location.href, { action: "replace" })
-        } else {
-          alert(`Failed to move booking: ${response.errors.join(", ")}`)
-        }
-      } catch (error) {
-        console.error("Error moving booking:", error)
-        alert("An unexpected error occurred while moving the booking.")
-      }
-    }
+    this.openTimelineSheet(bookingId, "move", {
+      check_in: newDateStr,
+      room_number: newRoomNumber,
+      room_type_id: newRoomTypeId
+    })
   }
 
-  async moveBooking(id, checkIn, checkOut, roomNumber, roomTypeId) {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+  openTimelineSheet(id, timelineAction, proposal) {
     const hotelId = window.location.pathname.split('/')[2]
-    
-    const response = await fetch(`/hotel/${hotelId}/bookings/${id}/move`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken,
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({
-        check_in: checkIn,
-        check_out: checkOut,
-        room_number: roomNumber,
-        room_type_id: roomTypeId
-      })
+    const query = new URLSearchParams({
+      timeline_action: timelineAction,
+      source: "booking_timeline_board",
+      return_to: `${window.location.pathname}${window.location.search}`,
+      ...proposal
     })
+    const link = document.createElement("a")
 
-    return await response.json()
+    link.href = `/hotel/${hotelId}/booking-transactions/edit-booking-timeline/${id}?${query}`
+    link.setAttribute("data-turbo-frame", "offcanvas_drawer")
+    link.setAttribute("data-offcanvas-variant", "right")
+    link.hidden = true
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
   }
 }

@@ -48,6 +48,101 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(response.body).to include(hotel_booking_transaction_amend_stay_path(hotel, booking))
   end
 
+  it "renders action-specific timeline sheets" do
+    booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 2.days)
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
+    get hotel_booking_transaction_edit_booking_timeline_path(hotel, booking),
+      params: { timeline_action: "move", check_in: Date.current + 1.day, room_type_id: room_type.id, room_number: "101" },
+      headers: { "Turbo-Frame" => "offcanvas_drawer" }
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Move Stay", "Confirm Move", "The current stay duration will be preserved.")
+
+    get hotel_booking_transaction_edit_booking_timeline_path(hotel, booking),
+      params: { timeline_action: "extend", check_out: Date.current + 3.days },
+      headers: { "Turbo-Frame" => "offcanvas_drawer" }
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Extend Stay", "Confirm Extension")
+  end
+
+  it "rejects unknown timeline actions" do
+    booking = create(:booking, hotel: hotel)
+
+    get hotel_booking_transaction_edit_booking_timeline_path(hotel, booking), params: { timeline_action: "unknown" }
+
+    expect(response).to have_http_status(:unprocessable_content)
+  end
+
+  it "moves a timeline booking while preserving its duration" do
+    second_room_type = create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "202" ])
+    booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 2.days)
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
+    patch hotel_booking_transaction_edit_booking_timeline_path(hotel, booking), params: {
+      timeline_action: "move",
+      booking: { check_in: Date.current + 3.days, room_type_id: second_room_type.id, room_number: "202" }
+    }
+
+    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(booking.reload.check_in.to_date).to eq(Date.current + 3.days)
+    expect(booking.check_out.to_date).to eq(Date.current + 5.days)
+    expect(booking.booking_rooms.first).to have_attributes(room_type_id: second_room_type.id, room_number: "202")
+  end
+
+  it "extends a timeline booking and rejects shortening it" do
+    booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 2.days)
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
+    patch hotel_booking_transaction_edit_booking_timeline_path(hotel, booking), params: {
+      timeline_action: "extend", booking: { check_out: Date.current + 4.days }
+    }
+    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(booking.reload.check_out.to_date).to eq(Date.current + 4.days)
+
+    patch hotel_booking_transaction_edit_booking_timeline_path(hotel, booking), params: {
+      timeline_action: "extend", booking: { check_out: Date.current + 3.days }
+    }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("New check-out must be later than the current check-out.")
+    expect(booking.reload.check_out.to_date).to eq(Date.current + 4.days)
+  end
+
+  it "keeps a timeline move unchanged when the destination room is unavailable" do
+    room_type.update!(room_numbers: [ "101", "102" ])
+    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
+    create(:room_status, hotel: hotel, room_type: room_type, room_number: "102", status: "ready")
+    booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 2.days)
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+    occupied_booking = create(:booking, hotel: hotel, check_in: Date.current + 3.days, check_out: Date.current + 5.days)
+    create(:booking_room, booking: occupied_booking, room_type: room_type, room_number: "102")
+
+    patch hotel_booking_transaction_edit_booking_timeline_path(hotel, booking), params: {
+      timeline_action: "move",
+      booking: { check_in: Date.current + 3.days, room_type_id: room_type.id, room_number: "102" }
+    }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("Room 102 is not available")
+    expect(booking.reload.check_in.to_date).to eq(Date.current)
+    expect(booking.booking_rooms.first.room_number).to eq("101")
+  end
+
+  it "completes timeline edits back to the booking board" do
+    booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 2.days)
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+    return_to = board_hotel_bookings_path(hotel, start_date: Date.current)
+
+    patch hotel_booking_transaction_edit_booking_timeline_path(hotel, booking), params: {
+      timeline_action: "extend",
+      return_to: return_to,
+      booking: { check_out: Date.current + 3.days }
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("complete_offcanvas")
+    expect(response.body).to include(return_to)
+  end
+
   it "keeps guest fields out of amend-stay updates" do
     booking = create(:booking, hotel: hotel, guest_name: "Original Guest", adults: 1)
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101")

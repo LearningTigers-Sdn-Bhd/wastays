@@ -27,7 +27,7 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
     end
 
-    it "responds successfully and includes the required modal structures" do
+    it "responds successfully without the retired extend modal" do
       sign_in_with_permissions("manage_bookings")
 
       get board_hotel_bookings_path(hotel)
@@ -35,7 +35,7 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("id=\"offcanvas_drawer_container\"")
       expect(response.body).to include("Booking Timeline Board")
-      expect(response.body).to include("id=\"booking-timeline-board-extend-duration-overlay\"")
+      expect(response.body).not_to include("booking-timeline-board-extend-duration-overlay")
     end
 
     it "renders accessible move and resize controls for booking managers" do
@@ -52,7 +52,7 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       expect(booking_block["data-action"]).to include("dragstart->booking-timeline#onDragStart")
       expect(booking_block.at_css("[data-action*='onDragHandleMouseDown']")).to be_present
       expect(booking_block.at_css("[data-action*='onResizeStart']")).to be_present
-      expect(response.parsed_body.at_css("[aria-label^='Create booking for room 101']")).to be_present
+      expect(response.parsed_body.at_css("[aria-label^='Open actions for room 101']")).to be_present
     end
 
     it "renders a read-only booking link without management affordances" do
@@ -66,8 +66,7 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       expect(response.parsed_body.at_css("[data-id='#{booking.id}']")).to be_nil
       expect(response.parsed_body.at_css("[data-booking-timeline-target='dragHandle']")).to be_nil
       expect(response.parsed_body.at_css("[data-booking-timeline-target='resizeHandle']")).to be_nil
-      expect(response.parsed_body.at_css("[aria-label^='Create booking for room 101']")).to be_nil
-      expect(response.body).not_to include("booking-timeline-board-extend-duration-overlay")
+      expect(response.parsed_body.at_css("[aria-label^='Open actions for room 101']")).to be_nil
     end
 
     it "displays rates in empty cells when a rate plan is present" do
@@ -80,6 +79,25 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("250")
+    end
+
+    it "renders date-specific actions for empty slots using the hotel calendar date" do
+      travel_to Time.zone.local(2026, 6, 12, 10)
+      hotel.update!(time_zone: "UTC")
+      booking.update!(check_in: Date.current + 10.days, check_out: Date.current + 11.days)
+      sign_in_with_permissions("manage_bookings")
+
+      get board_hotel_bookings_path(hotel, start_date: Date.current - 1.day, days: 7)
+
+      past_cell = response.parsed_body.at_css("[data-date='#{Date.current - 1.day}']")
+      today_cell = response.parsed_body.at_css("[data-date='#{Date.current}']")
+      future_cell = response.parsed_body.at_css("[data-date='#{Date.current + 1.day}']")
+
+      expect(past_cell.text).to include("Backdated Check-in")
+      expect(past_cell.text).not_to include("Add Booking")
+      expect(today_cell.text).to include("Walk-in Check-in", "Add Booking")
+      expect(future_cell.text).to include("Add Booking")
+      expect(future_cell.text).not_to include("Walk-in Check-in")
     end
   end
 end

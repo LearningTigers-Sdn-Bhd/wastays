@@ -31,10 +31,12 @@ export default class extends Controller {
     if (!trigger) return
 
     this.pendingVariant = trigger.dataset.offcanvasVariant || this.variantValue
+    setTimeout(() => window.dispatchEvent(new CustomEvent("dropdown:close-all")), 0)
   }
 
   open() {
     clearTimeout(this.closeTimeout)
+    window.dispatchEvent(new CustomEvent("offcanvas:open"))
     this.element.classList.replace(this.closedClass, this.openClass)
     // Small delay to ensure display:block is applied before transition
     requestAnimationFrame(() => {

@@ -152,12 +152,76 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)
   end
 
-  it "moves a booking by dragging its handle to another room and date", js: true do
+  it "opens today slot actions and prefills the selected room", js: true do
+    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    board_url = page.current_url
+
+    cell = find("[data-room-number='102'][data-date='#{@business_date}']")
+    cell.find("button[aria-haspopup='menu']").click
+
+    menu = find("body > [role='menu'][aria-label*='Booking actions for room 102']", visible: true)
+    expect(menu["style"]).to include("position: fixed", "z-index: 9999")
+    expect(menu).to have_content("Room 102")
+    expect(menu).to have_content("Walk-in Check-in")
+    expect(menu).to have_content("Add Booking")
+
+    menu.click_link "Add Booking"
+
+    expect(page.current_url).to eq(board_url)
+    expect(page).to have_selector("#offcanvas_drawer_container.block", visible: :all)
+    within "#offcanvas_drawer" do
+      expect(page).to have_content(/New Booking/i)
+      expect(page).to have_select("Room Number", selected: "102")
+    end
+    expect(page).to have_no_selector("body > [role='menu'][aria-label*='Booking actions for room 102']", visible: :all)
+    expect(cell).to have_selector("[role='menu'][aria-label*='Booking actions for room 102'].hidden", visible: :all)
+  end
+
+  it "opens a walk-in from today slot actions without leaving the board", js: true do
+    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    board_url = page.current_url
+
+    cell = find("[data-room-number='102'][data-date='#{@business_date}']")
+    cell.find("button[aria-haspopup='menu']").click
+    menu = find("body > [role='menu'][aria-label*='Booking actions for room 102']", visible: true)
+    menu.click_link "Walk-in Check-in"
+
+    expect(page.current_url).to eq(board_url)
+    expect(page).to have_selector("#offcanvas_drawer_container.block", visible: :all)
+    within "#offcanvas_drawer" do
+      expect(page).to have_content(/Walk[ -]in check[ -]in/i)
+      expect(page).to have_select("Room Number", selected: "102")
+    end
+    expect(page).to have_no_selector("body > [role='menu'][aria-label*='Booking actions for room 102']", visible: :all)
+    expect(cell).to have_selector("[role='menu'][aria-label*='Booking actions for room 102'].hidden", visible: :all)
+  end
+
+  it "restores a portaled slot menu after Escape", js: true do
+    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+
+    cell = find("[data-room-number='102'][data-date='#{@business_date}']")
+    trigger = cell.find("button[aria-haspopup='menu']")
+    trigger.click
+    menu = find("body > [role='menu'][aria-label*='Booking actions for room 102']", visible: true)
+
+    menu.send_keys(:escape)
+
+    expect(page).to have_no_selector("body > [role='menu'][aria-label*='Booking actions for room 102']", visible: :all)
+    expect(cell).to have_selector("[role='menu'][aria-label*='Booking actions for room 102'].hidden", visible: :all)
+    expect(trigger["aria-expanded"]).to eq("false")
+  end
+
+  it "does not open Edit Booking from a timeline handle and cancels a proposed move", js: true do
     target_date = @business_date + 1.day
     visit board_hotel_bookings_path(hotel, start_date: @business_date)
 
     page.execute_script(<<~JS)
-      window.confirm = () => true
+      const source = document.querySelector("[data-booking-actions-id-value='#{@booking.id}']")
+      source.querySelector("[data-booking-timeline-target='dragHandle']").click()
+    JS
+    expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)
+
+    page.execute_script(<<~JS)
       const source = document.querySelector("[data-booking-actions-id-value='#{@booking.id}']")
       const handle = source.querySelector("[data-action*='onDragHandleMouseDown']")
       const target = document.querySelector("[data-room-number='102'][data-date='#{target_date}']")
@@ -168,6 +232,36 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
       target.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer }))
     JS
 
+    within "#offcanvas_drawer" do
+      expect(page).to have_content(/Move Stay/i)
+      click_button "Cancel"
+    end
+
+    expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)
+    expect(@booking.reload.check_in.to_date).to eq(@business_date)
+    expect(@booking.booking_rooms.first.room_number).to eq("101")
+  end
+
+  it "moves a booking by dragging its handle and confirming the timeline sheet", js: true do
+    target_date = @business_date + 1.day
+    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+
+    page.execute_script(<<~JS)
+      const source = document.querySelector("[data-booking-actions-id-value='#{@booking.id}']")
+      const handle = source.querySelector("[data-action*='onDragHandleMouseDown']")
+      const target = document.querySelector("[data-room-number='102'][data-date='#{target_date}']")
+      const transfer = new DataTransfer()
+      handle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }))
+      source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer: transfer }))
+      target.dispatchEvent(new DragEvent("dragover", { bubbles: true, dataTransfer: transfer }))
+      target.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer }))
+    JS
+
+    within "#offcanvas_drawer" do
+      expect(page).to have_content(/Move Stay/i)
+      click_button "Confirm Move"
+    end
+
     expect(page).to have_selector(
       "[data-booking-actions-id-value='#{@booking.id}'][data-booking-actions-check-in-value='#{target_date}']",
       wait: 5
@@ -177,7 +271,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     expect(@booking.booking_rooms.first.room_number).to eq("102")
   end
 
-  it "extends a booking by resizing it and confirming the new checkout date", js: true do
+  it "extends a booking by resizing it and confirming the timeline sheet", js: true do
     target_date = @business_date + 2.days
     visit board_hotel_bookings_path(hotel, start_date: @business_date)
 
@@ -191,8 +285,8 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
       document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: targetRect.left + 4, clientY: targetRect.top + 4 }))
     JS
 
-    within "#booking-timeline-board-extend-duration-overlay" do
-      expect(page).to have_content(target_date.next_day.to_s)
+    within "#offcanvas_drawer" do
+      expect(page).to have_content(/Extend Stay/i)
       click_button "Confirm Extension"
     end
 

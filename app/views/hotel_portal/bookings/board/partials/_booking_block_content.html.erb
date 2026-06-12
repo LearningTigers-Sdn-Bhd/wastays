@@ -1,6 +1,6 @@
 <% if can_manage_bookings %>
   <div class="absolute inset-y-0 left-0 w-4 cursor-grab bg-black/5 hover:bg-black/10 transition-colors flex items-center justify-center"
-       data-action="mousedown->booking-timeline#onDragHandleMouseDown"
+       data-action="mousedown->booking-timeline#onDragHandleMouseDown click->booking-timeline#onHandleClick"
        data-booking-timeline-target="dragHandle"
        aria-hidden="true">
     <div class="flex flex-col gap-0.5">
@@ -19,7 +19,7 @@
 
 <% if can_manage_bookings %>
   <div class="absolute inset-y-0 right-0 w-4 cursor-ew-resize bg-black/5 hover:bg-black/10 transition-colors"
-       data-action="mousedown->booking-timeline#onResizeStart"
+       data-action="mousedown->booking-timeline#onResizeStart click->booking-timeline#onHandleClick"
        data-booking-timeline-target="resizeHandle"
        aria-hidden="true"></div>
 <% end %>

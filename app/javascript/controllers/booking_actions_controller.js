@@ -14,6 +14,7 @@ export default class extends Controller {
   }
 
   openBookingSheet(event) {
+    if (event?.target?.closest('[data-booking-timeline-target="dragHandle"], [data-booking-timeline-target="resizeHandle"]')) return
     if (event) { event.preventDefault(); event.stopPropagation() }
 
     const hotelId = window.location.pathname.split('/')[2]
