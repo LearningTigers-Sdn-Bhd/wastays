@@ -96,7 +96,7 @@ module Folios
         amount = nightly_room_amount(room, date)
         next if amount.zero?
 
-        description = @is_reinstate ? "Reinstate Charge - #{date.strftime('%d %b %Y')}" : "Unexpected Check-in (Room Charge) - #{date.strftime('%d %b %Y')}"
+        description = @is_reinstate ? "Reinstate Charge - #{date.strftime('%d %b %Y')}" : "Backdated Check-in (Room Charge) - #{date.strftime('%d %b %Y')}"
 
         result = Folios::InsertTransaction.new(
           booking_folio: @folio,
@@ -142,7 +142,7 @@ module Folios
         description = if @is_reinstate
           "Reinstate Tax: #{tax_line_name(tax_line)} - #{date.strftime('%d %b %Y')}"
         else
-          "Unexpected Check-in Tax: #{tax_line_name(tax_line)} - #{date.strftime('%d %b %Y')}"
+          "Backdated Check-in Tax: #{tax_line_name(tax_line)} - #{date.strftime('%d %b %Y')}"
         end
 
         result = Folios::InsertTransaction.new(
