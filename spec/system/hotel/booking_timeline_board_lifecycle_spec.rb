@@ -186,7 +186,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
       expect(page).to have_field("Guest name", with: "John Doe")
       page.execute_script("document.getElementById('offcanvas_drawer').src = '#{hotel_booking_transaction_amend_stay_path(hotel, @booking)}'")
       expect(page).to have_content(/Edit Stay & Room/i)
-      click_button "Cancel"
+      find_button("Cancel").trigger("click")
     end
 
     expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)
@@ -244,7 +244,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     trigger.click
     menu = find("body > [role='menu'][aria-label*='Booking actions for room 102']", visible: true)
 
-    menu.send_keys(:escape)
+    trigger.send_keys(:escape)
 
     expect(page).to have_no_selector("body > [role='menu'][aria-label*='Booking actions for room 102']", visible: :all)
     expect(cell).to have_selector("[role='menu'][aria-label*='Booking actions for room 102'].hidden", visible: :all)
@@ -305,6 +305,9 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     target_date = @business_date + 2.days
     visit board_hotel_bookings_path(hotel, start_date: @business_date)
 
+    # Ensure the booking block is fully loaded and positioned before resizing
+    expect(page).to have_selector("[data-booking-actions-id-value='#{@booking.id}']")
+
     page.execute_script(<<~JS)
       const source = document.querySelector("[data-booking-actions-id-value='#{@booking.id}']")
       const handle = source.querySelector("[data-action*='onResizeStart']")
@@ -312,7 +315,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
       const startRect = handle.getBoundingClientRect()
       const targetRect = target.getBoundingClientRect()
       handle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: startRect.left, clientY: startRect.top }))
-      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: targetRect.left + 4, clientY: targetRect.top + 4 }))
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: targetRect.left + (targetRect.width / 2), clientY: targetRect.top + (targetRect.height / 2) }))
     JS
 
     expect_offcanvas_to_finish_opening

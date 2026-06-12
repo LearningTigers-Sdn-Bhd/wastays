@@ -1,4 +1,4 @@
-<%= turbo_frame_tag "offcanvas_drawer" do %>
+<%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "compact-right" } do %>
   <div class="flex h-full flex-col bg-white">
     <%= render "hotel_portal/bookings/board/partials/content_header",
       title: "Edit Booking",

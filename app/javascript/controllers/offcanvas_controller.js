@@ -11,10 +11,20 @@ export default class extends Controller {
 
     document.addEventListener("click", this.handleTriggerClick)
 
+    // Listen synchronously for clicks on close triggers to bypass Stimulus race conditions
+    this.element.addEventListener("click", (event) => {
+      const closeTrigger = event.target.closest('[data-action*="offcanvas#close"]')
+      if (closeTrigger) {
+        event.preventDefault()
+        this.close()
+      }
+    })
+
     // Listen for turbo frame loads to open the drawer
     this.element.addEventListener("turbo:frame-load", (event) => {
       if (event.target.id === "offcanvas_drawer") {
-        this.applyVariant(this.pendingVariant || this.variantValue)
+        const variant = event.target.dataset.offcanvasVariant || this.pendingVariant || this.variantValue
+        this.applyVariant(variant)
         this.open()
       }
     })
@@ -81,12 +91,15 @@ export default class extends Controller {
       "inset-x-0", "bottom-0", "h-screen", "translate-y-full", "translate-y-0"
     )
 
+    const isOpen = this.element.classList.contains(this.openClass)
+    const transformClass = isOpen ? this.openTransformClass : this.closedTransformClass
+
     if (this.currentVariant === "fullscreen-bottom") {
-      this.panelTarget.classList.add("inset-x-0", "bottom-0", "h-screen", "w-full", "translate-y-full")
+      this.panelTarget.classList.add("inset-x-0", "bottom-0", "h-screen", "w-full", transformClass)
     } else if (this.currentVariant === "compact-right") {
-      this.panelTarget.classList.add("inset-y-0", "right-0", "w-full", "sm:w-[480px]", "md:w-[520px]", "lg:w-[560px]", "translate-x-full")
+      this.panelTarget.classList.add("inset-y-0", "right-0", "w-full", "sm:w-[480px]", "md:w-[520px]", "lg:w-[560px]", transformClass)
     } else {
-      this.panelTarget.classList.add("inset-y-0", "right-0", "w-full", "sm:w-[600px]", "md:w-[800px]", "lg:w-[1000px]", "translate-x-full")
+      this.panelTarget.classList.add("inset-y-0", "right-0", "w-full", "sm:w-[600px]", "md:w-[800px]", "lg:w-[1000px]", transformClass)
     }
   }
 

@@ -1,4 +1,4 @@
-<%= turbo_frame_tag "offcanvas_drawer" do %>
+<%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "fullscreen-bottom" } do %>
   <%= render "hotel_portal/bookings/transactions/check_out/partials/sheet",
     booking: @booking,
     presenter: @presenter,

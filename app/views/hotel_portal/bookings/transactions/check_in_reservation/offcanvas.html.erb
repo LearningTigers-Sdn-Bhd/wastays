@@ -1,4 +1,4 @@
-<%= turbo_frame_tag "offcanvas_drawer" do %>
+<%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right" } do %>
   <div class="flex flex-col h-full">
     <%= form_with model: @booking, url: check_in_hotel_booking_path(current_hotel, @booking), method: :post,
         class: "flex flex-col h-full" do |f| %>
