@@ -1,11 +1,7 @@
 <%= turbo_frame_tag "role_modal_content" do %>
-  <div class="flex flex-col bg-white border shadow-sm rounded-2xl pointer-events-auto overflow-hidden">
-    <div class="flex justify-between items-center py-3 px-4 border-b border-slate-200">
-      <h3 class="font-bold text-slate-800">Edit Role: <%= @role.name %></h3>
-      <button type="button" class="size-8 inline-flex justify-center items-center gap-x-2 rounded-full border border-transparent bg-slate-100 text-slate-800 hover:bg-slate-200 focus:outline-none focus:bg-slate-200 disabled:opacity-50 disabled:pointer-events-none" data-hs-overlay="#role-modal">
-        <span class="sr-only">Close</span>
-        <svg class="flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
+  <div class="flex flex-col bg-white">
+    <div class="flex justify-between items-center py-3.5 px-6 border-b border-slate-200 bg-slate-50/50">
+      <h3 class="font-bold text-slate-900">Edit Role: <%= @role.name %></h3>
     </div>
 
     <%= form_with model: @role, url: hotel_role_path(current_hotel, @role), method: :patch, data: { turbo_frame: "_top" } do |f| %>
@@ -31,9 +27,15 @@
       <div class="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/50 p-4">
         <div>
           <% if @role.user_hotel_accesses.empty? %>
-            <%= button_to hotel_role_path(current_hotel, @role),
-                          method: :delete,
-                          data: { turbo_confirm: "Are you sure you want to delete the '#{@role.name}' role? This cannot be undone.", turbo_confirm_title: "Delete Role", turbo_confirm_color: "red", turbo_frame: "_top" },
+            <%= link_to hotel_role_path(current_hotel, @role),
+                          data: { 
+                            turbo_method: :delete,
+                            turbo_confirm: "Are you sure you want to delete the '#{@role.name}' role? This cannot be undone.", 
+                            turbo_confirm_title: "Delete Role", 
+                            turbo_confirm_color: "red", 
+                            turbo_frame: "_top",
+                            action: "click->popup-modal#close"
+                          },
                           class: "inline-flex items-center rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 shadow-sm transition hover:bg-red-50" do %>
               Delete Role
             <% end %>
@@ -45,7 +47,9 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <button type="button" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" data-hs-overlay="#role-modal">
+          <button type="button" 
+                  class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" 
+                  data-action="click->popup-modal#close">
             Cancel
           </button>
           <%= f.submit "Update Role", class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>

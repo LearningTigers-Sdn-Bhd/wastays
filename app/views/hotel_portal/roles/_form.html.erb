@@ -1,4 +1,4 @@
-<%= form_with model: @role, url: @role.persisted? ? hotel_role_path(current_hotel, @role) : hotel_roles_path(current_hotel), method: @role.persisted? ? :patch : :post, local: true, class: "space-y-6" do |f| %>
+<%= form_with model: @role, url: @role.persisted? ? hotel_role_path(current_hotel, @role) : hotel_roles_path(current_hotel), method: @role.persisted? ? :patch : :post, local: true, class: "space-y-6", data: { turbo_frame: "_top" } do |f| %>
   <% if @role.errors.any? %>
     <div class="rounded-xl border border-red-200 bg-red-50 p-4">
       <h2 class="text-sm font-bold text-red-900">Role could not be saved</h2>
@@ -17,7 +17,9 @@
   </div>
 
   <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
-    <%= link_to "Cancel", hotel_roles_path(current_hotel), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" %>
+    <button type="button" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" data-action="click->popup-modal#close">
+      Cancel
+    </button>
     <%= f.submit @role.persisted? ? "Update Role" : "Create Role", class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
   </div>
 <% end %>
