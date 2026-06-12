@@ -8,7 +8,7 @@ module Guests
   end
 
   def call
-    scope = Guest
+    scope = Guest.kept
       .select("guests.*, COALESCE(MAX(bookings.checked_out_at), MAX(bookings.check_out::timestamp)) AS last_stay_at")
       .left_joins(:bookings)
       .where("bookings.hotel_id = :hotel_id OR guests.created_by_hotel_id = :hotel_id", hotel_id: @hotel.id)
@@ -21,7 +21,7 @@ module Guests
   end
 
   def country_options
-    Guest
+    Guest.kept
       .left_joins(:bookings)
       .where("bookings.hotel_id = :hotel_id OR guests.created_by_hotel_id = :hotel_id", hotel_id: @hotel.id)
       .where.not(country: [ nil, "" ])

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module BookingEngine
   class AvailabilityService
     PricingOption = Struct.new(:rate_plan, :currency, :total_price, :nightly_price, :nightly_rates, :winning_rule, keyword_init: true)
@@ -27,30 +29,31 @@ module BookingEngine
       hotels = Hotel.where(status: [ "approved", "live" ])
       hotels = hotels.where("city ILIKE ?", "%#{@city}%") if @city.present?
 
-      # 2. Filter by availability
-      # Note: Initial implementation for availability checks. For higher volume properties, consider specialized indexing.
-      hotels.select do |hotel|
-        available_rooms_for_hotel(hotel).any?
+      # 2. Filter by availability using find_each to avoid memory bloat
+      available_hotels = []
+      hotels.find_each do |hotel|
+        available_hotels << hotel if available_rooms_for_hotel(hotel).any?
       end
+      available_hotels
     end
 
     def available_rooms_for_hotel(hotel)
       # Get stay dates (excluding check-out day)
-      stay_dates = (@check_in...@check_out).to_a
-      return [] if stay_dates.empty?
+      stay_dates_list = stay_dates
+      return [] if stay_dates_list.empty?
 
-      # 1. Basic occupancy filter
-      # In V3, we assume guest specifies TOTAL adults/children for the whole booking.
-      # For now, let's say ANY room type that can fit the guests is a candidate.
-      potential_room_types = hotel.room_types.where("max_adults >= ?", @adults)
+      # 1. Basic occupancy filter and preload associations for performance
+      potential_room_types = hotel.room_types
+                                  .includes(:room_inventories, :room_rates, :rate_plans)
+                                  .where("max_adults >= ?", @adults)
 
       # 2. Date-based availability & rate check
       available_room_types = potential_room_types.select do |room_type|
-        # Check inventory for all stay dates
-        inventories = room_type.room_inventories.where(date: stay_dates)
+        # Check inventory for all stay dates in memory to avoid N+1
+        inventories = room_type.room_inventories.select { |inv| stay_dates_list.include?(inv.date) }
 
         # Must have open inventory with quantity >= required room_count for EVERY stay date
-        inventory_ok = (inventories.count == stay_dates.count) &&
+        inventory_ok = (inventories.count == stay_dates_list.count) &&
                        inventories.all? { |inv| inv.status == "open" && inv.quantity >= @room_count }
 
         next false unless inventory_ok
@@ -131,14 +134,18 @@ module BookingEngine
     end
 
     def candidate_rate_plans_for(room_type)
-      [ nil ] + room_type.rate_plans.order(:id).to_a
+      [ nil ] + room_type.rate_plans.to_a
     end
 
     def pricing_option_for(room_type, rate_plan)
       currency = rate_plan&.currency.presence || room_type.hotel.default_currency.presence || "MYR"
-      scope = room_type.room_rates.where(date: stay_dates, currency: currency)
-      scope = rate_plan.present? ? scope.where(rate_plan: rate_plan) : scope.where(rate_plan_id: nil)
-      rates_by_date = scope.index_by(&:date)
+
+      # Filter rates in memory to avoid N+1
+      rates_by_date = room_type.room_rates.select do |rr|
+        stay_dates.include?(rr.date) &&
+          rr.currency == currency &&
+          (rate_plan.present? ? rr.rate_plan_id == rate_plan.id : rr.rate_plan_id.nil?)
+      end.index_by(&:date)
 
       nightly_total = 0.to_d
       winning_rule = "base"

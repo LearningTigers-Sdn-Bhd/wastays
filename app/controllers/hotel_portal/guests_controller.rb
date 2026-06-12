@@ -36,20 +36,10 @@ module HotelPortal
     end
 
     def show
-      guest_booking_scope = Booking
-        .joins(:booking_guests)
-        .where(hotel_id: current_hotel.id, booking_guests: { guest_id: @guest.id })
-
-      @all_bookings = guest_booking_scope
-        .includes(:pre_checkin)
-        .order(check_out: :desc, id: :desc)
-      @bookings = @all_bookings.page(params[:page]).per(25)
-
-      @currency_totals = guest_booking_scope
-        .where(status: [ "checked_in", "completed" ])
-        .reorder(nil)
-        .group(:currency)
-        .sum(:total_amount)
+      query = Guests::GuestBookingsQuery.new(hotel: current_hotel, guest: @guest)
+      @all_bookings = query.all_bookings
+      @bookings = query.bookings(page: params[:page])
+      @currency_totals = query.currency_totals
     end
 
     def new
@@ -102,7 +92,7 @@ module HotelPortal
     private
 
     def set_guest
-      @guest = ActiveRecord::Encryption.without_encryption { Guest.find(params[:id]) }
+      @guest = ActiveRecord::Encryption.without_encryption { Guest.kept.find(params[:id]) }
 
       # Allow access if they have a booking OR were created by this hotel
       return if @guest.created_by_hotel_id == current_hotel.id

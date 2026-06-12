@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module HotelOps
   class SeedAccountRoles
     ROLE_TEMPLATES = [

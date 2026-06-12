@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rails_helper"
 
 RSpec.describe "HotelPortal::Guests Permissions", type: :request do
@@ -21,10 +23,18 @@ RSpec.describe "HotelPortal::Guests Permissions", type: :request do
         sign_in_as(user)
       end
 
-      it "successfully deletes the guest record" do
+      it "successfully soft deletes the guest record even with active bookings" do
+        create(:booking, hotel: hotel, status: "confirmed", guest_name: guest.name, guest_email: guest.email).tap do |b|
+          create(:booking_guest, booking: b, guest: guest)
+        end
+
         delete hotel_guest_path(hotel, guest)
         expect(response).to have_http_status(:see_other)
-        expect(Guest.exists?(guest.id)).to be_falsey
+
+        # Verify it is hidden from normal queries but exists in DB
+        expect(Guest.kept.exists?(guest.id)).to be_falsey
+        expect(Guest.exists?(guest.id)).to be_truthy
+        expect(Guest.find(guest.id).discarded?).to be_truthy
         expect(flash[:notice]).to include("successfully")
       end
     end

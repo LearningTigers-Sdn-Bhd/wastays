@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module HotelPortal
   module NavigationHelper
     NavSection = Struct.new(:label, :items, keyword_init: true)
