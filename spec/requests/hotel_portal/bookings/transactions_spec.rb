@@ -237,17 +237,19 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(booking.reload.status).to eq("confirmed")
   end
 
-  it "renders check-in, checkout, late-checkout, reinstate, and cancellation sheets" do
+  it "renders check-in, checkout, late-checkout, no-show review, reinstate, and cancellation sheets" do
     confirmed = create(:booking, hotel: hotel, status: "confirmed")
     checked_in = create(:booking, hotel: hotel, status: "checked_in")
     no_show = create(:booking, hotel: hotel, status: "no_show")
-    [ confirmed, checked_in, no_show ].each { |booking| create(:booking_room, booking: booking, room_type: room_type, room_number: "101") }
+    review_no_show = create(:booking, hotel: hotel, status: "review_no_show", no_show_review_business_date: Date.current)
+    [ confirmed, checked_in, no_show, review_no_show ].each { |booking| create(:booking_room, booking: booking, room_type: room_type, room_number: "101") }
     create(:booking_folio, booking: checked_in, hotel: hotel, status: "open")
 
     [
       hotel_booking_transaction_check_in_reservation_path(hotel, confirmed),
       hotel_booking_transaction_check_out_path(hotel, checked_in),
       hotel_booking_transaction_late_checkout_path(hotel, checked_in),
+      hotel_booking_transaction_mark_no_show_path(hotel, review_no_show),
       hotel_booking_transaction_reinstate_no_show_path(hotel, no_show),
       hotel_booking_transaction_cancel_booking_path(hotel, confirmed)
     ].each do |path|
@@ -255,6 +257,43 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
       expect(response).to have_http_status(:success), path
       expect(response.body).to include('turbo-frame id="offcanvas_drawer"'), path
     end
+  end
+
+  it "manually finalizes a booking pending no-show review" do
+    booking = create(
+      :booking,
+      hotel: hotel,
+      status: "review_no_show",
+      no_show_review_business_date: Date.current,
+      check_in: Date.current,
+      check_out: Date.current + 2.days,
+      tax_lines: []
+    )
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 200.0)
+
+    post mark_no_show_hotel_booking_path(hotel, booking)
+
+    expect(booking.reload.status).to eq("no_show")
+    expect(booking.booking_folio.folio_transactions.charge.where(category: "no_show_charge").sole.amount).to eq(100.0)
+  end
+
+  it "allows existing-reservation backdated check-in only during no-show review" do
+    booking = create(
+      :booking,
+      hotel: hotel,
+      status: "review_no_show",
+      no_show_review_business_date: Date.current,
+      check_in: Date.current,
+      check_out: Date.current + 1.day
+    )
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 100.0)
+
+    post hotel_booking_transaction_booking_backdated_check_in_path(hotel, booking), params: {
+      booking: { checked_in_at: Time.current },
+      retroactive_reason: "Late arrival"
+    }
+
+    expect(booking.reload.status).to eq("checked_in")
   end
 
   it "renders security deposit collection in the check-in sheet" do

@@ -20,6 +20,7 @@ module HotelPortal
     def status_label_class
       case status
       when "confirmed" then "border-green-800 text-green-800"
+      when "review_no_show" then "border-amber-800 text-amber-800"
       when "checked_in" then "border-blue-800 text-blue-800"
       when "completed" then "border-emerald-800 text-emerald-800"
       when "cancelled" then "border-red-800 text-red-800"

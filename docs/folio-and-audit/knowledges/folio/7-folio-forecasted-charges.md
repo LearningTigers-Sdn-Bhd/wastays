@@ -25,7 +25,7 @@ Forecasts are a separate model (`FolioForecastedCharge`) — they do not affect 
 - `app/services/folios/close_for_checkout.rb` — syncs forecasts, then validates unsettled forecasts before checkout
 - `app/services/bookings/update_stay_service.rb` — syncs forecasts on date/room/rate changes
 - `app/services/bookings/process_early_departure.rb` — syncs forecasts after checkout truncation
-- `app/services/bookings/process_no_shows.rb` — supersedes normal stay forecasts after no-show posting
+- `app/services/bookings/finalize_no_show.rb` — supersedes normal stay forecasts after no-show posting
 - `app/views/hotel_portal/bookings/folio.html.erb` — passes projections to partials
 - `app/views/hotel_portal/bookings/folio/_folio_transaction_table.html.erb` — renders amber "Pending / Forecast" rows
 - `spec/models/folio_forecasted_charge_spec.rb`
@@ -82,7 +82,7 @@ Forecasts are a separate model (`FolioForecastedCharge`) — they do not affect 
 
 ## Verification
 
-- `bundle exec rspec spec/services/folios/charge_posting_keys_spec.rb spec/services/folios/generate_forecasted_charges_spec.rb spec/services/folios/sync_forecasted_charges_spec.rb spec/services/folios/post_nightly_charges_spec.rb spec/services/folios/post_early_checkout_charges_spec.rb spec/services/folios/reverse_transaction_spec.rb spec/services/bookings/process_no_shows_spec.rb` — 54 examples, 0 failures.
+- `bundle exec rspec spec/services/folios/charge_posting_keys_spec.rb spec/services/folios/generate_forecasted_charges_spec.rb spec/services/folios/sync_forecasted_charges_spec.rb spec/services/folios/post_nightly_charges_spec.rb spec/services/folios/post_early_checkout_charges_spec.rb spec/services/folios/reverse_transaction_spec.rb spec/services/bookings/finalize_no_show_spec.rb`
 - `bundle exec rspec spec/integration/lifecycles/standard_booking_lifecycle_spec.rb spec/integration/lifecycles/exception_booking_lifecycle_spec.rb` — 11 examples, 0 failures.
 
 ## Known Follow-Ups

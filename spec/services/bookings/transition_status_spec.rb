@@ -327,6 +327,24 @@ RSpec.describe Bookings::TransitionStatus do
         expect(result.error).to eq("Cannot cancel booking with status checked_in")
         expect(booking.reload.status).to eq("checked_in")
       end
+
+      it "cancels a no-show review without charges and releases its assigned room" do
+        room_type = create(:room_type, hotel: booking.hotel, room_numbers: [ "101" ])
+        create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+        room_status = create(:room_status, hotel: booking.hotel, room_type: room_type, room_number: "101", status: "dirty")
+        booking.transition_status_to!(
+          "review_no_show",
+          event: "review_no_show",
+          attributes: { no_show_review_business_date: booking.check_in.to_date }
+        )
+
+        result = described_class.new(booking: booking, status: "cancelled", user: user, options: { reason: "Guest cancelled" }).call
+
+        expect(result.success?).to be true
+        expect(booking.reload.status).to eq("cancelled")
+        expect(booking.booking_folio).to be_nil
+        expect(room_status.reload.status).to eq("ready")
+      end
     end
 
     it "returns failure for unsupported status" do
@@ -353,62 +371,25 @@ RSpec.describe Bookings::TransitionStatus do
         create(:booking_room, booking: booking, subtotal: 100.0)
       end
 
-      context "when booking was marked as no_show" do
-        before do
-          booking.status_transition_event = "mark_no_show"
-          booking.update!(status: "no_show")
-          # Create a night audit record and no-show penalties
-          create(:night_audit, hotel: hotel, business_date: business_date, status: "completed")
-          folio = create(:booking_folio, booking: booking, hotel: hotel)
-          create(:folio_transaction,
-                 booking_folio: folio,
-                 transaction_type: :charge,
-                 category: :no_show_charge,
-                 amount: 100.0,
-                 metadata: { "posting_source" => "no_show" })
-        end
+      context "when booking was finalized as no_show" do
+        it "requires the dedicated reinstatement workflow" do
+          booking.transition_status_to!(
+            "review_no_show",
+            event: "review_no_show",
+            attributes: { no_show_review_business_date: business_date }
+          )
+          booking.transition_status_to!("no_show", event: "mark_no_show")
 
-        it "allows check-in, recovers inventory, and processes catch-up charges" do
-          inventory_manager = instance_double(Bookings::InventoryManager)
-          allow(Bookings::InventoryManager).to receive(:new).with(booking).and_return(inventory_manager)
-          expect(inventory_manager).to receive(:reserve_by_dates).with(business_date.to_date + 1.day, booking.check_out.to_date)
-
-          options = { override_night_audit: true, reason: "Late arrival" }
-          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: user, options: options)
-
-          expect {
-            result = subject.call
-            expect(result.success?).to be true
-          }.to change(FolioTransaction, :count).by(2) # 1 reversal adjustment + 1 catch-up charge
-
-          booking.reload
-          expect(booking.status).to eq("checked_in")
-
-          folio = booking.booking_folio
-          # Check for reversal
-          reversal = folio.folio_transactions.adjustment.first
-          expect(reversal.amount).to eq(-100.0)
-          expect(reversal.category).to eq("correction")
-
-          # Check for catch-up charge
-          catch_up = folio.folio_transactions.charge.find_by("metadata->>'posting_source' = ?", "catch_up")
-          expect(catch_up.amount).to eq(100.0)
-          expect(catch_up.category).to eq("accommodation")
-        end
-
-        it "does not reinstate a no-show when the assigned room has already been reused" do
-          room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ], quantity: 1)
-          booking.booking_rooms.sole.update!(room_type: room_type, room_number: "101")
-          reused_booking = create(:booking, hotel: hotel, status: "confirmed", check_in: booking.check_in, check_out: booking.check_out)
-          create(:booking_room, booking: reused_booking, room_type: room_type, room_number: "101")
-
-          options = { override_night_audit: true, reason: "Late arrival" }
-          subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: user, options: options)
-
-          result = subject.call
+          result = described_class.new(
+            booking: booking,
+            status: "checked_in",
+            timestamp: timestamp,
+            user: user,
+            options: { override_night_audit: true, reason: "Late arrival" }
+          ).call
 
           expect(result.success?).to be false
-          expect(result.error).to include("Assigned room 101 is no longer available")
+          expect(result.error).to include("Cannot check in booking with status no_show")
           expect(booking.reload.status).to eq("no_show")
         end
       end

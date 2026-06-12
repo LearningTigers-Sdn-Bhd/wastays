@@ -45,7 +45,7 @@
           <% @bookings.each do |booking| %>
             <% days_until_checkin = (booking.check_in.to_date - Date.current).to_i %>
             <% eligible_for_new_refund = booking.status == "confirmed" && booking.refund_request.nil? && @refund_policy.present? && days_until_checkin >= @refund_policy.min_days_before_checkin %>
-            <% status_classes = case booking.status
+            <% status_classes = case guest_booking_status(booking)
                when "confirmed" then "text-emerald-700"
                when "pending" then "text-amber-700"
                when "checked_in" then "text-indigo-700"
@@ -53,7 +53,7 @@
                when "cancelled" then "text-red-700"
                else "text-slate-600"
                end %>
-            <% status_dot_classes = case booking.status
+            <% status_dot_classes = case guest_booking_status(booking)
                when "confirmed" then "bg-emerald-500"
                when "pending" then "bg-amber-500"
                when "checked_in" then "bg-indigo-500"
@@ -70,7 +70,7 @@
                 </div>
                 <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_classes %>">
                   <span class="size-2.5 rounded-sm <%= status_dot_classes %>"></span>
-                  <%= booking.status.humanize %>
+                  <%= guest_booking_status(booking).humanize %>
                 </div>
               </div>
 
@@ -123,7 +123,7 @@
             <% @bookings.each_with_index do |booking, index| %>
               <% days_until_checkin = (booking.check_in.to_date - Date.current).to_i %>
               <% eligible_for_new_refund = booking.status == "confirmed" && booking.refund_request.nil? && @refund_policy.present? && days_until_checkin >= @refund_policy.min_days_before_checkin %>
-              <% status_classes = case booking.status
+              <% status_classes = case guest_booking_status(booking)
                  when "confirmed" then "text-emerald-700"
                  when "pending" then "text-amber-700"
                  when "checked_in" then "text-indigo-700"
@@ -131,7 +131,7 @@
                  when "cancelled" then "text-red-700"
                  else "text-slate-600"
                  end %>
-              <% status_dot_classes = case booking.status
+              <% status_dot_classes = case guest_booking_status(booking)
                  when "confirmed" then "bg-emerald-500"
                  when "pending" then "bg-amber-500"
                  when "checked_in" then "bg-indigo-500"
@@ -146,7 +146,7 @@
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_classes %>">
                       <span class="size-2.5 rounded-sm <%= status_dot_classes %>"></span>
-                      <%= booking.status.humanize %>
+                      <%= guest_booking_status(booking).humanize %>
                     </div>
                   </td>
                   <td class="px-6 py-4 text-right sm:px-8">

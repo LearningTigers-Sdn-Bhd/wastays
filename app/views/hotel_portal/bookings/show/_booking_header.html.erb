@@ -18,6 +18,10 @@
         <% if booking.status == "confirmed" %>
           <%= link_to "Check In", hotel_booking_transaction_check_in_reservation_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
           <%= link_to "Cancel", hotel_booking_transaction_cancel_booking_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-50" %>
+        <% elsif booking.status == "review_no_show" %>
+          <%= link_to "Backdated Check-in", hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+          <%= link_to "Mark No-show", hotel_booking_transaction_mark_no_show_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-bold text-rose-700 shadow-sm transition hover:bg-rose-50" %>
+          <%= link_to "Cancel", hotel_booking_transaction_cancel_booking_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-50" %>
         <% elsif booking.status == "no_show" %>
           <%= link_to "Reinstate", hotel_booking_transaction_reinstate_no_show_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700" %>
         <% elsif booking.status == "checked_in" %>

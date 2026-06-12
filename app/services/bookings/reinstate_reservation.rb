@@ -94,6 +94,7 @@ module Bookings
 
     def rooms_available?
       business_date = @booking.hotel.business_date_for(Time.current)
+      return @booking.booking_rooms.all? { |booking_room| booking_room.room_number.present? } if @booking.check_out.to_date <= business_date
 
       @booking.booking_rooms.all? do |booking_room|
         next false if booking_room.room_number.blank?

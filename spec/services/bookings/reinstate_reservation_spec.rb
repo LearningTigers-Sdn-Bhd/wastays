@@ -96,6 +96,16 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
       business_date = hotel.business_date_for(Time.current)
       expect(inventory_manager).to have_received(:reserve_by_dates).with(business_date, booking.check_out.to_date)
     end
+
+    it "reinstates a booking with no remaining inventory nights" do
+      business_date = hotel.business_date_for(Time.current)
+      booking.update!(check_in: business_date - 1.day, check_out: business_date)
+
+      result = subject.call
+
+      expect(result.success?).to be true
+      expect(booking.reload.status).to eq("checked_in")
+    end
   end
 
   context "when room is not available" do

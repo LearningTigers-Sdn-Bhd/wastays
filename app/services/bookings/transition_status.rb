@@ -69,8 +69,8 @@ module Bookings
             next
           end
 
-          was_no_show = @booking.status == "no_show"
-          unless @booking.status.in?(%w[confirmed no_show])
+          was_review_no_show = @booking.status == "review_no_show"
+          unless @booking.status.in?(%w[confirmed review_no_show])
             error = "Cannot check in booking with status #{@booking.status}"
             next
           end
@@ -78,17 +78,6 @@ module Bookings
           if is_retroactive && !(@options[:override_night_audit] && @options[:reason].present?)
             error = "Reason required for backdated check-in on closed date #{business_date}."
             next
-          end
-
-          if was_no_show
-            unavailable_room = unavailable_assigned_room
-            if unavailable_room.present?
-              error = "Assigned room #{unavailable_room} is no longer available. Reassign the booking before reinstating this no-show."
-              next
-            end
-
-            # Re-reserve inventory that was released by the no-show process.
-            Bookings::InventoryManager.new(@booking).reserve_by_dates(@booking.check_in.to_date + 1.day, @booking.check_out.to_date)
           end
 
           guest_reg = @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
@@ -107,7 +96,7 @@ module Bookings
 
           @booking.transition_status_to!(
             "checked_in",
-            event: was_no_show ? "reinstate" : "check_in",
+            event: was_review_no_show ? "backdated_check_in" : "check_in",
             attributes: attributes
           )
 
@@ -124,11 +113,11 @@ module Bookings
             @booking.update_columns(deposit_status: "collected")
           end
 
-          if is_retroactive || was_no_show
+          if is_retroactive || was_review_no_show
             Folios::ProcessCatchUpCharges.call(
               booking: @booking,
               user: @user,
-              is_reinstate: was_no_show,
+              is_reinstate: false,
               posting_date: @options[:posting_date]
             )
           end
@@ -246,6 +235,7 @@ module Bookings
           previous_status = @booking.status
           @booking.transition_status_to!("cancelled", event: "cancel", attributes: @options[:attributes] || {})
           InventoryManager.new(@booking).release if release_inventory_on_cancel?(previous_status)
+          release_review_rooms_to_ready if previous_status == "review_no_show"
           Bookings::RecordAuditLog.call(
             auditable: @booking,
             user: @user,
@@ -268,11 +258,11 @@ module Bookings
     end
 
     def cancellable_status?
-      @booking.status.in?(%w[pending confirmed overbooked])
+      @booking.status.in?(%w[pending confirmed review_no_show overbooked])
     end
 
     def release_inventory_on_cancel?(previous_status)
-      previous_status.in?(%w[pending confirmed])
+      previous_status.in?(%w[pending confirmed review_no_show])
     end
 
     def mark_assigned_rooms_dirty
@@ -295,20 +285,15 @@ module Bookings
       end
     end
 
-    def unavailable_assigned_room
-      @booking.booking_rooms.includes(:room_type).find do |booking_room|
-        next if booking_room.room_number.blank?
-
-        available_rooms = Bookings::AvailableRoomNumbers.new(
-          hotel: @booking.hotel,
-          room_type: booking_room.room_type,
-          check_in: @booking.check_in,
-          check_out: @booking.check_out,
-          exclude_booking_id: @booking.id
-        ).call
-
-        !available_rooms.include?(booking_room.room_number.to_s)
-      end&.room_number
+    def release_review_rooms_to_ready
+      result = Bookings::ReleaseAssignedRooms.call(
+        booking: @booking,
+        user: @user,
+        event_type: "review_no_show_cancelled",
+        reason: @options[:reason],
+        metadata: { "source" => "bookings_transition_status" }
+      )
+      raise result.error unless result.success?
     end
 
     def success

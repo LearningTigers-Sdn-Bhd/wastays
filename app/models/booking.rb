@@ -53,7 +53,7 @@ class Booking < ApplicationRecord
     @guest_government_id = value
   end
 
-  STATUSES = %w[pending confirmed checked_in review_due_out cancelled completed overbooked no_show].freeze
+  STATUSES = %w[pending confirmed review_no_show checked_in review_due_out cancelled completed overbooked no_show].freeze
   PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
@@ -67,6 +67,7 @@ class Booking < ApplicationRecord
 
   validates :status, presence: true, inclusion: { in: STATUSES }
   validate :status_transition_must_be_allowed, if: :status_changed_on_persisted_record?
+  validates :no_show_review_business_date, presence: true, if: -> { status == "review_no_show" }
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
   validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_blank: true }
@@ -88,8 +89,8 @@ class Booking < ApplicationRecord
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
   scope :no_show, -> { where(status: "no_show") }
-  scope :active, -> { where(status: [ "confirmed", "checked_in" ]) }
-  scope :revenue_generating, -> { where(status: [ "confirmed", "checked_in", "completed", "no_show" ]) }
+  scope :active, -> { where(status: [ "confirmed", "review_no_show", "checked_in" ]) }
+  scope :revenue_generating, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "completed", "no_show" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
 
   scope :search, ->(query) {

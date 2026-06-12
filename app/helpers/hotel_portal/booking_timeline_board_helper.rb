@@ -5,6 +5,7 @@ module HotelPortal
     STATUS_ICONS = {
       "pending" => "clock",
       "confirmed" => "circle-check",
+      "review_no_show" => "triangle-alert",
       "checked_in" => "log-in",
       "completed" => "check-check",
       "cancelled" => "circle-x",
@@ -17,6 +18,7 @@ module HotelPortal
     STATUS_ICON_CLASSES = {
       "pending" => "text-amber-600",
       "confirmed" => "text-blue-600",
+      "review_no_show" => "text-amber-600",
       "checked_in" => "text-violet-600",
       "completed" => "text-emerald-600",
       "cancelled" => "text-slate-500",

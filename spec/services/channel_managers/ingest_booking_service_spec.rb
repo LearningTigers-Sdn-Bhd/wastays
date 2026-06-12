@@ -86,6 +86,42 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(Notifications::Dispatcher).not_to have_received(:new).with(event: :booking_confirmed, booking: existing)
   end
 
+  it "preserves internal no-show review when the channel still reports confirmed" do
+    existing = create(
+      :booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "review_no_show",
+      no_show_review_business_date: booking_data[:check_in]
+    )
+    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+
+    result = described_class.new(booking_data: booking_data.merge(revision_number: 2)).call
+
+    expect(result.success?).to be(true)
+    expect(existing.reload.status).to eq("review_no_show")
+  end
+
+  it "allows the channel to cancel a booking pending no-show review" do
+    existing = create(
+      :booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "review_no_show",
+      no_show_review_business_date: booking_data[:check_in]
+    )
+    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+
+    result = described_class.new(booking_data: booking_data.merge(status: "cancelled", revision_number: 2)).call
+
+    expect(result.success?).to be(true)
+    expect(existing.reload.status).to eq("cancelled")
+  end
+
   it "marks OTA booking overbooked without deducting inventory when inventory is insufficient" do
     room_type.room_inventories.update_all(quantity: 0)
     dispatcher = instance_double(Notifications::Dispatcher, call: [])

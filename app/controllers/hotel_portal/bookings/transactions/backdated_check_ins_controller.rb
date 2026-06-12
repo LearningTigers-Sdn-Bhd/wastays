@@ -10,6 +10,8 @@ module HotelPortal
           return submit if request.post?
 
           if @booking
+            return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Backdated check-in is only available while reviewing a missed arrival." unless @booking.status == "review_no_show"
+
             render "hotel_portal/bookings/transactions/backdated_check_in/offcanvas"
           else
             build_booking(source: "walk_in")
@@ -24,6 +26,9 @@ module HotelPortal
 
           booking = params[:booking_id].present? ? current_hotel.bookings.find(params[:booking_id]) : create_backdated_walk_in
           return unless booking
+          if params[:booking_id].present? && booking.status != "review_no_show"
+            return redirect_to hotel_booking_path(current_hotel, booking), alert: "Backdated check-in is only available while reviewing a missed arrival."
+          end
 
           result = ::Bookings::TransitionStatus.new(
             booking: booking,

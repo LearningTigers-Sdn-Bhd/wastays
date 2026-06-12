@@ -40,6 +40,7 @@ module ChannelManagers
         end
 
         incoming_status = resolved_status(effective_check_in, effective_check_out)
+        incoming_status = "review_no_show" if previous_status == "review_no_show" && incoming_status == "confirmed"
 
         if is_existing_booking && previous_status != incoming_status
           event = status_transition_event_for(previous_status, incoming_status)
@@ -75,6 +76,7 @@ module ChannelManagers
         if booking.save
           sync_guest(booking)
           sync_rooms(booking)
+          release_review_rooms(booking) if previous_status == "review_no_show" && booking.status == "cancelled"
 
           # 5. Deduct New Inventory: If the new state is active, deduct the rooms
           if inventory_held_status?(booking.status)
@@ -142,7 +144,18 @@ module ChannelManagers
     end
 
     def inventory_held_status?(status)
-      status.in?(%w[confirmed checked_in])
+      status.in?(%w[confirmed review_no_show checked_in])
+    end
+
+    def release_review_rooms(booking)
+      result = Bookings::ReleaseAssignedRooms.call(
+        booking: booking,
+        user: nil,
+        event_type: "review_no_show_cancelled",
+        reason: "Channel manager cancelled booking pending no-show review",
+        metadata: { "source" => "channel_manager", "external_reference" => booking.external_reference }
+      )
+      raise IngestionFailure, result.error unless result.success?
     end
 
     def status_transition_event_for(previous_status, new_status)
@@ -150,6 +163,8 @@ module ChannelManagers
       when [ "pending", "confirmed" ]
         "confirm"
       when [ "pending", "cancelled" ], [ "confirmed", "cancelled" ], [ "overbooked", "cancelled" ]
+        "cancel"
+      when [ "review_no_show", "cancelled" ]
         "cancel"
       when [ "confirmed", "overbooked" ]
         "mark_overbooked"

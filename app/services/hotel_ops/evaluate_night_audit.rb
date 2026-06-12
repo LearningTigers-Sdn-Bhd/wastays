@@ -21,6 +21,7 @@ module HotelOps
     def build_summary
       {
         "arrivals_count" => hotel_bookings.checking_in_on(@business_date, @hotel.hotel_time_zone).count,
+        "review_no_show_count" => hotel_bookings.where(status: "review_no_show").count,
         "no_show_count" => hotel_bookings.no_show.checking_in_on(@business_date, @hotel.hotel_time_zone).count,
         "due_out_count" => hotel_bookings.checking_out_on(@business_date, @hotel.hotel_time_zone).count,
         "checked_out_count" => hotel_bookings.completed.where(checked_out_at: @hotel.business_day_window_for(@business_date)).count,

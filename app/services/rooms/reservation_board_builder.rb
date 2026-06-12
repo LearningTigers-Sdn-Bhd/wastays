@@ -180,7 +180,7 @@ module Rooms
         scope = scope.where(status: @filters[:status])
       else
         # Default statuses for reservation board
-        scope = scope.where(status: %w[confirmed checked_in pending review_due_out no_show])
+        scope = scope.where(status: %w[confirmed review_no_show checked_in pending review_due_out no_show])
       end
 
       # Add more filters here as needed (e.g. source, channel)

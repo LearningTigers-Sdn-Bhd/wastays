@@ -5,8 +5,8 @@ module HotelPortal
     class ArrivalsDeparturesReport
       Result = Struct.new(:start_date, :end_date, :arrivals, :departures, :arrival_count, :departure_count, keyword_init: true)
 
-      ARRIVAL_STATUSES = %w[confirmed checked_in].freeze
-      DEPARTURE_STATUSES = %w[confirmed checked_in completed].freeze
+      ARRIVAL_STATUSES = %w[confirmed review_no_show checked_in].freeze
+      DEPARTURE_STATUSES = %w[confirmed review_no_show checked_in completed].freeze
 
       def initialize(hotel:, start_date:, end_date:)
         @hotel = hotel
@@ -92,7 +92,7 @@ module HotelPortal
       end
 
       def room_details(booking)
-        details = booking.booking_rooms.map do |room|
+        details = booking.booking_rooms.sort_by(&:id).map do |room|
           snapshot_name = room.room_type_snapshot.is_a?(Hash) ? room.room_type_snapshot["name"].presence : nil
           room_name = snapshot_name || room.room_type&.name || "Room"
           "#{room.quantity}x #{room_name}"
@@ -102,7 +102,7 @@ module HotelPortal
       end
 
       def room_numbers(booking)
-        numbers = booking.booking_rooms.map { |room| room.room_number.presence || "TBA" }
+        numbers = booking.booking_rooms.sort_by(&:id).map { |room| room.room_number.presence || "TBA" }
         numbers.presence&.join(", ") || "TBA"
       end
 

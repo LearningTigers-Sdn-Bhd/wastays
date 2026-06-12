@@ -29,7 +29,8 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
       biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
       biz_date_record.start_audit!
-      Bookings::ProcessNoShows.call(night_audit: audit_day_1, user: user)
+      Bookings::ReviewMissedArrivals.call(night_audit: audit_day_1, user: user)
+      Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
       audit_day_1.update!(status: "completed")
       biz_date_record.complete_audit!
 
@@ -158,7 +159,8 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
       biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
       biz_date_record.start_audit!
-      Bookings::ProcessNoShows.call(night_audit: audit_day_1, user: user)
+      Bookings::ReviewMissedArrivals.call(night_audit: audit_day_1, user: user)
+      Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
       audit_day_1.update!(status: "completed")
       biz_date_record.complete_audit!
 

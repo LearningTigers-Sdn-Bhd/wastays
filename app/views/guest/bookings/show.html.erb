@@ -15,8 +15,8 @@
         <div class="px-6 py-4 border-b border-layer-line flex items-center justify-between">
           <h2 class="font-semibold text-neutral-text-primary">Reservation Information</h2>
           <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-            <%= @booking.status == 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-600' %>">
-            <%= @booking.status.humanize %>
+            <%= guest_booking_status(@booking) == 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-600' %>">
+            <%= guest_booking_status(@booking).humanize %>
           </span>
         </div>
 

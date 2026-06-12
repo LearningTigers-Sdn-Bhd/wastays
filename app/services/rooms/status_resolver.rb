@@ -55,7 +55,7 @@ module Rooms
       end
 
       # Priority 2: Confirmed (Arriving/Yellow)
-      confirmed_bks = covering_bks.select { |b| b.status == "confirmed" }
+      confirmed_bks = covering_bks.select { |b| b.status.in?(%w[confirmed review_no_show]) }
       if confirmed_bks.any?
         return { state: :arrival, details: { active: confirmed_bks } }
       end
@@ -83,7 +83,7 @@ module Rooms
           @provided_bookings
         else
           @hotel.bookings
-            .where(status: %w[confirmed checked_in completed])
+            .where(status: %w[confirmed review_no_show checked_in completed])
             .joins(:booking_rooms)
             .where(booking_rooms: { room_type_id: @room_type.id, room_number: @room_number })
             .distinct
