@@ -125,7 +125,12 @@ module Bookings
           end
 
           if is_retroactive || was_no_show
-            Folios::ProcessCatchUpCharges.call(booking: @booking, user: @user, is_reinstate: was_no_show)
+            Folios::ProcessCatchUpCharges.call(
+              booking: @booking,
+              user: @user,
+              is_reinstate: was_no_show,
+              posting_date: @options[:posting_date]
+            )
           end
 
           transitioned = true
@@ -139,6 +144,8 @@ module Bookings
       if is_retroactive
         metadata[:retroactive_checkin] = true
         metadata[:retroactive_reason] = @options[:reason]
+        metadata[:backdate_reason_category] = @options[:backdate_reason_category]
+        metadata[:backdate_reason_details] = @options[:backdate_reason_details]
       end
       if @security_deposit.present?
         metadata[:security_deposit_id] = @security_deposit.id

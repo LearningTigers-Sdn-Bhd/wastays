@@ -4,16 +4,17 @@ module Folios
   class ProcessCatchUpCharges
     include NightlyChargeCalculation
 
-    def self.call(booking:, user:, is_reinstate: false)
-      new(booking: booking, user: user, is_reinstate: is_reinstate).call
+    def self.call(booking:, user:, is_reinstate: false, posting_date: nil)
+      new(booking: booking, user: user, is_reinstate: is_reinstate, posting_date: posting_date).call
     end
 
-    def initialize(booking:, user:, is_reinstate: false)
+    def initialize(booking:, user:, is_reinstate: false, posting_date: nil)
       @booking = booking
       @folio = booking.booking_folio
       @user = user
       @hotel = booking.hotel
       @is_reinstate = is_reinstate
+      @posting_date = posting_date&.to_date
     end
 
     def call
@@ -104,7 +105,7 @@ module Folios
           category: :accommodation,
           user: @user,
           description: description,
-          posting_date: date,
+          posting_date: @posting_date || date,
           options: {
             override_night_audit: true,
             correction_reason: "late_checkin_catch_up",
@@ -151,7 +152,7 @@ module Folios
           category: :tax,
           user: @user,
           description: description,
-          posting_date: date,
+          posting_date: @posting_date || date,
           options: {
             override_night_audit: true,
             correction_reason: "late_checkin_catch_up",

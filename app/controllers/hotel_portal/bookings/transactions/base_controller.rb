@@ -62,7 +62,11 @@ module HotelPortal
 
           ::Bookings::CreateManualBooking.new(
             hotel: current_hotel,
-            params: booking_params.merge(source: source || booking_params[:source], rate_plan_id: rate_plan&.id),
+            params: booking_params.merge(
+              source: source || booking_params[:source],
+              rate_plan_id: rate_plan&.id,
+              posting_date: params[:posting_date]
+            ),
             user: current_user,
             rate_tier: rate_tier
           ).call

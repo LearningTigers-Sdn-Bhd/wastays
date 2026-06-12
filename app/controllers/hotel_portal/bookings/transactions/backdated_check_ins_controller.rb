@@ -30,7 +30,13 @@ module HotelPortal
             status: "checked_in",
             timestamp: booking_params[:checked_in_at].presence || booking.check_in,
             user: current_user,
-            options: { override_night_audit: true, reason: params[:retroactive_reason] }
+            options: {
+              override_night_audit: true,
+              reason: params[:retroactive_reason],
+              backdate_reason_category: params[:backdate_reason],
+              backdate_reason_details: params[:retroactive_reason],
+              posting_date: params[:posting_date]
+            }
           ).call
 
           return complete_existing_booking(booking, notice: "Backdated check-in completed.") if result.success?

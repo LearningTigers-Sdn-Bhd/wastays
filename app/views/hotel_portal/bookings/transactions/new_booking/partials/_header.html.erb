@@ -11,6 +11,15 @@
     </button>
   </div>
 
+  <% if @transaction == :backdated_check_in %>
+    <div class="flex items-start gap-3 border-t border-amber-100 bg-amber-50 px-6 py-3 text-xs text-amber-800 font-medium">
+      <%= cached_icon("triangle-alert", class: "size-4 text-amber-600 shrink-0 mt-0.5") %>
+      <div>
+        <span class="font-bold">Backdated check-in</span> uses a past arrival date. It may affect occupancy, folio charges, revenue reports, and audit logs. Reason is required.
+      </div>
+    </div>
+  <% end %>
+
   <div class="border-t border-slate-100 px-6 py-3">
     <div class="grid grid-cols-2 gap-x-8 gap-y-3 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-start">
       <div>
