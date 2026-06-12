@@ -172,7 +172,8 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
       "[data-booking-actions-id-value='#{@booking.id}'][data-booking-actions-check-in-value='#{target_date}']",
       wait: 5
     )
-    expect(@booking.reload).to have_attributes(check_in: target_date, check_out: target_date + 1.day)
+    expect(@booking.reload.check_in.to_date).to eq(target_date)
+    expect(@booking.check_out.to_date).to eq(target_date + 1.day)
     expect(@booking.booking_rooms.first.room_number).to eq("102")
   end
 
@@ -196,6 +197,6 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     end
 
     expect(page).to have_selector("[data-booking-actions-id-value='#{@booking.id}']", wait: 5)
-    expect(@booking.reload.check_out).to eq(target_date.next_day)
+    expect(@booking.reload.check_out.to_date).to eq(target_date.next_day)
   end
 end

@@ -46,7 +46,7 @@ module Rooms
 
       # Filter bookings that cover this date
       # Standard hotel logic: The room is occupied from check_in date up to (but not including) check_out date.
-      covering_bks = bks.select { |b| @date >= b.check_in && @date < b.check_out }
+      covering_bks = bks.select { |b| @date >= b.check_in.to_date && @date < b.check_out.to_date }
 
       # Priority 1: Checked In (Occupied/Red)
       checked_in_bks = covering_bks.select { |b| b.status == "checked_in" }
@@ -74,7 +74,7 @@ module Rooms
       # We check checked_in status specifically for the "occupied" physical status
       # This is different from the timeline colors which show "stay" for any confirmed booking
       bks = bookings
-      bks.any? { |b| b.status == "checked_in" && b.check_in <= @date && b.check_out > @date }
+      bks.any? { |b| b.status == "checked_in" && b.check_in.to_date <= @date && b.check_out.to_date > @date }
     end
 
     def bookings

@@ -31,7 +31,7 @@ module Bookings
           # 3. Reserve inventory (released by no-show)
           # We need to reserve from today (current business date) until check-out
           business_date = @booking.hotel.business_date_for(Time.current)
-          Bookings::InventoryManager.new(@booking).reserve_by_dates(business_date, @booking.check_out)
+          Bookings::InventoryManager.new(@booking).reserve_by_dates(business_date, @booking.check_out.to_date)
 
           # 4. Transition status to checked_in
           @booking.transition_status_to!(

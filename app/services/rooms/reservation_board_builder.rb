@@ -59,7 +59,7 @@ module Rooms
       scope = @hotel.bookings
         .includes(booking_notes: :user, booking_rooms: :room_type)
         .joins(:booking_rooms)
-        .where("bookings.check_in < ? AND bookings.check_out > ?", dates.last + 1.day, @start_date)
+        .where("bookings.check_in::date < ? AND bookings.check_out::date > ?", dates.last + 1.day, @start_date)
         .select("bookings.*, booking_rooms.room_number, booking_rooms.room_type_id")
         .distinct
 
@@ -72,7 +72,7 @@ module Rooms
 
       @hotel.bookings
         .joins(:booking_rooms)
-        .where(check_out: Date.current..dates.last)
+        .checking_out_between(Date.current, dates.last, @hotel.hotel_time_zone)
         .where.not(status: "cancelled")
         .order("bookings.check_out ASC")
         .select("bookings.*, booking_rooms.room_number, booking_rooms.room_type_id")
@@ -111,7 +111,7 @@ module Rooms
           }
         elsif dates.include?(Date.current)
           relevant_booking = @relevant_bookings_by_room[[ room_type.id, room_number.to_s ]]
-          start_date = relevant_booking ? relevant_booking.check_out : Date.current
+          start_date = relevant_booking ? relevant_booking.check_out.to_date : Date.current
 
           if dates.include?(start_date) || (start_date < @start_date && (start_date + 1.day) > @start_date)
             display_start = [ start_date, @start_date ].max
@@ -154,8 +154,8 @@ module Rooms
           booking: booking,
           guest_name: booking.guest_name,
           status: booking.status,
-          check_in: booking.check_in,
-          check_out: booking.check_out,
+          check_in: booking.check_in.to_date,
+          check_out: booking.check_out.to_date,
           total_amount: booking.total_amount,
           source: booking.source,
           payment_status: booking.payment_status,
@@ -165,8 +165,8 @@ module Rooms
           room_type_name: room_type.name,
           room_number: room_number,
           booking_room_id: booking_room&.id,
-          start_offset: [ (booking.check_in - @start_date).to_i, 0 ].max,
-          span: [ ([ booking.check_out, dates.last + 1.day ].min - [ booking.check_in, @start_date ].max).to_i, 1 ].max
+          start_offset: [ (booking.check_in.to_date - @start_date).to_i, 0 ].max,
+          span: [ ([ booking.check_out.to_date, dates.last + 1.day ].min - [ booking.check_in.to_date, @start_date ].max).to_i, 1 ].max
         }
       end
     end

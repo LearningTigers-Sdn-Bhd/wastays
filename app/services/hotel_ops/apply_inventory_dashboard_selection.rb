@@ -278,7 +278,7 @@ module HotelOps
     def occupied_room_count(date, room_numbers)
       hotel.bookings.revenue_generating
            .joins(:booking_rooms)
-           .where(":date >= bookings.check_in AND :date < bookings.check_out", date: date)
+           .where(":date >= bookings.check_in::date AND :date < bookings.check_out::date", date: date)
            .where(booking_rooms: { room_number: room_numbers })
            .distinct
            .count(:id)

@@ -193,7 +193,7 @@ export default class extends Controller {
     }
 
     try {
-      this.displayTotalTarget.textContent = "Calculating…"
+      if (this.hasDisplayTotalTarget) this.displayTotalTarget.textContent = "Calculating…"
       const params = new URLSearchParams({
         room_type_id: roomTypeId,
         check_in: checkIn,

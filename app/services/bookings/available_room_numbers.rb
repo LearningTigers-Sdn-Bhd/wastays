@@ -40,7 +40,7 @@ module Bookings
       return @availability_snapshot if defined?(@availability_snapshot)
 
       # 1. Get room numbers allowed by inventory for these dates
-      inventory_allowed_rooms = (@check_in..(@check_out - 1.day)).map do |date|
+      inventory_allowed_rooms = (@check_in.to_date..(@check_out.to_date - 1.day)).map do |date|
         inv = @room_type.room_inventories.find_by(date: date)
         if inv
           if inv.status == "open"

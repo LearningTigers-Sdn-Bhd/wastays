@@ -29,6 +29,16 @@ class Booking < ApplicationRecord
     source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
   end
 
+  def check_in=(value)
+    value = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: :check_in) if hotel && value.present?
+    super(value)
+  end
+
+  def check_out=(value)
+    value = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: :check_out) if hotel && value.present?
+    super(value)
+  end
+
   def room_type_summary
     booking_rooms.includes(:room_type).map { |br| br.room_type.name }.uniq.to_sentence
   end
@@ -93,6 +103,14 @@ class Booking < ApplicationRecord
 
   scope :created_between, ->(start_date, end_date) {
     where(created_at: start_date.beginning_of_day..end_date.end_of_day)
+  }
+  scope :checking_in_on, ->(date, zone = Time.zone) { where(check_in: date.to_date.in_time_zone(zone).all_day) }
+  scope :checking_out_on, ->(date, zone = Time.zone) { where(check_out: date.to_date.in_time_zone(zone).all_day) }
+  scope :checking_in_between, ->(start_date, end_date, zone = Time.zone) {
+    where(check_in: start_date.to_date.in_time_zone(zone).beginning_of_day..end_date.to_date.in_time_zone(zone).end_of_day)
+  }
+  scope :checking_out_between, ->(start_date, end_date, zone = Time.zone) {
+    where(check_out: start_date.to_date.in_time_zone(zone).beginning_of_day..end_date.to_date.in_time_zone(zone).end_of_day)
   }
 
   scope :unbatched_upcoming, ->(cutoff_date) {

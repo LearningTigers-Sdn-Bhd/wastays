@@ -44,7 +44,7 @@
           <div class="border-b border-slate-200 p-6 md:border-b-0 md:border-r">
             <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Stay</p>
             <p class="mt-2 text-lg font-black text-slate-950"><%= booking.check_in.strftime("%d %b") %> - <%= booking.check_out.strftime("%d %b %Y") %></p>
-            <p class="mt-1 text-sm font-semibold text-slate-500"><%= pluralize((booking.check_out - booking.check_in).to_i, "night") %></p>
+            <p class="mt-1 text-sm font-semibold text-slate-500"><%= pluralize((booking.check_out.to_date - booking.check_in.to_date).to_i, "night") %></p>
           </div>
           <div class="p-6">
             <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Final Balance</p>

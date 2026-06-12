@@ -60,7 +60,7 @@
               <div>
                 <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Stay Duration</p>
                 <p class="text-sm font-semibold text-neutral-text-primary">
-                  <%= (@booking.check_out - @booking.check_in).to_i %> Nights
+                  <%= (@booking.check_out.to_date - @booking.check_in.to_date).to_i %> Nights
                 </p>
               </div>
             </div>

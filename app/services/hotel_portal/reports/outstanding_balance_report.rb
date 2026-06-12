@@ -42,7 +42,7 @@ module HotelPortal
               .joins(:booking_folio)
               .left_joins(booking_folio: :folio_transactions)
               .where(status: INCLUDED_STATUSES)
-              .where(check_in: @start_date..@end_date)
+              .checking_in_between(@start_date, @end_date, @hotel.hotel_time_zone)
               .group("bookings.id")
               .having("#{BALANCE_SQL} > 0")
               .includes(:booking_notes, booking_folio: :folio_transactions, booking_rooms: :room_type)

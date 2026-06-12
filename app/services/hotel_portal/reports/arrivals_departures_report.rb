@@ -33,7 +33,7 @@ module HotelPortal
       def arrival_scope
         @hotel.bookings
               .where(status: ARRIVAL_STATUSES)
-              .where(check_in: @start_date..@end_date)
+              .checking_in_between(@start_date, @end_date, @hotel.hotel_time_zone)
               .includes(:pre_checkin, :booking_notes, booking_rooms: :room_type)
               .order(:check_in, :created_at, :id)
       end
@@ -41,7 +41,7 @@ module HotelPortal
       def departure_scope
         @hotel.bookings
               .where(status: DEPARTURE_STATUSES)
-              .where(check_out: @start_date..@end_date)
+              .checking_out_between(@start_date, @end_date, @hotel.hotel_time_zone)
               .includes(:booking_notes, booking_rooms: :room_type)
               .order(:check_out, :created_at, :id)
       end

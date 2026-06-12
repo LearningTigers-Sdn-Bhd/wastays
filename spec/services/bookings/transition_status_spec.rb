@@ -371,7 +371,7 @@ RSpec.describe Bookings::TransitionStatus do
         it "allows check-in, recovers inventory, and processes catch-up charges" do
           inventory_manager = instance_double(Bookings::InventoryManager)
           allow(Bookings::InventoryManager).to receive(:new).with(booking).and_return(inventory_manager)
-          expect(inventory_manager).to receive(:reserve_by_dates).with(business_date + 1.day, booking.check_out)
+          expect(inventory_manager).to receive(:reserve_by_dates).with(business_date.to_date + 1.day, booking.check_out.to_date)
 
           options = { override_night_audit: true, reason: "Late arrival" }
           subject = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp, user: user, options: options)

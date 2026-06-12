@@ -88,7 +88,7 @@ module Bookings
             end
 
             # Re-reserve inventory that was released by the no-show process.
-            Bookings::InventoryManager.new(@booking).reserve_by_dates(@booking.check_in.to_date + 1.day, @booking.check_out)
+            Bookings::InventoryManager.new(@booking).reserve_by_dates(@booking.check_in.to_date + 1.day, @booking.check_out.to_date)
           end
 
           guest_reg = @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
@@ -239,7 +239,12 @@ module Bookings
           previous_status = @booking.status
           @booking.transition_status_to!("cancelled", event: "cancel", attributes: @options[:attributes] || {})
           InventoryManager.new(@booking).release if release_inventory_on_cancel?(previous_status)
-          Bookings::RecordAuditLog.call(auditable: @booking, user: @user, action_type: "cancel")
+          Bookings::RecordAuditLog.call(
+            auditable: @booking,
+            user: @user,
+            action_type: "cancel",
+            metadata: { reason: @options[:reason] }.compact
+          )
           transitioned = true
         end
       end

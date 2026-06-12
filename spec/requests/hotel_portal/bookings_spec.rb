@@ -608,7 +608,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
   describe "POST /cancel" do
     it "redirects within the hotel path" do
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/cancel"
+      post "/hotel/#{hotel.id}/bookings/#{booking.id}/cancel", params: { cancellation_reason: "Guest requested cancellation" }
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
     end
   end

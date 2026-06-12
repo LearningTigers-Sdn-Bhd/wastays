@@ -25,6 +25,16 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(response).to have_http_status(:success)
     expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
     expect(response.body).to include("New booking")
+    expect(response.body).to include('type="datetime-local"')
+  end
+
+  it "reuses stay details for backdated walk-ins and places the override reason before internal notes" do
+    get hotel_booking_transaction_backdated_check_in_path(hotel), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body.scan("Stay Details").size).to eq(1)
+    expect(response.body).not_to include("Backdated check in Details")
+    expect(response.body.index("Override Reason")).to be < response.body.index("Internal Notes")
   end
 
   it "renders the same amend-stay sheet independently of its launcher" do
@@ -140,5 +150,29 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
       expect(response).to have_http_status(:success), path
       expect(response.body).to include('turbo-frame id="offcanvas_drawer"'), path
     end
+  end
+
+  it "renders security deposit collection in the check-in sheet" do
+    booking = create(:booking, hotel: hotel, status: "confirmed")
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
+    get hotel_booking_transaction_check_in_reservation_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response.body).to include("Collect security deposit")
+    expect(response.body).to include("security_deposit_amount")
+  end
+
+  it "requires and audits a cancellation reason" do
+    booking = create(:booking, hotel: hotel, status: "confirmed")
+
+    post cancel_hotel_booking_path(hotel, booking), params: { cancellation_reason: "" }
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(booking.reload.status).to eq("confirmed")
+
+    post cancel_hotel_booking_path(hotel, booking), params: { cancellation_reason: "Guest requested cancellation" }
+    expect(booking.reload.status).to eq("cancelled")
+    expect(BookingAuditLog.where(auditable: booking, action_type: "cancel").last.metadata).to include(
+      "reason" => "Guest requested cancellation"
+    )
   end
 end

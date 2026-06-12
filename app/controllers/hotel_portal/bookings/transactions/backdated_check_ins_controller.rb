@@ -28,7 +28,7 @@ module HotelPortal
           result = ::Bookings::TransitionStatus.new(
             booking: booking,
             status: "checked_in",
-            timestamp: booking_params[:checked_in_at],
+            timestamp: booking_params[:checked_in_at].presence || booking.check_in,
             user: current_user,
             options: { override_night_audit: true, reason: params[:retroactive_reason] }
           ).call

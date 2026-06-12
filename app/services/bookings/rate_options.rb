@@ -4,8 +4,8 @@ module Bookings
   class RateOptions
     def initialize(room_type:, check_in:, check_out:, apply_stop_sell: false, apply_arrival_departure: false, apply_stay_length: false, corporate_rate: false)
       @room_type = room_type
-      @check_in = check_in
-      @check_out = check_out
+      @check_in = check_in.to_date
+      @check_out = check_out.to_date
       @apply_stop_sell = ActiveModel::Type::Boolean.new.cast(apply_stop_sell)
       @apply_arrival_departure = ActiveModel::Type::Boolean.new.cast(apply_arrival_departure)
       @apply_stay_length = ActiveModel::Type::Boolean.new.cast(apply_stay_length)

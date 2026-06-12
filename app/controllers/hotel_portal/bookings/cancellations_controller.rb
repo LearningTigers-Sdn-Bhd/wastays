@@ -7,11 +7,18 @@ class HotelPortal::Bookings::CancellationsController < HotelPortal::BaseControll
 
   def create
     @booking = current_hotel.bookings.find(params[:id])
+    if params[:cancellation_reason].blank?
+      @booking.errors.add(:base, "Cancellation reason is required.")
+      @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+      @transaction_return_to = offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking))
+      return render "hotel_portal/bookings/transactions/cancel_booking/offcanvas", status: :unprocessable_content
+    end
 
     result = Bookings::TransitionStatus.new(
       booking: @booking,
       status: "cancelled",
-      user: current_user
+      user: current_user,
+      options: { reason: params[:cancellation_reason] }
     ).call
 
     if result.success?

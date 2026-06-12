@@ -25,26 +25,8 @@ end %>
         
         <%= render "hotel_portal/bookings/transactions/new_booking/partials/errors", booking: @booking %>
 
-        <% if @transaction.in?([:walk_in_check_in, :backdated_check_in]) %>
-          <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 class="text-sm font-bold text-slate-900"><%= @transaction.to_s.humanize %> Details</h3>
-            <div class="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <%= f.label :checked_in_at, "Check-in date and time", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
-                <%= f.datetime_local_field :checked_in_at, required: @transaction == :backdated_check_in, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" %>
-              </div>
-              <% if @transaction == :backdated_check_in %>
-                <div>
-                  <%= label_tag :retroactive_reason, "Override reason", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
-                  <%= text_field_tag :retroactive_reason, nil, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" %>
-                </div>
-              <% end %>
-            </div>
-          </section>
-        <% end %>
-
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <%= render "hotel_portal/bookings/transactions/new_booking/partials/stay_details", f: f %>
+          <%= render "hotel_portal/bookings/transactions/new_booking/partials/stay_details", f: f, transaction: @transaction %>
           <%= render "hotel_portal/bookings/transactions/new_booking/partials/select_room", f: f %>
         </div>
 

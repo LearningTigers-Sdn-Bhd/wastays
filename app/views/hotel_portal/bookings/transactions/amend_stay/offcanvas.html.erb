@@ -22,14 +22,14 @@
         
         <div class="grid sm:grid-cols-2 gap-6">
           <div class="space-y-2">
-            <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Check-in Date</label>
-            <%= f.date_field :check_in, 
+            <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Scheduled Check-in</label>
+            <%= f.datetime_local_field :check_in, value: @booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M"),
                 class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm", 
                 data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
           </div>
           <div class="space-y-2">
-            <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Check-out Date</label>
-            <%= f.date_field :check_out, 
+            <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Scheduled Check-out</label>
+            <%= f.datetime_local_field :check_out, value: @booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M"),
                 class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm", 
                 data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
           </div>
@@ -92,6 +92,7 @@
         <div class="pt-6 flex items-center justify-end gap-x-4">
           <button type="button" 
                   class="px-6 py-3 text-sm font-black text-slate-500 hover:text-slate-900 uppercase tracking-widest transition-colors" 
+                  onclick="event.preventDefault()"
                   data-action="click->offcanvas#close">
             Cancel
           </button>

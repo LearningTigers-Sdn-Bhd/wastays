@@ -26,6 +26,7 @@ module Bookings
     end
 
     def call
+      normalize_scheduled_stay!
       booking = @hotel.bookings.build(@params)
       selected_guest = selected_guest_from_param
       room_type = @hotel.room_types.find(@room_type_id)
@@ -170,6 +171,14 @@ module Bookings
     end
 
     private
+
+    def normalize_scheduled_stay!
+      %i[check_in check_out].each do |kind|
+        next if @params[kind].blank?
+
+        @params[kind] = ScheduledStay.at_hotel_time(hotel: @hotel, value: @params[kind], kind: kind)
+      end
+    end
 
     def selected_guest_from_param
       return if @existing_guest_id.blank?

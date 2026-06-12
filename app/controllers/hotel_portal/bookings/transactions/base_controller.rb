@@ -44,10 +44,10 @@ module HotelPortal
         end
 
         def build_booking(source: nil)
-          check_in = params[:check_in].presence || Date.current
+          check_in = params[:check_in].presence || ::Bookings::ScheduledStay.at_hotel_time(hotel: current_hotel, value: Date.current, kind: :check_in)
           @booking = current_hotel.bookings.build(
             check_in: check_in,
-            check_out: params[:check_out].presence || Date.parse(check_in.to_s) + 1.day,
+            check_out: params[:check_out].presence || ::Bookings::ScheduledStay.at_hotel_time(hotel: current_hotel, value: check_in.to_date + 1.day, kind: :check_out),
             adults: 2,
             source: source
           )

@@ -4,8 +4,8 @@ module Bookings
   class CalculateStayPrice
     def initialize(room_type:, check_in:, check_out:, rate_plan: nil, corporate_rate: false, rate_tier: :standard)
       @room_type = room_type
-      @check_in = check_in
-      @check_out = check_out
+      @check_in = check_in&.to_date
+      @check_out = check_out&.to_date
       @rate_plan = rate_plan
       @corporate_rate = corporate_rate
       @rate_tier = rate_tier.to_sym

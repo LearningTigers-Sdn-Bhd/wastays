@@ -20,13 +20,13 @@ module Bookings
 
     def release_by_dates(start_date, end_date)
       @booking.booking_rooms.each do |room|
-        update_inventory(room, room.quantity, dates: (start_date...end_date).to_a)
+        update_inventory(room, room.quantity, dates: (start_date.to_date...end_date.to_date).to_a)
       end
     end
 
     def reserve_by_dates(start_date, end_date)
       @booking.booking_rooms.each do |room|
-        update_inventory(room, -room.quantity, dates: (start_date...end_date).to_a)
+        update_inventory(room, -room.quantity, dates: (start_date.to_date...end_date.to_date).to_a)
       end
     end
 
@@ -34,7 +34,7 @@ module Bookings
 
     def update_inventory(room, quantity_change, dates: nil)
       room_type = room.room_type
-      stay_dates = dates || (@booking.check_in...@booking.check_out).to_a
+      stay_dates = dates || (@booking.check_in.to_date...@booking.check_out.to_date).to_a
 
       stay_dates.each do |date|
         inventory = room_type.room_inventories.lock.find_by(date: date)

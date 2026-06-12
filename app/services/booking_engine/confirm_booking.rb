@@ -30,8 +30,8 @@ module BookingEngine
 
         financial_snapshot = Bookings::BuildFinancialSnapshot.new(
           hotel: @quote.hotel,
-          check_in: @quote.check_in,
-          check_out: @quote.check_out,
+          check_in: Bookings::ScheduledStay.at_hotel_time(hotel: @quote.hotel, value: @quote.check_in, kind: :check_in),
+          check_out: Bookings::ScheduledStay.at_hotel_time(hotel: @quote.hotel, value: @quote.check_out, kind: :check_out),
           guest_country: guest_country,
           room_items: @quote.booking_quote_items.map do |item|
             {

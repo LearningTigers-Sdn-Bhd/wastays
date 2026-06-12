@@ -24,7 +24,7 @@ module HotelPortal
             transition = ::Bookings::TransitionStatus.new(
               booking: result.booking,
               status: "checked_in",
-              timestamp: booking_params[:checked_in_at].presence || Time.current,
+              timestamp: result.booking.check_in,
               user: current_user
             ).call
             raise ActiveRecord::Rollback unless transition.success?

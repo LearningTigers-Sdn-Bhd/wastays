@@ -99,7 +99,7 @@ module Bookings
 
     def truncate_stay!(departure_date, old_check_out)
       Bookings::InventoryManager.new(@booking).release_by_dates(departure_date, old_check_out)
-      @booking.update!(check_out: departure_date)
+      @booking.update!(check_out: Bookings::ScheduledStay.at_hotel_time(hotel: @booking.hotel, value: departure_date, kind: :check_out))
       Folios::SyncForecastedCharges.call(booking_folio: @booking.booking_folio) if @booking.booking_folio.present?
     end
 

@@ -94,7 +94,7 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
       subject.call
 
       business_date = hotel.business_date_for(Time.current)
-      expect(inventory_manager).to have_received(:reserve_by_dates).with(business_date, booking.check_out)
+      expect(inventory_manager).to have_received(:reserve_by_dates).with(business_date, booking.check_out.to_date)
     end
   end
 

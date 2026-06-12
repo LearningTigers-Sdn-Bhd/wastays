@@ -102,7 +102,7 @@
 
 <div class="<%= checkout_class %>">
   <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Checkout Period</label>
-  <%= form.datetime_local_field :check_out, value: booking.check_out.strftime("%Y-%m-%dT%H:%M"),
+  <%= form.datetime_local_field :check_out, value: booking.check_out.in_time_zone(booking.hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M"),
       class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
   <p class="text-[10px] text-slate-500">Updating this will change the booking's scheduled checkout date and time.</p>
 </div>

@@ -32,7 +32,7 @@ module Bookings
     def no_show_candidates
       @hotel.bookings.confirmed
         .includes(:pre_checkin, :payment_transactions, booking_rooms: :room_type, booking_folio: :folio_transactions)
-        .where(check_in: @business_date)
+        .checking_in_on(@business_date, @hotel.hotel_time_zone)
     end
 
     def process_booking(booking)
@@ -45,7 +45,7 @@ module Bookings
           post_no_show_charges(booking, folio)
           folio.folio_forecasted_charges.supersede_all!
           booking.transition_status_to!("no_show", event: "mark_no_show")
-          Bookings::InventoryManager.new(booking).release_by_dates(@business_date + 1.day, booking.check_out)
+          Bookings::InventoryManager.new(booking).release_by_dates(@business_date + 1.day, booking.check_out.to_date)
           release_assigned_rooms_to_ready(booking)
           Bookings::RecordAuditLog.call(
             auditable: booking,
@@ -60,7 +60,7 @@ module Bookings
 
     def no_show_eligible?(booking)
       booking.status == "confirmed" &&
-        booking.check_in == @business_date &&
+        booking.check_in.to_date == @business_date &&
         !active_pre_checkin_hold?(booking)
     end
 

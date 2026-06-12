@@ -60,7 +60,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
     result = described_class.new(booking_data: data).call
 
     expect(result.success?).to be(true)
-    expect(existing.reload.check_in).to eq(Date.current + 6.days)
+    expect(existing.reload.check_in.to_date).to eq(Date.current + 6.days)
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_updated, booking: existing)
   end
 

@@ -136,8 +136,8 @@ module ChannelManagers
           property_id: property_id,
           ota_name: "WAStays (Manual)",
           status: "new",
-          arrival_date: booking.check_in.to_s,
-          departure_date: booking.check_out.to_s,
+          arrival_date: booking.check_in.to_date.to_s,
+          departure_date: booking.check_out.to_date.to_s,
           amount: format("%.2f", booking.total_amount.to_f),
           currency: booking.currency,
           customer: {

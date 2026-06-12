@@ -11,7 +11,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
     @bookings = @bookings.search(params[:query]) if params[:query].present?
     @bookings = @bookings.where(status: params[:status]) if params[:status].present?
-    @bookings = @bookings.where(check_in: params[:check_in_date]) if params[:check_in_date].present?
+    @bookings = @bookings.checking_in_on(params[:check_in_date], current_hotel.hotel_time_zone) if params[:check_in_date].present?
 
     @bookings = @bookings.page(params[:page]).per(25)
     render "hotel_portal/bookings/index/index"

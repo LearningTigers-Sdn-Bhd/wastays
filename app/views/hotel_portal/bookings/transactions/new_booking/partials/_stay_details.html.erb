@@ -5,12 +5,12 @@
   <div class="p-6 space-y-6">
     <div class="grid sm:grid-cols-2 gap-6">
       <div>
-        <%= f.label :check_in, "Check-in Date", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-        <%= f.date_field :check_in, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
+        <%= f.label :check_in, "Scheduled Check-in", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.datetime_local_field :check_in, value: @booking.check_in&.in_time_zone(current_hotel.hotel_time_zone)&.strftime("%Y-%m-%dT%H:%M"), required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
       </div>
       <div>
-        <%= f.label :check_out, "Check-out Date", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-        <%= f.date_field :check_out, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
+        <%= f.label :check_out, "Scheduled Check-out", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.datetime_local_field :check_out, value: @booking.check_out&.in_time_zone(current_hotel.hotel_time_zone)&.strftime("%Y-%m-%dT%H:%M"), required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
       </div>
     </div>
 
@@ -30,6 +30,13 @@
       <%= f.select :source, [["Phone", "phone"], ["Walk-in", "walk_in"], ["Email", "email"], ["WhatsApp", "whatsapp"], ["Other", "internal"]], { selected: "phone" },
           { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" } %>
     </div>
+
+    <% if local_assigns[:transaction] == :backdated_check_in %>
+      <div>
+        <%= label_tag :retroactive_reason, "Override Reason", class: "block text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-2" %>
+        <%= text_area_tag :retroactive_reason, params[:retroactive_reason], required: true, rows: 5, placeholder: "Explain why this check-in is being recorded after the business date was closed.", class: "w-full resize-y rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-slate-700 focus:border-amber-400 focus:outline-none focus:ring-0 shadow-sm" %>
+      </div>
+    <% end %>
 
     <div>
       <%= f.label :internal_notes, "Internal Notes", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>

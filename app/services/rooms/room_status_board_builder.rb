@@ -108,10 +108,10 @@ module Rooms
           id: booking.id,
           guest_name: booking.guest_name,
           status: booking.status,
-          check_in: booking.check_in,
-          check_out: booking.check_out,
-          start_offset: [ (booking.check_in - @start_date).to_i, 0 ].max,
-          span: [ ([ booking.check_out + 1.day, dates.last + 1.day ].min - [ booking.check_in, @start_date ].max).to_i, 1 ].max
+          check_in: booking.check_in.to_date,
+          check_out: booking.check_out.to_date,
+          start_offset: [ (booking.check_in.to_date - @start_date).to_i, 0 ].max,
+          span: [ ([ booking.check_out.to_date + 1.day, dates.last + 1.day ].min - [ booking.check_in.to_date, @start_date ].max).to_i, 1 ].max
         }
       end
     end
@@ -141,7 +141,7 @@ module Rooms
         .includes(:booking_rooms, :housekeeping_requests)
         .where(status: %w[confirmed checked_in review_due_out completed])
         .joins(:booking_rooms)
-        .where("bookings.check_in < ? AND bookings.check_out > ?", dates.last + 1.day, @start_date)
+        .where("bookings.check_in::date < ? AND bookings.check_out::date > ?", dates.last + 1.day, @start_date)
         .distinct
         .order(:check_in, :id)
     end

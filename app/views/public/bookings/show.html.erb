@@ -144,7 +144,7 @@
           </div>
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-text-secondary mb-1">Duration</p>
-            <p class="text-xl font-bold text-neutral-text-primary tracking-tight"><%= pluralize((@booking.check_out - @booking.check_in).to_i, 'Night') %></p>
+            <p class="text-xl font-bold text-neutral-text-primary tracking-tight"><%= pluralize((@booking.check_out.to_date - @booking.check_in.to_date).to_i, 'Night') %></p>
           </div>
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-text-secondary mb-1">Guests</p>

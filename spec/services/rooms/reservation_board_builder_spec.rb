@@ -64,7 +64,7 @@ RSpec.describe Rooms::ReservationBoardBuilder do
           status_block = room[:blocks].find { |b| b[:type] == "room_status" }
 
           # If today is 12th and checkout is 14th, it should start on 14th
-          expect(status_block[:check_in]).to eq(booking.check_out)
+          expect(status_block[:check_in]).to eq(booking.check_out.to_date)
           expect(status_block[:span]).to eq(1)
           expect(status_block[:start_offset]).to eq(2)
         end

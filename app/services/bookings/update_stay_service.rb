@@ -18,6 +18,7 @@ module Bookings
 
     def call
       return OpenStruct.new(success?: false, errors: [ "Status cannot be changed through stay update." ]) if @params.key?(:status)
+      normalize_scheduled_stay!
 
       failure_error = nil
       assigned_room_number = extract_assigned_room_number
@@ -162,6 +163,14 @@ module Bookings
 
 
     private
+
+    def normalize_scheduled_stay!
+      %i[check_in check_out].each do |kind|
+        next if @params[kind].blank?
+
+        @params[kind] = ScheduledStay.at_hotel_time(hotel: @hotel, value: @params[kind], kind: kind)
+      end
+    end
 
     def extract_assigned_room_number
       from_nested_params = @params.dig(:booking_rooms_attributes, "0", :room_number) ||
