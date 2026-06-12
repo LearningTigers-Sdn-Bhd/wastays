@@ -162,7 +162,7 @@ RSpec.describe "HotelPortal::Roles", type: :request do
 
       patch bulk_update_hotel_roles_path(hotel), params: {
         roles: {
-          role.id => { permission_ids: [""] }
+          role.id => { permission_ids: [ "" ] }
         }
       }
 
