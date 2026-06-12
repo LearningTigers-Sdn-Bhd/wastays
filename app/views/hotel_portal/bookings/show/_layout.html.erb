@@ -2,6 +2,7 @@
   <div class="space-y-4">
     <%= render "hotel_portal/bookings/show/booking_header", booking: booking, presenter: presenter %>
     <%= render "hotel_portal/bookings/show/booking_summary_strip", booking: booking, presenter: presenter %>
+    <%= render "hotel_portal/bookings/show/reference_ids", presenter: presenter %>
     <%= render "hotel_portal/bookings/show/stay_details", booking: booking, presenter: presenter %>
 
     <%= render "hotel_portal/bookings/transactions/check_out/partials/success_modal", booking: booking, presenter: presenter, hotel: current_hotel if params[:checkout_success] %>

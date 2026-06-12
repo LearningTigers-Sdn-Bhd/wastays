@@ -43,6 +43,7 @@
       <span class="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 font-medium text-blue-700 ring-1 ring-blue-100"><%= cached_icon "badge-percent", class: "size-3" %> <%= presenter.rate_plan_label %></span>
     <% end %>
     <span class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 font-medium text-slate-700 ring-1 ring-slate-200"><%= cached_icon "receipt", class: "size-3" %> Room Total: <%= presenter.currency %> <%= number_with_precision(presenter.room_total, precision: 2) %></span>
+    <span class="inline-flex items-center gap-1 rounded-md bg-violet-50 px-2 py-1 font-medium text-violet-700 ring-1 ring-violet-100"><%= cached_icon "radio", class: "size-3" %> Source: <%= presenter.source_label %></span>
   </div>
 
 </section>

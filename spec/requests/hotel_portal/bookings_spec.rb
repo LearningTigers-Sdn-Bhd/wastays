@@ -89,6 +89,61 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include(booking.confirmation_token)
     end
 
+    it "renders reference IDs, booking source, and the refreshed guest records table" do
+      booking.update!(
+        adults: 3,
+        children: 1,
+        source: "booking_com",
+        reservation_number: 12,
+        guest_registration_number: 34,
+        external_reference: "OTA-55",
+        channel_manager_reference: "CM-66",
+        guest_country: "Malaysia"
+      )
+      guest = create(:guest, name: "Additional Guest", country: "Singapore")
+      create(:booking_guest, booking: booking, guest: guest, is_primary: false)
+
+      get hotel_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("References IDs")
+      expect(response.body).to include(booking.confirmation_token)
+      expect(response.body).to include(booking.formatted_reservation_number)
+      expect(response.body).to include(booking.formatted_guest_registration_number)
+      expect(response.body).to include("OTA-55")
+      expect(response.body).to include("CM-66")
+      expect(response.body).to include("Source: Booking Com")
+      expect(response.body.scan("Source").size).to eq(1)
+      expect(response.body).to include("2 registered guests")
+      expect(response.body).to include("Add Additional Guest")
+      expect(response.body).to include(hotel_booking_show_action_manage_guest_path(hotel, booking))
+      expect(response.body).not_to include("edit-primary-guest-modal")
+      expect(response.body).not_to include("add-additional-guest")
+      expect(response.body).to include("Guest Type")
+      expect(response.body).to include("Guest Reg No.")
+      expect(response.body).to include("Country")
+      expect(response.body.scan(">#{booking.formatted_guest_registration_number}<").size).to eq(3)
+      expect(response.body).to include("Primary")
+      expect(response.body).to include("Additional")
+      expect(response.body).to include("w-full table-fixed")
+      expect(response.body).not_to include("min-w-[1050px]")
+      expect(response.body).to include("This booking has 2 guests that have not been added to the guest records.")
+      expect(response.body).not_to include("No additional guests added.")
+    end
+
+    it "renders empty reference values and hides the guest-record warning when occupancy is fully registered" do
+      booking.update!(adults: 2, children: 0, external_reference: nil, channel_manager_reference: nil)
+      create(:booking_guest, booking: booking, is_primary: false)
+
+      get hotel_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("References IDs")
+      expect(response.body).to include("External")
+      expect(response.body).to include("Channel Manager")
+      expect(response.body).not_to include("have not been added to the guest records")
+    end
+
     it "renders successfully when booking has complaint requests" do
       create(:complaint_request, booking: booking, status: "pending", complaint_details: "Broken AC")
       get "/hotel/#{hotel.id}/bookings/#{booking.id}"
