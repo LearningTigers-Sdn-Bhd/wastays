@@ -15,14 +15,14 @@ RSpec.describe HotelOps::RunNightAudit do
 
   before do
     allow(Financials::CreateJournalBatch).to receive(:call)
-    # Create a blocker: a checked-in booking that is due out but not checked out
+    # Create a blocker: a checked-in booking missing its required check-in timestamp
     booking = create(:booking,
       hotel: hotel,
       status: "checked_in",
       payment_status: "captured",
       check_in: business_date - 1.day,
-      check_out: business_date,
-      checked_in_at: 1.day.ago)
+      check_out: business_date + 1.day,
+      checked_in_at: nil)
     create_balanced_folio(booking)
   end
 

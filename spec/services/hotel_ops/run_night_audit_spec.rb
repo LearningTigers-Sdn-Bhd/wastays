@@ -147,10 +147,7 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(result.night_audit.blocked_details["missing_folio"]).to be_empty
   end
 
-  it "blocks and logs when a due-out booking is not checked out" do
-    allow(Bookings::ProcessNoShowReviews).to receive(:call).and_return(OpenStruct.new(reviewed_count: 0, finalized_count: 0))
-    allow(Folios::PostNightlyCharges).to receive(:call)
-
+  it "moves a missed due-out to review, records a warning, and completes without a nightly charge" do
     booking = create(:booking,
       hotel: hotel,
       status: "checked_in",
@@ -160,43 +157,33 @@ RSpec.describe HotelOps::RunNightAudit do
       checked_in_at: 1.day.ago)
     create_balanced_folio(booking)
 
-    expect { run_audit }.to change(NightAuditLog, :count).by(3) # process_started, blocker_found, blocker_found (as finished status)
+    result = run_audit
+
+    expect(result.success?).to be(true)
+    expect(booking.reload.status).to eq("review_due_out")
+    expect(result.night_audit.exceptions["review_due_out"].sole["booking_id"]).to eq(booking.id)
+    expect(result.night_audit.summary.dig("run_results", "status_changes", "count")).to eq(1)
+    expect(result.night_audit.summary.dig("run_results", "charges_posted", "count")).to eq(0)
+  end
+
+  it "blocks when a stale checked-in due-out fails to transition" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      payment_status: "captured",
+      check_in: business_date - 1.day,
+      check_out: business_date,
+      checked_in_at: 1.day.ago)
+    create_balanced_folio(booking)
+    allow_any_instance_of(Bookings::TransitionStatus).to receive(:call).and_return(OpenStruct.new(success?: false, error: "transition failed"))
 
     result = run_audit
 
     expect(result.success?).to be(false)
     expect(result.night_audit).to be_blocked
-    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
-    expect(hotel.hotel_business_dates.find_by(business_date: business_date + 1.day)).to be_nil
-
-    log = result.night_audit.night_audit_logs.find_by(action_type: "blocker_found")
-    expect(log.message).to include("Found 1 blockers of type: Due out not checked out")
-    expect(log.metadata["items"].first["confirmation_token"]).to be_present
-    expect(Bookings::ProcessNoShowReviews).to have_received(:call)
-    expect(Folios::PostNightlyCharges).not_to have_received(:call)
-  end
-
-  it "records successful blocked-audit financial audit events" do
-    allow(Bookings::ProcessNoShowReviews).to receive(:call).and_return(OpenStruct.new(reviewed_count: 0, finalized_count: 0))
-    allow(Folios::PostNightlyCharges).to receive(:call)
-    booking = create(:booking,
-      hotel: hotel,
-      status: "checked_in",
-      payment_status: "captured",
-      check_in: business_date - 1.day,
-      check_out: business_date,
-      checked_in_at: 1.day.ago)
-    create_balanced_folio(booking)
-
-    result = run_audit
-
-    expect(result.success?).to be(false)
-    expect(result.night_audit.financial_audit_events.pluck(:event_type)).to include(
-      "night_audit_started",
-      "business_date_audit_started",
-      "night_audit_blocked",
-      "business_date_audit_blocked"
-    )
+    expect(booking.reload.status).to eq("checked_in")
+    expect(result.night_audit.blocked_details["due_out_not_checked_out"].sole["booking_id"]).to eq(booking.id)
+    expect(result.night_audit.summary.dig("run_results", "failed_items", "items").sole["reason"]).to eq("transition failed")
   end
 
   it "stores open requests as warnings and logs exceptions" do
@@ -400,6 +387,7 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(hotel.hotel_business_dates.find_by(business_date: business_date + 1.day)).to be_nil
     expect(result.night_audit.night_audit_logs.last.action_type).to eq("failed")
     expect(result.night_audit.night_audit_logs.last.metadata["error"]).to eq("boom")
+    expect(result.night_audit.summary.dig("run_results", "failed_items", "items").sole["reason"]).to eq("boom")
     expect(result.night_audit.financial_audit_events.pluck(:event_type)).to include(
       "night_audit_failed",
       "business_date_audit_blocked"

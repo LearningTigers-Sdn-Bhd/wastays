@@ -43,6 +43,23 @@ RSpec.describe Bookings::ProcessLateCheckout do
     expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
   end
 
+  it "allows a later Night Audit to post normal charges after the stay is extended" do
+    next_business_date = Date.current + 1.day
+    described_class.call(
+      booking: booking,
+      user: user,
+      params: { charge_type: "none", check_out: (Date.current + 2.days).to_s }
+    )
+    audit = create(:night_audit, hotel: hotel, business_date: next_business_date, status: "running", performed_by_user: user)
+    create(:hotel_business_date, hotel: hotel, business_date: next_business_date, status: "audit_running")
+
+    expect {
+      Folios::PostNightlyCharges.call(night_audit: audit, user: user)
+    }.to change { folio.folio_transactions.where(category: "accommodation").count }.by(1)
+
+    expect(booking.reload.status).to eq("checked_in")
+  end
+
   it "fails when the booking is not pending late checkout review" do
     booking.transition_status_to!("checked_in", event: "resolve_late_checkout")
 

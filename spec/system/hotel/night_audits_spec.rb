@@ -68,7 +68,7 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_content("Financial Summary")
     end
 
-    it "shows blockers on the result page" do
+    it "shows critical blockers on the result page" do
       travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
       business_date = Date.new(2026, 5, 22)
 
@@ -79,8 +79,8 @@ RSpec.describe "Hotel night audits", type: :system do
         guest_name: "Aisha Tan",
         confirmation_token: "WS-BLOCK-001",
         check_in: business_date - 1.day,
-        check_out: business_date,
-        checked_in_at: 1.day.ago)
+        check_out: business_date + 1.day,
+        checked_in_at: nil)
 
       visit hotel_night_audits_path(hotel)
 
@@ -94,7 +94,7 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_content("Night audit has been scheduled in the background. Please wait while it processes.")
       expect(page).to have_content("Audit Blockers")
       expect(page).to have_content("Aisha Tan")
-      expect(page).to have_content("Due out today but still not checked out")
+      expect(page).to have_content("Checked-in booking is missing check-in timestamp")
     end
   end
 
@@ -124,8 +124,8 @@ RSpec.describe "Hotel night audits", type: :system do
         guest_name: "Aisha Tan",
         confirmation_token: "WS-BLOCK-001",
         check_in: business_date - 1.day,
-        check_out: business_date,
-        checked_in_at: 1.day.ago)
+        check_out: business_date + 1.day,
+        checked_in_at: nil)
 
       visit hotel_night_audits_path(hotel)
 
@@ -145,7 +145,7 @@ RSpec.describe "Hotel night audits", type: :system do
       click_link "Resolve Blockers"
 
       expect(page).to have_content("Resolve Audit Blockers")
-      expect(page).to have_content("Due Outs Not Checked Out")
+      expect(page).to have_content("Missing Check-In Timestamps")
       expect(page).to have_content("Aisha Tan")
     end
   end
