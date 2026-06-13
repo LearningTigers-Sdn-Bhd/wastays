@@ -16,7 +16,7 @@ Keeps money movement auditable by recording gateway payments, manual payments, r
 - `app/services/folios/post_staff_transaction.rb`
 - `app/models/refund_request.rb`
 - `app/controllers/admin/refund_requests_controller.rb`
-- `docs/folio-and-audit/knowledges/folio/6-refund-lifecycle.md`
+- `docs/folio-transactions/knowledges/folio-lifecycle/06-refund-lifecycle.md`
 - `spec/services/folios/reverse_transaction_spec.rb`
 
 ## Rules Made So Far
