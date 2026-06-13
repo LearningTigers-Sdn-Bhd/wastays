@@ -13,10 +13,19 @@ RSpec.describe HotelOps::EvaluateNightAudit do
       expect(result).to have_key(:summary)
     end
 
-    it 'identifies due out not checked out' do
+    it 'identifies stale checked-in due outs as blockers' do
       create(:booking, status: 'checked_in', hotel: hotel, check_out: business_date)
       result = service.call
       expect(result[:blocked_details]["due_out_not_checked_out"]).not_to be_empty
+    end
+
+    it 'treats review_due_out bookings as warnings rather than blockers' do
+      booking = create(:booking, status: 'review_due_out', hotel: hotel, check_out: business_date)
+
+      result = service.call
+
+      expect(result[:blocked_details]["due_out_not_checked_out"]).to be_empty
+      expect(result[:exceptions]["review_due_out"].sole["booking_id"]).to eq(booking.id)
     end
 
     it 'omits posting-generated blockers during pre-close evaluation' do

@@ -60,6 +60,7 @@ module HotelOps
 
     def build_exceptions
       exceptions = {
+        "review_due_out" => serialize_bookings(review_due_out_bookings, "Late checkout requires staff review"),
         "open_housekeeping_requests" => serialize_requests(open_housekeeping_requests, :request_details, "Housekeeping request still open"),
         "open_complaint_requests" => serialize_requests(open_complaint_requests, :complaint_details, "Complaint request still open")
       }
@@ -76,7 +77,12 @@ module HotelOps
     end
 
     def due_out_not_checked_out
-      @due_out_not_checked_out ||= hotel_bookings.checking_out_on(@business_date, @hotel.hotel_time_zone).where(status: [ "checked_in", "review_due_out" ])
+      cutoff = (@business_date + 1.day).in_time_zone(@hotel.hotel_time_zone).beginning_of_day
+      @due_out_not_checked_out ||= hotel_bookings.checked_in.where("check_out < ?", cutoff)
+    end
+
+    def review_due_out_bookings
+      @review_due_out_bookings ||= hotel_bookings.where(status: "review_due_out")
     end
 
     def checked_in_missing_timestamp

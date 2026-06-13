@@ -97,7 +97,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
       status: "checked_in",
       payment_status: "captured",
       check_in: business_date - 1.day,
-      check_out: business_date,
+      check_out: business_date + 1.day,
       checked_in_at: 1.day.ago)
 
     perform_enqueued_jobs do
@@ -227,5 +227,25 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
       get blockers_hotel_night_audit_path(hotel, night_audit)
       expect(response).to redirect_to(root_path)
     end
+  end
+
+  it "shows structured run results on the audit page" do
+    night_audit = create(:night_audit,
+      hotel: hotel,
+      summary: {
+        "run_results" => {
+          "status_changes" => { "count" => 1, "items" => [] },
+          "charges_posted" => { "count" => 2, "items" => [] },
+          "skipped_items" => { "count" => 3, "items" => [] },
+          "failed_items" => { "count" => 0, "items" => [] }
+        }
+      })
+    create(:night_audit_financial_summary, night_audit: night_audit)
+    sign_in(user)
+
+    get hotel_night_audit_path(hotel, night_audit)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Run Results", "Status Changes", "Charges Posted", "Skipped Items", "Failed Items")
   end
 end

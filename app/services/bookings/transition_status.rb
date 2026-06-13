@@ -48,7 +48,7 @@ module Bookings
             old_value: { "status" => @booking.status_before_last_save },
             new_value: { "status" => new_status },
             reason: @options[:reason],
-            metadata: { from: @booking.status_before_last_save, to: new_status, event: event }
+            metadata: { from: @booking.status_before_last_save, to: new_status, event: event }.merge(@options[:metadata] || {})
           )
         end
       end

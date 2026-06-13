@@ -42,10 +42,14 @@ module HotelOps
       record_night_audit_event!(night_audit, business_date, "business_date_audit_started", "Business date moved to audit_running")
 
       no_show_result = Bookings::ProcessNoShowReviews.call(night_audit: night_audit, user: @performed_by_user)
+      due_out_result = Bookings::ReviewDueOuts.call(night_audit: night_audit, user: @performed_by_user)
+      record_result_items(night_audit, "item_skipped", due_out_result.skipped)
+      record_result_items(night_audit, "item_failed", due_out_result.failed)
       night_audit.night_audit_logs.where(action_type: "process_started").order(:id).last&.update!(
         metadata: {
           reviewed_no_show_count: no_show_result.reviewed_count,
-          finalized_no_show_count: no_show_result.finalized_count
+          finalized_no_show_count: no_show_result.finalized_count,
+          reviewed_due_out_count: due_out_result.changed.count
         }
       )
 
@@ -61,7 +65,7 @@ module HotelOps
           night_audit.update!(
             status: "blocked",
             completed_at: Time.current,
-            summary: pre_evaluation[:summary],
+            summary: summary_with_run_results(night_audit, pre_evaluation[:summary]),
             blocked_details: pre_evaluation[:blocked_details],
             exceptions: pre_evaluation[:exceptions]
           )
@@ -96,7 +100,7 @@ module HotelOps
         night_audit.update!(
           status: final_status,
           completed_at: Time.current,
-          summary: evaluation[:summary],
+          summary: summary_with_run_results(night_audit, evaluation[:summary]),
           blocked_details: evaluation[:blocked_details],
           exceptions: evaluation[:exceptions],
           force_closed: @force_roll && is_blocked
@@ -165,6 +169,12 @@ module HotelOps
       end
     end
 
+    def record_result_items(night_audit, action_type, items)
+      items.each do |item|
+        log_event(night_audit, action_type, item["reason"], { item: item })
+      end
+    end
+
     def calculate_financial_totals
       HotelOps::CalculateBusinessDayFinancials.call(hotel: @hotel, business_date: @business_date)
     end
@@ -218,6 +228,7 @@ module HotelOps
       failed_audit.save!(validate: false)
 
       log_event(failed_audit, "failed", "Night audit failed: #{error_message}", { error: error_message })
+      failed_audit.update_column(:summary, summary_with_run_results(failed_audit, failed_audit.summary))
       business_date = HotelBusinessDate.find_by(hotel: @hotel, business_date: @business_date)
       record_night_audit_event!(failed_audit, business_date, "night_audit_failed", "Night audit failed", error: error_message)
       if business_date&.audit_blocked?
@@ -225,6 +236,12 @@ module HotelOps
       end
 
       failed_audit
+    end
+
+    def summary_with_run_results(night_audit, summary)
+      summary.to_h.merge(
+        "run_results" => HotelOps::BuildNightAuditRunResults.call(night_audit: night_audit)
+      )
     end
 
     def record_night_audit_event!(night_audit, business_date, event_type, reason, metadata = {})

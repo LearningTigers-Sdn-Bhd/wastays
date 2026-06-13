@@ -18,7 +18,7 @@ RSpec.describe Folios::PostNightlyCharges do
     create(:booking_room, booking: booking, subtotal: 200.0)
     folio = create(:booking_folio, hotel: hotel, booking: booking)
 
-    described_class.call(night_audit: night_audit, user: user)
+    result = described_class.call(night_audit: night_audit, user: user)
 
     charges = folio.folio_transactions.charge.order(:category)
     expect(charges.count).to eq(2)
@@ -26,6 +26,9 @@ RSpec.describe Folios::PostNightlyCharges do
     expect(charges.find_by(category: "tax").amount).to eq(10.0)
     expect(charges.map { |charge| charge.metadata["posting_source"] }.uniq).to eq([ "night_audit" ])
     expect(charges.map { |charge| charge.metadata["stay_date"] }.uniq).to eq([ business_date.iso8601 ])
+    expect(result.posted.count).to eq(2)
+    expect(result.skipped).to be_empty
+    expect(result.failed).to be_empty
   end
 
   it "posts accommodation and tax from financial snapshots" do
@@ -80,9 +83,44 @@ RSpec.describe Folios::PostNightlyCharges do
 
     described_class.call(night_audit: night_audit, user: user)
 
+    result = nil
+    expect { result = described_class.call(night_audit: night_audit, user: user) }
+      .not_to change { folio.folio_transactions.charge.count }
+
+    expect(result.skipped.count).to eq(2)
+    expect(result.skipped.map { |item| item["reason"] }.uniq).to eq([ "Nightly charge already posted" ])
+    expect(night_audit.night_audit_logs.where(action_type: "item_skipped").count).to eq(2)
+  end
+
+  it "records a missing folio as a skipped item" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day)
+    create(:booking_room, booking: booking, subtotal: 100.0)
+
+    result = described_class.call(night_audit: night_audit, user: user)
+
+    expect(result.skipped.sole).to include("booking_id" => booking.id, "reason" => "Booking has no folio")
+  end
+
+  it "records a failed charge item before raising" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day)
+    create(:booking_room, booking: booking, subtotal: 100.0)
+    create(:booking_folio, hotel: hotel, booking: booking)
+    allow_any_instance_of(Folios::InsertTransaction).to receive(:call).and_return(OpenStruct.new(success?: false, error: "posting failed"))
+
     expect {
       described_class.call(night_audit: night_audit, user: user)
-    }.not_to change { folio.folio_transactions.charge.count }
+    }.to raise_error("Failed to post nightly folio charge: posting failed")
+
+    item = night_audit.night_audit_logs.find_by!(action_type: "item_failed").metadata["item"]
+    expect(item).to include("booking_id" => booking.id, "reason" => "posting failed")
   end
 
   it "posts separate tax lines with the same tax type" do
