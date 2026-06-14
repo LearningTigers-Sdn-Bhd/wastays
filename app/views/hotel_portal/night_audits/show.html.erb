@@ -15,6 +15,9 @@ end %>
 <% blockers = @night_audit.blocked_details || {} %>
 <% warnings = @night_audit.exceptions || {} %>
 <% run_results = @night_audit.summary.fetch("run_results", {}) %>
+<% has_hard_blockers = blockers.values.flatten.any? %>
+<% blocker_labels = { "missing_folio" => "Accounting blocker" } %>
+<% warning_labels = { "review_due_out" => "Due-out review carried forward" } %>
 
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
   <div class="px-4 md:px-0 mt-5">
@@ -63,6 +66,21 @@ end %>
       </div>
     </div>
   <% end %>
+
+  <% close_readiness = if @night_audit.completed?
+    ["Date closed", "The business date closed successfully. Warnings and review items were carried forward.", "border-emerald-200 bg-emerald-50 text-emerald-950", "text-emerald-700"]
+  elsif has_hard_blockers || @night_audit.blocked? || @night_audit.failed?
+    ["Cannot close this date", "Resolve all hard blockers before the business date can close.", "border-red-200 bg-red-50 text-red-950", "text-red-700"]
+  elsif @night_audit.running?
+    ["Close decision pending", "Night Audit is still evaluating posting and accounting integrity.", "border-blue-200 bg-blue-50 text-blue-950", "text-blue-700"]
+  else
+    ["Ready to close", "No hard blockers are recorded. Warnings and review items do not prevent close.", "border-emerald-200 bg-emerald-50 text-emerald-950", "text-emerald-700"]
+  end %>
+  <div class="mx-4 rounded-2xl border p-6 shadow-sm md:mx-0 <%= close_readiness[2] %>">
+    <p class="text-[11px] font-bold uppercase tracking-wider <%= close_readiness[3] %>">Close Readiness</p>
+    <h2 class="mt-1 text-xl font-bold"><%= close_readiness[0] %></h2>
+    <p class="mt-1 text-sm font-medium"><%= close_readiness[1] %></p>
+  </div>
 
   <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4 mx-4 md:mx-0">
     <div class="p-6 md:border-r md:border-slate-200 md:p-8">
@@ -215,11 +233,11 @@ end %>
         </div>
       </div>
 
-      <!-- Blocked Details Table -->
+      <!-- Hard Blockers Table -->
       <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950">Audit Blockers</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Operational blockers identified during the audit process.</p>
+          <h2 class="text-lg font-bold tracking-tight text-slate-950">Hard Blockers</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Accounting and posting integrity issues that prevent this business date from closing.</p>
         </div>        <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-slate-200">
             <thead class="bg-red-50">
@@ -234,7 +252,7 @@ end %>
                 <% blockers.each do |label, rows| %>
                   <% rows.each do |row| %>
                     <tr>
-                      <td class="whitespace-nowrap px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= label.humanize %></td>
+                      <td class="whitespace-nowrap px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-red-700"><%= blocker_labels.fetch(label, label.humanize) %></td>
                       <td class="px-6 py-4">
                         <p class="text-xs font-bold text-slate-900"><%= row["guest_name"] %></p>
                         <p class="text-[10px] font-medium text-slate-500">#<%= row["confirmation_token"] %></p>
@@ -253,11 +271,11 @@ end %>
         </div>
       </div>
 
-      <!-- Warnings Table -->
+      <!-- Warnings / Review Items Table -->
       <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950">Operational Warnings</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Open items preserved as warnings for management review.</p>
+          <h2 class="text-lg font-bold tracking-tight text-slate-950">Warnings / Review Items</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Open operational items carried forward without preventing close.</p>
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-slate-200">
@@ -273,7 +291,7 @@ end %>
                 <% warnings.each do |label, rows| %>
                   <% rows.each do |row| %>
                     <tr>
-                      <td class="whitespace-nowrap px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= label.humanize %></td>
+                      <td class="whitespace-nowrap px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-amber-700"><%= warning_labels.fetch(label, label.humanize) %></td>
                       <td class="px-6 py-4">
                         <p class="text-xs font-bold text-slate-900"><%= row["guest_name"] || "N/A" %></p>
                         <p class="text-[10px] font-medium text-slate-500">#<%= row["confirmation_token"] || "N/A" %></p>
@@ -284,7 +302,7 @@ end %>
                 <% end %>
               <% else %>
                 <tr>
-                  <td colspan="3" class="px-6 py-10 text-center text-xs font-medium italic text-slate-400">No operational exceptions were recorded.</td>
+                  <td colspan="3" class="px-6 py-10 text-center text-xs font-medium italic text-slate-400">No warnings or review items were recorded.</td>
                 </tr>
               <% end %>
             </tbody>

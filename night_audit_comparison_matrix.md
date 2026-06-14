@@ -2,16 +2,16 @@
 
 ## 1. Summary
 
-The current Night Audit is **MVP-ready with follow-up hardening recommended**. Its accounting posting core is strong: nightly room/tax charges are limited to in-house `checked_in` stays, duplicate postings are protected by a database unique index, folio transactions are immutable, retries reuse the same audit row, and hotel business dates are locked during execution.
+The current Night Audit is **MVP-ready with final close-policy hardening implemented**. Its accounting posting core is strong: nightly room/tax charges are limited to in-house `checked_in` stays, duplicate postings are protected by a database unique index, folio transactions are immutable, retries reuse the same audit row, and hotel business dates are locked during execution.
 
-The Night Audit is **MVP-ready with follow-up hardening recommended**. It now moves stale checked-in bookings to `review_due_out`, records those changes with Night Audit metadata, skips normal nightly charges for due-out reviews, and stores run-specific status changes, posted charges, skipped items, and failed items. Operational review states such as `review_due_out` are warning-only and do not prevent close. Accounting integrity issues, including a missing folio for a chargeable booking, remain hard blockers. Run-result rebuilding tolerates orphaned historical booking audit logs, so retry/close is not blocked when an old audit log points at a booking row that no longer exists. Business-date governance is based on one current accounting business date per hotel, where current statuses are `open`, `audit_running`, and `audit_blocked`; clock-derived dates are expected-date calculations, not posting authority.
+The final MVP hardening makes the close decision explicit: `review_due_out` and `review_no_show` are warnings/review items and do not prevent close, while accounting integrity failures remain hard blockers. A missing folio blocks a chargeable booking even after a stale checked-in due-out successfully transitions to `review_due_out`; proven non-chargeable states remain exempt. The result UI now separates **Hard Blockers** from **Warnings / Review Items**, labels missing folios as **Accounting blocker**, labels due-out reviews as **Due-out review carried forward**, and clearly states whether the date closed or cannot close. Run-result rebuilding continues to tolerate orphaned historical booking audit logs, and business-date governance remains based on one current accounting business date per hotel.
 
 | Overall Area | Assessment | Notes |
 |---|---|---|
-| Booking Status Flow | MVP-ready with a recovery gap | Missed arrivals move to `review_no_show`; stale checked-in bookings move to `review_due_out` as a Night Audit safety net. Amending a `review_no_show` arrival date still does not return it to `confirmed`. |
+| Booking Status Flow | MVP-ready | Missed arrivals move to `review_no_show`; stale checked-in bookings move to `review_due_out` as a Night Audit safety net. Review no-shows remain visible until staff resolves them through an explicit action. |
 | Folio Posting | Strong but incomplete | Checked-in-only room/tax posting, immutable transactions, locks, posting-date controls, database duplicate protection, and run-level skipped/failed posting details exist. Direct relational `night_audit_id` linkage remains absent. |
-| Business Date Closing | Strong | Audit claims and locks the hotel’s current accounting date, blocks unsafe posting, closes only after posting/evaluation, and atomically opens the next date. A partial unique index enforces one current accounting business date per hotel. |
-| Audit Summary | MVP-ready | Stored `run_results` reconcile run-specific status changes, posted charges, skipped items, and failed items; operational and financial summaries remain available. Status-change rows tolerate missing historical booking records with fallback details. |
+| Business Date Closing | Strong | Audit claims and locks the hotel’s current accounting date, blocks unsafe posting, treats review states as warnings, closes only after accounting evaluation, and atomically opens the next date. A partial unique index enforces one current accounting business date per hotel. |
+| Audit Summary / UI | MVP-ready | Stored `run_results` reconcile run-specific status changes, posted charges, skipped items, and failed items. The result page separates hard blockers from warning/review items and makes close readiness explicit. |
 | Retry / Idempotency | Strong | Failed/blocked runs can retry; nightly/no-show charge keys and unique indexes prevent duplicate charges. Status changes completed before a later failure remain committed but are idempotently skipped on retry. Run-result rebuilding is nil-safe for orphaned booking audit logs. |
 | Enterprise Features | Partially implemented / overbuilt for MVP | Force roll, journal batches, GL mapping, audit packets, deposit liability, occupancy, ADR, RevPAR, and advanced reports exist. Cashier/shift reconciliation, trial balance, city ledger, and audit reversal are absent. |
 
@@ -25,7 +25,7 @@ The Night Audit is **MVP-ready with follow-up hardening recommended**. It now mo
 | Backdated check-in | `review_no_show` can become `checked_in` | `Bookings::TransitionStatus#check_in` supports `review_no_show` using event `backdated_check_in` and processes catch-up charges. | Implemented | Backdated controller restricts this action to `review_no_show`. |
 | Mark no-show | `review_no_show` can become `no_show` | `Bookings::FinalizeNoShow` supports manual and automatic transition to `no_show`. | Implemented | Automatic finalization on a later Night Audit exceeds the requested MVP flow; see anomalies. |
 | Cancel review no-show | `review_no_show` can become `cancelled` | `Bookings::TransitionStatus#cancel` includes `review_no_show` as cancellable. | Implemented | Inventory and assigned-room release are included. |
-| Amend arrival date | `review_no_show` returns to `confirmed` when arrival date is amended | `Bookings::UpdateStayService` can amend dates but explicitly does not change status; lifecycle has no amend-arrival event from `review_no_show` to `confirmed`. | Missing | Amended booking remains `review_no_show`. |
+| Review no-show date amendment | Date amendment should not silently restore confirmed status; staff must use an explicit recovery action | `Bookings::UpdateStayService` can amend dates without changing `review_no_show` status. Supported explicit resolutions are backdated check-in, mark no-show, or cancel. | Not Needed for MVP | Preserves exception visibility and audit clarity. A future reinstate/reschedule action must be explicit and audited. |
 | Checkout due-out review | `review_due_out` can become `completed` through checkout | `Bookings::TransitionStatus#check_out` accepts `review_due_out`. | Implemented | The status can be resolved if created through another operational path. |
 | Extend due-out stay | `review_due_out` returns to `checked_in` after extending stay | `Bookings::ProcessLateCheckout` updates checkout date and transitions with `resolve_late_checkout`. | Implemented | Night Audit creates the review state when needed; staff resolves it by extending the stay. |
 | Keep due-out for review | `review_due_out` may remain for review | No automatic transition away from an existing `review_due_out`. | Implemented | Existing review remains until staff resolves it. |
@@ -127,7 +127,9 @@ The Night Audit is **MVP-ready with follow-up hardening recommended**. It now mo
 | Database reconciliation | Summary matches actual database records | Financial totals are calculated from folio transactions by posting date and can be recalculated with changelog. Operational counts are snapshot counts, not run-specific reconciliation. | Partially Implemented | Main summary does not prove which postings/status changes came from the run. |
 | Export/print | Export or print if implemented | Completed audit has a PDF audit packet export. | Implemented |  |
 | Separate status/posting results | Separate booking changes from folio postings | Operational and financial summaries are separate, and `run_results` retains run-specific status-change, posting, skipped, and failed item lists. | Implemented |  |
-| Warnings vs critical failures | Separate warnings from blockers | `exceptions` and `blocked_details` are separate and displayed separately. | Implemented |  |
+| Warnings vs critical failures | Separate warnings from blockers | `exceptions` and `blocked_details` are displayed as **Warnings / Review Items** and **Hard Blockers**. | Implemented | The page explicitly states whether the date closed or cannot close. |
+| Due-out review label | Clearly identify carried-forward due-out review | `review_due_out` is displayed as **Due-out review carried forward**. | Implemented | Review visibility does not imply a close blocker. |
+| Missing-folio label | Clearly identify accounting integrity blocker | `missing_folio` is displayed as **Accounting blocker** under Hard Blockers. | Implemented | Makes the reason for preventing close explicit. |
 
 ## 6. Close Policy Matrix
 
@@ -135,13 +137,13 @@ Core rule: Night Audit may close when unresolved items are controlled operationa
 
 | Condition | Close Policy | Current Enforcement |
 |---|---|---|
-| Existing `review_due_out` | Allow close with warning | Returned under `exceptions["review_due_out"]`; excluded from `blocked_details` and normal nightly posting. |
-| Existing `review_no_show` | Allow close with review visibility | Remains an operational review state unless a separate configured workflow resolves it. |
-| Stale checked-in due-out successfully changed to `review_due_out` | Allow close with warning | `NightAudits::ReviewDueOuts` runs before evaluation/posting; successful transitions appear as run-specific status changes and warnings. |
+| Existing `review_due_out` | Allow close with warning | Returned under `exceptions["review_due_out"]` as **Due-out review carried forward**; excluded from due-out blockers and normal nightly posting. A separate accounting issue on the booking can still block close. |
+| Existing `review_no_show` | Allow close with review visibility | Returned under `exceptions["review_no_show"]` as a carried-forward review item; it does not block close. |
+| Stale checked-in due-out successfully changed to `review_due_out` | Allow close with warning unless accounting integrity is incomplete | `NightAudits::ReviewDueOuts` runs before evaluation/posting; successful transitions appear as run-specific status changes and warnings. The transitioned booking remains financially relevant for missing-folio and balance checks. |
 | Stale checked-in due-out that failed to transition | Block close | Booking remains `checked_in` and is returned under `blocked_details["due_out_not_checked_out"]`; failed transition is retained in run results. |
 | Duplicate-protected nightly charge skip | Allow close | Existing charge is recorded as a skipped item and accepted as idempotent completion. |
 | Open housekeeping, complaint, or unusual in-house folio-balance review | Allow close with warning | Returned under `exceptions`; warnings do not affect the close decision. |
-| Missing folio for checked-in or otherwise chargeable/current financially relevant booking | Block close | Returned under `blocked_details["missing_folio"]` after posting-phase evaluation. |
+| Missing folio for checked-in or otherwise chargeable/current financially relevant booking | Block close | Returned under `blocked_details["missing_folio"]` after posting-phase evaluation, including a due-out booking that was moved to `review_due_out`. |
 | Missing folio for proven non-chargeable booking such as `cancelled` or `no_show` | Allow close | Proven non-chargeable states are excluded from the missing-folio blocker; ambiguous states remain blocking. |
 | Missing nightly room/tax charge | Block close | Returned under `blocked_details["missing_nightly_charges"]`. |
 | Failed posting | Block/fail close | Item-level failure and overall audit failure are retained; business date does not advance. |
@@ -149,6 +151,22 @@ Core rule: Night Audit may close when unresolved items are controlled operationa
 | Unsynced captured payment or completed refund | Block close | Returned under `captured_payment_not_synced` or `refund_not_synced`. |
 | Ambiguous or non-current business-date authority | Block close | `HotelBusinessDate` current-record checks reject the run and prevent date advancement. |
 | Orphaned historical audit log with fallback details | Allow close | Run-result rebuilding preserves fallback details without requiring the deleted booking row. |
+
+### Close-Policy Regression Verification
+
+The final hardening is covered by focused service, request, system, model, and posting tests. The expanded regression run completed with **115 examples, 0 failures**.
+
+| Verified Behavior | Result |
+|---|---|
+| Existing `review_due_out` does not block close | Verified |
+| Existing `review_no_show` is visible as a warning/review item | Verified |
+| Successful stale due-out transition allows close when accounting is complete | Verified |
+| Failed stale due-out transition blocks close | Verified |
+| Missing folio blocks checked-in and transitioned chargeable due-out bookings | Verified |
+| Missing folio is allowed for proven non-chargeable states | Verified |
+| Missing nightly charges block close | Verified |
+| Duplicate-protected skipped nightly charges allow close | Verified |
+| One current `HotelBusinessDate`, retry/idempotency, orphan tolerance, immutable folio transactions, and checked-in-only posting remain intact | Verified |
 
 ## 7. Optional Enterprise Features Matrix
 
@@ -193,7 +211,6 @@ Core rule: Night Audit may close when unresolved items are controlled operationa
 | High | Business-date authority must remain centralized in `HotelBusinessDate`. | Reintroducing clock-derived posting defaults would bypass the one-current-accounting-date invariant. | Keep financial posting governed by `hotel.current_business_date_record`; use clock-derived dates only for expected-date calculation and scheduling. |
 | High | Charge linkage to Night Audit is metadata-only. | `night_audit_id` has no relational integrity and could become invalid or omitted by alternate posting paths. | Add a nullable `night_audit_id` foreign key or a dedicated audit-posting join/event record while retaining metadata for readability. |
 | High | Booking/status/date changes are not generally locked while Night Audit runs. | Operational edits can race with candidate selection and post-close evaluation. | Add a targeted operational guard for financially relevant booking changes during `audit_running`, with controlled blocker-resolution overrides. |
-| Medium | `review_no_show` cannot return to `confirmed` when arrival date is amended. | Staff cannot complete the expected missed-arrival recovery flow cleanly. | Add an explicit audited lifecycle event for amend-arrival-date review resolution. |
 | Medium | Failed audit error is not stored directly on the run. | Failure discovery relies on log/event lookup and is harder to query/report. | Add a run-level failure field or structured failure summary. |
 | Medium | No distinct `completed_by_id`. | Completion/force-close accountability is less explicit if execution actor differs from initiator. | Add only if asynchronous/operator handoff requires it. |
 | Medium | Nightly rate and tax posting allow legacy fallbacks rather than requiring locked date snapshots. | Historical amounts may depend on averaged/current booking data for legacy records. | Require snapshots for new bookings and flag legacy fallback use in the audit summary. |
@@ -228,6 +245,8 @@ Core rule: Night Audit may close when unresolved items are controlled operationa
 | Open next business date | Yes | Implemented | Retain transactional ordering. |
 | Audit run record | Yes | Implemented | Add structured run failure/result fields only as needed for reconciliation. |
 | Audit summary | Yes | Implemented | Retain run-specific posting/status/skipped/failed counters and item details. |
+| Hard blockers versus warnings/review items | Yes | Implemented | Retain explicit close-readiness banner and separate result sections. |
+| Chargeable-booking missing-folio blocker | Yes | Implemented | Retain financial relevance checks after due-out review transition. |
 | Skipped item tracking | Yes | Implemented | Retain stable item keys and deduplication across retries. |
 | Failed item tracking | Yes | Implemented | Retain item-level and overall failure reasons. |
 | Failed audit retry safety | Yes | Implemented | Retain current idempotency, orphaned audit-log tolerance, and explicit retry/partial-work visibility. |
@@ -243,6 +262,11 @@ Start Night Audit
     |     |- confirmed -> review_no_show
     |     `- checked_in due-out -> review_due_out
     |
+    |- Staff resolves review_no_show explicitly
+    |     |- backdated_check_in -> checked_in
+    |     |- mark_no_show -> no_show
+    |     `- cancel -> cancelled
+    |
     |- Step 2: Post nightly room/tax charges
     |     `- eligible in-house bookings, with database idempotency
     |
@@ -253,13 +277,14 @@ Start Night Audit
     `- Step 5: Store and show run-specific summary
 ```
 
-Do not require cashier reconciliation, trial balance, city ledger, deposit ledger, POS integration, audit reversal, advanced reports, housekeeping sync, force close, or manager approval workflow for MVP.
+Do not automatically transition `review_no_show` to `confirmed` when dates are edited. Do not require cashier reconciliation, trial balance, city ledger, deposit ledger, POS integration, audit reversal, advanced reports, housekeeping sync, force close, or manager approval workflow for MVP.
 
 ## 11. Recommended Later Scope
 
 | Later Feature | Why It Matters | Suggested Priority |
 |---|---|---|
 | Configurable no-show fee automation | Allows properties to opt into automated finalization without forcing the policy on MVP users. | High Later |
+| Explicit `review_no_show` reinstate/reschedule | Supports future-date recovery if the product needs it. Must require new arrival/departure dates, staff reason, audit log, and any required permission guard; it must not be an automatic side effect of editing dates. | Optional |
 | Manager approvals for force roll/reopen | Adds controlled accountability for exceptional close operations. | High Later |
 | Trial balance | Supports formal accounting close and debit/credit validation. | High Later |
 | Cashier reconciliation and payment variance | Reconciles cash/card/transfer totals against expected collections. | High Later |
@@ -278,12 +303,12 @@ Do not require cashier reconciliation, trial balance, city ledger, deposit ledge
 
 ## 12. Final Recommendation
 
-Final status: MVP-ready
+Final status: **MVP-ready; final Night Audit close-policy and UI hardening complete**
 
 Recommended next action:
 
-1. Preserve one current accounting business date per hotel across `open`, `audit_running`, and `audit_blocked`, and add targeted protection against booking timeline/status races during audit execution.
-2. Add explicit `review_no_show` arrival-amendment resolution and make automatic no-show finalization a configurable later feature.
-3. Preserve the implemented due-out fallback, run-specific results, posting idempotency, immutable folio ledger, business-date lock, posting guard, and retry behavior.
+1. Preserve the implemented close-policy boundary: operational review states are warnings; accounting integrity failures are blockers.
+2. Preserve one current accounting business date per hotel, retry/idempotency behavior, orphaned audit-log tolerance, immutable folio transactions, and checked-in-only nightly posting.
+3. Keep cashier reconciliation, trial balance, city ledger, audit reversal, POS, reopening closed dates, and approval workflow out of the MVP.
 
-Do not build additional enterprise features yet unless the MVP status-flow and reconciliation issues are fixed.
+Remaining recovery/reporting/concurrency gaps are later work and do not change the final Night Audit MVP close policy.

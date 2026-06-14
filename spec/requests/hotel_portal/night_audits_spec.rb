@@ -248,4 +248,22 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Run Results", "Status Changes", "Charges Posted", "Skipped Items", "Failed Items")
   end
+
+  it "separates hard blockers from warnings and makes close readiness obvious" do
+    night_audit = create(:night_audit,
+      hotel: hotel,
+      status: "blocked",
+      blocked_details: {
+        "missing_folio" => [ { "guest_name" => "Aisha Tan", "confirmation_token" => "BLOCK-1", "reason" => "Booking requires a folio before night audit can close" } ]
+      },
+      exceptions: {
+        "review_due_out" => [ { "guest_name" => "Ben Lee", "confirmation_token" => "WARN-1", "reason" => "Due-out review carried forward" } ]
+      })
+    sign_in(user)
+
+    get hotel_night_audit_path(hotel, night_audit)
+
+    expect(response.body).to include("Cannot close this date", "Hard Blockers", "Warnings / Review Items")
+    expect(response.body).to include("Accounting blocker", "Due-out review carried forward")
+  end
 end
