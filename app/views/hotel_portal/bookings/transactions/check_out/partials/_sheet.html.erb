@@ -2,7 +2,7 @@
 <% balance = (folio&.projected_outstanding_balance || 0).to_d %>
 <% currency = booking.currency.presence || "MYR" %>
 <% checkout_error ||= nil %>
-<% checkout_business_date = hotel.business_date_for(Time.current).to_date %>
+<% checkout_business_date = hotel.current_business_date %>
 <% early_departure = checkout_business_date < booking.check_out.to_date %>
 <% early_checkout_lines = early_departure ? Folios::PostEarlyCheckoutCharges.pending_preview(booking: booking, folio: folio, departure_date: checkout_business_date, original_check_out: booking.check_out) : [] %>
 <% projected_checkout_balance = if early_departure && folio
@@ -24,7 +24,7 @@ end %>
     <div class="flex items-start justify-between gap-4 px-4 py-3 sm:px-6">
       <div class="min-w-0">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Step 1 of 2</p>
-        <h2 class="mt-0.5 truncate text-lg font-bold tracking-tight text-slate-950">Checkout <%= booking.guest_name %></h2>
+        <h2 class="mt-0.5 truncate text-lg font-bold tracking-tight text-slate-950"><%= booking.checkout_required? ? "Checkout Required" : "Checkout" %> <%= booking.guest_name %></h2>
         <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
           <span><%= booking.confirmation_token %> · <%= booking.check_in.strftime("%d %b") %> – <%= booking.check_out.strftime("%d %b %Y") %></span>
           <span class="rounded-md bg-slate-100 px-2 py-0.5 text-[9px] font-bold tracking-wider text-slate-600">

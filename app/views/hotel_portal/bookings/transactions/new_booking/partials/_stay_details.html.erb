@@ -35,7 +35,7 @@
       <div class="grid sm:grid-cols-2 gap-6">
         <div>
           <%= label_tag :posting_date, "Posting Date", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= date_field_tag :posting_date, params[:posting_date] || current_hotel.business_date_for(Time.current), required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          <%= date_field_tag :posting_date, params[:posting_date] || current_hotel.current_business_date, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
         <div>
           <%= f.label :source, "Booking Source", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>

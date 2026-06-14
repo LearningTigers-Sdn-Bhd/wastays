@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["chargeSection", "customSection", "toggleRadio", "typeRadio", "customType", "customValue", "displayAmount", "amountInput"]
+  static targets = ["chargeSection", "checkoutSection", "customSection", "toggleRadio", "typeRadio", "customType", "customValue", "displayAmount", "amountInput"]
   static values = {
     baseAmount: Number,
     currency: { type: String, default: "MYR" }
@@ -16,12 +16,14 @@ export default class extends Controller {
     
     if (chargeToggle === "none") {
       this.chargeSectionTarget.classList.add("hidden")
+      this.checkoutSectionTarget.classList.add("hidden")
       this.customSectionTarget.classList.add("hidden")
       this.amountInputTarget.value = 0
       return
     }
 
     this.chargeSectionTarget.classList.remove("hidden")
+    this.checkoutSectionTarget.classList.remove("hidden")
     const selectedType = this.typeRadioTargets.find(r => r.checked).value
     
     if (selectedType === "custom") {
