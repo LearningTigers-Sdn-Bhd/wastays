@@ -49,7 +49,7 @@ module Rooms
       covering_bks = bks.select { |b| @date >= b.check_in.to_date && @date < b.check_out.to_date }
 
       # Priority 1: Checked In (Occupied/Red)
-      checked_in_bks = covering_bks.select { |b| b.status == "checked_in" }
+      checked_in_bks = covering_bks.select { |b| b.status.in?(%w[checked_in review_due_out checkout_required]) }
       if checked_in_bks.any?
         return { state: :occupied, details: { active: checked_in_bks } }
       end
@@ -74,7 +74,7 @@ module Rooms
       # We check checked_in status specifically for the "occupied" physical status
       # This is different from the timeline colors which show "stay" for any confirmed booking
       bks = bookings
-      bks.any? { |b| b.status == "checked_in" && b.check_in.to_date <= @date && b.check_out.to_date > @date }
+      bks.any? { |b| b.status.in?(%w[checked_in review_due_out checkout_required]) && b.check_in.to_date <= @date && b.check_out.to_date > @date }
     end
 
     def bookings
@@ -83,7 +83,7 @@ module Rooms
           @provided_bookings
         else
           @hotel.bookings
-            .where(status: %w[confirmed review_no_show checked_in completed])
+            .where(status: %w[confirmed review_no_show checked_in review_due_out checkout_required completed])
             .joins(:booking_rooms)
             .where(booking_rooms: { room_type_id: @room_type.id, room_number: @room_number })
             .distinct
