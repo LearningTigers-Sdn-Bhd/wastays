@@ -10,8 +10,21 @@
   <%= render "hotel_portal/night_audits/show/header", presenter: presenter %>
   <%= render "hotel_portal/night_audits/show/result_banner", presenter: presenter %>
   <%= render "hotel_portal/night_audits/show/summary", presenter: presenter %>
-  <%= render "hotel_portal/night_audits/show/financial_summary", presenter: presenter %>
-  <%= render "hotel_portal/night_audits/show/run_results", presenter: presenter %>
-  <%= render "hotel_portal/night_audits/show/blockers_and_warnings", presenter: presenter %>
-  <%= render "hotel_portal/night_audits/show/manual_adjustments", presenter: presenter %>
+
+  <div data-controller="tabs" data-tabs-default-tab-value="results" class="space-y-4">
+    <%= render "hotel_portal/night_audits/show/tabs", presenter: presenter %>
+
+    <div id="results-panel" data-tabs-target="panel" data-tab-panel="results" role="tabpanel" class="space-y-4" data-testid="results-panel">
+      <%= render "hotel_portal/night_audits/show/run_results", presenter: presenter %>
+      <%= render "hotel_portal/night_audits/show/blockers_and_warnings", presenter: presenter %>
+    </div>
+
+    <div id="financial-summary-panel" data-tabs-target="panel" data-tab-panel="financial-summary" role="tabpanel" class="hidden" data-testid="financial-summary-panel">
+      <%= render "hotel_portal/night_audits/show/financial_summary", presenter: presenter %>
+    </div>
+
+    <div id="advanced-actions-panel" data-tabs-target="panel" data-tab-panel="advanced-actions" role="tabpanel" class="hidden" data-testid="show-advanced-actions-panel">
+      <%= render "hotel_portal/night_audits/show/manual_adjustments", presenter: presenter %>
+    </div>
+  </div>
 </div>
