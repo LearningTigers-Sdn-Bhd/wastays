@@ -107,7 +107,7 @@ end %>
       <% if financial_summary %>
         <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-            <h2 class="text-lg font-bold tracking-tight text-slate-950">Financial Summary</h2>
+            <h2 class="text-lg font-bold tracking-tight text-slate-950">Business-Date Financial Summary</h2>
             <p class="mt-1 text-sm font-medium text-slate-600">Calculated totals for the business date <%= @night_audit.business_date.strftime("%d %b %Y") %>.</p>
           </div>
           <div class="p-6 sm:p-8">
@@ -162,6 +162,9 @@ end %>
             <div class="bg-white p-5">
               <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= label %></p>
               <p class="mt-2 text-2xl font-bold <%= color %>"><%= run_results.dig(key, "count") || 0 %></p>
+              <% if key == "charges_posted" %>
+                <p class="mt-1 text-xs font-semibold text-slate-500"><%= number_to_currency(run_results.dig(key, "total").to_d) %> posted by this run</p>
+              <% end %>
             </div>
           <% end %>
         </div>

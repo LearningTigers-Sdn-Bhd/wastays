@@ -46,6 +46,13 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.errors).to include("Guest name can't be blank")
   end
 
+  it "blocks manual booking creation while night audit is running" do
+    hotel.current_business_date_record.update!(status: "audit_running")
+
+    expect { subject.call }.not_to change(Booking, :count)
+    expect(subject.call.errors).to include(NightAudits::OperationalChangeGuard::ERROR_MESSAGE)
+  end
+
   it "allows a manually recorded partial payment" do
     params.merge!(
       record_payment: "1",

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_13_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_14_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -470,6 +470,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_13_000000) do
     t.datetime "posted_at"
     t.string "currency"
     t.string "gl_code"
+    t.bigint "night_audit_id"
     t.index "booking_folio_id, ((metadata ->> 'early_checkout_charge_key'::text))", name: "index_folio_transactions_on_early_checkout_charge", unique: true, where: "(metadata ? 'early_checkout_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'nightly_charge_key'::text))", name: "index_folio_transactions_on_nightly_charge", unique: true, where: "(metadata ? 'nightly_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'no_show_charge_key'::text))", name: "index_folio_transactions_on_no_show_charge", unique: true, where: "(metadata ? 'no_show_charge_key'::text)"
@@ -479,6 +480,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_13_000000) do
     t.index ["booking_folio_id"], name: "index_folio_transactions_on_booking_folio_id"
     t.index ["category"], name: "index_folio_transactions_on_category"
     t.index ["gl_code"], name: "index_folio_transactions_on_gl_code"
+    t.index ["night_audit_id"], name: "index_folio_transactions_on_night_audit_id"
     t.index ["posting_date"], name: "index_folio_transactions_on_posting_date"
     t.index ["reversal_of_transaction_id"], name: "index_folio_transactions_on_reversal_of_transaction_id"
     t.index ["transaction_type"], name: "index_folio_transactions_on_transaction_type"
@@ -1357,6 +1359,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_13_000000) do
   add_foreign_key "folio_transactions", "booking_folios"
   add_foreign_key "folio_transactions", "folio_transactions", column: "reversal_of_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "voided_by_transaction_id"
+  add_foreign_key "folio_transactions", "night_audits", on_delete: :restrict
   add_foreign_key "folio_transactions", "users"
   add_foreign_key "hotel_business_dates", "hotels"
   add_foreign_key "hotel_business_dates", "users", column: "force_closed_by_id", on_delete: :nullify

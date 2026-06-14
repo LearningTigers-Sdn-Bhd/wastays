@@ -57,4 +57,14 @@ RSpec.describe Folios::InitializeForBooking do
 
     expect(booking.reload.booking_folio).to be_nil
   end
+
+  it "blocks missing folio creation while night audit is running" do
+    booking.hotel.current_business_date_record.update!(status: "audit_running")
+
+    expect do
+      described_class.call(booking: booking, user: user)
+    end.to raise_error(NightAudits::OperationalChangeGuard::OperationalChangeBlocked)
+
+    expect(booking.reload.booking_folio).to be_nil
+  end
 end

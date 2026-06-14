@@ -18,6 +18,7 @@ module Bookings
     end
 
     def call
+      NightAudits::OperationalChangeGuard.call!(hotel: @booking.hotel, action: :process_late_checkout)
       result = nil
 
       Booking.transaction do

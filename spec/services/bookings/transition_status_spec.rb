@@ -23,6 +23,25 @@ RSpec.describe Bookings::TransitionStatus do
   end
 
   describe "#call" do
+    it "blocks staff status transitions while night audit is running" do
+      booking.hotel.current_business_date_record.update!(status: "audit_running")
+
+      result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
+
+      expect(result.success?).to be(false)
+      expect(result.error).to eq(NightAudits::OperationalChangeGuard::ERROR_MESSAGE)
+      expect(booking.reload.status).to eq("confirmed")
+    end
+
+    it "allows status transitions while night audit is blocked" do
+      booking.hotel.current_business_date_record.update!(status: "audit_blocked")
+
+      result = described_class.new(booking: booking, status: "cancelled", timestamp: timestamp).call
+
+      expect(result.success?).to be(true)
+      expect(booking.reload.status).to eq("cancelled")
+    end
+
     context "when status is checked_in" do
       subject { described_class.new(booking: booking, status: "checked_in", timestamp: timestamp) }
 

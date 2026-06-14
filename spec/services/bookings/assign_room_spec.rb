@@ -58,4 +58,14 @@ RSpec.describe Bookings::AssignRoom do
     log = RoomOperationalAuditLog.find_by!(event_type: "assignment_override")
     expect(log.reason).to eq("Housekeeping verbally confirmed ready")
   end
+
+  it "allows room-number-only assignment while night audit is running" do
+    hotel.current_business_date_record.update!(status: "audit_running")
+    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
+
+    result = described_class.new(booking: booking, room_number: "101", user: user).call
+
+    expect(result).to be_success
+    expect(booking.booking_rooms.first.reload.room_number).to eq("101")
+  end
 end

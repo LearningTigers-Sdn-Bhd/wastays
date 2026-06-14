@@ -134,4 +134,26 @@ RSpec.describe NightAudits::CalculateFinancialSummary, type: :service do
     expect(result[:tax_revenue]).to eq(5.0)
     expect(result[:no_show_charges]).to eq(50.0)
   end
+
+  it "includes manual and audit-linked transactions in business-date totals" do
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: booking)
+    audit = create(:night_audit, hotel: hotel, business_date: business_date)
+    create(:folio_transaction,
+      booking_folio: folio,
+      night_audit: audit,
+      category: "accommodation",
+      amount: 100,
+      posting_date: business_date,
+      metadata: { night_audit_id: audit.id })
+    create(:folio_transaction,
+      booking_folio: folio,
+      category: "accommodation",
+      amount: 25,
+      posting_date: business_date)
+
+    result = described_class.call(hotel: hotel, business_date: business_date)
+
+    expect(result[:room_revenue]).to eq(125)
+  end
 end

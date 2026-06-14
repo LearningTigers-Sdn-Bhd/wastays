@@ -14,6 +14,7 @@ module Bookings
     end
 
     def call
+      NightAudits::OperationalChangeGuard.call!(hotel: @booking.hotel, action: :reinstate)
       return OpenStruct.new(success?: false, error: "Only no-show bookings can be reinstated.") unless @booking.status == "no_show"
 
       Booking.transaction do
