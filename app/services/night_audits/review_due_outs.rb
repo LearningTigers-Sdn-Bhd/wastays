@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Bookings
+module NightAudits
   class ReviewDueOuts
     Result = Struct.new(:changed, :skipped, :failed, keyword_init: true)
 

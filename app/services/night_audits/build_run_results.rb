@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-module HotelOps
-  class BuildNightAuditRunResults
+module NightAudits
+  class BuildRunResults
     def self.call(night_audit:)
       new(night_audit: night_audit).call
     end
@@ -30,8 +30,8 @@ module HotelOps
           {
             "item_key" => "booking_audit_log:#{log.id}",
             "booking_id" => log.auditable_id,
-            "confirmation_token" => booking.confirmation_token,
-            "guest_name" => booking.guest_name,
+            "confirmation_token" => booking&.confirmation_token,
+            "guest_name" => booking&.guest_name || "Deleted booking",
             "from" => log.old_value["status"],
             "to" => log.new_value["status"],
             "occurred_at" => log.occurred_at&.iso8601

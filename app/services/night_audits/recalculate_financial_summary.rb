@@ -1,5 +1,5 @@
-module HotelOps
-  class RecalculateNightAuditSummary
+module NightAudits
+  class RecalculateFinancialSummary
     def initialize(hotel:, business_date:, user:, reason:)
       @hotel = hotel
       @business_date = business_date.to_date
@@ -31,7 +31,7 @@ module HotelOps
     private
 
     def calculate_new_totals
-      HotelOps::CalculateBusinessDayFinancials.call(hotel: @hotel, business_date: @business_date)
+      NightAudits::CalculateFinancialSummary.call(hotel: @hotel, business_date: @business_date)
     end
 
     def totals_changed?(summary, new_totals)

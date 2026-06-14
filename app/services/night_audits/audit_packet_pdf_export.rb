@@ -3,8 +3,8 @@
 require "prawn"
 require "prawn/table"
 
-module HotelOps
-  class AuditPacketPdfExportService
+module NightAudits
+  class AuditPacketPdfExport
     def initialize(night_audit:)
       @night_audit = night_audit
       @hotel = night_audit.hotel

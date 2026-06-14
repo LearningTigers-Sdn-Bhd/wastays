@@ -2,7 +2,7 @@
 
 require "ostruct"
 
-module Bookings
+module NightAudits
   class ProcessNoShowReviews
     def self.call(night_audit:, user:)
       new(night_audit: night_audit, user: user).call
@@ -18,7 +18,7 @@ module Bookings
 
     def call
       finalize_expired_reviews
-      review_result = Bookings::ReviewMissedArrivals.call(night_audit: @night_audit, user: @user)
+      review_result = NightAudits::ReviewMissedArrivals.call(night_audit: @night_audit, user: @user)
 
       OpenStruct.new(
         success?: true,
