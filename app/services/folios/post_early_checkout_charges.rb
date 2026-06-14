@@ -199,7 +199,7 @@ module Folios
 
       options = @options.merge(metadata: (@options[:metadata] || {}).merge(metadata))
 
-      if @booking.hotel.date_closed?(@departure_date) || @departure_date < @booking.hotel.business_date_for
+      if @booking.hotel.date_closed?(@departure_date) || @departure_date < @booking.hotel.current_business_date
         options[:override_night_audit] = true
         options[:correction_reason] ||= "early_departure_charge_on_closed_date"
         options[:correction_note] ||= "Automated posting of early departure charges on a closed business date."

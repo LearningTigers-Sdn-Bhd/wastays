@@ -18,7 +18,7 @@ module Folios
         @booking.payment_transactions.where(status: "captured").find_each do |pt|
           next if already_recorded?(pt)
 
-          posting_date = pt.captured_at&.to_date || pt.created_at.to_date
+          posting_date = @booking.hotel.current_business_date
           amount = pt.amount_subunits.to_d / 100.0
 
           transaction_options = override_options.merge({
@@ -31,7 +31,7 @@ module Folios
             }
           })
 
-          if @booking.hotel.date_closed?(posting_date) || posting_date < @booking.hotel.business_date_for
+          if @booking.hotel.date_closed?(posting_date) || posting_date < @booking.hotel.current_business_date
             transaction_options[:override_night_audit] = true
             transaction_options[:correction_reason] ||= "payment_sync_on_closed_date"
             transaction_options[:correction_note] ||= "Automated sync of captured payment on a closed business date."

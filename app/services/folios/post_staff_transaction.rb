@@ -10,7 +10,7 @@ module Folios
       "adjustment" => %w[adjustment correction discount write_off other]
     }.freeze
 
-    def self.call(folio:, user:, transaction_type:, category:, amount:, description:, posting_date: nil)
+    def self.call(folio:, user:, transaction_type:, category:, amount:, description:, posting_date: nil, options: {})
       new(
         folio: folio,
         user: user,
@@ -18,18 +18,20 @@ module Folios
         category: category,
         amount: amount,
         description: description,
-        posting_date: posting_date
+        posting_date: posting_date,
+        options: options
       ).call
     end
 
-    def initialize(folio:, user:, transaction_type:, category:, amount:, description:, posting_date: nil)
+    def initialize(folio:, user:, transaction_type:, category:, amount:, description:, posting_date: nil, options: {})
       @folio = folio
       @user = user
       @transaction_type = transaction_type.to_s
       @category = category.to_s
       @amount = amount.to_d
       @description = description.to_s.strip
-      @posting_date = posting_date.presence || Time.current.to_date
+      @posting_date = posting_date.presence || @folio.hotel.current_business_date
+      @options = options
     end
 
     def call
@@ -47,13 +49,13 @@ module Folios
         user: @user,
         description: @description,
         posting_date: @posting_date,
-        options: {
-          metadata: {
-            posting_source: "staff",
+        options: @options.merge(
+          metadata: (@options[:metadata] || {}).merge(
+            posting_source: @options[:posting_source].presence || "staff",
             posted_from: "booking_show",
             posted_by_user_id: @user&.id
-          }
-        }
+          )
+        )
       ).call
     end
 
