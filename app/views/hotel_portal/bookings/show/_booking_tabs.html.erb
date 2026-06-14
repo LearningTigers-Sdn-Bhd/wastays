@@ -1,22 +1,26 @@
 <div class="mt-8 mb-3 rounded-xl border border-slate-200 bg-white p-1.5">
   <nav class="flex items-center gap-1 overflow-x-auto" aria-label="Tabs" role="tablist">
     <!-- Booking Details Tab -->
-    <button type="button" 
-            data-booking-tabs-target="tab" 
-            data-tab-name="booking-details" 
-            data-action="click->booking-tabs#switch" 
-            class="group inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 data-[active=true]:bg-blue-600 data-[active=true]:text-white data-[active=true]:font-semibold transition-all duration-150 whitespace-nowrap" 
+    <button type="button"
+            data-tabs-target="tab"
+            data-tab-name="booking-details"
+            data-tab-label="Booking Details"
+            data-action="click->tabs#switch"
+            class="group inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 data-[active=true]:bg-blue-600 data-[active=true]:text-white data-[active=true]:font-semibold transition-all duration-150 whitespace-nowrap"
+            aria-controls="booking-details-panel"
             role="tab">
       <%= cached_icon "file-text", class: "size-4" %>
       <span>Booking Details</span>
     </button>
 
     <!-- Requests Tab -->
-    <button type="button" 
-            data-booking-tabs-target="tab" 
-            data-tab-name="requests" 
-            data-action="click->booking-tabs#switch" 
-            class="group inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 data-[active=true]:bg-blue-600 data-[active=true]:text-white data-[active=true]:font-semibold transition-all duration-150 whitespace-nowrap" 
+    <button type="button"
+            data-tabs-target="tab"
+            data-tab-name="requests"
+            data-tab-label="Requests"
+            data-action="click->tabs#switch"
+            class="group inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 data-[active=true]:bg-blue-600 data-[active=true]:text-white data-[active=true]:font-semibold transition-all duration-150 whitespace-nowrap"
+            aria-controls="requests-panel"
             role="tab">
       <%= cached_icon "inbox", class: "size-4" %>
       <span>Requests</span>
@@ -27,11 +31,13 @@
 
     <!-- History Tab -->
     <% audit_count = local_assigns[:audit_logs] ? audit_logs.size : 0 %>
-    <button type="button" 
-            data-booking-tabs-target="tab" 
-            data-tab-name="history" 
-            data-action="click->booking-tabs#switch" 
-            class="group inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 data-[active=true]:bg-blue-600 data-[active=true]:text-white data-[active=true]:font-semibold transition-all duration-150 whitespace-nowrap" 
+    <button type="button"
+            data-tabs-target="tab"
+            data-tab-name="history"
+            data-tab-label="History"
+            data-action="click->tabs#switch"
+            class="group inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 data-[active=true]:bg-blue-600 data-[active=true]:text-white data-[active=true]:font-semibold transition-all duration-150 whitespace-nowrap"
+            aria-controls="history-panel"
             role="tab">
       <%= cached_icon "history", class: "size-4" %>
       <span>History</span>
