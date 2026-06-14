@@ -1,17 +1,16 @@
-<details class="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" <%= "open" if presenter.manual_adjustments_open? %> data-testid="manual-adjustments">
-  <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-slate-50/70 px-4 py-3 [&::-webkit-details-marker]:hidden">
+<section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" data-testid="manual-adjustments">
+  <header class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3">
     <div>
       <h2 class="inline-flex items-center gap-2 text-sm font-bold text-slate-950">
-        <%= cached_icon "chevron-right", class: "size-4 transition-transform group-open:rotate-90", aria: { hidden: true } %>
         <span class="inline-flex size-6 items-center justify-center rounded-md bg-amber-50 text-amber-700"><%= cached_icon "receipt-text", class: "size-3.5", aria: { hidden: true } %></span>
         Manual Adjustments & Voids
       </h2>
       <p class="mt-0.5 text-xs text-slate-500">Staff interventions, rebates, voids, and revenue corrections.</p>
     </div>
     <span class="shrink-0 text-xs font-bold text-slate-500"><%= presenter.manual_adjustment_rows.count %> records</span>
-  </summary>
+  </header>
 
-  <div class="border-t border-slate-200">
+  <div>
     <% if presenter.manual_adjustment_rows.any? %>
       <div class="hidden overflow-x-auto md:block">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
@@ -45,4 +44,4 @@
       <p class="px-4 py-3 text-sm font-medium text-slate-600"><%= presenter.empty_state(:adjustments) %></p>
     <% end %>
   </div>
-</details>
+</section>

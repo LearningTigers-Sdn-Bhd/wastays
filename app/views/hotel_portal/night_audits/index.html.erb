@@ -8,6 +8,16 @@
   <%= render "hotel_portal/night_audits/index/close_readiness", presenter: presenter, resolve_action: resolve_action %>
   <%= render "hotel_portal/night_audits/index/blockers", presenter: presenter, resolve_action: resolve_action if presenter.flattened_blocker_rows.any? %>
   <%= render "hotel_portal/night_audits/index/audit_action", presenter: presenter, primary_action: primary_action, resolve_action: resolve_action %>
-  <%= render "hotel_portal/night_audits/index/advanced_actions", presenter: presenter %>
-  <%= render "hotel_portal/night_audits/index/audit_history", presenter: presenter, night_audits: @night_audits %>
+
+  <div data-controller="tabs" data-tabs-default-tab-value="audit-history" class="space-y-4">
+    <%= render "hotel_portal/night_audits/index/tabs", presenter: presenter %>
+
+    <div id="audit-history-panel" data-tabs-target="panel" data-tab-panel="audit-history" role="tabpanel" data-testid="audit-history-panel">
+      <%= render "hotel_portal/night_audits/index/audit_history", presenter: presenter, night_audits: @night_audits %>
+    </div>
+
+    <div id="advanced-actions-panel" data-tabs-target="panel" data-tab-panel="advanced-actions" role="tabpanel" class="hidden" data-testid="index-advanced-actions-panel">
+      <%= render "hotel_portal/night_audits/index/advanced_actions", presenter: presenter %>
+    </div>
+  </div>
 </div>

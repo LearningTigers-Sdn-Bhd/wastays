@@ -1,4 +1,4 @@
-<div class="grid gap-4 xl:grid-cols-2">
+<div class="space-y-4">
   <% [["Hard Blockers", "Accounting and posting integrity issues.", presenter.blocker_rows, :blockers, "red", "triangle-alert"], ["Warnings / Review Items", "Carried forward without preventing close.", presenter.warning_rows, :warnings, "amber", "circle-alert"]].each do |title, description, rows, empty_key, color, icon| %>
     <% header_class = color == "red" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700" %>
     <% text_class = color == "red" ? "text-red-700" : "text-amber-700" %>
