@@ -28,18 +28,24 @@ module FinancialControls
     end
 
     def call!
-      case status_for_posting
+      record = business_date_record
+      raise PostingBlocked, "The business date #{@business_date} has no accounting control record." unless record
+
+      case record.status
       when "open"
+        require_authoritative_current!(record)
         true
       when "audit_running"
+        require_authoritative_current!(record)
         return true if audit_owned_posting?
 
         raise PostingBlocked, "The business date #{@business_date} is currently in night audit. Only night audit postings are allowed."
       when "audit_blocked"
+        require_authoritative_current!(record)
         return true if valid_blocker_resolution?
 
         raise PostingBlocked, "The business date #{@business_date} is blocked by night audit. Only audit blocker-resolution postings are allowed."
-      when "closed", "reopened", "force_closed"
+      when "closed", "force_closed"
         validate_override!
       else
         raise PostingBlocked, "The business date #{@business_date} is not open for financial posting."
@@ -48,33 +54,14 @@ module FinancialControls
 
     private
 
-    def status_for_posting
-      business_date_record&.status || inferred_missing_status
-    end
-
     def business_date_record
       @business_date_record ||= HotelBusinessDate.find_by(hotel: @hotel, business_date: @business_date)
     end
 
-    def inferred_missing_status
-      return "audit_running" if running_night_audit_exists?
-      return "audit_blocked" if blocked_night_audit_exists?
-      return "closed" if completed_night_audit_exists?
-      return "open" if @business_date >= @hotel.business_date_for
+    def require_authoritative_current!(record)
+      return if @hotel.current_business_date_record&.id == record.id
 
-      "closed"
-    end
-
-    def running_night_audit_exists?
-      NightAudit.exists?(hotel_id: @hotel.id, business_date: @business_date, status: "running")
-    end
-
-    def blocked_night_audit_exists?
-      NightAudit.exists?(hotel_id: @hotel.id, business_date: @business_date, status: "blocked")
-    end
-
-    def completed_night_audit_exists?
-      NightAudit.exists?(hotel_id: @hotel.id, business_date: @business_date, status: "completed")
+      raise PostingBlocked, "The business date #{@business_date} is not the hotel's current accounting business date."
     end
 
     def audit_owned_posting?
@@ -90,7 +77,7 @@ module FinancialControls
 
     def validate_override!
       unless @override
-        msg = if status_for_posting == "force_closed"
+        msg = if business_date_record.force_closed?
                 "The business date #{@business_date} has been force-closed. Please provide an override flag to post to a force-closed date."
         else
                 "The business date #{@business_date} is already closed. Please provide an override flag to post to a closed date."

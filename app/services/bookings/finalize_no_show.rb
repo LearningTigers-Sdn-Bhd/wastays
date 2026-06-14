@@ -91,7 +91,7 @@ module Bookings
       return if already_posted?(folio, metadata[:no_show_charge_key])
 
       options = { metadata: metadata, posting_source: "no_show" }
-      if @booking.hotel.date_closed?(@business_date) || @business_date < @booking.hotel.business_date_for
+      if @booking.hotel.date_closed?(@business_date) || @business_date < @booking.hotel.current_business_date
         options.merge!(
           override_night_audit: true,
           system_posting: true,

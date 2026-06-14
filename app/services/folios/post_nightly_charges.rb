@@ -178,8 +178,8 @@ module Folios
     end
 
     def record_item_log(action_type, item)
-      @night_audit.night_audit_logs.create!(
-        hotel: @hotel,
+      NightAudits::RecordLog.call!(
+        night_audit: @night_audit,
         user: @user,
         action_type: action_type,
         message: item["reason"],
