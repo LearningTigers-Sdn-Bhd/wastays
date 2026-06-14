@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Bookings::ReviewMissedArrivals do
+RSpec.describe NightAudits::ReviewMissedArrivals do
   it "moves an eligible confirmed arrival into no-show review" do
     hotel = create(:hotel)
     user = create(:user, account: hotel.account)

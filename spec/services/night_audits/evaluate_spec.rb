@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe HotelOps::EvaluateNightAudit do
+RSpec.describe NightAudits::Evaluate do
   let(:hotel) { create(:hotel) }
   let(:business_date) { Date.current - 1.day }
   let(:service) { described_class.new(hotel: hotel, business_date: business_date) }
@@ -26,6 +26,14 @@ RSpec.describe HotelOps::EvaluateNightAudit do
 
       expect(result[:blocked_details]["due_out_not_checked_out"]).to be_empty
       expect(result[:exceptions]["review_due_out"].sole["booking_id"]).to eq(booking.id)
+    end
+
+    it 'treats checkout_required bookings as due-out blockers' do
+      booking = create(:booking, status: 'checkout_required', hotel: hotel, check_out: business_date)
+
+      result = service.call
+
+      expect(result[:blocked_details]["due_out_not_checked_out"].sole["booking_id"]).to eq(booking.id)
     end
 
     it 'omits posting-generated blockers during pre-close evaluation' do
@@ -55,6 +63,38 @@ RSpec.describe HotelOps::EvaluateNightAudit do
       result = described_class.new(hotel: hotel, business_date: business_date, phase: :post_close).call
 
       expect(result[:blocked_details]["missing_folio"].first["booking_id"]).to eq(booking.id)
+    end
+
+    it 'keeps a missing folio as a blocker for a chargeable checked-in booking' do
+      booking = create(:booking,
+        status: 'checked_in',
+        hotel: hotel,
+        check_in: business_date,
+        check_out: business_date + 1.day,
+        checked_in_at: business_date.beginning_of_day)
+
+      result = service.call
+
+      expect(result[:blocked_details]["missing_folio"].sole["booking_id"]).to eq(booking.id)
+      expect(result[:exceptions]).not_to have_key("missing_folio")
+    end
+
+    it 'does not require a folio for proven non-chargeable bookings' do
+      cancelled = create(:booking,
+        status: 'cancelled',
+        hotel: hotel,
+        check_in: business_date,
+        check_out: business_date + 1.day)
+      no_show = create(:booking,
+        status: 'no_show',
+        hotel: hotel,
+        check_in: business_date,
+        check_out: business_date + 1.day)
+
+      result = service.call
+
+      missing_folio_ids = result[:blocked_details]["missing_folio"].pluck("booking_id")
+      expect(missing_folio_ids).not_to include(cancelled.id, no_show.id)
     end
 
     it 'identifies large balance exceptions' do

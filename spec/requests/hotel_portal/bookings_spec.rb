@@ -300,6 +300,22 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).not_to include('data-checkout-card="early-departure"')
       expect(response.body.scan("Ready for checkout").size).to eq(1)
     end
+
+    it "prefills the actual checkout time from scheduled checkout when checkout is required" do
+      scheduled_checkout = Time.find_zone(hotel.hotel_time_zone).local(2026, 6, 12, 12, 0)
+      booking.update!(check_out: scheduled_checkout)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+      booking.transition_status_to!("checkout_required", event: "reject_late_checkout")
+      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+
+      get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Checkout Required")
+      expect(response.body).to include('value="2026-06-12T12:00"')
+      expect(response.body).to include("required")
+    end
   end
 
   describe "POST /booking-transactions/new-booking" do
@@ -608,6 +624,53 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(booking.reload.status).to eq("checked_in")
       expect(folio.folio_transactions.payment).to be_empty
     end
+
+    it "requires an explicit checkout timestamp for checkout-required bookings" do
+      booking.transition_status_to!("checked_in", event: "check_in")
+      booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+      booking.transition_status_to!("checkout_required", event: "reject_late_checkout")
+      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: ""
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Check-out date and time can&#39;t be blank")
+      expect(booking.reload.status).to eq("checkout_required")
+    end
+
+    it "posts settlement as blocker resolution and checks out when business date is audit blocked" do
+      grant_permission("post_folio_payments")
+      business_date = hotel.current_business_date
+      hotel.current_business_date_record.update!(status: "audit_blocked")
+      audit = create(:night_audit, hotel: hotel, business_date: business_date, status: "blocked")
+      booking.update!(check_in: business_date - 1.day, check_out: business_date)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+      booking.transition_status_to!("checkout_required", event: "reject_late_checkout")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: booking.check_out.strftime("%Y-%m-%dT%H:%M"),
+          checkout_payment_method: "cash",
+          checkout_payment_amount: "100.00"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:success)
+      expect(booking.reload.status).to eq("completed")
+      expect(folio.reload.status).to eq("closed")
+      payment = folio.folio_transactions.payment.last
+      expect(payment.metadata["posting_source"]).to eq("audit_blocker_resolution")
+      expect(payment.metadata.dig("blocker_resolution", "night_audit_id")).to eq(audit.id)
+    end
   end
 
   describe "POST /process_late_checkout" do
@@ -639,20 +702,22 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(folio.folio_transactions.where(category: "late_checkout_charge").sum(:amount)).to eq(150.0)
     end
 
-    it "resolves late checkout without charge" do
+    it "rejects late checkout and opens checkout without charge" do
       booking.transition_status_to!("checked_in", event: "check_in")
       booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
 
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/process_late_checkout", params: {
         charge_type: "none",
         check_out: new_checkout_param
-      }
+      }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('turbo-stream action="update" target="offcanvas_drawer"')
+      expect(response.body).to include("Checkout Required")
 
       booking.reload
-      expect(booking.status).to eq("checked_in")
-      expect(booking.check_out.to_date).to eq(new_checkout_date.to_date)
+      expect(booking.status).to eq("checkout_required")
+      expect(booking.check_out.to_date).not_to eq(new_checkout_date.to_date)
       expect(folio.folio_transactions.where(category: "late_checkout_charge").count).to eq(0)
     end
 

@@ -18,6 +18,8 @@ RSpec.describe Bookings::FinalizeNoShow do
       tax_lines: []
     )
     create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0)
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+    start_business_date_audit(hotel)
 
     result = described_class.call(booking: booking, user: user)
 

@@ -1,9 +1,9 @@
 require "rails_helper"
 
-RSpec.describe HotelOps::RunNightAudit do
+RSpec.describe NightAudits::Run do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account) }
-  let(:user) { create(:user, account: account, role: "hotel_staff") }
+  let(:hotel) { create(:hotel, :without_current_business_date, account: account) }
+  let(:user) { create(:user, account: account, role: "superadmin") }
   let(:business_date) { 2.days.ago.to_date }
 
   def create_balanced_folio(booking, charge_amount: 200.0, payment_amount: charge_amount)
@@ -54,7 +54,8 @@ RSpec.describe HotelOps::RunNightAudit do
         business_date: business_date,
         performed_by_user: user,
         trigger_mode: "manual",
-        force_roll: true
+        force_roll: true,
+        notes: "Manager accepted unresolved blockers"
       ).call
     end
 

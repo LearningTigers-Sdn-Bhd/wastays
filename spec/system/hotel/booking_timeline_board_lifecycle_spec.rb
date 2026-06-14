@@ -126,7 +126,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
 
     # Set business date to May 22
     @business_date = Date.new(2026, 5, 22)
-    HotelBusinessDate.for_hotel_date!(hotel: hotel, date: @business_date)
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: @business_date)
 
     @booking = create(:booking,
       hotel: hotel,
@@ -172,7 +172,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     travel_to @initial_time + 1.day
 
     perform_enqueued_jobs do
-      result = HotelOps::RunNightAudit.new(
+      result = NightAudits::Run.new(
         hotel: hotel,
         business_date: @business_date,
         performed_by_user: user,

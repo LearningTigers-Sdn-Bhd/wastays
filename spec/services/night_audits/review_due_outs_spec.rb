@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Bookings::ReviewDueOuts do
+RSpec.describe NightAudits::ReviewDueOuts do
   let(:hotel) { create(:hotel, time_zone: "Kuala Lumpur") }
   let(:user) { create(:user, account: hotel.account) }
   let(:business_date) { Date.new(2026, 6, 12) }

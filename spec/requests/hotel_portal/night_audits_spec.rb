@@ -8,7 +8,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:hotel) do
-    create(:hotel,
+    create(:hotel, :without_current_business_date,
       account: account,
       plan: plan,
       status: "live",
@@ -57,19 +57,19 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     expect(NightAudit.last).to be_completed
   end
 
-  it "defaults manual business date to yesterday when omitted" do
+  it "defaults manual business date to the current accounting date when omitted" do
     sign_in(user)
 
     kl_zone = Time.find_zone("Kuala Lumpur")
     travel_to(kl_zone.local(2026, 5, 19, 10, 10)) do
-      # At 10:10 AM on May 19, May 18 should be the latest closable date
+      # The clock still calculates May 18 as latest closable, but accounting authority remains May 19.
       expect(hotel.latest_closable_business_date).to eq(Date.new(2026, 5, 18))
       perform_enqueued_jobs do
         post hotel_night_audits_path(hotel), params: { night_audit: { notes: "Default run" } }
       end
     end
 
-    expect(NightAudit.last.business_date).to eq(Date.new(2026, 5, 18))
+    expect(NightAudit.last.business_date).to eq(Date.new(2026, 5, 19))
     expect(NightAudit.last.trigger_mode).to eq("manual")
   end
 
@@ -120,7 +120,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
 
     expect do
       post hotel_night_audits_path(hotel), params: { night_audit: { business_date: business_date.to_s } }
-    end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+    end.not_to have_enqueued_job(NightAudits::RunJob)
 
     expect(response).to redirect_to(hotel_night_audit_path(hotel, night_audit))
     expect(flash[:notice]).to eq("Night audit is already scheduled or running in the background.")
@@ -133,7 +133,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
       expect do
         post hotel_night_audits_path(hotel), params: { night_audit: { business_date: Date.new(2026, 5, 21).to_s } }
-      end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+      end.not_to have_enqueued_job(NightAudits::RunJob)
     end
 
     expect(response).to redirect_to(hotel_night_audits_path(hotel))
@@ -175,7 +175,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
             allow_unclosable_date: "1"
           }
         }
-      end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+      end.not_to have_enqueued_job(NightAudits::RunJob)
     end
 
     expect(response).to redirect_to(hotel_night_audits_path(hotel))

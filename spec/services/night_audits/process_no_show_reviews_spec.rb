@@ -2,13 +2,21 @@
 
 require "rails_helper"
 
-RSpec.describe Bookings::ProcessNoShowReviews do
+RSpec.describe NightAudits::ProcessNoShowReviews do
   let(:business_date) { Date.new(2026, 5, 18) }
   let(:hotel) { create(:hotel, time_zone: "Kuala Lumpur") }
   let(:user) { create(:user, account: hotel.account) }
   let(:room_type) { create(:room_type, hotel: hotel, quantity: 5, room_numbers: [ "101" ]) }
 
   def audit(date)
+    current = hotel.current_business_date_record
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: date) unless current.business_date <= date
+
+    while hotel.reload.current_business_date < date
+      close_and_open_next_business_date(hotel)
+    end
+
+    start_business_date_audit(hotel) if hotel.current_business_date_record.open?
     create(:night_audit, hotel: hotel, business_date: date, performed_by_user: user, status: "running", started_at: Time.current)
   end
 
