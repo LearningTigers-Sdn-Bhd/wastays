@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-module HotelOps
-  class CalculateBusinessDayFinancials
+module NightAudits
+  class CalculateFinancialSummary
     def self.call(hotel:, business_date:)
       new(hotel: hotel, business_date: business_date).call
     end

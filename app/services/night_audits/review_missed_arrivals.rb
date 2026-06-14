@@ -2,7 +2,7 @@
 
 require "ostruct"
 
-module Bookings
+module NightAudits
   class ReviewMissedArrivals
     def self.call(night_audit:, user:)
       new(night_audit: night_audit, user: user).call

@@ -1,5 +1,5 @@
-module HotelOps
-  class EvaluateNightAudit
+module NightAudits
+  class Evaluate
     include Folios::NightlyChargeCalculation
 
     def initialize(hotel:, business_date:, phase: :post_close)
@@ -78,7 +78,7 @@ module HotelOps
 
     def due_out_not_checked_out
       cutoff = (@business_date + 1.day).in_time_zone(@hotel.hotel_time_zone).beginning_of_day
-      @due_out_not_checked_out ||= hotel_bookings.checked_in.where("check_out < ?", cutoff)
+      @due_out_not_checked_out ||= hotel_bookings.where(status: [ "checked_in", "checkout_required" ]).where("check_out < ?", cutoff)
     end
 
     def review_due_out_bookings
@@ -104,7 +104,15 @@ module HotelOps
     end
 
     def missing_folio_bookings
-      @missing_folio_bookings ||= financially_relevant_bookings.select { |booking| booking.booking_folio.blank? }
+      @missing_folio_bookings ||= financially_relevant_bookings.select do |booking|
+        booking.booking_folio.blank? && requires_accounting_folio?(booking)
+      end
+    end
+
+    def requires_accounting_folio?(booking)
+      return false if booking.status.in?(%w[cancelled no_show])
+
+      true
     end
 
     def nightly_charge_bookings

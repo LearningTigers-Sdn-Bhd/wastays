@@ -1,5 +1,5 @@
-module HotelOps
-  class RunNightAudit
+module NightAudits
+  class Run
     Result = Struct.new(:success?, :night_audit, :error, keyword_init: true)
 
     def initialize(hotel:, business_date:, performed_by_user:, trigger_mode:, notes: nil, allow_unclosable_date: false, force_roll: false)
@@ -41,8 +41,8 @@ module HotelOps
       record_night_audit_event!(night_audit, business_date, "night_audit_started", "Night audit started")
       record_night_audit_event!(night_audit, business_date, "business_date_audit_started", "Business date moved to audit_running")
 
-      no_show_result = Bookings::ProcessNoShowReviews.call(night_audit: night_audit, user: @performed_by_user)
-      due_out_result = Bookings::ReviewDueOuts.call(night_audit: night_audit, user: @performed_by_user)
+      no_show_result = NightAudits::ProcessNoShowReviews.call(night_audit: night_audit, user: @performed_by_user)
+      due_out_result = NightAudits::ReviewDueOuts.call(night_audit: night_audit, user: @performed_by_user)
       record_result_items(night_audit, "item_skipped", due_out_result.skipped)
       record_result_items(night_audit, "item_failed", due_out_result.failed)
       night_audit.night_audit_logs.where(action_type: "process_started").order(:id).last&.update!(
@@ -53,7 +53,7 @@ module HotelOps
         }
       )
 
-      pre_evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :pre_close).call
+      pre_evaluation = NightAudits::Evaluate.new(hotel: @hotel, business_date: @business_date, phase: :pre_close).call
 
       if blocked?(pre_evaluation) && !@force_roll
         log_blockers(night_audit, pre_evaluation[:blocked_details])
@@ -69,7 +69,12 @@ module HotelOps
             blocked_details: pre_evaluation[:blocked_details],
             exceptions: pre_evaluation[:exceptions]
           )
-          business_date.block_audit!(blockers: pre_evaluation[:blocked_details])
+          BusinessDates::BlockAudit.call!(
+            hotel: @hotel,
+            blockers: pre_evaluation[:blocked_details],
+            actor: @performed_by_user,
+            system_context: true
+          )
         end
 
         log_event(night_audit, "blocker_found", "Night audit process stopped before posting due to blockers")
@@ -81,7 +86,7 @@ module HotelOps
       Folios::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
 
       # Use the evaluation service to get blockers and exceptions
-      evaluation = HotelOps::EvaluateNightAudit.new(hotel: @hotel, business_date: @business_date, phase: :post_close).call
+      evaluation = NightAudits::Evaluate.new(hotel: @hotel, business_date: @business_date, phase: :post_close).call
 
       log_blockers(night_audit, evaluation[:blocked_details])
       log_exceptions(night_audit, evaluation[:exceptions])
@@ -108,22 +113,38 @@ module HotelOps
 
         if final_status == "completed"
           if @force_roll && is_blocked
-            business_date.force_close!
-          else
-            business_date.complete_audit!
+            BusinessDates::BlockAudit.call!(
+              hotel: @hotel,
+              blockers: evaluation[:blocked_details],
+              actor: @performed_by_user,
+              system_context: true
+            )
           end
 
-          next_business_date = business_date.open_next_business_date!
+          close_result = BusinessDates::CloseAndOpenNext.call!(
+            hotel: @hotel,
+            actor: @performed_by_user,
+            system_context: !@force_roll,
+            force: @force_roll && is_blocked,
+            reason: @notes,
+            blockers: evaluation[:blocked_details],
+            night_audit: night_audit
+          )
+          business_date = close_result.closed_business_date
+          next_business_date = close_result.next_business_date
           Financials::CreateJournalBatch.call(hotel: @hotel, business_date: @business_date)
 
           event_type = @force_roll && is_blocked ? "night_audit_force_rolled" : "night_audit_completed"
           reason = @force_roll && is_blocked ? "Night audit force-rolled with blockers" : "Night audit completed"
 
           persist_night_audit_event!(night_audit, business_date, event_type, reason, financial_totals: financial_totals)
-          persist_night_audit_event!(night_audit, business_date, "business_date_closed", "Business date moved to closed")
-          persist_night_audit_event!(night_audit, next_business_date, "business_date_opened", "Next business date opened after night audit", opened_business_date: next_business_date.business_date)
         else
-          business_date.block_audit!(blockers: evaluation[:blocked_details])
+          BusinessDates::BlockAudit.call!(
+            hotel: @hotel,
+            blockers: evaluation[:blocked_details],
+            actor: @performed_by_user,
+            system_context: true
+          )
         end
       end
 
@@ -144,8 +165,8 @@ module HotelOps
     private
 
     def log_event(night_audit, action_type, message, metadata = {})
-      night_audit.night_audit_logs.create!(
-        hotel: @hotel,
+      NightAudits::RecordLog.call!(
+        night_audit: night_audit,
         user: @performed_by_user,
         action_type: action_type,
         message: message,
@@ -176,20 +197,23 @@ module HotelOps
     end
 
     def calculate_financial_totals
-      HotelOps::CalculateBusinessDayFinancials.call(hotel: @hotel, business_date: @business_date)
+      NightAudits::CalculateFinancialSummary.call(hotel: @hotel, business_date: @business_date)
     end
 
     def claim_business_date
-      business_date = HotelBusinessDate.for_hotel_date!(hotel: @hotel, date: @business_date)
-      business_date.with_lock do
-        return [ nil, "Night audit is already running for this date." ] if business_date.audit_running?
-        if business_date.closed? || business_date.force_closed?
-          return [ nil, "Night audit has already been closed for this date." ]
-        end
+      business_date = @hotel.current_business_date_record ||
+        HotelBusinessDate.initialize_for_hotel!(hotel: @hotel, date: @business_date)
+      return [ nil, "Business date #{@business_date} is not the current accounting business date #{business_date.business_date}." ] unless business_date.business_date == @business_date
+      return [ nil, "Night audit is already running for this date." ] if business_date.audit_running?
 
-        business_date.start_audit!
-        [ business_date, nil ]
+      transitioned = if business_date.audit_blocked?
+                       BusinessDates::RetryAudit.call!(hotel: @hotel, actor: @performed_by_user, system_context: true)
+      else
+                       BusinessDates::StartAudit.call!(hotel: @hotel, actor: @performed_by_user, system_context: true)
       end
+      [ transitioned, nil ]
+    rescue HotelBusinessDate::InvalidTransition => e
+      [ nil, e.message ]
     end
 
     def blocked?(evaluation)
@@ -206,7 +230,12 @@ module HotelOps
       business_date.reload
       return unless business_date.audit_running?
 
-      business_date.block_audit!(blockers: { "audit_failure" => [ { "message" => error_message } ] })
+      BusinessDates::BlockAudit.call!(
+        hotel: @hotel,
+        blockers: { "audit_failure" => [ { "message" => error_message } ] },
+        actor: @performed_by_user,
+        system_context: true
+      )
     rescue StandardError => e
       Rails.logger.error("Failed to mark business date blocked after night audit failure: #{e.message}")
     end
@@ -240,7 +269,7 @@ module HotelOps
 
     def summary_with_run_results(night_audit, summary)
       summary.to_h.merge(
-        "run_results" => HotelOps::BuildNightAuditRunResults.call(night_audit: night_audit)
+        "run_results" => NightAudits::BuildRunResults.call(night_audit: night_audit)
       )
     end
 
