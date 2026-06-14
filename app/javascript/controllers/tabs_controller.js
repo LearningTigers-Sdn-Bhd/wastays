@@ -9,8 +9,8 @@ export default class extends Controller {
 
   connect() {
     const urlParams = new URLSearchParams(window.location.search)
-    const urlTab = urlParams.get(this.parameterNameValue)
-    const activeTab = urlTab || this.defaultTabValue
+    const requestedTab = urlParams.get(this.parameterNameValue)
+    const activeTab = this.validTab(requestedTab) ? requestedTab : this.defaultTab
     this.show(activeTab)
   }
 
@@ -18,6 +18,7 @@ export default class extends Controller {
     event.preventDefault()
     const tabName = event.currentTarget.dataset.tabName
     this.show(tabName)
+    this.updateBreadcrumb(event.currentTarget.dataset.tabLabel)
     
     // Update URL without reloading to preserve state for redirects
     const url = new URL(window.location)
@@ -36,5 +37,18 @@ export default class extends Controller {
       const active = panel.dataset.tabPanel === tabName
       panel.classList.toggle("hidden", !active)
     })
+  }
+
+  validTab(name) {
+    return name && this.tabTargets.some((tab) => tab.dataset.tabName === name)
+  }
+
+  updateBreadcrumb(label) {
+    const breadcrumb = document.querySelector("[data-tab-breadcrumb-label]")
+    if (breadcrumb && label) breadcrumb.textContent = label
+  }
+
+  get defaultTab() {
+    return this.defaultTabValue || this.tabTargets[0]?.dataset.tabName
   }
 }

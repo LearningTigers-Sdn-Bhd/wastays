@@ -23,6 +23,7 @@ export default class extends Controller {
 
     this.positionMenu(button, menu)
     menu.classList.remove("hidden")
+    button.setAttribute("aria-expanded", "true")
 
     document.addEventListener("click", this.closeHandler, { once: true })
   }
@@ -33,13 +34,19 @@ export default class extends Controller {
 
   closeAll() {
     this.menuTargets.forEach((m) => m.classList.add("hidden"))
+    this.itemTargets.forEach((item) => {
+      item.querySelector("[aria-expanded]")?.setAttribute("aria-expanded", "false")
+    })
   }
 
   positionMenu(button, menu) {
     const rect = button.getBoundingClientRect()
     const margin = 8
     const menuWidth = 224
-    const left = Math.min(Math.max(rect.left, margin), window.innerWidth - menuWidth - margin)
+    const left = Math.min(
+      Math.max(rect.right - menuWidth, margin),
+      window.innerWidth - menuWidth - margin
+    )
 
     menu.style.left = `${left}px`
     menu.style.top = `${rect.bottom + 6}px`

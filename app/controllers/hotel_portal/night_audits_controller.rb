@@ -1,9 +1,20 @@
 module HotelPortal
   class NightAuditsController < BaseController
+    INDEX_TAB_LABELS = {
+      "audit-history" => "Audit History",
+      "advanced-actions" => "Advanced Actions"
+    }.freeze
+    SHOW_TAB_LABELS = {
+      "results" => "Results",
+      "financial-summary" => "Financial Summary",
+      "advanced-actions" => "Advanced Actions"
+    }.freeze
+
     before_action :authorize_night_audit_access!
     before_action -> { require_feature!("no_show_auto_handling") }
 
     def index
+      append_breadcrumb({ label: index_tab_label, tab_breadcrumb: true })
       @suggested_business_date = authoritative_business_date
       @night_audits = current_hotel.night_audits.recent_first.page(params[:page]).per(25)
       @pre_audit_evaluation = ::NightAudits::Evaluate.new(hotel: current_hotel, business_date: @suggested_business_date).call
@@ -18,6 +29,8 @@ module HotelPortal
 
     def show
       @night_audit = current_hotel.night_audits.find(params[:id])
+      append_breadcrumb @night_audit.business_date.strftime("%d %b %Y"), hotel_night_audit_path(current_hotel, @night_audit)
+      append_breadcrumb({ label: show_tab_label, tab_breadcrumb: true })
 
       @adjustments = FolioTransaction.joins(booking_folio: :booking)
         .where(bookings: { hotel_id: current_hotel.id })
@@ -122,6 +135,14 @@ module HotelPortal
     end
 
     private
+
+    def index_tab_label
+      INDEX_TAB_LABELS.fetch(params[:tab].to_s, INDEX_TAB_LABELS.fetch("audit-history"))
+    end
+
+    def show_tab_label
+      SHOW_TAB_LABELS.fetch(params[:tab].to_s, SHOW_TAB_LABELS.fetch("results"))
+    end
 
     def authorize_night_audit_access!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_night_audit", hotel: current_hotel)
