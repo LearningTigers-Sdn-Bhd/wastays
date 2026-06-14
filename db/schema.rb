@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_13_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -518,9 +518,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
     t.jsonb "blockers_snapshot", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "force_closed_by_id"
+    t.datetime "force_closed_at"
+    t.text "force_close_reason"
+    t.index ["force_closed_by_id"], name: "index_hotel_business_dates_on_force_closed_by_id"
     t.index ["hotel_id", "business_date", "status"], name: "idx_on_hotel_id_business_date_status_38d59d82f8"
     t.index ["hotel_id", "business_date"], name: "index_hotel_business_dates_on_hotel_id_and_business_date", unique: true
     t.index ["hotel_id", "status"], name: "index_hotel_business_dates_on_hotel_id_and_status"
+    t.index ["hotel_id"], name: "idx_one_current_business_date_per_hotel", unique: true, where: "((status)::text = ANY ((ARRAY['open'::character varying, 'audit_running'::character varying, 'audit_blocked'::character varying])::text[]))"
     t.index ["hotel_id"], name: "index_hotel_business_dates_on_hotel_id"
   end
 
@@ -1354,6 +1359,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
   add_foreign_key "folio_transactions", "folio_transactions", column: "voided_by_transaction_id"
   add_foreign_key "folio_transactions", "users"
   add_foreign_key "hotel_business_dates", "hotels"
+  add_foreign_key "hotel_business_dates", "users", column: "force_closed_by_id", on_delete: :nullify
   add_foreign_key "hotel_counters", "hotels"
   add_foreign_key "hotel_general_ledger_maps", "hotels"
   add_foreign_key "hotel_knowledge_chunks", "hotel_knowledge_documents"
