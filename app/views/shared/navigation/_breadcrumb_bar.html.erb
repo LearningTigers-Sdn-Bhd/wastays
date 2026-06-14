@@ -19,11 +19,17 @@
 
     <% when :menu, :breakdown %>
       <% if part[:siblings].present? %>
-        <div class="relative" data-breadcrumb-dropdown-target="item">
+        <div class="relative inline-flex items-center gap-x-1" data-breadcrumb-dropdown-target="item">
+          <% if part[:path].present? %>
+            <%= link_to part[:label], part[:path], class: "font-semibold text-slate-900 hover:text-brand-primary transition-colors" %>
+          <% else %>
+            <span class="cursor-default font-semibold text-slate-900"><%= part[:label] %></span>
+          <% end %>
           <button type="button"
-                  class="cursor-pointer font-semibold text-slate-900 inline-flex items-center gap-x-1 hover:text-brand-primary transition-colors"
+                  class="inline-flex size-5 shrink-0 items-center justify-center rounded text-slate-600 transition-colors hover:bg-slate-100 hover:text-brand-primary"
+                  aria-label="Open <%= part[:label] %> navigation"
+                  aria-expanded="false"
                   data-action="click->breadcrumb-dropdown#toggle">
-            <%= part[:label] %>
             <%= cached_icon "chevron-down", class: "size-3 shrink-0" %>
           </button>
           <div class="fixed w-56 bg-layer shadow-dropdown rounded-lg hidden z-50 border border-layer-line py-1" data-breadcrumb-dropdown-target="menu">
@@ -41,11 +47,17 @@
       <% end %>
     <% else %>
       <% if part[:siblings].present? %>
-        <div class="relative" data-breadcrumb-dropdown-target="item">
+        <div class="relative inline-flex items-center gap-x-1" data-breadcrumb-dropdown-target="item">
+          <% if part[:path].present? %>
+            <%= link_to part[:label], part[:path], class: "font-semibold text-slate-900 hover:text-brand-primary transition-colors" %>
+          <% else %>
+            <span class="cursor-default font-semibold text-slate-900"><%= part[:label] %></span>
+          <% end %>
           <button type="button"
-                  class="cursor-pointer font-semibold text-slate-900 inline-flex items-center gap-x-1 hover:text-brand-primary transition-colors"
+                  class="inline-flex size-5 shrink-0 items-center justify-center rounded text-slate-600 transition-colors hover:bg-slate-100 hover:text-brand-primary"
+                  aria-label="Open <%= part[:label] %> navigation"
+                  aria-expanded="false"
                   data-action="click->breadcrumb-dropdown#toggle">
-            <%= part[:label] %>
             <%= cached_icon "chevron-down", class: "size-3 shrink-0" %>
           </button>
           <div class="fixed w-56 bg-layer shadow-dropdown rounded-lg hidden z-50 border border-layer-line py-1" data-breadcrumb-dropdown-target="menu">
@@ -63,7 +75,13 @@
           <span class="cursor-default font-medium text-slate-600"><%= part[:label] %></span>
         <% end %>
       <% else %>
-        <span class="cursor-default font-semibold text-slate-900"><%= part[:label] %></span>
+        <span class="cursor-default font-semibold text-slate-900">
+          <% if part[:tab_breadcrumb] %>
+            <span data-tab-breadcrumb-label><%= part[:label] %></span>
+          <% else %>
+            <%= part[:label] %>
+          <% end %>
+        </span>
       <% end %>
     <% end %>
   <% end %>
