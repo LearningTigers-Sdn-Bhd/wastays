@@ -168,6 +168,23 @@ RSpec.describe NightAudits::Run do
     expect(result.night_audit.blocked_details["due_out_not_checked_out"]).to be_empty
   end
 
+  it "closes with an existing review_due_out warning" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "review_due_out",
+      payment_status: "captured",
+      check_in: business_date - 1.day,
+      check_out: business_date,
+      checked_in_at: 1.day.ago)
+    create_balanced_folio(booking)
+
+    result = run_audit
+
+    expect(result.success?).to be(true)
+    expect(result.night_audit).to be_completed
+    expect(result.night_audit.exceptions["review_due_out"].sole["booking_id"]).to eq(booking.id)
+  end
+
   it "blocks when a stale checked-in due-out fails to transition" do
     booking = create(:booking,
       hotel: hotel,
@@ -246,6 +263,50 @@ RSpec.describe NightAudits::Run do
     expect(result.success?).to be(false)
     expect(result.night_audit.blocked_details["missing_folio"].first["booking_id"]).to eq(booking.id)
     expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
+  end
+
+  it "blocks when a due-out review booking has no folio" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date - 1.day,
+      check_out: business_date,
+      checked_in_at: business_date.beginning_of_day)
+
+    result = run_audit
+
+    expect(result.success?).to be(false)
+    expect(booking.reload.status).to eq("review_due_out")
+    expect(result.night_audit.blocked_details["missing_folio"].sole["booking_id"]).to eq(booking.id)
+    expect(result.night_audit.exceptions["review_due_out"].sole["booking_id"]).to eq(booking.id)
+  end
+
+  it "allows duplicate-protected nightly charge skips" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day,
+      checked_in_at: business_date.beginning_of_day)
+    booking_room = create(:booking_room, booking: booking, subtotal: 120.0)
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_type: :charge,
+      category: "accommodation",
+      amount: 120.0,
+      posting_date: business_date,
+      metadata: {
+        posting_source: "night_audit",
+        stay_date: business_date.iso8601,
+        nightly_charge_key: [ booking.id, business_date.iso8601, "accommodation", booking_room.id ].join(":")
+      })
+
+    result = run_audit
+
+    expect(result.success?).to be(true)
+    expect(result.night_audit).to be_completed
+    expect(result.night_audit.summary.dig("run_results", "skipped_items", "items").sole["reason"]).to eq("Nightly charge already posted")
   end
 
   it "blocks when an in-house booking folio is missing nightly charges" do

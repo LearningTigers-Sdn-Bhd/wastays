@@ -98,7 +98,8 @@ RSpec.describe "Hotel night audits", type: :system do
       end
 
       expect(page).to have_content("Night audit has been scheduled in the background. Please wait while it processes.")
-      expect(page).to have_content("Audit Blockers")
+      expect(page).to have_content("Cannot close this date")
+      expect(page).to have_content("Hard Blockers")
       expect(page).to have_content("Aisha Tan")
       expect(page).to have_content("Checked-in booking is missing check-in timestamp")
     end

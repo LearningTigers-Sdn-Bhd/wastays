@@ -20,12 +20,23 @@ RSpec.describe NightAudits::Evaluate do
     end
 
     it 'treats review_due_out bookings as warnings rather than blockers' do
-      booking = create(:booking, status: 'review_due_out', hotel: hotel, check_out: business_date)
+      booking = create(:booking, status: 'review_due_out', hotel: hotel, check_in: business_date - 1.day, check_out: business_date)
+      create(:booking_folio, booking: booking)
 
       result = service.call
 
       expect(result[:blocked_details]["due_out_not_checked_out"]).to be_empty
       expect(result[:exceptions]["review_due_out"].sole["booking_id"]).to eq(booking.id)
+      expect(result[:exceptions]["review_due_out"].sole["reason"]).to eq("Due-out review carried forward")
+    end
+
+    it 'treats review_no_show bookings as warnings rather than blockers' do
+      booking = create(:booking, status: 'review_no_show', hotel: hotel, check_in: business_date, check_out: business_date + 1.day, no_show_review_business_date: business_date)
+
+      result = service.call
+
+      expect(result[:exceptions]["review_no_show"].sole["booking_id"]).to eq(booking.id)
+      expect(result[:blocked_details].values.flatten.pluck("booking_id")).not_to include(booking.id)
     end
 
     it 'treats checkout_required bookings as due-out blockers' do
@@ -77,6 +88,19 @@ RSpec.describe NightAudits::Evaluate do
 
       expect(result[:blocked_details]["missing_folio"].sole["booking_id"]).to eq(booking.id)
       expect(result[:exceptions]).not_to have_key("missing_folio")
+    end
+
+    it 'keeps a missing folio as an accounting blocker after due-out review' do
+      booking = create(:booking,
+        status: 'review_due_out',
+        hotel: hotel,
+        check_in: business_date - 1.day,
+        check_out: business_date)
+
+      result = service.call
+
+      expect(result[:blocked_details]["missing_folio"].sole["booking_id"]).to eq(booking.id)
+      expect(result[:exceptions]["review_due_out"].sole["booking_id"]).to eq(booking.id)
     end
 
     it 'does not require a folio for proven non-chargeable bookings' do

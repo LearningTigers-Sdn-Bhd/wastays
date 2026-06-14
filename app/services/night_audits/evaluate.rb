@@ -60,7 +60,8 @@ module NightAudits
 
     def build_exceptions
       exceptions = {
-        "review_due_out" => serialize_bookings(review_due_out_bookings, "Late checkout requires staff review"),
+        "review_due_out" => serialize_bookings(review_due_out_bookings, "Due-out review carried forward"),
+        "review_no_show" => serialize_bookings(review_no_show_bookings, "No-show review carried forward"),
         "open_housekeeping_requests" => serialize_requests(open_housekeeping_requests, :request_details, "Housekeeping request still open"),
         "open_complaint_requests" => serialize_requests(open_complaint_requests, :complaint_details, "Complaint request still open")
       }
@@ -85,6 +86,10 @@ module NightAudits
       @review_due_out_bookings ||= hotel_bookings.where(status: "review_due_out")
     end
 
+    def review_no_show_bookings
+      @review_no_show_bookings ||= hotel_bookings.where(status: "review_no_show")
+    end
+
     def checked_in_missing_timestamp
       @checked_in_missing_timestamp ||= hotel_bookings.checked_in.where(checked_in_at: nil)
     end
@@ -98,7 +103,7 @@ module NightAudits
         .includes(:payment_transactions, :refund_request, :booking_rooms, booking_folio: :folio_transactions)
         .where(
           "(status IN (?) AND check_in::date <= ? AND check_out::date >= ?) OR (status = ? AND check_in::date = ?)",
-          %w[checked_in completed], @business_date, @business_date, "no_show", @business_date
+          %w[checked_in review_due_out checkout_required completed], @business_date, @business_date, "no_show", @business_date
         )
         .to_a
     end
