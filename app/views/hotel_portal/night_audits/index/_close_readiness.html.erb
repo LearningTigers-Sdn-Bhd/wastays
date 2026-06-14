@@ -1,0 +1,88 @@
+<section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+  <header class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/60 px-4 py-2.5">
+    <div>
+      <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+        <span class="inline-flex size-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-700"><%= cached_icon "clipboard-check", class: "size-3.5", aria: { hidden: true } %></span>
+        Close Readiness
+      </h2>
+      <p class="mt-0.5 text-xs text-slate-500">Current operational snapshot</p>
+    </div>
+    <span class="text-xs font-semibold text-slate-600"><%= presenter.current_business_date_label %></span>
+  </header>
+
+  <div class="grid grid-cols-2 gap-px bg-slate-200 lg:grid-cols-5">
+    <% presenter.readiness_counters.each_with_index do |counter, index| %>
+      <% counter_style = {
+        "Blockers" => { icon: "triangle-alert", chip: "bg-red-50 text-red-700", count: "text-red-700" },
+        "Warnings" => { icon: "circle-alert", chip: "bg-amber-50 text-amber-700", count: counter.value.to_i.positive? ? "text-amber-700" : "text-slate-950" },
+        "Arrivals" => { icon: "log-in", chip: "bg-blue-50 text-blue-700", count: "text-slate-950" },
+        "Due Outs" => { icon: "log-out", chip: "bg-indigo-50 text-indigo-700", count: "text-slate-950" },
+        "Review Queue" => { icon: "clipboard-list", chip: "bg-slate-100 text-indigo-700", count: "text-slate-950" }
+      }.fetch(counter.label) %>
+      <div class="min-w-0 bg-white px-4 py-2.5 <%= 'col-span-2 lg:col-span-1' if index == 4 %>">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= counter.label %></p>
+          <span class="inline-flex size-5 items-center justify-center rounded <%= counter_style[:chip] %>"><%= cached_icon counter_style[:icon], class: "size-3", aria: { hidden: true } %></span>
+        </div>
+        <p class="mt-0.5 text-lg font-bold <%= counter_style[:count] %>"><%= counter.value %></p>
+        <p class="text-[11px] text-slate-500"><%= counter.detail %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="hidden overflow-x-auto border-t border-slate-200 md:block">
+    <table class="min-w-full divide-y divide-slate-200 text-sm" data-testid="readiness-table">
+      <thead class="bg-white text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="w-[24%] px-4 py-2">Type</th>
+          <th class="w-[10%] px-4 py-2">Count</th>
+          <th class="px-4 py-2">Summary</th>
+          <th class="w-[16%] px-4 py-2 text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 bg-white">
+        <% presenter.readiness_detail_rows.each do |row| %>
+          <tr class="align-top hover:bg-slate-50/70">
+            <td class="px-4 py-2.5">
+              <% badge_class = row.tone == "danger" ? "bg-white text-red-700 ring-red-600/25" : (row.tone == "warning" ? "bg-white text-amber-700 ring-amber-600/25" : "bg-white text-indigo-700 ring-indigo-600/20") %>
+              <span class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset <%= badge_class %>"><%= row.type %></span>
+            </td>
+            <td class="px-4 py-2.5 font-semibold text-slate-950"><%= row.count %></td>
+            <td class="px-4 py-2.5 text-slate-600"><%= row.summary %></td>
+            <td class="px-4 py-2.5 text-right">
+              <% if row.action == "resolve" && resolve_action.present? %>
+                <%= link_to "Resolve", resolve_hotel_night_audit_path(current_hotel, resolve_action.night_audit), class: "inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100" %>
+              <% elsif row.action == "booking" && row.booking_id.present? %>
+                <%= link_to hotel_booking_path(current_hotel, row.booking_id), class: "inline-flex items-center gap-1 rounded-md bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-slate-800" do %>
+                  View Booking <%= cached_icon "arrow-up-right", class: "size-3", aria: { hidden: true } %>
+                <% end %>
+              <% else %>
+                <span class="text-xs text-slate-400">—</span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divide-y divide-slate-100 border-t border-slate-200 md:hidden">
+    <% presenter.readiness_detail_rows.each do |row| %>
+      <div class="grid grid-cols-[1fr_auto] gap-3 px-4 py-3">
+        <div>
+          <p class="text-xs font-bold text-slate-950"><%= row.type %> <span class="ml-1 text-slate-500"><%= row.count %></span></p>
+          <p class="mt-1 text-xs text-slate-600"><%= row.summary %></p>
+        </div>
+        <div class="self-center">
+          <% if row.action == "resolve" && resolve_action.present? %>
+            <%= link_to "Resolve", resolve_hotel_night_audit_path(current_hotel, resolve_action.night_audit), class: "inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800" %>
+          <% elsif row.action == "booking" && row.booking_id.present? %>
+            <%= link_to hotel_booking_path(current_hotel, row.booking_id), class: "inline-flex items-center gap-1 rounded-md bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white" do %>
+              View Booking <%= cached_icon "arrow-up-right", class: "size-3", aria: { hidden: true } %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</section>

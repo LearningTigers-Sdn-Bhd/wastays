@@ -266,4 +266,20 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     expect(response.body).to include("Cannot close this date", "Hard Blockers", "Warnings / Review Items")
     expect(response.body).to include("Accounting blocker", "Due-out review carried forward")
   end
+
+  it "renders the compact historical audit packet sections and preserved actions" do
+    night_audit = create(:night_audit, hotel: hotel, status: "completed")
+    sign_in(user)
+
+    get hotel_night_audit_path(hotel, night_audit)
+
+    expect(response.body).to include("Summary", "Audit Details", "Audit Snapshot", "Payment Status Counts")
+    expect(response.body).to include("data-testid=\"night-audit-summary\"")
+    expect(response.body).to include("data-testid=\"audit-details-card\"")
+    expect(response.body).to include("data-testid=\"audit-snapshot-card\"")
+    expect(response.body).to include("data-testid=\"payment-status-counts-card\"")
+    expect(response.body).to include("Business-Date Financial Summary", "Manual Adjustments & Voids")
+    expect(response.body).to include("View Audit Packet", "Back to Night Audit")
+    expect(response.body).to include("Date closed")
+  end
 end
