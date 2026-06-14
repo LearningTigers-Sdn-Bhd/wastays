@@ -67,7 +67,9 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_css("[data-testid='readiness-table']")
       expect(page).to have_no_css("[data-testid='blockers-table']")
       expect(page).to have_css("[data-testid='audit-history-table']")
-      expect(page).to have_css("details[data-testid='advanced-actions']:not([open])")
+      expect(page).to have_css("[data-testid='night-audit-index-tabs']")
+      expect(page).to have_css("[data-testid='audit-history-panel']")
+      expect(page).to have_css("[data-testid='index-advanced-actions-panel'].hidden", visible: :all)
       expect(page).to have_link("Night Audit", href: hotel_night_audits_path(hotel))
       expect(page).to have_no_field("Business Date")
       expect(page).to have_content(business_date.strftime("%d %b %Y"))
@@ -89,6 +91,14 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_css("[data-testid='audit-details-card']")
       expect(page).to have_css("[data-testid='audit-snapshot-card']")
       expect(page).to have_css("[data-testid='payment-status-counts-card']")
+      expect(page).to have_css("[data-testid='night-audit-show-tabs']")
+      within("[data-testid='results-panel']") do
+        expect(page).to have_content("Run Results")
+        expect(page).to have_content("Hard Blockers")
+        expect(page).to have_content("Warnings / Review Items")
+      end
+      expect(page).to have_css("[data-testid='financial-summary-panel'].hidden", visible: :all)
+      expect(page).to have_css("[data-testid='show-advanced-actions-panel'].hidden", visible: :all)
       expect(page).to have_link("View Audit Packet")
     end
 
@@ -202,6 +212,39 @@ RSpec.describe "Hotel night audits", type: :system do
       within("[data-testid='blockers-table']") do
         expect(page).to have_link("Resolve blockers")
       end
+    end
+
+    it "switches index and show tabs while preserving the active tab in the URL" do
+      travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
+      business_date = Date.new(2026, 5, 22)
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+      audit = create(:night_audit, hotel: hotel, business_date: business_date, status: "completed")
+
+      visit hotel_night_audits_path(hotel)
+
+      expect(page).to have_css("[data-testid='audit-history-panel']")
+      expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Audit History")
+      click_button "Advanced Actions"
+      expect(page).to have_current_path(hotel_night_audits_path(hotel, tab: "advanced-actions"))
+      expect(page).to have_css("[data-testid='index-advanced-actions-panel']")
+      expect(page).to have_css("[data-testid='audit-history-panel']", visible: :hidden)
+      expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Advanced Actions")
+
+      visit hotel_night_audit_path(hotel, audit)
+
+      expect(page).to have_css("[data-testid='results-panel']")
+      expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Results")
+      click_button "Financial Summary"
+      expect(page).to have_current_path(hotel_night_audit_path(hotel, audit, tab: "financial-summary"))
+      expect(page).to have_css("[data-testid='financial-summary-panel']")
+      expect(page).to have_css("[data-testid='results-panel']", visible: :hidden)
+      expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Financial Summary")
+
+      click_button "Advanced Actions"
+      expect(page).to have_current_path(hotel_night_audit_path(hotel, audit, tab: "advanced-actions"))
+      expect(page).to have_css("[data-testid='show-advanced-actions-panel']")
+      expect(page).to have_css("[data-testid='manual-adjustments']")
+      expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Advanced Actions")
     end
   end
 end

@@ -114,6 +114,19 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include(booking.confirmation_token)
     end
 
+    it "renders URL-addressable booking show tab panels" do
+      get hotel_booking_path(hotel, booking, tab: "requests")
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("data-controller=\"tabs\"")
+      expect(response.body).to include("data-tabs-default-tab-value=\"booking-details\"")
+      expect(response.body).to include("data-tab-name=\"requests\"")
+      expect(response.body).to include("data-testid=\"booking-details-panel\"")
+      expect(response.body).to include("data-testid=\"booking-requests-panel\"")
+      expect(response.body).to include("data-testid=\"booking-history-panel\"")
+      expect(response.body).to include("data-tab-breadcrumb-label>Requests</span>")
+    end
+
     it "renders reference IDs, booking source, and the refreshed guest records table" do
       booking.update!(
         adults: 3,

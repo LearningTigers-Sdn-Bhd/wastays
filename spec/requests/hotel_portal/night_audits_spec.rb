@@ -249,6 +249,19 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     expect(response.body).to include("Run Results", "Status Changes", "Charges Posted", "Skipped Items", "Failed Items")
   end
 
+  it "appends the active index and show tabs to the breadcrumbs" do
+    night_audit = create(:night_audit, hotel: hotel)
+    sign_in(user)
+
+    get hotel_night_audits_path(hotel, tab: "advanced-actions")
+    expect(response.body).to include("data-tab-breadcrumb-label>Advanced Actions</span>")
+    expect(response.body).to include(%(href="#{hotel_night_audits_path(hotel)}">Night Audit</a>))
+    expect(response.body).to include("aria-label=\"Open Night Audit navigation\"")
+
+    get hotel_night_audit_path(hotel, night_audit, tab: "financial-summary")
+    expect(response.body).to include("data-tab-breadcrumb-label>Financial Summary</span>")
+  end
+
   it "separates hard blockers from warnings and makes close readiness obvious" do
     night_audit = create(:night_audit,
       hotel: hotel,
@@ -281,5 +294,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     expect(response.body).to include("Business-Date Financial Summary", "Manual Adjustments & Voids")
     expect(response.body).to include("View Audit Packet", "Back to Night Audit")
     expect(response.body).to include("Date closed")
+    expect(response.body).to include(night_audit.business_date.strftime("%d %b %Y"))
+    expect(response.body).to include(hotel_night_audit_path(hotel, night_audit))
   end
 end
