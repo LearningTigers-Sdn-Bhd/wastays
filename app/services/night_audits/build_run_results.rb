@@ -40,9 +40,8 @@ module NightAudits
     end
 
     def charges_posted
-      FolioTransaction.joins(booking_folio: :booking)
-        .where(bookings: { hotel_id: @night_audit.hotel_id })
-        .where("folio_transactions.metadata->>'night_audit_id' = ?", @night_audit.id.to_s)
+      @night_audit.folio_transactions
+        .includes(booking_folio: :booking)
         .order(:id)
         .map do |transaction|
           {

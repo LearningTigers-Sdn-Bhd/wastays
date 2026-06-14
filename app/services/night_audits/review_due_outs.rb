@@ -47,6 +47,7 @@ module NightAudits
             event: "detect_late_checkout",
             source: "night_audit",
             reason: "Checkout date passed without checkout",
+            night_audit: @night_audit,
             metadata: {
               night_audit_id: @night_audit.id,
               business_date: @business_date.iso8601

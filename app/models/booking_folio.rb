@@ -12,6 +12,7 @@ class BookingFolio < ApplicationRecord
   validates :status, presence: true
   validates :invoice_number, uniqueness: { scope: :hotel_id, allow_nil: true }
   validate :hotel_matches_booking
+  before_destroy :guard_night_audit_operational_change
 
   def outstanding_balance
     total_charges - total_payments + total_adjustments
@@ -51,6 +52,10 @@ class BookingFolio < ApplicationRecord
   end
 
   private
+
+  def guard_night_audit_operational_change
+    NightAudits::OperationalChangeGuard.call!(hotel: hotel, action: :remove_folio)
+  end
 
   def hotel_matches_booking
     return if hotel_id.blank? || booking.blank? || hotel_id == booking.hotel_id

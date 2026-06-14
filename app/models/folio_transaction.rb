@@ -30,6 +30,7 @@ class FolioTransaction < ApplicationRecord
   }.freeze
 
   belongs_to :booking_folio
+  belongs_to :night_audit, optional: true
   belongs_to :user, optional: true
   belongs_to :reversal_of_transaction, class_name: "FolioTransaction", optional: true
   belongs_to :voided_by_transaction, class_name: "FolioTransaction", optional: true
@@ -55,6 +56,8 @@ class FolioTransaction < ApplicationRecord
   validate :category_allowed_for_transaction_type
   validate :amount_sign_matches_transaction_type
   validate :reversal_reference_is_valid
+  validate :night_audit_matches_hotel
+  validate :night_audit_matches_metadata, on: :create
 
   before_validation :assign_gl_code, on: :create
   before_update :prevent_immutable_changes
@@ -121,6 +124,21 @@ class FolioTransaction < ApplicationRecord
     elsif booking_folio_id.present? && reversal_of_transaction.booking_folio_id != booking_folio_id
       errors.add(:reversal_of_transaction, "must belong to the same folio")
     end
+  end
+
+  def night_audit_matches_hotel
+    return if night_audit.blank? || booking_folio.blank? || night_audit.hotel_id == booking_folio.hotel_id
+
+    errors.add(:night_audit, "must belong to the same hotel as the folio")
+  end
+
+  def night_audit_matches_metadata
+    return if night_audit.blank?
+
+    metadata_id = metadata.to_h["night_audit_id"] || metadata.to_h[:night_audit_id]
+    return if metadata_id.present? && metadata_id.to_s == night_audit_id.to_s
+
+    errors.add(:night_audit, "must match metadata night_audit_id")
   end
 
   def prevent_immutable_changes

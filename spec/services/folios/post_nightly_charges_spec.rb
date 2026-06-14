@@ -30,6 +30,8 @@ RSpec.describe Folios::PostNightlyCharges do
     expect(charges.find_by(category: "accommodation").amount).to eq(100.0)
     expect(charges.find_by(category: "tax").amount).to eq(10.0)
     expect(charges.map { |charge| charge.metadata["posting_source"] }.uniq).to eq([ "night_audit" ])
+    expect(charges.map(&:night_audit).uniq).to eq([ night_audit ])
+    expect(charges.map { |charge| charge.metadata["night_audit_id"] }.uniq).to eq([ night_audit.id ])
     expect(charges.map { |charge| charge.metadata["stay_date"] }.uniq).to eq([ business_date.iso8601 ])
     expect(result.posted.count).to eq(2)
     expect(result.skipped).to be_empty

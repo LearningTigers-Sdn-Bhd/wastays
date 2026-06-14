@@ -13,6 +13,12 @@ module Bookings
     end
 
     def call
+      NightAudits::OperationalChangeGuard.call!(
+        hotel: @booking.hotel,
+        action: "transition_status:#{@status}",
+        night_audit: @options[:night_audit]
+      )
+
       case @status
       when "checked_in"
         if @booking.status == "review_due_out"

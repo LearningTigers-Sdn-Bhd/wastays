@@ -277,7 +277,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     end
   end
 
-  it "manually finalizes a booking pending no-show review" do
+  it "blocks manual no-show finalization while night audit is running" do
     booking = create(
       :booking,
       hotel: hotel,
@@ -292,8 +292,10 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
 
     post mark_no_show_hotel_booking_path(hotel, booking)
 
-    expect(booking.reload.status).to eq("no_show")
-    expect(booking.booking_folio.folio_transactions.charge.where(category: "no_show_charge").sole.amount).to eq(100.0)
+    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(flash[:alert]).to eq(NightAudits::OperationalChangeGuard::ERROR_MESSAGE)
+    expect(booking.reload.status).to eq("review_no_show")
+    expect(booking.booking_folio).to be_nil
   end
 
   it "allows existing-reservation backdated check-in only during no-show review" do

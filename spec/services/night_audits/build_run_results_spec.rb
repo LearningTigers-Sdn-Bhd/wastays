@@ -19,6 +19,7 @@ RSpec.describe NightAudits::BuildRunResults do
       metadata: { night_audit_id: night_audit.id })
     transaction = create(:folio_transaction,
       booking_folio: folio,
+      night_audit: night_audit,
       amount: 125,
       metadata: { night_audit_id: night_audit.id, booking_id: booking.id })
     item = { "item_key" => "duplicate-key", "item_type" => "nightly_charge", "reason" => "Nightly charge already posted" }
@@ -33,6 +34,26 @@ RSpec.describe NightAudits::BuildRunResults do
     expect(result.dig("charges_posted", "total")).to eq("125.0")
     expect(result.dig("charges_posted", "items").sole["folio_transaction_id"]).to eq(transaction.id)
     expect(result.dig("skipped_items", "count")).to eq(1)
+  end
+
+  it "uses direct linkage instead of metadata-only linkage for posted charges" do
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+    linked = create(:folio_transaction,
+      booking_folio: folio,
+      night_audit: night_audit,
+      amount: 125,
+      metadata: { night_audit_id: night_audit.id })
+    create(:folio_transaction,
+      booking_folio: folio,
+      amount: 75,
+      metadata: { night_audit_id: night_audit.id })
+
+    result = described_class.call(night_audit: night_audit)
+
+    expect(result.dig("charges_posted", "count")).to eq(1)
+    expect(result.dig("charges_posted", "total")).to eq("125.0")
+    expect(result.dig("charges_posted", "items").sole["folio_transaction_id"]).to eq(linked.id)
   end
 
   it "keeps orphaned booking audit logs without crashing" do

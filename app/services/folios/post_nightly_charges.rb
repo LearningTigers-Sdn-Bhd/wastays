@@ -105,7 +105,7 @@ module Folios
         user: @user,
         description: description,
         posting_date: @business_date,
-        options: @options.merge(posting_source: "night_audit", metadata: metadata)
+        options: @options.merge(posting_source: "night_audit", night_audit: @night_audit, metadata: metadata)
       ).call
 
       if result.success?

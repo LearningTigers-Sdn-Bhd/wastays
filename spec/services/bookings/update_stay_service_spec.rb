@@ -68,4 +68,46 @@ RSpec.describe Bookings::UpdateStayService do
     expect(log.old_value["guest_name"]).to eq(old_name)
     expect(log.new_value["guest_name"]).to eq("New Guest Name")
   end
+
+  it "blocks financially relevant updates while night audit is running" do
+    hotel.current_business_date_record.update!(status: "audit_running")
+
+    result = described_class.new(booking: booking, params: { check_out: Date.current + 2.days }).call
+
+    expect(result.success?).to be(false)
+    expect(result.errors).to include(NightAudits::OperationalChangeGuard::ERROR_MESSAGE)
+    expect(booking.reload.check_out.to_date).to eq(Date.current + 1.day)
+  end
+
+  it "blocks room-type and rate-plan changes while night audit is running" do
+    hotel.current_business_date_record.update!(status: "audit_running")
+    new_room_type = create(:room_type, hotel: hotel)
+
+    result = described_class.new(booking: booking, params: { room_type_id: new_room_type.id }).call
+
+    expect(result.success?).to be(false)
+    expect(result.errors).to include(NightAudits::OperationalChangeGuard::ERROR_MESSAGE)
+    expect(booking_room.reload.room_type).to eq(room_type)
+  end
+
+  it "allows contact and internal note updates while night audit is running" do
+    hotel.current_business_date_record.update!(status: "audit_running")
+
+    result = described_class.new(
+      booking: booking,
+      params: { guest_phone: "+60123456789", internal_notes: "Guest prefers a quiet room" }
+    ).call
+
+    expect(result.success?).to be(true)
+    expect(booking.reload.guest_phone).to eq("+60123456789")
+    expect(booking.internal_notes).to eq("Guest prefers a quiet room")
+  end
+
+  it "allows unchanged financially relevant values while night audit is running" do
+    hotel.current_business_date_record.update!(status: "audit_running")
+
+    result = described_class.new(booking: booking, params: { check_out: booking.check_out }).call
+
+    expect(result.success?).to be(true)
+  end
 end
