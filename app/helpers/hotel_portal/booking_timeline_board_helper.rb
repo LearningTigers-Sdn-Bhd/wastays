@@ -11,6 +11,7 @@ module HotelPortal
       "cancelled" => "circle-x",
       "no_show" => "user-x",
       "review_due_out" => "triangle-alert",
+      "checkout_required" => "log-out",
       "overbooked" => "octagon-alert",
       "not_ready" => "ban"
     }.freeze
@@ -24,6 +25,7 @@ module HotelPortal
       "cancelled" => "text-slate-500",
       "no_show" => "text-rose-600",
       "review_due_out" => "text-orange-600",
+      "checkout_required" => "text-rose-600",
       "overbooked" => "text-red-700",
       "not_ready" => "text-red-500"
     }.freeze

@@ -48,7 +48,7 @@ module HotelPortal
         user: current_user,
         correction_reason: reversal_params[:correction_reason],
         correction_note: reversal_params[:correction_note],
-        posting_date: reversal_params[:posting_date].presence || Time.current.to_date,
+        posting_date: reversal_params[:posting_date].presence || current_hotel.current_business_date,
         options: reversal_options
       )
 
