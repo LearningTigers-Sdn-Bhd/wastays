@@ -6,8 +6,8 @@ module HotelPortal
     def index
       @suggested_business_date = authoritative_business_date
       @night_audits = current_hotel.night_audits.recent_first.page(params[:page]).per(25)
-      @pre_audit_evaluation = NightAudits::Evaluate.new(hotel: current_hotel, business_date: @suggested_business_date).call
-      @presenter = HotelPortal::NightAuditIndexPresenter.new(
+      @pre_audit_evaluation = ::NightAudits::Evaluate.new(hotel: current_hotel, business_date: @suggested_business_date).call
+      @presenter = HotelPortal::NightAudits::IndexPresenter.new(
         hotel: current_hotel,
         current_user: current_user,
         business_date_record: current_hotel.current_business_date_record,
@@ -27,9 +27,15 @@ module HotelPortal
         .order(:created_at)
 
       respond_to do |format|
-        format.html
+        format.html do
+          @presenter = HotelPortal::NightAudits::ShowPresenter.new(
+            night_audit: @night_audit,
+            adjustments: @adjustments,
+            view_context: view_context
+          )
+        end
         format.pdf do
-          pdf_content = NightAudits::AuditPacketPdfExport.new(night_audit: @night_audit).generate
+          pdf_content = ::NightAudits::AuditPacketPdfExport.new(night_audit: @night_audit).generate
           filename = "Audit_Packet_#{current_hotel.name.gsub(/\s+/, "_")}_#{@night_audit.business_date}.pdf"
           send_data pdf_content, filename: filename, type: "application/pdf", disposition: "inline"
         end
@@ -43,7 +49,7 @@ module HotelPortal
 
     def blockers
       @night_audit = current_hotel.night_audits.find(params[:id])
-      result = NightAudits::Evaluate.new(
+      result = ::NightAudits::Evaluate.new(
         hotel: current_hotel,
         business_date: @night_audit.business_date
       ).call
@@ -103,7 +109,7 @@ module HotelPortal
       )
 
       if night_audit.save
-        NightAudits::RunJob.perform_later(
+        ::NightAudits::RunJob.perform_later(
           night_audit.id,
           current_user.id,
           allow_unclosable_date: allow_unclosable_date?,

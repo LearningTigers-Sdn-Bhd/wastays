@@ -57,6 +57,17 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_content("Current Business Date")
       expect(page).to have_content("Calendar Date")
       expect(page).to have_content("Finished At")
+      within("[data-testid='night-audit-page-header']") do
+        expect(page).to have_no_css("[data-testid='business-date-status']")
+      end
+      within("[data-testid='business-date-card']") do
+        expect(page).to have_content("Accounting authority")
+        expect(page).to have_css("[data-testid='business-date-status']", text: "Open")
+      end
+      expect(page).to have_css("[data-testid='readiness-table']")
+      expect(page).to have_no_css("[data-testid='blockers-table']")
+      expect(page).to have_css("[data-testid='audit-history-table']")
+      expect(page).to have_css("details[data-testid='advanced-actions']:not([open])")
       expect(page).to have_link("Night Audit", href: hotel_night_audits_path(hotel))
       expect(page).to have_no_field("Business Date")
       expect(page).to have_content(business_date.strftime("%d %b %Y"))
@@ -69,9 +80,40 @@ RSpec.describe "Hotel night audits", type: :system do
       end
 
       expect(page).to have_content("Night audit has been scheduled in the background. Please wait while it processes.")
-      expect(page).to have_content("Night Audit #{business_date.strftime('%d %b %Y')}")
+      expect(page).to have_content("Night Audit / #{business_date.strftime('%d %b %Y')}")
       expect(page).to have_content("Completed")
       expect(page).to have_content("Financial Summary")
+      expect(page).to have_content("Summary")
+      expect(page).to have_content("Audit Snapshot")
+      expect(page).to have_css("[data-testid='night-audit-summary']")
+      expect(page).to have_css("[data-testid='audit-details-card']")
+      expect(page).to have_css("[data-testid='audit-snapshot-card']")
+      expect(page).to have_css("[data-testid='payment-status-counts-card']")
+      expect(page).to have_link("View Audit Packet")
+    end
+
+    it "shows blocker rows with links to affected bookings" do
+      travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
+      business_date = Date.new(2026, 5, 22)
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+
+      booking = create(:booking,
+        hotel: hotel,
+        status: "checked_in",
+        payment_status: "captured",
+        guest_name: "Aisha Tan",
+        confirmation_token: "WS-BLOCK-LINK",
+        check_in: business_date - 1.day,
+        check_out: business_date,
+        checked_in_at: 1.day.ago)
+
+      visit hotel_night_audits_path(hotel)
+
+      within("[data-testid='blockers-table']") do
+        expect(page).to have_content("Due out not checked out")
+        expect(page).to have_content("Aisha Tan")
+        expect(page).to have_link("View Booking", href: hotel_booking_path(hotel, booking))
+      end
     end
 
     it "shows critical blockers on the result page" do
@@ -100,6 +142,7 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_content("Night audit has been scheduled in the background. Please wait while it processes.")
       expect(page).to have_content("Cannot close this date")
       expect(page).to have_content("Hard Blockers")
+      expect(page).to have_content("Warnings / Review Items")
       expect(page).to have_content("Aisha Tan")
       expect(page).to have_content("Checked-in booking is missing check-in timestamp")
     end
@@ -141,7 +184,7 @@ RSpec.describe "Hotel night audits", type: :system do
         click_button "Run Audit"
       end
 
-      expect(page).to have_content("Night Audit #{business_date.strftime('%d %b %Y')}")
+      expect(page).to have_content("Night Audit / #{business_date.strftime('%d %b %Y')}")
 
       perform_enqueued_jobs
 
@@ -154,6 +197,11 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_content("Resolve Audit Blockers")
       expect(page).to have_content("Missing Check-In Timestamps")
       expect(page).to have_content("Aisha Tan")
+
+      visit hotel_night_audits_path(hotel)
+      within("[data-testid='blockers-table']") do
+        expect(page).to have_link("Resolve blockers")
+      end
     end
   end
 end

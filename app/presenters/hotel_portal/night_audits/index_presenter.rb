@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class NightAuditIndexPresenter
+  module NightAudits
+    class IndexPresenter
     DateTile = Struct.new(:label, :value, :detail, keyword_init: true)
     Counter = Struct.new(:label, :value, :tone, :detail, keyword_init: true)
     Group = Struct.new(:key, :label, :count, :rows, :tone, keyword_init: true)
+    ReadinessRow = Struct.new(:type, :count, :summary, :tone, :action, :booking_id, keyword_init: true)
+    BlockerRow = Struct.new(:type, :reason, :detail, :action, :booking_id, keyword_init: true)
     Action = Struct.new(:label, :enabled, :disabled_reason, :url, :method, :night_audit, keyword_init: true)
     HistoryRow = Struct.new(
       :night_audit,
@@ -69,6 +72,10 @@ module HotelPortal
       format_date(calendar_date)
     end
 
+    def hotel_timezone_label
+      hotel.hotel_time_zone.name
+    end
+
     def date_tiles
       [
         DateTile.new(label: "Current Business Date", value: current_business_date_label, detail: "Authoritative audit target"),
@@ -112,6 +119,21 @@ module HotelPortal
       end
     end
 
+    def business_date_status_label
+      business_date_record&.status&.humanize || "Not initialized"
+    end
+
+    def business_date_status_badge_class
+      case business_date_record&.status
+      when "open" then "border-blue-200 bg-blue-50 text-blue-700"
+      when "audit_running" then "border-sky-200 bg-sky-50 text-sky-700"
+      when "audit_blocked" then "border-amber-200 bg-amber-50 text-amber-700"
+      when "closed" then "border-emerald-200 bg-emerald-50 text-emerald-700"
+      when "force_closed" then "border-red-300 bg-red-50 text-red-800"
+      else "border-slate-200 bg-slate-50 text-slate-600"
+      end
+    end
+
     def main_message
       case ui_state
       when "READY_FOR_AUDIT"
@@ -136,8 +158,13 @@ module HotelPortal
         Counter.new(label: "Blockers", value: blocker_count, tone: blocker_count.positive? ? "danger" : "neutral", detail: "Must be resolved before clean close"),
         Counter.new(label: "Warnings", value: warning_count, tone: warning_count.positive? ? "warning" : "neutral", detail: "Non-blocking exceptions"),
         Counter.new(label: "Arrivals", value: summary_value("arrivals_count"), tone: "neutral", detail: "Current snapshot"),
-        Counter.new(label: "Due Outs", value: summary_value("due_out_count"), tone: "neutral", detail: "Current snapshot")
+        Counter.new(label: "Due Outs", value: summary_value("due_out_count"), tone: "neutral", detail: "Current snapshot"),
+        Counter.new(label: "Review Queue", value: review_queue_value, tone: "neutral", detail: "Arrival / due-out")
       ]
+    end
+
+    def review_queue_value
+      "#{arrival_review_summary[:value]} / #{due_out_review_summary[:value]}"
     end
 
     def blocker_groups
@@ -162,6 +189,40 @@ module HotelPortal
         value: exceptions.fetch("review_due_out", []).count,
         detail: "Bookings waiting in due-out review."
       }
+    end
+
+    def readiness_detail_rows
+      blocker_rows = blocker_groups.map { |group| readiness_group_row(group) }
+      warning_rows = warning_groups.map { |group| readiness_group_row(group) }
+
+      blocker_rows + warning_rows + [
+        ReadinessRow.new(
+          type: arrival_review_summary[:label],
+          count: arrival_review_summary[:value],
+          summary: arrival_review_summary[:detail],
+          tone: "neutral"
+        ),
+        ReadinessRow.new(
+          type: due_out_review_summary[:label],
+          count: due_out_review_summary[:value],
+          summary: due_out_review_summary[:detail],
+          tone: "neutral"
+        )
+      ]
+    end
+
+    def flattened_blocker_rows
+      blocker_groups.flat_map do |group|
+        group.rows.map do |row|
+          BlockerRow.new(
+            type: group.label,
+            reason: row_detail(row, "reason", group.label),
+            detail: blocker_item_detail(row),
+            action: resolve_action.present? ? "resolve" : (row_booking_id(row).present? ? "booking" : nil),
+            booking_id: row_booking_id(row)
+          )
+        end
+      end
     end
 
     def last_attempt_summary
@@ -329,6 +390,42 @@ module HotelPortal
       end
     end
 
+    def readiness_group_row(group)
+      first_row = group.rows.first
+      ReadinessRow.new(
+        type: group.label,
+        count: group.count,
+        summary: readiness_group_summary(group),
+        tone: group.tone,
+        action: group.tone == "danger" && resolve_action.present? ? "resolve" : (row_booking_id(first_row).present? ? "booking" : nil),
+        booking_id: row_booking_id(first_row)
+      )
+    end
+
+    def row_booking_id(row)
+      row.is_a?(Hash) ? row["booking_id"] : nil
+    end
+
+    def readiness_group_summary(group)
+      item_label = "item".pluralize(group.count)
+      return "#{group.count} #{item_label} requiring attention before close." if group.tone == "danger"
+
+      "#{group.count} non-blocking review #{item_label}."
+    end
+
+    def row_detail(row, key, fallback)
+      return fallback unless row.is_a?(Hash)
+
+      row[key].presence || fallback
+    end
+
+    def blocker_item_detail(row)
+      return "Operational blocker requires review." unless row.is_a?(Hash)
+
+      [ row["guest_name"], row["confirmation_token"], row["status"]&.to_s&.humanize ].compact_blank.join(" · ").presence ||
+        "Operational blocker requires review."
+    end
+
     def group_label(key)
       return "Due-Out Review" if key.to_s == "review_due_out"
 
@@ -373,6 +470,7 @@ module HotelPortal
 
     def format_datetime(value)
       value&.in_time_zone(hotel.hotel_time_zone)&.strftime("%d %b %Y, %I:%M %p") || "Not available"
+    end
     end
   end
 end
