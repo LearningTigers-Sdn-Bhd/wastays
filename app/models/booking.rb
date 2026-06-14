@@ -53,7 +53,7 @@ class Booking < ApplicationRecord
     @guest_government_id = value
   end
 
-  STATUSES = %w[pending confirmed review_no_show checked_in review_due_out cancelled completed overbooked no_show].freeze
+  STATUSES = %w[pending confirmed review_no_show checked_in review_due_out checkout_required cancelled completed overbooked no_show].freeze
   PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
@@ -87,10 +87,11 @@ class Booking < ApplicationRecord
   scope :recent_first, -> { order(created_at: :desc) }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
+  scope :checkout_required, -> { where(status: "checkout_required") }
   scope :completed, -> { where(status: "completed") }
   scope :no_show, -> { where(status: "no_show") }
-  scope :active, -> { where(status: [ "confirmed", "review_no_show", "checked_in" ]) }
-  scope :revenue_generating, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "completed", "no_show" ]) }
+  scope :active, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "review_due_out", "checkout_required" ]) }
+  scope :revenue_generating, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "review_due_out", "checkout_required", "completed", "no_show" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
 
   scope :search, ->(query) {
@@ -202,6 +203,10 @@ class Booking < ApplicationRecord
 
   def checked_in?
     status == "checked_in"
+  end
+
+  def checkout_required?
+    status == "checkout_required"
   end
 
   def checked_out?

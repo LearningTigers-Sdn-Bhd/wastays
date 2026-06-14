@@ -26,6 +26,8 @@ module Bookings
         cancel
       when "review_due_out"
         simple_transition("review_due_out", @options[:event] || "detect_late_checkout")
+      when "checkout_required"
+        simple_transition("checkout_required", @options[:event] || "reject_late_checkout")
       else
         failure("Unsupported status transition: #{@status}")
       end
@@ -187,7 +189,7 @@ module Bookings
         @booking.with_lock do
           @booking.reload
 
-          unless @booking.checked_in? || @booking.status == "review_due_out"
+          unless @booking.checked_in? || @booking.status == "checkout_required"
             error = "Cannot check out booking with status #{@booking.status}"
             next
           end

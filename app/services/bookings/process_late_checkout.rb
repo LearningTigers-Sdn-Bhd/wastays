@@ -14,6 +14,7 @@ module Bookings
       @params = params
       @options = options
       @charged = false
+      @rejected = false
     end
 
     def call
@@ -26,6 +27,28 @@ module Bookings
           unless @booking.status == "review_due_out"
             result = failure("Booking is not pending late checkout review.")
             raise ActiveRecord::Rollback
+          end
+
+          if reject_late_checkout?
+            transition_result = Bookings::TransitionStatus.new(
+              booking: @booking,
+              status: "checkout_required",
+              user: @user,
+              options: {
+                event: "reject_late_checkout",
+                reason: "Late checkout rejected"
+              }.merge(@options.fetch(:transition_options, {}))
+            ).call
+
+            if transition_result.success?
+              @rejected = true
+              result = success
+            else
+              result = transition_result
+              raise ActiveRecord::Rollback
+            end
+
+            next
           end
 
           stay_result = update_checkout_period
@@ -93,8 +116,12 @@ module Bookings
       @params[:charge_type] != "none"
     end
 
+    def reject_late_checkout?
+      @params[:charge_type] == "none"
+    end
+
     def success
-      OpenStruct.new(success?: true, booking: @booking, charged?: @charged)
+      OpenStruct.new(success?: true, booking: @booking, charged?: @charged, rejected?: @rejected)
     end
 
     def failure(error)
