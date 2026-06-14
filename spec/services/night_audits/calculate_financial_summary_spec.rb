@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HotelOps::CalculateBusinessDayFinancials, type: :service do
+RSpec.describe NightAudits::CalculateFinancialSummary, type: :service do
   let(:hotel) { create(:hotel) }
   let(:business_date) { 1.day.ago.to_date }
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HotelOps::AuditPacketPdfExportService do
+RSpec.describe NightAudits::AuditPacketPdfExport do
   let(:hotel) { create(:hotel, name: "Test Hotel") }
   let(:business_date) { Date.new(2026, 5, 20) }
   let(:night_audit) do

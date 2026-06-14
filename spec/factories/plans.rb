@@ -1,7 +1,7 @@
 FactoryBot.define do
   factory :plan do
     sequence(:name) { |n| "Plan #{n}" }
-    sequence(:slug) { |n| "plan-#{n}" }
+    slug { "plan-#{SecureRandom.hex(6)}" }
     position { 0 }
     most_popular { false }
     active { true }

@@ -7,6 +7,10 @@ RSpec.describe Bookings::TransitionStatus do
   let(:user) { create(:user, role: "superadmin") }
   let(:timestamp) { Time.current }
 
+  before do
+    BusinessDates::ResetAuthority.call!(hotel: booking.hotel, date: timestamp.to_date)
+  end
+
   def enable_feature_for(hotel, slug)
     plan = hotel.plan || create(:plan).tap { |record| hotel.update!(plan: record) }
     feature = Feature.find_or_create_by!(slug: slug) do |record|
@@ -61,6 +65,7 @@ RSpec.describe Bookings::TransitionStatus do
 
       it "allows different hotels to use the same folio number" do
         other_booking = create(:booking, status: "confirmed")
+        BusinessDates::ResetAuthority.call!(hotel: other_booking.hotel, date: timestamp.to_date)
         allow(HotelCounter).to receive(:increment!).and_call_original
         allow(HotelCounter).to receive(:increment!).with(hotel: booking.hotel, type: "folio").and_return(1)
         allow(HotelCounter).to receive(:increment!).with(hotel: other_booking.hotel, type: "folio").and_return(1)
@@ -179,6 +184,7 @@ RSpec.describe Bookings::TransitionStatus do
         zone = Time.find_zone("Kuala Lumpur")
         hotel = create(:hotel, time_zone: "Kuala Lumpur")
         booking = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 5, 18), check_out: Date.new(2026, 5, 19))
+        BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.new(2026, 5, 18))
 
         result = described_class.new(booking: booking, status: "checked_in", timestamp: zone.local(2026, 5, 19, 1, 30)).call
 
@@ -243,6 +249,31 @@ RSpec.describe Bookings::TransitionStatus do
         log = BookingAuditLog.last
         expect(log.action_type).to eq("check_out")
         expect(log.metadata["folio_id"]).to eq(folio.id)
+      end
+
+      it "checks out a checkout-required booking" do
+        folio = create_settled_folio
+        booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+        booking.transition_status_to!("checkout_required", event: "reject_late_checkout")
+
+        result = subject.call
+
+        expect(result.success?).to be true
+        expect(booking.reload.status).to eq("completed")
+        expect(booking.checked_out_at).to be_within(1.second).of(timestamp)
+        expect(folio.reload.status).to eq("closed")
+      end
+
+      it "does not check out directly from due-out review" do
+        folio = create_settled_folio
+        booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+
+        result = subject.call
+
+        expect(result.success?).to be false
+        expect(result.error).to eq("Cannot check out booking with status review_due_out")
+        expect(booking.reload.status).to eq("review_due_out")
+        expect(folio.reload.status).to eq("open")
       end
 
       it "fails when the folio has an outstanding balance" do
@@ -396,7 +427,9 @@ RSpec.describe Bookings::TransitionStatus do
 
       context "when check-in is retroactive for a confirmed booking" do
         before do
+          BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date + 1.day)
           create(:night_audit, hotel: hotel, business_date: business_date, status: "completed")
+          create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "closed")
         end
 
         it "posts catch-up charges immediately" do

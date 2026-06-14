@@ -6,12 +6,14 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user, :superadmin) }
   let(:room_type) { create(:room_type, hotel: hotel) }
-  let(:business_date) { hotel.business_date_for }
+  let(:business_date) { hotel.current_business_date }
 
   before do
     # Give user permissions
-    admin_role = create(:role, name: "Admin", slug: "admin", account: hotel.account)
-    lock_permission = create(:permission, name: "Override Date Lock", slug: "override_financial_date_lock")
+    admin_role = create(:role, name: "Admin", account: hotel.account)
+    lock_permission = Permission.find_or_create_by!(slug: "override_financial_date_lock") do |permission|
+      permission.name = "Override Date Lock"
+    end
     admin_role.role_permissions.create!(permission: lock_permission)
     user.user_hotel_accesses.create!(hotel: hotel, role: admin_role)
   end
@@ -27,12 +29,12 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
 
       # 1. Night Audit Day 1 Runs (Guest never arrived)
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
-      biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
-      biz_date_record.start_audit!
-      Bookings::ReviewMissedArrivals.call(night_audit: audit_day_1, user: user)
+      biz_date_record = hotel.current_business_date_record
+      start_business_date_audit(hotel)
+      NightAudits::ReviewMissedArrivals.call(night_audit: audit_day_1, user: user)
       Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
       audit_day_1.update!(status: "completed")
-      biz_date_record.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       booking.reload
       expect(booking.status).to eq("no_show")
@@ -76,20 +78,20 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
 
       # Night 1
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
-      biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
-      biz_date_record.start_audit!
+      biz_date_record = hotel.current_business_date_record
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
       audit_day_1.update!(status: "completed")
-      biz_date_record.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       # Night 2
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 1.day)
       audit_day_2 = hotel.night_audits.create!(business_date: business_date + 1.day, status: "running", trigger_mode: "manual")
-      biz_date_record_2 = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date + 1.day)
-      biz_date_record_2.start_audit!
+      biz_date_record_2 = hotel.current_business_date_record
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
       audit_day_2.update!(status: "completed")
-      biz_date_record_2.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       # Day 3 morning: Guest needs to leave early.
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 2.days)
@@ -121,10 +123,10 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
 
       # Night Audit
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "completed", trigger_mode: "manual")
-      biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
-      biz_date_record.start_audit!
+      biz_date_record = hotel.current_business_date_record
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
-      biz_date_record.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       # Next morning
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 1.day)
@@ -157,12 +159,12 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
 
       # 2. Night Audit Day 1: No Show
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
-      biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
-      biz_date_record.start_audit!
-      Bookings::ReviewMissedArrivals.call(night_audit: audit_day_1, user: user)
+      biz_date_record = hotel.current_business_date_record
+      start_business_date_audit(hotel)
+      NightAudits::ReviewMissedArrivals.call(night_audit: audit_day_1, user: user)
       Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
       audit_day_1.update!(status: "completed")
-      biz_date_record.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       expect(booking.reload.status).to eq("no_show")
       expect(booking.booking_folio.folio_transactions.charge.sum(:amount)).to eq(100.0) # Charge (1 night)
@@ -222,11 +224,11 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
         date = business_date + offset.days
         allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(date)
         audit = hotel.night_audits.create!(business_date: date, status: "running", trigger_mode: "manual")
-        biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: date)
-        biz_date_record.start_audit!
+        biz_date_record = hotel.current_business_date_record
+        start_business_date_audit(hotel)
         Folios::PostNightlyCharges.call(night_audit: audit, user: user)
         audit.update!(status: "completed")
-        biz_date_record.complete_audit!
+        close_and_open_next_business_date(hotel)
       end
 
       # 3. Guest leaves early on Day 3 morning (Total charges = 200)
@@ -260,8 +262,8 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       folio = Folios::InitializeForBooking.call(booking: booking, user: user)
 
       audit = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
-      biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
-      biz_date_record.start_audit!
+      biz_date_record = hotel.current_business_date_record
+      start_business_date_audit(hotel)
 
       # 1. First run of posting charges
       Folios::PostNightlyCharges.call(night_audit: audit, user: user)
@@ -277,8 +279,8 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       expect(folio.outstanding_balance).to eq(100.0)
 
       # 4. Finalize audit
-      biz_date_record.complete_audit!
-      expect(biz_date_record.status).to eq("closed")
+      close_and_open_next_business_date(hotel)
+      expect(biz_date_record.reload.status).to eq("closed")
     end
   end
 
@@ -320,10 +322,10 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
 
       # Day 1 audit posts 100
       audit = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
-      HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date).start_audit!
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit, user: user)
       audit.update!(status: "completed")
-      HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date).complete_audit!
+      close_and_open_next_business_date(hotel)
 
       # Day 2 morning: Guest leaves. Front desk applies 100 charge.
       # We need to override because the business date business_date is closed.

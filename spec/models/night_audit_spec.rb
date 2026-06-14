@@ -39,8 +39,9 @@ RSpec.describe NightAudit, type: :model do
       expect(described_class.closed_for_date?(hotel.id, Date.current)).to be(true)
     end
 
-    it "falls back to completed night audits when no hotel business date exists" do
+    it "does not treat a completed night audit as accounting-date authority" do
       night_audit = create(:night_audit, status: "completed")
+      night_audit.hotel.hotel_business_dates.delete_all
 
       expect(described_class.closed_for_date?(night_audit.hotel_id, night_audit.business_date)).to be(true)
     end

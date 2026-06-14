@@ -88,6 +88,16 @@ RSpec.describe Hotel, type: :model do
       expect(window.begin).to eq(zone.local(2026, 5, 18, 8, 0))
       expect(window.end).to eq(zone.local(2026, 5, 19, 2, 0))
     end
+
+    it 'uses the HotelBusinessDate row as accounting authority instead of the clock' do
+      persisted_hotel = create(:hotel)
+      record = persisted_hotel.current_business_date_record
+
+      allow(persisted_hotel).to receive(:business_date_for).and_return(record.business_date + 5.days)
+
+      expect(persisted_hotel.current_business_date_record).to eq(record)
+      expect(persisted_hotel.current_business_date).to eq(record.business_date)
+    end
   end
 
   describe 'payment setting resolution' do

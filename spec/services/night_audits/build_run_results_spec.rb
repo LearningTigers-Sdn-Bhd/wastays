@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HotelOps::BuildNightAuditRunResults do
+RSpec.describe NightAudits::BuildRunResults do
   let(:hotel) { create(:hotel) }
   let(:night_audit) { create(:night_audit, hotel: hotel, status: "running") }
 
@@ -33,5 +33,28 @@ RSpec.describe HotelOps::BuildNightAuditRunResults do
     expect(result.dig("charges_posted", "total")).to eq("125.0")
     expect(result.dig("charges_posted", "items").sole["folio_transaction_id"]).to eq(transaction.id)
     expect(result.dig("skipped_items", "count")).to eq(1)
+  end
+
+  it "keeps orphaned booking audit logs without crashing" do
+    missing_booking_id = Booking.maximum(:id).to_i + 10_000
+    log = create(:booking_audit_log,
+      hotel: hotel,
+      source: "night_audit",
+      action_type: "status_change",
+      old_value: { "status" => "confirmed" },
+      new_value: { "status" => "review_no_show" },
+      metadata: { night_audit_id: night_audit.id }
+    )
+    log.update_columns(auditable_id: missing_booking_id)
+
+    result = described_class.call(night_audit: night_audit)
+
+    item = result.dig("status_changes", "items").sole
+    expect(item["item_key"]).to eq("booking_audit_log:#{log.id}")
+    expect(item["booking_id"]).to eq(missing_booking_id)
+    expect(item["confirmation_token"]).to be_nil
+    expect(item["guest_name"]).to eq("Deleted booking")
+    expect(item["from"]).to eq("confirmed")
+    expect(item["to"]).to eq("review_no_show")
   end
 end

@@ -39,7 +39,7 @@ RSpec.describe FinancialControls::EvaluateAnomalies do
     context "with audit sync lags" do
       it "detects old business dates that are not closed" do
         old_date = 5.days.ago.to_date
-        create(:hotel_business_date, hotel: hotel, business_date: old_date, status: "open")
+        BusinessDates::ResetAuthority.call!(hotel: hotel, date: old_date)
 
         report = service.call
         expect(report[:audit_sync_lags].count).to eq(1)
@@ -47,7 +47,7 @@ RSpec.describe FinancialControls::EvaluateAnomalies do
       end
 
       it "ignores recently opened dates" do
-        create(:hotel_business_date, hotel: hotel, business_date: Date.current, status: "open")
+        BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
 
         report = service.call
         expect(report[:audit_sync_lags]).to be_empty

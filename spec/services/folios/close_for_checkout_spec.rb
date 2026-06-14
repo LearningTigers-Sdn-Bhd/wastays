@@ -77,8 +77,7 @@ RSpec.describe Folios::CloseForCheckout do
     folio = create(:booking_folio, booking: booking, status: "open")
     create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
     create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100.0)
-    business_date = booking.hotel.business_date_for
-    create(:hotel_business_date, hotel: booking.hotel, business_date: business_date, status: "audit_running")
+    booking.hotel.current_business_date_record.update!(status: "audit_running")
 
     result = described_class.call(booking: booking, user: user)
 

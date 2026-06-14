@@ -8,6 +8,11 @@ RSpec.describe Folios::PostNightlyCharges do
   let(:user) { create(:user, account: hotel.account) }
   let(:night_audit) { create(:night_audit, hotel: hotel, business_date: business_date, performed_by_user: user, status: "running") }
 
+  before do
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+    start_business_date_audit(hotel)
+  end
+
   it "posts one nightly accommodation and tax charge for an in-house booking" do
     booking = create(:booking,
       hotel: hotel,
@@ -145,6 +150,8 @@ RSpec.describe Folios::PostNightlyCharges do
 
   it "allocates rounding remainder to the final billable night" do
     final_night = business_date + 2.days
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: final_night)
+    start_business_date_audit(hotel)
     final_night_audit = create(:night_audit, hotel: hotel, business_date: final_night, performed_by_user: user, status: "running")
     booking = create(:booking,
       hotel: hotel,

@@ -102,9 +102,10 @@ RSpec.describe Concierge::SelfCheckIn do
 
     before { with_available_room(date: Date.yesterday) }
 
-    it "allows check-in" do
+    it "rejects check-in when the arrival accounting date has no control row" do
       result = call
-      expect(result.success?).to be true
+      expect(result.success?).to be false
+      expect(result.error_code).to eq(:error)
     end
   end
 

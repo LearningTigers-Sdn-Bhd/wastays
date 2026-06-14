@@ -75,10 +75,11 @@ RSpec.describe "Operational Exceptions", type: :system do
 
       # Let's post the nightly charge for yesterday
       audit = hotel.night_audits.create!(business_date: 1.day.ago.to_date, status: "running", trigger_mode: "manual")
-      HotelBusinessDate.for_hotel_date!(hotel: hotel, date: 1.day.ago.to_date).start_audit!
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: 1.day.ago.to_date)
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit, user: user)
       audit.update!(status: "completed")
-      HotelBusinessDate.for_hotel_date!(hotel: hotel, date: 1.day.ago.to_date).complete_audit!
+      close_and_open_next_business_date(hotel)
 
       # Pay the full 550: 100 (stay) + 300 (early checkout charges) + 150 (penalty)
       create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 550.0, user: user, posting_date: business_date)

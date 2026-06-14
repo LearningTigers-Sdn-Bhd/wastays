@@ -66,6 +66,7 @@ RSpec.describe Bookings::ProcessEarlyDeparture do
     create(:room_inventory, room_type: room_type, date: final_unused_date, quantity: 9)
 
     allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(future_date)
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: future_date)
 
     result = described_class.call(booking: booking, user: user, params: { apply_charge: "false" })
 
@@ -81,6 +82,7 @@ RSpec.describe Bookings::ProcessEarlyDeparture do
     allow_any_instance_of(Hotel).to receive(:business_date_for) do |_hotel, resolved_timestamp = nil|
       resolved_timestamp == timestamp ? business_date : Date.current
     end
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
     result = described_class.call(
       booking: booking,

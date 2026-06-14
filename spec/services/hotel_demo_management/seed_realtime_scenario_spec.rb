@@ -20,7 +20,7 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario do
     allow(HotelDemoManagement::ResetState).to receive(:new).and_return(instance_double(HotelDemoManagement::ResetState, call: reset_success))
     allow(Bookings::TransitionStatus).to receive(:new).and_return(instance_double(Bookings::TransitionStatus, call: OpenStruct.new(success?: true)))
     allow(Folios::PostCategoryCharge).to receive(:call).and_return(OpenStruct.new(success?: true))
-    allow(HotelOps::RunNightAudit).to receive(:new).and_return(instance_double(HotelOps::RunNightAudit, call: OpenStruct.new(success?: true)))
+    allow(NightAudits::Run).to receive(:new).and_return(instance_double(NightAudits::Run, call: OpenStruct.new(success?: true)))
   end
 
   describe "#call" do
@@ -52,7 +52,7 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario do
       expect(result).to be_success
       expect(Bookings::TransitionStatus).to have_received(:new).at_least(:once)
       expect(Folios::PostCategoryCharge).to have_received(:call).at_least(:once)
-      expect(HotelOps::RunNightAudit).to have_received(:new).exactly(5).times
+      expect(NightAudits::Run).to have_received(:new).exactly(5).times
     end
 
     it "returns failure when reset state fails" do

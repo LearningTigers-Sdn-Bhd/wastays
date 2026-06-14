@@ -35,6 +35,7 @@ RSpec.describe "Hotel night audits", type: :system do
       # and into a clearly closable business date.
       travel_to Time.zone.local(2026, 5, 19, 10, 0, 0)
       business_date = hotel.latest_closable_business_date
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
       booking = create(:booking,
         hotel: hotel,
@@ -50,13 +51,18 @@ RSpec.describe "Hotel night audits", type: :system do
 
       visit hotel_night_audits_path(hotel)
 
-      expect(page).to have_content("Night Audit")
-      expect(page).to have_content("Manual Run")
+      expect(page).to have_content("Business Date Control Center")
+      expect(page).to have_content("Close Readiness")
+      expect(page).to have_content("Audit Action")
+      expect(page).to have_content("Current Business Date")
+      expect(page).to have_content("Calendar Date")
+      expect(page).to have_content("Finished At")
       expect(page).to have_link("Night Audit", href: hotel_night_audits_path(hotel))
-      expect(page).to have_field("Business Date", with: business_date.strftime("%Y-%m-%d"))
+      expect(page).to have_no_field("Business Date")
+      expect(page).to have_content(business_date.strftime("%d %b %Y"))
 
       perform_enqueued_jobs do
-        within("[data-testid='manual-night-audit-form']") do
+        within("[data-testid='audit-action-form']") do
           fill_in "Notes", with: "Front desk close"
           click_button "Run Audit"
         end
@@ -71,6 +77,7 @@ RSpec.describe "Hotel night audits", type: :system do
     it "shows critical blockers on the result page" do
       travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
       business_date = Date.new(2026, 5, 22)
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
       create(:booking,
         hotel: hotel,
@@ -85,8 +92,7 @@ RSpec.describe "Hotel night audits", type: :system do
       visit hotel_night_audits_path(hotel)
 
       perform_enqueued_jobs do
-        within("[data-testid='manual-night-audit-form']") do
-          fill_in "Business Date", with: business_date.to_s
+        within("[data-testid='audit-action-form']") do
           click_button "Run Audit"
         end
       end
@@ -116,6 +122,7 @@ RSpec.describe "Hotel night audits", type: :system do
     it "navigates to the resolve page and displays blockers interactive wizard" do
       travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
       business_date = Date.new(2026, 5, 22)
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
       create(:booking,
         hotel: hotel,
@@ -129,8 +136,7 @@ RSpec.describe "Hotel night audits", type: :system do
 
       visit hotel_night_audits_path(hotel)
 
-      within("[data-testid='manual-night-audit-form']") do
-        fill_in "Business Date", with: business_date.to_s
+      within("[data-testid='audit-action-form']") do
         click_button "Run Audit"
       end
 

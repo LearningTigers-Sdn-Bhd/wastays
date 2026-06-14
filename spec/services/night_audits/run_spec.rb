@@ -1,8 +1,8 @@
 require "rails_helper"
 
-RSpec.describe HotelOps::RunNightAudit do
+RSpec.describe NightAudits::Run do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account) }
+  let(:hotel) { create(:hotel, :without_current_business_date, account: account) }
   let(:user) { create(:user, account: account, role: "hotel_staff") }
   let(:business_date) { 2.days.ago.to_date }
 
@@ -90,13 +90,14 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(hotel.hotel_business_dates.find_by(business_date: business_date + 1.day)).to be_nil
   end
 
-  xit "reuses an existing open next business date" do
-    existing_next_date = create(:hotel_business_date, hotel: hotel, business_date: business_date + 1.day, status: "open")
+  it "does not audit a date when a different accounting date is current" do
+    current = create(:hotel_business_date, hotel: hotel, business_date: business_date + 1.day, status: "open")
 
-    expect { run_audit }.to change(HotelBusinessDate, :count).by(1)
+    result = run_audit
 
-    expect(run_audit.success?).to be(true)
-    expect(existing_next_date.reload).to be_open
+    expect(result.success?).to be(false)
+    expect(result.error).to include("is not the current accounting business date")
+    expect(current.reload).to be_open
   end
 
   it "posts nightly charges before completing the audit" do
@@ -164,6 +165,7 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(result.night_audit.exceptions["review_due_out"].sole["booking_id"]).to eq(booking.id)
     expect(result.night_audit.summary.dig("run_results", "status_changes", "count")).to eq(1)
     expect(result.night_audit.summary.dig("run_results", "charges_posted", "count")).to eq(0)
+    expect(result.night_audit.blocked_details["due_out_not_checked_out"]).to be_empty
   end
 
   it "blocks when a stale checked-in due-out fails to transition" do
@@ -374,7 +376,7 @@ RSpec.describe HotelOps::RunNightAudit do
   end
 
   it "marks the audit failed and logs error when processing raises" do
-    allow_any_instance_of(HotelOps::EvaluateNightAudit).to receive(:call).and_raise(StandardError, "boom")
+    allow_any_instance_of(NightAudits::Evaluate).to receive(:call).and_raise(StandardError, "boom")
 
     expect { run_audit }.to change(NightAuditLog, :count).by(2) # process_started, failed
 
@@ -397,7 +399,7 @@ RSpec.describe HotelOps::RunNightAudit do
   it "keeps a missed arrival in review when the audit later fails" do
     booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 2.days)
     create(:booking_room, booking: booking, subtotal: 200.0)
-    allow_any_instance_of(HotelOps::EvaluateNightAudit).to receive(:call).and_raise(StandardError, "boom")
+    allow_any_instance_of(NightAudits::Evaluate).to receive(:call).and_raise(StandardError, "boom")
 
     result = run_audit
 
@@ -406,7 +408,7 @@ RSpec.describe HotelOps::RunNightAudit do
     expect(booking.no_show_review_business_date).to eq(business_date)
   end
 
-  it "keeps an expired review finalized when the audit later fails" do
+  it "blocks an expired-review charge when its posting date has no accounting control row" do
     booking = create(
       :booking,
       hotel: hotel,
@@ -417,14 +419,14 @@ RSpec.describe HotelOps::RunNightAudit do
       tax_lines: []
     )
     create(:booking_room, booking: booking, subtotal: 200.0)
-    allow_any_instance_of(HotelOps::EvaluateNightAudit).to receive(:call).and_raise(StandardError, "boom")
+    allow_any_instance_of(NightAudits::Evaluate).to receive(:call).and_raise(StandardError, "boom")
 
     result = run_audit
 
     expect(result.success?).to be(false)
-    expect(result.error).to eq("boom")
-    expect(booking.reload.status).to eq("no_show")
-    expect(booking.booking_folio.folio_transactions.charge.where(category: "no_show_charge")).to exist
+    expect(result.error).to include("has no accounting control record")
+    expect(booking.reload.status).to eq("review_no_show")
+    expect(booking.booking_folio).to be_nil
   end
 
   it "does not claim a business date that is already audit_running" do
@@ -464,7 +466,7 @@ RSpec.describe HotelOps::RunNightAudit do
 
     unclosable_date = Date.new(2026, 5, 21)
     kl_zone = Time.find_zone("Kuala Lumpur")
-    audit_hotel = create(:hotel, account: account, time_zone: "Kuala Lumpur", business_starts_at: "08:00", business_ends_at: "02:00")
+    audit_hotel = create(:hotel, :without_current_business_date, account: account, time_zone: "Kuala Lumpur", business_starts_at: "08:00", business_ends_at: "02:00")
 
     travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
       result = described_class.new(
@@ -499,25 +501,25 @@ RSpec.describe HotelOps::RunNightAudit do
     end
   end
 
-  it "does not claim a business date that is already closed" do
+  it "does not claim a closed date when no current accounting date exists" do
     create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "closed")
 
     result = run_audit
 
     expect(result.success?).to be(false)
-    expect(result.error).to eq("Night audit has already been closed for this date.")
+    expect(result.error).to eq("Hotel has no current accounting business date.")
     expect(result.night_audit).not_to be_persisted
   end
 
-  xit "fails safely when the next business date is locked" do
+  it "rejects the requested date when the next date is already current" do
     create(:hotel_business_date, hotel: hotel, business_date: business_date + 1.day, status: "audit_running")
 
     result = run_audit
 
     expect(result.success?).to be(false)
-    expect(result.night_audit).to be_failed
-    expect(result.error).to eq("Next business date #{business_date + 1.day} is already audit_running")
-    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
+    expect(result.night_audit).not_to be_persisted
+    expect(result.error).to include("is not the current accounting business date")
+    expect(hotel.hotel_business_dates.find_by(business_date: business_date)).to be_nil
     expect(hotel.hotel_business_dates.find_by!(business_date: business_date + 1.day)).to be_audit_running
     expect(Financials::CreateJournalBatch).not_to have_received(:call).with(hotel: hotel, business_date: business_date)
   end

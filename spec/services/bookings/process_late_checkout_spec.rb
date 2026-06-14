@@ -30,7 +30,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
     expect(folio.folio_transactions.where(category: "late_checkout_charge").sum(:amount)).to eq(150.0)
   end
 
-  it "resolves without posting a charge" do
+  it "rejects late checkout and marks checkout required without posting a charge" do
     result = described_class.call(
       booking: booking,
       user: user,
@@ -39,7 +39,9 @@ RSpec.describe Bookings::ProcessLateCheckout do
 
     expect(result).to be_success
     expect(result).not_to be_charged
-    expect(booking.reload.status).to eq("checked_in")
+    expect(result).to be_rejected
+    expect(booking.reload.status).to eq("checkout_required")
+    expect(booking.check_out.to_date).to eq(Date.current + 1.day)
     expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
   end
 
@@ -48,10 +50,11 @@ RSpec.describe Bookings::ProcessLateCheckout do
     described_class.call(
       booking: booking,
       user: user,
-      params: { charge_type: "none", check_out: (Date.current + 2.days).to_s }
+      params: { charge_type: "charge", amount: "150.00", check_out: (Date.current + 2.days).to_s }
     )
     audit = create(:night_audit, hotel: hotel, business_date: next_business_date, status: "running", performed_by_user: user)
-    create(:hotel_business_date, hotel: hotel, business_date: next_business_date, status: "audit_running")
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: next_business_date)
+    start_business_date_audit(hotel)
 
     expect {
       Folios::PostNightlyCharges.call(night_audit: audit, user: user)
