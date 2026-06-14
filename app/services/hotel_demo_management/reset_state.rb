@@ -32,7 +32,7 @@ module HotelDemoManagement
           delete_audit_logs
           delete_journal_batches
           delete_night_audits
-          delete_business_dates
+          reset_business_date_authority
           delete_bookings
           reset_rates_and_inventories
           reset_room_statuses
@@ -134,10 +134,10 @@ module HotelDemoManagement
       @hotel.night_audits.destroy_all
     end
 
-    def delete_business_dates
+    def reset_business_date_authority
       business_date_count = @hotel.hotel_business_dates.count
-      @logger.puts "Destroying #{business_date_count} business dates..."
-      @hotel.hotel_business_dates.destroy_all
+      @logger.puts "Resetting #{business_date_count} business dates and restoring accounting-date authority..."
+      BusinessDates::ResetAuthority.call!(hotel: @hotel)
     end
 
     def delete_bookings
