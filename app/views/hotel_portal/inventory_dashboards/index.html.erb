@@ -19,7 +19,7 @@
   
   <turbo-frame id="inventory_calendar_frame" data-turbo-action="advance">
     <div data-controller="tabs"
-         data-tabs-default-tab-value="calendar"
+         data-tabs-default-tab-value="<%= @active_tab %>"
          data-tabs-parameter-name-value="tab">
       <%= render "index_content", active_tab: @active_tab, active_subtab: @active_subtab %>
     </div>
@@ -39,6 +39,13 @@
       </div>
 
       <%= form_with scope: :selection_update, url: bulk_save_ari_hotel_inventory_dashboards_path(current_hotel), local: true, class: "flex min-h-0 flex-1 flex-col", data: { inventory_calendar_target: "form", action: "submit->inventory-calendar#confirmSubmit" } do |f| %>
+        <%= hidden_field_tag :tab, @active_tab %>
+        <%= hidden_field_tag :subtab, @active_subtab %>
+        <%= hidden_field_tag :display_currency, @display_currency %>
+        <% @view_currencies.each do |currency| %>
+          <%= hidden_field_tag "view_currencies[]", currency %>
+        <% end %>
+
         <div class="flex-1 overflow-y-auto px-5 py-5 space-y-6">
           <%= f.hidden_field :mode, data: { inventory_calendar_target: "mode" } %>
           <%= f.hidden_field :apply_inventory, value: "0", data: { inventory_calendar_target: "applyInventory" } %>
