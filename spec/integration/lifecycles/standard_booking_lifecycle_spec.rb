@@ -6,11 +6,11 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user, :superadmin) }
   let(:room_type) { create(:room_type, hotel: hotel) }
-  let(:business_date) { hotel.business_date_for }
+  let(:business_date) { hotel.current_business_date }
 
   before do
     # Give user permissions
-    admin_role = create(:role, name: "Admin", slug: "admin", account: hotel.account)
+    admin_role = create(:role, name: "Admin", account: hotel.account)
     user.user_hotel_accesses.create!(hotel: hotel, role: admin_role)
   end
 
@@ -34,22 +34,22 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
 
       # 3. Night Audit Day 1
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "pending", trigger_mode: "manual")
-      biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
-      biz_date_record.start_audit!
+      biz_date_record = hotel.current_business_date_record
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
       audit_day_1.update!(status: "completed")
-      biz_date_record.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       expect(folio.outstanding_balance).to eq(-100.0)
 
       # 4. Night Audit Day 2
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 1.day)
       audit_day_2 = hotel.night_audits.create!(business_date: business_date + 1.day, status: "pending", trigger_mode: "manual")
-      biz_date_record_2 = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date + 1.day)
-      biz_date_record_2.start_audit!
+      biz_date_record_2 = hotel.current_business_date_record
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
       audit_day_2.update!(status: "completed")
-      biz_date_record_2.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       # Balance is now exactly 0
       expect(folio.outstanding_balance).to eq(0.0)
@@ -80,11 +80,11 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
 
       # 3. Run Night Audit for Day 1
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "pending", trigger_mode: "manual")
-      biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
-      biz_date_record.start_audit!
+      biz_date_record = hotel.current_business_date_record
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
       audit_day_1.update!(status: "completed")
-      biz_date_record.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       # Verify 1 charge posted
       expect(folio.folio_transactions.charge.count).to eq(1)
@@ -97,11 +97,11 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
       # 4. Night Audit Day 2
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 1.day)
       audit_day_2 = hotel.night_audits.create!(business_date: business_date + 1.day, status: "pending", trigger_mode: "manual")
-      biz_date_record_2 = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date + 1.day)
-      biz_date_record_2.start_audit!
+      biz_date_record_2 = hotel.current_business_date_record
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
       audit_day_2.update!(status: "completed")
-      biz_date_record_2.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       expect(folio.outstanding_balance).to eq(200.0)
 
@@ -143,10 +143,10 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
 
       # Night 1 posts at $100
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "completed", trigger_mode: "manual")
-      biz_date_record = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date)
-      biz_date_record.start_audit!
+      biz_date_record = hotel.current_business_date_record
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
-      biz_date_record.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       # Next morning, guest decides to upgrade room or rate changes to $150 for remaining 2 nights.
       booking_room.update!(nightly_rate_snapshot: {
@@ -158,18 +158,18 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
       # Night 2 posts at $150
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 1.day)
       audit_day_2 = hotel.night_audits.create!(business_date: business_date + 1.day, status: "completed", trigger_mode: "manual")
-      biz_date_record_2 = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date + 1.day)
-      biz_date_record_2.start_audit!
+      biz_date_record_2 = hotel.current_business_date_record
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
-      biz_date_record_2.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       # Night 3 posts at $150
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 2.days)
       audit_day_3 = hotel.night_audits.create!(business_date: business_date + 2.days, status: "completed", trigger_mode: "manual")
-      biz_date_record_3 = HotelBusinessDate.for_hotel_date!(hotel: hotel, date: business_date + 2.days)
-      biz_date_record_3.start_audit!
+      biz_date_record_3 = hotel.current_business_date_record
+      start_business_date_audit(hotel)
       Folios::PostNightlyCharges.call(night_audit: audit_day_3, user: user)
-      biz_date_record_3.complete_audit!
+      close_and_open_next_business_date(hotel)
 
       # Total charges should be 100 + 150 + 150 = 400
       expect(folio.folio_transactions.charge.sum(:amount)).to eq(400.0)

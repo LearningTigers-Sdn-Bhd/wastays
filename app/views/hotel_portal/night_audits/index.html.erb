@@ -1,223 +1,23 @@
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0 mt-5">
-    <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Night Audit</h1>
-    <p class="mt-1 text-sm font-medium text-slate-600">
-      Night audit runs automatically 30 minutes after the hotel's business day ends (defined by <strong>Business Day Ends At</strong>). 
-      You can adjust this configuration in the <%= link_to "Hotel Settings", hotel_settings_path(current_hotel, tab: "general"), class: "underline font-semibold text-slate-900 hover:text-slate-700" %>.
-    </p>
-  </div>
+<% presenter = @presenter %>
+<% primary_action = presenter.primary_action %>
+<% resolve_action = presenter.resolve_action %>
 
-  <div class="px-4 md:px-0">
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-        <h2 class="text-lg font-bold tracking-tight text-slate-950">Pre-Audit Check: <%= @suggested_business_date.strftime("%d %b %Y") %></h2>
-        <p class="mt-1 text-sm font-medium text-slate-600">Current status of the hotel for the next scheduled audit run.</p>
-      </div>
-      <div class="p-6 sm:p-8 space-y-6">
-        <% blockers = @pre_audit_evaluation[:blocked_details] %>
-        <% warnings = @pre_audit_evaluation[:exceptions] %>
+<div class="mx-auto max-w-[1600px] space-y-4 px-4 pb-16 pt-5 md:px-0">
+  <%= render "hotel_portal/night_audits/index/page_header", presenter: presenter %>
+  <%= render "hotel_portal/night_audits/index/business_date", presenter: presenter %>
+  <%= render "hotel_portal/night_audits/index/close_readiness", presenter: presenter, resolve_action: resolve_action %>
+  <%= render "hotel_portal/night_audits/index/blockers", presenter: presenter, resolve_action: resolve_action if presenter.flattened_blocker_rows.any? %>
+  <%= render "hotel_portal/night_audits/index/audit_action", presenter: presenter, primary_action: primary_action, resolve_action: resolve_action %>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Blockers</p>
-            <p class="text-2xl font-bold <%= blockers.values.flatten.any? ? 'text-red-600' : 'text-slate-950' %>"><%= blockers.values.flatten.count %></p>
-          </div>
-          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Warnings</p>
-            <p class="text-2xl font-bold <%= warnings.values.flatten.any? ? 'text-amber-600' : 'text-slate-950' %>"><%= warnings.values.flatten.count %></p>
-          </div>
-          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Arrivals</p>
-            <p class="text-2xl font-bold text-slate-950"><%= @pre_audit_evaluation[:summary]["arrivals_count"] %></p>
-          </div>
-          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Due Outs</p>
-            <p class="text-2xl font-bold text-slate-950"><%= @pre_audit_evaluation[:summary]["due_out_count"] %></p>
-          </div>
-        </div>
+  <div data-controller="tabs" data-tabs-default-tab-value="audit-history" class="space-y-4">
+    <%= render "hotel_portal/night_audits/index/tabs", presenter: presenter %>
 
-        <% if blockers.values.flatten.any? %>
-          <div class="rounded-2xl border border-red-200 bg-red-50 p-6">
-            <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
-              <div class="flex items-start gap-4">
-                <div class="shrink-0 rounded-full bg-red-100 p-2 text-red-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 class="text-sm font-bold text-red-950">Audit Blocked</h3>
-                  <p class="mt-1 text-sm font-medium text-red-800">The following issues must be resolved before the night audit can complete successfully.</p>
-                  <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                    <% blockers.each do |label, rows| %>
-                      <% next if rows.blank? %>
-                      <div class="text-xs">
-                        <p class="font-bold text-red-900 mb-1"><%= label.humanize %></p>
-                        <p class="font-medium text-red-800"><%= rows.count %> items requiring attention</p>
-                      </div>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-
-              <% if current_user.has_permission?("override_financial_date_lock", hotel: current_hotel) %>
-                <div class="shrink-0">
-                  <%= form_with url: hotel_night_audits_path(current_hotel), method: :post, scope: :night_audit do |f| %>
-                    <%= f.hidden_field :business_date, value: @suggested_business_date %>
-                    <%= f.hidden_field :force_roll, value: "1" %>
-                    <%= f.hidden_field :notes, value: "Force roll from index dashboard alert" %>
-                    <%= f.submit "Force Roll &rarr;".html_safe, 
-                        class: "inline-flex items-center justify-center rounded-xl bg-red-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 whitespace-nowrap",
-                        data: { turbo_confirm: "FORCE ROLL WARNING: This will advance the business date to #{@suggested_business_date + 1.day} WITHOUT resolving the listed blockers. Financial discrepancies may occur. Are you sure you want to proceed?" } %>
-                  <% end %>
-                </div>
-              <% end %>
-            </div>
-          </div>
-        <% else %>
-          <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
-            <div class="flex items-start gap-4">
-              <div class="shrink-0 rounded-full bg-emerald-100 p-2 text-emerald-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <h3 class="text-sm font-bold text-emerald-950">Ready for Audit</h3>
-                <p class="mt-1 text-sm font-medium text-emerald-800">No critical blockers found for the business date <%= @suggested_business_date.strftime("%d %b %Y") %>.</p>
-              </div>
-            </div>
-          </div>
-        <% end %>
-      </div>
+    <div id="audit-history-panel" data-tabs-target="panel" data-tab-panel="audit-history" role="tabpanel" data-testid="audit-history-panel">
+      <%= render "hotel_portal/night_audits/index/audit_history", presenter: presenter, night_audits: @night_audits %>
     </div>
-  </div>
 
-  <div class="px-4 md:px-0">
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-        <h2 class="text-lg font-bold tracking-tight text-slate-950">Manual Run</h2>
-        <p class="mt-1 text-sm font-medium text-slate-600">Run night audit for a business date. The field defaults to the most recent closable business date (usually yesterday).</p>
-      </div>
-      <div class="p-6 sm:p-8">
-        <div class="space-y-6">
-          <%= form_with url: hotel_night_audits_path(current_hotel), method: :post, scope: :night_audit, class: "grid gap-4 lg:grid-cols-[220px,1fr,auto,auto] lg:items-end", data: { testid: "manual-night-audit-form" } do |f| %>
-            <div>
-              <%= f.label :business_date, "Business Date", class: "block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2" %>
-              <%= f.date_field :business_date, value: @suggested_business_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
-            </div>
-            <div>
-              <%= f.label :notes, "Notes", class: "block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2" %>
-              <%= f.text_field :notes, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", placeholder: "Optional note for this run" %>
-            </div>
-            <div>
-              <%= f.submit "Run Audit", class: "inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 whitespace-nowrap" %>
-            </div>
-            <% if current_user.has_permission?("override_financial_date_lock", hotel: current_hotel) %>
-              <div>
-                <%= f.hidden_field :force_roll, value: "0", id: "force_roll_hidden" %>
-                <button type="submit" 
-                        name="night_audit[force_roll]" 
-                        value="1" 
-                        class="inline-flex w-full items-center justify-center rounded-xl border-2 border-red-600 bg-white px-6 py-2.5 text-sm font-bold text-red-600 shadow-sm transition hover:bg-red-50 whitespace-nowrap"
-                        data-turbo-confirm="FORCE ROLL WARNING: This will advance the business date for the selected day WITHOUT resolving blockers. Financial discrepancies may occur. Are you sure you want to proceed?">
-                  Force Roll
-                </button>
-              </div>
-            <% end %>
-          <% end %>
-
-          <% if Rails.env.development? %>
-            <div class="pt-6 border-t border-dashed border-amber-200">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-amber-50 p-6 border border-amber-100">
-                <div>
-                  <h3 class="text-sm font-bold text-amber-950">Development Tools</h3>
-                  <p class="mt-1 text-xs font-medium text-amber-700">Force run an audit for the current operational date (bypass time check).</p>
-                </div>
-                <%= form_with url: hotel_night_audits_path(current_hotel), method: :post, scope: :night_audit do |f| %>
-                  <%= f.hidden_field :business_date, value: current_hotel.business_date_for %>
-                  <%= f.hidden_field :allow_unclosable_date, value: "1" %>
-                  <%= f.hidden_field :notes, value: "Dev mode force run" %>
-                  <%= f.submit "DEV MODE: RUN TODAY AUDIT", class: "inline-flex items-center justify-center rounded-xl bg-amber-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 whitespace-nowrap" %>
-                <% end %>
-              </div>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="px-4 md:px-0">
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="border-b border-slate-200 bg-slate-50/50 px-6 py-5 sm:px-8">
-        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Audit History</h2>
-        <p class="mt-1 text-sm font-medium text-slate-600">Each row is one business date for this hotel.</p>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="min-w-full table-fixed">
-          <colgroup>
-            <col class="w-[18%]">
-            <col class="w-[16%]">
-            <col class="w-[16%]">
-            <col class="w-[18%]">
-            <col class="w-[18%]">
-            <col class="w-[14%]">
-          </colgroup>
-          <thead class="bg-slate-100">
-            <tr>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Business Date</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Trigger</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Performed By</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Completed At</th>
-              <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Action</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-200 bg-white">
-            <% if @night_audits.any? %>
-              <% @night_audits.each_with_index do |night_audit, index| %>
-                <% badge_class = case night_audit.status
-                  when "completed" then "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  when "blocked" then "border-amber-200 bg-amber-50 text-amber-700"
-                  when "failed" then "border-red-200 bg-red-50 text-red-700"
-                  else "border-slate-200 bg-slate-50 text-slate-700"
-                end %>
-                <tr class="align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
-                  <td class="px-6 py-5 sm:px-8 text-sm font-bold text-slate-950"><%= night_audit.business_date.strftime("%d %b %Y") %></td>
-                  <td class="px-6 py-5">
-                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= badge_class %>"><%= night_audit.status.humanize %></span>
-                  </td>
-                  <td class="px-6 py-5 text-sm font-medium text-slate-700"><%= night_audit.trigger_mode.humanize %></td>
-                  <td class="px-6 py-5 text-sm font-medium text-slate-700"><%= night_audit.performed_by_user&.name || "System" %></td>
-                  <% timing_label = if night_audit.completed_at.present?
-                    night_audit.completed_at.strftime("%d %b %Y, %I:%M %p")
-                  elsif night_audit.pending?
-                    "Scheduled"
-                  else
-                    "In progress"
-                  end %>
-                  <td class="px-6 py-5 text-sm font-medium text-slate-700"><%= timing_label %></td>
-                  <td class="px-6 py-5 text-right sm:px-8">
-                    <%= link_to "View", hotel_night_audit_path(current_hotel, night_audit), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
-                  </td>
-                </tr>
-              <% end %>
-            <% else %>
-              <tr>
-                <td colspan="6" class="px-6 py-20 text-center sm:px-8">
-                  <p class="text-sm font-medium italic text-slate-500">No night audits have been run for this hotel yet.</p>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="px-6 py-4 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
-        <%= paginate @night_audits %>
-      </div>
+    <div id="advanced-actions-panel" data-tabs-target="panel" data-tab-panel="advanced-actions" role="tabpanel" class="hidden" data-testid="index-advanced-actions-panel">
+      <%= render "hotel_portal/night_audits/index/advanced_actions", presenter: presenter %>
     </div>
   </div>
 </div>

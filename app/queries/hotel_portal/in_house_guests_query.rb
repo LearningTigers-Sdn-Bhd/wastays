@@ -26,7 +26,7 @@ module HotelPortal
 
     def base_scope
       @hotel.bookings
-            .where(status: [ "checked_in", "review_due_out" ])
+            .where(status: [ "checked_in", "review_due_out", "checkout_required" ])
             .where.not(checked_in_at: nil)
             .where(checked_out_at: nil)
     end

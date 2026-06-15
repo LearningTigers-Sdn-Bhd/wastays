@@ -1,6 +1,6 @@
 FactoryBot.define do
   factory :account do
-    sequence(:name) { |n| "Account #{n}" }
+    name { "Account #{SecureRandom.hex(6)}" }
     status { "active" }
   end
 end

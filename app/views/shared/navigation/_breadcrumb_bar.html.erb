@@ -1,8 +1,9 @@
-<%# locals: parts - array of { type: :section|:menu|:menu_group|:breakdown, label:, path:, siblings: }
+<%# locals: parts - array of { type:, label:, path:, siblings:, tab_label: }
    # :section     → unclickable text
    # :menu        → clickable dropdown showing other menus under same section
    # :menu_group  → unclickable text (parent of nested children)
    # :breakdown   → clickable dropdown showing other breakdowns under same menu group
+   # tab_label     → label updated by the tabs Stimulus controller
 %>
 <div class="flex w-max min-w-0 items-center gap-x-2 text-sm" data-controller="breadcrumb-dropdown">
   <% parts.each_with_index do |part, index| %>
@@ -19,21 +20,7 @@
 
     <% when :menu, :breakdown %>
       <% if part[:siblings].present? %>
-        <div class="relative" data-breadcrumb-dropdown-target="item">
-          <button type="button"
-                  class="cursor-pointer font-semibold text-slate-900 inline-flex items-center gap-x-1 hover:text-brand-primary transition-colors"
-                  data-action="click->breadcrumb-dropdown#toggle">
-            <%= part[:label] %>
-            <%= cached_icon "chevron-down", class: "size-3 shrink-0" %>
-          </button>
-          <div class="fixed w-56 bg-layer shadow-dropdown rounded-lg hidden z-50 border border-layer-line py-1" data-breadcrumb-dropdown-target="menu">
-            <% part[:siblings].each do |sibling| %>
-              <%= link_to sibling[:label], sibling[:path],
-                          class: "block px-3 py-2 text-sm text-neutral-text-primary hover:bg-surface-hover transition-colors",
-                          data: { action: "click->breadcrumb-dropdown#close" } %>
-            <% end %>
-          </div>
-        </div>
+        <%= render "shared/navigation/breadcrumb_dropdown", part: part %>
       <% elsif part[:path].present? && index < parts.size - 1 %>
         <%= link_to part[:label], part[:path], class: "font-medium text-slate-600 hover:text-brand-primary transition-colors" %>
       <% else %>
@@ -41,21 +28,7 @@
       <% end %>
     <% else %>
       <% if part[:siblings].present? %>
-        <div class="relative" data-breadcrumb-dropdown-target="item">
-          <button type="button"
-                  class="cursor-pointer font-semibold text-slate-900 inline-flex items-center gap-x-1 hover:text-brand-primary transition-colors"
-                  data-action="click->breadcrumb-dropdown#toggle">
-            <%= part[:label] %>
-            <%= cached_icon "chevron-down", class: "size-3 shrink-0" %>
-          </button>
-          <div class="fixed w-56 bg-layer shadow-dropdown rounded-lg hidden z-50 border border-layer-line py-1" data-breadcrumb-dropdown-target="menu">
-            <% part[:siblings].each do |sibling| %>
-              <%= link_to sibling[:label], sibling[:path],
-                          class: "block px-3 py-2 text-sm text-neutral-text-primary hover:bg-surface-hover transition-colors",
-                          data: { action: "click->breadcrumb-dropdown#close" } %>
-            <% end %>
-          </div>
-        </div>
+        <%= render "shared/navigation/breadcrumb_dropdown", part: part %>
       <% elsif index < parts.size - 1 %>
         <% if part[:path].present? %>
           <%= link_to part[:label], part[:path], class: "font-medium text-slate-600 hover:text-brand-primary transition-colors" %>
@@ -63,7 +36,13 @@
           <span class="cursor-default font-medium text-slate-600"><%= part[:label] %></span>
         <% end %>
       <% else %>
-        <span class="cursor-default font-semibold text-slate-900"><%= part[:label] %></span>
+        <span class="cursor-default font-semibold text-slate-900">
+          <% if part[:tab_label] %>
+            <span data-tabs-breadcrumb-label><%= part[:label] %></span>
+          <% else %>
+            <%= part[:label] %>
+          <% end %>
+        </span>
       <% end %>
     <% end %>
   <% end %>

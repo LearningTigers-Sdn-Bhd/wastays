@@ -2,6 +2,7 @@ class NightAudit < ApplicationRecord
   belongs_to :hotel
   belongs_to :performed_by_user, class_name: "User", optional: true
   has_many :night_audit_logs, dependent: :destroy
+  has_many :folio_transactions, dependent: :restrict_with_error
   has_many :financial_audit_events, dependent: :restrict_with_error
   has_one :financial_summary, class_name: "NightAuditFinancialSummary", dependent: :destroy
 

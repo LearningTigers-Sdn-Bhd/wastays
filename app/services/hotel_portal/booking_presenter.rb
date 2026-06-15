@@ -22,6 +22,8 @@ module HotelPortal
       when "confirmed" then "border-green-800 text-green-800"
       when "review_no_show" then "border-amber-800 text-amber-800"
       when "checked_in" then "border-blue-800 text-blue-800"
+      when "review_due_out" then "border-orange-800 text-orange-800"
+      when "checkout_required" then "border-rose-800 text-rose-800"
       when "completed" then "border-emerald-800 text-emerald-800"
       when "cancelled" then "border-red-800 text-red-800"
       when "pending" then "border-yellow-800 text-yellow-800"
@@ -62,6 +64,8 @@ module HotelPortal
     end
 
     def checked_out_at_form_value
+      return booking.check_out.in_time_zone(booking.hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M") if booking.checkout_required?
+
       Time.current.strftime("%Y-%m-%dT%H:%M")
     end
 

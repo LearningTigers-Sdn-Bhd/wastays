@@ -44,8 +44,9 @@ RSpec.describe HotelPortal::BookingPresenter do
 
     around { |example| travel_to(Time.zone.local(2026, 5, 18, 14, 0, 0)) { example.run } }
 
-    it "returns true if a completed night audit exists for the check-in date" do
+    it "returns true if the check-in accounting date is closed" do
       create(:night_audit, hotel: hotel, business_date: check_in_date, status: "completed")
+      hotel.current_business_date_record.update!(business_date: check_in_date, status: "closed")
       expect(subject.requires_backdated_checkin_reason?).to be true
     end
 

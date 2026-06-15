@@ -6,13 +6,13 @@ RSpec.describe Folios::PostEarlyCheckoutCharges do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user, :superadmin) }
   let(:room_type) { create(:room_type, hotel: hotel) }
-  let(:departure_date) { Date.current }
-  let(:original_check_out) { Date.current + 2.days }
+  let(:departure_date) { hotel.current_business_date }
+  let(:original_check_out) { departure_date + 2.days }
   let(:booking) do
     create(
       :booking,
       hotel: hotel,
-      check_in: Date.current,
+      check_in: departure_date,
       check_out: original_check_out,
       tax_lines: [ { "name" => "Service Tax", "amount" => "20.00", "type" => "service_tax" } ]
     )

@@ -55,7 +55,7 @@ RSpec.describe Folios::InsertTransaction do
         # Setup: Hotel business day hasn't rolled, so calendar date is 10th but business date is 9th
         calendar_time = Time.zone.local(2026, 5, 10, 1, 0) # 1 AM on May 10
         business_date_9th = Date.new(2026, 5, 9)
-        create(:hotel_business_date, hotel: hotel, business_date: business_date_9th, status: "open")
+        BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date_9th)
 
         allow(Time).to receive(:current).and_return(calendar_time)
         allow(hotel).to receive(:business_date_for).with(calendar_time).and_return(business_date_9th)
@@ -97,6 +97,7 @@ RSpec.describe Folios::InsertTransaction do
       let(:closed_date) { 1.day.ago.to_date }
       before do
         create(:night_audit, hotel: hotel, business_date: closed_date, status: "completed")
+        create(:hotel_business_date, hotel: hotel, business_date: closed_date, status: "closed")
       end
 
       it "fails without override" do
@@ -204,7 +205,7 @@ RSpec.describe Folios::InsertTransaction do
 
     context "while night audit is running" do
       before do
-        create(:hotel_business_date, hotel: hotel, business_date: Date.current, status: "audit_running")
+        hotel.current_business_date_record.update!(status: "audit_running")
       end
 
       it "blocks normal staff postings" do
@@ -240,7 +241,7 @@ RSpec.describe Folios::InsertTransaction do
       let(:night_audit) { create(:night_audit, hotel: hotel, business_date: Date.current, status: "blocked") }
 
       before do
-        create(:hotel_business_date, hotel: hotel, business_date: Date.current, status: "audit_blocked")
+        hotel.current_business_date_record.update!(status: "audit_blocked")
       end
 
       it "blocks normal staff postings" do

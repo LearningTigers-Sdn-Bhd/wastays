@@ -72,7 +72,8 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     override_breadcrumbs(
       { label: "Operations" },
       { label: "Bookings", path: hotel_bookings_path(current_hotel) },
-      { label: @booking.confirmation_token }
+      { label: @booking.confirmation_token, path: hotel_booking_path(current_hotel, @booking) },
+      { label: "Booking Details", tab_label: true }
     )
   end
 

@@ -7,7 +7,7 @@ RSpec.describe "HotelPortal::NightAudits Force Roll", type: :request do
   let(:account) { create(:account) }
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, account: account, plan: plan, status: "live") }
+  let(:hotel) { create(:hotel, :without_current_business_date, account: account, plan: plan, status: "live") }
   let(:user) { create(:user, account: account, role: "hotel_staff") }
   let(:role) { create(:role, account: account, slug: "manager", name: "Manager") }
   let!(:manage_permission) { Permission.find_or_create_by!(slug: "manage_night_audit") { |p| p.name = "Manage Night Audit" } }
@@ -31,8 +31,9 @@ RSpec.describe "HotelPortal::NightAudits Force Roll", type: :request do
 
       post hotel_night_audits_path(hotel), params: {
         night_audit: {
-          business_date: business_date.to_s,
-          force_roll: "1"
+              business_date: business_date.to_s,
+              force_roll: "1",
+              notes: "Manager accepted unresolved blockers"
         }
       }
 
@@ -54,10 +55,11 @@ RSpec.describe "HotelPortal::NightAudits Force Roll", type: :request do
         post hotel_night_audits_path(hotel), params: {
           night_audit: {
             business_date: business_date.to_s,
-            force_roll: "1"
+            force_roll: "1",
+            notes: "Manager accepted unresolved blockers"
           }
         }
-      }.to have_enqueued_job(HotelOps::RunNightAuditJob).with(
+      }.to have_enqueued_job(NightAudits::RunJob).with(
         anything, # night_audit_id
         user.id,
         hash_including(force_roll: true)

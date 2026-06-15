@@ -139,7 +139,7 @@ module Rooms
     def bookings_scope
       @hotel.bookings
         .includes(:booking_rooms, :housekeeping_requests)
-        .where(status: %w[confirmed review_no_show checked_in review_due_out completed])
+        .where(status: %w[confirmed review_no_show checked_in review_due_out checkout_required completed])
         .joins(:booking_rooms)
         .where("bookings.check_in::date < ? AND bookings.check_out::date > ?", dates.last + 1.day, @start_date)
         .distinct

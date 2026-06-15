@@ -11,7 +11,7 @@ module Folios
       @category = category.to_s
       @user = user
       @description = description
-      @posting_date = posting_date || @booking_folio.hotel.business_date_for(Time.current)
+      @posting_date = posting_date || @booking_folio.hotel.current_business_date
       @options = options
     end
 
@@ -44,6 +44,7 @@ module Folios
           reversal_of_transaction: @options[:reversal_of_transaction],
           correction_reason: @options[:correction_reason],
           correction_note: @options[:correction_note],
+          night_audit: @options[:night_audit],
           metadata: transaction_metadata
         )
 
@@ -109,7 +110,9 @@ module Folios
 
     def transaction_metadata
       metadata = (@options[:metadata] || {}).merge(posted_by_user_id: @user&.id)
+      metadata[:night_audit_id] = @options[:night_audit].id if @options[:night_audit].present?
       metadata[:posting_source] ||= @options[:posting_source] if @options[:posting_source].present?
+      metadata[:blocker_resolution] ||= @options[:blocker_resolution] if @options[:blocker_resolution].present?
       return metadata unless override_requested?
 
       metadata.merge(

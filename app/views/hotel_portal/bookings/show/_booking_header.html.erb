@@ -31,8 +31,9 @@
           <%= link_to "Edit Check-In", hotel_booking_transaction_check_in_reservation_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" %>
         <% elsif booking.status == "review_due_out" %>
           <%= link_to "Review Late Checkout", hotel_booking_transaction_late_checkout_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700" %>
+        <% elsif booking.status == "checkout_required" %>
           <%= link_to hotel_booking_transaction_check_out_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" do %>
-            Check Out
+            Complete Checkout
           <% end %>
         <% end %>
       <% end %>

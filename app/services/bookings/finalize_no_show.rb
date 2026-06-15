@@ -18,6 +18,12 @@ module Bookings
     end
 
     def call
+      NightAudits::OperationalChangeGuard.call!(
+        hotel: @booking.hotel,
+        action: :finalize_no_show,
+        night_audit: @night_audit
+      )
+
       Booking.transaction do
         @booking.with_lock do
           @booking.reload
@@ -30,7 +36,7 @@ module Bookings
           folio = Folios::InitializeForBooking.call(
             booking: @booking,
             user: @user,
-            options: { posting_source: "no_show" },
+            options: { posting_source: "no_show", night_audit: @night_audit },
             lock: false
           )
           post_no_show_charges(folio)
@@ -90,8 +96,8 @@ module Bookings
     def insert_charge!(folio:, amount:, category:, description:, metadata:)
       return if already_posted?(folio, metadata[:no_show_charge_key])
 
-      options = { metadata: metadata, posting_source: "no_show" }
-      if @booking.hotel.date_closed?(@business_date) || @business_date < @booking.hotel.business_date_for
+      options = { metadata: metadata, posting_source: "no_show", night_audit: @night_audit }
+      if @booking.hotel.date_closed?(@business_date) || @business_date < @booking.hotel.current_business_date
         options.merge!(
           override_night_audit: true,
           system_posting: true,

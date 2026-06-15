@@ -35,6 +35,7 @@ RSpec.describe "Hotel night audits", type: :system do
       # and into a clearly closable business date.
       travel_to Time.zone.local(2026, 5, 19, 10, 0, 0)
       business_date = hotel.latest_closable_business_date
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
       booking = create(:booking,
         hotel: hotel,
@@ -50,27 +51,85 @@ RSpec.describe "Hotel night audits", type: :system do
 
       visit hotel_night_audits_path(hotel)
 
-      expect(page).to have_content("Night Audit")
-      expect(page).to have_content("Manual Run")
+      expect(page).to have_content("Business Date Control Center")
+      expect(page).to have_content("Close Readiness")
+      expect(page).to have_content("Audit Action")
+      expect(page).to have_content("Current Business Date")
+      expect(page).to have_content("Calendar Date")
+      expect(page).to have_content("Finished At")
+      within("[data-testid='night-audit-page-header']") do
+        expect(page).to have_no_css("[data-testid='business-date-status']")
+      end
+      within("[data-testid='business-date-card']") do
+        expect(page).to have_content("Accounting authority")
+        expect(page).to have_css("[data-testid='business-date-status']", text: "Open")
+      end
+      expect(page).to have_css("[data-testid='readiness-table']")
+      expect(page).to have_no_css("[data-testid='blockers-table']")
+      expect(page).to have_css("[data-testid='audit-history-table']")
+      expect(page).to have_css("[data-testid='night-audit-index-tabs']")
+      expect(page).to have_css("[data-testid='audit-history-panel']")
+      expect(page).to have_css("[data-testid='index-advanced-actions-panel'].hidden", visible: :all)
       expect(page).to have_link("Night Audit", href: hotel_night_audits_path(hotel))
-      expect(page).to have_field("Business Date", with: business_date.strftime("%Y-%m-%d"))
+      expect(page).to have_no_field("Business Date")
+      expect(page).to have_content(business_date.strftime("%d %b %Y"))
 
       perform_enqueued_jobs do
-        within("[data-testid='manual-night-audit-form']") do
+        within("[data-testid='audit-action-form']") do
           fill_in "Notes", with: "Front desk close"
           click_button "Run Audit"
         end
       end
 
       expect(page).to have_content("Night audit has been scheduled in the background. Please wait while it processes.")
-      expect(page).to have_content("Night Audit #{business_date.strftime('%d %b %Y')}")
+      expect(page).to have_content("Night Audit / #{business_date.strftime('%d %b %Y')}")
       expect(page).to have_content("Completed")
       expect(page).to have_content("Financial Summary")
+      expect(page).to have_content("Summary")
+      expect(page).to have_content("Audit Snapshot")
+      expect(page).to have_css("[data-testid='night-audit-summary']")
+      expect(page).to have_css("[data-testid='audit-details-card']")
+      expect(page).to have_css("[data-testid='audit-snapshot-card']")
+      expect(page).to have_css("[data-testid='payment-status-counts-card']")
+      expect(page).to have_css("[data-testid='night-audit-show-tabs']")
+      within("[data-testid='results-panel']") do
+        expect(page).to have_content("Run Results")
+        expect(page).to have_content("Hard Blockers")
+        expect(page).to have_content("Warnings / Review Items")
+      end
+      expect(page).to have_css("[data-testid='financial-summary-panel'].hidden", visible: :all)
+      expect(page).to have_css("[data-testid='show-advanced-actions-panel'].hidden", visible: :all)
+      expect(page).to have_link("View Audit Packet")
     end
 
-    it "shows blockers on the result page" do
+    it "shows blocker rows with links to affected bookings" do
       travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
       business_date = Date.new(2026, 5, 22)
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+
+      booking = create(:booking,
+        hotel: hotel,
+        status: "checked_in",
+        payment_status: "captured",
+        guest_name: "Aisha Tan",
+        confirmation_token: "WS-BLOCK-LINK",
+        check_in: business_date - 1.day,
+        check_out: business_date,
+        checked_in_at: 1.day.ago)
+
+      visit hotel_night_audits_path(hotel)
+
+      within("[data-testid='blockers-table']") do
+        expect(page).to have_content("Due out not checked out")
+        expect(page).to have_content("Aisha Tan")
+        expect(page).to have_link("View Booking", href: hotel_booking_path(hotel, booking))
+      end
+    end
+
+    it "shows critical blockers on the result page" do
+      travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
+      business_date = Date.new(2026, 5, 22)
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
       create(:booking,
         hotel: hotel,
@@ -79,22 +138,23 @@ RSpec.describe "Hotel night audits", type: :system do
         guest_name: "Aisha Tan",
         confirmation_token: "WS-BLOCK-001",
         check_in: business_date - 1.day,
-        check_out: business_date,
-        checked_in_at: 1.day.ago)
+        check_out: business_date + 1.day,
+        checked_in_at: nil)
 
       visit hotel_night_audits_path(hotel)
 
       perform_enqueued_jobs do
-        within("[data-testid='manual-night-audit-form']") do
-          fill_in "Business Date", with: business_date.to_s
+        within("[data-testid='audit-action-form']") do
           click_button "Run Audit"
         end
       end
 
       expect(page).to have_content("Night audit has been scheduled in the background. Please wait while it processes.")
-      expect(page).to have_content("Audit Blockers")
+      expect(page).to have_content("Cannot close this date")
+      expect(page).to have_content("Hard Blockers")
+      expect(page).to have_content("Warnings / Review Items")
       expect(page).to have_content("Aisha Tan")
-      expect(page).to have_content("Due out today but still not checked out")
+      expect(page).to have_content("Checked-in booking is missing check-in timestamp")
     end
   end
 
@@ -116,6 +176,7 @@ RSpec.describe "Hotel night audits", type: :system do
     it "navigates to the resolve page and displays blockers interactive wizard" do
       travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
       business_date = Date.new(2026, 5, 22)
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
       create(:booking,
         hotel: hotel,
@@ -124,17 +185,16 @@ RSpec.describe "Hotel night audits", type: :system do
         guest_name: "Aisha Tan",
         confirmation_token: "WS-BLOCK-001",
         check_in: business_date - 1.day,
-        check_out: business_date,
-        checked_in_at: 1.day.ago)
+        check_out: business_date + 1.day,
+        checked_in_at: nil)
 
       visit hotel_night_audits_path(hotel)
 
-      within("[data-testid='manual-night-audit-form']") do
-        fill_in "Business Date", with: business_date.to_s
+      within("[data-testid='audit-action-form']") do
         click_button "Run Audit"
       end
 
-      expect(page).to have_content("Night Audit #{business_date.strftime('%d %b %Y')}")
+      expect(page).to have_content("Night Audit / #{business_date.strftime('%d %b %Y')}")
 
       perform_enqueued_jobs
 
@@ -145,8 +205,46 @@ RSpec.describe "Hotel night audits", type: :system do
       click_link "Resolve Blockers"
 
       expect(page).to have_content("Resolve Audit Blockers")
-      expect(page).to have_content("Due Outs Not Checked Out")
+      expect(page).to have_content("Missing Check-In Timestamps")
       expect(page).to have_content("Aisha Tan")
+
+      visit hotel_night_audits_path(hotel)
+      within("[data-testid='blockers-table']") do
+        expect(page).to have_link("Resolve blockers")
+      end
+    end
+
+    it "switches index and show tabs while preserving the active tab in the URL" do
+      travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
+      business_date = Date.new(2026, 5, 22)
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+      audit = create(:night_audit, hotel: hotel, business_date: business_date, status: "completed")
+
+      visit hotel_night_audits_path(hotel)
+
+      expect(page).to have_css("[data-testid='audit-history-panel']")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Audit History")
+      click_button "Advanced Actions"
+      expect(page).to have_current_path(hotel_night_audits_path(hotel, tab: "advanced-actions"))
+      expect(page).to have_css("[data-testid='index-advanced-actions-panel']")
+      expect(page).to have_css("[data-testid='audit-history-panel']", visible: :hidden)
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Actions")
+
+      visit hotel_night_audit_path(hotel, audit)
+
+      expect(page).to have_css("[data-testid='results-panel']")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Results")
+      click_button "Financial Summary"
+      expect(page).to have_current_path(hotel_night_audit_path(hotel, audit, tab: "financial-summary"))
+      expect(page).to have_css("[data-testid='financial-summary-panel']")
+      expect(page).to have_css("[data-testid='results-panel']", visible: :hidden)
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Financial Summary")
+
+      click_button "Advanced Actions"
+      expect(page).to have_current_path(hotel_night_audit_path(hotel, audit, tab: "advanced-actions"))
+      expect(page).to have_css("[data-testid='show-advanced-actions-panel']")
+      expect(page).to have_css("[data-testid='manual-adjustments']")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Actions")
     end
   end
 end

@@ -13,6 +13,12 @@ module Bookings
     end
 
     def call
+      NightAudits::OperationalChangeGuard.call!(
+        hotel: @booking.hotel,
+        action: "transition_status:#{@status}",
+        night_audit: @options[:night_audit]
+      )
+
       case @status
       when "checked_in"
         if @booking.status == "review_due_out"
@@ -26,6 +32,8 @@ module Bookings
         cancel
       when "review_due_out"
         simple_transition("review_due_out", @options[:event] || "detect_late_checkout")
+      when "checkout_required"
+        simple_transition("checkout_required", @options[:event] || "reject_late_checkout")
       else
         failure("Unsupported status transition: #{@status}")
       end
@@ -48,7 +56,7 @@ module Bookings
             old_value: { "status" => @booking.status_before_last_save },
             new_value: { "status" => new_status },
             reason: @options[:reason],
-            metadata: { from: @booking.status_before_last_save, to: new_status, event: event }
+            metadata: { from: @booking.status_before_last_save, to: new_status, event: event }.merge(@options[:metadata] || {})
           )
         end
       end
@@ -187,7 +195,7 @@ module Bookings
         @booking.with_lock do
           @booking.reload
 
-          unless @booking.checked_in? || @booking.status == "review_due_out"
+          unless @booking.checked_in? || @booking.status == "checkout_required"
             error = "Cannot check out booking with status #{@booking.status}"
             next
           end

@@ -148,7 +148,7 @@ module ChannelManagers
     end
 
     def inventory_held_status?(status)
-      status.in?(%w[confirmed review_no_show checked_in])
+      status.in?(%w[confirmed review_no_show checked_in review_due_out checkout_required])
     end
 
     def release_review_rooms(booking)

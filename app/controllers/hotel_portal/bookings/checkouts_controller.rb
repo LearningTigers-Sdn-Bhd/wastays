@@ -18,6 +18,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     return check_out_from_sheet(timestamp) if params[:checkout_sheet] == "1"
 
     @booking = current_hotel.bookings.find(params[:id])
+    return render_checkout_sheet_error("Check-out date and time can't be blank.") if @booking.checkout_required? && timestamp.blank?
 
     if early_departure_checkout?(timestamp)
       options = { timestamp: timestamp }
@@ -75,6 +76,10 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     )
 
     return redirect_to hotel_booking_path(current_hotel, @booking), alert: result.error unless result.success?
+
+    if result.rejected?
+      return render_checkout_required_response("Late checkout rejected. Complete checkout to resolve the booking.")
+    end
 
     notice = result.charged? ? "Late checkout charge applied." : "Late checkout resolved without charge."
     offcanvas_transaction_response(
@@ -154,6 +159,9 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   def check_out_from_sheet(timestamp)
     @booking = current_hotel.bookings.includes(booking_folio: { folio_transactions: :user }).find(params[:id])
     error = nil
+    if @booking.checkout_required? && timestamp.blank?
+      return render_checkout_sheet_error("Check-out date and time can't be blank.")
+    end
 
     ActiveRecord::Base.transaction do
       if early_departure_checkout?(timestamp)
@@ -192,7 +200,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
         status: "completed",
         timestamp: timestamp,
         user: current_user,
-        options: { defer_side_effects: true }
+        options: { defer_side_effects: true }.merge(checkout_blocker_resolution_options)
       ).call
 
       unless result.success?
@@ -228,8 +236,27 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
       category: "cash",
       amount: checkout_payment_amount,
       description: checkout_payment_description,
-      posting_date: current_hotel.business_date_for(transition_timestamp(:checked_out_at).presence || Time.current)
+      posting_date: current_hotel.current_business_date,
+      options: checkout_blocker_resolution_options
     )
+  end
+
+  def checkout_blocker_resolution_options
+    return {} unless @booking&.checkout_required?
+    return {} unless current_hotel.current_business_date_record&.audit_blocked?
+
+    audit = current_hotel.night_audits.where(business_date: current_hotel.current_business_date).order(created_at: :desc).first
+    return {} unless audit
+
+    {
+      posting_source: "audit_blocker_resolution",
+      correction_reason: "Resolve checkout-required night audit blocker",
+      blocker_resolution: {
+        night_audit_id: audit.id,
+        blocker_type: "due_out_not_checked_out",
+        booking_id: @booking.id
+      }
+    }
   end
 
   def checkout_payment_amount
@@ -266,6 +293,30 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
         ), status: :unprocessable_content
       end
       format.html { render "hotel_portal/bookings/transactions/check_out/offcanvas", status: :unprocessable_content }
+    end
+  end
+
+  def render_checkout_required_response(notice)
+    @booking.reload
+    @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+    flash.now[:notice] = notice
+
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.update(
+          "offcanvas_drawer",
+          partial: "hotel_portal/bookings/transactions/check_out/partials/sheet",
+          locals: {
+            booking: @booking,
+            presenter: @presenter,
+            hotel: current_hotel,
+            checkout_error: nil,
+            checkout_source: params[:source],
+            transaction_return_to: offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking))
+          }
+        )
+      end
+      format.html { redirect_to hotel_booking_transaction_check_out_path(current_hotel, @booking), notice: notice, status: :see_other }
     end
   end
 

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe FinancialControls::PostingGuard do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, :without_current_business_date) }
   let(:business_date) { Date.current }
   let(:user) { create(:user, role: "superadmin") }
 
@@ -21,6 +21,10 @@ RSpec.describe FinancialControls::PostingGuard do
     create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "open")
 
     expect(guard_call).to be(true)
+  end
+
+  it "blocks posting when the business-date control row is missing" do
+    expect { guard_call }.to raise_error(described_class::PostingBlocked, /no accounting control record/)
   end
 
   it "allows night audit posting while audit is running" do

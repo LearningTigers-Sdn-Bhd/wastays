@@ -13,6 +13,7 @@ RSpec.describe "Retroactive Check-in", type: :service do
     create(:booking_room, booking: booking, subtotal: 200.0)
     booking.update(tax_lines: [ { "name" => "SST", "amount" => "12.00" } ])
     create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
+    create(:hotel_business_date, hotel: hotel, business_date: past_date, status: "closed")
   end
 
   it "blocks check-in on a closed date without override" do
@@ -58,7 +59,7 @@ RSpec.describe "Retroactive Check-in", type: :service do
   end
 
   it "posts all catch-up charges on the selected posting date instead of original stay dates" do
-    selected_posting_date = Date.current
+    selected_posting_date = hotel.current_business_date
     result = Bookings::TransitionStatus.new(
       booking: booking,
       status: "checked_in",

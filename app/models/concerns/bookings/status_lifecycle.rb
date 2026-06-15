@@ -28,8 +28,11 @@ module Bookings
         "detect_late_checkout" => "review_due_out"
       },
       "review_due_out" => {
-        "check_out" => "completed",
-        "resolve_late_checkout" => "checked_in"
+        "resolve_late_checkout" => "checked_in",
+        "reject_late_checkout" => "checkout_required"
+      },
+      "checkout_required" => {
+        "check_out" => "completed"
       },
       "no_show" => {
         "reinstate" => "checked_in"

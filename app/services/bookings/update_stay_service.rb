@@ -19,6 +19,7 @@ module Bookings
     def call
       return OpenStruct.new(success?: false, errors: [ "Status cannot be changed through stay update." ]) if @params.key?(:status)
       normalize_scheduled_stay!
+      guard_financially_relevant_change!
 
       failure_error = nil
       assigned_room_number = extract_assigned_room_number
@@ -167,6 +168,44 @@ module Bookings
 
 
     private
+
+    FINANCIALLY_RELEVANT_FIELDS = %w[
+      check_in check_out total_amount manual_rate_override tax_lines tax_posting_snapshot
+      tourism_tax_amount tourism_tax_applied payment_status guarantee_method
+    ].freeze
+
+    def guard_financially_relevant_change!
+      return unless financially_relevant_change_requested?
+
+      NightAudits::OperationalChangeGuard.call!(hotel: @hotel, action: :update_stay)
+    end
+
+    def financially_relevant_change_requested?
+      current_room = @booking.booking_rooms.first
+      return true if @room_type_id.present? && @room_type_id.to_i != current_room&.room_type_id
+      return true if @rate_plan_id.present? && @rate_plan_id.to_i != current_room&.rate_plan_id
+      return true if changed_booking_financial_field?
+
+      nested_rooms = @params[:booking_rooms_attributes] || @params["booking_rooms_attributes"]
+      return false unless nested_rooms.respond_to?(:each_value)
+
+      nested_rooms.each_value.any? do |attributes|
+        room_attributes = attributes.to_h.stringify_keys
+        booking_room = @booking.booking_rooms.find { |room| room.id == room_attributes["id"].to_i } || current_room
+        (room_attributes["room_type_id"].present? && room_attributes["room_type_id"].to_i != booking_room&.room_type_id) ||
+          (room_attributes["rate_plan_id"].present? && room_attributes["rate_plan_id"].to_i != booking_room&.rate_plan_id)
+      end
+    end
+
+    def changed_booking_financial_field?
+      FINANCIALLY_RELEVANT_FIELDS.any? do |field|
+        next false unless @params.key?(field.to_sym) || @params.key?(field)
+
+        requested_value = @params.key?(field.to_sym) ? @params[field.to_sym] : @params[field]
+        cast_value = @booking.class.type_for_attribute(field).cast(requested_value)
+        @booking.public_send(field) != cast_value
+      end
+    end
 
     def audit_values
       room = @booking.booking_rooms.first

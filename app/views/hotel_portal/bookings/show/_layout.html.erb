@@ -5,21 +5,21 @@
 
     <%= render "hotel_portal/bookings/transactions/check_out/partials/success_modal", booking: booking, presenter: presenter, hotel: current_hotel if params[:checkout_success] %>
 
-    <div data-controller="booking-tabs" class="space-y-4">
+    <div data-controller="tabs" data-tabs-default-tab-value="booking-details" class="space-y-4">
       <%= render "hotel_portal/bookings/show/booking_tabs", presenter: presenter, audit_logs: audit_logs %>
 
-      <div data-booking-tabs-target="panel" data-tab-panel="booking-details" class="space-y-4">
+      <div id="booking-details-panel" data-tabs-target="panel" data-tab-panel="booking-details" class="space-y-4" role="tabpanel" data-testid="booking-details-panel">
         <%= render "hotel_portal/bookings/show/guests_table", booking: booking, presenter: presenter %>
         <%= render "hotel_portal/bookings/show/price_summary", booking: booking, presenter: presenter %>
         <%= render "hotel_portal/bookings/show/documents_actions", booking: booking, presenter: presenter %>
         <%= render "hotel_portal/bookings/show/internal_notes", booking: booking %>
       </div>
 
-      <div data-booking-tabs-target="panel" data-tab-panel="requests" class="hidden">
+      <div id="requests-panel" data-tabs-target="panel" data-tab-panel="requests" class="hidden" role="tabpanel" data-testid="booking-requests-panel">
         <%= render "hotel_portal/bookings/show/tab_requests", booking: booking, presenter: presenter %>
       </div>
 
-      <div data-booking-tabs-target="panel" data-tab-panel="history" class="hidden">
+      <div id="history-panel" data-tabs-target="panel" data-tab-panel="history" class="hidden" role="tabpanel" data-testid="booking-history-panel">
         <%= render "hotel_portal/bookings/show/audit_history", audit_logs: audit_logs, audit_history: @audit_history %>
       </div>
     </div>

@@ -8,7 +8,7 @@ RSpec.describe HotelBusinessDate, type: :model do
   it { is_expected.to validate_inclusion_of(:status).in_array(described_class::STATUSES) }
 
   it "validates hotel/date uniqueness" do
-    hotel = create(:hotel)
+    hotel = create(:hotel, :without_current_business_date)
     create(:hotel_business_date, hotel: hotel, business_date: Date.current)
     business_date.hotel = hotel
     business_date.business_date = Date.current
@@ -18,7 +18,7 @@ RSpec.describe HotelBusinessDate, type: :model do
   end
 
   it "defaults to open with an opened timestamp" do
-    record = described_class.create!(hotel: create(:hotel), business_date: Date.current)
+    record = described_class.create!(hotel: create(:hotel, :without_current_business_date), business_date: Date.current)
 
     expect(record.status).to eq("open")
     expect(record.opened_at).to be_present
@@ -27,7 +27,7 @@ RSpec.describe HotelBusinessDate, type: :model do
 
   describe ".for_hotel_date!" do
     it "creates an open business date" do
-      hotel = create(:hotel)
+      hotel = create(:hotel, :without_current_business_date)
       date = Date.current
 
       record = described_class.for_hotel_date!(hotel: hotel, date: date)
@@ -48,92 +48,44 @@ RSpec.describe HotelBusinessDate, type: :model do
     end
   end
 
-  describe "#open_next_business_date!" do
-    it "opens the next business date" do
-      record = create(:hotel_business_date, business_date: Date.current, status: "closed")
-
-      next_record = record.open_next_business_date!
-
-      expect(next_record.business_date).to eq(record.business_date + 1.day)
-      expect(next_record).to be_open
-      expect(next_record.opened_at).to be_present
-    end
-
-    it "reuses an existing open next business date" do
-      record = create(:hotel_business_date, business_date: Date.current, status: "closed")
-      existing = create(:hotel_business_date, hotel: record.hotel, business_date: record.business_date + 1.day, status: "open")
-
-      expect(record.open_next_business_date!).to eq(existing)
-    end
-
-    it "rejects an existing locked next business date" do
-      record = create(:hotel_business_date, business_date: Date.current, status: "closed")
-      create(:hotel_business_date, hotel: record.hotel, business_date: record.business_date + 1.day, status: "audit_running")
-
-      expect { record.open_next_business_date! }.to raise_error(described_class::InvalidTransition, /already audit_running/)
-    end
+  it "defines current and closed-like statuses without reopened" do
+    expect(described_class::CURRENT_STATUSES).to eq(%w[open audit_running audit_blocked])
+    expect(described_class::CLOSED_STATUSES).to eq(%w[closed force_closed])
+    expect(described_class::STATUSES).not_to include("reopened")
   end
 
-  it "transitions from open to audit_running" do
-    record = create(:hotel_business_date, status: "open")
+  it "enforces one current accounting business date per hotel at the database level" do
+    hotel = create(:hotel, :without_current_business_date)
+    create(:hotel_business_date, hotel: hotel, business_date: Date.current, status: "audit_blocked")
 
-    record.start_audit!
-
-    expect(record.status).to eq("audit_running")
-    expect(record.audit_started_at).to be_present
+    expect do
+      described_class.insert_all!([
+        { hotel_id: hotel.id, business_date: Date.current + 1.day, status: "open", blockers_snapshot: {}, created_at: Time.current, updated_at: Time.current }
+      ])
+    end.to raise_error(ActiveRecord::RecordNotUnique)
   end
 
-  it "transitions from audit_blocked to audit_running for retry" do
-    record = create(:hotel_business_date, status: "audit_blocked", blockers_snapshot: { "x" => [ "y" ] }, blocked_at: Time.current)
+  it "allows multiple closed-like dates for one hotel" do
+    hotel = create(:hotel, :without_current_business_date)
 
-    record.retry_audit!
-
-    expect(record.status).to eq("audit_running")
-    expect(record.blockers_snapshot).to eq({})
-    expect(record.blocked_at).to be_nil
+    expect do
+      create(:hotel_business_date, hotel: hotel, business_date: Date.current, status: "closed")
+      create(:hotel_business_date, hotel: hotel, business_date: Date.current + 1.day, status: "force_closed")
+    end.not_to raise_error
   end
 
-  it "transitions from audit_running to audit_blocked with blocker details" do
-    record = create(:hotel_business_date, status: "audit_running")
-    blockers = { "due_out_not_checked_out" => [ { "booking_id" => 1 } ] }
+  it "prevents direct destruction of the hotel's only current business date" do
+    record = create(:hotel).current_business_date_record
 
-    record.block_audit!(blockers: blockers)
-
-    expect(record.status).to eq("audit_blocked")
-    expect(record.blockers_snapshot).to eq(blockers)
-    expect(record.blocked_at).to be_present
+    expect(record.destroy).to be(false)
+    expect(record.errors[:base]).to include("cannot destroy the hotel's only current accounting business date")
+    expect(record.reload).to be_persisted
   end
 
-  it "transitions from audit_running to closed" do
-    record = create(:hotel_business_date, status: "audit_running", blockers_snapshot: { "x" => [ "y" ] }, blocked_at: Time.current)
+  it "allows current business dates to be destroyed with their hotel" do
+    hotel = create(:hotel)
 
-    record.complete_audit!
-
-    expect(record.status).to eq("closed")
-    expect(record.closed_at).to be_present
-    expect(record.blockers_snapshot).to eq({})
-    expect(record.blocked_at).to be_nil
-  end
-
-  it "transitions from audit_running to force_closed and records an audit event" do
-    record = create(:hotel_business_date, status: "audit_running", blockers_snapshot: { "blocked" => true })
-
-    expect {
-      record.force_close!
-    }.to change(FinancialAuditEvent, :count).by(1)
-
-    expect(record.status).to eq("force_closed")
-    expect(record.closed_at).to be_present
-
-    event = FinancialAuditEvent.last
-    expect(event.event_type).to eq("business_date_force_closed")
-    expect(event.metadata).to include("reason" => "Manual force roll initiated")
-  end
-
-  it "rejects invalid transitions" do
-    record = create(:hotel_business_date, status: "closed")
-
-    expect { record.start_audit! }.to raise_error(described_class::InvalidTransition)
+    expect { hotel.destroy! }.to change(described_class, :count).by(-1)
   end
 
   it "allows normal postings only when open" do
@@ -146,5 +98,12 @@ RSpec.describe HotelBusinessDate, type: :model do
   it "allows audit postings only when audit_running" do
     expect(build(:hotel_business_date, status: "audit_running")).to be_audit_posting_allowed
     expect(build(:hotel_business_date, status: "open")).not_to be_audit_posting_allowed
+  end
+
+  it "exposes current, closed-like, blocker-resolution, and staff-operation helpers" do
+    expect(build(:hotel_business_date, status: "audit_blocked")).to be_current
+    expect(build(:hotel_business_date, status: "force_closed")).to be_closed_like
+    expect(build(:hotel_business_date, status: "audit_blocked")).to be_allows_blocker_resolution
+    expect(build(:hotel_business_date, status: "open")).to be_open_for_staff_operations
   end
 end

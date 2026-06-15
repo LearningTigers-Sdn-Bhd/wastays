@@ -29,6 +29,11 @@ module Folios
         folio = @booking.booking_folio
 
         unless folio.present?
+          NightAudits::OperationalChangeGuard.call!(
+            hotel: @booking.hotel,
+            action: :create_folio,
+            night_audit: @options[:night_audit]
+          )
           folio = create_folio!
 
           Folios::SyncExistingPayments.call(folio: folio, user: @user, options: @options)
