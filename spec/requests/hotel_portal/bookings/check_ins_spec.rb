@@ -20,7 +20,7 @@ RSpec.describe "HotelPortal::Bookings::CheckIns", type: :request do
   end
 
   describe "POST /create" do
-    it "updates tourism_tax_collected and tourism_tax_amount" do
+    it "updates tourism_tax_collected but ignores tourism_tax_amount from params" do
       post check_in_hotel_booking_path(hotel, booking, format: :html), params: {
         booking: {
           tourism_tax_collected: "1",
@@ -34,7 +34,7 @@ RSpec.describe "HotelPortal::Bookings::CheckIns", type: :request do
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.tourism_tax_collected).to be true
-      expect(booking.tourism_tax_amount).to eq(50.00)
+      expect(booking.tourism_tax_amount).to eq(20.00) # Remains unchanged
     end
 
     it "can set tourism_tax_collected to false" do

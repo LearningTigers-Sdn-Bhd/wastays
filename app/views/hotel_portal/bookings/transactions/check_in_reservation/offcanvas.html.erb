@@ -64,12 +64,12 @@
               <div class="mt-4 <%= 'hidden' unless @booking.tourism_tax_collected? %>" data-tourism-tax-collection-target="amountContainer">
                 <div class="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200 shadow-sm gap-4">
                   <span class="text-xs font-bold text-slate-600 uppercase tracking-wider shrink-0">Amount Collected (RM)</span>
-                  <%= f.number_field :tourism_tax_amount, 
-                                     step: 0.01, 
-                                     min: 0, 
-                                     class: "w-32 rounded-lg border border-slate-200 py-1.5 px-3 text-right text-sm font-black text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                  <%= f.text_field :tourism_tax_amount, 
+                                     value: number_with_precision(f.object.tourism_tax_amount, precision: 2),
+                                     readonly: true,
+                                     class: "w-32 rounded-lg border border-slate-200 py-1.5 px-3 text-right text-sm font-black text-slate-900 bg-slate-50 focus:outline-none focus:ring-0 cursor-not-allowed" %>
                 </div>
-                <p class="mt-2 text-[10px] text-slate-400 italic text-center">Auto-calculated based on stay duration. You can adjust if needed.</p>
+                <p class="mt-2 text-[10px] text-slate-400 italic text-center">Fixed amount based on stay duration.</p>
               </div>
               
               <% unless tourism_tax_applicable %>

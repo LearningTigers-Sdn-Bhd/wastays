@@ -4,6 +4,7 @@ module HotelPortal
   class GuestsController < HotelPortal::BaseController
     helper_method :safe_guest_attr, :guest_stays_count, :guest_currency_totals
 
+    before_action -> { require_feature!("unified_guest_profile") }
     before_action :authorize_view_guest_records!, only: %i[index show]
     before_action :authorize_manage_bookings!, only: %i[search new create edit update]
     before_action :authorize_delete_guest_record!, only: %i[destroy]

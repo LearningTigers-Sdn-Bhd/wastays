@@ -19,7 +19,8 @@ RSpec.describe GuestArrival::ProcessPreCheckin do
     {
       "guest_name" => "Updated Guest",
       "guest_government_id" => "B7654321",
-      "estimated_arrival_time" => "20:30"
+      "estimated_arrival_time" => "20:30",
+      "signature" => "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
     }
   end
 
@@ -70,5 +71,16 @@ RSpec.describe GuestArrival::ProcessPreCheckin do
     expect(result.submitted_arrival_time).to eq("20:30")
     expect(result.submitted_government_id).to eq("B7654321")
     expect(pre_checkin.reload.status).to eq("pending")
+  end
+
+  it "returns failure when signature is missing" do
+    params_without_sig = params.except("signature")
+
+    result = described_class.new(booking: booking, pre_checkin: pre_checkin, params: params_without_sig).call
+
+    expect(result.success?).to be(false)
+    expect(result.message).to eq("Guest signature is required.")
+    expect(result.submitted_arrival_time).to eq("20:30")
+    expect(result.submitted_government_id).to eq("B7654321")
   end
 end
