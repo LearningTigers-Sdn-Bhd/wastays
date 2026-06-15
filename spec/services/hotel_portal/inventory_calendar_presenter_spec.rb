@@ -57,4 +57,24 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
       expect(presenter.cell_for(corporate_row, start_date)[:formatted_price]).to eq("150.00")
     end
   end
+
+  describe "sold counts" do
+    it "correctly counts bookings even when check_in/check_out are TimeWithZone" do
+      room_type = create(:room_type, hotel: hotel, quantity: 5)
+      # Create a booking that spans 2 nights
+      check_in = Time.zone.parse("#{start_date} 14:00:00")
+      check_out = Time.zone.parse("#{start_date + 2.days} 12:00:00")
+      
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: check_in, check_out: check_out)
+      create(:booking_room, booking: booking, room_type: room_type, quantity: 1)
+
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+      row = presenter.rows.find { |r| r.inventory_row? && r.room_type_id == room_type.id }
+      
+      # Should count 1 for start_date and start_date + 1.day
+      expect(presenter.cell_for(row, start_date)[:sold_count]).to eq(1)
+      expect(presenter.cell_for(row, start_date + 1.day)[:sold_count]).to eq(1)
+      expect(presenter.cell_for(row, start_date + 2.days)[:sold_count]).to eq(0)
+    end
+  end
 end

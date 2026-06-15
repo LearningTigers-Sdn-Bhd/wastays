@@ -10,7 +10,7 @@
       class: "flex flex-1 flex-col p-8" do |f| %>
       <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
       <%= f.hidden_field :checked_in_at, value: @booking.check_in&.in_time_zone(current_hotel.hotel_time_zone)&.strftime("%Y-%m-%dT%H:%M") %>
-      <div class="space-y-5" data-controller="backdate-reason-validation">
+      <div class="space-y-5 overflow-y-auto custom-scrollbar" data-controller="backdate-reason-validation">
         <div>
           <span class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Scheduled Check-in</span>
           <p class="text-sm font-semibold text-slate-800"><%= @booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
