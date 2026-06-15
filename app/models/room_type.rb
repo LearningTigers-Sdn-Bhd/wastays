@@ -9,7 +9,8 @@ class RoomType < ApplicationRecord
 
   has_many :room_rates, dependent: :destroy
   has_many :room_inventories, dependent: :destroy
-  has_many :rate_plans, dependent: :destroy
+  has_many :room_type_rate_plans, dependent: :destroy
+  has_many :rate_plans, through: :room_type_rate_plans
   has_many :inventory_audit_logs, dependent: :nullify
   has_many :booking_rooms, dependent: :restrict_with_error
   has_many :booking_quote_items, dependent: :restrict_with_error
@@ -71,10 +72,13 @@ class RoomType < ApplicationRecord
   def ensure_standard_rate_plan
     return if rate_plans.exists?
 
-    rate_plans.create!(
-      name: "Standard Rate",
-      sell_mode: "per_room",
-      currency: hotel.default_currency || "MYR"
-    )
+    # Find or create a standard rate plan for the hotel
+    rate_plan = hotel.rate_plans.find_or_create_by!(name: "Standard Rate") do |rp|
+      rp.sell_mode = "per_room"
+      rp.currency = hotel.default_currency || "MYR"
+    end
+
+    # Associate this room type with the rate plan
+    room_type_rate_plans.create!(rate_plan: rate_plan)
   end
 end

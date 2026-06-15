@@ -363,7 +363,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.decimal "display_exchange_rate", precision: 18, scale: 8
     t.string "display_rate_source"
     t.text "special_requests"
+    t.bigint "partner_id"
     t.index ["hotel_id"], name: "index_booking_quotes_on_hotel_id"
+    t.index ["partner_id"], name: "index_booking_quotes_on_partner_id"
     t.index ["token"], name: "index_booking_quotes_on_token", unique: true
   end
 
@@ -448,6 +450,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.integer "reservation_number"
     t.integer "receipt_number"
     t.integer "guest_registration_number"
+    t.bigint "partner_id"
     t.text "internal_notes"
     t.decimal "manual_rate_override"
     t.jsonb "tax_posting_snapshot", default: {}, null: false
@@ -474,6 +477,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.index ["hotel_id", "reservation_number"], name: "idx_bookings_on_hotel_reservation_number", unique: true, where: "(reservation_number IS NOT NULL)"
     t.index ["hotel_id", "status", "no_show_review_business_date"], name: "index_bookings_on_hotel_status_no_show_review_date"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
+    t.index ["partner_id"], name: "index_bookings_on_partner_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
     t.index ["payout_batch_id"], name: "index_bookings_on_payout_batch_id"
     t.index ["source"], name: "index_bookings_on_source"
@@ -916,6 +920,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.string "magic_token_digest"
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
+    t.jsonb "chat_history", default: []
     t.bigint "created_by_hotel_id"
     t.datetime "discarded_at"
     t.date "date_of_birth"
@@ -1378,6 +1383,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.index ["hotel_id"], name: "index_onboarding_sessions_on_hotel_id"
   end
 
+  create_table "partners", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "name", null: false
+    t.string "code", null: false
+    t.string "domain"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_partners_on_hotel_id"
+  end
+
   create_table "payment_settings", force: :cascade do |t|
     t.string "settable_type"
     t.bigint "settable_id"
@@ -1544,12 +1559,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
 
   create_table "rate_plans", force: :cascade do |t|
     t.string "name", null: false
-    t.bigint "room_type_id", null: false
     t.string "sell_mode", default: "per_room", null: false
     t.string "currency", default: "MYR", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["room_type_id"], name: "index_rate_plans_on_room_type_id"
+    t.text "description"
+    t.bigint "hotel_id", null: false
+    t.index ["hotel_id"], name: "index_rate_plans_on_hotel_id"
   end
 
   create_table "refund_policies", force: :cascade do |t|
@@ -1713,6 +1729,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.index ["room_type_id"], name: "index_room_statuses_on_room_type_id"
   end
 
+  create_table "room_type_rate_plans", force: :cascade do |t|
+    t.bigint "room_type_id", null: false
+    t.bigint "rate_plan_id", null: false
+    t.string "pricing_mode", default: "fixed", null: false
+    t.decimal "pricing_value", precision: 10, scale: 2
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["rate_plan_id"], name: "index_room_type_rate_plans_on_rate_plan_id"
+    t.index ["room_type_id"], name: "index_room_type_rate_plans_on_room_type_id"
+  end
+
   create_table "room_types", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.string "name"
@@ -1816,6 +1843,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   create_table "webhook_endpoints", force: :cascade do |t|
     t.string "name"
     t.string "url"
+    t.string "event_types"
     t.boolean "enabled"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -1871,6 +1899,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   add_foreign_key "booking_quote_items", "booking_quotes"
   add_foreign_key "booking_quote_items", "room_types"
   add_foreign_key "booking_quotes", "hotels"
+  add_foreign_key "booking_quotes", "partners"
   add_foreign_key "booking_rooms", "bookings"
   add_foreign_key "booking_rooms", "rate_plans"
   add_foreign_key "booking_rooms", "room_types"
@@ -1882,6 +1911,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "group_bookings"
   add_foreign_key "bookings", "hotels"
+  add_foreign_key "bookings", "partners"
   add_foreign_key "bookings", "payout_batches"
   add_foreign_key "check_out_requests", "bookings"
   add_foreign_key "check_out_requests", "users", column: "acknowledged_by_user_id"
@@ -1988,6 +2018,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   add_foreign_key "notification_deliveries", "hotels"
   add_foreign_key "onboarding_sessions", "hotels"
   add_foreign_key "payment_transactions", "ar_payments"
+  add_foreign_key "partners", "hotels"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
   add_foreign_key "payment_transactions", "corporate_ar_payment_intents"
@@ -2000,7 +2031,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   add_foreign_key "prospect_messages", "prospects"
   add_foreign_key "prospects", "guests"
   add_foreign_key "prospects", "hotels"
-  add_foreign_key "rate_plans", "room_types"
+  add_foreign_key "rate_plans", "hotels"
   add_foreign_key "refund_requests", "bookings"
   add_foreign_key "role_permissions", "permissions"
   add_foreign_key "role_permissions", "roles"
@@ -2022,6 +2053,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   add_foreign_key "room_statuses", "hotels"
   add_foreign_key "room_statuses", "room_types"
   add_foreign_key "room_statuses", "users", column: "last_changed_by_id"
+  add_foreign_key "room_type_rate_plans", "rate_plans"
+  add_foreign_key "room_type_rate_plans", "room_types"
   add_foreign_key "room_types", "hotels"
   add_foreign_key "room_types", "room_groups"
   add_foreign_key "transaction_code_taxes", "hotel_taxes"

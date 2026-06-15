@@ -1,5 +1,8 @@
 class RatePlan < ApplicationRecord
-  belongs_to :room_type
+  include HotelScopable
+
+  has_many :room_type_rate_plans, dependent: :destroy
+  has_many :room_types, through: :room_type_rate_plans
   has_many :room_rates, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
 
@@ -38,16 +41,16 @@ class RatePlan < ApplicationRecord
   end
 
   def sync_with_channel_manager
-    return if room_type.hotel.preferred_channel_manager.blank?
+    return if hotel.preferred_channel_manager.blank?
 
     ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
   end
 
   def delete_from_channel_manager
-    ChannelManagers::SyncStructureJob.perform_later(self.class.name, nil, "delete", hotel_id: room_type.hotel_id, external_id: channel_mapping.external_id)
+    ChannelManagers::SyncStructureJob.perform_later(self.class.name, nil, "delete", hotel_id: hotel_id, external_id: channel_mapping.external_id)
   end
 
   def synced_with_channel_manager?
-    room_type.hotel.preferred_channel_manager.present? && channel_mapping.present? && channel_mapping.external_id != "pending"
+    hotel.preferred_channel_manager.present? && channel_mapping.present? && channel_mapping.external_id != "pending"
   end
 end

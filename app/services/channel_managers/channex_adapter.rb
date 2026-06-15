@@ -66,10 +66,16 @@ module ChannelManagers
       end
     end
 
-    def sync_rate_plan(rate_plan)
+    def sync_rate_plan(rate_plan, room_type: nil)
       client = Channex::Client.new
       property_id = mapping_for(@hotel).external_id
-      room_type_id = mapping_for(rate_plan.room_type).external_id
+
+      # If no room_type is provided, we use the first one as a fallback
+      # This matches the "master plan" logic used in other parts of the system
+      room_type ||= rate_plan.room_types.first
+      return nil if room_type.blank?
+
+      room_type_id = mapping_for(room_type).external_id
       mapping = mapping_for(rate_plan)
 
       payload = {
@@ -79,7 +85,7 @@ module ChannelManagers
           title: rate_plan.name,
           currency: rate_plan.currency,
           sell_mode: rate_plan.sell_mode,
-          options: default_rate_plan_options(rate_plan)
+          options: default_rate_plan_options(rate_plan, room_type: room_type)
         }
       }
 
@@ -499,18 +505,23 @@ module ChannelManagers
     end
 
     def ensure_rate_plans(client, room_type)
-      # If room type has no rate plans, create a default one
+      # If room type has no rate plans, find or create a standard one and link it
       if room_type.rate_plans.empty?
-        room_type.rate_plans.create!(name: "Standard Rate", sell_mode: "per_room", currency: @hotel.default_currency || "MYR")
+        rate_plan = @hotel.rate_plans.find_or_create_by!(name: "Standard Rate") do |rp|
+          rp.sell_mode = "per_room"
+          rp.currency = @hotel.default_currency || "MYR"
+        end
+        room_type.room_type_rate_plans.find_or_create_by!(rate_plan: rate_plan)
       end
 
       room_type.rate_plans.all? do |rate_plan|
-        sync_rate_plan(rate_plan).present?
+        sync_rate_plan(rate_plan, room_type: room_type).present?
       end
     end
 
-    def default_rate_plan_options(rate_plan)
-      occupancy = rate_plan.room_type.max_adults.to_i
+    def default_rate_plan_options(rate_plan, room_type: nil)
+      room_type ||= rate_plan.room_types.first
+      occupancy = room_type&.max_adults.to_i
       occupancy = 1 if occupancy <= 0
 
       [
