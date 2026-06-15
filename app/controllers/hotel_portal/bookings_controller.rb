@@ -3,12 +3,6 @@
 class HotelPortal::BookingsController < HotelPortal::BaseController
   include BookingAuditable
 
-  SHOW_TAB_LABELS = {
-    "booking-details" => "Booking Details",
-    "requests" => "Requests",
-    "history" => "History"
-  }.freeze
-
   before_action :authorize_view_bookings!, only: %i[index show]
   before_action :authorize_manage_bookings!, only: %i[update]
 
@@ -79,12 +73,8 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
       { label: "Operations" },
       { label: "Bookings", path: hotel_bookings_path(current_hotel) },
       { label: @booking.confirmation_token, path: hotel_booking_path(current_hotel, @booking) },
-      { label: show_tab_label, tab_breadcrumb: true }
+      { label: "Booking Details", tab_label: true }
     )
-  end
-
-  def show_tab_label
-    SHOW_TAB_LABELS.fetch(params[:tab].to_s, SHOW_TAB_LABELS.fetch("booking-details"))
   end
 
   def booking_params
