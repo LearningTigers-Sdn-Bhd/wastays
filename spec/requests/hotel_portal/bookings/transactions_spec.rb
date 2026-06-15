@@ -12,6 +12,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
   end
 
   before do
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
     user = create(:user)
     role = create(:role, account: hotel.account)
     grant_permission(role, "manage_bookings")
@@ -276,7 +277,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     end
   end
 
-  it "manually finalizes a booking pending no-show review" do
+  it "blocks manual no-show finalization while night audit is running" do
     booking = create(
       :booking,
       hotel: hotel,
@@ -287,11 +288,14 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
       tax_lines: []
     )
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 200.0)
+    start_business_date_audit(hotel)
 
     post mark_no_show_hotel_booking_path(hotel, booking)
 
-    expect(booking.reload.status).to eq("no_show")
-    expect(booking.booking_folio.folio_transactions.charge.where(category: "no_show_charge").sole.amount).to eq(100.0)
+    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(flash[:alert]).to eq(NightAudits::OperationalChangeGuard::ERROR_MESSAGE)
+    expect(booking.reload.status).to eq("review_no_show")
+    expect(booking.booking_folio).to be_nil
   end
 
   it "allows existing-reservation backdated check-in only during no-show review" do
@@ -340,6 +344,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
   it "creates and immediately checks in a backdated walk-in booking with posting_date and reasons" do
     past_date = 1.day.ago.to_date
     create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
+    create(:hotel_business_date, hotel: hotel, business_date: past_date, status: "closed")
     signed_in_user = User.joins(:user_hotel_accesses).where(user_hotel_accesses: { hotel_id: hotel.id }).first
     user_role = signed_in_user.user_hotel_accesses.first.role
     grant_permission(user_role, "post_folio_charges")
@@ -391,6 +396,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
   it "allows backdated check-in with a standard category and blank reason details" do
     past_date = 1.day.ago.to_date
     create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
+    create(:hotel_business_date, hotel: hotel, business_date: past_date, status: "closed")
 
     signed_in_user = User.joins(:user_hotel_accesses).where(user_hotel_accesses: { hotel_id: hotel.id }).first
     user_role = signed_in_user.user_hotel_accesses.first.role

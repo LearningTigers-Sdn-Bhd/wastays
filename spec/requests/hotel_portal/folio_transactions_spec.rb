@@ -97,6 +97,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     it "rejects closed business dates" do
       closed_date = 1.day.ago.to_date
       create(:night_audit, hotel: hotel, business_date: closed_date, status: "completed")
+      create(:hotel_business_date, hotel: hotel, business_date: closed_date, status: "closed")
 
       post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash", posting_date: closed_date)
 

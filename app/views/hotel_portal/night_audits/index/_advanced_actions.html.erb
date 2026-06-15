@@ -1,0 +1,52 @@
+<section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" data-testid="advanced-actions">
+  <header class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/60 px-4 py-3">
+    <div>
+      <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+        <span class="inline-flex size-6 items-center justify-center rounded-md bg-amber-50 text-amber-700"><%= cached_icon "settings-2", class: "size-3.5", aria: { hidden: true } %></span>
+        Advanced Actions
+      </h2>
+      <p class="mt-0.5 text-xs text-slate-500">Exceptional override and development-only controls</p>
+    </div>
+  </header>
+
+  <div class="divide-y divide-slate-200">
+    <div class="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr),minmax(320px,0.8fr)]">
+      <div>
+        <h3 class="inline-flex items-center gap-1.5 text-sm font-bold text-red-900"><%= cached_icon "triangle-alert", class: "size-4", aria: { hidden: true } %> Force Close Business Date</h3>
+        <p class="mt-1 text-sm font-medium text-slate-700">
+          Advance <%= presenter.current_business_date_label %> to <%= presenter.format_date(presenter.next_business_date) %> without resolving every blocker.
+        </p>
+      </div>
+      <div>
+        <% if presenter.can_force_close? %>
+          <%= form_with url: hotel_night_audits_path(current_hotel), method: :post, scope: :night_audit, class: "space-y-2", data: { testid: "force-close-form" } do |f| %>
+            <%= f.hidden_field :business_date, value: presenter.form_business_date_value %>
+            <%= f.hidden_field :force_roll, value: "1" %>
+            <div>
+              <%= f.label :notes, "Override Reason", class: "mb-1 block text-[10px] font-bold uppercase tracking-wider text-red-700" %>
+              <%= f.text_area :notes, rows: 2, required: true, class: "w-full rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm focus:border-red-300 focus:outline-none focus:ring-0", placeholder: "Required: explain why this business date must be force closed" %>
+            </div>
+            <%= f.submit "Force Close Business Date", class: "inline-flex w-full items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 sm:w-auto", data: { turbo_confirm: presenter.force_close_confirmation } %>
+          <% end %>
+        <% else %>
+          <p class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600"><%= presenter.force_close_unavailable_reason %></p>
+        <% end %>
+      </div>
+    </div>
+
+    <% if Rails.env.development? %>
+      <div class="flex flex-col gap-3 bg-amber-50/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between" data-testid="development-tools">
+        <div>
+          <h3 class="inline-flex items-center gap-1.5 text-sm font-bold text-amber-900"><%= cached_icon "settings-2", class: "size-4", aria: { hidden: true } %> Development Tools</h3>
+          <p class="mt-0.5 text-xs font-medium text-amber-800">Run an audit without the production closability time check.</p>
+        </div>
+        <%= form_with url: hotel_night_audits_path(current_hotel), method: :post, scope: :night_audit do |f| %>
+          <%= f.hidden_field :business_date, value: presenter.form_business_date_value %>
+          <%= f.hidden_field :allow_unclosable_date, value: "1" %>
+          <%= f.hidden_field :notes, value: "Dev mode force run" %>
+          <%= f.submit "DEV MODE: RUN TODAY AUDIT", class: "inline-flex w-full items-center justify-center rounded-md bg-amber-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 sm:w-auto" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

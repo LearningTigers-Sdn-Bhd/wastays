@@ -27,6 +27,7 @@ module Bookings
     end
 
     def call
+      NightAudits::OperationalChangeGuard.call!(hotel: @hotel, action: :create_manual_booking)
       normalize_scheduled_stay!
       booking = @hotel.bookings.build(@params)
       selected_guest = selected_guest_from_param
@@ -180,6 +181,8 @@ module Bookings
       rescue => e
         OpenStruct.new(success?: false, errors: [ e.message ])
       end
+    rescue NightAudits::OperationalChangeGuard::OperationalChangeBlocked => e
+      OpenStruct.new(success?: false, errors: [ e.message ])
     end
 
     private

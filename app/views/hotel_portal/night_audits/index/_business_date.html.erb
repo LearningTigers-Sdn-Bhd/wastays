@@ -1,0 +1,34 @@
+<section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" data-testid="business-date-card">
+  <header class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/60 px-4 py-2.5">
+    <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+      <span class="inline-flex size-6 items-center justify-center rounded-md bg-blue-50 text-blue-700"><%= cached_icon "calendar-days", class: "size-3.5", aria: { hidden: true } %></span>
+      Business Date
+    </h2>
+    <div class="flex flex-wrap items-center justify-end gap-2">
+      <span class="text-xs font-semibold text-slate-500">Accounting authority</span>
+      <span class="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide <%= presenter.business_date_status_badge_class %>" data-testid="business-date-status">
+        <%= presenter.business_date_status_label %>
+      </span>
+    </div>
+  </header>
+  <div class="grid gap-px bg-slate-200 md:grid-cols-[1fr_1fr_0.8fr]">
+    <div class="min-w-0 bg-white px-4 py-2.5">
+      <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Current Business Date</p>
+      <p class="mt-0.5 text-sm font-semibold text-slate-950"><%= presenter.current_business_date_label %></p>
+      <p class="mt-0.5 text-xs text-slate-500">Authoritative audit target</p>
+    </div>
+    <div class="min-w-0 bg-white px-4 py-2.5">
+      <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Calendar Date</p>
+      <p class="mt-0.5 text-sm font-semibold text-slate-950"><%= presenter.calendar_date_label %></p>
+      <p class="mt-0.5 text-xs text-slate-500">Hotel calendar date</p>
+    </div>
+    <div class="min-w-0 bg-white px-4 py-2.5">
+      <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Timezone</p>
+      <p class="mt-0.5 text-sm font-semibold text-slate-950"><%= presenter.hotel_timezone_label %></p>
+      <p class="mt-0.5 text-xs text-slate-500">Hotel-local time</p>
+    </div>
+    <div class="bg-white px-4 py-2.5 md:col-span-3 <%= presenter.date_difference? ? 'text-amber-900' : 'text-slate-700' %>">
+      <p class="text-xs font-medium"><%= presenter.date_explanation %></p>
+    </div>
+  </div>
+</section>

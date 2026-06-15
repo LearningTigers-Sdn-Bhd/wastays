@@ -17,7 +17,7 @@
         </div>
         <div>
           <%= label_tag :posting_date, "Posting Date", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-          <%= date_field_tag :posting_date, params[:posting_date] || current_hotel.business_date_for(Time.current), required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          <%= date_field_tag :posting_date, params[:posting_date] || current_hotel.current_business_date, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
         <div>
           <%= label_tag :backdate_reason, "Backdate Reason", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>

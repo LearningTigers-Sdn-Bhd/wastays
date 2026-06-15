@@ -83,15 +83,15 @@ module HotelPortal
     end
 
     def grid_room_width
-      comfortable_mode? ? 180 : 130
+      comfortable_mode? ? 160 : 80
     end
 
     def grid_day_width
-      comfortable_mode? ? 84 : 64
+      comfortable_mode? ? 84 : 44
     end
 
     def grid_template_columns
-      "#{grid_room_width}px repeat(#{board_dates.size}, minmax(#{grid_day_width}px, 1fr))"
+      "#{grid_room_width}px repeat(#{board_dates.size}, var(--grid-day-width, #{grid_day_width}px))"
     end
 
     def page_spacing
@@ -103,7 +103,7 @@ module HotelPortal
     end
 
     def card_padding
-      comfortable_mode? ? "px-4 py-3" : "px-3 py-2"
+      comfortable_mode? ? "px-3 py-1" : "px-2 py-0"
     end
 
     def title_class
@@ -115,7 +115,7 @@ module HotelPortal
     end
 
     def summary_padding
-      comfortable_mode? ? "px-4 py-3" : "px-3 py-2"
+      comfortable_mode? ? "px-4 py-2" : "px-2.5 py-1.5"
     end
 
     def summary_gap
@@ -127,19 +127,19 @@ module HotelPortal
     end
 
     def room_number_class
-      comfortable_mode? ? "text-xl" : "text-lg"
+      comfortable_mode? ? "text-lg" : "text-base"
     end
 
     def row_min_base
-      comfortable_mode? ? 80 : 64
+      comfortable_mode? ? 44 : 28
     end
 
     def block_step
-      comfortable_mode? ? 48 : 40
+      comfortable_mode? ? 40 : 30
     end
 
     def block_top
-      comfortable_mode? ? 6 : 4
+      comfortable_mode? ? 5 : 2
     end
 
     def block_left_pad
@@ -148,7 +148,8 @@ module HotelPortal
 
     def row_min_height(room)
       max_blocks_same_start = room[:blocks].group_by { |block| [ block[:check_in], visible_start_date ].max }.values.map(&:size).max || 1
-      [ row_min_base, 24 + (max_blocks_same_start * block_step) ].max
+      padding = comfortable_mode? ? 24 : 12
+      [ row_min_base, padding + (max_blocks_same_start * block_step) ].max
     end
 
     def status_style(status, fallback: "border-slate-200 bg-slate-50 text-slate-700")

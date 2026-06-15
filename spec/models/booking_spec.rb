@@ -90,6 +90,10 @@ RSpec.describe Booking, type: :model do
       expect_transition(from: "overbooked", to: "confirmed", event: "resolve_overbooking")
       expect_transition(from: "overbooked", to: "cancelled", event: "cancel")
       expect_transition(from: "checked_in", to: "completed", event: "check_out")
+      expect_transition(from: "checked_in", to: "review_due_out", event: "detect_late_checkout")
+      expect_transition(from: "review_due_out", to: "checked_in", event: "resolve_late_checkout")
+      expect_transition(from: "review_due_out", to: "checkout_required", event: "reject_late_checkout")
+      expect_transition(from: "checkout_required", to: "completed", event: "check_out")
       expect_transition(from: "no_show", to: "checked_in", event: "reinstate")
     end
 
@@ -99,6 +103,15 @@ RSpec.describe Booking, type: :model do
       expect(booking.update(status: "checked_in")).to be(false)
       expect(booking.errors[:status]).to include("status transition event is required")
       expect(booking.reload.status).to eq("confirmed")
+    end
+
+    it "rejects checkout-required bookings returning to confirmed" do
+      booking = create(:booking, status: "checkout_required")
+      booking.status_transition_event = "confirm"
+
+      expect(booking.update(status: "confirmed")).to be(false)
+      expect(booking.errors[:status]).to include("cannot transition from checkout_required to confirmed with event confirm")
+      expect(booking.reload.status).to eq("checkout_required")
     end
 
     it "rejects status changes with the wrong event" do

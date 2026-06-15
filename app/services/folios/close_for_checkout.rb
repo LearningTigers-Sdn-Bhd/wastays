@@ -47,15 +47,16 @@ module Folios
     private
 
     def validate_checkout_business_date(folio)
-      business_date = folio.hotel.business_date_for(@checked_out_at)
+      business_date = folio.hotel.current_business_date
       FinancialControls::PostingGuard.call!(
         hotel: folio.hotel,
         business_date: business_date,
         actor: @user,
-        posting_source: "checkout",
+        posting_source: @options[:posting_source].presence || "checkout",
         override: @options[:override_night_audit],
         override_reason: @options[:correction_reason],
         permission_context: @options[:permission_context] || @user,
+        blocker_resolution: @options[:blocker_resolution],
         system_posting: !!@options[:system_posting]
       )
       nil
@@ -92,7 +93,7 @@ module Folios
     def record_financial_audit_event!(folio, balance)
       FinancialControls::AuditEventRecorder.call!(
         hotel: folio.hotel,
-        business_date: folio.hotel.business_date_for(@checked_out_at),
+        business_date: folio.hotel.current_business_date,
         event_type: "folio_closed_for_checkout",
         source: "checkout",
         actor: @user,

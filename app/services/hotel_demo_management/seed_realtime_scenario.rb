@@ -144,13 +144,7 @@ module HotelDemoManagement
 
     def run_day_by_day_simulation(acting_user:, system_posting:)
       simulation_start_date = Date.current - 5.days
-      HotelBusinessDate.create!(
-        hotel: @hotel,
-        business_date: simulation_start_date,
-        status: "open",
-        opened_at: Time.current,
-        blockers_snapshot: {}
-      )
+      BusinessDates::ResetAuthority.call!(hotel: @hotel, date: simulation_start_date)
 
       zone = Time.find_zone(@hotel.time_zone.presence || "Kuala Lumpur")
 
@@ -228,7 +222,7 @@ module HotelDemoManagement
     end
 
     def run_night_audit(date, acting_user)
-      result = HotelOps::RunNightAudit.new(
+      result = NightAudits::Run.new(
         hotel: @hotel,
         business_date: date,
         performed_by_user: acting_user,

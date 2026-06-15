@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_14_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -114,7 +114,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
     t.datetime "occurred_at", null: false
     t.index ["auditable_type", "auditable_id", "occurred_at"], name: "idx_booking_audit_logs_on_auditable_time"
     t.index ["auditable_type", "auditable_id"], name: "index_booking_audit_logs_on_auditable"
-    t.index ["category", "occurred_at"], name: "idx_booking_audit_logs_on_category_time"
     t.index ["hotel_id", "category", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_category_time"
     t.index ["hotel_id", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_time"
     t.index ["hotel_id"], name: "index_booking_audit_logs_on_hotel_id"
@@ -470,6 +469,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
     t.datetime "posted_at"
     t.string "currency"
     t.string "gl_code"
+    t.bigint "night_audit_id"
     t.index "booking_folio_id, ((metadata ->> 'early_checkout_charge_key'::text))", name: "index_folio_transactions_on_early_checkout_charge", unique: true, where: "(metadata ? 'early_checkout_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'nightly_charge_key'::text))", name: "index_folio_transactions_on_nightly_charge", unique: true, where: "(metadata ? 'nightly_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'no_show_charge_key'::text))", name: "index_folio_transactions_on_no_show_charge", unique: true, where: "(metadata ? 'no_show_charge_key'::text)"
@@ -479,6 +479,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
     t.index ["booking_folio_id"], name: "index_folio_transactions_on_booking_folio_id"
     t.index ["category"], name: "index_folio_transactions_on_category"
     t.index ["gl_code"], name: "index_folio_transactions_on_gl_code"
+    t.index ["night_audit_id"], name: "index_folio_transactions_on_night_audit_id"
     t.index ["posting_date"], name: "index_folio_transactions_on_posting_date"
     t.index ["reversal_of_transaction_id"], name: "index_folio_transactions_on_reversal_of_transaction_id"
     t.index ["transaction_type"], name: "index_folio_transactions_on_transaction_type"
@@ -503,7 +504,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
     t.datetime "magic_token_expires_at"
     t.datetime "last_signed_in_at"
     t.bigint "created_by_hotel_id"
+    t.datetime "discarded_at"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
+    t.index ["discarded_at"], name: "index_guests_on_discarded_at"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
   end
 
@@ -518,9 +521,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
     t.jsonb "blockers_snapshot", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "force_closed_by_id"
+    t.datetime "force_closed_at"
+    t.text "force_close_reason"
+    t.index ["force_closed_by_id"], name: "index_hotel_business_dates_on_force_closed_by_id"
     t.index ["hotel_id", "business_date", "status"], name: "idx_on_hotel_id_business_date_status_38d59d82f8"
     t.index ["hotel_id", "business_date"], name: "index_hotel_business_dates_on_hotel_id_and_business_date", unique: true
     t.index ["hotel_id", "status"], name: "index_hotel_business_dates_on_hotel_id_and_status"
+    t.index ["hotel_id"], name: "idx_one_current_business_date_per_hotel", unique: true, where: "((status)::text = ANY ((ARRAY['open'::character varying, 'audit_running'::character varying, 'audit_blocked'::character varying])::text[]))"
     t.index ["hotel_id"], name: "index_hotel_business_dates_on_hotel_id"
   end
 
@@ -1352,8 +1360,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_12_000002) do
   add_foreign_key "folio_transactions", "booking_folios"
   add_foreign_key "folio_transactions", "folio_transactions", column: "reversal_of_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "voided_by_transaction_id"
+  add_foreign_key "folio_transactions", "night_audits", on_delete: :restrict
   add_foreign_key "folio_transactions", "users"
   add_foreign_key "hotel_business_dates", "hotels"
+  add_foreign_key "hotel_business_dates", "users", column: "force_closed_by_id", on_delete: :nullify
   add_foreign_key "hotel_counters", "hotels"
   add_foreign_key "hotel_general_ledger_maps", "hotels"
   add_foreign_key "hotel_knowledge_chunks", "hotel_knowledge_documents"

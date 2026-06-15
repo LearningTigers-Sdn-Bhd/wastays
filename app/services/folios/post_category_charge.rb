@@ -24,7 +24,7 @@ module Folios
       return failure("Invalid charge category: #{@category}") unless ALLOWED_CATEGORIES.include?(@category)
       return failure("Charge amount must be greater than zero") unless @amount.positive?
 
-      posting_date = @options[:posting_date] || @folio.hotel.business_date_for
+      posting_date = @options[:posting_date] || @folio.hotel.current_business_date
 
       options = @options.merge(
         metadata: @metadata.merge(
@@ -33,7 +33,7 @@ module Folios
         )
       )
 
-      if @folio.hotel.date_closed?(posting_date) || posting_date < @folio.hotel.business_date_for
+      if @folio.hotel.date_closed?(posting_date) || posting_date < @folio.hotel.current_business_date
         options[:override_night_audit] = true
         options[:system_posting] = true
         options[:correction_reason] ||= "charge_on_closed_date"

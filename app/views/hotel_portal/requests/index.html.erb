@@ -102,9 +102,6 @@
                     <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= kind_badge_class %>">
                       <%= card[:kind] %>
                     </span>
-                    <% if card[:source] == "concierge_page" %>
-                      <span class="rounded border border-brand-primary/30 bg-brand-primary/10 px-2 py-0.5 text-[9px] font-black uppercase text-brand-primary">Concierge</span>
-                    <% end %>
                     <span class="font-mono text-[10px] font-bold tracking-tight text-slate-400"><%= card[:booking_token] %></span>
                   </div>
                   <span class="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600">

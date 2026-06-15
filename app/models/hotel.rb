@@ -67,6 +67,7 @@ class Hotel < ApplicationRecord
   has_many :notification_deliveries, dependent: :destroy
 
   after_create :ensure_default_gl_maps
+  after_create :ensure_current_business_date
 
   validates :name, presence: true
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
@@ -239,23 +240,19 @@ class Hotel < ApplicationRecord
     date
   end
 
-  def date_closed?(date, reference_time = Time.current)
+  def current_business_date_record
+    hotel_business_dates.current.order(:business_date, :id).first
+  end
+
+  def current_business_date
+    current_business_date_record&.business_date
+  end
+
+  def date_closed?(date, _reference_time = Time.current)
     date = date.to_date
+    record = hotel_business_dates.find_by(business_date: date)
 
-    return true if NightAudit.exists?(hotel_id: id, business_date: date, status: "completed")
-
-    current_biz_date = business_date_for(reference_time)
-
-    return true if date < current_biz_date - 1.day
-
-    if date == current_biz_date - 1.day
-      return true if defined?(HotelBusinessDate) && HotelBusinessDate.closed_for?(hotel: id, date: date)
-      return NightAudit.exists?(hotel_id: id, business_date: date, status: "completed")
-    end
-
-    return true if defined?(HotelBusinessDate) && HotelBusinessDate.closed_for?(hotel: id, date: date)
-
-    false
+    record.nil? || record.closed_like?
   end
 
   def can_audit_date?(business_date, time = Time.current)
@@ -662,6 +659,10 @@ class Hotel < ApplicationRecord
   end
 
   private
+
+  def ensure_current_business_date
+    HotelBusinessDate.initialize_for_hotel!(hotel: self, date: business_date_for(Time.current))
+  end
 
   def ensure_default_gl_maps
     Financials::EnsureDefaultGlMaps.call(self)

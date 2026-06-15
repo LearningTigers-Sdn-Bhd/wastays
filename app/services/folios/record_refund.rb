@@ -4,7 +4,7 @@ require "ostruct"
 
 module Folios
   class RecordRefund
-    def self.call(refund_request:, user:, posting_date: Time.current.to_date, options: {})
+    def self.call(refund_request:, user:, posting_date: nil, options: {})
       new(refund_request: refund_request, user: user, posting_date: posting_date, options: options).call
     end
 
@@ -13,7 +13,7 @@ module Folios
       @booking = refund_request.booking
       @folio = @booking.booking_folio
       @user = user
-      @posting_date = posting_date
+      @posting_date = posting_date || @booking.hotel.current_business_date
       @options = options
     end
 
@@ -27,7 +27,7 @@ module Folios
         description = "Refund completed"
         options = merged_options
 
-        if @booking.hotel.date_closed?(target_date) || target_date < @booking.hotel.business_date_for
+        if @booking.hotel.date_closed?(target_date) || target_date < @booking.hotel.current_business_date
           options[:override_night_audit] = true
           options[:system_posting] = true
           options[:correction_reason] ||= "refund_on_closed_date"

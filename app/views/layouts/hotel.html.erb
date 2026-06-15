@@ -12,6 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= javascript_importmap_tags %>
   </head>
@@ -111,5 +112,6 @@
     <%= render 'shared/turbo_confirm' %>
     <%= render 'shared/room_lock_alert' %>
     <%= render 'shared/offcanvas_drawer' %>
+    <%= yield :body_end %>
   </body>
 </html>

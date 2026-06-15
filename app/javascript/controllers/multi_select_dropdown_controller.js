@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["input", "dropdown", "pillsContainer", "template", "checkbox", "option", "chevron"]
+  static targets = ["input", "dropdown", "pillsContainer", "template", "checkbox", "option", "chevron", "placeholder"]
   static values = {
     selected: Array,
     all: Array
@@ -101,8 +101,12 @@ export default class extends Controller {
       }
     })
 
-    if (visibleCount === 0 && query !== "") {
-      this.closeDropdown()
+    if (this.hasPlaceholderTarget) {
+      if (visibleCount === 0 && query !== "") {
+        this.placeholderTarget.classList.remove('hidden')
+      } else {
+        this.placeholderTarget.classList.add('hidden')
+      }
     }
   }
 

@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe FolioTransaction, type: :model do
   describe "validations" do
     it { should belong_to(:booking_folio) }
+    it { should belong_to(:night_audit).optional }
     it { should belong_to(:user).optional }
     it { should belong_to(:reversal_of_transaction).optional }
     it { should belong_to(:voided_by_transaction).optional }
@@ -61,6 +62,38 @@ RSpec.describe FolioTransaction, type: :model do
 
       expect(transaction).not_to be_valid
       expect(transaction.errors[:category]).to include("is not allowed for charge transactions")
+    end
+
+    it "requires a linked night audit to match the folio hotel and metadata" do
+      folio = create(:booking_folio)
+      other_audit = create(:night_audit)
+
+      transaction = build(
+        :folio_transaction,
+        booking_folio: folio,
+        night_audit: other_audit,
+        metadata: { night_audit_id: other_audit.id }
+      )
+
+      expect(transaction).not_to be_valid
+      expect(transaction.errors[:night_audit]).to include("must belong to the same hotel as the folio")
+    end
+
+    it "requires direct and metadata night audit links to agree" do
+      folio = create(:booking_folio)
+      audit = create(:night_audit, hotel: folio.hotel)
+
+      transaction = build(:folio_transaction, booking_folio: folio, night_audit: audit, metadata: { night_audit_id: audit.id + 1 })
+
+      expect(transaction).not_to be_valid
+      expect(transaction.errors[:night_audit]).to include("must match metadata night_audit_id")
+    end
+
+    it "rejects an invalid direct night audit foreign key" do
+      invalid_id = NightAudit.maximum(:id).to_i + 10_000
+      transaction = create(:folio_transaction)
+
+      expect { transaction.update_column(:night_audit_id, invalid_id) }.to raise_error(ActiveRecord::InvalidForeignKey)
     end
   end
 

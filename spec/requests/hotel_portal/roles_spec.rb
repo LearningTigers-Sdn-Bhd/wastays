@@ -134,4 +134,55 @@ RSpec.describe "HotelPortal::Roles", type: :request do
       expect(response).to have_http_status(:not_found)
     end
   end
+
+  describe "PATCH /hotel/:hotel_id/roles-and-permissions/bulk_update" do
+    it "updates multiple roles at once" do
+      role1 = create(:role, account: account, name: "Role 1")
+      role2 = create(:role, account: account, name: "Role 2")
+      p1 = Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings', name: 'View Bookings')
+      p2 = Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings', name: 'Manage Bookings')
+
+      patch bulk_update_hotel_roles_path(hotel), params: {
+        roles: {
+          role1.id => { permission_ids: [ p1.id ] },
+          role2.id => { permission_ids: [ p1.id, p2.id ] }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_roles_path(hotel))
+      expect(flash[:notice]).to include("successfully")
+      expect(role1.reload.permissions).to contain_exactly(p1)
+      expect(role2.reload.permissions).to contain_exactly(p1, p2)
+    end
+
+    it "handles clearing all permissions for a role" do
+      role = create(:role, account: account, name: "Cleanup Role")
+      p1 = Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings')
+      role.permissions << p1
+
+      patch bulk_update_hotel_roles_path(hotel), params: {
+        roles: {
+          role.id => { permission_ids: [ "" ] }
+        }
+      }
+
+      expect(role.reload.permissions).to be_empty
+    end
+
+    it "fails if a role ID does not belong to the account" do
+      other_account = create(:account)
+      other_role = create(:role, account: other_account)
+
+      # RolesController#bulk_update finds roles via current_hotel.account.roles.where(id: ...)
+      # So it will simply skip roles not found in that scope.
+      patch bulk_update_hotel_roles_path(hotel), params: {
+        roles: {
+          other_role.id => { permission_ids: [] }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_roles_path(hotel))
+      expect(other_role.reload.permissions).to be_empty
+    end
+  end
 end

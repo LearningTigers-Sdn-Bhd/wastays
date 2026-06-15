@@ -55,7 +55,7 @@ RSpec.describe Folios::SyncExistingPayments do
   it "can post captured payments as no-show owned transactions during night audit" do
     payment_transaction = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: open_date.noon)
     night_audit = booking.hotel.night_audits.create!(business_date: open_date, status: "running", trigger_mode: "manual")
-    HotelBusinessDate.for_hotel_date!(hotel: booking.hotel, date: open_date).start_audit!
+    start_business_date_audit(booking.hotel)
 
     described_class.call(folio: folio, user: user, options: { posting_source: "no_show" })
 

@@ -26,7 +26,7 @@ production:
     class: CleanupRoomLocksJob
     schedule: every 5 minutes
   run_scheduled_night_audits:
-    class: RunScheduledNightAuditsJob
+    class: NightAudits::RunScheduledJob
     schedule: every 15 minutes
   financial_observability:
     class: FinancialObservabilityJob
@@ -43,7 +43,7 @@ demo:
     class: CleanupRoomLocksJob
     schedule: every 5 minutes
   run_scheduled_night_audits:
-    class: RunScheduledNightAuditsJob
+    class: NightAudits::RunScheduledJob
     schedule: every 15 minutes
   financial_observability:
     class: FinancialObservabilityJob

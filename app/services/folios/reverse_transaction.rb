@@ -4,7 +4,7 @@ require "ostruct"
 
 module Folios
   class ReverseTransaction
-    def self.call(transaction:, user:, correction_reason:, correction_note:, posting_date: Time.current.to_date, options: {})
+    def self.call(transaction:, user:, correction_reason:, correction_note:, posting_date: nil, options: {})
       new(
         transaction: transaction,
         user: user,
@@ -21,7 +21,7 @@ module Folios
       @user = user
       @correction_reason = correction_reason.to_s.strip
       @correction_note = correction_note.to_s.strip
-      @posting_date = posting_date
+      @posting_date = posting_date || @folio.hotel.current_business_date
       @options = options
     end
 

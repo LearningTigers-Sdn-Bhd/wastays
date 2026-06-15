@@ -15,6 +15,8 @@ class NightAuditLog < ApplicationRecord
     check_open_requests
     blocker_found
     exception_found
+    item_skipped
+    item_failed
     completed
     failed
   ].freeze

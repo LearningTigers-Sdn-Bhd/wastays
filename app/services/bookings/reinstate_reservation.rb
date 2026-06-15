@@ -14,6 +14,7 @@ module Bookings
     end
 
     def call
+      NightAudits::OperationalChangeGuard.call!(hotel: @booking.hotel, action: :reinstate)
       return OpenStruct.new(success?: false, error: "Only no-show bookings can be reinstated.") unless @booking.status == "no_show"
 
       Booking.transaction do
@@ -30,7 +31,7 @@ module Bookings
 
           # 3. Reserve inventory (released by no-show)
           # We need to reserve from today (current business date) until check-out
-          business_date = @booking.hotel.business_date_for(Time.current)
+          business_date = @booking.hotel.current_business_date
           Bookings::InventoryManager.new(@booking).reserve_by_dates(business_date, @booking.check_out.to_date)
 
           # 4. Transition status to checked_in
@@ -101,7 +102,7 @@ module Bookings
     end
 
     def rooms_available?
-      business_date = @booking.hotel.business_date_for(Time.current)
+      business_date = @booking.hotel.current_business_date
       return @booking.booking_rooms.all? { |booking_room| booking_room.room_number.present? } if @booking.check_out.to_date <= business_date
 
       @booking.booking_rooms.all? do |booking_room|

@@ -8,6 +8,11 @@ RSpec.describe Folios::PostNightlyCharges do
   let(:user) { create(:user, account: hotel.account) }
   let(:night_audit) { create(:night_audit, hotel: hotel, business_date: business_date, performed_by_user: user, status: "running") }
 
+  before do
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+    start_business_date_audit(hotel)
+  end
+
   it "posts one nightly accommodation and tax charge for an in-house booking" do
     booking = create(:booking,
       hotel: hotel,
@@ -18,14 +23,19 @@ RSpec.describe Folios::PostNightlyCharges do
     create(:booking_room, booking: booking, subtotal: 200.0)
     folio = create(:booking_folio, hotel: hotel, booking: booking)
 
-    described_class.call(night_audit: night_audit, user: user)
+    result = described_class.call(night_audit: night_audit, user: user)
 
     charges = folio.folio_transactions.charge.order(:category)
     expect(charges.count).to eq(2)
     expect(charges.find_by(category: "accommodation").amount).to eq(100.0)
     expect(charges.find_by(category: "tax").amount).to eq(10.0)
     expect(charges.map { |charge| charge.metadata["posting_source"] }.uniq).to eq([ "night_audit" ])
+    expect(charges.map(&:night_audit).uniq).to eq([ night_audit ])
+    expect(charges.map { |charge| charge.metadata["night_audit_id"] }.uniq).to eq([ night_audit.id ])
     expect(charges.map { |charge| charge.metadata["stay_date"] }.uniq).to eq([ business_date.iso8601 ])
+    expect(result.posted.count).to eq(2)
+    expect(result.skipped).to be_empty
+    expect(result.failed).to be_empty
   end
 
   it "posts accommodation and tax from financial snapshots" do
@@ -80,9 +90,44 @@ RSpec.describe Folios::PostNightlyCharges do
 
     described_class.call(night_audit: night_audit, user: user)
 
+    result = nil
+    expect { result = described_class.call(night_audit: night_audit, user: user) }
+      .not_to change { folio.folio_transactions.charge.count }
+
+    expect(result.skipped.count).to eq(2)
+    expect(result.skipped.map { |item| item["reason"] }.uniq).to eq([ "Nightly charge already posted" ])
+    expect(night_audit.night_audit_logs.where(action_type: "item_skipped").count).to eq(2)
+  end
+
+  it "records a missing folio as a skipped item" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day)
+    create(:booking_room, booking: booking, subtotal: 100.0)
+
+    result = described_class.call(night_audit: night_audit, user: user)
+
+    expect(result.skipped.sole).to include("booking_id" => booking.id, "reason" => "Booking has no folio")
+  end
+
+  it "records a failed charge item before raising" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day)
+    create(:booking_room, booking: booking, subtotal: 100.0)
+    create(:booking_folio, hotel: hotel, booking: booking)
+    allow_any_instance_of(Folios::InsertTransaction).to receive(:call).and_return(OpenStruct.new(success?: false, error: "posting failed"))
+
     expect {
       described_class.call(night_audit: night_audit, user: user)
-    }.not_to change { folio.folio_transactions.charge.count }
+    }.to raise_error("Failed to post nightly folio charge: posting failed")
+
+    item = night_audit.night_audit_logs.find_by!(action_type: "item_failed").metadata["item"]
+    expect(item).to include("booking_id" => booking.id, "reason" => "posting failed")
   end
 
   it "posts separate tax lines with the same tax type" do
@@ -107,6 +152,8 @@ RSpec.describe Folios::PostNightlyCharges do
 
   it "allocates rounding remainder to the final billable night" do
     final_night = business_date + 2.days
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: final_night)
+    start_business_date_audit(hotel)
     final_night_audit = create(:night_audit, hotel: hotel, business_date: final_night, performed_by_user: user, status: "running")
     booking = create(:booking,
       hotel: hotel,

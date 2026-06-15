@@ -60,7 +60,7 @@ module Bookings
       allowed_rooms = inventory_allowed_rooms.reduce(:&) || []
 
       # 2. Find room numbers already occupied for these dates by other bookings
-      occupied = @hotel.bookings.where(status: [ "confirmed", "review_no_show", "checked_in" ])
+      occupied = @hotel.bookings.where(status: [ "confirmed", "review_no_show", "checked_in", "review_due_out", "checkout_required" ])
       occupied = occupied.where.not(id: @exclude_booking_id) if @exclude_booking_id
 
       occupied_numbers = occupied.where("check_in < ? AND check_out > ?", @check_out, @check_in)

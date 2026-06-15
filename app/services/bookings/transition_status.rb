@@ -13,6 +13,12 @@ module Bookings
     end
 
     def call
+      NightAudits::OperationalChangeGuard.call!(
+        hotel: @booking.hotel,
+        action: "transition_status:#{@status}",
+        night_audit: @options[:night_audit]
+      )
+
       case @status
       when "checked_in"
         if @booking.status == "review_due_out"
@@ -26,6 +32,8 @@ module Bookings
         cancel
       when "review_due_out"
         simple_transition("review_due_out", @options[:event] || "detect_late_checkout")
+      when "checkout_required"
+        simple_transition("checkout_required", @options[:event] || "reject_late_checkout")
       else
         failure("Unsupported status transition: #{@status}")
       end
@@ -48,7 +56,7 @@ module Bookings
             old_value: { "status" => @booking.status_before_last_save },
             new_value: { "status" => new_status },
             reason: @options[:reason],
-            metadata: { from: @booking.status_before_last_save, to: new_status, event: event }
+            metadata: { from: @booking.status_before_last_save, to: new_status, event: event }.merge(@options[:metadata] || {})
           )
         end
       end
@@ -70,6 +78,11 @@ module Bookings
           if @booking.checked_in?
             repair_options = @booking.booking_folio.present? ? @options : @options.reverse_merge(override_night_audit: true)
             Folios::InitializeForBooking.call(booking: @booking, user: @user, options: repair_options, lock: false)
+
+            if @options[:attributes].present?
+              @booking.update!(@options[:attributes])
+              sync_room_number_to_snapshot
+            end
             next
           end
 
@@ -86,12 +99,7 @@ module Bookings
 
           guest_reg = @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
 
-          # Sync room number to hotel_snapshot for consistency
-          room_number = @booking.booking_rooms.first&.room_number
-          if room_number.present?
-            @booking.hotel_snapshot ||= {}
-            @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => room_number)
-          end
+          sync_room_number_to_snapshot
 
           attributes = (@options[:attributes] || {}).merge(
             checked_in_at: @timestamp,
@@ -187,7 +195,7 @@ module Bookings
         @booking.with_lock do
           @booking.reload
 
-          unless @booking.checked_in? || @booking.status == "review_due_out"
+          unless @booking.checked_in? || @booking.status == "checkout_required"
             error = "Cannot check out booking with status #{@booking.status}"
             next
           end
@@ -316,6 +324,15 @@ module Bookings
         metadata: { "source" => "bookings_transition_status" }
       )
       raise result.error unless result.success?
+    end
+
+    def sync_room_number_to_snapshot
+      room_number = @booking.booking_rooms.first&.room_number
+      if room_number.present?
+        @booking.hotel_snapshot ||= {}
+        @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => room_number)
+        @booking.update_columns(hotel_snapshot: @booking.hotel_snapshot) if @booking.persisted?
+      end
     end
 
     def success

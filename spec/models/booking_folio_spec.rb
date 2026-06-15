@@ -3,6 +3,14 @@
 require "rails_helper"
 
 RSpec.describe BookingFolio, type: :model do
+  it "prevents removal while night audit is running" do
+    folio = create(:booking_folio)
+    folio.hotel.current_business_date_record.update!(status: "audit_running")
+
+    expect { folio.destroy }.to raise_error(NightAudits::OperationalChangeGuard::OperationalChangeBlocked)
+    expect(described_class.exists?(folio.id)).to be(true)
+  end
+
   describe "associations" do
     it { should belong_to(:hotel) }
     it { should belong_to(:booking) }

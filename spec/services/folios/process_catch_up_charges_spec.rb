@@ -10,6 +10,7 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
   let(:folio) { create(:booking_folio, booking: booking) }
 
   before do
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
     create(:booking_room, booking: booking, subtotal: 200.0)
     booking.update(tax_lines: [ { "name" => "SST", "amount" => "12.00" } ])
     # Ensure folio exists and is linked
@@ -19,6 +20,7 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
   context "when night audit for the stay date is completed" do
     before do
       create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
+      create(:hotel_business_date, hotel: hotel, business_date: past_date, status: "closed")
     end
 
     it "posts missing nightly charges with backdated check-in descriptions by default" do

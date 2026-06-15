@@ -8,7 +8,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:hotel) do
-    create(:hotel,
+    create(:hotel, :without_current_business_date,
       account: account,
       plan: plan,
       status: "live",
@@ -57,19 +57,19 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     expect(NightAudit.last).to be_completed
   end
 
-  it "defaults manual business date to yesterday when omitted" do
+  it "defaults manual business date to the current accounting date when omitted" do
     sign_in(user)
 
     kl_zone = Time.find_zone("Kuala Lumpur")
     travel_to(kl_zone.local(2026, 5, 19, 10, 10)) do
-      # At 10:10 AM on May 19, May 18 should be the latest closable date
+      # The clock still calculates May 18 as latest closable, but accounting authority remains May 19.
       expect(hotel.latest_closable_business_date).to eq(Date.new(2026, 5, 18))
       perform_enqueued_jobs do
         post hotel_night_audits_path(hotel), params: { night_audit: { notes: "Default run" } }
       end
     end
 
-    expect(NightAudit.last.business_date).to eq(Date.new(2026, 5, 18))
+    expect(NightAudit.last.business_date).to eq(Date.new(2026, 5, 19))
     expect(NightAudit.last.trigger_mode).to eq("manual")
   end
 
@@ -97,7 +97,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
       status: "checked_in",
       payment_status: "captured",
       check_in: business_date - 1.day,
-      check_out: business_date,
+      check_out: business_date + 1.day,
       checked_in_at: 1.day.ago)
 
     perform_enqueued_jobs do
@@ -120,7 +120,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
 
     expect do
       post hotel_night_audits_path(hotel), params: { night_audit: { business_date: business_date.to_s } }
-    end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+    end.not_to have_enqueued_job(NightAudits::RunJob)
 
     expect(response).to redirect_to(hotel_night_audit_path(hotel, night_audit))
     expect(flash[:notice]).to eq("Night audit is already scheduled or running in the background.")
@@ -133,7 +133,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
       expect do
         post hotel_night_audits_path(hotel), params: { night_audit: { business_date: Date.new(2026, 5, 21).to_s } }
-      end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+      end.not_to have_enqueued_job(NightAudits::RunJob)
     end
 
     expect(response).to redirect_to(hotel_night_audits_path(hotel))
@@ -175,7 +175,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
             allow_unclosable_date: "1"
           }
         }
-      end.not_to have_enqueued_job(HotelOps::RunNightAuditJob)
+      end.not_to have_enqueued_job(NightAudits::RunJob)
     end
 
     expect(response).to redirect_to(hotel_night_audits_path(hotel))
@@ -227,5 +227,74 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
       get blockers_hotel_night_audit_path(hotel, night_audit)
       expect(response).to redirect_to(root_path)
     end
+  end
+
+  it "shows structured run results on the audit page" do
+    night_audit = create(:night_audit,
+      hotel: hotel,
+      summary: {
+        "run_results" => {
+          "status_changes" => { "count" => 1, "items" => [] },
+          "charges_posted" => { "count" => 2, "items" => [] },
+          "skipped_items" => { "count" => 3, "items" => [] },
+          "failed_items" => { "count" => 0, "items" => [] }
+        }
+      })
+    create(:night_audit_financial_summary, night_audit: night_audit)
+    sign_in(user)
+
+    get hotel_night_audit_path(hotel, night_audit)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Run Results", "Status Changes", "Charges Posted", "Skipped Items", "Failed Items")
+  end
+
+  it "appends the default index and show tabs to the breadcrumbs" do
+    night_audit = create(:night_audit, hotel: hotel)
+    sign_in(user)
+
+    get hotel_night_audits_path(hotel, tab: "advanced-actions")
+    expect(response.body).to include("data-tabs-breadcrumb-label>Audit History</span>")
+    expect(response.body).to include(%(href="#{hotel_night_audits_path(hotel)}">Night Audit</a>))
+    expect(response.body).to include("aria-label=\"Open Night Audit navigation\"")
+
+    get hotel_night_audit_path(hotel, night_audit, tab: "financial-summary")
+    expect(response.body).to include("data-tabs-breadcrumb-label>Results</span>")
+  end
+
+  it "separates hard blockers from warnings and makes close readiness obvious" do
+    night_audit = create(:night_audit,
+      hotel: hotel,
+      status: "blocked",
+      blocked_details: {
+        "missing_folio" => [ { "guest_name" => "Aisha Tan", "confirmation_token" => "BLOCK-1", "reason" => "Booking requires a folio before night audit can close" } ]
+      },
+      exceptions: {
+        "review_due_out" => [ { "guest_name" => "Ben Lee", "confirmation_token" => "WARN-1", "reason" => "Due-out review carried forward" } ]
+      })
+    sign_in(user)
+
+    get hotel_night_audit_path(hotel, night_audit)
+
+    expect(response.body).to include("Cannot close this date", "Hard Blockers", "Warnings / Review Items")
+    expect(response.body).to include("Accounting blocker", "Due-out review carried forward")
+  end
+
+  it "renders the compact historical audit packet sections and preserved actions" do
+    night_audit = create(:night_audit, hotel: hotel, status: "completed")
+    sign_in(user)
+
+    get hotel_night_audit_path(hotel, night_audit)
+
+    expect(response.body).to include("Summary", "Audit Details", "Audit Snapshot", "Payment Status Counts")
+    expect(response.body).to include("data-testid=\"night-audit-summary\"")
+    expect(response.body).to include("data-testid=\"audit-details-card\"")
+    expect(response.body).to include("data-testid=\"audit-snapshot-card\"")
+    expect(response.body).to include("data-testid=\"payment-status-counts-card\"")
+    expect(response.body).to include("Business-Date Financial Summary", "Manual Adjustments & Voids")
+    expect(response.body).to include("View Audit Packet", "Back to Night Audit")
+    expect(response.body).to include("Date closed")
+    expect(response.body).to include(night_audit.business_date.strftime("%d %b %Y"))
+    expect(response.body).to include(hotel_night_audit_path(hotel, night_audit))
   end
 end
