@@ -40,6 +40,7 @@ export default class extends Controller {
     })
 
     this.updateBreadcrumbLabel(activeTab?.dataset.tabLabel)
+    this.updateSubtabBreadcrumbVisibility(activeTab?.dataset.showSubtabBreadcrumb === "true")
   }
 
   validTab(name) {
@@ -49,6 +50,11 @@ export default class extends Controller {
   updateBreadcrumbLabel(label) {
     const breadcrumb = document.querySelector("[data-tabs-breadcrumb-label]")
     if (breadcrumb && label) breadcrumb.textContent = label
+  }
+
+  updateSubtabBreadcrumbVisibility(visible) {
+    const segment = document.querySelector("[data-subtabs-breadcrumb-segment]")
+    if (segment) segment.classList.toggle("hidden", !visible)
   }
 
   get defaultTab() {
