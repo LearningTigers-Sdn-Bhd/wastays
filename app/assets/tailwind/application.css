@@ -317,7 +317,7 @@
   }
 
   .sidebar-collapsed nav {
-    @apply !space-y-6 py-2 px-2;
+    @apply !space-y-1 py-2 px-2;
   }
 
   .sidebar-collapsed .sidebar-header-container,
@@ -326,7 +326,7 @@
   }
 
   .sidebar-collapsed .sidebar-nav-group + .sidebar-nav-group {
-    @apply border-t border-layer-line !mt-3 pt-3 -mx-2;
+    @apply border-t border-layer-line !mt-1 pt-1 -mx-2;
   }
 
   .sidebar-collapsed .sidebar-nav-group > div {

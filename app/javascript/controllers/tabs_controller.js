@@ -10,8 +10,7 @@ export default class extends Controller {
   connect() {
     const urlParams = new URLSearchParams(window.location.search)
     const requestedTab = urlParams.get(this.parameterNameValue)
-    const activeTab = this.validTab(requestedTab) ? requestedTab : this.defaultTab
-    this.show(activeTab)
+    this.show(requestedTab)
   }
 
   switch(event) {
@@ -26,16 +25,17 @@ export default class extends Controller {
   }
 
   show(tabName) {
-    const activeTab = this.tabTargets.find((tab) => tab.dataset.tabName === tabName)
+    const activeTabName = this.validTab(tabName) ? tabName : this.defaultTab
+    const activeTab = this.tabTargets.find((tab) => tab.dataset.tabName === activeTabName)
 
     this.tabTargets.forEach((tab) => {
-      const active = tab.dataset.tabName === tabName
+      const active = tab.dataset.tabName === activeTabName
       tab.setAttribute("data-active", active)
       tab.setAttribute("aria-selected", active ? "true" : "false")
     })
 
     this.panelTargets.forEach((panel) => {
-      const active = panel.dataset.tabPanel === tabName
+      const active = panel.dataset.tabPanel === activeTabName
       panel.classList.toggle("hidden", !active)
     })
 
