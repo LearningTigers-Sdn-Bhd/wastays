@@ -1,0 +1,71 @@
+<% if feature_enabled_for_hotel?("excel_pdf_export") %>
+  <div class="flex justify-end px-4 md:px-0">
+    <% if @upcoming_bookings.blank? %>
+      <button type="button" disabled class="inline-flex min-w-[160px] cursor-not-allowed items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-400 shadow-sm" title="No data available to export">
+        <%= cached_icon "download", class: "me-2 size-4" %>
+        Export
+      </button>
+    <% else %>
+      <details class="relative min-w-[160px]">
+        <summary class="inline-flex w-full cursor-pointer list-none items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
+          <%= cached_icon "download", class: "me-2 size-4" %>
+          Export
+        </summary>
+        <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+          <%= link_to "Export PDF", payouts_hotel_reports_path(current_hotel, tab: "upcoming", format: :pdf), class: "block px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50", data: { turbo: false } %>
+          <%= link_to "Export Excel", payouts_hotel_reports_path(current_hotel, tab: "upcoming", format: :xls), class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50", data: { turbo: false } %>
+          <%= link_to "Export CSV", payouts_hotel_reports_path(current_hotel, tab: "upcoming", format: :csv), class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50", data: { turbo: false } %>
+        </div>
+      </details>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm <%= @processing_batches.any? ? 'md:grid-cols-2' : 'md:grid-cols-1' %>">
+  <div class="p-6 md:p-8 <%= @processing_batches.any? ? 'md:border-r md:border-slate-200' : '' %>">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Accumulating (Current Cycle)</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950">MYR <%= number_with_precision(@upcoming_payout_amount, precision: 2) %></h2>
+    <p class="mt-2 text-sm font-medium text-slate-600"><%= pluralize(@upcoming_bookings.count, "stay") %> completed and ready for settlement</p>
+  </div>
+
+  <% if @processing_batches.any? %>
+    <div class="bg-amber-50/30 p-6 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-amber-700">Processing Batch</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-900">MYR <%= number_with_precision(@processing_batches.sum(&:amount), precision: 2) %></h2>
+      <p class="mt-2 text-sm font-medium text-amber-700/80">Funds currently being processed by the platform</p>
+    </div>
+  <% end %>
+</div>
+
+<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+    <h2 class="text-lg font-bold tracking-tight text-slate-950">Current Cycle Breakdown</h2>
+    <p class="mt-1 text-sm font-medium text-slate-600">Individual bookings ready for next payout.</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full table-fixed">
+      <thead class="bg-slate-100">
+        <tr>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Booking Reference</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Checkout Date</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
+          <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Net Payout</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200 bg-white">
+        <% if @upcoming_bookings.any? %>
+          <% @upcoming_bookings.each_with_index do |booking, index| %>
+            <tr class="align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
+              <td class="px-6 py-4 sm:px-8"><span class="font-mono text-sm font-semibold text-slate-900">#<%= booking.confirmation_token %></span></td>
+              <td class="px-6 py-4 text-sm font-medium text-slate-600"><%= booking.checked_out_at&.strftime("%d %b %Y, %I:%M %p") %></td>
+              <td class="px-6 py-4"><span class="inline-flex items-center gap-x-1.5 rounded-lg border px-2 py-1 text-xs font-bold <%= payout_status_class(booking.payout_status) %>"><%= booking.payout_status.titleize %></span></td>
+              <td class="whitespace-nowrap px-6 py-4 text-right sm:px-8"><span class="text-sm font-bold text-slate-900">RM <%= number_with_precision(booking.net_amount, precision: 2) %></span></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr><td colspan="4" class="px-6 py-20 text-center text-sm font-medium italic text-slate-500">No completed bookings in the current cycle yet.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

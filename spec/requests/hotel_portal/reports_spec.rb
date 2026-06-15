@@ -450,6 +450,24 @@ RSpec.describe "HotelPortal::Reports", type: :request do
   end
 
   describe "GET /payouts" do
+    it "renders both payout panels and the tab-aware breadcrumb" do
+      get payouts_hotel_reports_path(hotel), params: { tab: "paid" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('data-tabs-default-tab-value="paid"')
+      expect(response.body).to include('data-testid="payouts-upcoming-panel"')
+      expect(response.body).to include('data-testid="payouts-paid-panel"')
+      expect(response.body).to include("data-tabs-breadcrumb-label>Paid History</span>")
+    end
+
+    it "falls back to upcoming for an unknown tab" do
+      get payouts_hotel_reports_path(hotel), params: { tab: "unknown" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('data-tabs-default-tab-value="upcoming"')
+      expect(response.body).to include("data-tabs-breadcrumb-label>Upcoming &amp; Processing</span>")
+    end
+
     it "exports csv/xls/pdf for upcoming tab" do
       create(:booking, hotel: hotel, status: "completed", payment_status: "captured", net_amount: 120, checked_out_at: Time.zone.local(2026, 5, 7, 10, 0), payout_batch_id: nil)
 
@@ -464,6 +482,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get payouts_hotel_reports_path(hotel, format: :pdf), params: { tab: "upcoming" }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
+    end
+
+    it "exports paid history when the paid tab is requested" do
+      create(:payout_batch, hotel: hotel, status: "paid", payout_reference: "PAID-EXPORT")
+
+      get payouts_hotel_reports_path(hotel, format: :csv), params: { tab: "paid" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("PAID-EXPORT")
     end
   end
 end
