@@ -83,11 +83,11 @@ module HotelPortal
     end
 
     def grid_room_width
-      comfortable_mode? ? 160 : 80
+      comfortable_mode? ? 160 : 130
     end
 
     def grid_day_width
-      comfortable_mode? ? 84 : 44
+      comfortable_mode? ? 84 : 78
     end
 
     def grid_template_columns
@@ -95,15 +95,15 @@ module HotelPortal
     end
 
     def page_spacing
-      comfortable_mode? ? "space-y-6" : "space-y-4"
+      comfortable_mode? ? "space-y-6" : "space-y-3"
     end
 
     def container_padding
-      comfortable_mode? ? "px-4 md:px-0" : "px-3 md:px-0"
+      comfortable_mode? ? "px-4 md:px-0" : "px-2 md:px-0"
     end
 
     def card_padding
-      comfortable_mode? ? "px-3 py-1" : "px-2 py-0"
+      comfortable_mode? ? "px-3 py-1" : "px-2.5 py-1"
     end
 
     def title_class
@@ -115,11 +115,11 @@ module HotelPortal
     end
 
     def summary_padding
-      comfortable_mode? ? "px-4 py-2" : "px-2.5 py-1.5"
+      comfortable_mode? ? "px-4 py-2" : "px-2 py-1.5"
     end
 
     def summary_gap
-      comfortable_mode? ? "gap-3" : "gap-2"
+      comfortable_mode? ? "gap-3" : "gap-1.5"
     end
 
     def chip_text_class
@@ -127,28 +127,28 @@ module HotelPortal
     end
 
     def room_number_class
-      comfortable_mode? ? "text-lg" : "text-base"
+      comfortable_mode? ? "text-lg" : "text-sm"
     end
 
     def row_min_base
-      comfortable_mode? ? 44 : 28
+      comfortable_mode? ? 44 : 40
     end
 
     def block_step
-      comfortable_mode? ? 40 : 30
+      comfortable_mode? ? 30 : 26
     end
 
     def block_top
-      comfortable_mode? ? 5 : 2
+      comfortable_mode? ? 5 : 4
     end
 
     def block_left_pad
-      comfortable_mode? ? 6 : 4
+      comfortable_mode? ? 6 : 3
     end
 
     def row_min_height(room)
       max_blocks_same_start = room[:blocks].group_by { |block| [ block[:check_in], visible_start_date ].max }.values.map(&:size).max || 1
-      padding = comfortable_mode? ? 24 : 12
+      padding = comfortable_mode? ? 24 : 20
       [ row_min_base, padding + (max_blocks_same_start * block_step) ].max
     end
 

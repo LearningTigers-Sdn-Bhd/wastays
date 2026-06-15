@@ -558,7 +558,7 @@
 @layer components {
   .room-status-comfortable {
     @media (min-width: 1024px) {
-      --grid-day-width: 103px;
+      --grid-day-width: 102.7px;
     }
   }
 }
