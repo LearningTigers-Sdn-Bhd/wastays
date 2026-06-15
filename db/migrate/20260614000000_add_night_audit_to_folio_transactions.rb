@@ -36,8 +36,6 @@ class AddNightAuditToFolioTransactions < ActiveRecord::Migration[8.0]
         skipped += 1
       end
     end
-
-    say("Skipped #{skipped} folio transaction night audit links with invalid or missing references") if skipped.positive?
   end
 
   def parsed_night_audit_id(value)
