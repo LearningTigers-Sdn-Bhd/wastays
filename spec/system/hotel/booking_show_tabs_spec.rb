@@ -27,14 +27,14 @@ RSpec.describe "Hotel booking show tabs", type: :system, js: true do
     expect(page).to have_current_path(hotel_booking_path(hotel, booking, tab: "requests"))
     expect(page).to have_css("[data-testid='booking-requests-panel']")
     expect(page).to have_css("[data-testid='booking-details-panel']", visible: :hidden)
-    expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Requests")
+    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Requests")
 
     click_button "History"
 
     expect(page).to have_current_path(hotel_booking_path(hotel, booking, tab: "history"))
     expect(page).to have_css("[data-testid='booking-history-panel']")
     expect(page).to have_css("[data-testid='booking-requests-panel']", visible: :hidden)
-    expect(page).to have_css("[data-tab-breadcrumb-label]", text: "History")
+    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "History")
   end
 
   it "falls back to booking details for an unknown tab parameter" do
@@ -43,6 +43,6 @@ RSpec.describe "Hotel booking show tabs", type: :system, js: true do
     expect(page).to have_css("[data-testid='booking-details-panel']")
     expect(page).to have_css("[data-testid='booking-requests-panel']", visible: :hidden)
     expect(page).to have_css("[data-testid='booking-history-panel']", visible: :hidden)
-    expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Booking Details")
+    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Booking Details")
   end
 end

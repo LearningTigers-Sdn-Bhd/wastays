@@ -223,28 +223,28 @@ RSpec.describe "Hotel night audits", type: :system do
       visit hotel_night_audits_path(hotel)
 
       expect(page).to have_css("[data-testid='audit-history-panel']")
-      expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Audit History")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Audit History")
       click_button "Advanced Actions"
       expect(page).to have_current_path(hotel_night_audits_path(hotel, tab: "advanced-actions"))
       expect(page).to have_css("[data-testid='index-advanced-actions-panel']")
       expect(page).to have_css("[data-testid='audit-history-panel']", visible: :hidden)
-      expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Advanced Actions")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Actions")
 
       visit hotel_night_audit_path(hotel, audit)
 
       expect(page).to have_css("[data-testid='results-panel']")
-      expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Results")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Results")
       click_button "Financial Summary"
       expect(page).to have_current_path(hotel_night_audit_path(hotel, audit, tab: "financial-summary"))
       expect(page).to have_css("[data-testid='financial-summary-panel']")
       expect(page).to have_css("[data-testid='results-panel']", visible: :hidden)
-      expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Financial Summary")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Financial Summary")
 
       click_button "Advanced Actions"
       expect(page).to have_current_path(hotel_night_audit_path(hotel, audit, tab: "advanced-actions"))
       expect(page).to have_css("[data-testid='show-advanced-actions-panel']")
       expect(page).to have_css("[data-testid='manual-adjustments']")
-      expect(page).to have_css("[data-tab-breadcrumb-label]", text: "Advanced Actions")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Actions")
     end
   end
 end
