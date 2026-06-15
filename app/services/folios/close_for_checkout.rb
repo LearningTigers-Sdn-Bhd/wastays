@@ -26,6 +26,9 @@ module Folios
         posting_guard_error = validate_checkout_business_date(folio)
         return failure(posting_guard_error, folio: folio) if posting_guard_error.present?
 
+        sync_error = sync_payment_and_refund_state(folio)
+        return failure(sync_error, folio: folio) if sync_error.present?
+
         Folios::SyncForecastedCharges.call(booking_folio: folio)
 
         missing_charges_error = validate_all_nights_posted(folio)
@@ -84,6 +87,51 @@ module Folios
       adjustments = FolioTransaction.adjustment.where(booking_folio_id: folio.id).sum(:amount)
 
       charges.to_d - payments.to_d + adjustments.to_d
+    end
+
+    def sync_payment_and_refund_state(folio)
+      @booking.payment_transactions.where(status: "captured").find_each do |payment_transaction|
+        next if payment_synced?(folio, payment_transaction)
+
+        result = Folios::RecordPaymentFromGateway.call(payment_transaction)
+        folio.reload
+        next if result&.success? && payment_synced?(folio, payment_transaction)
+
+        return "Cannot check out: captured payment is not synced to the folio."
+      end
+
+      refund_request = @booking.refund_request
+      if refund_request&.completed? && !refund_synced?(folio, refund_request)
+        result = Folios::RecordRefund.call(
+          refund_request: refund_request,
+          user: @user,
+          options: { posting_source: "sync", system_posting: true }
+        )
+        folio.reload
+        unless result&.success? && refund_synced?(folio, refund_request)
+          return "Cannot check out: completed refund is not synced to the folio."
+        end
+      end
+
+      nil
+    end
+
+    def payment_synced?(folio, payment_transaction)
+      expected_amount = payment_transaction.amount_subunits.to_d / 100.0
+
+      folio.folio_transactions.payment.any? do |transaction|
+        transaction.metadata["payment_transaction_id"].to_s == payment_transaction.id.to_s &&
+          transaction.amount.to_d == expected_amount
+      end
+    end
+
+    def refund_synced?(folio, refund_request)
+      expected_amount = -refund_request.refund_amount.to_d
+
+      folio.folio_transactions.payment.any? do |transaction|
+        transaction.metadata["refund_request_id"].to_s == refund_request.id.to_s &&
+          transaction.amount.to_d == expected_amount
+      end
     end
 
     def formatted_balance(balance)

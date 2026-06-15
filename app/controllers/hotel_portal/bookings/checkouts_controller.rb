@@ -22,11 +22,6 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
     if early_departure_checkout?(timestamp)
       options = { timestamp: timestamp }
-      if params[:override_night_audit] == "1"
-        options[:override_night_audit] = true
-        options[:correction_reason] = params[:retroactive_reason]
-        options[:correction_note] = "Early departure override"
-      end
 
       result = Bookings::ProcessEarlyDeparture.call(
         booking: @booking,
@@ -109,18 +104,12 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   end
 
   def transition_status(status, timestamp, success_notice)
-    options = {}
-    if params[:override_night_audit] == "1"
-      options[:override_night_audit] = true
-      options[:reason] = params[:retroactive_reason]
-    end
-
     result = Bookings::TransitionStatus.new(
       booking: @booking,
       status: status,
       timestamp: timestamp,
       user: current_user,
-      options: options
+      options: {}
     ).call
 
     if result.success?
@@ -166,11 +155,6 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     ActiveRecord::Base.transaction do
       if early_departure_checkout?(timestamp)
         options = { timestamp: timestamp }
-        if params[:override_night_audit] == "1"
-          options[:override_night_audit] = true
-          options[:correction_reason] = params[:retroactive_reason]
-          options[:correction_note] = "Early departure override"
-        end
 
         res = Bookings::ProcessEarlyDeparture.call(
           booking: @booking,

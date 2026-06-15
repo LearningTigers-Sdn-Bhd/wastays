@@ -130,7 +130,7 @@ module Bookings
               booking: @booking,
               user: @user,
               is_reinstate: false,
-              posting_date: @options[:posting_date]
+              reason: @options[:reason]
             )
           end
 

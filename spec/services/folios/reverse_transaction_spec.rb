@@ -145,8 +145,7 @@ RSpec.describe Folios::ReverseTransaction, type: :service do
       transaction: transaction,
       user: user,
       correction_reason: "Manager override",
-      correction_note: "Correct closed folio",
-      options: { override_closed_folio: true }
+      correction_note: "Correct closed folio"
     )
 
     expect(result).to be_success

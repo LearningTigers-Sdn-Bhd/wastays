@@ -106,4 +106,12 @@ RSpec.describe BookingFolio, type: :model do
       expect(described_class.exists?(folio.id)).to be(true)
     end
   end
+
+  describe "database constraints" do
+    it "rejects null statuses" do
+      folio = create(:booking_folio)
+
+      expect { folio.update_column(:status, nil) }.to raise_error(ActiveRecord::NotNullViolation)
+    end
+  end
 end

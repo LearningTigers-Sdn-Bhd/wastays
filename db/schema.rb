@@ -126,7 +126,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
   create_table "booking_folios", force: :cascade do |t|
     t.bigint "booking_id", null: false
     t.integer "folio_number"
-    t.string "status", default: "open"
+    t.string "status", default: "open", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "hotel_id", null: false
@@ -487,7 +487,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
     t.string "transaction_type", null: false
     t.string "category", null: false
     t.date "posting_date", null: false
-    t.string "description"
+    t.string "description", null: false
     t.bigint "user_id"
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
@@ -497,14 +497,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
     t.string "correction_reason"
     t.text "correction_note"
     t.datetime "posted_at"
-    t.string "currency"
+    t.string "currency", null: false
     t.string "gl_code"
     t.bigint "night_audit_id"
+    t.string "catch_up_key"
     t.index "booking_folio_id, ((metadata ->> 'early_checkout_charge_key'::text))", name: "index_folio_transactions_on_early_checkout_charge", unique: true, where: "(metadata ? 'early_checkout_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'nightly_charge_key'::text))", name: "index_folio_transactions_on_nightly_charge", unique: true, where: "(metadata ? 'nightly_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'no_show_charge_key'::text))", name: "index_folio_transactions_on_no_show_charge", unique: true, where: "(metadata ? 'no_show_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'payment_transaction_id'::text))", name: "index_folio_transactions_on_gateway_payment", unique: true, where: "(metadata ? 'payment_transaction_id'::text)"
     t.index "booking_folio_id, ((metadata ->> 'refund_request_id'::text))", name: "index_folio_transactions_on_refund_request", unique: true, where: "(metadata ? 'refund_request_id'::text)"
+    t.index ["booking_folio_id", "catch_up_key"], name: "index_folio_transactions_on_folio_and_catch_up_key", unique: true, where: "(catch_up_key IS NOT NULL)"
     t.index ["booking_folio_id", "posting_date"], name: "index_folio_transactions_on_folio_and_posting_date"
     t.index ["booking_folio_id"], name: "index_folio_transactions_on_booking_folio_id"
     t.index ["category"], name: "index_folio_transactions_on_category"

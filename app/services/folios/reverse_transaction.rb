@@ -92,6 +92,14 @@ module Folios
         correction_note: @correction_note,
         currency: @options[:currency] || @transaction.currency || @folio.booking.currency
       )
+        .merge(derived_override_options)
+    end
+
+    def derived_override_options
+      options = {}
+      options[:override_closed_folio] = true if @folio.status == "closed"
+      options[:override_night_audit] = true if @folio.hotel.date_closed?(@posting_date) || @posting_date.to_date < @folio.hotel.current_business_date
+      options
     end
 
     def reconcile_forecast_after_reversal!

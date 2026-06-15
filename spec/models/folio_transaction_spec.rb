@@ -13,6 +13,7 @@ RSpec.describe FolioTransaction, type: :model do
     it { should validate_presence_of(:transaction_type) }
     it { should validate_presence_of(:category) }
     it { should validate_presence_of(:description) }
+    it { should validate_presence_of(:currency) }
     it { should validate_presence_of(:posting_date) }
 
     it "requires charges to be positive" do
@@ -120,6 +121,27 @@ RSpec.describe FolioTransaction, type: :model do
       expect(transaction.destroy).to be(false)
       expect(transaction.errors[:base]).to include("Folio transactions are immutable and cannot be deleted.")
       expect(described_class.exists?(transaction.id)).to be(true)
+    end
+
+    it "prevents changing catch_up_key after creation" do
+      transaction = create(:folio_transaction, catch_up_key: "catch_up:1:2026-06-10:accommodation:1")
+
+      expect(transaction.update(catch_up_key: "catch_up:1:2026-06-10:accommodation:2")).to be(false)
+      expect(transaction.errors[:base]).to include("Folio transactions are immutable. Post a reversing transaction instead.")
+    end
+  end
+
+  describe "database constraints" do
+    it "rejects null descriptions" do
+      transaction = create(:folio_transaction)
+
+      expect { transaction.update_column(:description, nil) }.to raise_error(ActiveRecord::NotNullViolation)
+    end
+
+    it "rejects null currencies" do
+      transaction = create(:folio_transaction)
+
+      expect { transaction.update_column(:currency, nil) }.to raise_error(ActiveRecord::NotNullViolation)
     end
   end
 

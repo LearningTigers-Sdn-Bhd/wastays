@@ -58,7 +58,7 @@ RSpec.describe "Retroactive Check-in", type: :service do
     expect(log.metadata["backdate_reason_details"]).to eq("Manual reservation missed")
   end
 
-  it "posts all catch-up charges on the selected posting date instead of original stay dates" do
+  it "ignores a selected posting date and posts catch-up charges on missed stay dates" do
     selected_posting_date = hotel.current_business_date
     result = Bookings::TransitionStatus.new(
       booking: booking,
@@ -76,8 +76,26 @@ RSpec.describe "Retroactive Check-in", type: :service do
     folio = booking.booking_folio
     expect(folio.folio_transactions.charge.count).to be >= 2 # Room charge + SST
     folio.folio_transactions.charge.each do |tx|
-      expect(tx.posting_date).to eq(selected_posting_date)
+      expect(tx.posting_date).to eq(past_date)
     end
+  end
+
+  it "records the backdated reason in booking and financial audit metadata" do
+    result = Bookings::TransitionStatus.new(
+      booking: booking,
+      status: "checked_in",
+      timestamp: timestamp,
+      user: user,
+      options: {
+        override_night_audit: true,
+        reason: "Manual reservation missed"
+      }
+    ).call
+
+    expect(result.success?).to be true
+    expect(BookingAuditLog.last.metadata["retroactive_reason"]).to eq("Manual reservation missed")
+    catch_up_event = FinancialAuditEvent.where(event_type: "closed_date_override_posted").order(:id).last
+    expect(catch_up_event.metadata["backdate_reason"]).to eq("Manual reservation missed")
   end
 
   it "syncs existing captured payments during check-in" do

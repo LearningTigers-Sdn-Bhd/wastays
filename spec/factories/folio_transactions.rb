@@ -7,5 +7,6 @@ FactoryBot.define do
     category { "accommodation" }
     posting_date { Date.current }
     description { "Test transaction" }
+    currency { booking_folio&.booking&.currency || "MYR" }
   end
 end

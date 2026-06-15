@@ -52,6 +52,7 @@ class FolioTransaction < ApplicationRecord
   validates :transaction_type, presence: true
   validates :category, presence: true
   validates :description, presence: true
+  validates :currency, presence: true
   validates :posting_date, presence: true
   validate :category_allowed_for_transaction_type
   validate :amount_sign_matches_transaction_type

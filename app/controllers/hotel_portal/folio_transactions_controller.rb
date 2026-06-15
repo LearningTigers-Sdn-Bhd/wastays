@@ -48,8 +48,7 @@ module HotelPortal
         user: current_user,
         correction_reason: reversal_params[:correction_reason],
         correction_note: reversal_params[:correction_note],
-        posting_date: reversal_params[:posting_date].presence || current_hotel.current_business_date,
-        options: reversal_options
+        posting_date: reversal_params[:posting_date].presence || current_hotel.current_business_date
       )
 
       if result.success?
@@ -83,17 +82,8 @@ module HotelPortal
       params.require(:folio_transaction).permit(
         :correction_reason,
         :correction_note,
-        :posting_date,
-        :override_closed_folio,
-        :override_night_audit
+        :posting_date
       )
-    end
-
-    def reversal_options
-      {
-        override_closed_folio: ActiveModel::Type::Boolean.new.cast(reversal_params[:override_closed_folio]),
-        override_night_audit: ActiveModel::Type::Boolean.new.cast(reversal_params[:override_night_audit])
-      }
     end
   end
 end

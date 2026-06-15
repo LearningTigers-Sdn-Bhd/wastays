@@ -216,6 +216,48 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     expect(flash[:alert]).to include("permission")
   end
 
+  it "does not allow override_closed_folio params to bypass closed folio controls" do
+    grant_permission("post_folio_payments")
+    folio.update!(status: "closed")
+
+    expect {
+      post hotel_folio_transactions_path(hotel, booking), params: {
+        folio_transaction: {
+          transaction_type: "payment",
+          category: "cash",
+          amount: "100.00",
+          description: "Cash",
+          posting_date: Date.current,
+          override_closed_folio: "true"
+        }
+      }
+    }.not_to change(FolioTransaction, :count)
+
+    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(flash[:alert]).to include("Folio is closed")
+  end
+
+  it "does not allow override_night_audit params to bypass closed-date reversal controls" do
+    grant_permission("post_folio_corrections")
+    transaction = create(:folio_transaction, booking_folio: folio)
+    closed_date = 1.day.ago.to_date
+    create(:night_audit, hotel: hotel, business_date: closed_date, status: "completed")
+    create(:hotel_business_date, hotel: hotel, business_date: closed_date, status: "closed")
+
+    expect {
+      reverse_transaction(
+        transaction,
+        correction_reason: "Posting error",
+        correction_note: "Wrong booking",
+        posting_date: closed_date,
+        override_night_audit: "true"
+      )
+    }.not_to change(FolioTransaction, :count)
+
+    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(flash[:alert]).to include("override_financial_date_lock")
+  end
+
   it "redirects with an error when the booking has no folio" do
     grant_permission("post_folio_payments")
 
