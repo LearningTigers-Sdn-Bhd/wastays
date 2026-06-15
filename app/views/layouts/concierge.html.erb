@@ -6,6 +6,7 @@
     <title><%= content_for?(:title) ? yield(:title) : "Concierge | WAStays" %></title>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= javascript_importmap_tags %>
   </head>
