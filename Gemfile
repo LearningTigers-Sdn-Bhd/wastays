@@ -2,7 +2,7 @@ source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 8.0.4"
-gem "friendly_id", "~> 5.6"
+gem "friendly_id", "~> 5.7"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use postgresql as the database for Active Record
@@ -53,13 +53,13 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 2.0"
 gem "kaminari", "~> 1.2"
-gem "commonmarker", "~> 2.7"
+gem "commonmarker", "~> 2.8"
 gem "rqrcode", "~> 2.2"
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
-gem "ruby_llm", "~> 1.14"
+gem "ruby_llm", "~> 1.16"
 gem "pdf-reader", "~> 2.12"
-gem "pgvector", "~> 0.2.0"
+gem "pgvector", "~> 0.3.0"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
@@ -99,6 +99,6 @@ group :development do
   gem "bundler-audit", require: false
 end
 
-gem "openssl", "~> 3.1.2"
+gem "openssl", "~> 4.0"
 gem "aws-sdk-s3", "~> 1.225"
 gem "nokogiri", ">= 1.19.3"

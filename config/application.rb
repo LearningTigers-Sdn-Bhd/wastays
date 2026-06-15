@@ -7,6 +7,10 @@ require "rails/all"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+RubyLLM.configure do |config|
+  config.use_new_acts_as = true
+end
+
 require_relative "../app/middleware/observation_deck_middleware"
 require "csv"
 

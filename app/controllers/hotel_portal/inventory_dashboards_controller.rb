@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
+  INVENTORY_TABS = %w[calendar advanced].freeze
+  INVENTORY_SUBTABS = %w[pricing overrides].freeze
+
   def index
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
@@ -28,8 +31,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     @room_types = current_hotel.room_types.order(:id)
     @calendar = build_calendar
     @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules(params[:room_type_ids])
-    @active_tab = params[:tab].presence || "calendar"
-    @active_subtab = params[:subtab].presence || "pricing"
+    set_active_tabs
+    append_inventory_breadcrumbs
   end
 
   def bulk_save_ari
@@ -164,8 +167,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @calendar = build_calendar
       @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_params(pricing_params)
       @pricing_form.errors = sync_result[:errors] || {}
-      @active_tab = params[:tab].presence || "calendar"
-      @active_subtab = params[:subtab].presence || "pricing"
+      set_active_tabs
+      append_inventory_breadcrumbs
       flash.now[:alert] = sync_result[:error] || "Error saving pricing rules."
       return render :index, status: :unprocessable_entity
     end
@@ -342,6 +345,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     {
       start_date: params[:start_date] || permitted_selection[:start_date],
       view_currencies: params[:view_currencies] || permitted_selection[:view_currencies],
+      display_currency: params[:display_currency],
       room_type_id: Array(permitted_selection[:room_type_ids]).reject(&:blank?).first || params[:room_type_id],
       rate_plan_id: Array(permitted_selection[:rate_plan_ids]).reject(&:blank?).first || params[:rate_plan_id],
       tab: params[:tab],
@@ -366,5 +370,27 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
   def cast_boolean(value)
     ActiveModel::Type::Boolean.new.cast(value)
+  end
+
+  def set_active_tabs
+    @active_tab = INVENTORY_TABS.include?(params[:tab]) ? params[:tab] : "calendar"
+    @active_subtab = INVENTORY_SUBTABS.include?(params[:subtab]) ? params[:subtab] : "pricing"
+  end
+
+  def append_inventory_breadcrumbs
+    append_breadcrumb({ label: inventory_tab_label, tab_label: true })
+    append_breadcrumb({
+      label: inventory_subtab_label,
+      subtab_label: true,
+      hidden: @active_tab != "advanced"
+    })
+  end
+
+  def inventory_tab_label
+    @active_tab == "advanced" ? "Advanced Pricing" : "Rates & Availability"
+  end
+
+  def inventory_subtab_label
+    @active_subtab == "overrides" ? "Availability Overrides" : "Pricing Rules"
   end
 end

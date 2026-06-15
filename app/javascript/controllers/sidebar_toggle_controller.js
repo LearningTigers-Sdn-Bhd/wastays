@@ -88,23 +88,23 @@ export default class extends Controller {
     const links = sidebar.querySelectorAll(".sidebar-nav-link, .sidebar-header")
     links.forEach((link) => {
       link.classList.toggle("justify-center", collapsed)
-      const labelNode = link.querySelector(".sidebar-label") || link.querySelector("span")
-      const label = labelNode?.textContent?.trim()
-      if (collapsed && label) {
-        link.setAttribute("title", label)
-      } else {
-        link.removeAttribute("title")
-      }
+      link.removeAttribute("title")
     })
 
     const detailsContent = sidebar.querySelectorAll(".sidebar-details-content")
-    detailsContent.forEach((node) => node.classList.toggle("ps-6", !collapsed))
+    detailsContent.forEach((node) => node.classList.toggle("ps-5", !collapsed))
+
+    sidebar.querySelectorAll("details.sidebar-group").forEach((details) => {
+      details.toggleAttribute("open", !collapsed && details.classList.contains("sidebar-group-active"))
+    })
 
     const searchInput = sidebar.querySelector('input[type="search"]')
     const searchContainer = searchInput?.closest("div.p-4.pb-2")
     if (searchContainer) {
       searchContainer.classList.toggle("hidden", collapsed)
     }
+
+    sidebar.dispatchEvent(new CustomEvent("sidebar:state-change", { detail: { collapsed } }))
   }
 
   isDesktopCollapsed(sidebar) {

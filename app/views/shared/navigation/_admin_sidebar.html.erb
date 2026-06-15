@@ -2,7 +2,7 @@
 <% footer_items = admin_sidebar_footer_items %>
 
 <% admin_sidebar_header = capture do %>
-  <div class="flex items-center gap-x-2.5 px-4 py-3 sidebar-header">
+  <div class="flex items-center gap-x-2.5 px-4 py-3 sidebar-header sidebar-header-container">
     <span class="inline-flex justify-center items-center size-7 rounded-lg bg-slate-100 text-slate-700 shadow-xs ring-1 ring-slate-200">
       <%= cached_icon "settings", class: "size-4 shrink-0" %>
     </span>
@@ -19,6 +19,9 @@
           <% section.items.each do |item| %>
             <a class="sidebar-nav-link <%= item.active ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>"
                href="<%= item.path %>"
+               data-sidebar-route
+               data-sidebar-tooltip="<%= item.label %>"
+               aria-label="<%= item.label %>"
                <%= 'target="_blank" rel="noopener noreferrer"'.html_safe if item.external %>>
               <%= cached_icon item.icon, class: "size-4 shrink-0" %>
               <span><%= item.label %></span>
@@ -33,7 +36,7 @@
 <% admin_nav_html = capture(&render_sidebar_nav) %>
 <% admin_footer_html = capture do %>
   <% footer_items.each do |item| %>
-    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item.path %>">
+    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item.path %>" data-sidebar-tooltip="<%= item.label %>" aria-label="<%= item.label %>">
       <%= cached_icon item.icon, class: "size-4 shrink-0" %>
       <span><%= item.label %></span>
     </a>

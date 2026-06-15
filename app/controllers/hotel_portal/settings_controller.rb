@@ -11,6 +11,7 @@ module HotelPortal
     def index
       @presenter = settings_presenter
       @account.build_banking_detail unless @account.banking_detail
+      append_settings_tab_breadcrumb
     end
 
     def edit
@@ -57,6 +58,7 @@ module HotelPortal
       else
         @presenter = settings_presenter
         @account.build_banking_detail unless @account.banking_detail
+        append_settings_tab_breadcrumb
         render :index, status: :unprocessable_entity
       end
     end
@@ -70,6 +72,7 @@ module HotelPortal
         redirect_to hotel_settings_path(@hotel, tab: "banking"), notice: "Settings updated successfully."
       else
         @presenter = settings_presenter(tab: "banking")
+        append_settings_tab_breadcrumb
         render :index, status: :unprocessable_entity
       end
     end
@@ -85,6 +88,7 @@ module HotelPortal
         @notification_config = form.config
         @presenter = settings_presenter(tab: "notifications")
         @account.build_banking_detail unless @account.banking_detail
+        append_settings_tab_breadcrumb
         render :index, status: :unprocessable_entity
       end
     end
@@ -107,12 +111,33 @@ module HotelPortal
 
     def active_settings_tab
       requested_tab = params[:tab].to_s
-      return requested_tab if SETTINGS_TABS.include?(requested_tab)
+      return requested_tab if permitted_settings_tabs.include?(requested_tab)
 
-      default_tab = settings_tab_for_form
-      return default_tab if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
+      form_tab = settings_tab_for_form
+      return form_tab if permitted_settings_tabs.include?(form_tab)
 
       "banking"
+    end
+
+    def permitted_settings_tabs
+      tabs = []
+      tabs.concat(SETTINGS_TABS - [ "banking" ]) if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
+      tabs << "banking" if current_user.has_permission?("manage_account")
+      tabs
+    end
+
+    def append_settings_tab_breadcrumb
+      append_breadcrumb({ label: settings_tab_label(@presenter.active_tab), tab_label: true })
+    end
+
+    def settings_tab_label(tab)
+      {
+        "general" => "General",
+        "tax" => "Tax",
+        "ai" => "AI Concierge",
+        "notifications" => "Notifications",
+        "banking" => "Banking"
+      }.fetch(tab, "General")
     end
 
     def settings_tab_for_form

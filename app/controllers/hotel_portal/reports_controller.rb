@@ -6,6 +6,8 @@ module HotelPortal
   class ReportsController < HotelPortal::BaseController
     include FinancialFiltering
 
+    PAYOUT_TABS = %w[upcoming paid].freeze
+
     before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches]
     before_action :authorize_view_payouts!, only: %i[payouts]
     before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
@@ -60,7 +62,8 @@ module HotelPortal
 
     def payouts
       cutoff_date = Booking.last_friday.end_of_day
-      @active_tab = params[:tab] || "upcoming"
+      @active_tab = PAYOUT_TABS.include?(params[:tab]) ? params[:tab] : "upcoming"
+      append_breadcrumb({ label: payout_tab_label(@active_tab), tab_label: true }) if request.format.html?
 
       @upcoming_bookings = current_hotel.bookings.unbatched_upcoming(cutoff_date)
       @upcoming_payout_amount = current_hotel.upcoming_payout_amount(cutoff_date)
@@ -456,6 +459,10 @@ module HotelPortal
         processing_batches: @processing_batches,
         payout_history: history_scope
       )
+    end
+
+    def payout_tab_label(tab)
+      tab == "paid" ? "Paid History" : "Upcoming & Processing"
     end
 
     def folio_ledger_export_service

@@ -23,8 +23,7 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
   end
 
   it 'allows the user to add banking details from the settings page' do
-    visit hotel_settings_path(hotel)
-    click_link 'Banking'
+    visit hotel_settings_path(hotel, tab: 'banking')
 
     fill_in 'account_banking_detail_attributes_account_holder_name', with: 'Syarikat Maju Jaya Sdn Bhd'
     fill_in 'account_banking_detail_attributes_bank_name', with: 'Maybank'
@@ -42,8 +41,7 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
   end
 
   it 'saves banking details independently of the display-only settings card' do
-    visit hotel_settings_path(hotel)
-    click_link 'Banking'
+    visit hotel_settings_path(hotel, tab: 'banking')
 
     fill_in 'account_banking_detail_attributes_account_holder_name', with: 'Kejayaan Hotel Sdn Bhd'
     fill_in 'account_banking_detail_attributes_bank_name', with: 'CIMB'
@@ -57,8 +55,7 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
   end
 
   it 'shows validation errors when banking details are invalid' do
-    visit hotel_settings_path(hotel)
-    click_link 'Banking'
+    visit hotel_settings_path(hotel, tab: 'banking')
 
     fill_in 'account_banking_detail_attributes_account_holder_name', with: ''
     fill_in 'account_banking_detail_attributes_bank_name', with: ''
