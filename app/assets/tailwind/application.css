@@ -26,10 +26,10 @@
 
   /* Sidebar Design Tokens */
   --color-sidebar-bg: #FFFFFF;
-  --color-sidebar-nav-hover: #F1F5F9;
-  --color-sidebar-nav-active: #FEF2F2;
-  --color-sidebar-nav-active-text: #DC2626;
-  --color-sidebar-nav-foreground: #475569;
+  --color-sidebar-nav-hover: #F8FAFC;
+  --color-sidebar-nav-active: #F1F5F9;
+  --color-sidebar-nav-active-text: #020617;
+  --color-sidebar-nav-foreground: #64748B;
   --color-sidebar-section-label: #94A3B8;
 
   /* Navbar Design Tokens */
@@ -281,15 +281,27 @@
 
   /* ─── Sidebar Nav Items (Preline CMS Style) ─── */
   .sidebar-nav-link {
-    @apply w-full flex items-center gap-x-2.5 py-2 px-2.5 text-sm rounded-lg transition-colors duration-150;
+    @apply relative w-full flex items-center gap-x-2.5 py-2 px-2.5 text-sm font-medium rounded-xl transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300;
   }
 
   .sidebar-nav-link-default {
-    @apply text-sidebar-nav-foreground hover:bg-sidebar-nav-hover;
+    @apply bg-transparent text-sidebar-nav-foreground hover:bg-sidebar-nav-hover hover:text-slate-900;
   }
 
   .sidebar-nav-link-active {
-    @apply bg-sidebar-nav-active text-sidebar-nav-active-text font-medium;
+    @apply bg-sidebar-nav-active text-sidebar-nav-active-text font-semibold ring-1 ring-slate-200;
+  }
+
+  .sidebar-group-parent {
+    @apply text-sidebar-nav-foreground hover:bg-sidebar-nav-hover hover:text-slate-900;
+  }
+
+  details[open] > .sidebar-group-parent {
+    @apply bg-slate-50 text-slate-700 font-semibold;
+  }
+
+  .sidebar-child-link {
+    @apply rounded-lg;
   }
 
   .sidebar-section-label {
@@ -301,11 +313,49 @@
   }
 
   .sidebar-collapsed .sidebar-nav-link {
-    @apply size-10 mx-auto justify-center p-0;
+    @apply size-9 mx-auto justify-center p-0;
+  }
+
+  .sidebar-collapsed nav {
+    @apply !space-y-6 py-2 px-2;
+  }
+
+  .sidebar-collapsed .sidebar-header-container,
+  .sidebar-collapsed .sidebar-footer {
+    @apply px-2;
   }
 
   .sidebar-collapsed .sidebar-nav-group + .sidebar-nav-group {
-    @apply border-t border-layer-line !mt-3 pt-3 -mx-4 px-4;
+    @apply border-t border-layer-line !mt-3 pt-3 -mx-2;
+  }
+
+  .sidebar-collapsed .sidebar-nav-group > div {
+    @apply space-y-0.5;
+  }
+
+  .sidebar-collapsed .sidebar-details-content {
+    @apply hidden;
+  }
+
+  .sidebar-collapsed details[open] > .sidebar-details-content {
+    @apply fixed z-[90] flex flex-col gap-1 w-14 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg;
+  }
+
+  .sidebar-collapsed details[open] > .sidebar-group-parent::after {
+    content: "";
+    @apply absolute right-2 top-2 size-1.5 rounded-full bg-slate-400;
+  }
+
+  .sidebar-collapsed .sidebar-group-active > .sidebar-group-parent {
+    @apply bg-slate-100 text-slate-950 ring-1 ring-slate-200;
+  }
+
+  .sidebar-collapsed .sidebar-group-active[open] > .sidebar-group-parent::after {
+    @apply bg-slate-500;
+  }
+
+  .sidebar-tooltip {
+    @apply fixed z-[100] pointer-events-none whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg;
   }
 
   /* ─── Navbar Items (Preline CMS Style) ─── */
