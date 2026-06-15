@@ -5,8 +5,9 @@ module HotelPortal
     helper_method :safe_guest_attr, :guest_stays_count, :guest_currency_totals
 
     before_action -> { require_feature!("unified_guest_profile") }
-    before_action :authorize_view_bookings!, only: %i[index show]
-    before_action :authorize_manage_bookings!, only: %i[search new create edit update destroy]
+    before_action :authorize_view_guest_records!, only: %i[index show]
+    before_action :authorize_manage_bookings!, only: %i[search new create edit update]
+    before_action :authorize_delete_guest_record!, only: %i[destroy]
     before_action :set_guest, only: [ :show, :edit, :update, :destroy ]
     before_action :set_breadcrumbs, only: [ :show, :new, :create, :edit, :update ]
 
@@ -35,20 +36,10 @@ module HotelPortal
     end
 
     def show
-      guest_booking_scope = Booking
-        .joins(:booking_guests)
-        .where(hotel_id: current_hotel.id, booking_guests: { guest_id: @guest.id })
-
-      @all_bookings = guest_booking_scope
-        .includes(:pre_checkin)
-        .order(check_out: :desc, id: :desc)
-      @bookings = @all_bookings.page(params[:page]).per(25)
-
-      @currency_totals = guest_booking_scope
-        .where(status: [ "checked_in", "completed" ])
-        .reorder(nil)
-        .group(:currency)
-        .sum(:total_amount)
+      query = Guests::GuestBookingsQuery.new(hotel: current_hotel, guest: @guest)
+      @all_bookings = query.all_bookings
+      @bookings = query.bookings(page: params[:page])
+      @currency_totals = query.currency_totals
     end
 
     def new
@@ -101,7 +92,7 @@ module HotelPortal
     private
 
     def set_guest
-      @guest = ActiveRecord::Encryption.without_encryption { Guest.find(params[:id]) }
+      @guest = ActiveRecord::Encryption.without_encryption { Guest.kept.find(params[:id]) }
 
       # Allow access if they have a booking OR were created by this hotel
       return if @guest.created_by_hotel_id == current_hotel.id
@@ -125,12 +116,16 @@ module HotelPortal
 
     private
 
-    def authorize_view_bookings!
-      raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
+    def authorize_view_guest_records!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_guest_records", hotel: current_hotel)
     end
 
     def authorize_manage_bookings!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
+    end
+
+    def authorize_delete_guest_record!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("delete_guest_record", hotel: current_hotel)
     end
   end
 end

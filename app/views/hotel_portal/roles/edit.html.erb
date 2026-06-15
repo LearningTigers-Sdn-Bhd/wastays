@@ -1,16 +1,60 @@
-<div class="mx-auto max-w-5xl space-y-8 pb-20">
-  <div class="px-4 md:px-0">
-    <div class="mt-5">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Edit <%= @role.name %></h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Update this role's name and assigned permissions.</p>
+<%= turbo_frame_tag "role_modal_content" do %>
+  <div class="flex flex-col bg-white">
+    <div class="flex justify-between items-center py-3.5 px-6 border-b border-slate-200 bg-slate-50/50">
+      <h3 class="font-bold text-slate-900">Edit Role: <%= @role.name %></h3>
     </div>
-  </div>
 
-  <div class="px-4 md:px-0">
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="p-6">
-        <%= render "form" %>
+    <%= form_with model: @role, url: hotel_role_path(current_hotel, @role), method: :patch, data: { turbo_frame: "_top" } do |f| %>
+      <div class="p-4 overflow-y-auto">
+        <% if @role.errors.any? %>
+          <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4">
+            <h2 class="text-sm font-bold text-red-900">Role could not be saved</h2>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-red-700">
+              <% @role.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <div>
+          <%= f.label :name, "Role Name", class: "mb-2 block text-sm font-medium text-slate-900" %>
+          <%= f.text_field :name, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm transition focus:border-slate-900 focus:ring-0", placeholder: "e.g. Night Manager" %>
+          <p class="mt-2 text-xs text-slate-500">The role slug is generated from the name when the role is created.</p>
+        </div>
       </div>
-    </section>
+
+      <div class="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/50 p-4">
+        <div>
+          <% if @role.user_hotel_accesses.empty? %>
+            <%= link_to hotel_role_path(current_hotel, @role),
+                          data: { 
+                            turbo_method: :delete,
+                            turbo_confirm: "Are you sure you want to delete the '#{@role.name}' role? This cannot be undone.", 
+                            turbo_confirm_title: "Delete Role", 
+                            turbo_confirm_color: "red", 
+                            turbo_frame: "_top",
+                            action: "click->popup-modal#close"
+                          },
+                          class: "inline-flex items-center rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 shadow-sm transition hover:bg-red-50" do %>
+              Delete Role
+            <% end %>
+          <% else %>
+            <span class="inline-flex items-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-400" title="Remove assigned staff before deleting this role.">
+              Delete Role
+            </span>
+          <% end %>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button type="button" 
+                  class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" 
+                  data-action="click->popup-modal#close">
+            Cancel
+          </button>
+          <%= f.submit "Update Role", class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+        </div>
+      </div>
+    <% end %>
   </div>
-</div>
+<% end %>

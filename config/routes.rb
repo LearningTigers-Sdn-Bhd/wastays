@@ -269,7 +269,9 @@ Rails.application.routes.draw do
     resources :staff_invitations, only: [ :update, :destroy ] do
       post :resend, on: :member
     end
-    resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions"
+    resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions" do
+      patch :bulk_update, on: :collection
+    end
     resources :general_ledger_maps, only: [ :index, :edit, :update ], path: "general-ledger-mappings"
 
     resources :room_types, except: [ :show ] do

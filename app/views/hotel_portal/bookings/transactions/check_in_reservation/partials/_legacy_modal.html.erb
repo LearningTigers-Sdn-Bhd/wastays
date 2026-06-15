@@ -12,7 +12,7 @@
       <%= render "hotel_portal/bookings/guarantee_status_badge", booking: booking %>
     </div>
 
-    <%= form_with model: booking, url: check_in_hotel_booking_path(hotel, booking), method: :post, 
+    <%= form_with model: booking, url: check_in_hotel_booking_path(hotel, booking), method: :post,
         class: "mt-4 space-y-4" do |f| %>
       <div>
         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
@@ -59,17 +59,26 @@
       <div class="space-y-3">
         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Room Assignments</label>
         <%= f.fields_for :booking_rooms do |rf| %>
-          <div class="flex items-center gap-3" 
-               data-controller="room-lock"
+          <div class="flex items-center gap-3"
+               data-controller="room-lock room-selection"
                data-room-lock-url-value="<%= hotel_room_locks_path(hotel) %>"
                data-room-lock-room-type-id-value="<%= rf.object.room_type_id %>"
-               data-room-lock-current-room-value="<%= rf.object.room_number %>">
+               data-room-lock-current-room-value="<%= rf.object.room_number %>"
+               data-room-selection-url-value="<%= availability_hotel_bookings_path(hotel) %>"
+               data-room-selection-room-type-id-value="<%= rf.object.room_type_id %>"
+               data-room-selection-check-in-value="<%= booking.check_in.to_date %>"
+               data-room-selection-check-out-value="<%= booking.check_out.to_date %>"
+               data-room-selection-booking-id-value="<%= booking.id %>"
+               data-room-selection-current-room-value="<%= rf.object.room_number %>">
             <div class="flex-1">
               <p class="text-[10px] font-medium text-slate-400 uppercase mb-1"><%= rf.object.room_type.name %></p>
-              <%= rf.text_field :room_number, 
-                  placeholder: "Room No.",
-                  class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
-                  data: { action: "change->room-lock#lock" } %>
+              <%= rf.select :room_number, [[rf.object.room_number, rf.object.room_number]], { selected: rf.object.room_number },
+                  class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                  data: {
+                    room_selection_target: "select",
+                    action: "change->room-lock#lock"
+                  } %>
+              <p class="text-[10px] text-slate-400 mt-1.5 italic">Only available rooms for the stay dates are shown.</p>
             </div>
           </div>
         <% end %>

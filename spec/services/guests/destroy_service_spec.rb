@@ -15,14 +15,16 @@ RSpec.describe Guests::DestroyService do
         create(:booking_guest, booking: booking, guest: guest, is_primary: true)
       end
 
-      it "returns failure" do
+      it "returns success (because it is a soft delete)" do
         result = service.call
-        expect(result.success?).to be false
-        expect(result.message).to include("associated active bookings")
+        expect(result.success?).to be true
+        expect(result.message).to include("removed successfully")
       end
 
-      it "does not destroy the guest" do
-        expect { service.call }.not_to change(Guest, :count)
+      it "soft deletes the guest (hides from kept scope but remains in DB)" do
+        expect { service.call }.to change { Guest.kept.count }.by(-1)
+        expect(Guest.exists?(guest.id)).to be true
+        expect(guest.reload.discarded?).to be true
       end
     end
 
@@ -37,8 +39,10 @@ RSpec.describe Guests::DestroyService do
         expect(result.success?).to be true
       end
 
-      it "destroys the guest record" do
-        expect { service.call }.to change(Guest, :count).by(-1)
+      it "soft deletes the guest record" do
+        expect { service.call }.to change { Guest.kept.count }.by(-1)
+        expect(Guest.exists?(guest.id)).to be true
+        expect(guest.reload.discarded?).to be true
       end
     end
 
@@ -50,36 +54,10 @@ RSpec.describe Guests::DestroyService do
           expect(result.message).to include("removed successfully")
         end
 
-        it "destroys the guest record if no other links exist" do
-          expect { service.call }.to change(Guest, :count).by(-1)
-        end
-
-        it "destroys the guest record even if links to this hotel existed (but no bookings)" do
-          # This case covers where booking_guests exists but bookings don't (rare but possible if orphan link)
-          create(:booking_guest, guest: guest, booking: create(:booking, hotel: other_hotel))
-          # If it has links to other hotels, it shouldn't be fully destroyed if those links are still there.
-          # The service says: if @guest.created_by_hotel_id == @hotel.id && @guest.booking_guests.empty?
-
-          # Let's test the specific logic:
-          guest_with_other_link = create(:guest, created_by_hotel: hotel)
-          create(:booking_guest, guest: guest_with_other_link, booking: create(:booking, hotel: other_hotel))
-
-          result = described_class.new(guest: guest_with_other_link, hotel: hotel).call
-          expect(result.success?).to be true
-          expect(Guest.exists?(guest_with_other_link.id)).to be true
-        end
-      end
-
-      context "when guest was not created by the hotel" do
-        let(:guest) { create(:guest, created_by_hotel: other_hotel) }
-
-        it "returns success" do
-          result = service.call
-          expect(result.success?).to be true
-        end
-
-        it "does not destroy the guest record" do
-          expect { service.call }.not_to change(Guest, :count)
+        it "soft deletes the guest record" do
+          expect { service.call }.to change { Guest.kept.count }.by(-1)
+          expect(Guest.exists?(guest.id)).to be true
+          expect(guest.reload.discarded?).to be true
         end
       end
     end

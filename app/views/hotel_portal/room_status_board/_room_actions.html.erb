@@ -1,4 +1,4 @@
-<div class="mt-2 flex flex-wrap gap-1.5">
+<div class="flex flex-wrap gap-1.5">
   <div data-controller="floating" data-floating-placement-value="bottom-end" class="relative z-[1000] isolate inline-flex overflow-visible">
     <button data-floating-target="reference" data-action="click->floating#toggle" id="room-actions-<%= room_status_id %>" type="button" 
       title="<%= (status == 'inspection_failed' && failure_note.present?) ? "Failure Reason: #{failure_note}" : '' %>"
@@ -148,7 +148,7 @@
       <div data-room-status-action-target="readyPanel" hidden class="mt-2 rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
         <div class="mb-3">
           <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Mark as Ready</p>
-          <p class="mt-1 text-[9px] font-medium leading-tight text-emerald-600">Enter cleaning/inspection notes (optional).</p>
+          <p class="mt-1 text-[9px] font-medium leading-tight text-emerald-600">Enter cleaning/inspection notes.</p>
         </div>
         <%= form_with url: hotel_room_status_path(current_hotel, room_status_id), method: :patch, local: true do %>
           <%= hidden_field_tag "room_status[status]", "ready" %>
@@ -160,7 +160,8 @@
             <%= text_area_tag "room_status[notes]",
                 nil,
                 rows: 4,
-                placeholder: "Enter cleaning or inspection notes...",
+                required: true,
+                placeholder: "Enter cleaning or inspection notes (mandatory)...",
                 data: { room_status_action_target: "readyInput" },
                 class: "w-full rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-300 focus:outline-none" %>
           </div>

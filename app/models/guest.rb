@@ -27,7 +27,30 @@ class Guest < ApplicationRecord
   GENDERS = %w[male female other].freeze
   DOCUMENT_TYPES = %w[ic passport].freeze
 
+  scope :kept, -> { where(discarded_at: nil) }
+  scope :discarded, -> { where.not(discarded_at: nil) }
+
   before_validation :normalize_guest_data
+
+  def discard
+    update(discarded_at: Time.current)
+  end
+
+  def discard!
+    update!(discarded_at: Time.current)
+  end
+
+  def undiscard
+    update(discarded_at: nil)
+  end
+
+  def discarded?
+    discarded_at.present?
+  end
+
+  def kept?
+    discarded_at.nil?
+  end
 
   def otp_on_cooldown?
     otp_sent_at.present? && otp_sent_at > RESEND_COOLDOWN.ago

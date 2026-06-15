@@ -503,3 +503,12 @@
     transform: none;
   }
 }
+
+/* Room Status Board Overrides */
+@layer components {
+  .room-status-comfortable {
+    @media (min-width: 1024px) {
+      --grid-day-width: 103px;
+    }
+  }
+}

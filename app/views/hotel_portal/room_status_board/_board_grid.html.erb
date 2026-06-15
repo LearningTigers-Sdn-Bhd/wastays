@@ -1,11 +1,11 @@
-<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white bg-[repeating-linear-gradient(-45deg,transparent,transparent_10px,#f8fafc_10px,#f8fafc_20px)] shadow-sm">
+<div class="room-status-board <%= 'room-status-comfortable' if presenter.comfortable_mode? %> overflow-hidden rounded-2xl border border-slate-200 bg-white bg-[repeating-linear-gradient(-45deg,transparent,transparent_10px,#f8fafc_10px,#f8fafc_20px)] shadow-sm">
   <% if presenter.room_groups.blank? %>
     <div class="px-8 py-20 text-center bg-white">
       <p class="text-sm font-medium text-slate-500">No rooms found for this property.</p>
     </div>
   <% else %>
     <div class="overflow-x-auto">
-      <div class="min-w-[1200px] w-fit">
+      <div class="min-w-full w-fit">
         <div class="grid border-b border-slate-200 bg-slate-50" style="grid-template-columns: <%= presenter.grid_template_columns %>;">
           <div class="sticky left-0 z-30 border-r border-slate-200 bg-slate-50 shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= presenter.card_padding %> text-left text-sm font-semibold uppercase tracking-[0.08em] text-slate-600">
             Rooms
@@ -13,8 +13,8 @@
 
           <% presenter.board_dates.each_with_index do |date, index| %>
             <div class="border-l <%= 'border-r' if index == presenter.board_dates.size - 1 %> border-slate-200 <%= presenter.summary_padding %> text-center <%= 'bg-slate-100' if date == Date.current %>">
-              <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500"><%= date.strftime('%a') %></p>
-              <p class="text-2xl font-black leading-none text-slate-900"><%= date.day %></p>
+              <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500"><%= date.strftime('%a') %></p>
+              <p class="<%= presenter.comfortable_mode? ? 'text-xl' : 'text-lg' %> font-black leading-none text-slate-900"><%= date.day %></p>
             </div>
           <% end %>
         </div>
@@ -23,14 +23,14 @@
           <details open class="group border-b border-slate-200">
             <summary class="list-none cursor-pointer bg-slate-100 [&::-webkit-details-marker]:hidden">
               <div class="grid" style="grid-template-columns: <%= presenter.grid_template_columns %>;">
-                <div class="sticky left-0 z-20 bg-slate-100 text-xs font-bold uppercase tracking-[0.08em] text-slate-600">
-                  <div class="flex items-center justify-between gap-2 opacity-0 <%= presenter.summary_padding %> pointer-events-none">
+                <div class="sticky left-0 z-20 bg-slate-100 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
+                  <div class="flex items-center justify-between gap-2 opacity-0 <%= presenter.comfortable_mode? ? 'px-4 py-2' : 'px-3 py-1' %> pointer-events-none">
                     <span class="truncate whitespace-nowrap"><%= group[:room_type].name %></span>
                     <svg class="size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path d="m9 6 6 6-6 6"/>
                     </svg>
                   </div>
-                  <div class="absolute inset-y-0 left-0 w-max min-w-full flex items-center justify-between gap-4 <%= presenter.summary_padding %> pointer-events-auto">
+                  <div class="absolute inset-y-0 left-0 w-max min-w-full flex items-center justify-between gap-4 <%= presenter.comfortable_mode? ? 'px-4 py-2' : 'px-3 py-1' %> pointer-events-auto">
                     <span class="whitespace-nowrap"><%= group[:room_type].name %></span>
                     <svg class="size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path d="m9 6 6 6-6 6"/>
