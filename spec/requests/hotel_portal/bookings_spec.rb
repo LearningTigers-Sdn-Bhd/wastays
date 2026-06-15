@@ -124,7 +124,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("data-testid=\"booking-details-panel\"")
       expect(response.body).to include("data-testid=\"booking-requests-panel\"")
       expect(response.body).to include("data-testid=\"booking-history-panel\"")
-      expect(response.body).to include("data-tab-breadcrumb-label>Requests</span>")
+      expect(response.body).to include("data-tabs-breadcrumb-label>Booking Details</span>")
     end
 
     it "renders reference IDs, booking source, and the refreshed guest records table" do
