@@ -13,6 +13,56 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
   end
 
   describe "GET /index" do
+    it "renders validated tabs and nested breadcrumb labels" do
+      get hotel_inventory_index_path(hotel), params: { tab: "advanced", subtab: "overrides" }
+
+      expect(response).to have_http_status(:success)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css('[data-tabs-default-tab-value="advanced"]')
+      expect(page).to have_css("[data-testid='inventory-calendar-panel']")
+      expect(page).to have_css("[data-testid='inventory-advanced-panel']")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Pricing")
+      expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Availability Overrides")
+    end
+
+    it "falls back to the default tab and subtab for unknown parameters" do
+      get hotel_inventory_index_path(hotel), params: { tab: "unknown", subtab: "unknown" }
+
+      expect(response).to have_http_status(:success)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css('[data-tabs-default-tab-value="calendar"]')
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Rates & Availability")
+      expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Pricing Rules")
+      expect(page).to have_css("[data-subtabs-breadcrumb-segment].hidden")
+    end
+
+    it "preserves inventory state in server-rendered navigation links" do
+      room_type = create(:room_type, hotel: hotel)
+
+      get hotel_inventory_index_path(hotel), params: {
+        start_date: Date.current,
+        view_currencies: [ "MYR" ],
+        display_currency: "MYR",
+        room_type_id: room_type.id,
+        tab: "calendar",
+        subtab: "overrides"
+      }
+
+      page = Capybara.string(response.body)
+      next_link = page.find_link("Next 14 days")
+      query = Rack::Utils.parse_nested_query(URI.parse(next_link[:href]).query)
+
+      expect(query).to include(
+        "display_currency" => "MYR",
+        "room_type_id" => room_type.id.to_s,
+        "tab" => "calendar",
+        "subtab" => "overrides"
+      )
+      expect(query["view_currencies"]).to eq([ "MYR" ])
+    end
+
     it "renders the PMS availability calendar by default" do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room", quantity: 4)
       create(:room_inventory, room_type: room_type, date: Date.current, quantity: 0, status: "closed")
@@ -81,6 +131,43 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
   end
 
   describe "POST /bulk_save_ari" do
+    it "preserves active tabs and currency state after saving" do
+      room_type = create(:room_type, hotel: hotel, base_price: 180)
+      rate_plan = create(:rate_plan, room_type: room_type, name: "Best Available Rate")
+
+      post bulk_save_ari_hotel_inventory_dashboards_path(hotel), params: {
+        tab: "calendar",
+        subtab: "overrides",
+        display_currency: "MYR",
+        view_currencies: [ "MYR" ],
+        selection_update: {
+          mode: "combined",
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
+          start_date: Date.current.to_s,
+          end_date: Date.current.to_s,
+          apply_inventory: "0",
+          apply_rates: "1",
+          apply_restrictions: "0",
+          price: "333.00",
+          currency: "MYR"
+        }
+      }
+
+      expect(response).to redirect_to(
+        hotel_inventory_index_path(
+          hotel,
+          start_date: Date.current.to_s,
+          view_currencies: [ "MYR" ],
+          display_currency: "MYR",
+          room_type_id: room_type.id.to_s,
+          rate_plan_id: rate_plan.id.to_s,
+          tab: "calendar",
+          subtab: "overrides"
+        )
+      )
+    end
+
     it "saves a single-date rate update through the calendar payload" do
       room_type = create(:room_type, hotel: hotel, base_price: 180)
       rate_plan = create(:rate_plan, room_type: room_type, name: "Best Available Rate")

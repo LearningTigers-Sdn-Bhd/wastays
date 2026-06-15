@@ -1,12 +1,14 @@
-<%# locals: parts - array of { type:, label:, path:, siblings:, tab_label: }
+<%# locals: parts - array of { type:, label:, path:, siblings:, tab_label:, subtab_label: }
    # :section     → unclickable text
    # :menu        → clickable dropdown showing other menus under same section
    # :menu_group  → unclickable text (parent of nested children)
    # :breakdown   → clickable dropdown showing other breakdowns under same menu group
    # tab_label     → label updated by the tabs Stimulus controller
+   # subtab_label  → conditional label updated by the subtabs Stimulus controller
 %>
 <div class="flex w-max min-w-0 items-center gap-x-2 text-sm" data-controller="breadcrumb-dropdown">
   <% parts.each_with_index do |part, index| %>
+    <div class="contents <%= "hidden" if part[:subtab_label] && part[:hidden] %>" <%= "data-subtabs-breadcrumb-segment" if part[:subtab_label] %>>
     <% if index > 0 %>
       <span class="text-slate-400">/</span>
     <% end %>
@@ -27,7 +29,11 @@
         <span class="cursor-default font-semibold text-slate-900"><%= part[:label] %></span>
       <% end %>
     <% else %>
-      <% if part[:siblings].present? %>
+      <% if part[:subtab_label] %>
+        <span class="cursor-default font-semibold text-slate-900" data-subtabs-breadcrumb-label><%= part[:label] %></span>
+      <% elsif part[:tab_label] %>
+        <span class="cursor-default font-semibold text-slate-900" data-tabs-breadcrumb-label><%= part[:label] %></span>
+      <% elsif part[:siblings].present? %>
         <%= render "shared/navigation/breadcrumb_dropdown", part: part %>
       <% elsif index < parts.size - 1 %>
         <% if part[:path].present? %>
@@ -37,13 +43,10 @@
         <% end %>
       <% else %>
         <span class="cursor-default font-semibold text-slate-900">
-          <% if part[:tab_label] %>
-            <span data-tabs-breadcrumb-label><%= part[:label] %></span>
-          <% else %>
-            <%= part[:label] %>
-          <% end %>
+          <%= part[:label] %>
         </span>
       <% end %>
     <% end %>
+    </div>
   <% end %>
 </div>

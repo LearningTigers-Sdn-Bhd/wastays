@@ -1,0 +1,29 @@
+<div class="rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm" data-testid="settings-tabs">
+  <nav class="flex items-center gap-1 overflow-x-auto" aria-label="Settings sections" role="tablist">
+    <% tabs = [] %>
+    <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
+      <% tabs.concat([
+        { name: "general", label: "General", icon: "settings" },
+        { name: "tax", label: "Tax", icon: "receipt" },
+        { name: "ai", label: "AI Concierge", icon: "sparkles" },
+        { name: "notifications", label: "Notifications", icon: "bell" }
+      ]) %>
+    <% end %>
+    <% tabs << { name: "banking", label: "Banking", icon: "landmark" } if current_user.has_permission?("manage_account") %>
+
+    <% tabs.each do |tab| %>
+      <button type="button"
+              data-tabs-target="tab"
+              data-tab-name="<%= tab[:name] %>"
+              data-tab-label="<%= tab[:label] %>"
+              data-action="click->tabs#switch"
+              data-active="<%= presenter.active_tab == tab[:name] %>"
+              class="group inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium text-slate-600 transition-all duration-150 hover:bg-slate-50 hover:text-slate-900 data-[active=true]:bg-blue-600 data-[active=true]:font-semibold data-[active=true]:text-white"
+              aria-controls="<%= tab[:name] %>-panel"
+              role="tab">
+        <%= cached_icon tab[:icon], class: "size-4", aria: { hidden: true } %>
+        <span><%= tab[:label] %></span>
+      </button>
+    <% end %>
+  </nav>
+</div>

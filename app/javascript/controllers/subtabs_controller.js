@@ -9,8 +9,8 @@ export default class extends Controller {
 
   connect() {
     const urlParams = new URLSearchParams(window.location.search)
-    const urlTab = urlParams.get(this.parameterNameValue)
-    const activeTab = urlTab || this.defaultTabValue
+    const requestedTab = urlParams.get(this.parameterNameValue)
+    const activeTab = this.validTab(requestedTab) ? requestedTab : this.defaultTab
     this.show(activeTab)
   }
 
@@ -26,6 +26,8 @@ export default class extends Controller {
   }
 
   show(tabName) {
+    const activeTab = this.tabTargets.find((tab) => tab.dataset.tabName === tabName)
+
     this.tabTargets.forEach((tab) => {
       const active = tab.dataset.tabName === tabName
       tab.setAttribute("data-active", active)
@@ -36,5 +38,20 @@ export default class extends Controller {
       const active = panel.dataset.tabPanel === tabName
       panel.classList.toggle("hidden", !active)
     })
+
+    this.updateBreadcrumbLabel(activeTab?.dataset.tabLabel)
+  }
+
+  validTab(name) {
+    return name && this.tabTargets.some((tab) => tab.dataset.tabName === name)
+  }
+
+  updateBreadcrumbLabel(label) {
+    const breadcrumb = document.querySelector("[data-subtabs-breadcrumb-label]")
+    if (breadcrumb && label) breadcrumb.textContent = label
+  }
+
+  get defaultTab() {
+    return this.defaultTabValue || this.tabTargets[0]?.dataset.tabName
   }
 }

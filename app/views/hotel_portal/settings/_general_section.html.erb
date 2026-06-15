@@ -1,0 +1,251 @@
+      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Hotel Settings</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600">Control check-in/out timings and currency.</p>
+        </div>
+
+        <div class="px-6 py-5 sm:px-8">
+          <%= form_with model: @hotel, url: hotel_settings_path(@hotel, tab: "general"), method: :patch, local: true, class: "space-y-6" do |f| %>
+            <%= hidden_field_tag :form_id, "hotel_settings" %>
+            <% settings_errors = @hotel.errors.full_messages + @presenter.property_policy.errors.full_messages %>
+            <% if settings_errors.any? && params[:form_id] == "hotel_settings" %>
+              <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <p class="font-semibold"><%= pluralize(settings_errors.count, "error") %> prohibited these settings from being saved:</p>
+                <ul class="mt-2 list-disc space-y-1 ps-5">
+                  <% settings_errors.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <%= f.label :hotel_status_display, "Hotel Status", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <%= f.text_field :hotel_status_display, value: @presenter.settings_summary[:hotel_status], disabled: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500" %>
+              </div>
+
+              <div>
+                <%= f.label :onboarding_stage_display, "Onboarding Stage", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <%= f.text_field :onboarding_stage_display, value: @presenter.settings_summary[:onboarding_stage], disabled: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500" %>
+              </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <%= f.fields_for :property_policy_attributes, @presenter.property_policy do |property_policy_fields| %>
+                <div data-controller="time-picker" data-time-picker-next-field-selector-value="#index-check-out-dropdown" class="relative">
+                  <%= property_policy_fields.label :check_in_time, "Standard Check-in Time", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                  <div class="relative">
+                    <input type="text"
+                           data-time-picker-target="input"
+                           data-action="click->time-picker#toggle"
+                           class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 cursor-pointer"
+                           readonly
+                           value="<%= @presenter.property_policy.check_in_time %>">
+                    <%= property_policy_fields.hidden_field :check_in_time, data: { time_picker_target: "hiddenInput" } %>
+
+                    <div data-time-picker-target="dropdown"
+                         class="absolute z-[100] hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 mt-1">
+                      <div class="flex h-[200px]">
+                        <div class="flex-1 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1">
+                          <% (0..23).each do |h| %>
+                            <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= h %>" class="w-full rounded-lg px-3 py-1.5 text-left text-xs font-bold transition-colors">
+                              <%= Time.current.change(hour: h).strftime("%I %p") %>
+                            </button>
+                          <% end %>
+                        </div>
+                        <div class="w-[70px] overflow-y-auto custom-scrollbar p-1 bg-slate-50/30">
+                          <% [0, 15, 30, 45].each do |m| %>
+                            <button type="button" data-time-picker-target="minute" data-action="click->time-picker#selectMinute" data-value="<%= m %>" class="w-full rounded-lg px-3 py-1.5 text-center text-xs font-bold transition-colors">
+                              :<%= m.to_s.rjust(2, '0') %>
+                            </button>
+                          <% end %>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="index-check-out-dropdown" data-controller="time-picker" class="relative">
+                  <%= property_policy_fields.label :check_out_time, "Standard Check-out Time", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                  <div class="relative">
+                    <input type="text"
+                           data-time-picker-target="input"
+                           data-action="click->time-picker#toggle"
+                           class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 cursor-pointer"
+                           readonly
+                           value="<%= @presenter.property_policy.check_out_time %>">
+                    <%= property_policy_fields.hidden_field :check_out_time, data: { time_picker_target: "hiddenInput" } %>
+
+                    <div data-time-picker-target="dropdown"
+                         class="absolute z-[100] hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 mt-1">
+                      <div class="flex h-[200px]">
+                        <div class="flex-1 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1">
+                          <% (0..23).each do |h| %>
+                            <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= h %>" class="w-full rounded-lg px-3 py-1.5 text-left text-xs font-bold transition-colors">
+                              <%= Time.current.change(hour: h).strftime("%I %p") %>
+                            </button>
+                          <% end %>
+                        </div>
+                        <div class="w-[70px] overflow-y-auto custom-scrollbar p-1 bg-slate-50/30">
+                          <% [0, 15, 30, 45].each do |m| %>
+                            <button type="button" data-time-picker-target="minute" data-action="click->time-picker#selectMinute" data-value="<%= m %>" class="w-full rounded-lg px-3 py-1.5 text-center text-xs font-bold transition-colors">
+                              :<%= m.to_s.rjust(2, '0') %>
+                            </button>
+                          <% end %>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div data-controller="searchable-select">
+                <%= f.label :time_zone, "Property Timezone", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <div class="relative group">
+                  <input type="text"
+                         data-searchable-select-target="input"
+                         data-action="input->searchable-select#filter click->searchable-select#open"
+                         class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all focus:border-slate-300 focus:outline-none focus:ring-0"
+                         placeholder="Search timezone..."
+                         autocomplete="off"
+                         value="<%= @hotel.time_zone %>">
+                  <%= f.hidden_field :time_zone, data: { searchable_select_target: "hiddenInput" } %>
+                  <div data-searchable-select-target="options" class="absolute z-[100] hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 mt-1">
+                    <div class="max-height-[240px] overflow-y-auto p-1 custom-scrollbar" style="max-height: 240px;">
+                      <% ActiveSupport::TimeZone.all.each do |tz| %>
+                        <button type="button" data-searchable-select-target="option" data-action="click->searchable-select#select" data-value="<%= tz.name %>" data-label="<%= tz.to_s %>" class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                          <span class="truncate text-xs"><%= tz.to_s %></span>
+                        </button>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <% can_edit_currency = current_user.has_permission?("manage_hotel_profile") %>
+                <%= f.label :default_currency, "Default Currency", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <%= f.select :default_currency,
+                             options_for_select(CurrencyCatalog.options, @presenter.settings_summary[:default_currency] || "MYR"),
+                             {},
+                             class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-900 #{can_edit_currency ? 'bg-white focus:border-slate-300 focus:outline-none focus:ring-0' : 'bg-slate-50 cursor-not-allowed'}",
+                             disabled: !can_edit_currency %>
+                <% if can_edit_currency %>
+                  <p class="mt-1 text-[10px] font-medium text-slate-400 italic">Changing this will affect how rates are stored and synced.</p>
+                <% else %>
+                  <p class="mt-1 text-[10px] font-medium text-rose-500 italic">Contact admin to change base accounting currency.</p>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-3 mt-6">
+              <div data-controller="time-picker" class="relative">
+                <%= f.label :business_starts_at, "Business Day Starts At", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <div class="relative">
+                  <input type="text"
+                         data-time-picker-target="input"
+                         data-action="click->time-picker#toggle"
+                         class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 cursor-pointer"
+                         readonly
+                         value="<%= @hotel.business_starts_at&.strftime("%I:%M %p") %>">
+                  <%= f.hidden_field :business_starts_at, value: @hotel.business_starts_at&.strftime("%H:%M"), data: { time_picker_target: "hiddenInput" } %>
+
+                  <div data-time-picker-target="dropdown" class="absolute z-[100] hidden w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 mt-1">
+                    <div class="flex h-[240px]">
+                      <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1">
+                        <% (1..12).each do |h| %>
+                          <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= h %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors">
+                            <%= h %>
+                          </button>
+                        <% end %>
+                      </div>
+                      <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1 bg-slate-50/10">
+                        <% (0..59).each do |m| %>
+                          <button type="button" data-time-picker-target="minute" data-action="click->time-picker#selectMinute" data-value="<%= m %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors">
+                            <%= m.to_s.rjust(2, '0') %>
+                          </button>
+                        <% end %>
+                      </div>
+                      <div class="flex-1 p-1 bg-slate-50/30 flex flex-col justify-center gap-1">
+                        <% ["AM", "PM"].each do |p| %>
+                          <button type="button" data-time-picker-target="period" data-action="click->time-picker#selectPeriod" data-value="<%= p %>" class="w-full rounded-lg py-3 text-center text-xs font-bold transition-colors">
+                            <%= p %>
+                          </button>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div data-controller="time-picker" class="relative">
+                <%= f.label :business_ends_at, "Business Day Ends At", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <div class="relative">
+                  <input type="text"
+                         data-time-picker-target="input"
+                         data-action="click->time-picker#toggle"
+                         class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 cursor-pointer"
+                         readonly
+                         value="<%= @hotel.business_ends_at&.strftime("%I:%M %p") %>">
+                  <%= f.hidden_field :business_ends_at, value: @hotel.business_ends_at&.strftime("%H:%M"), data: { time_picker_target: "hiddenInput" } %>
+
+                  <div data-time-picker-target="dropdown" class="absolute z-[100] hidden w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 mt-1">
+                    <div class="flex h-[240px]">
+                      <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1">
+                        <% (1..12).each do |h| %>
+                          <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= h %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors">
+                            <%= h %>
+                          </button>
+                        <% end %>
+                      </div>
+                      <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1 bg-slate-50/10">
+                        <% (0..59).each do |m| %>
+                          <button type="button" data-time-picker-target="minute" data-action="click->time-picker#selectMinute" data-value="<%= m %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors">
+                            <%= m.to_s.rjust(2, '0') %>
+                          </button>
+                        <% end %>
+                      </div>
+                      <div class="flex-1 p-1 bg-slate-50/30 flex flex-col justify-center gap-1">
+                        <% ["AM", "PM"].each do |p| %>
+                          <button type="button" data-time-picker-target="period" data-action="click->time-picker#selectPeriod" data-value="<%= p %>" class="w-full rounded-lg py-3 text-center text-xs font-bold transition-colors">
+                            <%= p %>
+                          </button>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <%= f.label :arrival_grace_period_hours, "Arrival Grace Period (Hours)", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                <%= f.number_field :arrival_grace_period_hours, min: 0, step: 1, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                <p class="mt-1 text-[10px] font-medium text-slate-400 italic">Grace period after business hours before marking as No-Show.</p>
+              </div>
+            </div>
+
+            <div class="flex justify-end border-t border-slate-200 pt-4">
+              <%= f.submit "Save Settings", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
+            </div>
+          <% end %>
+        </div>
+      </section>
+      <% if feature_enabled_for_hotel?("ai_concierge_page", current_hotel) %>
+        <!-- Concierge QR -->
+        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+            <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Concierge Pages</h2>
+            <p class="mt-1 text-sm font-medium text-slate-600">Print and display at your front desk so guests can self-serve check-in, check-out, and requests.</p>
+          </div>
+          <div class="px-6 py-5 sm:px-8 flex items-center justify-between gap-4">
+            <p class="text-sm text-slate-600">Generate a printable QR code that links guests to your hotel's concierge page.</p>
+            <%= link_to hotel_concierge_qr_path(current_hotel), class: "inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700 transition flex-none" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 lucide lucide-qr-code-icon lucide-qr-code"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+              View QR Code
+            <% end %>
+          </div>
+        </section>
+      <% end %>

@@ -49,9 +49,13 @@
     <% end %>
   </div>
 
-  <div class="shrink-0 px-4 py-4 border-t border-layer-line bg-sidebar-bg space-y-0.5">
+  <div class="shrink-0 px-4 py-4 border-t border-layer-line bg-sidebar-bg space-y-0.5 sidebar-footer">
     <%= footer_html %>
   </div>
+
+  <% if permanent_sidebar %>
+    <div class="sidebar-tooltip hidden" role="tooltip" data-sidebar-state-target="tooltip"></div>
+  <% end %>
 </aside>
 
 <div id="<%= overlay_id %>" class="fixed inset-0 z-[79] bg-black/50 hidden lg:hidden" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#close"></div>
@@ -96,7 +100,7 @@
     <% end %>
   </div>
 
-  <div class="shrink-0 px-4 py-4 border-t border-layer-line bg-sidebar-bg space-y-0.5">
+  <div class="shrink-0 px-4 py-4 border-t border-layer-line bg-sidebar-bg space-y-0.5 sidebar-footer">
     <%= footer_html %>
   </div>
 </aside>

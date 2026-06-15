@@ -3,30 +3,46 @@
   active_tab ||= params[:tab].presence || "calendar"
   active_subtab ||= params[:subtab].presence || "pricing"
 %>
+<%
+  navigation_state = {
+    view_currencies: @view_currencies,
+    display_currency: @display_currency,
+    room_type_id: @calendar.selected_room_type_id,
+    tab: active_tab,
+    subtab: active_subtab
+  }.compact
+%>
 
 <% if request.headers["Turbo-Frame"].present? %>
   <%= render "shared/feedback/flash_toasts", flash: flash %>
 <% end %>
 
 <!-- Top-Level Tabs -->
-<nav class="<%= dashboard_tab_container_classes %>">
-  <div class="flex min-w-max items-center gap-2" role="tablist">
+<nav class="<%= dashboard_tab_container_classes %>" data-testid="inventory-tabs">
+  <div class="flex min-w-max items-center gap-1" role="tablist" aria-label="Rates and inventory sections">
     <button type="button"
             data-tabs-target="tab"
             data-tab-name="calendar"
+            data-tab-label="Rates & Availability"
             data-action="click->tabs#switch"
             data-active="<%= active_tab == 'calendar' %>"
             class="<%= dashboard_tab_classes %>"
+            aria-controls="inventory-calendar-panel"
             role="tab">
+      <%= cached_icon "calendar-range", class: "size-4", aria: { hidden: true } %>
       Rates & Availability
     </button>
     <button type="button"
             data-tabs-target="tab"
             data-tab-name="advanced"
+            data-tab-label="Advanced Pricing"
+            data-show-subtab-breadcrumb="true"
             data-action="click->tabs#switch"
             data-active="<%= active_tab == 'advanced' %>"
             class="<%= dashboard_tab_classes %>"
+            aria-controls="inventory-advanced-panel"
             role="tab">
+      <%= cached_icon "settings-2", class: "size-4", aria: { hidden: true } %>
       Advanced Pricing
     </button>
   </div>
@@ -35,7 +51,7 @@
 <!-- Main Content Panels -->
 <div class="mt-6">
   <!-- Panel: Rates & Availability -->
-  <div data-tabs-target="panel" data-tab-panel="calendar" class="<%= active_tab == 'calendar' ? 'space-y-6' : 'hidden' %>">
+  <div id="inventory-calendar-panel" data-tabs-target="panel" data-tab-panel="calendar" class="<%= active_tab == 'calendar' ? 'space-y-6' : 'hidden' %>" role="tabpanel" data-testid="inventory-calendar-panel">
     <% if @missing_rates.any? %>
       <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
         <div class="flex items-center gap-3 text-rose-800">
@@ -59,7 +75,7 @@
           <h1 class="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-900">Rates & Availability</h1>
           <div class="h-4 w-px bg-slate-200 hidden sm:block"></div>
           <div class="flex items-center gap-1">
-            <%= link_to hotel_inventory_index_path(current_hotel, { start_date: @start_date - 14.days, view_currencies: @view_currencies, room_type_id: @calendar.selected_room_type_id }.compact),
+            <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date - 14.days)),
                         class: "inline-flex size-9 sm:size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900",
                         title: "Previous 14 days" do %>
               <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -71,7 +87,7 @@
                    data-inventory-calendar-target="navStartDate"
                    data-action="change->inventory-calendar#navigate">
 
-            <%= link_to hotel_inventory_index_path(current_hotel, { start_date: @start_date + 14.days, view_currencies: @view_currencies, room_type_id: @calendar.selected_room_type_id }.compact),
+            <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date + 14.days)),
                         class: "inline-flex size-9 sm:size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900",
                         title: "Next 14 days" do %>
               <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
@@ -93,10 +109,10 @@
             <% @view_currencies.each do |currency| %>
               <div class="group relative flex h-full items-center">
                 <%= link_to currency,
-                            hotel_inventory_index_path(current_hotel, { start_date: @start_date, view_currencies: @view_currencies, display_currency: currency, room_type_id: @calendar.selected_room_type_id }.compact),
+                            hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date, display_currency: currency)),
                             class: "flex h-full items-center rounded-md px-3 text-[10px] font-black tracking-wider transition #{@display_currency == currency ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-900'}" %>
                 <% if @view_currencies.size > 1 && currency != @hotel_base_currency %>
-                  <%= link_to hotel_inventory_index_path(current_hotel, { start_date: @start_date, view_currencies: (@view_currencies - [currency]), room_type_id: @calendar.selected_room_type_id }.compact),
+                  <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date, view_currencies: (@view_currencies - [currency]))),
                               title: "Remove from view",
                               class: "absolute -top-1 -right-1 hidden group-hover:flex size-4 items-center justify-center rounded-full bg-slate-900 text-white text-[8px] font-bold shadow-sm" do %>
                     ✕
@@ -118,7 +134,7 @@
                   <div class="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 mb-1">Add Currency</div>
                   <% (CurrencyCatalog::COMMON_CODES - @view_currencies).each do |c| %>
                     <%= link_to c, 
-                                hotel_inventory_index_path(current_hotel, { start_date: @start_date, view_currencies: (@view_currencies + [c]), room_type_id: @calendar.selected_room_type_id }.compact),
+                                hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date, view_currencies: (@view_currencies + [c]))),
                                 class: "block rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors" %>
                   <% end %>
                 </div>
@@ -343,39 +359,45 @@
   </div>
 
   <!-- Panel: Advanced Pricing -->
-  <div data-tabs-target="panel" data-tab-panel="advanced" class="<%= active_tab == 'advanced' ? '' : 'hidden' %>">
+  <div id="inventory-advanced-panel" data-tabs-target="panel" data-tab-panel="advanced" class="<%= active_tab == 'advanced' ? '' : 'hidden' %>" role="tabpanel" data-testid="inventory-advanced-panel">
     <div data-controller="subtabs"
          data-subtabs-default-tab-value="pricing"
          data-subtabs-parameter-name-value="subtab">
 
-      <nav class="<%= dashboard_tab_container_classes %> mb-6">
-        <div class="flex min-w-max items-center gap-2" role="tablist">
+      <nav class="<%= dashboard_tab_container_classes %> mb-6" data-testid="inventory-subtabs">
+        <div class="flex min-w-max items-center gap-1" role="tablist" aria-label="Advanced pricing sections">
           <button type="button"
                   data-subtabs-target="tab"
                   data-tab-name="pricing"
+                  data-tab-label="Pricing Rules"
                   data-action="click->subtabs#switch"
                   data-active="<%= active_subtab == 'pricing' %>"
                   class="<%= dashboard_tab_classes %>"
+                  aria-controls="inventory-pricing-panel"
                   role="tab">
+            <%= cached_icon "tags", class: "size-4", aria: { hidden: true } %>
             Pricing Rules
           </button>
           <button type="button"
                   data-subtabs-target="tab"
                   data-tab-name="overrides"
+                  data-tab-label="Availability Overrides"
                   data-action="click->subtabs#switch"
                   data-active="<%= active_subtab == 'overrides' %>"
                   class="<%= dashboard_tab_classes %>"
+                  aria-controls="inventory-overrides-panel"
                   role="tab">
+            <%= cached_icon "calendar-cog", class: "size-4", aria: { hidden: true } %>
             Availability Overrides
           </button>
         </div>
       </nav>
 
-      <div data-subtabs-target="panel" data-tab-panel="pricing" class="<%= active_subtab == 'pricing' ? '' : 'hidden' %>">
+      <div id="inventory-pricing-panel" data-subtabs-target="panel" data-tab-panel="pricing" class="<%= active_subtab == 'pricing' ? '' : 'hidden' %>" role="tabpanel" data-testid="inventory-pricing-panel">
         <%= render "pricing_rules" %>
       </div>
 
-      <div data-subtabs-target="panel" data-tab-panel="overrides" class="<%= active_subtab == 'overrides' ? '' : 'hidden' %>">
+      <div id="inventory-overrides-panel" data-subtabs-target="panel" data-tab-panel="overrides" class="<%= active_subtab == 'overrides' ? '' : 'hidden' %>" role="tabpanel" data-testid="inventory-overrides-panel">
         <%= render "availability_override" %>
       </div>
     </div>

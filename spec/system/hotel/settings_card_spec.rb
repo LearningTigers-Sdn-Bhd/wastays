@@ -34,14 +34,14 @@ RSpec.describe 'Hotel Settings Card', type: :system do
       expect(page).to have_button('Save Settings')
     end
 
-    click_link 'Tax'
+    visit hotel_settings_path(hotel, tab: 'tax')
 
     within('section', text: 'Tax Configuration') do
       expect(page).to have_checked_field('hotel_tourism_tax_enabled')
       expect(page).to have_field('Tourism Tax Amount (RM)')
     end
 
-    click_link 'General'
+    visit hotel_settings_path(hotel, tab: 'general')
 
     find('#hotel_property_policy_attributes_check_in_time', visible: false).set('15:00')
     find('#hotel_property_policy_attributes_check_out_time', visible: false).set('11:00')
@@ -67,8 +67,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   it 'hides tourism tax amount when tourism tax is off' do
     hotel.update!(tourism_tax_enabled: false, tourism_tax_amount: 10.0)
 
-    visit hotel_settings_path(hotel)
-    click_link 'Tax'
+    visit hotel_settings_path(hotel, tab: 'tax')
 
     within('section', text: 'Tax Configuration') do
       expect(page).to have_unchecked_field('hotel_tourism_tax_enabled')
@@ -95,8 +94,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   end
 
   it 'shows the AI concierge fields and saves the selected tone' do
-    visit hotel_settings_path(hotel)
-    click_link 'AI Concierge'
+    visit hotel_settings_path(hotel, tab: 'ai')
 
     within('section', text: 'AI Concierge Configuration') do
       expect(page).to have_select('Tone', selected: 'Basic')

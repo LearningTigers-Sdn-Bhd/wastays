@@ -24,5 +24,9 @@ RSpec.describe 'Admin layout shell', type: :system do
     expect(page).to have_link('Homepage', href: root_path)
     expect(page).to have_link('Payment Issues', href: admin_reconciliation_dashboard_path)
     expect(page).to have_link('My account', href: edit_admin_profile_path)
+    expect(page).to have_css("#admin-sidebar a.sidebar-nav-link-active[data-sidebar-route]", text: "Dashboard")
+    expect(page).to have_css("#admin-sidebar a[data-sidebar-tooltip='Dashboard']")
+    expect(page).to have_css("#admin-sidebar [data-sidebar-state-target='tooltip']", visible: :all)
+    expect(page).to have_no_css("#admin-sidebar a.sidebar-nav-link-active.text-red-600")
   end
 end
