@@ -18,8 +18,7 @@ export default class extends Controller {
     event.preventDefault()
     const tabName = event.currentTarget.dataset.tabName
     this.show(tabName)
-    this.updateBreadcrumb(event.currentTarget.dataset.tabLabel)
-    
+
     // Update URL without reloading to preserve state for redirects
     const url = new URL(window.location)
     url.searchParams.set(this.parameterNameValue, tabName)
@@ -27,6 +26,8 @@ export default class extends Controller {
   }
 
   show(tabName) {
+    const activeTab = this.tabTargets.find((tab) => tab.dataset.tabName === tabName)
+
     this.tabTargets.forEach((tab) => {
       const active = tab.dataset.tabName === tabName
       tab.setAttribute("data-active", active)
@@ -37,14 +38,16 @@ export default class extends Controller {
       const active = panel.dataset.tabPanel === tabName
       panel.classList.toggle("hidden", !active)
     })
+
+    this.updateBreadcrumbLabel(activeTab?.dataset.tabLabel)
   }
 
   validTab(name) {
     return name && this.tabTargets.some((tab) => tab.dataset.tabName === name)
   }
 
-  updateBreadcrumb(label) {
-    const breadcrumb = document.querySelector("[data-tab-breadcrumb-label]")
+  updateBreadcrumbLabel(label) {
+    const breadcrumb = document.querySelector("[data-tabs-breadcrumb-label]")
     if (breadcrumb && label) breadcrumb.textContent = label
   }
 
