@@ -49,8 +49,64 @@ module HotelPortal
         %w[ready dirty cleaning inspection_failed awaiting_inspection late_checkout_detected].include?(status)
       end
 
+      def can_mark_cleaning?
+        %w[dirty inspection_failed awaiting_inspection].include?(status)
+      end
+
+      def can_mark_dirty?
+        %w[ready late_checkout_detected].include?(status)
+      end
+
+      def can_mark_late_checkout?
+        %w[ready dirty].include?(status)
+      end
+
+      def can_mark_awaiting_inspection?
+        status == "cleaning"
+      end
+
+      def can_mark_ready?
+        %w[dirty cleaning inspection_failed awaiting_inspection late_checkout_detected].include?(status)
+      end
+
+      def can_fail_inspection?
+        status == "awaiting_inspection"
+      end
+
       def room_type
         room[:room_type]
+      end
+
+      def smoking_label
+        room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking"
+      end
+
+      def smoking_color
+        room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400"
+      end
+
+      def pets_label
+        room_type.pets_allowed ? "Pets Allowed" : "No Pets"
+      end
+
+      def pets_color
+        room_type.pets_allowed ? "text-emerald-500" : "text-slate-400"
+      end
+
+      def smoking_icon
+        if room_type.smoking_allowed
+          '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h14" /><path d="M18 8c0-2.5-2-2.5-2-5" /><path d="M21 16a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /><path d="M22 8c0-2.5-2-2.5-2-5" /><path d="M7 12v4" /></svg>'.html_safe
+        else
+          '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h13" /><path d="M18 8c0-2.5-2-2.5-2-5" /><path d="m2 2 20 20" /><path d="M21 12a1 1 0 0 1 1 1v2a1 1 0 0 1-.5.866" /><path d="M22 8c0-2.5-2-2.5-2-5" /><path d="M7 12v4" /></svg>'.html_safe
+        end
+      end
+
+      def pets_icon
+        if room_type.pets_allowed
+          '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /></svg>'.html_safe
+        else
+          '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /><path d="m2 2 20 20" /></svg>'.html_safe
+        end
       end
     end
 
@@ -150,6 +206,78 @@ module HotelPortal
       max_blocks_same_start = room[:blocks].group_by { |block| [ block[:check_in], visible_start_date ].max }.values.map(&:size).max || 1
       padding = comfortable_mode? ? 24 : 20
       [ row_min_base, padding + (max_blocks_same_start * block_step) ].max
+    end
+
+    def blocks_for(room, date)
+      room[:blocks].select { |block| [ block[:check_in], visible_start_date ].max == date }
+    end
+
+    def maintenance_blocks_for(room, date)
+      room[:maintenance_blocks].select { |block| [ block[:start_date], visible_start_date ].max == date }
+    end
+
+    def booking_count_at(room, date)
+      blocks_for(room, date).size
+    end
+
+    def cell_meta(room, date)
+      day_data = room[:daily_data][date]
+      booking_state = day_data[:booking_state]
+      physical_status = day_data[:status]
+
+      bg_class = cell_color(booking_state)
+      bg_class = cell_color(:out_of_service) if physical_status == "out_of_service"
+
+      is_interactable = (booking_state == :none || booking_state == :completed) && physical_status != "out_of_service"
+
+      {
+        bg_class: bg_class,
+        is_interactable: is_interactable
+      }
+    end
+
+    def block_meta(block)
+      clipped_left = block[:check_in] < visible_start_date
+      clipped_right = block[:check_out] > visible_end_exclusive
+      left_offset = clipped_left ? 0 : block_left_pad
+      right_trim = clipped_right ? 0 : block_left_pad
+      width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)"
+      clip_corner_class = [ ("rounded-l-none" if clipped_left), ("rounded-r-none" if clipped_right) ].compact.join(" ")
+
+      {
+        style_class: booking_style(block[:status]),
+        left_offset: left_offset,
+        width_calc: width_calc,
+        clip_corner_class: clip_corner_class
+      }
+    end
+
+    def maintenance_block_meta(block)
+      clipped_left = block[:start_date] < visible_start_date
+      clipped_right = block[:end_date] > visible_end_exclusive
+      left_offset = clipped_left ? 0 : block_left_pad
+      right_trim = clipped_right ? 0 : block_left_pad
+      width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)"
+      clip_corner_class = [ ("rounded-l-none" if clipped_left), ("rounded-r-none" if clipped_right) ].compact.join(" ")
+
+      {
+        left_offset: left_offset,
+        width_calc: width_calc,
+        clip_corner_class: clip_corner_class
+      }
+    end
+
+    def status_badge_meta(status, failure_note = nil)
+      {
+        container_class: "inline-flex items-center justify-center rounded-full border size-5 #{status_style(status)} cursor-help shadow-sm",
+        tooltip_wrapper_class: "hidden z-[100] #{(status == 'inspection_failed' && failure_note.present?) ? 'px-4 py-3 rounded-2xl w-64' : 'px-3 py-1.5 rounded-full'} bg-white border border-slate-200 shadow-xl pointer-events-none",
+        icon_bg_class: "p-1 rounded-full #{status_style(status, fallback: 'border-slate-400').split(' ').first.gsub('border-', 'bg-')} text-white",
+        label: room_status_label(status)
+      }
+    end
+
+    def room_status_label(status)
+      status.present? ? status.to_s.humanize.titleize : "Unknown Status"
     end
 
     def status_style(status, fallback: "border-slate-200 bg-slate-50 text-slate-700")
