@@ -19,6 +19,15 @@ module GuestArrival
       submitted_arrival_time = @params.delete("estimated_arrival_time")
       signature_data = @params.delete("signature")
 
+      if signature_data.blank? || !signature_data.start_with?("data:image")
+        return OpenStruct.new(
+          success?: false,
+          message: "Guest signature is required.",
+          submitted_arrival_time: submitted_arrival_time,
+          submitted_government_id: submitted_government_id
+        )
+      end
+
       @booking.estimated_arrival_time = submitted_arrival_time
 
       ActiveRecord::Base.transaction do
