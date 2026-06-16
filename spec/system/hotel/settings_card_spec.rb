@@ -34,13 +34,6 @@ RSpec.describe 'Hotel Settings Card', type: :system do
       expect(page).to have_button('Save Settings')
     end
 
-    visit hotel_settings_path(hotel, tab: 'tax')
-
-    within('section', text: 'Tax Configuration') do
-      expect(page).to have_checked_field('hotel_tourism_tax_enabled')
-      expect(page).to have_field('Tourism Tax Amount (RM)')
-    end
-
     visit hotel_settings_path(hotel, tab: 'general')
 
     find('#hotel_property_policy_attributes_check_in_time', visible: false).set('15:00')
@@ -67,11 +60,12 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   it 'hides tourism tax amount when tourism tax is off' do
     hotel.update!(tourism_tax_enabled: false, tourism_tax_amount: 10.0)
 
-    visit hotel_settings_path(hotel, tab: 'tax')
+    visit hotel_taxes_fees_path(hotel)
 
-    within('section', text: 'Tax Configuration') do
-      expect(page).to have_unchecked_field('hotel_tourism_tax_enabled')
-      expect(page).to have_field('Tourism Tax Amount (RM)', disabled: true)
+    within('section', text: 'Primary Tax Settings') do
+      expect(page).to have_content('Tourism Tax')
+      expect(page).to have_content('Inactive')
+      expect(page).to have_content('RM 10.00')
     end
   end
 
