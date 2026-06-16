@@ -282,6 +282,8 @@ Rails.application.routes.draw do
     end
 
     resources :nearby_attractions, except: [ :show ]
+    resource :taxes_fees, only: [ :show, :update ], path: "taxes-fees"
+    resource :transaction_codes, only: [ :show ], path: "transaction-codes"
 
     resources :bookings, only: [ :index, :show, :update ] do
       collection do
@@ -397,7 +399,7 @@ Rails.application.routes.draw do
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
-    resources :hotel_taxes, only: %i[index create update destroy]
+    resources :hotel_taxes, only: %i[index new create edit update destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board
