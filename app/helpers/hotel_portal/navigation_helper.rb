@@ -15,7 +15,8 @@ module HotelPortal
         NavItem.new(label: "Arrivals & Departures", path: arrivals_departures_hotel_reports_path(current_hotel), icon: "arrow-up-right", active: controller_name == "reports" && action_name == "arrivals_departures", plan_feature: "arrivals_departures_list"),
         NavItem.new(label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), icon: "pie-chart", active: controller_name == "reports" && action_name == "daily_occupancy", plan_feature: "daily_occupancy_revenue"),
         NavItem.new(label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), icon: "credit-card", active: controller_name == "reports" && action_name == "outstanding_balance", plan_feature: "outstanding_balance_noshow"),
-        NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "banknote", active: controller_name == "reports" && action_name == "deposit_liability")
+        NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "banknote", active: controller_name == "reports" && action_name == "deposit_liability"),
+        NavItem.new(label: "SST Report", path: sst_hotel_reports_path(current_hotel), icon: "receipt", active: controller_name == "reports" && action_name == "sst")
       ]
       financial_nav_active = financial_nav_items.any?(&:active)
 

@@ -8,7 +8,7 @@ module HotelPortal
 
     PAYOUT_TABS = %w[upcoming paid].freeze
 
-    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches]
+    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches sst]
     before_action :authorize_view_payouts!, only: %i[payouts]
     before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
     before_action -> { require_feature!("arrivals_departures_list") }, only: %i[arrivals_departures]
@@ -380,6 +380,39 @@ module HotelPortal
           send_data csv,
             filename: "journal-batches-#{@report_start_date}-#{@report_end_date}.csv",
             type: "text/csv"
+        end
+      end
+    end
+
+    def sst
+      @report_start_date, @report_end_date = parse_report_date_range
+      @report = HotelPortal::Reports::SstReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date
+      ).call
+
+      respond_to do |format|
+        format.html
+        format.csv do
+          csv = HotelPortal::Reports::SstCsvExportService.new(report: @report).generate
+          send_data csv,
+            filename: "sst-report-#{@report.start_date}-#{@report.end_date}.csv",
+            type: "text/csv"
+        end
+        format.any(:xls) do
+          workbook = HotelPortal::Reports::SstExcelExportService.new(report: @report).generate
+          send_data workbook,
+            filename: "sst-report-#{@report.start_date}-#{@report.end_date}.xls",
+            type: "application/vnd.ms-excel",
+            disposition: "attachment"
+        end
+        format.pdf do
+          pdf = HotelPortal::Reports::SstPdfExportService.new(hotel: current_hotel, report: @report).generate
+          send_data pdf,
+            filename: "sst-report-#{@report.start_date}-#{@report.end_date}.pdf",
+            type: "application/pdf",
+            disposition: "attachment"
         end
       end
     end

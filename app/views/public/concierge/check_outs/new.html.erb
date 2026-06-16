@@ -24,13 +24,13 @@
         <%= hidden_field_tag :stage, "submit" %>
         <div class="rounded-2xl border border-neutral-border bg-white p-4 shadow-sm sm:p-5">
           <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Message to front desk (optional)</label>
-          <%= text_area_tag :guest_notes, params[:guest_notes], rows: 3, class: "form-input py-3", placeholder: "e.g. Requesting late checkout until 2pm" %>
+          <%= text_area_tag :guest_notes, params[:guest_notes], rows: 3, class: "form-input px-4 py-3", placeholder: "e.g. Requesting late checkout until 2pm" %>
         </div>
         <%= submit_tag "Confirm Checkout Request →", class: "btn btn-primary w-full cursor-pointer py-3 text-sm font-black uppercase tracking-widest" %>
       <% else %>
         <div>
           <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Confirmation Code</label>
-          <%= text_field_tag :confirmation_token, params[:confirmation_token], class: "form-input py-3 uppercase", placeholder: "e.g. AKWS4A", autocapitalize: "characters", required: true %>
+          <%= text_field_tag :confirmation_token, params[:confirmation_token], class: "form-input px-4 py-3 uppercase", placeholder: "e.g. AKWS4A", autocapitalize: "characters", required: true %>
         </div>
         <%= hidden_field_tag :stage, "lookup" %>
         <%= submit_tag "Continue →", class: "btn btn-primary w-full cursor-pointer py-3 text-sm font-black uppercase tracking-widest" %>

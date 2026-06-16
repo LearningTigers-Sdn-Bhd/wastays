@@ -24,18 +24,18 @@
         <div class="space-y-4 rounded-2xl border border-neutral-border bg-white p-4 shadow-sm sm:p-5">
           <div>
             <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Request Type</label>
-            <%= select_tag :kind, options_for_select([["Housekeeping", "housekeeping"], ["Complaint / Feedback", "complaint"]], params[:kind]), class: "form-input py-3", required: true %>
+            <%= select_tag :kind, options_for_select([["Housekeeping", "housekeeping"], ["Complaint / Feedback", "complaint"]], params[:kind]), class: "form-input px-4 py-3", required: true %>
           </div>
           <div>
             <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Details <span class="text-red-500">*</span></label>
-            <%= text_area_tag :details, params[:details], rows: 4, class: "form-input py-3", required: true, placeholder: "Describe your request..." %>
+            <%= text_area_tag :details, params[:details], rows: 4, class: "form-input px-4 py-3", required: true, placeholder: "Describe your request..." %>
           </div>
         </div>
         <%= submit_tag "Submit Request →", class: "btn btn-primary w-full cursor-pointer py-3 text-sm font-black uppercase tracking-widest" %>
       <% else %>
         <div>
           <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Confirmation Code</label>
-          <%= text_field_tag :confirmation_token, params[:confirmation_token], class: "form-input py-3 uppercase", placeholder: "e.g. AKWS4A", autocapitalize: "characters", required: true %>
+          <%= text_field_tag :confirmation_token, params[:confirmation_token], class: "form-input px-4 py-3 uppercase", placeholder: "e.g. AKWS4A", autocapitalize: "characters", required: true %>
         </div>
         <%= hidden_field_tag :stage, "lookup" %>
         <%= submit_tag "Continue →", class: "btn btn-primary w-full cursor-pointer py-3 text-sm font-black uppercase tracking-widest" %>

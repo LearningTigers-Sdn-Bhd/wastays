@@ -11,7 +11,7 @@ module Public
         return unless booking
 
         if params[:stage] != "submit"
-          return render_request_lookup_error(booking) unless booking.status.in?(%w[confirmed checked_in])
+          return render_request_lookup_error(booking) unless booking.checked_in?
 
           set_concierge_booking_cookie(booking)
           return redirect_to concierge_new_request_path(@hotel.slug, stage: "submit")
@@ -60,8 +60,10 @@ module Public
           "This booking has already been checked out."
         elsif booking.status == "cancelled"
           "This booking has been cancelled."
+        elsif booking.status == "confirmed"
+          "You must be checked in to submit a request."
         else
-          "Requests can only be submitted for active bookings."
+          "Requests can only be submitted for checked-in guests."
         end
         render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
       end

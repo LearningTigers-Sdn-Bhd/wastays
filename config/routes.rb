@@ -369,7 +369,8 @@ Rails.application.routes.draw do
         get :outstanding_balance
         get :deposit_liability
         get :folio_ledger
-        get :journal_batches      end
+        get :journal_batches
+        get :sst      end
     end
     resources :night_audits, only: [ :index, :show, :create ] do
       member do
