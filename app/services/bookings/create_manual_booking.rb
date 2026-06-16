@@ -155,6 +155,7 @@ module Bookings
 
             InventoryManager.new(booking).deduct
             sync_guest(booking, selected_guest)
+            Folios::InitializeForBooking.call(booking: booking, user: @user, lock: false)
 
             # Record Audit Log
             Bookings::RecordAuditLog.call!(

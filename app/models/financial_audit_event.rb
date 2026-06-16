@@ -5,6 +5,7 @@ class FinancialAuditEvent < ApplicationRecord
     folio_transaction_created
     folio_transaction_reversed
     folio_closed_for_checkout
+    folio_reopened_for_correction
     closed_date_override_posted
     audit_blocker_resolution_posted
     night_audit_started

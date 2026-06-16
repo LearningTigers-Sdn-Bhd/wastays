@@ -32,6 +32,8 @@ RSpec.describe Bookings::CreateManualBooking do
       expect(result.success?).to be true
       expect(result.booking).to be_persisted
       expect(result.booking.hotel_snapshot["room_number"]).to eq("101")
+      expect(result.booking.booking_folio).to be_present
+      expect(result.booking.booking_folio).to be_open
     }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything)
 
     inventory = room_type.room_inventories.find_by(date: Date.current)
@@ -44,6 +46,15 @@ RSpec.describe Bookings::CreateManualBooking do
     result = subject.call
     expect(result.success?).to be false
     expect(result.errors).to include("Guest name can't be blank")
+  end
+
+  it "rolls back booking creation when folio initialization fails" do
+    allow(Folios::InitializeForBooking).to receive(:call).and_raise("folio initialization failed")
+
+    expect { @result = subject.call }.not_to change(Booking, :count)
+
+    expect(@result.success?).to be(false)
+    expect(@result.errors).to include("folio initialization failed")
   end
 
   it "blocks manual booking creation while night audit is running" do
@@ -65,6 +76,7 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.success?).to be true
     expect(result.booking.payment_status).to eq("partial")
     expect(result.booking.payment_transactions.first.amount_subunits).to eq(2_500)
+    expect(result.booking.booking_folio.folio_transactions.payment.sole.amount).to eq(25.to_d)
   end
 
   it "rejects non-positive manual payment amounts" do

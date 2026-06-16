@@ -47,7 +47,7 @@ RSpec.describe NightAudits::Evaluate do
       expect(result[:blocked_details]["due_out_not_checked_out"].sole["booking_id"]).to eq(booking.id)
     end
 
-    it 'omits posting-generated blockers during pre-close evaluation' do
+    it 'includes missing folios but omits missing nightly charges during pre-close evaluation' do
       booking = create(:booking,
         status: 'checked_in',
         hotel: hotel,
@@ -58,7 +58,7 @@ RSpec.describe NightAudits::Evaluate do
 
       result = described_class.new(hotel: hotel, business_date: business_date, phase: :pre_close).call
 
-      expect(result[:blocked_details]).not_to have_key("missing_folio")
+      expect(result[:blocked_details]["missing_folio"].sole["booking_id"]).to eq(booking.id)
       expect(result[:blocked_details]).not_to have_key("missing_nightly_charges")
     end
 

@@ -25,6 +25,12 @@ RSpec.describe BookingFolio, type: :model do
     it { should validate_uniqueness_of(:folio_number).scoped_to(:hotel_id) }
     it { should validate_presence_of(:status) }
 
+    it "only accepts open and closed statuses" do
+      expect(build(:booking_folio, status: "open")).to be_valid
+      expect(build(:booking_folio, status: "closed")).to be_valid
+      expect(build(:booking_folio, status: "reopened")).not_to be_valid
+    end
+
     it "allows the same folio number for different hotels" do
       create(:booking_folio, hotel: booking.hotel, booking: booking, folio_number: 1)
       other_booking = create(:booking)
@@ -112,6 +118,21 @@ RSpec.describe BookingFolio, type: :model do
       folio = create(:booking_folio)
 
       expect { folio.update_column(:status, nil) }.to raise_error(ActiveRecord::NotNullViolation)
+    end
+
+    it "rejects statuses outside the lifecycle" do
+      folio = create(:booking_folio)
+
+      expect { folio.update_column(:status, "reopened") }.to raise_error(ActiveRecord::StatementInvalid)
+    end
+  end
+
+  describe "status transitions" do
+    it "rejects direct reopening of a closed folio" do
+      folio = create(:booking_folio, status: "closed")
+
+      expect { folio.update!(status: "open") }.to raise_error(ActiveRecord::RecordInvalid, /controlled correction workflow/)
+      expect(folio.reload).to be_closed
     end
   end
 end

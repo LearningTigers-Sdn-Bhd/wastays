@@ -39,6 +39,18 @@ rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
 RSpec.configure do |config|
+  config.define_derived_metadata(file_path: %r{/spec/migrations/}) do |metadata|
+    metadata[:migration] = true
+  end
+
+  config.around(:each, :migration) do |example|
+    previous_verbose = ActiveRecord::Migration.verbose
+    ActiveRecord::Migration.verbose = false
+    example.run
+  ensure
+    ActiveRecord::Migration.verbose = previous_verbose
+  end
+
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [
     Rails.root.join('spec/fixtures')

@@ -240,6 +240,8 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     }.to change(Booking, :count).by(1)
 
     expect(Booking.last).to be_checked_in
+    expect(Booking.last.booking_folio).to be_present
+    expect(BookingFolio.where(booking: Booking.last).count).to eq(1)
     expect(response).to redirect_to(hotel_booking_path(hotel, Booking.last))
   end
 
@@ -420,6 +422,8 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     }
 
     expect(booking.reload.status).to eq("checked_in")
+    expect(booking.booking_folio).to be_present
+    expect(BookingFolio.where(booking: booking).count).to eq(1)
     log = BookingAuditLog.where(auditable: booking, action_type: "check_in").last
     expect(log.metadata["backdate_reason_category"]).to eq("System / internet issue")
     expect(log.metadata["backdate_reason_details"]).to be_blank

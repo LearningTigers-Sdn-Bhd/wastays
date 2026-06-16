@@ -76,6 +76,8 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       }.to change(Booking, :count).by(1)
 
       expect(response).to redirect_to(hotel_booking_path(hotel, Booking.last))
+      expect(Booking.last.booking_folio).to be_present
+      expect(BookingFolio.where(booking: Booking.last).count).to eq(1)
 
       # Check inventory deduction
       inventory = room_type.room_inventories.find_by(date: Date.current)
