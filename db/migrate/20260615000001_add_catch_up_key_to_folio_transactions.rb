@@ -46,7 +46,6 @@ class AddCatchUpKeyToFolioTransactions < ActiveRecord::Migration[8.0]
   end
 
   def add_catch_up_index
-
     add_index :folio_transactions,
       [ :booking_folio_id, :catch_up_key ],
       unique: true,
