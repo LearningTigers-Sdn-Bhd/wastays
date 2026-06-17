@@ -10,7 +10,7 @@ module Folios
       "adjustment" => %w[adjustment correction discount write_off other]
     }.freeze
 
-    def self.call(folio:, user:, transaction_type:, category:, amount:, description:, posting_date: nil, options: {})
+    def self.call(folio:, user:, transaction_type:, category:, amount:, description:, posting_date: nil, transaction_code_id: nil, options: {})
       new(
         folio: folio,
         user: user,
@@ -19,11 +19,12 @@ module Folios
         amount: amount,
         description: description,
         posting_date: posting_date,
+        transaction_code_id: transaction_code_id,
         options: options
       ).call
     end
 
-    def initialize(folio:, user:, transaction_type:, category:, amount:, description:, posting_date: nil, options: {})
+    def initialize(folio:, user:, transaction_type:, category:, amount:, description:, posting_date: nil, transaction_code_id: nil, options: {})
       @folio = folio
       @user = user
       @transaction_type = transaction_type.to_s
@@ -31,41 +32,74 @@ module Folios
       @amount = amount.to_d
       @description = description.to_s.strip
       @posting_date = posting_date.presence || @folio.hotel.current_business_date
+      @transaction_code_id = transaction_code_id.presence
       @options = options
     end
 
     def call
+      code_error = apply_transaction_code
+      return failure(code_error) if code_error.present?
+
       return failure("Transaction type is not allowed.") unless allowed_transaction_type?
       return failure("Category is not allowed for #{@transaction_type} transactions.") unless allowed_category?
       return failure("Description can't be blank.") if @description.blank?
       return failure("Amount must be greater than zero.") if requires_positive_amount? && !@amount.positive?
       return failure("Amount can't be zero.") if @transaction_type == "adjustment" && @amount.zero?
 
-      Folios::InsertTransaction.new(
-        booking_folio: @folio,
-        amount: normalized_amount,
-        transaction_type: @transaction_type,
-        category: @category,
-        user: @user,
-        description: @description,
-        posting_date: @posting_date,
-        options: @options.merge(
-          metadata: (@options[:metadata] || {}).merge(
-            posting_source: @options[:posting_source].presence || "staff",
-            posted_from: "booking_show",
-            posted_by_user_id: @user&.id
-          )
-        )
-      ).call
+      result = nil
+      ActiveRecord::Base.transaction do
+        result = Folios::InsertTransaction.new(
+          booking_folio: @folio,
+          amount: normalized_amount,
+          transaction_type: @transaction_type,
+          category: @category,
+          user: @user,
+          description: @description,
+          posting_date: @posting_date,
+          options: @options.merge(
+            metadata: (@options[:metadata] || {}).merge(
+              posting_source: @options[:posting_source].presence || "staff",
+              posted_from: "booking_show",
+              posted_by_user_id: @user&.id
+            )
+          ).merge(transaction_code: @transaction_code)
+        ).call
+
+        next unless result.success? && taxable_charge?
+
+        tax_results = post_tax_transactions(result.transaction)
+        failed_tax = tax_results.find { |tax_result| !tax_result.success? }
+        if failed_tax
+          result = failure(failed_tax.error)
+          raise ActiveRecord::Rollback
+        end
+
+        result.tax_transactions = tax_results.map(&:transaction).compact
+      end
+
+      result
     end
 
     private
+
+    def apply_transaction_code
+      return if @transaction_code_id.blank?
+
+      @transaction_code = @folio.hotel.transaction_codes.find_by(id: @transaction_code_id)
+      return "Transaction code is not available." if @transaction_code.blank? || !@transaction_code.active?
+
+      @transaction_type = @transaction_code.kind
+      @category = @transaction_code.category
+      nil
+    end
 
     def allowed_transaction_type?
       ALLOWED_CATEGORIES.key?(@transaction_type)
     end
 
     def allowed_category?
+      return true if @transaction_code.present? && @transaction_type == "charge" && @category.in?(FolioTransaction::CHARGE_CATEGORIES)
+
       @category.in?(ALLOWED_CATEGORIES.fetch(@transaction_type, []))
     end
 
@@ -77,6 +111,55 @@ module Folios
 
     def requires_positive_amount?
       @transaction_type == "charge" || @transaction_type == "payment"
+    end
+
+    def taxable_charge?
+      @transaction_type == "charge" && @transaction_code&.is_taxable? && @transaction_code.taxes.enabled.any?
+    end
+
+    def post_tax_transactions(parent_transaction)
+      @transaction_code.taxes.enabled.map do |tax|
+        amount = tax.compute(rooms_subtotal: @amount.abs).to_d
+        next if amount.zero?
+
+        Folios::InsertTransaction.new(
+          booking_folio: @folio,
+          amount: amount,
+          transaction_type: "charge",
+          category: "tax",
+          user: @user,
+          description: "Tax: #{tax.name} for #{parent_transaction.description}",
+          posting_date: @posting_date,
+          options: @options.merge(
+            posting_source: @options[:posting_source].presence || "staff",
+            transaction_code: tax.ensure_transaction_code,
+            metadata: (@options[:metadata] || {}).merge(
+              posting_source: @options[:posting_source].presence || "staff",
+              posted_from: "booking_show",
+              posted_by_user_id: @user&.id,
+              parent_folio_transaction_id: parent_transaction.id,
+              source_transaction_code_id: @transaction_code.id,
+              tax_line: tax_line(tax, amount)
+            )
+          )
+        ).call
+      end.compact
+    end
+
+    def tax_line(tax, amount)
+      {
+        tax_id: tax.id,
+        name: tax.name,
+        type: "custom",
+        transaction_code_id: tax.ensure_transaction_code&.id,
+        transaction_code_code: tax.ensure_transaction_code&.code,
+        rate_type: tax.rate_type,
+        rate: tax.amount.to_d.to_s("F"),
+        basis: "staff_charge",
+        basis_amount: @amount.abs.to_s("F"),
+        amount: amount.to_s("F"),
+        source: "transaction_code_tax_rule"
+      }
     end
 
     def failure(error)

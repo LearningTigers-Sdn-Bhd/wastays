@@ -13,6 +13,7 @@ module Folios
       @description = description
       @posting_date = posting_date || @booking_folio.hotel.current_business_date
       @options = options
+      @transaction_code = options[:transaction_code]
       @catch_up_key = catch_up_key.presence || @options[:catch_up_key].presence
     end
 
@@ -47,6 +48,7 @@ module Folios
           correction_note: @options[:correction_note],
           night_audit: @options[:night_audit],
           catch_up_key: @catch_up_key,
+          transaction_code: @transaction_code,
           metadata: transaction_metadata
         )
 

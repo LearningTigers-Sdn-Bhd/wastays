@@ -39,6 +39,8 @@ RSpec.describe Bookings::BuildFinancialSnapshot do
         # SST 8% of 200 = 16
         sst_line = result.tax_lines.find { |l| l["type"] == "sst" }
         expect(sst_line["amount"].to_d).to eq(16.0)
+        expect(sst_line["transaction_code_system_key"]).to eq("sst_tax")
+        expect(sst_line["transaction_code_code"]).to eq("TAX_SST")
       end
     end
 
@@ -78,6 +80,29 @@ RSpec.describe Bookings::BuildFinancialSnapshot do
         tourism_line = result.tax_lines.find { |l| l["type"] == "tourism_tax" }
         # 10.0 per night * 2 nights = 20.0
         expect(tourism_line["amount"].to_d).to eq(20.0)
+        expect(tourism_line["transaction_code_system_key"]).to eq("tourism_tax")
+        expect(tourism_line["transaction_code_code"]).to eq("TAX_TTX")
+      end
+    end
+
+    context "with custom hotel taxes" do
+      let!(:hotel_tax) { create(:hotel_tax, hotel: hotel, name: "Dewan Bandaraya Kota Kinabalu", code: "DBKK", rate_type: "flat", amount: 12) }
+      let(:service) do
+        described_class.new(
+          hotel: hotel,
+          check_in: check_in,
+          check_out: check_out,
+          guest_country: guest_country,
+          room_type: room_type
+        )
+      end
+
+      it "includes the custom tax transaction code in the tax snapshot" do
+        result = service.call
+        tax_line = result.tax_lines.find { |line| line["name"] == hotel_tax.name }
+
+        expect(tax_line["transaction_code_system_key"]).to eq("hotel_tax_#{hotel_tax.id}")
+        expect(tax_line["transaction_code_code"]).to eq("TAX_DBKK")
       end
     end
   end

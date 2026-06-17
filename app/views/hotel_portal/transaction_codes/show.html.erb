@@ -17,20 +17,32 @@
          class="<%= @presenter.active_tab == "default_codes" ? "space-y-6" : "hidden space-y-6" %>"
          role="tabpanel"
          data-testid="transaction-codes-default-codes-panel">
-      <%= render "placeholder_section",
+      <%= render "default_codes",
+                 transaction_codes: @presenter.default_codes,
                  title: "Default Codes",
-                 message: "Default transaction code setup is coming soon." %>
+                 description: "System-required and tax-related transaction codes used by folio posting and accounting exports.",
+                 empty_message: "No default transaction codes found.",
+                 test_id: "transaction-codes-default-list" %>
     </div>
 
     <div id="additional_service_codes-panel"
          data-tabs-target="panel"
          data-tab-panel="additional_service_codes"
          class="<%= @presenter.active_tab == "additional_service_codes" ? "space-y-6" : "hidden space-y-6" %>"
-         role="tabpanel"
-         data-testid="transaction-codes-additional-service-codes-panel">
-      <%= render "placeholder_section",
+          role="tabpanel"
+          data-testid="transaction-codes-additional-service-codes-panel">
+      <div class="flex justify-end">
+        <%= link_to "New Code",
+                    hotel_new_transaction_code_path(current_hotel),
+                    data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" },
+                    class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-700" %>
+      </div>
+      <%= render "default_codes",
+                 transaction_codes: @presenter.additional_service_codes,
                  title: "Additional Service Codes",
-                 message: "Additional service code setup is coming soon." %>
+                 description: "Hotel-specific non-tax transaction codes for additional service postings.",
+                 empty_message: "No additional service transaction codes found.",
+                 test_id: "transaction-codes-additional-service-list" %>
     </div>
   </div>
 </div>

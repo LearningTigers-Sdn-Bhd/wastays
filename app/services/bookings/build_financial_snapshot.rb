@@ -191,11 +191,15 @@ module Bookings
 
     def tax_posting_for(tax, date, basis_amount)
       amount = tax.rate_type == "percentage" ? (basis_amount * tax.amount.to_d / 100).round(2) : tax.amount.to_d
+      transaction_code = tax.ensure_transaction_code
 
       {
         "tax_id" => tax.id,
         "name" => tax.name,
         "type" => "custom",
+        "transaction_code_id" => transaction_code.id,
+        "transaction_code_system_key" => transaction_code.system_key,
+        "transaction_code_code" => transaction_code.code,
         "rate_type" => tax.rate_type,
         "rate" => tax.amount.to_d,
         "basis" => tax.rate_type == "percentage" ? "nightly_room_charge" : "booking",
@@ -211,9 +215,14 @@ module Bookings
     end
 
     def sst_posting_for(date, basis_amount)
+      transaction_code = transaction_code_for("sst_tax")
+
       {
         "name" => "Service Tax (SST 8%)",
         "type" => "sst",
+        "transaction_code_id" => transaction_code&.id,
+        "transaction_code_system_key" => transaction_code&.system_key,
+        "transaction_code_code" => transaction_code&.code,
         "rate_type" => "percentage",
         "rate" => 8.to_d,
         "basis" => "nightly_room_charge",
@@ -228,9 +237,14 @@ module Bookings
     end
 
     def tourism_posting_for(date, amount)
+      transaction_code = transaction_code_for("tourism_tax")
+
       {
         "name" => "Tourism Tax",
         "type" => "tourism_tax",
+        "transaction_code_id" => transaction_code&.id,
+        "transaction_code_system_key" => transaction_code&.system_key,
+        "transaction_code_code" => transaction_code&.code,
         "rate_type" => "flat",
         "basis" => "room_night",
         "basis_amount" => 1,
@@ -249,16 +263,25 @@ module Bookings
       end
     end
 
+    def transaction_code_for(system_key)
+      Financials::EnsureDefaultTransactionCodes.call(@hotel)
+      @hotel.transaction_codes.find_by(system_key: system_key)
+    end
+
     def summarize_tax_lines(tax_posting_snapshot)
       grouped = tax_posting_snapshot.values.flatten.group_by { |item| [ item["name"], item["type"], item["source"] ] }
 
       grouped.map do |(name, type, source), items|
+        first_item = items.first
         {
           "name" => name,
           "type" => type,
           "source" => source,
+          "transaction_code_id" => first_item["transaction_code_id"],
+          "transaction_code_system_key" => first_item["transaction_code_system_key"],
+          "transaction_code_code" => first_item["transaction_code_code"],
           "amount" => items.sum { |item| item["amount"].to_d }.round(2).to_s("F")
-        }
+        }.compact
       end
     end
   end

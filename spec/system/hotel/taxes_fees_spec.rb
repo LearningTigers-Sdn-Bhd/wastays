@@ -67,6 +67,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
 
     expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Add Fee")
     expect(page).to have_field("Name")
+    expect(page).to have_field("Tax Code")
     expect(page).to have_select("Type", options: [ "Fixed RM", "Percentage" ])
     expect(page).to have_css("label", text: "Enabled")
     expect(page).to have_css("label", text: "Foreign guests only")
@@ -79,19 +80,26 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
 
     expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Edit Fee")
     expect(page).to have_field("Name", with: "Heritage Fee")
+    expect(page).to have_field("Tax Code", with: "HF")
     expect(page).to have_field("Amount", with: "2.0")
   end
 
-  it "renders transaction code placeholders behind tabs" do
+  it "renders default transaction codes behind tabs" do
     visit hotel_transaction_codes_path(hotel)
 
     expect(page).to have_content("Transaction Codes")
     expect(page).to have_css("[data-testid='transaction-codes-default-codes-panel']", visible: :all)
-    expect(page).to have_content("Default transaction code setup is coming soon.")
+    expect(page).to have_content("System-required and tax-related transaction codes used by folio posting and accounting exports.")
+    expect(page).to have_content("ROOM")
+    expect(page).to have_content("TAX_SST")
+    expect(page).to have_content("TAX_TTX")
+    expect(page).to have_content("TAX_HF")
+    expect(page).to have_content("Heritage Fee")
 
     click_button "Additional Service Codes"
     expect(page).to have_current_path(hotel_transaction_codes_path(hotel, tab: "additional_service_codes"))
     expect(page).to have_css("[data-testid='transaction-codes-additional-service-codes-panel']", visible: :all)
-    expect(page).to have_content("Additional service code setup is coming soon.")
+    expect(page).to have_content("Hotel-specific non-tax transaction codes for additional service postings.")
+    expect(page).to have_content("No additional service transaction codes found.")
   end
 end

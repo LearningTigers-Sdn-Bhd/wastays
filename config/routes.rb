@@ -283,7 +283,11 @@ Rails.application.routes.draw do
 
     resources :nearby_attractions, except: [ :show ]
     resource :taxes_fees, only: [ :show, :update ], path: "taxes-fees"
-    resource :transaction_codes, only: [ :show ], path: "transaction-codes"
+    get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes
+    get "transaction-codes/new", to: "transaction_codes#new", as: :new_transaction_code
+    post "transaction-codes", to: "transaction_codes#create"
+    get "transaction-codes/:id/edit", to: "transaction_codes#edit", as: :edit_transaction_code
+    patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
 
     resources :bookings, only: [ :index, :show, :update ] do
       collection do

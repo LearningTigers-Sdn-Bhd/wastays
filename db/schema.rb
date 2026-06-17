@@ -502,6 +502,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
     t.string "gl_code"
     t.bigint "night_audit_id"
     t.string "catch_up_key"
+    t.bigint "transaction_code_id"
     t.index "booking_folio_id, ((metadata ->> 'early_checkout_charge_key'::text))", name: "index_folio_transactions_on_early_checkout_charge", unique: true, where: "(metadata ? 'early_checkout_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'nightly_charge_key'::text))", name: "index_folio_transactions_on_nightly_charge", unique: true, where: "(metadata ? 'nightly_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'no_show_charge_key'::text))", name: "index_folio_transactions_on_no_show_charge", unique: true, where: "(metadata ? 'no_show_charge_key'::text)"
@@ -515,6 +516,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
     t.index ["night_audit_id"], name: "index_folio_transactions_on_night_audit_id"
     t.index ["posting_date"], name: "index_folio_transactions_on_posting_date"
     t.index ["reversal_of_transaction_id"], name: "index_folio_transactions_on_reversal_of_transaction_id"
+    t.index ["transaction_code_id"], name: "index_folio_transactions_on_transaction_code_id"
     t.index ["transaction_type"], name: "index_folio_transactions_on_transaction_type"
     t.index ["user_id"], name: "index_folio_transactions_on_user_id"
     t.index ["voided_by_transaction_id"], name: "index_folio_transactions_on_voided_by_transaction_id"
@@ -675,7 +677,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
     t.boolean "foreign_guests_only", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "transaction_code_id"
+    t.string "code"
+    t.index ["hotel_id", "code"], name: "index_hotel_taxes_on_hotel_id_and_code", unique: true, where: "(code IS NOT NULL)"
     t.index ["hotel_id"], name: "index_hotel_taxes_on_hotel_id"
+    t.index ["transaction_code_id"], name: "index_hotel_taxes_on_transaction_code_id"
   end
 
   create_table "hotel_team_configs", force: :cascade do |t|
@@ -1311,6 +1317,35 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
     t.index ["token_digest"], name: "index_staff_invitations_on_token_digest", unique: true
   end
 
+  create_table "transaction_code_taxes", force: :cascade do |t|
+    t.bigint "transaction_code_id", null: false
+    t.bigint "hotel_tax_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_tax_id"], name: "index_transaction_code_taxes_on_hotel_tax_id"
+    t.index ["transaction_code_id", "hotel_tax_id"], name: "idx_on_transaction_code_id_hotel_tax_id_9f5f103371", unique: true
+    t.index ["transaction_code_id"], name: "index_transaction_code_taxes_on_transaction_code_id"
+  end
+
+  create_table "transaction_codes", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "system_key", null: false
+    t.string "code", null: false
+    t.string "name", null: false
+    t.string "kind", null: false
+    t.string "category", null: false
+    t.boolean "active", default: true, null: false
+    t.boolean "system_required", default: false, null: false
+    t.string "gl_account_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "is_taxable", default: false, null: false
+    t.index ["hotel_id", "code"], name: "index_transaction_codes_on_hotel_id_and_code", unique: true
+    t.index ["hotel_id", "kind", "category"], name: "index_transaction_codes_on_hotel_id_and_kind_and_category"
+    t.index ["hotel_id", "system_key"], name: "index_transaction_codes_on_hotel_id_and_system_key", unique: true
+    t.index ["hotel_id"], name: "index_transaction_codes_on_hotel_id"
+  end
+
   create_table "user_hotel_accesses", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "hotel_id", null: false
@@ -1411,6 +1446,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
   add_foreign_key "folio_transactions", "folio_transactions", column: "reversal_of_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "voided_by_transaction_id"
   add_foreign_key "folio_transactions", "night_audits", on_delete: :restrict
+  add_foreign_key "folio_transactions", "transaction_codes"
   add_foreign_key "folio_transactions", "users"
   add_foreign_key "hotel_business_dates", "hotels"
   add_foreign_key "hotel_business_dates", "users", column: "force_closed_by_id", on_delete: :nullify
@@ -1424,6 +1460,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
   add_foreign_key "hotel_pricing_rules", "corporate_entities"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotel_taxes", "hotels"
+  add_foreign_key "hotel_taxes", "transaction_codes"
   add_foreign_key "hotel_team_configs", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "plans"
@@ -1485,6 +1522,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
   add_foreign_key "staff_invitations", "hotels"
   add_foreign_key "staff_invitations", "roles"
   add_foreign_key "staff_invitations", "users", column: "invited_by_user_id"
+  add_foreign_key "transaction_code_taxes", "hotel_taxes"
+  add_foreign_key "transaction_code_taxes", "transaction_codes"
+  add_foreign_key "transaction_codes", "hotels"
   add_foreign_key "user_hotel_accesses", "hotels"
   add_foreign_key "user_hotel_accesses", "roles"
   add_foreign_key "user_hotel_accesses", "users"

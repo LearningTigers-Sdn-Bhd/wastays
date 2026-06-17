@@ -102,6 +102,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("turbo-frame id=\"offcanvas_drawer\"")
       expect(response.body).to include("Add Fee")
+      expect(response.body).to include("Tax Code")
       expect(response.body).to include("Fixed RM")
       expect(response.body).to include("Percentage")
     end
@@ -121,6 +122,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
       post hotel_hotel_taxes_path(hotel), params: {
         hotel_tax: {
           name: "Heritage Fee",
+          code: "DBKK",
           rate_type: "flat",
           amount: "5.00",
           enabled: "1"
@@ -128,13 +130,17 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
       }
 
       expect(response).to redirect_to(hotel_taxes_fees_path(hotel, tab: "tax_listing"))
-      expect(hotel.hotel_taxes.find_by!(name: "Heritage Fee").amount).to eq(5.0)
+      tax = hotel.hotel_taxes.find_by!(name: "Heritage Fee")
+      expect(tax.amount).to eq(5.0)
+      expect(tax.code).to eq("DBKK")
+      expect(tax.transaction_code.code).to eq("TAX_DBKK")
     end
 
     it "renders the add fee offcanvas with errors when create is invalid" do
       post hotel_hotel_taxes_path(hotel), params: {
         hotel_tax: {
           name: "",
+          code: "",
           rate_type: "flat",
           amount: "5.00",
           enabled: "1"
@@ -153,6 +159,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
       patch hotel_hotel_tax_path(hotel, tax), params: {
         hotel_tax: {
           name: "Heritage Fee",
+          code: "HF2",
           rate_type: "flat",
           amount: "0",
           enabled: "1"

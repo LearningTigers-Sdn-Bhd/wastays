@@ -13,7 +13,14 @@
       <% if local_assigns[:redirect_to_checkout] %>
         <%= hidden_field_tag "redirect_to_checkout", "true" %>
       <% end %>
-      <% if category.present? %>
+      <% if local_assigns[:transaction_code_options].present? %>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Transaction Code</label>
+          <%= select_tag "folio_transaction[transaction_code_id]",
+              options_from_collection_for_select(transaction_code_options, :id, ->(code) { "#{code.code} · #{code.name}" }),
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      <% elsif category.present? %>
         <%= hidden_field_tag "folio_transaction[category]", category %>
       <% else %>
         <div>

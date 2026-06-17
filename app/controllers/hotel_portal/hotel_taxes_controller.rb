@@ -46,7 +46,7 @@ class HotelPortal::HotelTaxesController < HotelPortal::BaseController
   end
 
   def tax_params
-    params.require(:hotel_tax).permit(:name, :rate_type, :amount, :enabled, :foreign_guests_only)
+    params.require(:hotel_tax).permit(:name, :code, :rate_type, :amount, :enabled, :foreign_guests_only)
   end
 
   def authorize!

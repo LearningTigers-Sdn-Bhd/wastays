@@ -159,15 +159,49 @@ RSpec.describe FolioTransaction, type: :model do
       expect(transaction.gl_code).to eq("4010")
     end
 
+    it "automatically assigns transaction_code from category on creation" do
+      transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation")
+
+      expect(transaction.transaction_code.system_key).to eq("room_revenue")
+    end
+
+    it "uses tax line type to assign SST transaction code" do
+      transaction = create(
+        :folio_transaction,
+        booking_folio: folio,
+        category: "tax",
+        metadata: { tax_line: { type: "sst" } }
+      )
+
+      expect(transaction.transaction_code.system_key).to eq("sst_tax")
+      expect(transaction.transaction_code.code).to eq("TAX_SST")
+    end
+
+    it "uses hotel tax id to assign custom tax transaction code" do
+      tax = create(:hotel_tax, hotel: hotel, name: "Dewan Bandaraya Kota Kinabalu", amount: 5)
+
+      transaction = create(
+        :folio_transaction,
+        booking_folio: folio,
+        category: "tax",
+        metadata: { tax_line: { tax_id: tax.id, type: "custom" } }
+      )
+
+      expect(transaction.transaction_code).to eq(tax.transaction_code)
+      expect(transaction.gl_code).to eq(tax.transaction_code.gl_account_code)
+    end
+
     it "does not overwrite gl_code if manually provided" do
       transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation", gl_code: "MANUAL-GL")
       expect(transaction.gl_code).to eq("MANUAL-GL")
     end
 
-    it "leaves gl_code as nil if no mapping exists" do
+    it "uses transaction code GL account when a legacy mapping is missing" do
       hotel.hotel_general_ledger_maps.where(transaction_category: "other").delete_all
       transaction = create(:folio_transaction, booking_folio: folio, category: "other")
-      expect(transaction.gl_code).to be_nil
+
+      expect(transaction.gl_code).to eq("4090")
+      expect(transaction.transaction_code.system_key).to eq("misc_revenue")
     end
   end
 end

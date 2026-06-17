@@ -1,0 +1,42 @@
+# frozen_string_literal: true
+
+class TransactionCode < ApplicationRecord
+  KINDS = %w[charge payment adjustment tax].freeze
+  CATEGORIES = %w[
+    accommodation
+    no_show_charge
+    cancellation_charge
+    tax
+    fb
+    parking
+    other
+    cash
+    gateway_payment
+    booking_payment
+    refund
+    adjustment
+    correction
+    discount
+    write_off
+  ].freeze
+
+  belongs_to :hotel
+  has_many :folio_transactions, dependent: :nullify
+  has_many :hotel_taxes, dependent: :nullify
+  has_many :transaction_code_taxes, dependent: :destroy
+  has_many :taxes, through: :transaction_code_taxes, source: :hotel_tax
+
+  validates :system_key, :code, :name, :kind, :category, presence: true
+  validates :system_key, uniqueness: { scope: :hotel_id }
+  validates :code, uniqueness: { scope: :hotel_id }
+  validates :kind, inclusion: { in: KINDS }
+  validates :category, inclusion: { in: CATEGORIES }
+
+  scope :active, -> { where(active: true) }
+  scope :system_required, -> { where(system_required: true) }
+  scope :charge, -> { where(kind: "charge") }
+
+  def hotel_tax_ids
+    tax_ids
+  end
+end

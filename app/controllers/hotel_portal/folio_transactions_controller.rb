@@ -27,7 +27,8 @@ module HotelPortal
         category: folio_transaction_params[:category],
         amount: folio_transaction_params[:amount],
         description: folio_transaction_params[:description],
-        posting_date: folio_transaction_params[:posting_date]
+        posting_date: folio_transaction_params[:posting_date],
+        transaction_code_id: folio_transaction_params[:transaction_code_id]
       )
 
       if result.success?
@@ -75,7 +76,7 @@ module HotelPortal
     end
 
     def folio_transaction_params
-      params.require(:folio_transaction).permit(:transaction_type, :category, :amount, :description, :posting_date)
+      params.require(:folio_transaction).permit(:transaction_type, :category, :transaction_code_id, :amount, :description, :posting_date)
     end
 
     def reversal_params

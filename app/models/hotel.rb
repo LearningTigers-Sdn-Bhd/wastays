@@ -47,6 +47,7 @@ class Hotel < ApplicationRecord
   has_many :bookings, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :destroy
+  has_many :transaction_codes, dependent: :destroy
   has_many :hotel_counters, dependent: :destroy
   has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy
@@ -67,7 +68,9 @@ class Hotel < ApplicationRecord
   has_many :notification_deliveries, dependent: :destroy
 
   after_create :ensure_default_gl_maps
+  after_create :ensure_default_transaction_codes
   after_create :ensure_current_business_date
+  after_update :sync_primary_tax_transaction_codes, if: :saved_change_to_primary_tax_settings?
 
   validates :name, presence: true
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
@@ -666,5 +669,17 @@ class Hotel < ApplicationRecord
 
   def ensure_default_gl_maps
     Financials::EnsureDefaultGlMaps.call(self)
+  end
+
+  def ensure_default_transaction_codes
+    Financials::EnsureDefaultTransactionCodes.call(self)
+  end
+
+  def saved_change_to_primary_tax_settings?
+    saved_change_to_sst_enabled? || saved_change_to_tourism_tax_enabled?
+  end
+
+  def sync_primary_tax_transaction_codes
+    Financials::EnsureDefaultTransactionCodes.call(self)
   end
 end

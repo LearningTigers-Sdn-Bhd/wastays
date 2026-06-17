@@ -56,6 +56,29 @@ RSpec.describe Hotel, type: :model do
     end
   end
 
+  describe 'primary tax transaction codes' do
+    it 'creates SST and tourism tax codes using the hotel tax enabled settings' do
+      hotel = create(:hotel, sst_enabled: false, tourism_tax_enabled: false)
+
+      expect(hotel.transaction_codes.find_by!(system_key: 'sst_tax')).not_to be_active
+      expect(hotel.transaction_codes.find_by!(system_key: 'tourism_tax')).not_to be_active
+    end
+
+    it 'syncs SST and tourism tax code active state when settings change' do
+      hotel = create(:hotel, sst_enabled: true, tourism_tax_enabled: true)
+
+      hotel.update!(sst_enabled: false, tourism_tax_enabled: false)
+
+      expect(hotel.transaction_codes.find_by!(system_key: 'sst_tax')).not_to be_active
+      expect(hotel.transaction_codes.find_by!(system_key: 'tourism_tax')).not_to be_active
+
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true)
+
+      expect(hotel.transaction_codes.find_by!(system_key: 'sst_tax')).to be_active
+      expect(hotel.transaction_codes.find_by!(system_key: 'tourism_tax')).to be_active
+    end
+  end
+
   describe 'business dates' do
     let(:hotel) do
       build(:hotel,

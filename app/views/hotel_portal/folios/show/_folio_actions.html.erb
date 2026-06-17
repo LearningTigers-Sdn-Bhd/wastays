@@ -9,6 +9,7 @@
 <% adjustment_category_options << "correction" if can_post && current_user.has_permission?("post_folio_corrections", hotel: hotel) %>
 <% adjustment_category_options << "write_off" if can_post && current_user.has_permission?("post_folio_write_offs", hotel: hotel) %>
 <% can_post_adjustment = adjustment_category_options.any? %>
+<% charge_transaction_codes = hotel.transaction_codes.active.charge.order(:code) %>
 
 <% if can_post_payment || can_post_charge || can_post_adjustment || can_execute_refund %>
   <div class="flex flex-wrap items-center gap-2">
@@ -46,9 +47,10 @@
         hotel: hotel,
         modal_id: "folio-charge-modal-#{booking.id}",
         title: "Add Charge",
-        description: "Record a manual other charge. Accommodation and tax are posted by audit flows.",
+        description: "Record a manual charge using a transaction code preset.",
         transaction_type: "charge",
-        category: "other",
+        category: nil,
+        transaction_code_options: charge_transaction_codes,
         signed_amount: false,
         submit_label: "Add Charge",
         redirect_to_folio: redirect_to_folio %>

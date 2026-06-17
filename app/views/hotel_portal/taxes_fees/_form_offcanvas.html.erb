@@ -27,11 +27,23 @@
           <% end %>
 
           <div class="grid gap-5 md:grid-cols-2">
-            <div class="md:col-span-2">
+            <div>
               <%= f.label :name, "Name", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
               <%= f.text_field :name,
                   placeholder: "e.g. Heritage Fee",
                   class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+            </div>
+
+            <div>
+              <%= f.label :code, "Tax Code", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+              <div class="flex rounded-xl border border-slate-200 bg-white focus-within:border-slate-400">
+                <span class="inline-flex items-center rounded-l-xl border-r border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500">TAX_</span>
+                <%= f.text_field :code,
+                    placeholder: "e.g. DBKK",
+                    data: { controller: "tax-code-field", action: "input->tax-code-field#format" },
+                    class: "min-w-0 flex-1 rounded-r-xl border-0 px-4 py-3 text-sm font-semibold uppercase text-slate-700 focus:outline-none focus:ring-0" %>
+              </div>
+              <p class="mt-1.5 text-xs font-medium text-slate-500">Used as transaction code suffix. Example: DBKK becomes TAX_DBKK. Spaces become underscores.</p>
             </div>
 
             <div>
