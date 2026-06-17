@@ -1319,11 +1319,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
 
   create_table "transaction_code_taxes", force: :cascade do |t|
     t.bigint "transaction_code_id", null: false
-    t.bigint "hotel_tax_id", null: false
+    t.bigint "hotel_tax_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "primary_tax_key"
     t.index ["hotel_tax_id"], name: "index_transaction_code_taxes_on_hotel_tax_id"
-    t.index ["transaction_code_id", "hotel_tax_id"], name: "idx_on_transaction_code_id_hotel_tax_id_9f5f103371", unique: true
+    t.index ["transaction_code_id", "hotel_tax_id"], name: "idx_transaction_code_taxes_on_custom_tax", unique: true, where: "(hotel_tax_id IS NOT NULL)"
+    t.index ["transaction_code_id", "primary_tax_key"], name: "idx_transaction_code_taxes_on_primary_tax", unique: true, where: "(primary_tax_key IS NOT NULL)"
     t.index ["transaction_code_id"], name: "index_transaction_code_taxes_on_transaction_code_id"
   end
 

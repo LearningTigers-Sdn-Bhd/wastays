@@ -39,4 +39,8 @@ class TransactionCode < ApplicationRecord
   def hotel_tax_ids
     tax_ids
   end
+
+  def tax_rule_keys
+    transaction_code_taxes.map(&:tax_rule_key)
+  end
 end

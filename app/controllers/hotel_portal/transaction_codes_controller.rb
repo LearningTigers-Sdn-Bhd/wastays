@@ -16,35 +16,37 @@ module HotelPortal
 
     def new
       @transaction_code = @hotel.transaction_codes.build(kind: "charge", category: "other", active: true)
-      @taxes = taxes
+      @tax_rules = tax_rules
     end
 
     def create
-      @transaction_code = @hotel.transaction_codes.build(transaction_code_params.except(:hotel_tax_ids))
+      @transaction_code = @hotel.transaction_codes.build(transaction_code_attributes)
       @transaction_code.system_key = unique_system_key(@transaction_code.code)
       @transaction_code.system_required = false
+      normalize_taxable_flag(@transaction_code)
 
       if @transaction_code.save
         assign_tax_rules(@transaction_code)
         redirect_to hotel_transaction_codes_path(@hotel, tab: "additional_service_codes"), notice: "Transaction code created."
       else
-        @taxes = taxes
+        @tax_rules = tax_rules
         render :new, status: :unprocessable_entity
       end
     end
 
     def edit
-      @taxes = taxes
+      @tax_rules = tax_rules
     end
 
     def update
-      @transaction_code.assign_attributes(transaction_code_params.except(:hotel_tax_ids))
+      @transaction_code.assign_attributes(transaction_code_attributes)
+      normalize_taxable_flag(@transaction_code)
 
       if @transaction_code.save
         assign_tax_rules(@transaction_code)
         redirect_to hotel_transaction_codes_path(@hotel, tab: tab_for(@transaction_code)), notice: "Transaction code updated."
       else
-        @taxes = taxes
+        @tax_rules = tax_rules
         render :edit, status: :unprocessable_entity
       end
     end
@@ -71,8 +73,8 @@ module HotelPortal
       @transaction_code = @hotel.transaction_codes.find(params[:id])
     end
 
-    def taxes
-      @taxes ||= @hotel.hotel_taxes.order(:enabled, :name)
+    def tax_rules
+      @tax_rules ||= primary_tax_rules + custom_tax_rules
     end
 
     def transaction_code_params
@@ -84,16 +86,80 @@ module HotelPortal
         :active,
         :gl_account_code,
         :is_taxable,
-        hotel_tax_ids: []
+        hotel_tax_ids: [],
+        tax_rule_keys: []
       )
       permitted[:code] = normalize_code(permitted[:code]) if permitted.key?(:code)
       permitted[:gl_account_code] = permitted[:gl_account_code].to_s.strip.presence if permitted.key?(:gl_account_code)
       permitted
     end
 
+    def transaction_code_attributes
+      transaction_code_params.except(:hotel_tax_ids, :tax_rule_keys)
+    end
+
     def assign_tax_rules(transaction_code)
-      tax_ids = Array(transaction_code_params[:hotel_tax_ids]).reject(&:blank?)
-      transaction_code.tax_ids = @hotel.hotel_taxes.where(id: tax_ids).pluck(:id)
+      if transaction_code.kind == "tax" || transaction_code.category == "tax"
+        transaction_code.transaction_code_taxes.destroy_all
+        return
+      end
+
+      keys = tax_rule_keys_param
+      custom_tax_ids = keys.filter_map { |key| key.delete_prefix("hotel_tax:") if key.start_with?("hotel_tax:") }
+      primary_tax_keys = keys.filter_map { |key| key.delete_prefix("primary:") if key.start_with?("primary:") }
+
+      transaction_code.transaction_code_taxes.destroy_all
+      @hotel.hotel_taxes.where(id: custom_tax_ids).find_each do |tax|
+        transaction_code.transaction_code_taxes.create!(hotel_tax: tax)
+      end
+      (primary_tax_keys & TransactionCodeTax::PRIMARY_TAX_KEYS).each do |primary_tax_key|
+        transaction_code.transaction_code_taxes.create!(primary_tax_key: primary_tax_key)
+      end
+    end
+
+    def tax_rule_keys_param
+      keys = Array(transaction_code_params[:tax_rule_keys]).reject(&:blank?)
+      return keys if keys.any?
+
+      Array(transaction_code_params[:hotel_tax_ids]).reject(&:blank?).map { |id| "hotel_tax:#{id}" }
+    end
+
+    def normalize_taxable_flag(transaction_code)
+      transaction_code.is_taxable = false if transaction_code.kind == "tax" || transaction_code.category == "tax"
+    end
+
+    def primary_tax_rules
+      [
+        {
+          key: "primary:sst_tax",
+          name: "SST 8%",
+          rate_type: "percentage",
+          amount: 8.to_d,
+          enabled: @hotel.sst_enabled?,
+          group: "Primary Taxes"
+        },
+        {
+          key: "primary:tourism_tax",
+          name: "Tourism Tax",
+          rate_type: "flat",
+          amount: @hotel.tourism_tax_amount.to_d,
+          enabled: @hotel.tourism_tax_enabled?,
+          group: "Primary Taxes"
+        }
+      ]
+    end
+
+    def custom_tax_rules
+      @hotel.hotel_taxes.order(:enabled, :name).map do |tax|
+        {
+          key: "hotel_tax:#{tax.id}",
+          name: tax.name,
+          rate_type: tax.rate_type,
+          amount: tax.amount.to_d,
+          enabled: tax.enabled?,
+          group: "Additional Taxes & Fees"
+        }
+      end
     end
 
     def unique_system_key(code)

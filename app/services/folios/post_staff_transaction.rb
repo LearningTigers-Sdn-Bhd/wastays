@@ -114,12 +114,12 @@ module Folios
     end
 
     def taxable_charge?
-      @transaction_type == "charge" && @transaction_code&.is_taxable? && @transaction_code.taxes.enabled.any?
+      @transaction_type == "charge" && @transaction_code&.is_taxable? && active_tax_rules.any?
     end
 
     def post_tax_transactions(parent_transaction)
-      @transaction_code.taxes.enabled.map do |tax|
-        amount = tax.compute(rooms_subtotal: @amount.abs).to_d
+      active_tax_rules.map do |tax_rule|
+        amount = tax_rule.compute(@amount.abs).to_d
         next if amount.zero?
 
         Folios::InsertTransaction.new(
@@ -128,33 +128,39 @@ module Folios
           transaction_type: "charge",
           category: "tax",
           user: @user,
-          description: "Tax: #{tax.name} for #{parent_transaction.description}",
+          description: "Tax: #{tax_rule.display_name} for #{parent_transaction.description}",
           posting_date: @posting_date,
           options: @options.merge(
             posting_source: @options[:posting_source].presence || "staff",
-            transaction_code: tax.ensure_transaction_code,
+            transaction_code: tax_rule.posting_transaction_code,
             metadata: (@options[:metadata] || {}).merge(
               posting_source: @options[:posting_source].presence || "staff",
               posted_from: "booking_show",
               posted_by_user_id: @user&.id,
               parent_folio_transaction_id: parent_transaction.id,
               source_transaction_code_id: @transaction_code.id,
-              tax_line: tax_line(tax, amount)
+              tax_line: tax_line(tax_rule, amount)
             )
           )
         ).call
       end.compact
     end
 
-    def tax_line(tax, amount)
+    def active_tax_rules
+      @active_tax_rules ||= @transaction_code.transaction_code_taxes.includes(:hotel_tax).select(&:enabled_for_posting?)
+    end
+
+    def tax_line(tax_rule, amount)
+      posting_transaction_code = tax_rule.posting_transaction_code
       {
-        tax_id: tax.id,
-        name: tax.name,
-        type: "custom",
-        transaction_code_id: tax.ensure_transaction_code&.id,
-        transaction_code_code: tax.ensure_transaction_code&.code,
-        rate_type: tax.rate_type,
-        rate: tax.amount.to_d.to_s("F"),
+        tax_id: tax_rule.hotel_tax_id,
+        primary_tax_key: tax_rule.primary_tax_key,
+        name: tax_rule.display_name,
+        type: tax_rule.tax_line_type,
+        transaction_code_id: posting_transaction_code&.id,
+        transaction_code_code: posting_transaction_code&.code,
+        rate_type: tax_rule.rate_type,
+        rate: tax_rule.amount.to_d.to_s("F"),
         basis: "staff_charge",
         basis_amount: @amount.abs.to_s("F"),
         amount: amount.to_s("F"),

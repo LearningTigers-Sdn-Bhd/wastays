@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "Hotel taxes and fees", type: :system, js: true do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
-  let(:hotel) { create(:hotel, account: account, status: "live", tourism_tax_enabled: true, tourism_tax_amount: 10.0) }
+  let(:hotel) { create(:hotel, account: account, status: "live", sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10.0) }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let!(:heritage_fee) { HotelTax.create!(hotel: hotel, name: "Heritage Fee", rate_type: "flat", amount: 2.0, enabled: false) }
   let!(:manage_profile_permission) do
@@ -101,5 +101,62 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     expect(page).to have_css("[data-testid='transaction-codes-additional-service-codes-panel']", visible: :all)
     expect(page).to have_content("Hotel-specific non-tax transaction codes for additional service postings.")
     expect(page).to have_content("No additional service transaction codes found.")
+  end
+
+  it "updates transaction code tax rules and footer preview dynamically" do
+    HotelTax.create!(hotel: hotel, name: "Service Charge", code: "SC", rate_type: "percentage", amount: 10.0, enabled: true)
+
+    visit hotel_transaction_codes_path(hotel)
+
+    within("tr", text: "FNB") do
+      click_link "Edit"
+    end
+
+    expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Edit Transaction Code: FNB")
+    expect(page).to have_no_text("Taxes to generate")
+
+    taxable_input = find("#transaction_code_is_taxable", visible: :all)
+    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", taxable_input)
+
+    expect(page).to have_text("Taxes to generate")
+    expect(page).to have_text("PRIMARY TAXES")
+    expect(page).to have_text("SST 8%")
+    expect(page).to have_text("Tourism Tax")
+    expect(page).to have_text("Service Charge")
+    expect(page).to have_text("Heritage Fee")
+
+    sst_input = find("label", text: "SST 8%").find("input[type='checkbox']", visible: :all)
+    tourism_tax_input = find("label", text: "Tourism Tax").find("input[type='checkbox']", visible: :all)
+    service_charge_input = find("label", text: "Service Charge").find("input[type='checkbox']", visible: :all)
+    heritage_fee_input = find("label", text: "Heritage Fee").find("input[type='checkbox']", visible: :all)
+    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", sst_input)
+    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", tourism_tax_input)
+    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", service_charge_input)
+    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", heritage_fee_input)
+
+    within("section[aria-label='Transaction code posting preview']") do
+      expect(page).to have_text("Food & Beverage")
+      expect(page).to have_text("SST 8%")
+      expect(page).to have_text("Tourism Tax")
+      expect(page).to have_text("Service Charge")
+      expect(page).to have_no_text("Heritage Fee")
+      expect(page).to have_text("MYR 69.00")
+    end
+
+    page.execute_script("arguments[0].checked = false; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", service_charge_input)
+
+    within("section[aria-label='Transaction code posting preview']") do
+      expect(page).to have_no_text("Service Charge")
+      expect(page).to have_text("MYR 64.00")
+    end
+
+    select "Tax", from: "Category"
+
+    expect(page).to have_no_text("Tax Rules")
+    expect(page).to have_no_text("Taxes to generate")
+    within("section[aria-label='Transaction code posting preview']") do
+      expect(page).to have_text("CHARGE · TAX")
+      expect(page).to have_text("MYR 50.00")
+    end
   end
 end

@@ -74,6 +74,55 @@ RSpec.describe Folios::PostStaffTransaction do
     expect(tax_transaction.metadata["source_transaction_code_id"]).to eq(code.id)
   end
 
+  it "posts selected active primary taxes for taxable charge codes" do
+    hotel = folio.hotel
+    hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+    code.update!(is_taxable: true)
+    code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+    code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+
+    result = described_class.call(
+      folio: folio,
+      user: user,
+      transaction_type: "charge",
+      category: nil,
+      transaction_code_id: code.id,
+      amount: "50.00",
+      description: "Restaurant charge"
+    )
+
+    expect(result.success?).to be(true)
+    expect(result.tax_transactions.map(&:amount)).to match_array([ 4.to_d, 10.to_d ])
+    expect(result.tax_transactions.map { |transaction| transaction.metadata.dig("tax_line", "type") }).to match_array(%w[sst tourism_tax])
+    expect(result.tax_transactions.map { |transaction| transaction.transaction_code.system_key }).to match_array(%w[sst_tax tourism_tax])
+  end
+
+  it "skips selected inactive primary taxes" do
+    hotel = folio.hotel
+    hotel.update!(sst_enabled: false, tourism_tax_enabled: true, tourism_tax_amount: 10)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+    code.update!(is_taxable: true)
+    code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+    code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+
+    result = described_class.call(
+      folio: folio,
+      user: user,
+      transaction_type: "charge",
+      category: nil,
+      transaction_code_id: code.id,
+      amount: "50.00",
+      description: "Restaurant charge"
+    )
+
+    expect(result.success?).to be(true)
+    expect(result.tax_transactions.size).to eq(1)
+    expect(result.tax_transactions.first.metadata.dig("tax_line", "type")).to eq("tourism_tax")
+  end
+
   it "posts selected default charge code categories" do
     Financials::EnsureDefaultTransactionCodes.call(folio.hotel)
     code = folio.hotel.transaction_codes.find_by!(system_key: "parking_revenue")
