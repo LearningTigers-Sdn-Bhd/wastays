@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class FolioIndexPresenter
+  module Folios
+    class IndexPresenter
     FILTERS = [
       [ "all", "All" ],
       [ "open", "Open" ],
@@ -277,6 +278,7 @@ module HotelPortal
       def red_badge_class
         "border-red-200 bg-red-50 text-red-700"
       end
+    end
     end
   end
 end

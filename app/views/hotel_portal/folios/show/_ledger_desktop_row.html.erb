@@ -1,0 +1,22 @@
+<tr class="transition hover:bg-slate-50/70 <%= "text-slate-400" if row.reversed %>"
+    data-folio-ledger-target="row"
+    data-section="<%= section %>">
+  <td class="px-4 py-2 whitespace-nowrap text-slate-600"><%= row.date_label %></td>
+  <td class="px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-slate-700"><%= row.code %></td>
+  <td class="px-4 py-2">
+    <p class="font-medium text-slate-900 <%= "line-through text-slate-400" if row.reversed %>"><%= row.description %></p>
+    <p class="mt-0.5 text-[10px] font-medium text-slate-500">
+      <%= row.reference_label %> · <%= row.detail_label %> · <%= row.source_label %>
+    </p>
+  </td>
+  <td class="px-4 py-2 text-right font-semibold tabular-nums text-slate-900"><%= row.debit %></td>
+  <td class="px-4 py-2 text-right font-semibold tabular-nums text-emerald-700"><%= row.credit %></td>
+  <td class="px-4 py-2 text-right">
+    <% if row.row_kind == :forecasted %>
+      <span class="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-700"><%= row.balance %></span>
+    <% else %>
+      <p class="font-semibold tabular-nums text-slate-900"><%= row.balance %></p>
+    <% end %>
+  </td>
+  <td class="px-4 py-2 text-right font-semibold text-slate-500"><%= row.action_label %></td>
+</tr>

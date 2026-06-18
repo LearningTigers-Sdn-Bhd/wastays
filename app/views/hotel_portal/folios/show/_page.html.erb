@@ -1,22 +1,13 @@
-<% folio = booking.booking_folio %>
-<% projected_lines = (folio&.projected_forecasts || []).map { |forecast| { date: forecast.stay_date, description: forecast.description, amount: forecast.amount, category: forecast.charge_kind } } %>
 <% back_label = local_assigns[:back_label].presence || "Back to Booking" %>
 <% folio_origin = local_assigns[:folio_origin] %>
+<% folio_show = local_assigns.fetch(:folio_show) %>
 
 <div class="mx-auto mt-5 max-w-[1600px] space-y-4 px-4 pb-20 md:px-0">
-  <header>
+  <header class="space-y-4">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="min-w-0">
-        <div class="flex flex-wrap items-center gap-2">
-          <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Folio <%= booking.confirmation_token %></h1>
-          <span class="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide <%= presenter.status_label_class %>">
-            <%= presenter.status.tr("_", " ") %>
-          </span>
-        </div>
-        <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm font-medium text-slate-600">
-          <span>Guest <span class="font-medium text-slate-700"><%= booking.guest_name %></span></span>
-          <span>Stay <span class="font-medium text-slate-700"><%= booking.check_in.strftime("%d %b") %> — <%= booking.check_out.strftime("%d %b %Y") %></span></span>
-        </div>
+        <h1 class="truncate text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Folio <%= folio_show.folio_reference %></h1>
+        <p class="mt-1 max-w-3xl text-sm font-medium text-slate-600"><%= folio_show.header_subtitle %></p>
       </div>
 
       <%= link_to back_path, class: "inline-flex items-center justify-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 sm:self-auto" do %>
@@ -24,13 +15,11 @@
         <%= back_label %>
       <% end %>
     </div>
+
+    <%= render "hotel_portal/folios/show/page_summary", folio_show: folio_show %>
   </header>
 
-  <section class="overflow-hidden rounded-md border border-slate-200 bg-white">
-    <%= render "hotel_portal/folios/show/page_summary", booking: booking, projected_lines: projected_lines %>
-  </section>
+  <%= render "hotel_portal/folios/show/folio_actions", booking: booking, hotel: current_hotel, folio_show: folio_show, redirect_to_folio: true, folio_origin: folio_origin %>
 
-  <%= render "hotel_portal/folios/show/folio_actions", booking: booking, hotel: current_hotel, redirect_to_folio: true, folio_origin: folio_origin %>
-
-  <%= render "hotel_portal/folios/show/page_ledger", booking: booking, projected_lines: projected_lines %>
+  <%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show %>
 </div>
