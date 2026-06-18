@@ -1,0 +1,106 @@
+<% setting = current_hotel.e_invoice_setting || current_hotel.build_e_invoice_setting %>
+
+<%# ── E-Invoice Config Card ── %>
+<section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">E-Invoice (MyInvois)</h2>
+        <p class="mt-1 text-sm font-medium text-slate-600">
+          Enable LHDN e-invoice submission for bookings at this hotel.
+          WAStays (Jesselton Pixel Sdn Bhd) issues all invoices as the supplier.
+        </p>
+      </div>
+      <% if setting.enabled? %>
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+          <%= cached_icon "circle-check", class: "size-3.5" %> Active
+        </span>
+      <% else %>
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+          <%= cached_icon "circle", class: "size-3.5" %> Inactive
+        </span>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="px-6 py-5 sm:px-8 space-y-6">
+    <%= form_with model: setting, url: hotel_e_invoice_setting_path(current_hotel), method: :patch, local: true do |f| %>
+      <%= hidden_field_tag :form_id, "einvoice_settings" %>
+
+      <%# Enable toggle %>
+      <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+        <div>
+          <p class="text-sm font-semibold text-slate-900">Enable E-Invoice Submission</p>
+          <p class="mt-0.5 text-xs text-slate-500">
+            When enabled, staff can submit e-invoices to LHDN for closed folios.
+          </p>
+        </div>
+        <label class="relative inline-flex cursor-pointer items-center">
+          <%= f.check_box :enabled, class: "sr-only peer" %>
+          <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
+        </label>
+      </div>
+
+      <%# Hotel TIN/BRN for Phase 2 (hotel as buyer on payout invoices) %>
+      <div>
+        <p class="mb-3 text-sm font-semibold text-slate-900">Hotel Tax Details <span class="font-normal text-slate-400">(for payout invoices — optional now)</span></p>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <%= f.label :hotel_tin, "Hotel TIN", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+            <%= f.text_field :hotel_tin, placeholder: "e.g. C1234567890",
+                class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            <p class="mt-1 text-xs text-slate-400">Hotel's LHDN TIN. Used as buyer on payout invoices.</p>
+          </div>
+          <div>
+            <%= f.label :hotel_brn, "Hotel BRN (SSM)", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+            <%= f.text_field :hotel_brn, placeholder: "e.g. 202301234567",
+                class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            <p class="mt-1 text-xs text-slate-400">Hotel's SSM registration number.</p>
+          </div>
+        </div>
+      </div>
+
+      <%# Info box %>
+      <div class="rounded-xl border border-blue-100 bg-blue-50 px-5 py-4 text-xs text-blue-800 space-y-1">
+        <p class="font-semibold">How it works</p>
+        <ul class="list-disc list-inside space-y-0.5 text-blue-700">
+          <li>WAStays submits e-invoices to LHDN using <strong>Jesselton Pixel Sdn Bhd's</strong> TIN as supplier.</li>
+          <li>Invoices are issued to guests (buyer) upon checkout of a closed folio.</li>
+          <li>No action required from the hotel on MyInvois — WAStays handles all submissions.</li>
+        </ul>
+      </div>
+
+      <div class="flex justify-end border-t border-slate-200 pt-4">
+        <%= f.submit "Save E-Invoice Settings",
+            class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 cursor-pointer" %>
+      </div>
+    <% end %>
+  </div>
+</section>
+
+<%# ── Recent Submissions ── %>
+<% submissions = current_hotel.e_invoice_submissions.order(created_at: :desc).limit(5) %>
+<% if submissions.any? %>
+  <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4 sm:px-8">
+      <h2 class="text-base font-bold text-slate-950">Recent Submissions</h2>
+      <%= link_to "View All →", hotel_e_invoice_submissions_path(current_hotel),
+          class: "text-sm font-semibold text-blue-600 hover:text-blue-800" %>
+    </div>
+    <ul class="divide-y divide-slate-100">
+      <% submissions.each do |sub| %>
+        <li class="flex items-center justify-between px-6 py-3 sm:px-8">
+          <div>
+            <p class="text-sm font-semibold text-slate-900"><%= sub.internal_id || sub.booking&.confirmation_token %></p>
+            <p class="text-xs text-slate-500 mt-0.5"><%= sub.submitted_at&.strftime("%d %b %Y %H:%M") || "Not yet submitted" %></p>
+          </div>
+          <div class="flex items-center gap-3">
+            <%= render "hotel_portal/e_invoice_submissions/status_badge", submission: sub %>
+            <%= link_to "View", hotel_e_invoice_submission_path(current_hotel, sub),
+                class: "text-xs font-semibold text-blue-600 hover:underline" %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>

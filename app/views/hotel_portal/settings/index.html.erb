@@ -49,6 +49,14 @@
              data-testid="settings-notifications-panel">
           <%= render "notifications_section" %>
         </div>
+
+        <div id="einvoice-panel"
+             data-tabs-target="panel"
+             data-tab-panel="einvoice"
+             class="<%= @presenter.active_tab == "einvoice" ? "space-y-6" : "hidden space-y-6" %>"
+             role="tabpanel">
+          <%= render "e_invoice_section" %>
+        </div>
       <% end %>
 
       <% if current_user.has_permission?("manage_account") %>

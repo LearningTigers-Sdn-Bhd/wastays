@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_15_021053) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_18_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -371,6 +371,38 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_15_021053) do
     t.index ["user_id"], name: "index_deposits_on_user_id"
   end
 
+  create_table "e_invoice_settings", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.boolean "enabled", default: false, null: false
+    t.string "hotel_tin"
+    t.string "hotel_brn"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_e_invoice_settings_on_hotel_id", unique: true
+  end
+
+  create_table "e_invoice_submissions", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "booking_id", null: false
+    t.string "document_type", default: "01", null: false
+    t.string "internal_id"
+    t.string "uuid"
+    t.string "long_id"
+    t.string "submission_uid"
+    t.string "status", default: "pending", null: false
+    t.datetime "submitted_at"
+    t.datetime "validated_at"
+    t.datetime "cancelled_at"
+    t.jsonb "raw_response", default: {}
+    t.jsonb "error_details", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_e_invoice_submissions_on_booking_id", unique: true
+    t.index ["hotel_id"], name: "index_e_invoice_submissions_on_hotel_id"
+    t.index ["status"], name: "index_e_invoice_submissions_on_status"
+    t.index ["uuid"], name: "index_e_invoice_submissions_on_uuid", unique: true, where: "(uuid IS NOT NULL)"
+  end
+
   create_table "exchange_rates", force: :cascade do |t|
     t.string "currency_code", null: false
     t.decimal "rate", precision: 18, scale: 8, null: false
@@ -541,7 +573,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_15_021053) do
     t.index ["hotel_id", "business_date", "status"], name: "idx_on_hotel_id_business_date_status_38d59d82f8"
     t.index ["hotel_id", "business_date"], name: "index_hotel_business_dates_on_hotel_id_and_business_date", unique: true
     t.index ["hotel_id", "status"], name: "index_hotel_business_dates_on_hotel_id_and_status"
-    t.index ["hotel_id"], name: "idx_one_current_business_date_per_hotel", unique: true, where: "((status)::text = ANY ((ARRAY['open'::character varying, 'audit_running'::character varying, 'audit_blocked'::character varying])::text[]))"
+    t.index ["hotel_id"], name: "idx_one_current_business_date_per_hotel", unique: true, where: "((status)::text = ANY (ARRAY[('open'::character varying)::text, ('audit_running'::character varying)::text, ('audit_blocked'::character varying)::text]))"
     t.index ["hotel_id"], name: "index_hotel_business_dates_on_hotel_id"
   end
 
@@ -1383,6 +1415,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_15_021053) do
   add_foreign_key "deposits", "bookings"
   add_foreign_key "deposits", "hotels"
   add_foreign_key "deposits", "users"
+  add_foreign_key "e_invoice_settings", "hotels"
+  add_foreign_key "e_invoice_submissions", "bookings"
+  add_foreign_key "e_invoice_submissions", "hotels"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
   add_foreign_key "features", "feature_groups"
   add_foreign_key "financial_audit_events", "booking_folios"

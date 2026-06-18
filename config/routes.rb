@@ -304,6 +304,7 @@ Rails.application.routes.draw do
         delete "guests/:guest_id", to: "bookings/guests#destroy", as: :remove_guest
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings/housekeeping_requests#complete", as: :complete_housekeeping_request
         post "complaint_requests/:complaint_request_id/resolve", to: "bookings/complaint_requests#resolve", as: :resolve_complaint_request
+        post :submit_einvoice, to: "e_invoice_submissions#create"
       end
 
       resources :refund_requests, only: [ :new, :create ]
@@ -404,6 +405,14 @@ Rails.application.routes.draw do
     resources :room_statuses, only: [ :update ]
     resources :room_blocks, only: [ :create, :update, :destroy ] do
       post :finish, on: :member
+    end
+
+    resource :e_invoice_setting, only: [ :show, :update ], controller: "e_invoice_settings"
+    resources :e_invoice_submissions, only: [ :index, :show, :create ] do
+      member do
+        post :refresh_status
+        post :cancel
+      end
     end
   end
 end

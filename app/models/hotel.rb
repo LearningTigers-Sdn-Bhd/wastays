@@ -65,6 +65,8 @@ class Hotel < ApplicationRecord
   has_many :room_blocks, dependent: :destroy
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+  has_one :e_invoice_setting, dependent: :destroy
+  has_many :e_invoice_submissions, dependent: :destroy
 
   after_create :ensure_default_gl_maps
   after_create :ensure_current_business_date

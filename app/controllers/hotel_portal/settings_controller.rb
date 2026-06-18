@@ -2,7 +2,7 @@
 
 module HotelPortal
   class SettingsController < HotelPortal::BaseController
-    SETTINGS_TABS = %w[general tax ai notifications banking].freeze
+    SETTINGS_TABS = %w[general tax ai notifications banking einvoice].freeze
 
     before_action :set_account
     before_action :set_hotel
@@ -136,7 +136,8 @@ module HotelPortal
         "tax" => "Tax",
         "ai" => "AI Concierge",
         "notifications" => "Notifications",
-        "banking" => "Banking"
+        "banking" => "Banking",
+        "einvoice" => "E-Invoice"
       }.fetch(tab, "General")
     end
 
@@ -146,6 +147,7 @@ module HotelPortal
       when "tax_settings" then "tax"
       when "ai_configuration" then "ai"
       when "notification_settings" then "notifications"
+      when "einvoice_settings" then "einvoice"
       else "general"
       end
     end
