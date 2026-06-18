@@ -336,7 +336,7 @@ Rails.application.routes.draw do
       get "cancel-booking/:booking_id", to: "cancel_bookings#show", as: :cancel_booking
     end
 
-    resources :folios, only: [ :show ], param: :booking_id do
+    resources :folios, only: [ :index, :show ], param: :booking_id do
       get :invoice, on: :member
       resources :transactions, only: [ :create ], controller: "folios/transactions" do
         post :reverse, on: :member

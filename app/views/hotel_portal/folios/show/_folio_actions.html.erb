@@ -1,5 +1,6 @@
 <% folio = booking.booking_folio %>
 <% redirect_to_folio = local_assigns[:redirect_to_folio] || false %>
+<% folio_origin = local_assigns[:folio_origin] %>
 <% can_post = folio&.status == "open" %>
 <% can_post_payment = can_post && current_user.has_permission?("post_folio_payments", hotel: hotel) %>
 <% can_post_charge = can_post && current_user.has_permission?("post_folio_charges", hotel: hotel) %>
@@ -38,7 +39,8 @@
         category: "cash",
         signed_amount: false,
         submit_label: "Add Payment",
-        redirect_to_folio: redirect_to_folio %>
+        redirect_to_folio: redirect_to_folio,
+        folio_origin: folio_origin %>
   <% end %>
 
   <% if can_post_charge %>
@@ -53,7 +55,8 @@
         transaction_code_options: charge_transaction_codes,
         signed_amount: false,
         submit_label: "Add Charge",
-        redirect_to_folio: redirect_to_folio %>
+        redirect_to_folio: redirect_to_folio,
+        folio_origin: folio_origin %>
   <% end %>
 
   <% if can_post_adjustment %>
@@ -68,7 +71,8 @@
         category_options: adjustment_category_options,
         signed_amount: true,
         submit_label: "Add Adjustment",
-        redirect_to_folio: redirect_to_folio %>
+        redirect_to_folio: redirect_to_folio,
+        folio_origin: folio_origin %>
   <% end %>
 
   <% if can_execute_refund %>
@@ -82,6 +86,7 @@
         category: "refund",
         signed_amount: false,
         submit_label: "Issue Refund",
-        redirect_to_folio: redirect_to_folio %>
+        redirect_to_folio: redirect_to_folio,
+        folio_origin: folio_origin %>
   <% end %>
 <% end %>

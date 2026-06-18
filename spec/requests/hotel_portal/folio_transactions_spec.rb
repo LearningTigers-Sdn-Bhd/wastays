@@ -51,6 +51,24 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(folio.folio_transactions.last.category).to eq("cash")
     end
 
+    it "preserves folios origin when redirecting back to folio after posting" do
+      expect {
+        post hotel_folio_transactions_path(hotel, booking), params: {
+          redirect_to_folio: "true",
+          folio_origin: "folios",
+          folio_transaction: {
+            transaction_type: "payment",
+            category: "cash",
+            amount: "100.00",
+            description: "Cash payment",
+            posting_date: Date.current
+          }
+        }
+      }.to change { folio.folio_transactions.payment.count }.by(1)
+
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios"))
+    end
+
     it "posts an other charge" do
       expect {
         post_transaction(transaction_type: "charge", category: "other", amount: "25.00", description: "Lost key", posting_date: Date.current)
@@ -117,6 +135,24 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(reversal.reversal_of_transaction).to eq(transaction)
       expect(reversal.amount).to eq(-100.to_d)
       expect(transaction.reload.voided_by_transaction).to eq(reversal)
+    end
+
+    it "preserves folios origin when redirecting back to folio after reversal" do
+      transaction = create(:folio_transaction, booking_folio: folio, amount: 100, category: "accommodation")
+
+      expect {
+        post reverse_hotel_folio_transaction_path(hotel, booking, transaction), params: {
+          redirect_to_folio: "true",
+          folio_origin: "folios",
+          folio_transaction: {
+            correction_reason: "Posting error",
+            correction_note: "Wrong booking",
+            posting_date: Date.current
+          }
+        }
+      }.to change { folio.folio_transactions.adjustment.count }.by(1)
+
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios"))
     end
 
     it "rejects reversal without a correction reason" do

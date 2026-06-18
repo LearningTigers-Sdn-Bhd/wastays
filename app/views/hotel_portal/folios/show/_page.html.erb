@@ -1,5 +1,7 @@
 <% folio = booking.booking_folio %>
 <% projected_lines = (folio&.projected_forecasts || []).map { |forecast| { date: forecast.stay_date, description: forecast.description, amount: forecast.amount, category: forecast.charge_kind } } %>
+<% back_label = local_assigns[:back_label].presence || "Back to Booking" %>
+<% folio_origin = local_assigns[:folio_origin] %>
 
 <div class="mx-auto mt-5 max-w-[1600px] space-y-4 px-4 pb-20 md:px-0">
   <header>
@@ -19,7 +21,7 @@
 
       <%= link_to back_path, class: "inline-flex items-center justify-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 sm:self-auto" do %>
         <%= cached_icon "arrow-left", stroke_width: 2.25, class: "size-3.5" %>
-        Back to Booking
+        <%= back_label %>
       <% end %>
     </div>
   </header>
@@ -28,7 +30,7 @@
     <%= render "hotel_portal/folios/show/page_summary", booking: booking, projected_lines: projected_lines %>
   </section>
 
-  <%= render "hotel_portal/folios/show/folio_actions", booking: booking, hotel: current_hotel, redirect_to_folio: true %>
+  <%= render "hotel_portal/folios/show/folio_actions", booking: booking, hotel: current_hotel, redirect_to_folio: true, folio_origin: folio_origin %>
 
   <%= render "hotel_portal/folios/show/page_ledger", booking: booking, projected_lines: projected_lines %>
 </div>

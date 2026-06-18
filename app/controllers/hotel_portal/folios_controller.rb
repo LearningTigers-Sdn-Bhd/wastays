@@ -4,9 +4,18 @@ module HotelPortal
   class FoliosController < BaseController
     before_action :authorize_view_bookings!
 
+    def index
+      @folio_index = HotelPortal::FolioIndexPresenter.new(
+        hotel: current_hotel,
+        params: params
+      )
+      render "hotel_portal/folios/index/index"
+    end
+
     def show
       @booking = current_hotel.bookings.includes(booking_folio: [ { folio_transactions: :user }, :folio_forecasted_charges ]).find(params[:booking_id])
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+      set_navigation_context
       set_breadcrumbs
       render "hotel_portal/folios/show/index"
     end
@@ -25,13 +34,33 @@ module HotelPortal
 
     private
 
+    def set_navigation_context
+      if params[:origin] == "folios"
+        @folio_origin = "folios"
+        @folio_back_path = hotel_folios_path(current_hotel)
+        @folio_back_label = "Back to All Folios"
+      else
+        @folio_back_path = hotel_booking_path(current_hotel, @booking)
+        @folio_back_label = "Back to Booking"
+      end
+    end
+
     def set_breadcrumbs
-      override_breadcrumbs(
-        { label: "Operations" },
-        { label: "Bookings", path: hotel_bookings_path(current_hotel) },
-        { label: @booking.confirmation_token, path: hotel_booking_path(current_hotel, @booking) },
-        { label: "Folio Ledger" }
-      )
+      if @folio_origin == "folios"
+        override_breadcrumbs(
+          { label: "Finance" },
+          { label: "Folios", path: hotel_folios_path(current_hotel) },
+          { label: @booking.formatted_folio_number.presence || @booking.confirmation_token, path: hotel_folio_path(current_hotel, @booking, origin: "folios") },
+          { label: "Folio Ledger" }
+        )
+      else
+        override_breadcrumbs(
+          { label: "Operations" },
+          { label: "Bookings", path: hotel_bookings_path(current_hotel) },
+          { label: @booking.confirmation_token, path: hotel_booking_path(current_hotel, @booking) },
+          { label: "Folio Ledger" }
+        )
+      end
     end
 
     def authorize_view_bookings!

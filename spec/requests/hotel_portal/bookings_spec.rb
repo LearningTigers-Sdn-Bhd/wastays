@@ -112,6 +112,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("Operations")
       expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
       expect(response.body).to include(booking.confirmation_token)
+      expect(response.body).to include(%(href="#{hotel_folio_path(hotel, booking)}"))
+      expect(response.body).not_to include(%(href="#{hotel_folio_path(hotel, booking)}?origin=folios"))
     end
 
     it "renders URL-addressable booking show tab panels" do

@@ -10,6 +10,9 @@
       <% if local_assigns[:redirect_to_folio] %>
         <%= hidden_field_tag "redirect_to_folio", "true" %>
       <% end %>
+      <% if local_assigns[:folio_origin].present? %>
+        <%= hidden_field_tag "folio_origin", local_assigns[:folio_origin] %>
+      <% end %>
       <% if local_assigns[:redirect_to_checkout] %>
         <%= hidden_field_tag "redirect_to_checkout", "true" %>
       <% end %>

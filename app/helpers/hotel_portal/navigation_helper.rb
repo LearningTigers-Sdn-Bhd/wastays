@@ -72,6 +72,7 @@ module HotelPortal
         NavSection.new(
           label: "Finance",
           items: [
+            NavItem.new(label: "Folios", path: hotel_folios_path(current_hotel), search_text: "Folios Ledger Guest Balances Refund Due Finance", active: controller_name == "folios" && action_name == "index", icon: "book-open", permission: "view_bookings"),
             NavItem.new(label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel), search_text: "Taxes Fees Property Finance", active: controller_name == "taxes_fees", icon: "receipt", permission: "manage_hotel_profile"),
             NavItem.new(label: "Transaction Codes", path: hotel_transaction_codes_path(current_hotel), search_text: "Transaction Codes Posting Finance", active: controller_name == "transaction_codes", icon: "badge-percent", permission: "manage_hotel_profile"),
             NavItem.new(label: "Payouts", path: payouts_hotel_reports_path(current_hotel), search_text: "Payouts Settlements Finance", active: controller_name == "reports" && action_name == "payouts", icon: "credit-card", permission: "view_payouts")

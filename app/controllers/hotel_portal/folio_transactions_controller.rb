@@ -65,10 +65,14 @@ module HotelPortal
       if params[:redirect_to_checkout] == "true"
         redirect_to hotel_booking_transaction_check_out_path(current_hotel, @booking), options
       elsif params[:redirect_to_folio] == "true"
-        redirect_to hotel_folio_path(current_hotel, @booking), options
+        redirect_to hotel_folio_path(current_hotel, @booking, folio_origin_params), options
       else
         redirect_to hotel_booking_path(current_hotel, @booking), options
       end
+    end
+
+    def folio_origin_params
+      params[:folio_origin] == "folios" ? { origin: "folios" } : {}
     end
 
     def set_booking

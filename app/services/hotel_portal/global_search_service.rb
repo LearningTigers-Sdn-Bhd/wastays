@@ -10,6 +10,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
     { title: "In-House Guests", subtitle: "Current in-house guests", route: :hotel_in_house_guests_path, keywords: "in house guests" },
     { title: "Today's Check-Outs", subtitle: "Guests checked out today", route: :hotel_checked_out_guests_path, keywords: "today check outs checked out departures" },
     { title: "Bookings", subtitle: "All hotel bookings", route: :hotel_bookings_path, keywords: "bookings reservations recent bookings" },
+    { title: "Folios", subtitle: "Guest folios, balances, and refund due review", route: :hotel_folios_path, keywords: "folios ledger balances balance due refund due finance" },
     { title: "Requests", subtitle: "Housekeeping and complaints", route: :hotel_requests_path, keywords: "requests housekeeping complaints" },
     { title: "Request Archive", subtitle: "Archived housekeeping and complaint requests", route: :hotel_request_archive_path, keywords: "request archive archived housekeeping complaints" },
     { title: "Guest Records", subtitle: "Past and upcoming guest history", route: :hotel_guests_path, keywords: "guest records guests" },
@@ -48,6 +49,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
   def quick_actions
     [
       { group: "Bookings", label: "Go to bookings", url: hotel_bookings_path(@hotel) },
+      { group: "Pages", label: "Go to folios", url: hotel_folios_path(@hotel) },
       { group: "Requests", label: "Go to requests", url: hotel_requests_path(@hotel) },
       { group: "Pages", label: "Go to arrival board", url: hotel_arrivals_path(@hotel) }
     ]
