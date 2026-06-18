@@ -151,7 +151,13 @@ module Bookings
     end
 
     def build_tax_posting_snapshot(rooms)
+      build_room_transaction_code_tax_snapshot(rooms)
+    end
+
+    def build_room_transaction_code_tax_snapshot(rooms)
       snapshot = Hash.new { |hash, key| hash[key] = [] }
+      rules = room_revenue_tax_rules
+      return {} if rules.empty?
 
       rooms.each do |room|
         stay_dates.each do |date|
@@ -159,30 +165,90 @@ module Bookings
           basis_amount = room[:nightly_rate_snapshot].dig(date_key, "price").to_d * room[:quantity]
           next unless basis_amount.positive?
 
-          enabled_hotel_taxes.select { |tax| tax.rate_type == "percentage" }.each do |tax|
-            next unless tax.applicable_for?(@guest_country)
-
-            snapshot[date_key] << tax_posting_for(tax, date, basis_amount)
-          end
-
-          if @hotel.sst_enabled?
-            snapshot[date_key] << sst_posting_for(date, basis_amount)
-          end
-
-          tourism_amount = @hotel.tourism_tax_amount_for(@guest_country).to_d
-          if tourism_amount.positive?
-            snapshot[date_key] << tourism_posting_for(date, tourism_amount * room[:quantity])
+          rules.each do |rule|
+            posting = room_transaction_code_tax_posting_for(rule, date, basis_amount, room[:quantity])
+            snapshot[date_key] << posting if posting.present?
           end
         end
       end
 
-      enabled_hotel_taxes.select { |tax| tax.rate_type == "flat" }.each do |tax|
-        next unless tax.applicable_for?(@guest_country)
-
-        snapshot[@check_in.iso8601] << tax_posting_for(tax, @check_in, rooms.sum { |room| room[:total_amount] })
-      end
-
       snapshot.transform_values { |items| items.map { |item| stringify_amounts(item) } }
+    end
+
+    def room_revenue_tax_rules
+      return [] unless room_revenue_transaction_code&.active? && room_revenue_transaction_code.is_taxable?
+
+      room_revenue_transaction_code.transaction_code_taxes.includes(:hotel_tax).select do |rule|
+        room_transaction_code_tax_enabled?(rule)
+      end
+    end
+
+    def room_revenue_transaction_code
+      @room_revenue_transaction_code ||= begin
+        Financials::EnsureDefaultTransactionCodes.call(@hotel)
+        @hotel.transaction_codes.find_by(system_key: "room_revenue")
+      end
+    end
+
+    def room_transaction_code_tax_enabled?(rule)
+      if rule.hotel_tax.present?
+        rule.hotel_tax.enabled? && rule.hotel_tax.applicable_for?(@guest_country)
+      elsif rule.primary_tax_key == "sst_tax"
+        @hotel.sst_enabled?
+      elsif rule.primary_tax_key == "tourism_tax"
+        @hotel.tourism_tax_amount_for(@guest_country).to_d.positive?
+      else
+        false
+      end
+    end
+
+    def room_transaction_code_tax_posting_for(rule, date, basis_amount, quantity)
+      amount = room_transaction_code_tax_amount(rule, basis_amount, quantity)
+      return if amount.zero?
+
+      transaction_code = rule.posting_transaction_code
+
+      {
+        "tax_id" => rule.hotel_tax_id,
+        "primary_tax_key" => rule.primary_tax_key,
+        "name" => rule.display_name,
+        "type" => rule.tax_line_type,
+        "transaction_code_id" => transaction_code&.id,
+        "transaction_code_system_key" => transaction_code&.system_key,
+        "transaction_code_code" => transaction_code&.code,
+        "rate_type" => rule.rate_type,
+        "rate" => room_transaction_code_tax_rate(rule),
+        "basis" => room_transaction_code_tax_basis(rule),
+        "basis_amount" => room_transaction_code_tax_basis_amount(rule, basis_amount, quantity),
+        "amount" => amount,
+        "currency" => @hotel.default_currency.presence || "MYR",
+        "posting_schedule" => "nightly",
+        "stay_date" => date.iso8601,
+        "guest_country" => @guest_country,
+        "foreign_guests_only" => rule.hotel_tax&.foreign_guests_only,
+        "source" => "transaction_code_tax_rule",
+        "source_transaction_code_id" => room_revenue_transaction_code.id
+      }.compact
+    end
+
+    def room_transaction_code_tax_amount(rule, basis_amount, quantity)
+      return @hotel.tourism_tax_amount_for(@guest_country).to_d * quantity.to_i if rule.primary_tax_key == "tourism_tax"
+
+      rule.compute(basis_amount)
+    end
+
+    def room_transaction_code_tax_rate(rule)
+      return @hotel.tourism_tax_amount_for(@guest_country).to_d if rule.primary_tax_key == "tourism_tax"
+
+      rule.amount
+    end
+
+    def room_transaction_code_tax_basis(rule)
+      rule.primary_tax_key == "tourism_tax" ? "room_night" : "nightly_room_charge"
+    end
+
+    def room_transaction_code_tax_basis_amount(rule, basis_amount, quantity)
+      rule.primary_tax_key == "tourism_tax" ? quantity.to_i : basis_amount
     end
 
     def enabled_hotel_taxes
