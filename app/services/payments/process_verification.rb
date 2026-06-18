@@ -62,7 +62,8 @@ module Payments
         country: metadata[:country],
         document_type: metadata[:document_type],
         marketing_consent: metadata[:marketing_consent],
-        privacy_consent: metadata[:privacy_consent]
+        privacy_consent: metadata[:privacy_consent],
+        special_requests: metadata[:special_requests]
       }.compact
     end
 
@@ -79,6 +80,7 @@ module Payments
           document_type: guest_details[:document_type],
           marketing_consent: guest_details[:marketing_consent],
           privacy_consent: guest_details[:privacy_consent],
+          special_requests: guest_details[:special_requests],
           external_reference: external_reference
         }
       ).call

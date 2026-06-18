@@ -222,6 +222,18 @@
             </div>
           </div>
 
+          <% if @booking.special_requests.present? %>
+            <div>
+              <div class="flex items-center gap-x-3 mb-6">
+                <span class="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-primary">Special Requests</span>
+                <div class="h-px flex-1 bg-brand-primary/10"></div>
+              </div>
+              <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-neutral-border/40">
+                <p class="text-xs text-neutral-text-secondary leading-relaxed font-medium"><%= @booking.special_requests %></p>
+              </div>
+            </div>
+          <% end %>
+
           <!-- Hotel Terms -->
           <div class="pt-6 border-t border-neutral-border/40">
             <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-brand-primary mb-4">Property Policies</h3>

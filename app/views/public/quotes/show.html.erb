@@ -183,6 +183,22 @@
             <% end %>
           </div>
 
+          <!-- Special Requests -->
+          <div class="card p-6 md:p-8">
+            <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
+              <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M11 12H7"/></svg>
+              Special Requests
+            </h2>
+            <p class="text-sm text-neutral-text-secondary mb-4">
+              Please let us know if you have any special requirements (e.g., late arrival, bedding preference, dietary needs). We will do our best to accommodate them, but they are subject to availability.
+            </p>
+            <%= f.text_area "guest_details[special_requests]",
+                            rows: 3,
+                            placeholder: "Type your special requests here...",
+                            class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                            data: { checkout_payment_target: "specialRequestsField" } %>
+          </div>
+
           <!-- Payment Selection -->
           <div class="card p-6 md:p-8">
             <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
