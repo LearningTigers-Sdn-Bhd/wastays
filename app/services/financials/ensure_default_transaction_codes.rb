@@ -6,6 +6,8 @@ module Financials
       { system_key: "room_revenue", code: "ROOM", name: "Room Revenue", kind: "charge", category: "accommodation", gl_account_code: "4010" },
       { system_key: "no_show_revenue", code: "NO_SHOW", name: "No-Show Revenue", kind: "charge", category: "no_show_charge", gl_account_code: "4030" },
       { system_key: "cancel_revenue", code: "CANCEL", name: "Cancellation Revenue", kind: "charge", category: "cancellation_charge", gl_account_code: "4033" },
+      { system_key: "late_checkout_revenue", code: "LATE_CO", name: "Late Checkout Revenue", kind: "charge", category: "late_checkout_charge", gl_account_code: "4031" },
+      { system_key: "early_departure_revenue", code: "EARLY_DEP", name: "Early Departure Revenue", kind: "charge", category: "early_departure_charge", gl_account_code: "4032" },
       { system_key: "sst_tax", code: "TAX_SST", name: "SST", kind: "tax", category: "tax", gl_account_code: "2010" },
       { system_key: "tourism_tax", code: "TAX_TTX", name: "Tourism Tax", kind: "tax", category: "tax", gl_account_code: "2010" },
       { system_key: "fnb_revenue", code: "FNB", name: "Food & Beverage", kind: "charge", category: "fb", gl_account_code: "4020" },
@@ -22,6 +24,8 @@ module Financials
     CATEGORY_SYSTEM_KEYS = {
       "accommodation" => "room_revenue",
       "no_show_charge" => "no_show_revenue",
+      "late_checkout_charge" => "late_checkout_revenue",
+      "early_departure_charge" => "early_departure_revenue",
       "fb" => "fnb_revenue",
       "cash" => "cash_payment",
       "gateway_payment" => "card_payment",

@@ -6,6 +6,8 @@ class TransactionCode < ApplicationRecord
     accommodation
     no_show_charge
     cancellation_charge
+    late_checkout_charge
+    early_departure_charge
     tax
     fb
     parking

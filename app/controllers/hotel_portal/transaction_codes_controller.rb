@@ -2,7 +2,7 @@
 
 module HotelPortal
   class TransactionCodesController < HotelPortal::BaseController
-    TABS = %w[default_codes additional_service_codes].freeze
+    TABS = %w[default_codes additional_service_codes configuration].freeze
 
     before_action :set_hotel
     before_action :authorize!
@@ -44,10 +44,25 @@ module HotelPortal
 
       if @transaction_code.save
         assign_tax_rules(@transaction_code)
+        refresh_open_folio_forecasts_if_needed if @transaction_code.system_key == "room_revenue"
         redirect_to hotel_transaction_codes_path(@hotel, tab: tab_for(@transaction_code)), notice: "Transaction code updated."
       else
         @tax_rules = tax_rules
         render :edit, status: :unprocessable_entity
+      end
+    end
+
+    def update_configuration
+      configuration = @hotel.transaction_configuration
+      configuration.assign_attributes(transaction_configuration_params)
+
+      if configuration.save
+        refresh_open_folio_forecasts_if_needed
+        redirect_to hotel_transaction_codes_path(@hotel, tab: "configuration"), notice: "Transaction configuration updated."
+      else
+        @presenter = transaction_codes_presenter(tab: "configuration")
+        append_transaction_codes_tab_breadcrumb
+        render :show, status: :unprocessable_entity
       end
     end
 
@@ -91,11 +106,26 @@ module HotelPortal
       )
       permitted[:code] = normalize_code(permitted[:code]) if permitted.key?(:code)
       permitted[:gl_account_code] = permitted[:gl_account_code].to_s.strip.presence if permitted.key?(:gl_account_code)
+      if tax_transaction_code?
+        preserve_tax_code_params(permitted)
+      else
+        prevent_new_tax_code_params(permitted)
+      end
       permitted
     end
 
     def transaction_code_attributes
       transaction_code_params.except(:hotel_tax_ids, :tax_rule_keys)
+    end
+
+    def transaction_configuration_params
+      params.require(:hotel_transaction_configuration).permit(:room_revenue_tax_rule_application)
+    end
+
+    def refresh_open_folio_forecasts_if_needed
+      return unless @hotel.transaction_configuration.open_folio_forecasts?
+
+      ::Folios::RefreshOpenForecastsFromRoomRevenueRules.call(hotel: @hotel, actor: current_user)
     end
 
     def assign_tax_rules(transaction_code)
@@ -126,6 +156,20 @@ module HotelPortal
 
     def normalize_taxable_flag(transaction_code)
       transaction_code.is_taxable = false if transaction_code.kind == "tax" || transaction_code.category == "tax"
+    end
+
+    def tax_transaction_code?
+      @transaction_code&.persisted? && (@transaction_code.kind == "tax" || @transaction_code.category == "tax")
+    end
+
+    def prevent_new_tax_code_params(permitted)
+      permitted[:kind] = "charge" if permitted[:kind] == "tax"
+      permitted[:category] = "other" if permitted[:category] == "tax"
+    end
+
+    def preserve_tax_code_params(permitted)
+      permitted[:kind] = @transaction_code.kind if permitted.key?(:kind)
+      permitted[:category] = @transaction_code.category if permitted.key?(:category)
     end
 
     def primary_tax_rules

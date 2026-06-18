@@ -17,12 +17,15 @@
          class="<%= @presenter.active_tab == "default_codes" ? "space-y-6" : "hidden space-y-6" %>"
          role="tabpanel"
          data-testid="transaction-codes-default-codes-panel">
-      <%= render "default_codes",
-                 transaction_codes: @presenter.default_codes,
-                 title: "Default Codes",
-                 description: "System-required and tax-related transaction codes used by folio posting and accounting exports.",
-                 empty_message: "No default transaction codes found.",
-                 test_id: "transaction-codes-default-list" %>
+      <% @presenter.default_code_sections.each do |section| %>
+        <%= render "default_codes",
+                   transaction_codes: section[:transaction_codes],
+                   title: section[:title],
+                   description: section[:description],
+                   empty_message: section[:empty_message],
+                   test_id: section[:test_id],
+                   action: section[:action] %>
+      <% end %>
     </div>
 
     <div id="additional_service_codes-panel"
@@ -43,6 +46,15 @@
                  description: "Hotel-specific non-tax transaction codes for additional service postings.",
                  empty_message: "No additional service transaction codes found.",
                  test_id: "transaction-codes-additional-service-list" %>
+    </div>
+
+    <div id="configuration-panel"
+         data-tabs-target="panel"
+         data-tab-panel="configuration"
+         class="<%= @presenter.active_tab == "configuration" ? "space-y-6" : "hidden space-y-6" %>"
+         role="tabpanel"
+         data-testid="transaction-codes-configuration-panel">
+      <%= render "configuration", configuration: @presenter.transaction_configuration %>
     </div>
   </div>
 </div>

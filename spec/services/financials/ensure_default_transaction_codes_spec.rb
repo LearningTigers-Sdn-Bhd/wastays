@@ -11,10 +11,10 @@ RSpec.describe Financials::EnsureDefaultTransactionCodes, type: :service do
 
       expect {
         described_class.call(hotel)
-      }.to change { hotel.transaction_codes.count }.from(0).to(14)
+      }.to change { hotel.transaction_codes.count }.from(0).to(16)
 
       expect(hotel.transaction_codes.system_required.pluck(:code)).to contain_exactly(
-        "ROOM", "NO_SHOW", "CANCEL", "TAX_SST", "TAX_TTX", "FNB", "PARK", "MISC", "CASH", "CARD", "BANK", "REFUND", "ADJUSTMENT", "REBATE"
+        "ROOM", "NO_SHOW", "CANCEL", "LATE_CO", "EARLY_DEP", "TAX_SST", "TAX_TTX", "FNB", "PARK", "MISC", "CASH", "CARD", "BANK", "REFUND", "ADJUSTMENT", "REBATE"
       )
     end
 

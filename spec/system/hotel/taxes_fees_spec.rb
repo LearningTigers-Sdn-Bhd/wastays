@@ -89,12 +89,23 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
 
     expect(page).to have_content("Transaction Codes")
     expect(page).to have_css("[data-testid='transaction-codes-default-codes-panel']", visible: :all)
-    expect(page).to have_content("System-required and tax-related transaction codes used by folio posting and accounting exports.")
-    expect(page).to have_content("ROOM")
-    expect(page).to have_content("TAX_SST")
-    expect(page).to have_content("TAX_TTX")
-    expect(page).to have_content("TAX_HF")
-    expect(page).to have_content("Heritage Fee")
+    expect(page).to have_content("Hotel Operations")
+    expect(page).to have_content("Booking Operations")
+    expect(page).to have_content("Utility Operations")
+    expect(page).to have_content("Tax Operations")
+
+    within("[data-testid='transaction-codes-hotel-operations-list']") do
+      expect(page).to have_content("ROOM")
+    end
+
+    within("[data-testid='transaction-codes-tax-operations-list']") do
+      expect(page).to have_content("TAX_SST")
+      expect(page).to have_content("TAX_TTX")
+      expect(page).to have_content("TAX_HF")
+      expect(page).to have_content("Heritage Fee")
+      expect(page).to have_link("Manage Taxes & Fees", href: hotel_taxes_fees_path(hotel))
+      expect(find_link("Manage Taxes & Fees")[:target]).to eq("_blank")
+    end
 
     click_button "Additional Service Codes"
     expect(page).to have_current_path(hotel_transaction_codes_path(hotel, tab: "additional_service_codes"))
@@ -150,13 +161,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
       expect(page).to have_text("MYR 64.00")
     end
 
-    select "Tax", from: "Category"
-
-    expect(page).to have_no_text("Tax Rules")
-    expect(page).to have_no_text("Taxes to generate")
-    within("section[aria-label='Transaction code posting preview']") do
-      expect(page).to have_text("CHARGE · TAX")
-      expect(page).to have_text("MYR 50.00")
-    end
+    category_options = find_field("Category").all("option").map(&:text)
+    expect(category_options).not_to include("Tax")
   end
 end

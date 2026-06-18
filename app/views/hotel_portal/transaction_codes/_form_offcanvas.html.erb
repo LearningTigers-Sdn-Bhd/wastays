@@ -3,6 +3,9 @@
   <% preview_amount = 50.to_d %>
   <% currency = current_hotel.default_currency.presence || "MYR" %>
   <% selected_tax_rule_keys = transaction_code.tax_rule_keys %>
+  <% tax_transaction_code = transaction_code.kind == "tax" || transaction_code.category == "tax" %>
+  <% kind_options = TransactionCode::KINDS.reject { |kind| kind == "tax" }.map { |kind| [kind.titleize, kind] } %>
+  <% category_options = TransactionCode::CATEGORIES.reject { |category| category == "tax" }.map { |category| [category.titleize, category] } %>
 
   <div class="flex h-full min-h-0 flex-col bg-slate-100">
     <header class="z-10 shrink-0 border-b border-slate-200 bg-white">
@@ -57,20 +60,30 @@
 
               <div>
                 <%= f.label :kind, "Kind", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-                <%= f.select :kind,
-                    TransactionCode::KINDS.map { |kind| [kind.titleize, kind] },
-                    {},
-                    data: { transaction_code_form_target: "kind", action: "change->transaction-code-form#update" },
-                    class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                <% if tax_transaction_code %>
+                  <div class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700"><%= transaction_code.kind.to_s.titleize %></div>
+                  <%= f.hidden_field :kind, data: { transaction_code_form_target: "kind" } %>
+                <% else %>
+                  <%= f.select :kind,
+                      kind_options,
+                      {},
+                      data: { transaction_code_form_target: "kind", action: "change->transaction-code-form#update" },
+                      class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                <% end %>
               </div>
 
               <div>
                 <%= f.label :category, "Category", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-                <%= f.select :category,
-                    TransactionCode::CATEGORIES.map { |category| [category.titleize, category] },
-                    {},
-                    data: { transaction_code_form_target: "category", action: "change->transaction-code-form#update" },
-                    class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                <% if tax_transaction_code %>
+                  <div class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700"><%= transaction_code.category.to_s.titleize %></div>
+                  <%= f.hidden_field :category, data: { transaction_code_form_target: "category" } %>
+                <% else %>
+                  <%= f.select :category,
+                      category_options,
+                      {},
+                      data: { transaction_code_form_target: "category", action: "change->transaction-code-form#update" },
+                      class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                <% end %>
               </div>
 
               <div>

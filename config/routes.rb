@@ -286,6 +286,7 @@ Rails.application.routes.draw do
     get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes
     get "transaction-codes/new", to: "transaction_codes#new", as: :new_transaction_code
     post "transaction-codes", to: "transaction_codes#create"
+    patch "transaction-codes/configuration", to: "transaction_codes#update_configuration", as: :transaction_code_configuration
     get "transaction-codes/:id/edit", to: "transaction_codes#edit", as: :edit_transaction_code
     patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
 
