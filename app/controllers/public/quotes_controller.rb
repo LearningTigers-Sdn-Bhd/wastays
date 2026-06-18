@@ -12,14 +12,15 @@ class Public::QuotesController < ApplicationController
   end
 
   def show
-    @quote = BookingQuote.find_by!(token: params[:id])
+    quote = BookingQuote.find_by!(token: params[:id])
 
-    if @quote.expires_at < Time.current
+    if quote.expires_at < Time.current
       flash[:alert] = "Your quote has expired. Please search again."
       redirect_to root_path
     end
 
-    @hotel = @quote.hotel
+    @quote = Public::QuotePresenter.new(quote, view_context)
+    @hotel = Public::HotelPresenter.new(quote.hotel, view_context)
     @quote_items = @quote.booking_quote_items
     @display_currency = display_currency_for_request
     @payment_gateway = @hotel.checkout_payment_gateway || "razorpay"

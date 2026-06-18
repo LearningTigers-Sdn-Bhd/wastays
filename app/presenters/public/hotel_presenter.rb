@@ -57,5 +57,9 @@ module Public
       return nil unless availability_service && room_types.any?
       availability_service.calculate_total_price(room_types.first)
     end
+
+    def summary_photo
+      room_types.first&.photos&.attached? ? room_types.first.photos.first : nil
+    end
   end
 end

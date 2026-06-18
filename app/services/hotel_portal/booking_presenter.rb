@@ -329,5 +329,57 @@ module HotelPortal
     def refund_eligibility
       @refund_eligibility ||= Refunds::Eligibility.new(booking).call
     end
+
+    def occupancy_text(variant: :desktop)
+      if variant == :desktop
+        "#{booking.adults} #{'adult'.pluralize(booking.adults)} · #{booking.children.to_i} ch."
+      else
+        "#{booking.adults}A · #{booking.children.to_i}C"
+      end
+    end
+
+    def room_display_text(variant: :desktop)
+      primary_room = booking.booking_rooms.first
+      return "—" unless primary_room
+
+      room_no = room_number_for(primary_room)
+      room_type = primary_room.room_type_snapshot["name"].presence || primary_room.room_type&.name
+
+      if variant == :desktop
+        room_no.present? ? "Room #{room_no} · #{room_type}" : room_type
+      else
+        room_no.present? ? "#{room_type} · #{room_no}" : room_type
+      end
+    end
+
+    def formatted_projected_balance
+      "#{currency} #{view_context.number_with_precision(projected_outstanding_balance, precision: 2)}"
+    end
+
+    def payment_status_label
+      payment_status_display.to_s.tr("_", " ").titleize.presence || "—"
+    end
+
+    def guarantee_method_label
+      booking.guarantee_method.to_s.presence&.tr("_", " ")&.titleize || "No guarantee"
+    end
+
+    def formatted_room_total
+      "#{currency} #{view_context.number_with_precision(room_total, precision: 2)}"
+    end
+
+    def formatted_taxes_total
+      "#{currency} #{view_context.number_with_precision(taxes_total, precision: 2)}"
+    end
+
+    def formatted_total_amount
+      "#{currency} #{view_context.number_with_precision(booking.total_amount, precision: 2)}"
+    end
+
+    private
+
+    def view_context
+      ActionController::Base.helpers
+    end
   end
 end
