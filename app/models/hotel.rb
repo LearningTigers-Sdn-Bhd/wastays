@@ -49,6 +49,7 @@ class Hotel < ApplicationRecord
   has_many :deposits, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :destroy
   has_many :transaction_codes, dependent: :destroy
+  has_one :hotel_transaction_configuration, dependent: :destroy
   has_many :hotel_counters, dependent: :destroy
   has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy
@@ -447,6 +448,10 @@ class Hotel < ApplicationRecord
 
   def tourism_tax_amount_for(country)
     tourism_tax_applicable_for?(country) ? tourism_tax_amount : 0
+  end
+
+  def transaction_configuration
+    hotel_transaction_configuration || build_hotel_transaction_configuration
   end
 
   def featured_photo_attachment

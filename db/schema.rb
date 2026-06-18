@@ -697,6 +697,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
     t.index ["hotel_id"], name: "index_hotel_team_configs_on_hotel_id"
   end
 
+  create_table "hotel_transaction_configurations", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "room_revenue_tax_rule_application", default: "new_bookings_only", null: false
+    t.index ["hotel_id"], name: "index_hotel_transaction_configurations_on_hotel_id", unique: true
+  end
+
   create_table "hotels", force: :cascade do |t|
     t.string "name"
     t.string "address"
@@ -1464,6 +1472,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
   add_foreign_key "hotel_taxes", "hotels"
   add_foreign_key "hotel_taxes", "transaction_codes"
   add_foreign_key "hotel_team_configs", "hotels"
+  add_foreign_key "hotel_transaction_configurations", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "plans"
   add_foreign_key "hotels", "users", column: "salesperson_id"
