@@ -191,7 +191,7 @@
                 <div class="space-y-1">
                   <% @booking.guest_info_items.each do |item| %>
                     <p class="text-xs text-neutral-text-secondary flex items-center gap-x-2 font-bold">
-                      <svg class="w-3.5 h-3.5 text-[#d9c5a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<%= item[:icon_path] %>"/></svg>
+                      <%= item[:icon_svg].html_safe %>
                       <%= item[:text] %>
                     </p>
                   <% end %>

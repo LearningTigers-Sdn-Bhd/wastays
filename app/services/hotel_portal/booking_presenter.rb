@@ -353,7 +353,7 @@ module HotelPortal
     end
 
     def formatted_projected_balance
-      "#{currency} #{view_context.number_with_precision(projected_outstanding_balance, precision: 2)}"
+      format_currency(projected_outstanding_balance)
     end
 
     def payment_status_label
@@ -365,18 +365,22 @@ module HotelPortal
     end
 
     def formatted_room_total
-      "#{currency} #{view_context.number_with_precision(room_total, precision: 2)}"
+      format_currency(room_total)
     end
 
     def formatted_taxes_total
-      "#{currency} #{view_context.number_with_precision(taxes_total, precision: 2)}"
+      format_currency(taxes_total)
     end
 
     def formatted_total_amount
-      "#{currency} #{view_context.number_with_precision(booking.total_amount, precision: 2)}"
+      format_currency(booking.total_amount)
     end
 
     private
+
+    def format_currency(amount)
+      "#{currency} #{view_context.number_with_precision(amount, precision: 2)}"
+    end
 
     def view_context
       ActionController::Base.helpers
