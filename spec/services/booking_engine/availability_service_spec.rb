@@ -83,6 +83,16 @@ RSpec.describe BookingEngine::AvailabilityService do
       expect(service.calculate_total_price(room_type)).to eq(0)
     end
 
+    it "respects stop_sell on Standard Rate Plan when calculating base rate fallback" do
+      # Only standard plan is stop sell, nil plan has no RoomRate record
+      RoomRate.where(rate_plan_id: nil).delete_all
+      RoomRate.where(rate_plan_id: room_type.rate_plans.first.id).update_all(stop_sell: true)
+
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
+      expect(service.calculate_total_price(room_type)).to eq(0)
+      expect(service.available_rooms_for_hotel(hotel)).to be_empty
+    end
+
     it "ignores corporate_price even if available" do
       RoomRate.update_all(corporate_price: 80)
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)

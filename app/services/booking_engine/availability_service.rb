@@ -187,6 +187,17 @@ module BookingEngine
     end
 
     def nightly_price_for(date, rate, room_type)
+      if rate.nil? || rate.rate_plan_id.nil?
+        std_rate = standard_rate_for(date, room_type)
+        if std_rate.present?
+          return nil if std_rate.stop_sell?
+          return nil if date == stay_dates.first && std_rate.closed_to_arrival?
+          return nil if date == stay_dates.last && std_rate.closed_to_departure?
+          return nil if std_rate.min_stay.present? && nights < std_rate.min_stay
+          return nil if std_rate.max_stay.present? && nights > std_rate.max_stay
+        end
+      end
+
       if rate.present?
         # 1. Check Restrictions
         return nil if rate.stop_sell?
@@ -201,6 +212,19 @@ module BookingEngine
         # 3. Fallback to base price if no specific rate record exists
         room_type.base_price.presence
       end
+    end
+
+    def standard_rate_for(date, room_type)
+      @standard_rates ||= {}
+      @standard_rates[room_type.id] ||= begin
+        standard_plan = room_type.rate_plans.first
+        if standard_plan
+          room_type.room_rates.select { |rr| rr.rate_plan_id == standard_plan.id }.index_by(&:date)
+        else
+          {}
+        end
+      end
+      @standard_rates[room_type.id][date]
     end
   end
 end
