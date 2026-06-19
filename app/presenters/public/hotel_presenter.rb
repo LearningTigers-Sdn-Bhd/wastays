@@ -61,5 +61,13 @@ module Public
     def summary_photo
       room_types.first&.photos&.attached? ? room_types.first.photos.first : nil
     end
+
+    def first_room_type_photo
+      summary_photo
+    end
+
+    def first_room_type_photo_attached?
+      summary_photo.present?
+    end
   end
 end

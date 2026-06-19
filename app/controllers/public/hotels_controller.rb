@@ -49,9 +49,10 @@ class Public::HotelsController < ApplicationController
                                       hotel_sort_order.index(category) || hotel_sort_order.size
                                     }
 
-    # Decorate for view
+    # Decorate for view and sort restricted rooms to the bottom
     @hotel = Public::HotelPresenter.new(@hotel, view_context)
     @room_types = @room_types.map { |rt| Public::RoomTypePresenter.new(rt, @hotel, @availability_service, view_context) }
+                             .sort_by { |rt| rt.stay_restriction_error.present? ? 1 : 0 }
   end
 
   def rate_calendar

@@ -11,6 +11,11 @@ class BookingQuote < ApplicationRecord
   before_validation :normalize_currencies
 
   def stay_restriction_error_message
+    msg = raw_stay_restriction_error_message
+    "#{msg} Please select another date." if msg.present?
+  end
+
+  def raw_stay_restriction_error_message
     nights = (check_out - check_in).to_i
 
     booking_quote_items.each do |item|
@@ -23,16 +28,16 @@ class BookingQuote < ApplicationRecord
           max_stay = rate_data["max_stay"]
 
           if min_stay.present? && nights < min_stay.to_i
-            return "The stay duration does not follow the minimum stay requirement of #{min_stay} night(s) for this rate."
+            return "The stay duration does not follow the minimum stay requirement of #{min_stay} night(s) for this room."
           end
           if max_stay.present? && nights > max_stay.to_i
-            return "The stay duration does not follow the maximum stay requirement of #{max_stay} night(s) for this rate."
+            return "The stay duration does not follow the maximum stay requirement of #{max_stay} night(s) for this room."
           end
         end
       end
 
       # 2. Check current database values in case restrictions were updated/added
-      rate_plan_ids = [nil]
+      rate_plan_ids = [ nil ]
       if item.nightly_rate_snapshot.present?
         item.nightly_rate_snapshot.values.each do |rate_data|
           if rate_data.is_a?(Hash) && rate_data["rate_plan_id"].present?

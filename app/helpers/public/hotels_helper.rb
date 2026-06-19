@@ -8,7 +8,7 @@ module Public::HotelsHelper
     "Safety And Security" => [ "safety", "shield-check" ],
     "Security" => [ "security", "shield-check" ],
     "Food And Drink" => [ "dining", "utensils" ],
-    "Kitchen" => [ "kitchen", "utensils" ],
+    "Kitchen" => [ "kitchen", "cooking-pot" ],
     "Activities" => [ "activities", "list-todo" ],
     "Outdoors" => [ "outdoors", "tent-tree" ],
     "Outside" => [ "outside", "trees" ],

@@ -38,6 +38,11 @@ export default class extends Controller {
         return response.json()
       })
       .then(session => {
+        if (session.gateway === "cute_mock" && session.mock_success_payload) {
+          this.handleMockSuccess(session)
+          return
+        }
+
         if (session.checkout_url) {
           window.location.href = session.checkout_url
           return
@@ -57,6 +62,15 @@ export default class extends Controller {
         this.submitButtonTarget.disabled = false
         this.submitButtonTarget.value = this.originalLabel
       })
+  }
+
+  handleMockSuccess(session) {
+    this.paymentIdFieldTarget.value = session.mock_success_payload.razorpay_payment_id
+    this.orderIdFieldTarget.value = session.mock_success_payload.razorpay_order_id
+    this.signatureFieldTarget.value = session.mock_success_payload.razorpay_signature
+    this.submittingToServer = true
+    this.submitButtonTarget.value = "Confirming your booking... 🌸"
+    this.element.requestSubmit()
   }
 
   openRazorpay(session) {

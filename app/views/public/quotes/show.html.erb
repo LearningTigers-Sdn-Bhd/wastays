@@ -9,7 +9,7 @@
       
       <!-- Hold Timer -->
       <div class="inline-flex items-center justify-center gap-x-2 bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-status-error self-center md:self-auto">
-        <svg class="w-4 h-4 animate-pulse" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <%= cached_icon("clock", class: "w-4 h-4 animate-pulse") %>
         <span class="text-[10px] md:text-xs font-black uppercase tracking-widest">
           Hold expires in: 
           <span data-controller="countdown" data-countdown-expiry-value="<%= @quote.expires_at.iso8601 %>">
@@ -25,7 +25,7 @@
     <div class="flex items-center justify-center max-w-2xl mx-auto mb-10 md:mb-12">
       <div class="flex flex-col items-center">
         <div class="w-8 h-8 rounded-full bg-status-success text-white flex items-center justify-center text-xs font-bold ring-4 ring-green-50 shadow-sm relative">
-          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <%= cached_icon("check", class: "w-4 h-4", stroke_width: 3) %>
         </div>
         <span class="text-[9px] md:text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mt-2">Room</span>
       </div>
@@ -66,7 +66,7 @@
           <!-- Guest Information -->
           <div class="card p-4 md:p-8">
             <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
-               <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+               <%= cached_icon("user", class: "w-5 h-5 text-brand-primary") %>
               Guest Information
             </h2>
             
@@ -204,7 +204,7 @@
           <!-- Payment Selection -->
           <div class="card p-4 md:p-8">
             <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
-              <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              <%= cached_icon("credit-card", class: "w-5 h-5 text-brand-primary") %>
               Secure Payment Method
             </h2>
             
@@ -215,7 +215,7 @@
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-x-4">
                       <div class="w-10 h-10 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                        <%= cached_icon("credit-card", class: "w-6 h-6") %>
                       </div>
                       <div>
                         <p class="font-bold text-neutral-text-primary">Online Payment / Cards</p>
@@ -284,7 +284,7 @@
                       <%= image_tag @hotel.summary_photo, class: "w-full h-full object-cover" %>
                     <% else %>
                       <div class="w-full h-full bg-neutral-bg flex items-center justify-center text-neutral-border">
-                        <svg class="w-8 h-8" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9 12 2l9 9"/><path d="M9 22V12h6v10"/><path d="M21 11v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V11"/></svg>
+                        <%= cached_icon("house", class: "w-8 h-8") %>
                       </div>
                     <% end %>
                   </div>
@@ -298,11 +298,11 @@
                 <div class="space-y-4 text-sm border-t border-b border-neutral-bg py-6 mb-6">
                   <div class="flex justify-between">
                     <span class="text-neutral-text-secondary">Check-in</span>
-                    <span class="font-bold text-neutral-text-primary"><%= @quote.display_check_in %></span>
+                    <span class="font-bold text-neutral-text-primary"><%= @quote.formatted_check_in %></span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-neutral-text-secondary">Check-out</span>
-                    <span class="font-bold text-neutral-text-primary"><%= @quote.display_check_out %></span>
+                    <span class="font-bold text-neutral-text-primary"><%= @quote.formatted_check_out %></span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-neutral-text-secondary">Stay Length</span>
@@ -314,7 +314,7 @@
                   <% @quote_items.each do |item| %>
                     <div class="flex justify-between text-sm">
                       <span class="text-neutral-text-secondary font-medium"><%= item.quantity %>x <%= item.room_type_snapshot['name'] %></span>
-                      <span class="text-neutral-text-primary font-bold"><%= display_amount(item.subtotal, quote_currency: @quote.currency, display_currency: @display_currency, hotel: @hotel) %></span>
+                      <span class="text-neutral-text-primary font-bold"><%= @quote.formatted_item_subtotal(item) %></span>
                     </div>
                   <% end %>
                 </div>
@@ -323,7 +323,7 @@
                   <div class="flex justify-between items-center text-xl">
                     <span class="font-black text-neutral-text-primary">Total</span>
                     <span class="font-black text-brand-primary">
-                      <%= @quote.total_amount_display(@display_currency, @hotel) %>
+                      <%= @quote.formatted_total %>
                     </span>
                   </div>
                   <p class="text-[10px] text-neutral-text-secondary italic text-right leading-tight">
@@ -336,7 +336,7 @@
             <div class="card p-5 bg-neutral-surface border-neutral-border">
               <h4 class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mb-3">Cancellation Policy</h4>
               <p class="text-xs text-neutral-text-secondary leading-relaxed">
-                <%= @quote.cancellation_policy_text %>
+                <%= @quote.cancellation_policy %>
               </p>
             </div>
           </div>

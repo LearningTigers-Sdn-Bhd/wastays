@@ -70,6 +70,40 @@ RSpec.describe "Public::Hotels", type: :request do
       expect(response.body).to include("rate-calendar")
     end
 
+    it "sorts restricted rooms to the bottom of the list when dates are provided" do
+      unrestricted_rt = create(:room_type, hotel: hotel, name: "Unrestricted Deluxe Room", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range")
+      restricted_rt = create(:room_type, hotel: hotel, name: "Restricted Suite Room", quantity: 5, max_adults: 2, base_price: 150, room_number_mode: "range")
+
+      check_in = Date.current + 1.day
+      check_out = check_in + 1.day
+
+      [ unrestricted_rt, restricted_rt ].each do |rt|
+        RoomInventory.create!(room_type: rt, date: check_in, quantity: 5, status: "open")
+        standard_plan = rt.rate_plans.first
+        RoomRate.create!(room_type: rt, rate_plan: nil, date: check_in, price: rt.base_price, currency: "MYR")
+        RoomRate.create!(room_type: rt, rate_plan: standard_plan, date: check_in, price: rt.base_price, currency: "MYR")
+      end
+
+      RoomRate.where(room_type: restricted_rt, date: check_in).update_all(min_stay: 3)
+
+      get "/hotels/#{hotel.id}", params: {
+        check_in: check_in.to_s,
+        check_out: check_out.to_s,
+        adults: 2,
+        children: 0,
+        room_count: 1
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Unrestricted Deluxe Room")
+      expect(response.body).to include("Restricted Suite Room")
+
+      idx_unrestricted = response.body.index("Unrestricted Deluxe Room")
+      idx_restricted = response.body.index("Restricted Suite Room")
+
+      expect(idx_unrestricted).to be < idx_restricted
+    end
+
     it "redirects when hotel is on easy plan" do
       hotel.update!(plan: easy_plan)
 

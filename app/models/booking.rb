@@ -406,12 +406,13 @@ class Booking < ApplicationRecord
   def check_cta_ctd_restrictions
     return unless %w[pending confirmed review_no_show checked_in review_due_out checkout_required].include?(status)
     return unless new_record? || check_in_changed? || check_out_changed?
+    return if new_record? && booking_rooms.target.empty?
 
     room_types = booking_rooms.map(&:room_type).compact
     return if room_types.empty?
 
     room_types.each do |room_type|
-      rate_plan_ids = [nil]
+      rate_plan_ids = [ nil ]
       if booking_rooms.present?
         rate_plan_ids += booking_rooms.map(&:rate_plan_id).compact
       end

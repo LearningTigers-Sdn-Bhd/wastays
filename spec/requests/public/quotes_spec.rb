@@ -86,7 +86,5 @@ RSpec.describe "Public::Quotes", type: :request do
       expect(body["found"]).to eq(false)
       expect(body["message"]).to eq("Email is required.")
     end
-
-
   end
 end

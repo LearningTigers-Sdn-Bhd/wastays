@@ -117,10 +117,10 @@ module BookingEngine
                 messages << "Check-out is not allowed on this date (Closed to Departure)."
               end
               if std_rate.min_stay.present? && nights < std_rate.min_stay
-                messages << "Minimum stay is #{std_rate.min_stay} night(s) for this rate."
+                messages << "Minimum stay is #{std_rate.min_stay} night(s) for this room."
               end
               if std_rate.max_stay.present? && nights > std_rate.max_stay
-                messages << "Maximum stay is #{std_rate.max_stay} night(s) for this rate."
+                messages << "Maximum stay is #{std_rate.max_stay} night(s) for this room."
               end
             end
           end
@@ -143,7 +143,8 @@ module BookingEngine
       end
 
       # Return the first restriction message we found
-      messages.uniq.first
+      first_message = messages.uniq.first
+      "#{first_message} Please select another date." if first_message.present?
     end
 
     def pricing_summary_for(room_type, rate_plan: nil)

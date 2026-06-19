@@ -224,7 +224,7 @@ RSpec.describe Booking, type: :model do
 
     it "blocks booking when check-in date is CTA" do
       RoomRate.create!(room_type: room_type, date: check_in, price: 100, currency: "MYR", rate_plan: room_type.rate_plans.first, closed_to_arrival: true)
-      
+
       booking = build(:booking, hotel: hotel, check_in: check_in, check_out: check_out)
       booking.booking_rooms.build(room_type: room_type, subtotal: 100.0)
 
@@ -234,7 +234,7 @@ RSpec.describe Booking, type: :model do
 
     it "blocks booking when check-out date is CTD" do
       RoomRate.create!(room_type: room_type, date: check_out, price: 100, currency: "MYR", rate_plan: room_type.rate_plans.first, closed_to_departure: true)
-      
+
       booking = build(:booking, hotel: hotel, check_in: check_in, check_out: check_out)
       booking.booking_rooms.build(room_type: room_type, subtotal: 100.0)
 
