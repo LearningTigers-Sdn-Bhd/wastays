@@ -281,8 +281,8 @@ export default class extends Controller {
         priceHtml = `<span class="text-[8px] mr-0.5">${sym}</span>${amt}`
       }
 
-      const actions = disabled ? "" :
-        `data-action="click->rate-calendar#pickDay mouseenter->rate-calendar#hoverDay" data-date="${d.iso}"`
+      const actions = `data-date="${d.iso}"` + (disabled ? "" :
+        ` data-action="click->rate-calendar#pickDay mouseenter->rate-calendar#hoverDay"`)
 
       const tooltip = info?.min_price ? `title="${this._fmt(info.min_price)}/night"` : ""
 
