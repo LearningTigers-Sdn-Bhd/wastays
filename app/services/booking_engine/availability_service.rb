@@ -37,7 +37,7 @@ module BookingEngine
       available_hotels
     end
 
-    def available_rooms_for_hotel(hotel)
+    def available_rooms_for_hotel(hotel, allow_restricted: false)
       # Get stay dates (excluding check-out day)
       stay_dates_list = stay_dates
       return [] if stay_dates_list.empty?
@@ -58,10 +58,92 @@ module BookingEngine
 
         next false unless inventory_ok
 
-        pricing_options_for(room_type).any?
+        pricing_options_for(room_type).any? || (allow_restricted && stay_restriction_error_message(room_type).present?)
       end
 
       available_room_types
+    end
+
+    def stay_restriction_error_message(room_type)
+      # If there is at least one valid pricing option, there is no blocking restriction.
+      return nil if pricing_options_for(room_type).any?
+
+      # Otherwise, let's find if any rates have stay restrictions that were violated.
+      stay_dates_list = stay_dates
+      return nil if stay_dates_list.empty?
+
+      messages = []
+
+      candidate_rate_plans_for(room_type).each do |rate_plan|
+        currency = rate_plan&.currency.presence || room_type.hotel.default_currency.presence || "MYR"
+
+        # Check check-out date for CTD restriction
+        checkout_rate = room_type.room_rates.find do |rr|
+          rr.date == @check_out &&
+            rr.currency == currency &&
+            (rate_plan.present? ? rr.rate_plan_id == rate_plan.id : rr.rate_plan_id.nil?)
+        end
+
+        if (checkout_rate.nil? || checkout_rate.rate_plan_id.nil?) && room_type.rate_plans.present?
+          standard_plan = room_type.rate_plans.first
+          std_checkout_rate = room_type.room_rates.find do |rr|
+            rr.date == @check_out &&
+              rr.currency == currency &&
+              rr.rate_plan_id == standard_plan.id
+          end
+          checkout_rate = std_checkout_rate if std_checkout_rate
+        end
+
+        if checkout_rate&.closed_to_departure?
+          messages << "Check-out is not allowed on this date (Closed to Departure)."
+        end
+
+        rates_by_date = room_type.room_rates.select do |rr|
+          stay_dates_list.include?(rr.date) &&
+            rr.currency == currency &&
+            (rate_plan.present? ? rr.rate_plan_id == rate_plan.id : rr.rate_plan_id.nil?)
+        end.index_by(&:date)
+
+        stay_dates_list.each do |date|
+          rate = rates_by_date[date]
+
+          if rate.nil? || rate.rate_plan_id.nil?
+            std_rate = standard_rate_for(date, room_type)
+            if std_rate.present?
+              if date == @check_in && std_rate.closed_to_arrival?
+                messages << "Check-in is not allowed on this date (Closed to Arrival)."
+              end
+              if date == stay_dates_list.last && std_rate.closed_to_departure?
+                messages << "Check-out is not allowed on this date (Closed to Departure)."
+              end
+              if std_rate.min_stay.present? && nights < std_rate.min_stay
+                messages << "Minimum stay is #{std_rate.min_stay} night(s) for this rate."
+              end
+              if std_rate.max_stay.present? && nights > std_rate.max_stay
+                messages << "Maximum stay is #{std_rate.max_stay} night(s) for this rate."
+              end
+            end
+          end
+
+          if rate.present?
+            if date == @check_in && rate.closed_to_arrival?
+              messages << "Check-in is not allowed on this date (Closed to Arrival)."
+            end
+            if date == stay_dates_list.last && rate.closed_to_departure?
+              messages << "Check-out is not allowed on this date (Closed to Departure)."
+            end
+            if rate.min_stay.present? && nights < rate.min_stay
+              messages << "Minimum stay is #{rate.min_stay} night(s) for this rate."
+            end
+            if rate.max_stay.present? && nights > rate.max_stay
+              messages << "Maximum stay is #{rate.max_stay} night(s) for this rate."
+            end
+          end
+        end
+      end
+
+      # Return the first restriction message we found
+      messages.uniq.first
     end
 
     def pricing_summary_for(room_type, rate_plan: nil)
@@ -139,6 +221,26 @@ module BookingEngine
 
     def pricing_option_for(room_type, rate_plan)
       currency = rate_plan&.currency.presence || room_type.hotel.default_currency.presence || "MYR"
+
+      # Check check-out date for CTD restriction
+      checkout_rate = room_type.room_rates.find do |rr|
+        rr.date == @check_out &&
+          rr.currency == currency &&
+          (rate_plan.present? ? rr.rate_plan_id == rate_plan.id : rr.rate_plan_id.nil?)
+      end
+
+      # Fallback to standard rate plan if checking base plan (nil)
+      if (checkout_rate.nil? || checkout_rate.rate_plan_id.nil?) && room_type.rate_plans.present?
+        standard_plan = room_type.rate_plans.first
+        std_checkout_rate = room_type.room_rates.find do |rr|
+          rr.date == @check_out &&
+            rr.currency == currency &&
+            rr.rate_plan_id == standard_plan.id
+        end
+        checkout_rate = std_checkout_rate if std_checkout_rate
+      end
+
+      return nil if checkout_rate&.closed_to_departure?
 
       # Filter rates in memory to avoid N+1
       rates_by_date = room_type.room_rates.select do |rr|

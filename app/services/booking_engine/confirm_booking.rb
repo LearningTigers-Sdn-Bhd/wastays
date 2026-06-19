@@ -81,13 +81,24 @@ module BookingEngine
         )
 
 
+        @quote.booking_quote_items.each do |item|
+          booking.booking_rooms.build(
+            room_type: item.room_type,
+            quantity: item.quantity,
+            subtotal: item.subtotal,
+            room_type_snapshot: item.room_type_snapshot,
+            nightly_rate_snapshot: normalized_nightly_rate_snapshot(item.nightly_rate_snapshot),
+            occupancy_snapshot: item.occupancy_snapshot
+          )
+        end
+
         if booking.save
           # 3. Link Guest Profile
           guest_result = GuestArrival::CreateOrMatchGuest.new(
             name: @payment_details[:guest_name],
             email: @payment_details[:guest_email],
             phone: @payment_details[:guest_phone],
-            government_id: @payment_details[:government_id],
+            government_id: @payment_details[:guest_government_id],
             gender: gender,
             country: guest_country,
             document_type: document_type,
@@ -101,18 +112,6 @@ module BookingEngine
 
           # 4. Initialize Pre-checkin
           GuestArrival::StartPreCheckin.new(booking).call
-
-          # 5. Create Booking Rooms
-          @quote.booking_quote_items.each do |item|
-            booking.booking_rooms.create!(
-              room_type: item.room_type,
-              quantity: item.quantity,
-              subtotal: item.subtotal,
-              room_type_snapshot: item.room_type_snapshot,
-              nightly_rate_snapshot: normalized_nightly_rate_snapshot(item.nightly_rate_snapshot),
-              occupancy_snapshot: item.occupancy_snapshot
-            )
-          end
 
           initialize_folio(booking)
 

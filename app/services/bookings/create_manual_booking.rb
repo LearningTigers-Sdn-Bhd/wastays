@@ -133,16 +133,16 @@ module Bookings
 
       begin
         ActiveRecord::Base.transaction do
-          if booking.save
-            booking.booking_rooms.create!(
-              room_type: room_type,
-              rate_plan: rate_plan,
-              quantity: 1,
-              subtotal: financial_snapshot.room_total,
-              room_type_snapshot: room_type.as_json,
-              nightly_rate_snapshot: financial_snapshot.nightly_rate_snapshot
-            )
+          booking.booking_rooms.build(
+            room_type: room_type,
+            rate_plan: rate_plan,
+            quantity: 1,
+            subtotal: financial_snapshot.room_total,
+            room_type_snapshot: room_type.as_json,
+            nightly_rate_snapshot: financial_snapshot.nightly_rate_snapshot
+          )
 
+          if booking.save
             assignment_result = Bookings::AssignRoom.new(
               booking: booking,
               room_number: @room_number,

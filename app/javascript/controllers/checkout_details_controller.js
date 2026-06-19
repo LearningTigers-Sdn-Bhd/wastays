@@ -64,12 +64,6 @@ export default class extends Controller {
           return
         }
 
-        if (payload.restriction_failed) {
-          this.setDetailsUnlocked(false)
-          this.setFeedback(payload.message, "error")
-          return
-        }
-
         this.setDetailsUnlocked(true)
 
         if (payload.found) {

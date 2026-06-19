@@ -35,12 +35,7 @@ class Public::QuotesController < ApplicationController
       return render json: { found: false, message: "Email is required." }, status: :unprocessable_content
     end
 
-    if (restriction_msg = quote.stay_restriction_error_message).present?
-      return render json: {
-        restriction_failed: true,
-        message: restriction_msg
-      }
-    end
+
 
     guest = Guest.find_by(email: email)
     found = guest.present?
