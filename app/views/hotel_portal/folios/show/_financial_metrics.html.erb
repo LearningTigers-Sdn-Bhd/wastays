@@ -13,7 +13,7 @@
       <% folio_show.financial_metric_rows.each do |label, value| %>
         <tr>
           <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48"><%= label %></th>
-          <td class="px-4 py-2 font-semibold tabular-nums <%= label == "Close Readiness" && folio_show.close_folio_ready? ? "text-emerald-700" : "text-slate-950" %>"><%= value %></td>
+          <td class="px-4 py-2 font-semibold tabular-nums <%= label == "Checkout Readiness" && folio_show.checkout_readiness_label == "Ready" ? "text-emerald-700" : "text-slate-950" %>"><%= value %></td>
         </tr>
       <% end %>
     </tbody>

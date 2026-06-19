@@ -190,17 +190,82 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include(%(href="#{hotel_folio_path(hotel, booking)}?origin=folios"))
       expect(response.body).not_to include("Back to Booking")
     end
+
+    it "renders combined folio details, checkout readiness metrics, and ready checkout status" do
+      booking = create_booking_with_folio(
+        guest_name: "Ready Guest",
+        confirmation_token: "BK-READY",
+        folio_number: 604,
+        charges: 100,
+        payments: 100,
+        check_in: Date.new(2026, 6, 11),
+        check_out: Date.new(2026, 6, 13)
+      )
+
+      get hotel_folio_path(hotel, booking)
+
+      body = response.body
+
+      expect(response).to have_http_status(:success)
+      expect(body).to include("Stay / Nights")
+      expect(body).to include("11 Jun 2026 - 13 Jun 2026 / 2 Nights")
+      expect(body).to include("Folio Type")
+      expect(body).to include("Payments / Refunds")
+      expect(body).to include("Checkout Readiness")
+      expect(body).not_to include("Upcoming Lines")
+      expect(body).not_to include("Close Readiness")
+      expect(body).to include("Checkout Status")
+      expect(body).to include("Ready for checkout")
+      expect(body).to include("Balance settled · No upcoming charges · Payments/refunds synced")
+      expect(body).to include(%(href="#{hotel_booking_path(hotel, booking)}"))
+      expect(body).to include("Go to Booking")
+      expect(body).not_to include("Close Folio")
+    end
+
+    it "renders blocked checkout status with blocker summary" do
+      booking = create_booking_with_folio(guest_name: "Blocked Guest", confirmation_token: "BK-BLOCK", folio_number: 605, charges: 100, check_out: Date.current + 1.day)
+      create(:folio_forecasted_charge, booking_folio: booking.booking_folio, amount: 30, stay_date: Date.current, charge_kind: "accommodation")
+
+      get hotel_folio_path(hotel, booking)
+
+      body = response.body
+
+      expect(response).to have_http_status(:success)
+      expect(body).to include("Not ready for checkout")
+      expect(body).to include("Guest owes MYR 130.00 · 1 upcoming charge pending")
+      expect(body).to include(%(href="#{hotel_booking_path(hotel, booking)}"))
+      expect(body).not_to include("Close Folio: Not ready")
+    end
+
+    it "renders one horizontal ledger table with posted balance as a section summary only" do
+      booking = create_booking_with_folio(guest_name: "Ledger Guest", confirmation_token: "BK-LEDGER", folio_number: 603, charges: 100, payments: 40)
+      create(:folio_forecasted_charge, booking_folio: booking.booking_folio, amount: 30, stay_date: Date.current, charge_kind: "accommodation")
+
+      get hotel_folio_path(hotel, booking)
+
+      html = Nokogiri::HTML(response.body)
+      ledger = html.at_css("section[data-controller='folio-ledger']")
+      headers = ledger.css("thead th").map { |header| header.text.squish }
+
+      expect(response).to have_http_status(:success)
+      expect(ledger.at_css(".overflow-x-auto")).to be_present
+      expect(headers).to eq([ "Date", "Code", "Description / Reference", "Debit", "Credit", "Action" ])
+      expect(ledger.text.squish).to include("Posted balance MYR 60.00")
+      expect(ledger.text.squish).not_to include("Projected balance")
+      expect(response.body).not_to include("posted-mobile")
+      expect(response.body).not_to include("forecasted-mobile")
+    end
   end
 
-  def create_booking_with_folio(guest_name:, confirmation_token:, folio_number:, room_number: nil, charges: 0, payments: 0, adjustments: 0, status: "open")
+  def create_booking_with_folio(guest_name:, confirmation_token:, folio_number:, room_number: nil, charges: 0, payments: 0, adjustments: 0, status: "open", check_in: Date.current, check_out: Date.current)
     room_type = create(:room_type, hotel: hotel)
     booking = create(
       :booking,
       hotel: hotel,
       guest_name: guest_name,
       confirmation_token: confirmation_token,
-      check_in: Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: Date.current, kind: :check_in),
-      check_out: Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: Date.current, kind: :check_out)
+      check_in: Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: check_in, kind: :check_in),
+      check_out: Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: check_out, kind: :check_out)
     )
     create(:booking_room, booking: booking, room_type: room_type, room_number: room_number) if room_number.present?
     folio = create(:booking_folio, booking: booking, hotel: hotel, folio_number: folio_number, status: status)
