@@ -2,10 +2,11 @@ class Public::BookingsController < ApplicationController
   skip_before_action :authenticate_user! if respond_to?(:authenticate_user!)
 
   def show
-    @booking = Booking.find_by!(confirmation_token: params[:id])
-    @hotel = @booking.hotel
+    booking = Booking.find_by!(confirmation_token: params[:id])
+    @booking = Public::BookingPresenter.new(booking, view_context)
+    @hotel = Public::HotelPresenter.new(@booking.hotel, view_context)
     @booking_rooms = @booking.booking_rooms
-    pre_checkin_result = GuestArrival::StartPreCheckin.new(@booking).call
+    pre_checkin_result = GuestArrival::StartPreCheckin.new(booking).call
     @pre_checkin = pre_checkin_result.pre_checkin if pre_checkin_result.success?
     @qr_data_url = Concierge::QrSvg.data_url(@booking.confirmation_token)
   end

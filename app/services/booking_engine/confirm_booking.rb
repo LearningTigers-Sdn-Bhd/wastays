@@ -52,6 +52,7 @@ module BookingEngine
           guest_name: @payment_details[:guest_name], # From checkout form
           guest_email: @payment_details[:guest_email],
           guest_phone: @payment_details[:guest_phone],
+          special_requests: @payment_details[:special_requests],
           total_amount: payable_total,
           currency: @quote.currency,
           check_in: @quote.check_in,
@@ -111,7 +112,7 @@ module BookingEngine
           end
 
           # 4. Finalize Quote status
-          @quote.update!(status: "converted")
+          @quote.update!(status: "converted", special_requests: @payment_details[:special_requests])
 
           # Record Audit Logs
           Bookings::RecordAuditLog.call!(auditable: @quote, action_type: "convert", source: "guest")

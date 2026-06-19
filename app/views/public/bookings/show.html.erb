@@ -25,7 +25,7 @@
         Booking <span class="text-[#d9c5a0]">Confirmed!</span>
       </h1>
       <p class="text-white/70 text-sm sm:text-base lg:text-lg max-w-xl mx-auto font-medium mb-8 sm:mb-10">
-        Pack your bags, <%= @booking.guest_name.split.first %>, you're all set for your stay.
+        Pack your bags, <%= @booking.guest_first_name %>, you're all set for your stay.
       </p>
 
       <div class="inline-flex flex-col items-center">
@@ -134,17 +134,17 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-5 sm:gap-8">
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-text-secondary mb-1">Check-in</p>
-            <p class="text-xl font-bold text-neutral-text-primary tracking-tight"><%= @booking.check_in.strftime("%b %d, %Y") %></p>
-            <p class="text-[10px] text-neutral-text-secondary font-bold">From <%= @booking.hotel_snapshot['property_policy']&.fetch('check_in_time', '2:00 PM') %></p>
+            <p class="text-xl font-bold text-neutral-text-primary tracking-tight"><%= @booking.formatted_check_in %></p>
+            <p class="text-[10px] text-neutral-text-secondary font-bold">From <%= @booking.check_in_time %></p>
           </div>
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-text-secondary mb-1">Check-out</p>
-            <p class="text-xl font-bold text-neutral-text-primary tracking-tight"><%= @booking.check_out.strftime("%b %d, %Y") %></p>
-            <p class="text-[10px] text-neutral-text-secondary font-bold">Until <%= @booking.hotel_snapshot['property_policy']&.fetch('check_out_time', '12:00 PM') %></p>
+            <p class="text-xl font-bold text-neutral-text-primary tracking-tight"><%= @booking.formatted_check_out %></p>
+            <p class="text-[10px] text-neutral-text-secondary font-bold">Until <%= @booking.check_out_time %></p>
           </div>
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-text-secondary mb-1">Duration</p>
-            <p class="text-xl font-bold text-neutral-text-primary tracking-tight"><%= pluralize((@booking.check_out.to_date - @booking.check_in.to_date).to_i, 'Night') %></p>
+            <p class="text-xl font-bold text-neutral-text-primary tracking-tight"><%= @booking.stay_duration %></p>
           </div>
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-text-secondary mb-1">Guests</p>
@@ -189,14 +189,12 @@
               <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-neutral-border/40 h-full">
                 <p class="text-base sm:text-lg font-bold text-neutral-text-primary mb-2"><%= @booking.guest_name %></p>
                 <div class="space-y-1">
-                  <p class="text-xs text-neutral-text-secondary flex items-center gap-x-2 font-bold">
-                    <svg class="w-3.5 h-3.5 text-[#d9c5a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                    <%= @booking.guest_email %>
-                  </p>
-                  <p class="text-xs text-neutral-text-secondary flex items-center gap-x-2 font-bold">
-                    <svg class="w-3.5 h-3.5 text-[#d9c5a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                    <%= @booking.guest_phone %>
-                  </p>
+                  <% @booking.guest_info_items.each do |item| %>
+                    <p class="text-xs text-neutral-text-secondary flex items-center gap-x-2 font-bold">
+                      <%= item[:icon_svg].html_safe %>
+                      <%= item[:text] %>
+                    </p>
+                  <% end %>
                 </div>
               </div>
             </div>
@@ -210,7 +208,7 @@
                 <div class="relative flex justify-between items-center mb-6">
                   <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d9c5a0]">Total Paid</span>
                   <div class="text-right">
-                    <span class="text-2xl sm:text-3xl font-bold tracking-tight">RM <%= number_with_precision(@booking.total_amount, precision: 2) %></span>
+                    <span class="text-2xl sm:text-3xl font-bold tracking-tight"><%= @booking.total_amount_display %></span>
                     <p class="text-[9px] text-white/50 uppercase tracking-widest mt-1">Inclusive of all taxes</p>
                   </div>
                 </div>
@@ -222,6 +220,18 @@
             </div>
           </div>
 
+          <% if @booking.special_requests.present? %>
+            <div>
+              <div class="flex items-center gap-x-3 mb-6">
+                <span class="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-primary">Special Requests</span>
+                <div class="h-px flex-1 bg-brand-primary/10"></div>
+              </div>
+              <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-neutral-border/40">
+                <p class="text-xs text-neutral-text-secondary leading-relaxed font-medium"><%= @booking.special_requests %></p>
+              </div>
+            </div>
+          <% end %>
+
           <!-- Hotel Terms -->
           <div class="pt-6 border-t border-neutral-border/40">
             <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-brand-primary mb-4">Property Policies</h3>
@@ -230,7 +240,7 @@
                 <span class="w-1.5 h-1.5 rounded-full bg-[#d9c5a0] mt-1.5 flex-none"></span>
                 <p class="font-bold">Identification required upon check-in. Local government taxes may apply.</p>
               </div>
-              <% if (policy = @booking.hotel_snapshot['property_policy']&.fetch('cancellation_policy', nil)).present? %>
+              <% if (policy = @booking.cancellation_policy).present? %>
                 <div class="flex items-start gap-x-3">
                   <span class="w-1.5 h-1.5 rounded-full bg-[#d9c5a0] mt-1.5 flex-none"></span>
                   <p class="font-bold"><%= policy %></p>

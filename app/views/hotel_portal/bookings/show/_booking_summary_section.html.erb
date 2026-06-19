@@ -45,7 +45,7 @@
   </div>
 
   <!-- Stay + Financial Wrapper (2 columns on desktop/lg, stacked on mobile) -->
-  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
     <!-- Stay Card -->
     <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <header class="flex items-center justify-between border-b border-slate-200 bg-slate-50/60 px-4 py-2.5">
@@ -81,26 +81,16 @@
         <div class="bg-white px-4 py-2.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Occupancy</div>
           <div class="mt-0.5 text-sm font-semibold text-slate-900">
-            <span class="hidden sm:inline"><%= booking.adults %> <%= "adult".pluralize(booking.adults) %> · <%= booking.children.to_i %> ch.</span>
-            <span class="inline sm:hidden"><%= booking.adults %>A · <%= booking.children.to_i %>C</span>
+            <span class="hidden sm:inline"><%= presenter.occupancy_text(variant: :desktop) %></span>
+            <span class="inline sm:hidden"><%= presenter.occupancy_text(variant: :mobile) %></span>
           </div>
         </div>
         <!-- Room (spans 2 columns) -->
-        <% primary_room = booking.booking_rooms.first %>
-        <% if primary_room %>
-          <% room_no = presenter.room_number_for(primary_room) %>
-          <% room_type = primary_room.room_type_snapshot["name"].presence || primary_room.room_type&.name %>
-          <% room_val_desktop = room_no.present? ? "Room #{room_no} · #{room_type}" : room_type %>
-          <% room_val_mobile = room_no.present? ? "#{room_type} · #{room_no}" : room_type %>
-        <% else %>
-          <% room_val_desktop = "—" %>
-          <% room_val_mobile = "—" %>
-        <% end %>
         <div class="col-span-2 bg-white px-4 py-2.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Room</div>
           <div class="mt-0.5 text-sm font-semibold text-slate-900">
-            <span class="hidden sm:inline" title="<%= room_val_desktop %>"><%= room_val_desktop %></span>
-            <span class="inline sm:hidden" title="<%= room_val_mobile %>"><%= room_val_mobile %></span>
+            <span class="hidden sm:inline" title="<%= presenter.room_display_text(variant: :desktop) %>"><%= presenter.room_display_text(variant: :desktop) %></span>
+            <span class="inline sm:hidden" title="<%= presenter.room_display_text(variant: :mobile) %>"><%= presenter.room_display_text(variant: :mobile) %></span>
           </div>
         </div>
         <!-- booking source -->
@@ -113,11 +103,19 @@
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Rate</div>
           <div class="mt-0.5 truncate text-sm font-semibold text-slate-900" title="<%= presenter.rate_plan_label.presence || "Standard Rate" %>"><%= presenter.rate_plan_label.presence || "Standard Rate" %></div>
         </div>
+        <!-- Special Requests (spans 2 columns) -->
+        <% if booking.special_requests.present? %>
+          <div class="col-span-2 bg-white px-4 py-1.5 min-w-0">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-amber-700 flex items-center gap-1">
+              <%= cached_icon "message-square", class: "size-3" %> Guest Special Request
+            </div>
+            <div class="mt-0.5 text-sm font-semibold text-slate-900 whitespace-pre-wrap leading-relaxed"><%= booking.special_requests %></div>
+          </div>
+        <% end %>
       </div>
     </div>
 
     <!-- Financial Card -->
-    <% balance = presenter.projected_outstanding_balance %>
     <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <header class="flex items-center justify-between border-b border-slate-200 bg-slate-50/60 px-4 py-2.5">
         <div class="flex items-center gap-2">
@@ -132,7 +130,7 @@
         <div class="bg-white px-4 py-2.5 min-w-0 flex flex-col justify-center">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Balance</div>
           <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm font-semibold text-slate-900">
-            <span><%= presenter.currency %> <%= number_with_precision(balance, precision: 2) %></span>
+            <span><%= presenter.formatted_projected_balance %></span>
             <% if presenter.balance_due? %>
               <span class="inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-800 ring-1 ring-inset ring-amber-600/20">Due</span>
             <% else %>
@@ -143,12 +141,12 @@
         <!-- Payment -->
         <div class="bg-white px-4 py-2.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Payment</div>
-          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900" title="<%= presenter.payment_status_display.to_s.tr("_", " ").titleize %>"><%= presenter.payment_status_display.to_s.tr("_", " ").titleize.presence || "—" %></div>
+          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900" title="<%= presenter.payment_status_label %>"><%= presenter.payment_status_label %></div>
         </div>
         <!-- Guarantee -->
         <div class="bg-white px-4 py-2.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Guarantee</div>
-          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900" title="<%= booking.guarantee_method.to_s.presence&.tr("_", " ")&.titleize || "No guarantee" %>"><%= booking.guarantee_method.to_s.presence&.tr("_", " ")&.titleize || "No guarantee" %></div>
+          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900" title="<%= presenter.guarantee_method_label %>"><%= presenter.guarantee_method_label %></div>
         </div>
         <!-- Folio -->
         <div class="bg-white px-4 py-2.5 min-w-0 flex items-center justify-between">
@@ -165,17 +163,17 @@
         <!-- Room Total -->
         <div class="bg-white px-4 py-2.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Room Total</div>
-          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900"><%= presenter.currency %> <%= number_with_precision(presenter.room_total, precision: 2) %></div>
+          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900"><%= presenter.formatted_room_total %></div>
         </div>
         <!-- Taxes / Charges -->
         <div class="bg-white px-4 py-2.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Taxes / Charges</div>
-          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900"><%= presenter.currency %> <%= number_with_precision(presenter.taxes_total, precision: 2) %></div>
+          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900"><%= presenter.formatted_taxes_total %></div>
         </div>
         <!-- Total Paid (spans 2 columns) -->
         <div class="col-span-2 bg-white px-4 py-2.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Paid</div>
-          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900"><%= presenter.currency %> <%= number_with_precision(booking.total_amount, precision: 2) %></div>
+          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900"><%= presenter.formatted_total_amount %></div>
         </div>
       </div>
     </div>

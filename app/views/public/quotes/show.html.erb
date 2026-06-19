@@ -1,16 +1,16 @@
 <div class="bg-neutral-bg min-h-screen pb-12">
   <!-- Checkout Header -->
-  <div class="bg-white border-b border-neutral-border py-6 shadow-sm">
+  <div class="bg-white border-b border-neutral-border py-4 md:py-6 shadow-sm">
     <div class="max-w-[85rem] mx-auto px-4 flex flex-col md:flex-row md:items-center md:justify-between gap-y-4">
-      <div>
-        <h1 class="text-2xl font-black text-neutral-text-primary tracking-tight">Complete Your Booking</h1>
-        <p class="text-sm text-neutral-text-secondary mt-1">Please provide your details to secure your room.</p>
+      <div class="text-center md:text-left">
+        <h1 class="text-xl md:text-2xl font-black text-neutral-text-primary tracking-tight">Complete Your Booking</h1>
+        <p class="text-xs md:text-sm text-neutral-text-secondary mt-1">Please provide your details to secure your room.</p>
       </div>
       
       <!-- Hold Timer -->
-      <div class="inline-flex items-center gap-x-2 bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-status-error">
+      <div class="inline-flex items-center justify-center gap-x-2 bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-status-error self-center md:self-auto">
         <svg class="w-4 h-4 animate-pulse" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span class="text-xs font-black uppercase tracking-widest">
+        <span class="text-[10px] md:text-xs font-black uppercase tracking-widest">
           Hold expires in: 
           <span data-controller="countdown" data-countdown-expiry-value="<%= @quote.expires_at.iso8601 %>">
             <%= quote_time_remaining(@quote.expires_at) %>
@@ -21,23 +21,23 @@
   </div>
 
   <!-- Progress Stepper -->
-  <div class="max-w-[85rem] mx-auto px-4 py-8">
-    <div class="flex items-center justify-center max-w-2xl mx-auto mb-12">
-      <div class="flex flex-col items-center relative">
-        <div class="w-8 h-8 rounded-full bg-status-success text-white flex items-center justify-center text-xs font-bold ring-4 ring-green-50 shadow-sm">
+  <div class="max-w-[85rem] mx-auto px-4 py-6 md:py-8">
+    <div class="flex items-center justify-center max-w-2xl mx-auto mb-10 md:mb-12">
+      <div class="flex flex-col items-center">
+        <div class="w-8 h-8 rounded-full bg-status-success text-white flex items-center justify-center text-xs font-bold ring-4 ring-green-50 shadow-sm relative">
           <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <span class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mt-2 absolute -bottom-6 whitespace-nowrap">Room</span>
+        <span class="text-[9px] md:text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mt-2">Room</span>
       </div>
-      <div class="flex-1 h-0.5 bg-brand-primary mx-4"></div>
-      <div class="flex flex-col items-center relative">
+      <div class="flex-1 h-0.5 bg-brand-primary mx-2 md:mx-4 -mt-5"></div>
+      <div class="flex flex-col items-center">
         <div class="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center text-xs font-black ring-4 ring-red-50 shadow-md">2</div>
-        <span class="text-[10px] font-black text-brand-primary uppercase tracking-widest mt-2 absolute -bottom-6 whitespace-nowrap">Details</span>
+        <span class="text-[9px] md:text-[10px] font-black text-brand-primary uppercase tracking-widest mt-2">Details</span>
       </div>
-      <div class="flex-1 h-0.5 bg-neutral-border mx-4"></div>
-      <div class="flex flex-col items-center relative opacity-50">
+      <div class="flex-1 h-0.5 bg-neutral-border mx-2 md:mx-4 -mt-5"></div>
+      <div class="flex flex-col items-center opacity-50">
         <div class="w-8 h-8 rounded-full bg-neutral-surface border-2 border-neutral-border text-neutral-text-secondary flex items-center justify-center text-xs font-bold">3</div>
-        <span class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mt-2 absolute -bottom-6 whitespace-nowrap">Payment</span>
+        <span class="text-[9px] md:text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mt-2">Payment</span>
       </div>
     </div>
 
@@ -60,9 +60,9 @@
       
       <div class="grid lg:grid-cols-12 gap-8">
         <!-- Forms Area -->
-        <div class="lg:col-span-8 space-y-6">
+        <div class="lg:col-span-8 space-y-6 order-2 lg:order-1">
           <!-- Guest Information -->
-          <div class="card p-6 md:p-8">
+          <div class="card p-4 md:p-8">
             <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
               <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               Guest Information
@@ -183,8 +183,24 @@
             <% end %>
           </div>
 
+          <!-- Special Requests -->
+          <div class="card p-4 md:p-8">
+            <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
+              <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M11 12H7"/></svg>
+              Special Requests
+            </h2>
+            <p class="text-sm text-neutral-text-secondary mb-4">
+              Please let us know if you have any special requirements. We will do our best to accommodate them, but they are subject to availability.
+            </p>
+            <%= f.text_area "guest_details[special_requests]",
+                            rows: 3,
+                            placeholder: "Type your special requests here...",
+                            class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                            data: { checkout_payment_target: "specialRequestsField" } %>
+          </div>
+
           <!-- Payment Selection -->
-          <div class="card p-6 md:p-8">
+          <div class="card p-4 md:p-8">
             <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
               <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
               Secure Payment Method
@@ -241,29 +257,29 @@
             </label>
           </div>
 
-          <div class="flex items-center justify-end gap-4 pt-4">
+          <div class="flex flex-col sm:flex-row items-center justify-end gap-4 pt-4">
             <%= link_to "Back to hotel",
                         hotel_path(@hotel, request.query_parameters),
-                        class: "btn btn-secondary min-w-[220px] px-12 py-4 text-base font-black text-center" %>
+                        class: "btn btn-secondary w-full sm:min-w-[220px] sm:w-auto px-8 py-4 text-base font-black text-center" %>
             <%= f.submit "Confirm & Pay Now",
-                         class: "btn btn-gradient min-w-[220px] px-12 py-4 text-base font-black disabled:cursor-not-allowed disabled:opacity-60",
+                         class: "btn btn-gradient w-full sm:min-w-[220px] sm:w-auto px-8 py-4 text-base font-black disabled:cursor-not-allowed disabled:opacity-60",
                          data: { checkout_payment_target: "submitButton" },
                          disabled: !@payment_ready %>
           </div>
         </div>
 
         <!-- Summary Sidebar -->
-        <aside class="lg:col-span-4">
+        <aside class="lg:col-span-4 order-1 lg:order-2">
           <div class="sticky top-[130px] space-y-6">
             <div class="card overflow-hidden">
-              <div class="p-5 border-b border-neutral-border bg-neutral-bg/50">
+              <div class="p-4 md:p-5 border-b border-neutral-border bg-neutral-bg/50">
                 <h3 class="text-xs font-black text-neutral-text-secondary uppercase tracking-widest">Booking Summary</h3>
               </div>
-              <div class="p-6">
+              <div class="p-4 md:p-6">
                 <div class="flex gap-x-4 mb-6">
                   <div class="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-neutral-border shadow-sm">
-                    <% if @hotel.room_types.first&.photos&.attached? %>
-                      <%= image_tag @hotel.room_types.first.photos.first, class: "w-full h-full object-cover" %>
+                    <% if @hotel.summary_photo %>
+                      <%= image_tag @hotel.summary_photo, class: "w-full h-full object-cover" %>
                     <% else %>
                       <div class="w-full h-full bg-neutral-bg flex items-center justify-center text-neutral-border">
                         <svg class="w-8 h-8" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9 12 2l9 9"/><path d="M9 22V12h6v10"/><path d="M21 11v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V11"/></svg>
@@ -273,26 +289,22 @@
                   <div>
                     <h4 class="font-extrabold text-neutral-text-primary leading-tight"><%= @hotel.name %></h4>
                     <p class="text-xs text-neutral-text-secondary mt-1"><%= @hotel.city %></p>
-                    <div class="flex text-amber-400 mt-1">
-                      <% @hotel.star_rating.to_i.times do %>
-                        <svg class="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                      <% end %>
-                    </div>
+                    <%= star_rating_icons(@hotel.star_rating) %>
                   </div>
                 </div>
 
                 <div class="space-y-4 text-sm border-t border-b border-neutral-bg py-6 mb-6">
                   <div class="flex justify-between">
                     <span class="text-neutral-text-secondary">Check-in</span>
-                    <span class="font-bold text-neutral-text-primary"><%= @quote.check_in.strftime("%a, %b %d") %></span>
+                    <span class="font-bold text-neutral-text-primary"><%= @quote.display_check_in %></span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-neutral-text-secondary">Check-out</span>
-                    <span class="font-bold text-neutral-text-primary"><%= @quote.check_out.strftime("%a, %b %d") %></span>
+                    <span class="font-bold text-neutral-text-primary"><%= @quote.display_check_out %></span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-neutral-text-secondary">Stay Length</span>
-                    <span class="font-bold text-neutral-text-primary"><%= pluralize((@quote.check_out - @quote.check_in).to_i, 'night') %></span>
+                    <span class="font-bold text-neutral-text-primary"><%= @quote.stay_length_text %></span>
                   </div>
                 </div>
 
@@ -309,11 +321,7 @@
                   <div class="flex justify-between items-center text-xl">
                     <span class="font-black text-neutral-text-primary">Total</span>
                     <span class="font-black text-brand-primary">
-                      <% if @quote.display_currency.present? && @quote.display_total_amount.present? %>
-                        <%= CurrencyFormatter.format(@quote.display_total_amount, currency: @quote.display_currency) %>
-                      <% else %>
-                        <%= display_amount(@quote.total_amount, quote_currency: @quote.currency, display_currency: @display_currency, hotel: @hotel) %>
-                      <% end %>
+                      <%= @quote.total_amount_display(@display_currency, @hotel) %>
                     </span>
                   </div>
                   <p class="text-[10px] text-neutral-text-secondary italic text-right leading-tight">
@@ -326,7 +334,7 @@
             <div class="card p-5 bg-neutral-surface border-neutral-border">
               <h4 class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mb-3">Cancellation Policy</h4>
               <p class="text-xs text-neutral-text-secondary leading-relaxed">
-                <%= @quote.cancellation_policy_snapshot || "Standard cancellation policy applies. Refund eligibility depends on your check-in date." %>
+                <%= @quote.cancellation_policy_text %>
               </p>
             </div>
           </div>
