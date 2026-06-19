@@ -6,7 +6,10 @@ module HotelPortal
 
     FOLIO_POSTING_PERMISSIONS = {
       [ "charge", "other" ] => "post_folio_charges",
+      [ "payment", "" ] => "post_folio_payments",
       [ "payment", "cash" ] => "post_folio_payments",
+      [ "payment", "booking_payment" ] => "post_folio_payments",
+      [ "payment", "gateway_payment" ] => "post_folio_payments",
       [ "payment", "refund" ] => "execute_folio_refunds",
       [ "adjustment", "adjustment" ] => "post_folio_adjustments",
       [ "adjustment", "discount" ] => "post_folio_adjustments",
@@ -19,6 +22,7 @@ module HotelPortal
       unless @booking.booking_folio
         return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
       end
+      return redirect_after_post(alert: "You do not have permission to post this folio transaction.") unless allowed_to_post_folio_transaction?
 
       result = ::Folios::PostStaffTransaction.call(
         folio: @booking.booking_folio,
@@ -28,7 +32,8 @@ module HotelPortal
         amount: folio_transaction_params[:amount],
         description: folio_transaction_params[:description],
         posting_date: folio_transaction_params[:posting_date],
-        transaction_code_id: folio_transaction_params[:transaction_code_id]
+        transaction_code_id: folio_transaction_params[:transaction_code_id],
+        options: posting_options
       )
 
       if result.success?
@@ -44,12 +49,19 @@ module HotelPortal
       end
 
       transaction = @booking.booking_folio.folio_transactions.find(params[:id])
+      policy = ::Folios::TransactionActionPolicy.new(
+        transaction: transaction,
+        user: current_user,
+        posting_date: current_hotel.current_business_date
+      )
+      return redirect_after_post(alert: policy.reverse_error) unless policy.reverse_allowed?
+
       result = ::Folios::ReverseTransaction.call(
         transaction: transaction,
         user: current_user,
         correction_reason: reversal_params[:correction_reason],
         correction_note: reversal_params[:correction_note],
-        posting_date: reversal_params[:posting_date].presence || current_hotel.current_business_date
+        posting_date: current_hotel.current_business_date
       )
 
       if result.success?
@@ -80,14 +92,51 @@ module HotelPortal
     end
 
     def folio_transaction_params
-      params.require(:folio_transaction).permit(:transaction_type, :category, :transaction_code_id, :amount, :description, :posting_date)
+      params.require(:folio_transaction).permit(
+        :transaction_type,
+        :category,
+        :transaction_code_id,
+        :amount,
+        :description,
+        :posting_date,
+        :reference,
+        :note,
+        :payment_source
+      )
+    end
+
+    def posting_options
+      options = {}
+      options[:require_transaction_code] = true if folio_transaction_params[:transaction_type].to_s == "charge"
+      options[:payment_source] = folio_transaction_params[:payment_source].to_s.strip if folio_transaction_params[:transaction_type].to_s == "payment"
+
+      metadata = {}
+      metadata[:reference] = folio_transaction_params[:reference].to_s.strip if folio_transaction_params[:reference].present?
+      metadata[:note] = folio_transaction_params[:note].to_s.strip if folio_transaction_params[:note].present?
+      options[:metadata] = metadata if metadata.any?
+
+      options
+    end
+
+    def allowed_to_post_folio_transaction?
+      slug = posting_permission_slug
+      slug.present? && current_user.has_permission?(slug, hotel: current_hotel)
+    end
+
+    def posting_permission_slug
+      type = folio_transaction_params[:transaction_type].to_s
+      category = folio_transaction_params[:category].to_s
+      return "post_folio_payments" if type == "payment" && folio_transaction_params[:payment_source].present?
+      return "post_folio_payments" if type == "payment" && category != "refund"
+      return "post_folio_charges" if type == "charge"
+
+      FOLIO_POSTING_PERMISSIONS.fetch([ type, category ], nil)
     end
 
     def reversal_params
       params.require(:folio_transaction).permit(
         :correction_reason,
-        :correction_note,
-        :posting_date
+        :correction_note
       )
     end
   end
