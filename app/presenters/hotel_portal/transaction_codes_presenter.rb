@@ -26,7 +26,7 @@ module HotelPortal
       {
         title: "Utility Operations",
         description: "Payment, refund, adjustment, and rebate codes used to balance guest folios.",
-        system_keys: %w[cash_payment card_payment bank_payment refund adjustment rebate],
+        system_keys: %w[cash_payment card_payment bank_payment gateway_manual_recovery_payment ota_collected_payment refund adjustment rebate],
         test_id: "transaction-codes-utility-operations-list",
         empty_message: "No utility operations transaction codes found."
       },

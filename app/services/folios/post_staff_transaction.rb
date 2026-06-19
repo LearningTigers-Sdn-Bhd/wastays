@@ -6,7 +6,7 @@ module Folios
   class PostStaffTransaction
     ALLOWED_CATEGORIES = {
       "charge" => %w[other],
-      "payment" => %w[cash refund],
+      "payment" => %w[cash booking_payment gateway_payment refund],
       "adjustment" => %w[adjustment correction discount write_off other]
     }.freeze
 
@@ -34,9 +34,14 @@ module Folios
       @posting_date = posting_date.presence || @folio.hotel.current_business_date
       @transaction_code_id = transaction_code_id.presence
       @options = options
+      @require_transaction_code = !!@options[:require_transaction_code]
+      @payment_source = nil
     end
 
     def call
+      payment_source_error = apply_payment_source
+      return failure(payment_source_error) if payment_source_error.present?
+
       code_error = apply_transaction_code
       return failure(code_error) if code_error.present?
 
@@ -57,7 +62,7 @@ module Folios
           description: @description,
           posting_date: @posting_date,
           options: @options.merge(
-            metadata: (@options[:metadata] || {}).merge(
+            metadata: staff_metadata.merge(
               posting_source: @options[:posting_source].presence || "staff",
               posted_from: "booking_show",
               posted_by_user_id: @user&.id
@@ -82,11 +87,35 @@ module Folios
 
     private
 
+    def apply_payment_source
+      return unless staff_payment?
+
+      source_key = @options[:payment_source].to_s
+      return "Payment source is required." if source_key.blank?
+
+      @payment_source = Folios::PaymentSource.fetch(source_key)
+      return "Payment source is not valid." if @payment_source.blank?
+
+      reference = payment_source_reference
+      return "#{@payment_source.label} reference is required." if @payment_source.required_reference? && reference.blank?
+
+      @transaction_code = @payment_source.transaction_code_for(@folio.hotel)
+      return "Payment transaction code is not available." if @transaction_code.blank? || !@transaction_code.active?
+      return "Payment transaction code must be a payment code." unless @transaction_code.kind == "payment"
+
+      @transaction_type = @transaction_code.kind
+      @category = @transaction_code.category
+      @transaction_code_id = nil
+      nil
+    end
+
     def apply_transaction_code
+      return "Transaction code is required for manual charges." if @require_transaction_code && @transaction_code_id.blank?
       return if @transaction_code_id.blank?
 
       @transaction_code = @folio.hotel.transaction_codes.find_by(id: @transaction_code_id)
       return "Transaction code is not available." if @transaction_code.blank? || !@transaction_code.active?
+      return "Transaction code must be a charge code." if @require_transaction_code && @transaction_code.kind != "charge"
 
       @transaction_type = @transaction_code.kind
       @category = @transaction_code.category
@@ -101,6 +130,39 @@ module Folios
       return true if @transaction_code.present? && @transaction_type == "charge" && @category.in?(FolioTransaction::CHARGE_CATEGORIES)
 
       @category.in?(ALLOWED_CATEGORIES.fetch(@transaction_type, []))
+    end
+
+    def staff_payment?
+      @transaction_type == "payment" && (@options[:payment_source].present? || @category != "refund")
+    end
+
+    def payment_source_reference
+      return if @payment_source.blank?
+
+      @options.dig(:payment_references, @payment_source.reference_key).presence ||
+        @options.dig(:payment_references, @payment_source.reference_key.to_sym).presence ||
+        @options.dig(:metadata, @payment_source.reference_key).presence ||
+        @options.dig(:metadata, @payment_source.reference_key.to_sym).presence ||
+        @options.dig(:metadata, :reference).presence ||
+        @options.dig(:metadata, "reference").presence
+    end
+
+    def staff_metadata
+      metadata = (@options[:metadata] || {}).dup
+      return metadata if @payment_source.blank?
+
+      reference = payment_source_reference.to_s.strip
+      metadata[:payment_source] = @payment_source.key
+      metadata[:reference] = reference if reference.present? && metadata[:reference].blank? && metadata["reference"].blank?
+      metadata[:source_references] = source_references_metadata(metadata, reference) if reference.present?
+      metadata[:manual_recovery] = true if @payment_source.manual_recovery?
+      metadata
+    end
+
+    def source_references_metadata(metadata, reference)
+      metadata.fetch(:source_references, metadata.fetch("source_references", {})).to_h.merge(
+        @payment_source.reference_key => reference
+      )
     end
 
     def normalized_amount

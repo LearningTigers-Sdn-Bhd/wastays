@@ -55,6 +55,10 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       expect(response.body).to include("Inactive Levy")
       expect(response.body).to include("bg-slate-100 text-slate-600 ring-slate-200")
       expect(response.body).to include("REBATE")
+      expect(response.body).to include("GATEWAY")
+      expect(response.body).to include("OTA")
+      expect(response.body).to include("Gateway Manual Recovery")
+      expect(response.body).to include("OTA Collected")
       expect(response.body).to include("Hotel-specific non-tax transaction codes for additional service postings.")
       expect(response.body).not_to include("Tax Listing")
     end

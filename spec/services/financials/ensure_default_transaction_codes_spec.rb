@@ -11,11 +11,13 @@ RSpec.describe Financials::EnsureDefaultTransactionCodes, type: :service do
 
       expect {
         described_class.call(hotel)
-      }.to change { hotel.transaction_codes.count }.from(0).to(16)
+      }.to change { hotel.transaction_codes.count }.from(0).to(18)
 
       expect(hotel.transaction_codes.system_required.pluck(:code)).to contain_exactly(
-        "ROOM", "NO_SHOW", "CANCEL", "LATE_CO", "EARLY_DEP", "TAX_SST", "TAX_TTX", "FNB", "PARK", "MISC", "CASH", "CARD", "BANK", "REFUND", "ADJUSTMENT", "REBATE"
+        "ROOM", "NO_SHOW", "CANCEL", "LATE_CO", "EARLY_DEP", "TAX_SST", "TAX_TTX", "FNB", "PARK", "MISC", "CASH", "CARD", "BANK", "GATEWAY", "OTA", "REFUND", "ADJUSTMENT", "REBATE"
       )
+      expect(hotel.transaction_codes.find_by!(system_key: "gateway_manual_recovery_payment")).to have_attributes(code: "GATEWAY", category: "gateway_payment", gl_account_code: "1010")
+      expect(hotel.transaction_codes.find_by!(system_key: "ota_collected_payment")).to have_attributes(code: "OTA", category: "booking_payment", gl_account_code: "2020")
     end
 
     it "is idempotent" do
