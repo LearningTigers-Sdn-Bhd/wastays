@@ -64,6 +64,12 @@ export default class extends Controller {
           return
         }
 
+        if (payload.restriction_failed) {
+          this.setDetailsUnlocked(false)
+          this.setFeedback(payload.message, "error")
+          return
+        }
+
         this.setDetailsUnlocked(true)
 
         if (payload.found) {
@@ -155,6 +161,12 @@ export default class extends Controller {
       if (this.hasDocumentFieldTarget) this.documentFieldTarget.classList.add("hidden")
     }
     this.updateEnabled()
+
+    const submitBtn = this.element.querySelector('[type="submit"]')
+    if (submitBtn) {
+      const paymentReady = this.element.getAttribute("data-checkout-payment-ready-value") !== "false"
+      submitBtn.disabled = !unlocked || !paymentReady
+    }
   }
 
   clearGuestFields() {

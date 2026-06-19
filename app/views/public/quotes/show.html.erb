@@ -57,6 +57,15 @@
       <%= f.hidden_field "payment_response[razorpay_payment_id]", value: "", data: { checkout_payment_target: "paymentIdField" } %>
       <%= f.hidden_field "payment_response[razorpay_order_id]", value: "", data: { checkout_payment_target: "orderIdField" } %>
       <%= f.hidden_field "payment_response[razorpay_signature]", value: "", data: { checkout_payment_target: "signatureField" } %>
+
+      <% if (restriction_msg = @quote.stay_restriction_error_message).present? %>
+        <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-status-error flex items-start gap-x-3">
+          <svg class="w-5 h-5 shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <span class="font-bold">Booking Restriction:</span> <%= restriction_msg %>
+          </div>
+        </div>
+      <% end %>
       
       <div class="grid lg:grid-cols-12 gap-8">
         <!-- Forms Area -->
@@ -64,7 +73,7 @@
           <!-- Guest Information -->
           <div class="card p-4 md:p-8">
             <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
-              <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+               <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               Guest Information
             </h2>
             
@@ -76,7 +85,8 @@
                                   id: "email",
                                   required: true,
                                   placeholder: "john@example.com",
-                                  class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                                  class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20 disabled:opacity-50 disabled:cursor-not-allowed",
+                                  disabled: @quote.stay_restriction_violated?,
                                   data: {
                                     checkout_details_target: "emailInput",
                                     checkout_payment_target: "emailField",
@@ -84,7 +94,8 @@
                                   } %>
               </div>
               <div class="sm:col-span-3">
-                <button type="button" class="btn btn-secondary w-full py-3 text-sm font-black"
+                <button type="button" class="btn btn-secondary w-full py-3 text-sm font-black <%= 'disabled opacity-60 cursor-not-allowed' if @quote.stay_restriction_violated? %>"
+                        <%= 'disabled' if @quote.stay_restriction_violated? %>
                         data-checkout-details-target="lookupButton"
                         data-action="click->checkout-details#lookup">
                   Continue
@@ -242,7 +253,7 @@
           <div class="space-y-4 py-4">
             <label class="flex items-start gap-3 text-sm text-neutral-text-secondary cursor-pointer">
               <%= hidden_field_tag "guest_details[privacy_consent]", "0" %>
-              <%= check_box_tag "guest_details[privacy_consent]", "1", false, required: true, class: "mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary" %>
+              <%= check_box_tag "guest_details[privacy_consent]", "1", false, required: true, disabled: @quote.stay_restriction_violated?, class: "mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary" %>
               <span>
                 I have read and agree to the <%= link_to "Privacy Policy", privacy_policy_path, class: "text-brand-primary underline", target: "_blank" %> and how my data will be processed. <span class="text-status-error">*</span>
               </span>
@@ -250,7 +261,7 @@
 
             <label class="flex items-start gap-3 text-sm text-neutral-text-secondary cursor-pointer">
               <%= hidden_field_tag "guest_details[marketing_consent]", "0" %>
-              <%= check_box_tag "guest_details[marketing_consent]", "1", false, class: "mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary" %>
+              <%= check_box_tag "guest_details[marketing_consent]", "1", false, disabled: @quote.stay_restriction_violated?, class: "mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary" %>
               <span>
                 I agree to receive marketing communications, exclusive offers, and travel updates from WAStays and its partner hotels.
               </span>
@@ -264,7 +275,7 @@
             <%= f.submit "Confirm & Pay Now",
                          class: "btn btn-gradient w-full sm:min-w-[220px] sm:w-auto px-8 py-4 text-base font-black disabled:cursor-not-allowed disabled:opacity-60",
                          data: { checkout_payment_target: "submitButton" },
-                         disabled: !@payment_ready %>
+                         disabled: !@payment_ready || @quote.stay_restriction_violated? %>
           </div>
         </div>
 

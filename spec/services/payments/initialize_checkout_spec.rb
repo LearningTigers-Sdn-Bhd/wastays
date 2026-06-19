@@ -87,6 +87,14 @@ RSpec.describe Payments::InitializeCheckout do
     expect(result.error).to eq("Unsupported gateway")
   end
 
+  it "returns failure when stay restriction is violated" do
+    allow(quote).to receive(:stay_restriction_error_message).and_return("Minimum stay is 3 nights")
+
+    result = subject.call
+    expect(result.success?).to be false
+    expect(result.error).to eq("Minimum stay is 3 nights")
+  end
+
   it "handles standard errors" do
     allow(adapter).to receive(:create_checkout_session).and_raise(StandardError, "Unexpected error")
 

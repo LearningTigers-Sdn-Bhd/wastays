@@ -20,6 +20,10 @@ module Payments
     def call
       return failure("Invalid parameters") unless valid?
 
+      if (restriction_msg = quote.stay_restriction_error_message).present?
+        return failure(restriction_msg)
+      end
+
       setting = quote.hotel.effective_payment_setting(gateway)
       return failure("Payment gateway is not configured.") unless setting
 

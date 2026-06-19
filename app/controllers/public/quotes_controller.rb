@@ -35,6 +35,13 @@ class Public::QuotesController < ApplicationController
       return render json: { found: false, message: "Email is required." }, status: :unprocessable_content
     end
 
+    if (restriction_msg = quote.stay_restriction_error_message).present?
+      return render json: {
+        restriction_failed: true,
+        message: restriction_msg
+      }
+    end
+
     guest = Guest.find_by(email: email)
     found = guest.present?
 
@@ -48,7 +55,7 @@ class Public::QuotesController < ApplicationController
   private
 
   def quote_params
-    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency)
+    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency, :rate_plan_id)
   end
 
   def display_currency_for_request
