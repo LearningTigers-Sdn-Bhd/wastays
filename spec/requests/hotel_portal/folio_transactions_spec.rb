@@ -44,11 +44,138 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
 
     it "posts a cash payment" do
       expect {
-        post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash payment", posting_date: Date.current)
+        post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash payment", posting_date: Date.current)
       }.to change { folio.folio_transactions.payment.count }.by(1)
 
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
       expect(folio.folio_transactions.last.category).to eq("cash")
+    end
+
+    it "stores reference and note metadata for staff-posted cash payments" do
+      expect {
+        post_transaction(
+          transaction_type: "payment",
+          category: "cash",
+          payment_source: "cash",
+          amount: "100.00",
+          description: "Cash payment",
+          posting_date: Date.current,
+          reference: "RCP-000821",
+          note: "Front desk receipt"
+        )
+      }.to change { folio.folio_transactions.payment.count }.by(1)
+
+      transaction = folio.folio_transactions.payment.last
+      expect(transaction.category).to eq("cash")
+      expect(transaction.transaction_code.code).to eq("CASH")
+      expect(transaction.metadata["reference"]).to eq("RCP-000821")
+      expect(transaction.metadata["source_references"]).to eq("receipt_reference" => "RCP-000821")
+      expect(transaction.metadata["note"]).to eq("Front desk receipt")
+    end
+
+    [
+      {
+        source: "cash",
+        reference_key: :receipt_reference,
+        reference: "RCP-123",
+        code: "CASH",
+        category: "cash"
+      },
+      {
+        source: "bank",
+        reference_key: :bank_reference,
+        reference: "BNK-123",
+        code: "BANK",
+        category: "booking_payment"
+      },
+      {
+        source: "card",
+        reference_key: :card_reference,
+        reference: "AUTH-123",
+        code: "CARD",
+        category: "gateway_payment"
+      },
+      {
+        source: "gateway",
+        reference_key: :gateway_reference,
+        reference: "cap_123",
+        code: "GATEWAY",
+        category: "gateway_payment",
+        manual_recovery: true
+      },
+      {
+        source: "ota",
+        reference_key: :ota_reference,
+        reference: "AGD-123",
+        code: "OTA",
+        category: "booking_payment"
+      }
+    ].each do |example|
+      it "posts #{example[:source]} payments using the server-mapped transaction code" do
+        Financials::EnsureDefaultTransactionCodes.call(hotel)
+        forged_code = hotel.transaction_codes.find_by!(system_key: "refund")
+        tax_count = folio.folio_transactions.where(category: "tax").count
+
+        expect {
+          post_transaction(
+            transaction_type: "payment",
+            category: "cash",
+            transaction_code_id: forged_code.id,
+            payment_source: example[:source],
+            amount: "100.00",
+            description: "#{example[:source].humanize} payment",
+            posting_date: Date.current,
+            reference: example[:reference],
+            note: "Front desk note"
+          )
+        }.to change { folio.folio_transactions.payment.count }.by(1)
+
+        transaction = folio.folio_transactions.payment.order(:id).last
+        expect(folio.folio_transactions.where(category: "tax").count).to eq(tax_count)
+        expect(transaction.amount).to eq(100.to_d)
+        expect(transaction.category).to eq(example[:category])
+        expect(transaction.transaction_code.code).to eq(example[:code])
+        expect(transaction.metadata["payment_source"]).to eq(example[:source])
+        expect(transaction.metadata["source_references"]).to eq(example[:reference_key].to_s => example[:reference])
+        expect(transaction.metadata["reference"]).to eq(example[:reference])
+        expect(transaction.metadata["note"]).to eq("Front desk note")
+        expect(transaction.metadata["posting_source"]).to eq("staff")
+        expect(transaction.metadata["posted_by_user_id"]).to eq(user.id)
+        expect(transaction.metadata["manual_recovery"]).to eq(true) if example[:manual_recovery]
+        expect(folio.reload.outstanding_balance).to eq(-100.to_d)
+      end
+    end
+
+    it "rejects staff payments without a payment source" do
+      expect {
+        post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash payment", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(flash[:alert]).to eq("Payment source is required.")
+    end
+
+    it "rejects staff payments with an invalid payment source" do
+      expect {
+        post_transaction(transaction_type: "payment", category: "cash", payment_source: "crypto", amount: "100.00", description: "Payment", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(flash[:alert]).to eq("Payment source is not valid.")
+    end
+
+    it "requires gateway references for gateway manual recovery payments" do
+      expect {
+        post_transaction(transaction_type: "payment", category: "cash", payment_source: "gateway", amount: "100.00", description: "Gateway recovery", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(flash[:alert]).to eq("Gateway Manual Recovery reference is required.")
+    end
+
+    it "requires OTA references for OTA collected payments" do
+      expect {
+        post_transaction(transaction_type: "payment", category: "cash", payment_source: "ota", amount: "100.00", description: "OTA collected", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(flash[:alert]).to eq("OTA Collected reference is required.")
     end
 
     it "preserves folios origin when redirecting back to folio after posting" do
@@ -59,6 +186,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
           folio_transaction: {
             transaction_type: "payment",
             category: "cash",
+            payment_source: "cash",
             amount: "100.00",
             description: "Cash payment",
             posting_date: Date.current
@@ -70,11 +198,51 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     end
 
     it "posts an other charge" do
+      code = create(:transaction_code, hotel: hotel, kind: "charge", category: "other")
+
       expect {
-        post_transaction(transaction_type: "charge", category: "other", amount: "25.00", description: "Lost key", posting_date: Date.current)
+        post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
       }.to change { folio.folio_transactions.charge.count }.by(1)
 
       expect(folio.folio_transactions.last.category).to eq("other")
+      expect(folio.folio_transactions.last.transaction_code).to eq(code)
+    end
+
+    it "adds a charge from a transaction code and generated attached taxes, then redirects to folio" do
+      hotel.update!(sst_enabled: true)
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+      code.update!(is_taxable: true)
+      code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+
+      expect {
+        post hotel_folio_transactions_path(hotel, booking), params: {
+          redirect_to_folio: "true",
+          folio_transaction: {
+            transaction_type: "charge",
+            category: "tax",
+            transaction_code_id: code.id,
+            amount: "100.00",
+            description: "Restaurant charge",
+            posting_date: Date.current,
+            reference: "RCPT-42",
+            note: "Manager approved",
+            override_closed_folio: "true",
+            tax_ids: [ 999 ]
+          }
+        }
+      }.to change(FolioTransaction, :count).by(2)
+
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking))
+      parent = folio.folio_transactions.find_by!(transaction_code: code)
+      tax = folio.folio_transactions.where(category: "tax").sole
+      expect(parent.category).to eq("fb")
+      expect(parent.metadata["reference"]).to eq("RCPT-42")
+      expect(parent.metadata["note"]).to eq("Manager approved")
+      expect(tax.amount).to eq(8.to_d)
+      expect(tax.transaction_code.system_key).to eq("sst_tax")
+      expect(tax.metadata["parent_folio_transaction_id"]).to eq(parent.id)
+      expect(tax.metadata["source_transaction_code_id"]).to eq(code.id)
     end
 
     it "records a refund as a negative payment" do
@@ -83,6 +251,26 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       transaction = folio.folio_transactions.payment.last
       expect(transaction.category).to eq("refund")
       expect(transaction.amount).to eq(-50.0)
+    end
+
+    it "stores reference and note metadata for manually issued refunds" do
+      expect {
+        post_transaction(
+          transaction_type: "payment",
+          category: "refund",
+          amount: "50.00",
+          description: "Refund",
+          posting_date: Date.current,
+          reference: "RF-102",
+          note: "Returned cash deposit"
+        )
+      }.to change { folio.folio_transactions.payment.count }.by(1)
+
+      transaction = folio.folio_transactions.payment.last
+      expect(transaction.category).to eq("refund")
+      expect(transaction.transaction_code.code).to eq("REFUND")
+      expect(transaction.metadata["reference"]).to eq("RF-102")
+      expect(transaction.metadata["note"]).to eq("Returned cash deposit")
     end
 
     it "posts a write-off adjustment" do
@@ -99,14 +287,25 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       }.not_to change(FolioTransaction, :count)
 
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
-      expect(flash[:alert]).to eq("Category is not allowed for charge transactions.")
+      expect(flash[:alert]).to eq("Transaction code is required for manual charges.")
+    end
+
+    it "rejects non-charge transaction codes for add charge posting" do
+      code = create(:transaction_code, hotel: hotel, kind: "payment", category: "cash")
+
+      expect {
+        post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "10.00", description: "Cash", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to eq("Transaction code must be a charge code.")
     end
 
     it "rejects closed folios" do
       folio.update!(status: "closed")
 
       expect {
-        post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
+        post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
       expect(flash[:alert]).to include("Folio is closed")
@@ -117,9 +316,21 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       create(:night_audit, hotel: hotel, business_date: closed_date, status: "completed")
       create(:hotel_business_date, hotel: hotel, business_date: closed_date, status: "closed")
 
-      post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash", posting_date: closed_date)
+      post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: closed_date)
 
       expect(flash[:alert]).to include("business date #{closed_date} is already closed")
+    end
+
+    it "rejects staff inserts while night audit is running" do
+      hotel.current_business_date_record.update!(status: "audit_running")
+      code = create(:transaction_code, hotel: hotel, kind: "charge", category: "other")
+
+      expect {
+        post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to include("currently in night audit")
     end
 
     it "reverses a folio transaction with correction details" do
@@ -135,6 +346,45 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(reversal.reversal_of_transaction).to eq(transaction)
       expect(reversal.amount).to eq(-100.to_d)
       expect(transaction.reload.voided_by_transaction).to eq(reversal)
+    end
+
+    it "reverses a taxable parent and generated tax child as a group" do
+      parent = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "fb", amount: 100)
+      tax = create(
+        :folio_transaction,
+        booking_folio: folio,
+        transaction_type: "charge",
+        category: "tax",
+        amount: 8,
+        metadata: { "parent_folio_transaction_id" => parent.id, "tax_line" => { "type" => "sst" } }
+      )
+
+      expect {
+        reverse_transaction(parent, correction_reason: "Posting error", correction_note: "Wrong taxable charge")
+      }.to change(FolioTransaction, :count).by(2)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(parent.reload.voided_by_transaction).to be_present
+      expect(tax.reload.voided_by_transaction).to be_present
+    end
+
+    it "rejects direct generated tax child reversal through the controller policy" do
+      parent = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "fb", amount: 100)
+      tax = create(
+        :folio_transaction,
+        booking_folio: folio,
+        transaction_type: "charge",
+        category: "tax",
+        amount: 8,
+        metadata: { "parent_folio_transaction_id" => parent.id, "tax_line" => { "type" => "sst" } }
+      )
+
+      expect {
+        reverse_transaction(tax, correction_reason: "Posting error", correction_note: "Tax only")
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to eq("Generated tax rows reverse with their parent charge.")
     end
 
     it "preserves folios origin when redirecting back to folio after reversal" do
@@ -197,7 +447,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     folio
 
     expect {
-      post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
+      post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
     }.not_to change(FolioTransaction, :count)
 
     expect(response).to redirect_to(hotel_booking_path(hotel, booking))
@@ -209,7 +459,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     folio
 
     expect {
-      post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
+      post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
     }.not_to change(FolioTransaction, :count)
 
     expect(response).to redirect_to(hotel_booking_path(hotel, booking))
@@ -261,6 +511,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         folio_transaction: {
           transaction_type: "payment",
           category: "cash",
+          payment_source: "cash",
           amount: "100.00",
           description: "Cash",
           posting_date: Date.current,
@@ -276,16 +527,15 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
   it "does not allow override_night_audit params to bypass closed-date reversal controls" do
     grant_permission("post_folio_corrections")
     transaction = create(:folio_transaction, booking_folio: folio)
-    closed_date = 1.day.ago.to_date
+    closed_date = hotel.current_business_date
     create(:night_audit, hotel: hotel, business_date: closed_date, status: "completed")
-    create(:hotel_business_date, hotel: hotel, business_date: closed_date, status: "closed")
+    hotel.current_business_date_record.update!(status: "closed")
 
     expect {
       reverse_transaction(
         transaction,
         correction_reason: "Posting error",
         correction_note: "Wrong booking",
-        posting_date: closed_date,
         override_night_audit: "true"
       )
     }.not_to change(FolioTransaction, :count)
@@ -297,7 +547,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
   it "redirects with an error when the booking has no folio" do
     grant_permission("post_folio_payments")
 
-    post_transaction(transaction_type: "payment", category: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
+    post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
 
     expect(response).to redirect_to(hotel_booking_path(hotel, booking))
     expect(flash[:alert]).to eq("Booking has no folio.")

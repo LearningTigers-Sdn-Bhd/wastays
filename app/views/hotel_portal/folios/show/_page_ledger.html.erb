@@ -1,4 +1,7 @@
 <% folio_show = local_assigns.fetch(:folio_show) %>
+<% booking = local_assigns.fetch(:booking) %>
+<% hotel = local_assigns.fetch(:hotel) %>
+<% folio_origin = local_assigns[:folio_origin] %>
 
 <section class="overflow-hidden rounded-md border border-slate-200 bg-white" data-controller="folio-ledger">
   <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
@@ -11,8 +14,8 @@
     <span class="text-xs font-medium tabular-nums text-slate-500"><%= pluralize(folio_show.ledger_entry_count, "entry") %></span>
   </div>
 
-  <div class="hidden overflow-x-auto md:block">
-    <table class="w-full min-w-[880px] table-fixed text-left text-xs">
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-[760px] table-fixed text-left text-xs">
       <thead class="sticky top-0 z-[1] bg-slate-50 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
         <tr class="border-b border-slate-200">
           <th class="w-24 px-4 py-2">Date</th>
@@ -20,13 +23,12 @@
           <th class="px-4 py-2">Description / Reference</th>
           <th class="w-24 px-4 py-2 text-right">Debit</th>
           <th class="w-24 px-4 py-2 text-right">Credit</th>
-          <th class="w-24 px-4 py-2 text-right">Balance</th>
-          <th class="w-16 px-4 py-2 text-right">Action</th>
+          <th class="w-28 px-4 py-2 text-right">Action</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100">
         <tr class="border-y border-slate-200 bg-slate-50">
-          <td colspan="7" class="p-0">
+          <td colspan="6" class="p-0">
             <button type="button"
                     class="flex w-full items-center justify-between gap-4 px-4 py-2.5 text-left transition hover:bg-slate-100"
                     aria-expanded="true"
@@ -45,17 +47,25 @@
         </tr>
 
         <% folio_show.posted_rows.each do |row| %>
-          <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "posted", currency: folio_show.currency %>
+          <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "posted", currency: folio_show.currency, booking: booking, hotel: hotel, folio_origin: folio_origin %>
         <% end %>
 
         <% if folio_show.posted_rows.empty? %>
           <tr data-folio-ledger-target="row" data-section="posted">
-            <td colspan="7" class="px-4 py-6 text-center text-xs text-slate-500">No posted transactions.</td>
+            <td colspan="6" class="px-4 py-6 text-center text-xs text-slate-500">No posted transactions.</td>
+          </tr>
+        <% end %>
+
+        <% if folio_show.posted_rows.any? %>
+          <tr data-folio-ledger-target="row" data-section="posted" class="bg-slate-50/70">
+            <td colspan="4" class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-500">Posted balance</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-black tabular-nums text-slate-950"><%= folio_show.money(folio_show.posted_balance) %></td>
+            <td class="px-4 py-3"></td>
           </tr>
         <% end %>
 
         <tr class="border-y border-slate-200 bg-slate-50">
-          <td colspan="7" class="p-0">
+          <td colspan="6" class="p-0">
             <button type="button"
                     class="flex w-full items-center justify-between gap-4 px-4 py-2.5 text-left transition hover:bg-slate-100"
                     aria-expanded="true"
@@ -74,59 +84,15 @@
         </tr>
 
         <% folio_show.forecasted_rows.each do |row| %>
-          <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "forecasted", currency: folio_show.currency %>
+          <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "forecasted", currency: folio_show.currency, booking: booking, hotel: hotel, folio_origin: folio_origin %>
         <% end %>
 
         <% if folio_show.forecasted_rows.empty? %>
           <tr data-folio-ledger-target="row" data-section="forecasted">
-            <td colspan="7" class="px-4 py-6 text-center text-xs text-slate-500">No upcoming forecasted charges.</td>
+            <td colspan="6" class="px-4 py-6 text-center text-xs text-slate-500">No upcoming charges.</td>
           </tr>
         <% end %>
       </tbody>
     </table>
-  </div>
-
-  <div class="divide-y divide-slate-200 md:hidden">
-    <button type="button"
-            class="flex w-full items-center justify-between gap-4 bg-slate-50 px-4 py-3 text-left"
-            aria-expanded="true"
-            data-action="folio-ledger#toggle"
-            data-folio-ledger-section-param="posted-mobile">
-      <span class="flex items-center gap-2 text-sm font-bold text-slate-900">
-        <span class="w-3 text-slate-500" data-folio-ledger-target="chevron" data-section="posted-mobile">▾</span>
-        <span class="inline-flex size-5 items-center justify-center rounded-md bg-emerald-50 text-emerald-700"><%= cached_icon "credit-card", class: "size-3" %></span>
-        Posted Transactions
-      </span>
-      <span class="text-[11px] font-medium text-slate-500"><%= folio_show.posted_section_summary %></span>
-    </button>
-
-    <% folio_show.posted_rows.each do |row| %>
-      <%= render "hotel_portal/folios/show/ledger_mobile_row", row: row, section: "posted-mobile", currency: folio_show.currency %>
-    <% end %>
-
-    <% if folio_show.posted_rows.empty? %>
-      <div class="px-4 py-6 text-center text-xs text-slate-500" data-folio-ledger-target="row" data-section="posted-mobile">No posted transactions.</div>
-    <% end %>
-
-    <button type="button"
-            class="flex w-full items-center justify-between gap-4 bg-slate-50 px-4 py-3 text-left"
-            aria-expanded="true"
-            data-action="folio-ledger#toggle"
-            data-folio-ledger-section-param="forecasted-mobile">
-      <span class="flex items-center gap-2 text-sm font-bold text-slate-900">
-        <span class="w-3 text-slate-500" data-folio-ledger-target="chevron" data-section="forecasted-mobile">▾</span>
-        <span class="inline-flex size-5 items-center justify-center rounded-md bg-amber-50 text-amber-700"><%= cached_icon "calendar-clock", class: "size-3" %></span>
-        Upcoming Charges
-      </span>
-      <span class="text-[11px] font-medium text-slate-500"><%= folio_show.forecasted_section_summary %></span>
-    </button>
-
-    <% folio_show.forecasted_rows.each do |row| %>
-      <%= render "hotel_portal/folios/show/ledger_mobile_row", row: row, section: "forecasted-mobile", currency: folio_show.currency %>
-    <% end %>
-
-    <% if folio_show.forecasted_rows.empty? %>
-      <div class="px-4 py-6 text-center text-xs text-slate-500" data-folio-ledger-target="row" data-section="forecasted-mobile">No upcoming forecasted charges.</div>
-    <% end %>
   </div>
 </section>

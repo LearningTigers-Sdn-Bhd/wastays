@@ -16,7 +16,15 @@
       <% if local_assigns[:redirect_to_checkout] %>
         <%= hidden_field_tag "redirect_to_checkout", "true" %>
       <% end %>
-      <% if local_assigns[:transaction_code_options].present? %>
+      <% if local_assigns[:payment_source_options].present? %>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Payment Source</label>
+          <%= select_tag "folio_transaction[payment_source]",
+              options_for_select(payment_source_options),
+              required: true,
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      <% elsif local_assigns[:transaction_code_options].present? %>
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Transaction Code</label>
           <%= select_tag "folio_transaction[transaction_code_id]",
@@ -44,13 +52,25 @@
 
       <div>
         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Posting Date</label>
-        <%= date_field_tag "folio_transaction[posting_date]", Date.current, required: true, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        <%= date_field_tag "folio_transaction[posting_date]", hotel.current_business_date, required: true, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
       </div>
 
       <div>
         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Description</label>
         <%= text_field_tag "folio_transaction[description]", nil, required: true, placeholder: "e.g., Mini-bar, Late Checkout Fee", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
       </div>
+
+      <% if local_assigns[:include_reference_fields] %>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Reference</label>
+          <%= text_field_tag "folio_transaction[reference]", nil, placeholder: "e.g., Receipt or approval number", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Note</label>
+          <%= text_area_tag "folio_transaction[note]", nil, rows: 3, placeholder: "Optional internal note", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+      <% end %>
 
       <div class="flex items-center justify-end gap-x-3 pt-2">
         <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition" onclick="this.closest('dialog').close()">Cancel</button>

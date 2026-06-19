@@ -14,22 +14,25 @@ module HotelPortal
       :source_label,
       :debit,
       :credit,
-      :tax,
       :balance,
       :balance_kind,
       :action_label,
+      :action_kind,
+      :modal_title,
+      :transaction_id,
       :row_kind,
       :reversed,
       keyword_init: true
     )
 
-    def initialize(booking:, hotel:)
+    def initialize(booking:, hotel:, user: nil)
       @booking = booking
       @hotel = hotel
+      @user = user
       @booking_presenter = HotelPortal::BookingPresenter.new(booking, hotel)
     end
 
-    attr_reader :booking, :hotel
+    attr_reader :booking, :hotel, :user
 
     def folio
       booking.booking_folio
@@ -81,6 +84,12 @@ module HotelPortal
     def nights_label
       nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
       "#{nights} #{'night'.pluralize(nights)}"
+    end
+
+    def formatted_stay_nights
+      nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
+      dates = "#{booking.check_in.strftime('%d %b %Y')} - #{booking.check_out.strftime('%d %b %Y')}"
+      "#{dates} / #{nights} #{'Night'.pluralize(nights)}"
     end
 
     def posted_charges
@@ -155,7 +164,7 @@ module HotelPortal
         summary_item("Stay", stay_summary, "Check-in/out"),
         summary_item("Status", status_summary, "Folio · Booking"),
         summary_item("Balance", "#{balance_state_label} · #{money(current_balance)}", balance_state_hint),
-        summary_item("Projected Total", money(projected_total), "Posted + forecast")
+        summary_item("Projected Total", money(projected_total), "Posted + upcoming")
       ]
     end
 
@@ -165,8 +174,8 @@ module HotelPortal
         summary_item("Posted Amount", money(posted_charges), "Charges"),
         summary_item("Paid/Refunded", "Paid/refunded", "Net received"),
         summary_item("Paid/Refunded Amount", money(payments_refunds), "Payments / refunds"),
-        summary_item("Forecasted", "Forecasted", "Pending charges"),
-        summary_item("Forecasted Amount", money(forecasted_charges), "Will post by audit"),
+        summary_item("Upcoming", "Upcoming", "Pending charges"),
+        summary_item("Upcoming Amount", money(forecasted_charges), "Will post by audit"),
         summary_item("Currency", currency, "Folio currency")
       ]
     end
@@ -187,13 +196,13 @@ module HotelPortal
     def financial_metric_items
       [
         summary_item("Balance", "#{balance_state_label} · #{money(current_balance)}", balance_state_hint),
-        summary_item("Projected Total", money(projected_total), "Posted + forecast"),
+        summary_item("Projected Total", money(projected_total), "Posted + upcoming"),
         summary_item("Posted Charges", money(posted_charges), "Posted only"),
         summary_item("Paid", money(paid_amount), "Net received"),
-        summary_item("Forecasted Charges", forecasted_count_label, "Will post by audit"),
-        summary_item("Forecasted Amount", money(forecasted_charges), "Pending charges"),
+        summary_item("Upcoming Charges", forecasted_count_label, "Will post by audit"),
+        summary_item("Upcoming Amount", money(forecasted_charges), "Pending charges"),
         summary_item("Refunds", money(refund_amount), refunds_hint),
-        summary_item("Close", close_folio_label, close_folio_hint)
+        summary_item("Checkout", checkout_readiness_label, checkout_status_description)
       ]
     end
 
@@ -203,8 +212,7 @@ module HotelPortal
         [ "Folio Reference", folio_reference ],
         [ "Guest", guest_name ],
         [ "Room", room_summary ],
-        [ "Stay", stay_summary ],
-        [ "Nights", nights_label ],
+        [ "Stay / Nights", formatted_stay_nights ],
         [ "Folio Type", "Booking folio" ]
       ]
     end
@@ -214,11 +222,42 @@ module HotelPortal
         [ "Current Balance", money(current_balance) ],
         [ "Balance State", balance_state_label ],
         [ "Posted Charges", money(posted_charges) ],
-        [ "Payments/Refunds", money(payments_refunds) ],
+        [ "Payments / Refunds", money(payments_refunds) ],
         [ "Upcoming Charges", money(forecasted_charges) ],
-        [ "Upcoming Lines", forecasted_count_label ],
-        [ "Close Readiness", close_folio_label ]
+        [ "Checkout Readiness", checkout_readiness_label ]
       ]
+    end
+
+    def checkout_readiness_label
+      checkout_ready? ? "Ready" : "Not ready"
+    end
+
+    def checkout_status_label
+      checkout_ready? ? "Ready for checkout" : "Not ready for checkout"
+    end
+
+    def checkout_status_description
+      return "Balance settled · No upcoming charges · Payments/refunds synced" if checkout_ready?
+
+      checkout_blockers.join(" · ")
+    end
+
+    def checkout_blockers
+      @checkout_blockers ||= begin
+        blockers = []
+        blockers << "Guest owes #{money(current_balance)}" if current_balance.positive?
+        blockers << "Hotel owes guest #{money(current_balance.abs)}" if current_balance.negative?
+        blockers << "#{forecasted_rows.size} upcoming #{'charge'.pluralize(forecasted_rows.size)} pending" if forecasted_rows.any?
+        blockers << "Audit is running" if hotel.current_business_date_record&.audit_running?
+        blockers << "Captured payment is not synced" if unsynced_captured_payment?
+        blockers << "Completed refund is not synced" if unsynced_completed_refund?
+        blockers << "Folio is closed" if folio&.status == "closed"
+        blockers.presence || [ "Review booking checkout status" ]
+      end
+    end
+
+    def booking_show_url
+      Rails.application.routes.url_helpers.hotel_booking_path(hotel, booking)
     end
 
     def mobile_summary_items
@@ -231,7 +270,7 @@ module HotelPortal
         [ "Balance", "#{balance_state_label} · #{money(current_balance)}" ],
         [ "Posted", money(posted_charges) ],
         [ "Paid/Refunded", money(payments_refunds) ],
-        [ "Forecasted", money(forecasted_charges) ],
+        [ "Upcoming", money(forecasted_charges) ],
         [ "Projected", money(projected_total) ],
         [ "Currency", currency ]
       ]
@@ -270,25 +309,19 @@ module HotelPortal
     end
 
     def close_folio_ready?
-      forecasted_rows.empty? && current_balance.zero? && folio&.status == "open"
+      checkout_ready?
     end
 
     def close_folio_label
-      close_folio_ready? ? "Ready" : "Not ready"
+      checkout_readiness_label
     end
 
     def close_folio_hint
-      return "Ready to close" if close_folio_ready?
-      return "#{forecasted_rows.size} forecasted #{'charge'.pluralize(forecasted_rows.size)} will post by night audit" if forecasted_rows.any?
-      return "Guest owes #{money(current_balance)}" if current_balance.positive?
-      return "Hotel owes guest #{money(current_balance.abs)}" if current_balance.negative?
-      return "Folio is closed" if folio&.status == "closed"
-
-      "Review folio before close"
+      checkout_status_description
     end
 
     def close_folio_status_text
-      "Close Folio: #{close_folio_label} · #{close_folio_hint}"
+      "Checkout: #{checkout_readiness_label} · #{checkout_status_description}"
     end
 
     def projected_lines
@@ -313,6 +346,58 @@ module HotelPortal
 
     private
 
+    def checkout_ready?
+      if @checkout_ready.nil?
+        @checkout_ready = current_balance.zero? &&
+          forecasted_rows.empty? &&
+          folio&.status == "open" &&
+          !hotel.current_business_date_record&.audit_running? &&
+          !unsynced_captured_payment? &&
+          !unsynced_completed_refund?
+      end
+
+      @checkout_ready
+    end
+
+    def unsynced_captured_payment?
+      if @unsynced_captured_payment.nil?
+        @unsynced_captured_payment = booking.payment_transactions.where(status: "captured").any? do |payment_transaction|
+          !payment_synced?(payment_transaction)
+        end
+      end
+
+      @unsynced_captured_payment
+    end
+
+    def unsynced_completed_refund?
+      if @unsynced_completed_refund.nil?
+        refund_request = booking.refund_request
+        @unsynced_completed_refund = refund_request&.completed? && !refund_synced?(refund_request)
+      end
+
+      @unsynced_completed_refund
+    end
+
+    def payment_synced?(payment_transaction)
+      expected_amount = payment_transaction.amount_subunits.to_d / 100.0
+
+      posted_transactions.any? do |transaction|
+        transaction.payment? &&
+          transaction.metadata.to_h["payment_transaction_id"].to_s == payment_transaction.id.to_s &&
+          transaction.amount.to_d == expected_amount
+      end
+    end
+
+    def refund_synced?(refund_request)
+      expected_amount = -refund_request.refund_amount.to_d
+
+      posted_transactions.any? do |transaction|
+        transaction.payment? &&
+          transaction.metadata.to_h["refund_request_id"].to_s == refund_request.id.to_s &&
+          transaction.amount.to_d == expected_amount
+      end
+    end
+
     def summary_item(label, value, hint)
       { label: label, value: value, hint: hint }
     end
@@ -322,19 +407,22 @@ module HotelPortal
     end
 
     def posted_row(transaction, effect, balance)
+      policy = ::Folios::TransactionActionPolicy.new(transaction: transaction, user: user)
       LedgerRow.new(
         date_label: transaction.posting_date.strftime("%d %b"),
         code: posted_code(transaction),
         description: transaction.description,
         reference_label: reference_label(transaction),
-        detail_label: "#{transaction.transaction_type.humanize} · #{transaction.category.humanize}",
+        detail_label: detail_label(transaction),
         source_label: source_label(transaction),
         debit: effect.positive? ? amount_label(effect) : "—",
         credit: effect.negative? ? amount_label(effect) : "—",
-        tax: tax_transaction?(transaction) ? amount_label(transaction.amount) : "—",
         balance: signed_amount_label(balance),
         balance_kind: "Balance",
-        action_label: "⋯",
+        action_label: policy.action_label,
+        action_kind: policy.action_kind,
+        modal_title: policy.modal_title,
+        transaction_id: transaction.id,
         row_kind: :posted,
         reversed: transaction.reversed?
       )
@@ -351,10 +439,12 @@ module HotelPortal
         source_label: "Upcoming",
         debit: amount.positive? ? amount_label(amount) : "—",
         credit: amount.negative? ? amount_label(amount) : "—",
-        tax: line[:category].to_s == "tax" ? amount_label(amount) : "—",
         balance: "Pending",
         balance_kind: "Balance",
         action_label: "—",
+        action_kind: :none,
+        modal_title: nil,
+        transaction_id: nil,
         row_kind: :forecasted,
         reversed: false
       )
@@ -395,12 +485,11 @@ module HotelPortal
 
     def reference_label(transaction)
       metadata = transaction.metadata.to_h
-      reference = metadata["payment_transaction_id"].presence ||
-        metadata[:payment_transaction_id].presence ||
-        metadata["refund_request_id"].presence ||
-        metadata[:refund_request_id].presence ||
-        metadata["parent_folio_transaction_id"].presence ||
-        metadata[:parent_folio_transaction_id].presence ||
+      return tax_reference_label(transaction, metadata) if tax_transaction?(transaction)
+      return payment_reference_label(transaction, metadata) if transaction.payment?
+
+      reference = metadata["reference"].presence ||
+        metadata[:reference].presence ||
         metadata["source_transaction_code_id"].presence ||
         metadata[:source_transaction_code_id].presence ||
         metadata["catch_up_key"].presence ||
@@ -409,6 +498,18 @@ module HotelPortal
         metadata[:night_audit_id].presence
 
       reference.present? ? "Ref #{reference}" : "—"
+    end
+
+    def detail_label(transaction)
+      metadata = transaction.metadata.to_h
+      if transaction.payment? && metadata["payment_source"].present?
+        payment_source = ::Folios::PaymentSource.fetch(metadata["payment_source"])
+        return [ "Payment", payment_source&.display_label, state_label(transaction) ].compact.join(" · ")
+      end
+
+      label = "#{transaction.transaction_type.humanize} · #{transaction.category.humanize}"
+      state = state_label(transaction)
+      state.present? ? "#{label} · #{state}" : label
     end
 
     def source_label(transaction)
@@ -424,6 +525,100 @@ module HotelPortal
 
     def forecasted_detail(line)
       line[:category].to_s == "tax" ? "Tax linked to ROOM" : line[:category].to_s.humanize
+    end
+
+    def tax_reference_label(transaction, metadata)
+      parent_id = metadata["parent_folio_transaction_id"].presence || metadata[:parent_folio_transaction_id].presence
+      parent_code = parent_id.present? ? parent_transaction_code(parent_id) : nil
+      [ "Tax linked to #{parent_code || 'parent'}", parent_id.present? ? "Parent ##{parent_id}" : nil ].compact.join(" · ")
+    end
+
+    def payment_reference_label(transaction, metadata)
+      if metadata["payment_source"].present?
+        return staff_payment_reference_label(transaction, metadata)
+      end
+
+      if metadata["payment_transaction_id"].present? || metadata["posting_source"] == "gateway_payment"
+        payment = payment_transactions_by_id[metadata["payment_transaction_id"].to_s]
+        gateway_ref = payment&.external_reference || metadata["payment_reference"].presence || metadata["reference"].presence || metadata["payment_transaction_id"].presence
+        parts = [ gateway_ref.present? ? "Gateway Ref #{gateway_ref}" : "Gateway payment" ]
+        parts << payment.gateway.to_s.titleize if payment&.gateway.present?
+        parts << payment.payment_method.to_s.titleize if payment&.payment_method.present?
+        parts << "Synced"
+        return parts.compact_blank.join(" · ")
+      end
+
+      if transaction.category == "cash"
+        parts = []
+        reference = metadata["reference"].presence || metadata[:reference].presence
+        parts << "Receipt #{reference}" if reference.present?
+        parts << "Cash"
+        parts << "Staff: #{transaction.user.name}" if transaction.user&.name.present?
+        return parts.join(" · ")
+      end
+
+      if metadata["refund_request_id"].present?
+        return "Refund Request ##{metadata['refund_request_id']} · #{source_state_label(transaction)}"
+      end
+
+      reference = metadata["reference"].presence || metadata[:reference].presence
+      [ reference.present? ? "Ref #{reference}" : nil, transaction.category.humanize, source_state_label(transaction) ].compact.join(" · ").presence || "—"
+    end
+
+    def staff_payment_reference_label(transaction, metadata)
+      payment_source = ::Folios::PaymentSource.fetch(metadata["payment_source"])
+      return "—" if payment_source.blank?
+
+      reference = payment_source_reference(metadata, payment_source)
+      parts = []
+      parts << "#{payment_source.reference_prefix} #{reference}" if reference.present?
+      parts << payment_source.display_label
+      parts << "Staff: #{transaction.user.name}" if transaction.user&.name.present?
+      parts.compact_blank.join(" · ")
+    end
+
+    def payment_source_reference(metadata, payment_source)
+      source_references = metadata["source_references"].presence || metadata[:source_references].presence || {}
+      source_references[payment_source.reference_key].presence ||
+        source_references[payment_source.reference_key.to_sym].presence ||
+        metadata[payment_source.reference_key].presence ||
+        metadata[payment_source.reference_key.to_sym].presence ||
+        metadata["reference"].presence ||
+        metadata[:reference].presence
+    end
+
+    def parent_transaction_code(parent_id)
+      posted_transactions_by_id[parent_id.to_i]&.then { |parent| posted_code(parent) }
+    end
+
+    def state_label(transaction)
+      return "Voided" if transaction.voided_by_transaction_id.present?
+      return "Reversal" if transaction.reversal_of_transaction_id.present?
+
+      source_state_label(transaction)
+    end
+
+    def source_state_label(transaction)
+      metadata = transaction.metadata.to_h
+      source = metadata["posting_source"].presence || metadata[:posting_source].presence
+      return "Night Audit" if transaction.night_audit_id.present? || metadata["night_audit_id"].present? || source == "night_audit"
+      return "Gateway" if source == "gateway_payment" || metadata["payment_transaction_id"].present?
+      return "Gateway" if metadata["payment_source"] == "gateway"
+      return "OTA" if source.to_s.include?("ota") || metadata["payment_source"] == "ota"
+      return "Manual" if transaction.user.present? || source == "staff"
+
+      "System"
+    end
+
+    def posted_transactions_by_id
+      @posted_transactions_by_id ||= posted_transactions.index_by(&:id)
+    end
+
+    def payment_transactions_by_id
+      @payment_transactions_by_id ||= begin
+        ids = posted_transactions.filter_map { |transaction| transaction.metadata.to_h["payment_transaction_id"].presence&.to_s }
+        ids.any? ? PaymentTransaction.where(id: ids).index_by { |payment| payment.id.to_s } : {}
+      end
     end
 
     def signed_amount_label(amount)

@@ -19,7 +19,9 @@
     <%= render "hotel_portal/folios/show/page_summary", folio_show: folio_show %>
   </header>
 
+  <%= render "hotel_portal/folios/show/checkout_status", folio_show: folio_show %>
+
   <%= render "hotel_portal/folios/show/folio_actions", booking: booking, hotel: current_hotel, folio_show: folio_show, redirect_to_folio: true, folio_origin: folio_origin %>
 
-  <%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show %>
+  <%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: booking, hotel: current_hotel, folio_origin: folio_origin %>
 </div>

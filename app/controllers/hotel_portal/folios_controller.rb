@@ -15,7 +15,7 @@ module HotelPortal
     def show
       @booking = current_hotel.bookings.includes({ booking_rooms: :room_type }, booking_folio: [ { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges ]).find(params[:booking_id])
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-      @folio_show = HotelPortal::Folios::ShowPresenter.new(booking: @booking, hotel: current_hotel)
+      @folio_show = HotelPortal::Folios::ShowPresenter.new(booking: @booking, hotel: current_hotel, user: current_user)
       set_navigation_context
       set_breadcrumbs
       render "hotel_portal/folios/show/index"
