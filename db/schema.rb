@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_20_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -679,6 +679,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_18_005001) do
     t.datetime "updated_at", null: false
     t.bigint "transaction_code_id"
     t.string "code"
+    t.string "charge_type", default: "tax", null: false
     t.index ["hotel_id", "code"], name: "index_hotel_taxes_on_hotel_id_and_code", unique: true, where: "(code IS NOT NULL)"
     t.index ["hotel_id"], name: "index_hotel_taxes_on_hotel_id"
     t.index ["transaction_code_id"], name: "index_hotel_taxes_on_transaction_code_id"

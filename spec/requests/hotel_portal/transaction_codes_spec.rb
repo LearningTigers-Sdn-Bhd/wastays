@@ -43,7 +43,7 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       expect(response.body).to include("Hotel Operations")
       expect(response.body).to include("Booking Operations")
       expect(response.body).to include("Utility Operations")
-      expect(response.body).to include("Tax Operations")
+      expect(response.body).to include("Taxes and Fees Operations")
       expect(response.body).to include("Manage Taxes &amp; Fees")
       expect(response.body).to include(hotel_taxes_fees_path(hotel))
       expect(response.body).to include("target=\"_blank\"")
@@ -118,13 +118,26 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
 
     it "does not show tax options when editing a non-tax transaction code" do
       Financials::EnsureDefaultTransactionCodes.call(hotel)
-      code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+      code = create(:transaction_code, hotel: hotel, code: "SPA", name: "Spa Package", kind: "charge", category: "other", system_required: false)
 
       get hotel_edit_transaction_code_path(hotel, code)
 
       expect(response).to have_http_status(:ok)
       expect(form_option_values(:kind)).not_to include("tax")
       expect(form_option_values(:category)).not_to include("tax")
+    end
+
+    it "locks default transaction code kind and category while keeping code editable" do
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+
+      get hotel_edit_transaction_code_path(hotel, code)
+
+      expect(response).to have_http_status(:ok)
+      expect(form_select_present?(:kind)).to be(false)
+      expect(form_select_present?(:category)).to be(false)
+      expect(Nokogiri::HTML(response.body).at_css("input[name='transaction_code[code]']")).to be_present
+      expect(response.body).to include("Accommodation")
     end
 
     it "shows primary tax transaction code kind and category without selectors" do
@@ -151,6 +164,19 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       expect(response.body).to include("Service Charge")
       expect(response.body).to include("value=\"tax\"")
     end
+
+    it "locks taxes and fees managed non-tax transaction code kind and category" do
+      tax = create(:hotel_tax, hotel: hotel, name: "Service Charge", code: "SC", charge_type: "charge")
+      code = tax.reload.transaction_code
+
+      get hotel_edit_transaction_code_path(hotel, code)
+
+      expect(response).to have_http_status(:ok)
+      expect(form_select_present?(:kind)).to be(false)
+      expect(form_select_present?(:category)).to be(false)
+      expect(response.body).to include("Charge")
+      expect(response.body).to include("Other")
+    end
   end
 
   describe "GET /hotel/:hotel_id/transaction-codes/new" do
@@ -164,7 +190,7 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
   end
 
   describe "PATCH /hotel/:hotel_id/transaction-codes/:id" do
-    it "updates an existing default transaction code and tax rules" do
+    it "updates an existing default transaction code and tax rules while preserving kind and category" do
       Financials::EnsureDefaultTransactionCodes.call(hotel)
       code = hotel.transaction_codes.find_by!(system_key: "parking_revenue")
 
@@ -172,8 +198,8 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
         transaction_code: {
           code: "PARKING",
           name: "Parking Revenue",
-          kind: "charge",
-          category: "parking",
+          kind: "payment",
+          category: "cash",
           active: "1",
           gl_account_code: "4091",
           is_taxable: "1",
@@ -183,6 +209,8 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
 
       expect(response).to redirect_to(hotel_transaction_codes_path(hotel, tab: "default_codes"))
       expect(code.reload.code).to eq("PARKING")
+      expect(code.kind).to eq("charge")
+      expect(code.category).to eq("parking")
       expect(code.name).to eq("Parking Revenue")
       expect(code.gl_account_code).to eq("4091")
       expect(code).to be_is_taxable
@@ -252,7 +280,7 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
 
       expect(response).to redirect_to(hotel_transaction_codes_path(hotel, tab: "default_codes"))
       expect(code.reload.kind).to eq("charge")
-      expect(code.category).to eq("other")
+      expect(code.category).to eq("parking")
     end
 
     it "prevents existing tax transaction codes from being updated into non-tax codes" do

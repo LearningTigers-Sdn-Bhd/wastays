@@ -3,6 +3,7 @@ FactoryBot.define do
     association :hotel
     name { "Heritage Fee" }
     code { nil }
+    charge_type { "tax" }
     rate_type { "flat" }
     amount { 2.0 }
     enabled { true }

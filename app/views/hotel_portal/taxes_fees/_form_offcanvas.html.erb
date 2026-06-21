@@ -26,59 +26,76 @@
             </div>
           <% end %>
 
-          <div class="grid gap-5 md:grid-cols-2">
+          <div class="space-y-5" data-controller="tax-code-field">
             <div>
               <%= f.label :name, "Name", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
               <%= f.text_field :name,
                   placeholder: "e.g. Heritage Fee",
-                  class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                  class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
             </div>
 
-            <div>
-              <%= f.label :code, "Tax Code", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-              <div class="flex rounded-xl border border-slate-200 bg-white focus-within:border-slate-400">
-                <span class="inline-flex items-center rounded-l-xl border-r border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500">TAX_</span>
-                <%= f.text_field :code,
-                    placeholder: "e.g. DBKK",
-                    data: { controller: "tax-code-field", action: "input->tax-code-field#format" },
-                    class: "min-w-0 flex-1 rounded-r-xl border-0 px-4 py-3 text-sm font-semibold uppercase text-slate-700 focus:outline-none focus:ring-0" %>
+            <div class="grid gap-5 md:grid-cols-2">
+              <div>
+                <%= f.label :charge_type, "Charge Type", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+                <%= f.select :charge_type,
+                    [["Tax", "tax"], ["Charge", "charge"], ["Others", "others"]],
+                    {},
+                    data: { tax_code_field_target: "chargeType", action: "change->tax-code-field#updatePrefix" },
+                    class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
               </div>
-              <p class="mt-1.5 text-xs font-medium text-slate-500">Used as transaction code suffix. Example: DBKK becomes TAX_DBKK. Spaces become underscores.</p>
+
+              <div>
+                <%= f.label :code, "Transaction Code", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+                <div class="flex rounded-xl border border-slate-200 bg-white focus-within:border-slate-400">
+                  <span class="inline-flex items-center rounded-l-xl border-r border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500" data-tax-code-field-target="prefix" <%= "hidden" unless hotel_tax.charge_type == "tax" %>>TAX_</span>
+                  <%= f.text_field :code,
+                      placeholder: "e.g. DBKK",
+                      data: { tax_code_field_target: "input", action: "input->tax-code-field#format" },
+                      class: "min-w-0 flex-1 border-0 bg-white px-4 py-3 text-sm font-semibold uppercase text-slate-700 focus:outline-none focus:ring-0 #{hotel_tax.charge_type == "tax" ? "rounded-r-xl" : "rounded-xl"}" %>
+                </div>
+                <p class="mt-1.5 text-xs font-medium text-slate-500" data-tax-code-field-target="help">
+                  <%= hotel_tax.charge_type == "tax" ? "Used as transaction code suffix. Example: DBKK becomes TAX_DBKK. Spaces become underscores." : "Used as transaction code. Example: SC stays SC. Spaces become underscores." %>
+                </p>
+              </div>
             </div>
 
-            <div>
-              <%= f.label :rate_type, "Type", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-              <%= f.select :rate_type,
-                  [["Fixed RM", "flat"], ["Percentage", "percentage"]],
-                  {},
-                  class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+            <div class="grid gap-5 md:grid-cols-2">
+              <div>
+                <%= f.label :rate_type, "Amount Type", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+                <%= f.select :rate_type,
+                    [["Fixed RM", "flat"], ["Percentage", "percentage"]],
+                    {},
+                    class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+              </div>
+
+              <div>
+                <%= f.label :amount, "Amount", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+                <%= f.number_field :amount,
+                    step: 0.01,
+                    min: 0,
+                    placeholder: "e.g. 10.00",
+                    class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+              </div>
             </div>
 
-            <div>
-              <%= f.label :amount, "Amount", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-              <%= f.number_field :amount,
-                  step: 0.01,
-                  min: 0,
-                  placeholder: "e.g. 10.00",
-                  class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
-            </div>
+            <div class="grid gap-5 md:grid-cols-2">
+              <div>
+                <span class="mb-2 block text-sm font-semibold text-slate-900">Status</span>
+                <%= render "hotel_portal/taxes_fees/status_toggle",
+                           form: f,
+                           field: :enabled,
+                           checked: hotel_tax.enabled?,
+                           label: "Enabled" %>
+              </div>
 
-            <div>
-              <span class="mb-2 block text-sm font-semibold text-slate-900">Status</span>
-              <%= render "hotel_portal/taxes_fees/status_toggle",
-                         form: f,
-                         field: :enabled,
-                         checked: hotel_tax.enabled?,
-                         label: "Enabled" %>
-            </div>
-
-            <div>
-              <span class="mb-2 block text-sm font-semibold text-slate-900">Rule</span>
-              <%= render "hotel_portal/taxes_fees/status_toggle",
-                         form: f,
-                         field: :foreign_guests_only,
-                         checked: hotel_tax.foreign_guests_only?,
-                         label: "Foreign guests only" %>
+              <div>
+                <span class="mb-2 block text-sm font-semibold text-slate-900">Rule</span>
+                <%= render "hotel_portal/taxes_fees/status_toggle",
+                           form: f,
+                           field: :foreign_guests_only,
+                           checked: hotel_tax.foreign_guests_only?,
+                           label: "Foreign guests only" %>
+              </div>
             </div>
           </div>
         </div>

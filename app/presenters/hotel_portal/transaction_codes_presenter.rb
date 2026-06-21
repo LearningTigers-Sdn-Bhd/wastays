@@ -31,8 +31,8 @@ module HotelPortal
         empty_message: "No utility operations transaction codes found."
       },
       {
-        title: "Tax Operations",
-        description: "Tax transaction codes generated from primary taxes and configured taxes and fees.",
+        title: "Taxes and Fees Operations",
+        description: "Transaction codes generated from primary taxes and configured taxes and fees.",
         system_keys: %w[sst_tax tourism_tax],
         kind: "tax",
         test_id: "transaction-codes-tax-operations-list",
@@ -54,7 +54,10 @@ module HotelPortal
     end
 
     def default_codes
-      @default_codes ||= hotel.transaction_codes.where(system_required: true).or(hotel.transaction_codes.where(kind: "tax")).order(:kind, :code)
+      @default_codes ||= hotel.transaction_codes.where(system_required: true)
+        .or(hotel.transaction_codes.where(kind: "tax"))
+        .or(hotel.transaction_codes.where(id: hotel_tax_transaction_code_ids))
+        .order(:kind, :code)
     end
 
     def default_code_sections
@@ -64,7 +67,7 @@ module HotelPortal
     end
 
     def additional_service_codes
-      @additional_service_codes ||= hotel.transaction_codes.where(system_required: false).where.not(kind: "tax").order(:kind, :code)
+      @additional_service_codes ||= hotel.transaction_codes.where(system_required: false).where.not(kind: "tax").where.not(id: hotel_tax_transaction_code_ids).order(:kind, :code)
     end
 
     def transaction_configuration
@@ -76,8 +79,13 @@ module HotelPortal
     def transaction_codes_for_section(section)
       relation = hotel.transaction_codes.where(system_key: section[:system_keys])
       relation = relation.or(hotel.transaction_codes.where(kind: section[:kind])) if section[:kind]
+      relation = relation.or(hotel.transaction_codes.where(id: hotel_tax_transaction_code_ids)) if section[:action] == :taxes_fees
 
       order_by_system_keys(relation, section[:system_keys])
+    end
+
+    def hotel_tax_transaction_code_ids
+      @hotel_tax_transaction_code_ids ||= hotel.hotel_taxes.where.not(transaction_code_id: nil).select(:transaction_code_id)
     end
 
     def order_by_system_keys(relation, system_keys)

@@ -102,7 +102,9 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("turbo-frame id=\"offcanvas_drawer\"")
       expect(response.body).to include("Add Fee")
-      expect(response.body).to include("Tax Code")
+      expect(response.body).to include("Transaction Code")
+      expect(response.body).to include("Charge Type")
+      expect(response.body).to include("Amount Type")
       expect(response.body).to include("Fixed RM")
       expect(response.body).to include("Percentage")
     end
@@ -123,6 +125,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
         hotel_tax: {
           name: "Heritage Fee",
           code: "DBKK",
+          charge_type: "tax",
           rate_type: "flat",
           amount: "5.00",
           enabled: "1"
@@ -132,8 +135,27 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
       expect(response).to redirect_to(hotel_taxes_fees_path(hotel, tab: "tax_listing"))
       tax = hotel.hotel_taxes.find_by!(name: "Heritage Fee")
       expect(tax.amount).to eq(5.0)
+      expect(tax.charge_type).to eq("tax")
       expect(tax.code).to eq("DBKK")
       expect(tax.transaction_code.code).to eq("TAX_DBKK")
+    end
+
+    it "creates non-tax fee transaction codes without the tax prefix" do
+      post hotel_hotel_taxes_path(hotel), params: {
+        hotel_tax: {
+          name: "Service Charge",
+          code: "SC",
+          charge_type: "charge",
+          rate_type: "percentage",
+          amount: "10.00",
+          enabled: "1"
+        }
+      }
+
+      expect(response).to redirect_to(hotel_taxes_fees_path(hotel, tab: "tax_listing"))
+      tax = hotel.hotel_taxes.find_by!(name: "Service Charge")
+      expect(tax.transaction_code.code).to eq("SC")
+      expect(tax.transaction_code.kind).to eq("charge")
     end
 
     it "renders the add fee offcanvas with errors when create is invalid" do
@@ -141,6 +163,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
         hotel_tax: {
           name: "",
           code: "",
+          charge_type: "tax",
           rate_type: "flat",
           amount: "5.00",
           enabled: "1"
@@ -160,6 +183,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
         hotel_tax: {
           name: "Heritage Fee",
           code: "HF2",
+          charge_type: "tax",
           rate_type: "flat",
           amount: "0",
           enabled: "1"

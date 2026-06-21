@@ -106,8 +106,8 @@ module HotelPortal
       )
       permitted[:code] = normalize_code(permitted[:code]) if permitted.key?(:code)
       permitted[:gl_account_code] = permitted[:gl_account_code].to_s.strip.presence if permitted.key?(:gl_account_code)
-      if tax_transaction_code?
-        preserve_tax_code_params(permitted)
+      if locked_kind_category_transaction_code?
+        preserve_locked_kind_category_params(permitted)
       else
         prevent_new_tax_code_params(permitted)
       end
@@ -162,12 +162,20 @@ module HotelPortal
       @transaction_code&.persisted? && (@transaction_code.kind == "tax" || @transaction_code.category == "tax")
     end
 
+    def locked_kind_category_transaction_code?
+      return false unless @transaction_code&.persisted?
+      return true if @transaction_code.system_required?
+      return true if tax_transaction_code?
+
+      @hotel.hotel_taxes.exists?(transaction_code_id: @transaction_code.id)
+    end
+
     def prevent_new_tax_code_params(permitted)
       permitted[:kind] = "charge" if permitted[:kind] == "tax"
       permitted[:category] = "other" if permitted[:category] == "tax"
     end
 
-    def preserve_tax_code_params(permitted)
+    def preserve_locked_kind_category_params(permitted)
       permitted[:kind] = @transaction_code.kind if permitted.key?(:kind)
       permitted[:category] = @transaction_code.category if permitted.key?(:category)
     end

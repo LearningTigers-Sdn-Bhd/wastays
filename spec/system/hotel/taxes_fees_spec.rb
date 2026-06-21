@@ -67,10 +67,15 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
 
     expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Add Fee")
     expect(page).to have_field("Name")
-    expect(page).to have_field("Tax Code")
-    expect(page).to have_select("Type", options: [ "Fixed RM", "Percentage" ])
+    expect(page).to have_field("Transaction Code")
+    expect(page).to have_select("Charge Type", options: [ "Tax", "Charge", "Others" ])
+    expect(page).to have_select("Amount Type", options: [ "Fixed RM", "Percentage" ])
     expect(page).to have_css("label", text: "Enabled")
     expect(page).to have_css("label", text: "Foreign guests only")
+    expect(page).to have_css("span", text: "TAX_")
+
+    select "Charge", from: "Charge Type"
+    expect(page).to have_no_css("span", text: "TAX_", visible: :visible)
 
     click_button "Cancel"
 
@@ -80,7 +85,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
 
     expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Edit Fee")
     expect(page).to have_field("Name", with: "Heritage Fee")
-    expect(page).to have_field("Tax Code", with: "HF")
+    expect(page).to have_field("Transaction Code", with: "HF")
     expect(page).to have_field("Amount", with: "2.0")
   end
 
@@ -92,7 +97,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     expect(page).to have_content("Hotel Operations")
     expect(page).to have_content("Booking Operations")
     expect(page).to have_content("Utility Operations")
-    expect(page).to have_content("Tax Operations")
+    expect(page).to have_content("Taxes and Fees Operations")
 
     within("[data-testid='transaction-codes-hotel-operations-list']") do
       expect(page).to have_content("ROOM")

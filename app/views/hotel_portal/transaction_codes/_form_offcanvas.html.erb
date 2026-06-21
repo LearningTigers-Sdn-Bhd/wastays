@@ -4,6 +4,7 @@
   <% currency = current_hotel.default_currency.presence || "MYR" %>
   <% selected_tax_rule_keys = transaction_code.tax_rule_keys %>
   <% tax_transaction_code = transaction_code.kind == "tax" || transaction_code.category == "tax" %>
+  <% locked_kind_category = persisted && (transaction_code.system_required? || tax_transaction_code || current_hotel.hotel_taxes.exists?(transaction_code_id: transaction_code.id)) %>
   <% kind_options = TransactionCode::KINDS.reject { |kind| kind == "tax" }.map { |kind| [kind.titleize, kind] } %>
   <% category_options = TransactionCode::CATEGORIES.reject { |category| category == "tax" }.map { |category| [category.titleize, category] } %>
 
@@ -60,7 +61,7 @@
 
               <div>
                 <%= f.label :kind, "Kind", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-                <% if tax_transaction_code %>
+                <% if locked_kind_category %>
                   <div class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700"><%= transaction_code.kind.to_s.titleize %></div>
                   <%= f.hidden_field :kind, data: { transaction_code_form_target: "kind" } %>
                 <% else %>
@@ -74,7 +75,7 @@
 
               <div>
                 <%= f.label :category, "Category", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-                <% if tax_transaction_code %>
+                <% if locked_kind_category %>
                   <div class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700"><%= transaction_code.category.to_s.titleize %></div>
                   <%= f.hidden_field :category, data: { transaction_code_form_target: "category" } %>
                 <% else %>

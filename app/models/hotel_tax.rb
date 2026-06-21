@@ -7,10 +7,12 @@ class HotelTax < ApplicationRecord
   has_many :taxable_transaction_codes, through: :transaction_code_taxes, source: :transaction_code
 
   RATE_TYPES = %w[flat percentage].freeze
+  CHARGE_TYPES = %w[tax charge others].freeze
 
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :hotel_id }
   validates :rate_type, inclusion: { in: RATE_TYPES }
+  validates :charge_type, inclusion: { in: CHARGE_TYPES }
   validates :amount, presence: true, numericality: { greater_than: 0 }
 
   scope :enabled, -> { where(enabled: true) }
@@ -39,6 +41,10 @@ class HotelTax < ApplicationRecord
     }
   end
 
+  def transaction_code_value(value = code)
+    charge_type == "tax" ? "TAX_#{value}" : value
+  end
+
   def ensure_transaction_code
     return transaction_code if transaction_code.present?
 
@@ -61,10 +67,10 @@ class HotelTax < ApplicationRecord
 
       return hotel.transaction_codes.create!(
         system_key: "hotel_tax_#{id}",
-        code: "TAX_#{candidate_code}",
+        code: transaction_code_value(candidate_code),
         name: name,
-        kind: "tax",
-        category: "tax",
+        kind: transaction_code_kind,
+        category: transaction_code_category,
         active: enabled?,
         system_required: false,
         gl_account_code: hotel.transaction_codes.find_by(system_key: "sst_tax")&.gl_account_code ||
@@ -99,7 +105,7 @@ class HotelTax < ApplicationRecord
 
   def code_taken?(candidate)
     hotel.hotel_taxes.where(code: candidate).where.not(id: id).exists? ||
-      hotel.transaction_codes.where(code: "TAX_#{candidate}").where.not(id: transaction_code_id).exists?
+      hotel.transaction_codes.where(code: transaction_code_value(candidate)).where.not(id: transaction_code_id).exists?
   end
 
   def normalized_code(value)
@@ -117,19 +123,25 @@ class HotelTax < ApplicationRecord
     abbreviation.upcase.presence || "CUSTOM"
   end
 
-  def transaction_code_value
-    "TAX_#{code}"
+  def transaction_code_kind
+    charge_type == "tax" ? "tax" : "charge"
+  end
+
+  def transaction_code_category
+    charge_type == "tax" ? "tax" : "other"
   end
 
   def saved_change_to_transaction_code_fields?
-    saved_change_to_enabled? || saved_change_to_code? || saved_change_to_name?
+    saved_change_to_enabled? || saved_change_to_code? || saved_change_to_name? || saved_change_to_charge_type?
   end
 
   def sync_transaction_code
     ensure_transaction_code.update!(
       active: enabled?,
       code: transaction_code_value,
-      name: name
+      name: name,
+      kind: transaction_code_kind,
+      category: transaction_code_category
     )
   end
 end

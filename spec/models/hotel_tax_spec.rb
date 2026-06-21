@@ -17,6 +17,15 @@ RSpec.describe HotelTax, type: :model do
     expect(tax.transaction_code.code).to eq("TAX_DBKK")
     expect(tax.transaction_code.name).to eq("Dewan Bandaraya Kota Kinabalu")
     expect(tax.transaction_code.kind).to eq("tax")
+    expect(tax.transaction_code.category).to eq("tax")
+  end
+
+  it "creates non-tax charge transaction codes without a TAX prefix" do
+    tax = create(:hotel_tax, name: "Service Charge", code: "SC", charge_type: "charge")
+
+    expect(tax.transaction_code.code).to eq("SC")
+    expect(tax.transaction_code.kind).to eq("charge")
+    expect(tax.transaction_code.category).to eq("other")
   end
 
   it "normalizes spaces in tax code to underscores" do
@@ -40,6 +49,16 @@ RSpec.describe HotelTax, type: :model do
 
     expect(tax.transaction_code.reload.name).to eq("Local Council Tax")
     expect(tax.transaction_code.code).to eq("TAX_LCT")
+  end
+
+  it "syncs transaction code when charge type changes" do
+    tax = create(:hotel_tax, name: "Service Charge", code: "SC", charge_type: "tax")
+
+    tax.update!(charge_type: "charge")
+
+    expect(tax.transaction_code.reload.code).to eq("SC")
+    expect(tax.transaction_code.kind).to eq("charge")
+    expect(tax.transaction_code.category).to eq("other")
   end
 
   it "creates disabled tax transaction codes as inactive" do

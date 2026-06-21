@@ -9,7 +9,7 @@ class HotelPortal::HotelTaxesController < HotelPortal::BaseController
   end
 
   def new
-    @hotel_tax = current_hotel.hotel_taxes.build(enabled: true, rate_type: "flat")
+    @hotel_tax = current_hotel.hotel_taxes.build(enabled: true, rate_type: "flat", charge_type: "tax")
     render "hotel_portal/taxes_fees/new"
   end
 
@@ -46,7 +46,7 @@ class HotelPortal::HotelTaxesController < HotelPortal::BaseController
   end
 
   def tax_params
-    params.require(:hotel_tax).permit(:name, :code, :rate_type, :amount, :enabled, :foreign_guests_only)
+    params.require(:hotel_tax).permit(:name, :code, :charge_type, :rate_type, :amount, :enabled, :foreign_guests_only)
   end
 
   def authorize!
