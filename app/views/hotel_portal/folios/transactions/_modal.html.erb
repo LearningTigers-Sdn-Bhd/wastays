@@ -24,6 +24,17 @@
               required: true,
               class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
+      <% elsif local_assigns[:refund_source_options].present? %>
+        <% if category.present? %>
+          <%= hidden_field_tag "folio_transaction[category]", category %>
+        <% end %>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Refund Source</label>
+          <%= select_tag "folio_transaction[refund_source]",
+              options_for_select(refund_source_options),
+              required: true,
+              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
       <% elsif local_assigns[:transaction_code_options].present? %>
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Transaction Code</label>

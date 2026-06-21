@@ -101,21 +101,32 @@ module HotelPortal
         :posting_date,
         :reference,
         :note,
-        :payment_source
+        :payment_source,
+        :refund_source
       )
     end
 
     def posting_options
       options = {}
       options[:require_transaction_code] = true if folio_transaction_params[:transaction_type].to_s == "charge"
-      options[:payment_source] = folio_transaction_params[:payment_source].to_s.strip if folio_transaction_params[:transaction_type].to_s == "payment"
+      if folio_transaction_params[:transaction_type].to_s == "payment" && !refund_transaction?
+        options[:payment_source] = folio_transaction_params[:payment_source].to_s.strip
+      end
 
       metadata = {}
       metadata[:reference] = folio_transaction_params[:reference].to_s.strip if folio_transaction_params[:reference].present?
       metadata[:note] = folio_transaction_params[:note].to_s.strip if folio_transaction_params[:note].present?
+      if refund_transaction? && folio_transaction_params[:refund_source].present?
+        metadata[:refund_source] = folio_transaction_params[:refund_source].to_s.strip
+      end
       options[:metadata] = metadata if metadata.any?
 
       options
+    end
+
+    def refund_transaction?
+      folio_transaction_params[:transaction_type].to_s == "payment" &&
+        folio_transaction_params[:category].to_s == "refund"
     end
 
     def allowed_to_post_folio_transaction?
@@ -126,6 +137,7 @@ module HotelPortal
     def posting_permission_slug
       type = folio_transaction_params[:transaction_type].to_s
       category = folio_transaction_params[:category].to_s
+      return "execute_folio_refunds" if type == "payment" && category == "refund"
       return "post_folio_payments" if type == "payment" && folio_transaction_params[:payment_source].present?
       return "post_folio_payments" if type == "payment" && category != "refund"
       return "post_folio_charges" if type == "charge"

@@ -117,7 +117,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
     expect(rows.first.code).to eq("FNB")
     expect(rows.first.reference_label).to eq("Ref RCPT-42")
     expect(rows.first.balance).to eq("100.00")
-    expect(rows.second.code).to eq("TAX_SST")
+    expect(rows.second.code).to eq("FNB_TAX_SST")
     expect(rows.second.reference_label).to eq("Tax linked to FNB · Parent ##{parent.id}")
     expect(rows.second.balance).to eq("108.00")
   end
@@ -150,6 +150,60 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
     expect(rows.first.action_kind).to eq(:reverse)
     expect(rows.second.action_label).to eq("Tax reverses with parent")
     expect(rows.second.action_kind).to eq(:disabled)
+  end
+
+  it "reports normal action state when the business date is open" do
+    manager = create(:user, :superadmin)
+    folio_show = described_class.new(booking: booking, hotel: hotel, user: manager)
+
+    expect(folio_show.action_section_state).to eq(:normal)
+    expect(folio_show.actions_blocked?).to be(false)
+    expect(folio_show.can_show_normal_folio_actions?).to be(true)
+    expect(folio_show.normal_folio_actions_available?).to be(true)
+    expect(folio_show.adjustment_category_options).to eq(%w[adjustment discount other correction write_off])
+  end
+
+  it "blocks normal actions and ledger reversals while night audit is running" do
+    manager = create(:user, :superadmin)
+    hotel.current_business_date_record.update!(status: "audit_running")
+    create(:night_audit, hotel: hotel, business_date: hotel.current_business_date, status: "running")
+    create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100, description: "Room charge")
+
+    folio_show = described_class.new(booking: booking, hotel: hotel, user: manager)
+
+    expect(folio_show.action_section_state).to eq(:audit_running_blocked)
+    expect(folio_show.actions_blocked?).to be(true)
+    expect(folio_show.actions_blocked_title).to eq("Financial posting is temporarily unavailable.")
+    expect(folio_show.actions_blocked_reason).to eq("Night audit is currently running for this business date.")
+    expect(folio_show.can_show_normal_folio_actions?).to be(false)
+    expect(folio_show.normal_folio_actions_available?).to be(false)
+    expect(folio_show.posted_rows.first.action_label).to eq("—")
+    expect(folio_show.posted_rows.first.action_kind).to eq(:none)
+  end
+
+  it "blocks normal actions and links to blockers while night audit is blocked" do
+    manager = create(:user, :superadmin)
+    hotel.current_business_date_record.update!(status: "audit_blocked")
+    night_audit = create(:night_audit, hotel: hotel, business_date: hotel.current_business_date, status: "blocked")
+    create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100, description: "Room charge")
+
+    folio_show = described_class.new(booking: booking, hotel: hotel, user: manager)
+
+    expect(folio_show.action_section_state).to eq(:audit_blocked_blocked)
+    expect(folio_show.actions_blocked?).to be(true)
+    expect(folio_show.actions_blocked_title).to eq("Normal folio posting is blocked.")
+    expect(folio_show.actions_blocked_reason).to eq("Night audit is blocked. Resolve blockers from the Night Audit page, then retry audit.")
+    expect(folio_show.actions_blocked_url).to eq(Rails.application.routes.url_helpers.resolve_hotel_night_audit_path(hotel, night_audit))
+    expect(folio_show.can_show_normal_folio_actions?).to be(false)
+    expect(folio_show.posted_rows.first.action_kind).to eq(:none)
+  end
+
+  it "keeps closed folios separate from audit-blocked states" do
+    folio.update!(status: "closed")
+
+    expect(presenter.action_section_state).to eq(:closed)
+    expect(presenter.actions_blocked?).to be(false)
+    expect(presenter.closed_folio_action_message).to eq("Normal posting actions are unavailable for a closed folio.")
   end
 
   it "treats negative refund payments as debit-side balance increases" do
@@ -265,6 +319,23 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
 
     expect(row.code).to eq("REFUND")
     expect(row.reference_label).to eq("Ref RF-102 · Refund · Manual")
+  end
+
+  it "shows manual refund source metadata when present" do
+    create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "payment",
+      category: "refund",
+      amount: -25,
+      description: "Refund",
+      metadata: { "refund_source" => "bank_transfer", "reference" => "BNK-REF-102" }
+    )
+
+    row = presenter.posted_rows.first
+
+    expect(row.code).to eq("REFUND")
+    expect(row.reference_label).to eq("Ref BNK-REF-102 · Bank transfer · Refund · Manual")
   end
 
   it "labels upcoming rows as pending projected audit postings" do

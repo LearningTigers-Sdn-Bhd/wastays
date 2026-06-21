@@ -237,6 +237,126 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(body).not_to include("Close Folio: Not ready")
     end
 
+    it "shows normal actions on an open business date when the user has permission" do
+      %w[
+        post_folio_charges
+        post_folio_payments
+        execute_folio_refunds
+        post_folio_adjustments
+      ].each { |slug| grant_permission(slug) }
+      booking = create_booking_with_folio(guest_name: "Action Guest", confirmation_token: "BK-ACT", folio_number: 606, charges: 100)
+
+      get hotel_folio_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Post Payment")
+      expect(response.body).to include("Post Charge")
+      expect(response.body).to include("Post Adjustment")
+      expect(response.body).to include("More Actions")
+      expect(response.body).to include("Issue Refund")
+
+      refund_form = Nokogiri::HTML(response.body).at_css("#folio-refund-modal-#{booking.id} form")
+      expect(refund_form).to be_present
+      expect(refund_form.text).to include("Refund Source")
+      expect(refund_form.at_css(%(select[name="folio_transaction[refund_source]"][required]))).to be_present
+      expect(refund_form.at_css(%(input[name="folio_transaction[category]"][value="refund"]))).to be_present
+    end
+
+    it "does not show normal actions on an open business date when the user lacks permission" do
+      booking = create_booking_with_folio(guest_name: "No Permission Guest", confirmation_token: "BK-NOPERM", folio_number: 607, charges: 100)
+
+      get hotel_folio_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("No posting actions available")
+      expect(response.body).not_to include("Post Payment")
+      expect(response.body).not_to include("Post Charge")
+      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).not_to include("More Actions")
+      expect(response.body).not_to include("Issue Refund")
+    end
+
+    it "replaces normal actions with a night-audit-running message" do
+      %w[
+        manage_night_audit
+        post_folio_charges
+        post_folio_payments
+        execute_folio_refunds
+        post_folio_adjustments
+        post_folio_corrections
+      ].each { |slug| grant_permission(slug) }
+      hotel.current_business_date_record.update!(status: "audit_running")
+      night_audit = create(:night_audit, hotel: hotel, business_date: hotel.current_business_date, status: "running")
+      booking = create_booking_with_folio(guest_name: "Audit Running Guest", confirmation_token: "BK-RUN", folio_number: 608, charges: 100)
+      transaction = booking.booking_folio.folio_transactions.first
+
+      get hotel_folio_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Financial posting is temporarily unavailable.")
+      expect(response.body).to include("Night audit is currently running for this business date.")
+      expect(response.body).to include("View Night Audit")
+      expect(response.body).to include(hotel_night_audit_path(hotel, night_audit))
+      expect(response.body).not_to include("Post Payment")
+      expect(response.body).not_to include("Post Charge")
+      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).not_to include("More Actions")
+      expect(response.body).not_to include("Issue Refund")
+      expect(response.body).not_to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
+    end
+
+    it "replaces normal actions with a night-audit-blocked message" do
+      %w[
+        manage_night_audit
+        post_folio_charges
+        post_folio_payments
+        execute_folio_refunds
+        post_folio_adjustments
+        post_folio_corrections
+      ].each { |slug| grant_permission(slug) }
+      hotel.current_business_date_record.update!(status: "audit_blocked")
+      night_audit = create(:night_audit, hotel: hotel, business_date: hotel.current_business_date, status: "blocked")
+      booking = create_booking_with_folio(guest_name: "Audit Blocked Guest", confirmation_token: "BK-BLOCKED", folio_number: 609, charges: 100)
+      transaction = booking.booking_folio.folio_transactions.first
+
+      get hotel_folio_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Normal folio posting is blocked.")
+      expect(response.body).to include("Night audit is blocked. Resolve blockers from the Night Audit page, then retry audit.")
+      expect(response.body).to include("View Night Audit Blockers")
+      expect(response.body).to include(resolve_hotel_night_audit_path(hotel, night_audit))
+      expect(response.body).not_to include("Post Payment")
+      expect(response.body).not_to include("Post Charge")
+      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).not_to include("More Actions")
+      expect(response.body).not_to include("Issue Refund")
+      expect(response.body).not_to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
+    end
+
+    it "shows closed-folio actions state while preserving allowed ledger corrections" do
+      %w[
+        post_folio_charges
+        post_folio_payments
+        execute_folio_refunds
+        post_folio_adjustments
+        post_folio_corrections
+        override_financial_date_lock
+      ].each { |slug| grant_permission(slug) }
+      booking = create_booking_with_folio(guest_name: "Closed Guest", confirmation_token: "BK-CLOSED", folio_number: 610, charges: 100, status: "closed")
+      transaction = booking.booking_folio.folio_transactions.first
+
+      get hotel_folio_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Normal posting actions are unavailable for a closed folio.")
+      expect(response.body).not_to include("Post Payment")
+      expect(response.body).not_to include("Post Charge")
+      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).not_to include("Issue Refund")
+      expect(response.body).to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
+    end
+
     it "renders one horizontal ledger table with posted balance as a section summary only" do
       booking = create_booking_with_folio(guest_name: "Ledger Guest", confirmation_token: "BK-LEDGER", folio_number: 603, charges: 100, payments: 40)
       create(:folio_forecasted_charge, booking_folio: booking.booking_folio, amount: 30, stay_date: Date.current, charge_kind: "accommodation")
@@ -255,6 +375,11 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).not_to include("posted-mobile")
       expect(response.body).not_to include("forecasted-mobile")
     end
+  end
+
+  def grant_permission(slug)
+    permission = Permission.find_or_create_by!(slug: slug) { |record| record.name = slug.humanize }
+    role.permissions << permission unless role.permissions.exists?(permission.id)
   end
 
   def create_booking_with_folio(guest_name:, confirmation_token:, folio_number:, room_number: nil, charges: 0, payments: 0, adjustments: 0, status: "open", check_in: Date.current, check_out: Date.current)

@@ -246,11 +246,12 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     end
 
     it "records a refund as a negative payment" do
-      post_transaction(transaction_type: "payment", category: "refund", amount: "50.00", description: "Refund", posting_date: Date.current)
+      post_transaction(transaction_type: "payment", category: "refund", refund_source: "bank_transfer", amount: "50.00", description: "Refund", posting_date: Date.current)
 
       transaction = folio.folio_transactions.payment.last
       expect(transaction.category).to eq("refund")
       expect(transaction.amount).to eq(-50.0)
+      expect(transaction.metadata["refund_source"]).to eq("bank_transfer")
     end
 
     it "stores reference and note metadata for manually issued refunds" do
@@ -258,6 +259,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         post_transaction(
           transaction_type: "payment",
           category: "refund",
+          refund_source: "cash",
           amount: "50.00",
           description: "Refund",
           posting_date: Date.current,
@@ -269,8 +271,48 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       transaction = folio.folio_transactions.payment.last
       expect(transaction.category).to eq("refund")
       expect(transaction.transaction_code.code).to eq("REFUND")
+      expect(transaction.metadata["refund_source"]).to eq("cash")
       expect(transaction.metadata["reference"]).to eq("RF-102")
       expect(transaction.metadata["note"]).to eq("Returned cash deposit")
+    end
+
+    it "rejects manual refunds without a refund source" do
+      expect {
+        post_transaction(transaction_type: "payment", category: "refund", amount: "50.00", description: "Refund", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to eq("Refund source is required.")
+    end
+
+    it "rejects manual refunds with an invalid refund source" do
+      expect {
+        post_transaction(transaction_type: "payment", category: "refund", refund_source: "crypto_wallet", amount: "50.00", description: "Refund", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to eq("Refund source is not valid.")
+    end
+
+    it "does not allow payment_source to bypass refund permissions or source validation" do
+      role.role_permissions.destroy_all
+      grant_permission("post_folio_payments")
+
+      expect {
+        post_transaction(transaction_type: "payment", category: "refund", payment_source: "cash", amount: "50.00", description: "Refund", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to include("permission")
+
+      grant_permission("execute_folio_refunds")
+
+      expect {
+        post_transaction(transaction_type: "payment", category: "refund", payment_source: "cash", amount: "50.00", description: "Refund", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to eq("Refund source is required.")
     end
 
     it "posts a write-off adjustment" do
@@ -333,6 +375,18 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(flash[:alert]).to include("currently in night audit")
     end
 
+    it "rejects staff inserts while night audit is blocked" do
+      hotel.current_business_date_record.update!(status: "audit_blocked")
+      code = create(:transaction_code, hotel: hotel, kind: "charge", category: "other")
+
+      expect {
+        post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to include("blocked by night audit")
+    end
+
     it "reverses a folio transaction with correction details" do
       transaction = create(:folio_transaction, booking_folio: folio, amount: 100, category: "accommodation")
 
@@ -346,6 +400,30 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(reversal.reversal_of_transaction).to eq(transaction)
       expect(reversal.amount).to eq(-100.to_d)
       expect(transaction.reload.voided_by_transaction).to eq(reversal)
+    end
+
+    it "rejects reversal while night audit is running" do
+      transaction = create(:folio_transaction, booking_folio: folio, amount: 100, category: "accommodation")
+      hotel.current_business_date_record.update!(status: "audit_running")
+
+      expect {
+        reverse_transaction(transaction, correction_reason: "Posting error", correction_note: "Wrong booking", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to include("currently in night audit")
+    end
+
+    it "rejects reversal while night audit is blocked" do
+      transaction = create(:folio_transaction, booking_folio: folio, amount: 100, category: "accommodation")
+      hotel.current_business_date_record.update!(status: "audit_blocked")
+
+      expect {
+        reverse_transaction(transaction, correction_reason: "Posting error", correction_note: "Wrong booking", posting_date: Date.current)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to include("blocked by night audit")
     end
 
     it "reverses a taxable parent and generated tax child as a group" do

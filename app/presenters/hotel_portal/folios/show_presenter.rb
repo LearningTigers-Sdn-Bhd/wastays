@@ -249,6 +249,7 @@ module HotelPortal
         blockers << "Hotel owes guest #{money(current_balance.abs)}" if current_balance.negative?
         blockers << "#{forecasted_rows.size} upcoming #{'charge'.pluralize(forecasted_rows.size)} pending" if forecasted_rows.any?
         blockers << "Audit is running" if hotel.current_business_date_record&.audit_running?
+        blockers << "Audit is blocked" if hotel.current_business_date_record&.audit_blocked?
         blockers << "Captured payment is not synced" if unsynced_captured_payment?
         blockers << "Completed refund is not synced" if unsynced_completed_refund?
         blockers << "Folio is closed" if folio&.status == "closed"
@@ -258,6 +259,120 @@ module HotelPortal
 
     def booking_show_url
       Rails.application.routes.url_helpers.hotel_booking_path(hotel, booking)
+    end
+
+    def action_section_state
+      return :closed if folio&.status == "closed"
+
+      business_date_record = hotel.current_business_date_record
+      return :audit_running_blocked if business_date_record&.audit_running?
+      return :audit_blocked_blocked if business_date_record&.audit_blocked?
+
+      :normal
+    end
+
+    def actions_blocked?
+      %i[audit_running_blocked audit_blocked_blocked].include?(action_section_state)
+    end
+
+    def actions_blocked_reason
+      case action_section_state
+      when :audit_running_blocked
+        "Night audit is currently running for this business date."
+      when :audit_blocked_blocked
+        "Night audit is blocked. Resolve blockers from the Night Audit page, then retry audit."
+      end
+    end
+
+    def actions_blocked_title
+      case action_section_state
+      when :audit_running_blocked
+        "Financial posting is temporarily unavailable."
+      when :audit_blocked_blocked
+        "Normal folio posting is blocked."
+      when :closed
+        "Folio is closed."
+      end
+    end
+
+    def actions_blocked_url
+      case action_section_state
+      when :audit_running_blocked
+        night_audit_url
+      when :audit_blocked_blocked
+        night_audit_blockers_url
+      end
+    end
+
+    def actions_blocked_link_label
+      case action_section_state
+      when :audit_running_blocked
+        "View Night Audit"
+      when :audit_blocked_blocked
+        "View Night Audit Blockers"
+      end
+    end
+
+    def closed_folio_action_message
+      "Normal posting actions are unavailable for a closed folio."
+    end
+
+    def night_audit_url
+      return unless can_view_night_audit?
+
+      if current_business_date_night_audit
+        routes.hotel_night_audit_path(hotel, current_business_date_night_audit)
+      else
+        routes.hotel_night_audits_path(hotel)
+      end
+    end
+
+    def night_audit_blockers_url
+      return unless can_view_night_audit?
+
+      if current_business_date_night_audit&.blocked?
+        routes.resolve_hotel_night_audit_path(hotel, current_business_date_night_audit)
+      else
+        routes.hotel_night_audits_path(hotel)
+      end
+    end
+
+    def can_show_normal_folio_actions?
+      action_section_state == :normal && hotel.current_business_date_record&.allows_normal_posting?
+    end
+
+    def can_post_payment?
+      can_show_normal_folio_actions? && permitted?("post_folio_payments")
+    end
+
+    def can_post_charge?
+      can_show_normal_folio_actions? && permitted?("post_folio_charges")
+    end
+
+    def can_execute_refund?
+      can_show_normal_folio_actions? && permitted?("execute_folio_refunds")
+    end
+
+    def adjustment_category_options
+      return [] unless can_show_normal_folio_actions?
+
+      options = []
+      options += %w[adjustment discount other] if permitted?("post_folio_adjustments")
+      options << "correction" if permitted?("post_folio_corrections")
+      options << "write_off" if permitted?("post_folio_write_offs")
+      options
+    end
+
+    def can_post_adjustment?
+      adjustment_category_options.any?
+    end
+
+    def normal_folio_actions_available?
+      can_post_payment? || can_post_charge? || can_post_adjustment? || can_execute_refund?
+    end
+
+    def charge_transaction_codes
+      hotel.transaction_codes.active.charge.order(:code)
     end
 
     def mobile_summary_items
@@ -352,6 +467,7 @@ module HotelPortal
           forecasted_rows.empty? &&
           folio&.status == "open" &&
           !hotel.current_business_date_record&.audit_running? &&
+          !hotel.current_business_date_record&.audit_blocked? &&
           !unsynced_captured_payment? &&
           !unsynced_completed_refund?
       end
@@ -402,12 +518,36 @@ module HotelPortal
       { label: label, value: value, hint: hint }
     end
 
+    def permitted?(slug)
+      return true if user&.respond_to?(:superadmin?) && user.superadmin?
+      return false unless user&.respond_to?(:has_permission?)
+
+      user.has_permission?(slug, hotel: hotel)
+    end
+
+    def can_view_night_audit?
+      permitted?("manage_night_audit")
+    end
+
+    def current_business_date_night_audit
+      @current_business_date_night_audit ||= begin
+        business_date = hotel.current_business_date
+        business_date.present? ? hotel.night_audits.where(business_date: business_date).order(created_at: :desc).first : nil
+      end
+    end
+
+    def routes
+      Rails.application.routes.url_helpers
+    end
+
     def posted_transactions
       @posted_transactions ||= folio&.folio_transactions&.includes(:transaction_code, :user)&.order(posting_date: :asc, created_at: :asc)&.to_a || []
     end
 
     def posted_row(transaction, effect, balance)
       policy = ::Folios::TransactionActionPolicy.new(transaction: transaction, user: user)
+      action_label = suppress_normal_ledger_actions? ? "—" : policy.action_label
+      action_kind = suppress_normal_ledger_actions? ? :none : policy.action_kind
       LedgerRow.new(
         date_label: transaction.posting_date.strftime("%d %b"),
         code: posted_code(transaction),
@@ -419,13 +559,17 @@ module HotelPortal
         credit: effect.negative? ? amount_label(effect) : "—",
         balance: signed_amount_label(balance),
         balance_kind: "Balance",
-        action_label: policy.action_label,
-        action_kind: policy.action_kind,
-        modal_title: policy.modal_title,
+        action_label: action_label,
+        action_kind: action_kind,
+        modal_title: action_kind == :reverse ? policy.modal_title : nil,
         transaction_id: transaction.id,
         row_kind: :posted,
         reversed: transaction.reversed?
       )
+    end
+
+    def suppress_normal_ledger_actions?
+      actions_blocked?
     end
 
     def forecasted_row(line, balance)
@@ -456,6 +600,8 @@ module HotelPortal
     end
 
     def posted_code(transaction)
+      return derived_tax_transaction_code(transaction) if tax_transaction?(transaction)
+
       transaction.transaction_code&.code.presence || metadata_transaction_code(transaction) || fallback_code(transaction.transaction_type, transaction.category, transaction.description)
     end
 
@@ -481,6 +627,27 @@ module HotelPortal
     def metadata_transaction_code(transaction)
       metadata = transaction.metadata.to_h
       metadata.dig("tax_line", "transaction_code_code").presence || metadata.dig(:tax_line, :transaction_code_code).presence
+    end
+
+    def derived_tax_transaction_code(transaction)
+      child_code = metadata_transaction_code(transaction) || transaction.transaction_code&.code.presence
+      source_code = source_transaction_code_for(transaction)&.code.presence
+      return "#{source_code}_#{child_code}" if source_code.present? && child_code.present?
+
+      child_code || transaction.transaction_code&.code.presence || fallback_code(transaction.transaction_type, transaction.category, transaction.description)
+    end
+
+    def source_transaction_code_for(transaction)
+      metadata = transaction.metadata.to_h
+      tax_line = metadata["tax_line"].to_h
+      source_id = tax_line["source_transaction_code_id"].presence ||
+        metadata["source_transaction_code_id"].presence ||
+        metadata[:source_transaction_code_id].presence
+      parent_id = metadata["parent_folio_transaction_id"].presence || metadata[:parent_folio_transaction_id].presence
+      source_id ||= posted_transactions_by_id[parent_id.to_i]&.transaction_code_id if parent_id.present?
+      return if source_id.blank?
+
+      transaction_codes_by_id[source_id.to_i]
     end
 
     def reference_label(transaction)
@@ -561,6 +728,12 @@ module HotelPortal
         return "Refund Request ##{metadata['refund_request_id']} · #{source_state_label(transaction)}"
       end
 
+      if transaction.category == "refund"
+        refund_source = ::Folios::RefundSource.fetch(metadata["refund_source"].presence || metadata[:refund_source].presence)
+        reference = metadata["reference"].presence || metadata[:reference].presence
+        return [ reference.present? ? "Ref #{reference}" : nil, refund_source&.display_label, "Refund", source_state_label(transaction) ].compact.join(" · ")
+      end
+
       reference = metadata["reference"].presence || metadata[:reference].presence
       [ reference.present? ? "Ref #{reference}" : nil, transaction.category.humanize, source_state_label(transaction) ].compact.join(" · ").presence || "—"
     end
@@ -589,6 +762,10 @@ module HotelPortal
 
     def parent_transaction_code(parent_id)
       posted_transactions_by_id[parent_id.to_i]&.then { |parent| posted_code(parent) }
+    end
+
+    def transaction_codes_by_id
+      @transaction_codes_by_id ||= hotel.transaction_codes.index_by(&:id)
     end
 
     def state_label(transaction)

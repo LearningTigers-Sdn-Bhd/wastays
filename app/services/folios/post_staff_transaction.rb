@@ -42,6 +42,9 @@ module Folios
       payment_source_error = apply_payment_source
       return failure(payment_source_error) if payment_source_error.present?
 
+      refund_source_error = validate_refund_source
+      return failure(refund_source_error) if refund_source_error.present?
+
       code_error = apply_transaction_code
       return failure(code_error) if code_error.present?
 
@@ -133,7 +136,21 @@ module Folios
     end
 
     def staff_payment?
-      @transaction_type == "payment" && (@options[:payment_source].present? || @category != "refund")
+      @transaction_type == "payment" && @category != "refund"
+    end
+
+    def refund_payment?
+      @transaction_type == "payment" && @category == "refund"
+    end
+
+    def validate_refund_source
+      return unless refund_payment?
+
+      source_key = @options.dig(:metadata, :refund_source).presence || @options.dig(:metadata, "refund_source").presence
+      return "Refund source is required." if source_key.blank?
+      return "Refund source is not valid." unless Folios::RefundSource.valid?(source_key)
+
+      nil
     end
 
     def payment_source_reference

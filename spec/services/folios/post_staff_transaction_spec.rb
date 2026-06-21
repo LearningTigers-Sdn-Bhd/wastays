@@ -372,13 +372,44 @@ RSpec.describe Folios::PostStaffTransaction do
       transaction_type: "payment",
       category: "refund",
       amount: "50.00",
-      description: "Refund credit balance"
+      description: "Refund credit balance",
+      options: { metadata: { refund_source: "bank_transfer" } }
     )
 
     expect(result.success?).to be(true)
     expect(result.transaction.transaction_type).to eq("payment")
     expect(result.transaction.category).to eq("refund")
     expect(result.transaction.amount).to eq(-50.0)
+    expect(result.transaction.metadata["refund_source"]).to eq("bank_transfer")
+  end
+
+  it "rejects manual refunds without a refund source" do
+    result = described_class.call(
+      folio: folio,
+      user: user,
+      transaction_type: "payment",
+      category: "refund",
+      amount: "50.00",
+      description: "Refund credit balance"
+    )
+
+    expect(result.success?).to be(false)
+    expect(result.error).to eq("Refund source is required.")
+  end
+
+  it "rejects manual refunds with an invalid refund source" do
+    result = described_class.call(
+      folio: folio,
+      user: user,
+      transaction_type: "payment",
+      category: "refund",
+      amount: "50.00",
+      description: "Refund credit balance",
+      options: { metadata: { refund_source: "crypto_wallet" } }
+    )
+
+    expect(result.success?).to be(false)
+    expect(result.error).to eq("Refund source is not valid.")
   end
 
   it "rejects manual accommodation charges" do
