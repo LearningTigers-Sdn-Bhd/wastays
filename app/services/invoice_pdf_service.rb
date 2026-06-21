@@ -22,6 +22,8 @@ class InvoicePdfService
   end
 
   def generate
+    return FolioInvoicePdfService.new(@booking).generate if @booking.booking_folio.present?
+
     pdf = Prawn::Document.new(
       page_size: "A4",
       margin: [ 40, 40, 40, 40 ],
