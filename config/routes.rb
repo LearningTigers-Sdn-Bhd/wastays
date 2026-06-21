@@ -383,6 +383,7 @@ Rails.application.routes.draw do
       member do
         get :resolve
         get :blockers
+        post :resolve_missing_folio
       end
     end
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do

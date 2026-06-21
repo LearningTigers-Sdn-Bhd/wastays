@@ -213,12 +213,27 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     let(:night_audit) { create(:night_audit, hotel: hotel, status: "blocked") }
 
     it "returns the blockers as JSON" do
+      business_date = Date.current
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+      booking = create(:booking,
+        hotel: hotel,
+        status: "checked_in",
+        guest_name: "Hanami Saki",
+        check_in: business_date,
+        check_out: business_date + 1.day)
+      room_type = create(:room_type, hotel: hotel, room_numbers: [ "302" ])
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "302")
+
       sign_in(user)
       get blockers_hotel_night_audit_path(hotel, night_audit)
       expect(response).to have_http_status(:ok)
       json = JSON.parse(response.body)
       expect(json).to have_key("blocked_details")
       expect(json).to have_key("exceptions")
+      expect(json.dig("blocked_details", "missing_folio").first).to include(
+        "booking_id" => booking.id,
+        "room_numbers" => "302"
+      )
     end
 
     it "blocks access without permission" do
@@ -226,6 +241,60 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
       sign_in(user)
       get blockers_hotel_night_audit_path(hotel, night_audit)
       expect(response).to redirect_to(root_path)
+    end
+  end
+
+  describe "POST #resolve_missing_folio" do
+    let(:business_date) { Date.current }
+    let(:booking) do
+      create(:booking,
+        hotel: hotel,
+        status: "checked_in",
+        payment_status: "captured",
+        guest_name: "Hanami Saki",
+        check_in: business_date,
+        check_out: business_date + 1.day,
+        checked_in_at: Time.current)
+    end
+    let(:night_audit) do
+      create(:night_audit,
+        hotel: hotel,
+        business_date: business_date,
+        status: "blocked",
+        blocked_details: { "missing_folio" => [ { "booking_id" => booking.id } ] })
+    end
+
+    before do
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+      start_business_date_audit(hotel)
+      block_business_date_audit(hotel, blockers: { "missing_folio" => [ { "booking_id" => booking.id } ] })
+      create(:booking_room, booking: booking, subtotal: 100.0)
+    end
+
+    it "recovers the missing folio and redirects to blocker resolution" do
+      sign_in(user)
+
+      expect {
+        post resolve_missing_folio_hotel_night_audit_path(hotel, night_audit), params: {
+          booking_id: booking.id,
+          reason: "Request spec recovery"
+        }
+      }.to change(BookingFolio, :count).by(1)
+
+      expect(response).to redirect_to(resolve_hotel_night_audit_path(hotel, night_audit))
+      expect(flash[:notice]).to eq("Folio recovered. Missing nightly charges are still detected.")
+      expect(booking.reload.booking_folio).to be_present
+      expect(FinancialAuditEvent.where(event_type: "missing_folio_recovered", booking: booking)).to exist
+    end
+
+    it "blocks unauthorized recovery execution" do
+      role.permissions.delete(permission)
+      sign_in(user)
+
+      post resolve_missing_folio_hotel_night_audit_path(hotel, night_audit), params: { booking_id: booking.id }
+
+      expect(response).to redirect_to(root_path)
+      expect(booking.reload.booking_folio).to be_nil
     end
   end
 

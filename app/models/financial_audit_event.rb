@@ -19,6 +19,7 @@ class FinancialAuditEvent < ApplicationRecord
     business_date_force_closed
     business_date_opened
     folio_forecasts_refreshed
+    missing_folio_recovered
   ].freeze
 
   belongs_to :hotel
