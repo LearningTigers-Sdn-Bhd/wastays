@@ -71,6 +71,16 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: booking)
     end
 
+    it 'saves special requests to both booking and quote' do
+      details = payment_details.merge(special_requests: 'Late arrival at 10 PM')
+
+      result = described_class.new(quote_token: quote.token, payment_details: details).call
+
+      expect(result.success?).to be(true)
+      expect(result.booking.special_requests).to eq('Late arrival at 10 PM')
+      expect(quote.reload.special_requests).to eq('Late arrival at 10 PM')
+    end
+
     it 'returns existing booking when quote is already converted' do
       existing = create(:booking, booking_quote: quote, hotel: hotel)
 

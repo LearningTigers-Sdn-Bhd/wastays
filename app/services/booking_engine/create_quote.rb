@@ -14,6 +14,7 @@ module BookingEngine
       @guest_name = params[:guest_name]
       @guest_email = params[:guest_email]
       @guest_phone = params[:guest_phone]
+      @special_requests = params[:special_requests]
       @display_currency = CurrencyCatalog.normalize(params[:display_currency], fallback: nil)
       @rate_plan_id = params[:rate_plan_id]
     end
@@ -65,7 +66,8 @@ module BookingEngine
           cancellation_policy_snapshot: @hotel.property_policy&.cancellation_policy,
           guest_name: @guest_name,
           guest_email: @guest_email,
-          guest_phone: @guest_phone
+          guest_phone: @guest_phone,
+          special_requests: @special_requests
         )
 
         if quote.save

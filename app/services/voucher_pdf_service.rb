@@ -46,6 +46,8 @@ class VoucherPdfService
     pdf.move_down 24
     draw_guest_and_payment(pdf)
     pdf.move_down 24
+    draw_special_requests(pdf)
+    pdf.move_down 24
     draw_policies(pdf)
     pdf.move_down 30
     draw_footer(pdf)
@@ -208,6 +210,16 @@ class VoucherPdfService
     pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, row_height
 
     pdf.table(data, width: w, column_widths: [ half, w - half ])
+  end
+
+  def draw_special_requests(pdf)
+    return if @booking.special_requests.blank?
+
+    section_label(pdf, "SPECIAL REQUESTS")
+    pdf.move_down 8
+
+    pdf.fill_color TEXT_PRIMARY
+    pdf.text @booking.special_requests, size: 9, leading: 2
   end
 
   def draw_policies(pdf)

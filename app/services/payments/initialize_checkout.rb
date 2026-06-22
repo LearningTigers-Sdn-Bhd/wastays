@@ -75,7 +75,8 @@ module Payments
         gender: guest_details[:gender],
         country: guest_details[:country],
         document_type: guest_details[:document_type],
-        marketing_consent: guest_details[:marketing_consent]
+        marketing_consent: guest_details[:marketing_consent],
+        special_requests: guest_details[:special_requests]
       }
     end
 
