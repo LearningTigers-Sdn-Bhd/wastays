@@ -3,6 +3,8 @@
 class Booking < ApplicationRecord
   include Bookings::StatusLifecycle
 
+  TOURISM_TAX_KEYS = %w[tourism_tax ttx].freeze
+
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
   belongs_to :payout_batch, optional: true
@@ -247,7 +249,17 @@ class Booking < ApplicationRecord
   end
 
   def tourism_tax?
-    tourism_tax_applied && tourism_tax_amount.positive?
+    tourism_tax_total.positive?
+  end
+
+  def tourism_tax_total
+    snapshot_total = self.class.tourism_tax_total_from_posting_snapshot(tax_posting_snapshot)
+    return snapshot_total if snapshot_total.positive?
+
+    tax_line_total = self.class.tourism_tax_total_for(tax_lines)
+    return tax_line_total if tax_line_total.positive?
+
+    tourism_tax_amount.to_d.round(2)
   end
 
   def folio_outstanding_balance
@@ -265,8 +277,37 @@ class Booking < ApplicationRecord
     Array(tax_lines).sum { |t| t["amount"].to_f }.round(2)
   end
 
+  def non_tourism_tax_total
+    self.class.non_tourism_tax_total_for(tax_lines)
+  end
+
   def tax_lines_for(type)
     Array(tax_lines).select { |t| t["type"] == type.to_s }
+  end
+
+  def self.tourism_tax_total_for(lines)
+    Array(lines).select { |line| tourism_tax_line?(line) }.sum { |line| tax_line_amount(line) }.round(2)
+  end
+
+  def self.non_tourism_tax_total_for(lines)
+    Array(lines).reject { |line| tourism_tax_line?(line) }.sum { |line| tax_line_amount(line) }.round(2)
+  end
+
+  def self.tourism_tax_total_from_posting_snapshot(snapshot)
+    snapshot.to_h.values.flatten.select { |line| tourism_tax_line?(line) }.sum { |line| tax_line_amount(line) }.round(2)
+  end
+
+  def self.tourism_tax_line?(line)
+    line = line.to_h
+    type = line["type"].presence || line[:type]
+    primary_key = line["primary_tax_key"].presence || line[:primary_tax_key]
+
+    type.to_s.in?(TOURISM_TAX_KEYS) || primary_key.to_s.in?(TOURISM_TAX_KEYS)
+  end
+
+  def self.tax_line_amount(line)
+    line = line.to_h
+    (line["amount"].presence || line[:amount]).to_d
   end
 
   def formatted_reservation_number

@@ -10,6 +10,9 @@ RSpec.describe "HotelPortal::Bookings::CheckIns", type: :request do
       guest_country: "United States",
       tourism_tax_applied: true,
       tourism_tax_amount: 20.0,
+      tax_posting_snapshot: {
+        Date.current.iso8601 => [ { "name" => "Tourism Tax", "type" => "tourism_tax", "amount" => "20.00" } ]
+      },
       booking_quote: nil
     )
   end
@@ -20,34 +23,66 @@ RSpec.describe "HotelPortal::Bookings::CheckIns", type: :request do
   end
 
   describe "POST /create" do
-    it "updates tourism_tax_collected but ignores tourism_tax_amount from params" do
+    it "posts a cash folio payment when tourism tax is collected and ignores submitted amount" do
+      expect {
+        post check_in_hotel_booking_path(hotel, booking, format: :html), params: {
+          booking: {
+            tourism_tax_collected: "1",
+            tourism_tax_amount: "50.00",
+            booking_rooms_attributes: [
+              { id: booking.booking_rooms.first.id, room_number: "101" }
+            ]
+          }
+        }
+      }.to change(FolioTransaction.payment, :count).by(1)
+
+      payment = booking.reload.booking_folio.folio_transactions.payment.sole
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(booking.status).to eq("checked_in")
+      expect(booking.tourism_tax_collected).to be true
+      expect(booking.tourism_tax_amount).to eq(20.00) # Remains unchanged
+      expect(payment.category).to eq("cash")
+      expect(payment.amount).to eq(20.to_d)
+      expect(payment.metadata["source"]).to eq("tourism_tax_check_in")
+    end
+
+    it "does not duplicate tourism tax folio payment on repeated check-in save" do
       post check_in_hotel_booking_path(hotel, booking, format: :html), params: {
         booking: {
           tourism_tax_collected: "1",
-          tourism_tax_amount: "50.00",
           booking_rooms_attributes: [
             { id: booking.booking_rooms.first.id, room_number: "101" }
           ]
         }
       }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
-      expect(booking.reload.status).to eq("checked_in")
-      expect(booking.tourism_tax_collected).to be true
-      expect(booking.tourism_tax_amount).to eq(20.00) # Remains unchanged
+      expect {
+        post check_in_hotel_booking_path(hotel, booking, format: :html), params: {
+          booking: {
+            tourism_tax_collected: "1",
+            booking_rooms_attributes: [
+              { id: booking.booking_rooms.first.id, room_number: "101" }
+            ]
+          }
+        }
+      }.not_to change(FolioTransaction.payment, :count)
+
+      expect(booking.reload.tourism_tax_collected).to be true
     end
 
-    it "can set tourism_tax_collected to false" do
+    it "can set tourism_tax_collected to false without posting a payment" do
       booking.update!(tourism_tax_collected: true)
 
-      post check_in_hotel_booking_path(hotel, booking, format: :html), params: {
-        booking: {
-          tourism_tax_collected: "0",
-          booking_rooms_attributes: [
-            { id: booking.booking_rooms.first.id, room_number: "101" }
-          ]
+      expect {
+        post check_in_hotel_booking_path(hotel, booking, format: :html), params: {
+          booking: {
+            tourism_tax_collected: "0",
+            booking_rooms_attributes: [
+              { id: booking.booking_rooms.first.id, room_number: "101" }
+            ]
+          }
         }
-      }
+      }.not_to change(FolioTransaction.payment, :count)
 
       expect(booking.reload.tourism_tax_collected).to be false
     end

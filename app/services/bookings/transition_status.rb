@@ -83,6 +83,11 @@ module Bookings
               @booking.update!(@options[:attributes])
               sync_room_number_to_snapshot
             end
+            tourism_tax_result = record_tourism_tax_payment_if_requested
+            unless tourism_tax_result.success?
+              error = tourism_tax_result.error
+              raise ActiveRecord::Rollback
+            end
             next
           end
 
@@ -113,6 +118,12 @@ module Bookings
           )
 
           Folios::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
+
+          tourism_tax_result = record_tourism_tax_payment_if_requested
+          unless tourism_tax_result.success?
+            error = tourism_tax_result.error
+            raise ActiveRecord::Rollback
+          end
 
           deposit_result = record_security_deposit_if_requested
           unless deposit_result.success?
@@ -169,6 +180,16 @@ module Bookings
         amount: deposit_options[:amount],
         payment_method: deposit_options[:payment_method],
         external_reference: deposit_options[:external_reference]
+      )
+    end
+
+    def record_tourism_tax_payment_if_requested
+      return OpenStruct.new(success?: true) unless @booking.tourism_tax_collected?
+
+      Folios::RecordTourismTaxPayment.call(
+        booking: @booking,
+        user: @user,
+        options: @options.except(:attributes, :security_deposit)
       )
     end
 

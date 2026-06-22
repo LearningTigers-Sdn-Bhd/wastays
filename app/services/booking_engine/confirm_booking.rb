@@ -47,7 +47,7 @@ module BookingEngine
         tax_lines = financial_snapshot.tax_lines
         tourism_tax = tax_lines.find { |tax| tax["type"].to_s == "tourism_tax" }
         tourism_tax_amount = tourism_tax ? tourism_tax["amount"].to_d : 0
-        payable_total = financial_snapshot.room_total + financial_snapshot.tax_total
+        payable_total = financial_snapshot.room_total + Booking.non_tourism_tax_total_for(tax_lines)
 
         booking = Booking.new(
           booking_quote: @quote,

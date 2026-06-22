@@ -20,6 +20,10 @@ RSpec.describe Bookings::CreateManualBooking do
 
   subject { described_class.new(hotel: hotel, params: params) }
 
+  def room_revenue_code
+    hotel.transaction_codes.find_by!(system_key: "room_revenue")
+  end
+
   before do
     dispatcher = instance_double(Notifications::Dispatcher, call: [])
     allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
@@ -77,6 +81,23 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.booking.payment_status).to eq("partial")
     expect(result.booking.payment_transactions.first.amount_subunits).to eq(2_500)
     expect(result.booking.booking_folio.folio_transactions.payment.sole.amount).to eq(25.to_d)
+  end
+
+  it "defaults manual payment to the stay total excluding tourism tax" do
+    hotel.update!(tourism_tax_enabled: true, tourism_tax_amount: 10.0)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    room_code.update!(is_taxable: true)
+    room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+    params.merge!(record_payment: "1", payment_method: "cash", guest_country: "Singapore")
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    expect(result.booking.total_amount).to eq(200.to_d)
+    expect(result.booking.tourism_tax_amount).to eq(10.to_d)
+    expect(result.booking.payment_status).to eq("captured")
+    expect(result.booking.payment_transactions.first.amount_subunits).to eq(20_000)
+    expect(result.booking.booking_folio.folio_transactions.payment.sole.amount).to eq(200.to_d)
   end
 
   it "rejects non-positive manual payment amounts" do
@@ -282,6 +303,8 @@ RSpec.describe Bookings::CreateManualBooking do
 
   it "stores a nightly rate snapshot and tax posting snapshot" do
     hotel.update!(sst_enabled: true)
+    room_revenue_code.update!(is_taxable: true)
+    room_revenue_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
 
     result = subject.call
 
@@ -334,17 +357,19 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.booking.total_amount).to eq(333.33.to_d)
   end
 
-  it "posts custom flat hotel tax once in the tax posting snapshot" do
-    HotelTax.create!(hotel: hotel, name: "Admin Levy", rate_type: "flat", amount: 12)
+  it "posts custom flat hotel tax nightly through the room revenue tax rule" do
+    hotel_tax = HotelTax.create!(hotel: hotel, name: "Admin Levy", rate_type: "flat", amount: 12)
+    room_revenue_code.update!(is_taxable: true)
+    room_revenue_code.transaction_code_taxes.create!(hotel_tax: hotel_tax)
     create(:room_rate, room_type: room_type, date: Date.current + 1.day, price: 220)
     params.merge!(check_in: Date.current, check_out: Date.current + 2.days)
 
     result = subject.call
 
     expect(result.success?).to be true
-    expect(result.booking.tax_lines.find { |line| line["name"] == "Admin Levy" }["amount"]).to eq("12.0")
+    expect(result.booking.tax_lines.find { |line| line["name"] == "Admin Levy" }["amount"]).to eq("24.0")
     expect(result.booking.tax_posting_snapshot[Date.current.iso8601].count { |tax| tax["name"] == "Admin Levy" }).to eq(1)
-    expect(result.booking.tax_posting_snapshot[(Date.current + 1.day).iso8601].to_a).to be_empty
+    expect(result.booking.tax_posting_snapshot[(Date.current + 1.day).iso8601].count { |tax| tax["name"] == "Admin Levy" }).to eq(1)
   end
 
   it "rejects a selected rate plan from another room category" do

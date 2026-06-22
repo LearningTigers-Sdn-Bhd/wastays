@@ -60,7 +60,7 @@ module Payments
             end
           ).call
 
-          snapshot.room_total + snapshot.tax_total
+          snapshot.room_total + Booking.non_tourism_tax_total_for(snapshot.tax_lines)
         end
       end
     end

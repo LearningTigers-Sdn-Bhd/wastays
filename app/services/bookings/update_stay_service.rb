@@ -76,7 +76,7 @@ module Bookings
 
             # Update booking totals (including taxes)
             @booking.update!(
-              total_amount: financial_snapshot.room_total + financial_snapshot.tax_total,
+              total_amount: financial_snapshot.room_total + Booking.non_tourism_tax_total_for(financial_snapshot.tax_lines),
               tax_lines: financial_snapshot.tax_lines,
               tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
               tourism_tax_amount: financial_snapshot.tax_lines.find { |t| t["type"] == "tourism_tax" }&.fetch("amount", 0).to_d,

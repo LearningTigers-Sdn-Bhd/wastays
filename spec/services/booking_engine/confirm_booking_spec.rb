@@ -35,6 +35,12 @@ RSpec.describe BookingEngine::ConfirmBooking do
   end
 
   describe '#call' do
+    before do
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.update!(is_taxable: true)
+      room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+    end
+
     it 'creates booking, rooms, guest link, pre-checkin, and converts quote' do
       dispatcher = instance_double(Notifications::Dispatcher, call: [])
       allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
@@ -50,7 +56,7 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(booking).to be_persisted
       expect(booking.status).to eq('confirmed')
       expect(booking.payment_status).to eq('captured')
-      expect(booking.total_amount).to eq(210.to_d)
+      expect(booking.total_amount).to eq(200.to_d)
       expect(booking.guest_gender).to eq('female')
       expect(booking.guest_document_type).to eq('passport')
       expect(booking.guest_country).to eq('Singapore')

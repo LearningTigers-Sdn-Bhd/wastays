@@ -792,6 +792,29 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       )
     end
 
+    it "separates tourism tax from payable taxes for foreign guests" do
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.update!(is_taxable: true)
+      room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+      room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+
+      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s,
+        guest_country: "Singapore"
+      }
+
+      body = JSON.parse(response.body)
+      expect(response).to have_http_status(:success)
+      expect(body["total_amount"].to_d).to eq(216.to_d)
+      expect(body["room_total"].to_d).to eq(200.to_d)
+      expect(body["tax_total"].to_d).to eq(16.to_d)
+      expect(body["tourism_tax_total"].to_d).to eq(20.to_d)
+      expect(body["tax_lines"].map { |line| line["type"] }).to include("sst", "tourism_tax")
+    end
+
     it "returns 0 if params are missing" do
       get "/hotel/#{hotel.id}/bookings/stay_price"
 
