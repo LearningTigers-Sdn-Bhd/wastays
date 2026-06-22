@@ -125,6 +125,11 @@
                         class: "form-input py-3 px-5 border border-neutral-border", required: true %>
                 </div>
 
+                <div>
+                  <%= f.label :guest_city, "City", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+                  <%= f.text_field :guest_city, class: "form-input py-3 px-5 border border-neutral-border", required: true, placeholder: "e.g. Kuala Lumpur" %>
+                </div>
+
                 <div data-controller="time-picker">
                   <%= f.label :estimated_arrival_time, "Estimated Arrival Time", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
                   <div class="relative">

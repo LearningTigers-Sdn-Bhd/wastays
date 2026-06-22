@@ -43,6 +43,12 @@
             data: { guest_autocomplete_target: "country", guest_change_confirmation_target: "country", booking_calc_target: "guestCountry", action: "input->booking-calc#calculate" } %>
       </div>
       <div>
+        <%= f.label :guest_city, "City", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.text_field :guest_city, placeholder: "Kuala Lumpur",
+            class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+            data: { guest_change_confirmation_target: "city" } %>
+      </div>
+      <div>
         <%= f.label :guest_gender, "Gender", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
         <%= f.select :guest_gender, Guest::GENDERS.map { |gender| [gender.titleize, gender] }, { include_blank: "Select gender" },
             { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",

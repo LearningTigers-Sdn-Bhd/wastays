@@ -142,6 +142,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
           guest_email: "ahmad@example.com",
           guest_phone: "+60123456789",
           guest_country: "Malaysia",
+          guest_city: "Kuala Lumpur",
           guest_document_type: "ic",
           guest_government_id: "900101011234",
           guest_home_address: "No. 12, Jalan Ampang, 50450 KL"
@@ -150,6 +151,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
 
       expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
       expect(booking.reload.status).to eq("checked_in")
+      expect(booking.reload.guest_city).to eq("Kuala Lumpur")
       expect(booking.reload.guest_home_address).to eq("No. 12, Jalan Ampang, 50450 KL")
       expect(BookingAuditLog.where(auditable: booking, action_type: "guest_updated", source: "guest").count).to eq(1)
     end

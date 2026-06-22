@@ -272,6 +272,11 @@ class Booking < ApplicationRecord
   after_create_commit :enqueue_receipt_email, if: -> { status == "confirmed" }
   after_create_commit :enqueue_whatsapp_receipt, if: -> { status == "confirmed" }
 
+  delegate :folio_number, to: :booking_folio, allow_nil: true
+  delegate :invoice_number, to: :booking_folio, allow_nil: true
+
+  public
+
   def pre_checkin_display_status
     metadata = pre_checkin&.metadata || {}
     has_real_pre_checkin_data = pre_checkin.present? && (
@@ -290,15 +295,8 @@ class Booking < ApplicationRecord
     pre_checkin_status.presence || pre_checkin&.status.presence || "not_started"
   end
 
-  delegate :folio_number, to: :booking_folio, allow_nil: true
-  delegate :invoice_number, to: :booking_folio, allow_nil: true
-
   def pre_checkin_completed?
     pre_checkin_display_status == "completed"
-  end
-
-  def tourism_tax?
-    tourism_tax_applied && tourism_tax_amount.positive?
   end
 
   def folio_outstanding_balance
@@ -318,6 +316,10 @@ class Booking < ApplicationRecord
 
   def tax_lines_for(type)
     Array(tax_lines).select { |t| t["type"] == type.to_s }
+  end
+
+  def tourism_tax?
+    tourism_tax_applied && tourism_tax_amount.positive?
   end
 
   def formatted_reservation_number
@@ -410,5 +412,6 @@ class Booking < ApplicationRecord
   def normalize_guest_data
     self.guest_email = guest_email&.downcase&.strip
     self.guest_country = guest_country&.split&.map(&:capitalize)&.join(" ") if guest_country.present?
+    self.guest_city = guest_city&.split&.map(&:capitalize)&.join(" ") if guest_city.present?
   end
 end

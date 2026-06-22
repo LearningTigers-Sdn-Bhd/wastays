@@ -29,6 +29,18 @@ class Public::BookingsController < ApplicationController
       disposition: "inline"
   end
 
+  def e_invoice
+    @booking = Booking.find_by!(confirmation_token: params[:id])
+    submission = @booking.e_invoice_submissions.guest_facing.valid.recent_first.first
+    raise ActiveRecord::RecordNotFound unless submission
+
+    pdf_bytes = EInvoicePdfService.new(@booking, submission: submission).generate
+    send_data pdf_bytes,
+      filename: "wastays-e-invoice-#{submission.internal_id || @booking.confirmation_token}.pdf",
+      type: "application/pdf",
+      disposition: "inline"
+  end
+
   def voucher
     @booking = Booking.find_by!(confirmation_token: params[:id])
     pdf_bytes = VoucherPdfService.new(@booking).generate

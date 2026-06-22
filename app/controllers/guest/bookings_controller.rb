@@ -53,4 +53,18 @@ class Guest::BookingsController < Guest::BaseController
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."
   end
+
+  def e_invoice
+    @booking = current_guest.bookings.find(params[:id])
+    submission = @booking.e_invoice_submissions.guest_facing.valid.recent_first.first
+    raise ActiveRecord::RecordNotFound unless submission
+
+    pdf_bytes = EInvoicePdfService.new(@booking, submission: submission).generate
+    send_data pdf_bytes,
+      filename: "wastays-e-invoice-#{submission.internal_id || @booking.confirmation_token}.pdf",
+      type: "application/pdf",
+      disposition: "attachment"
+  rescue ActiveRecord::RecordNotFound
+    redirect_to guest_bookings_path, alert: "Booking not found."
+  end
 end

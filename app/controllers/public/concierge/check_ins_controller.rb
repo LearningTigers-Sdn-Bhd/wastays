@@ -92,6 +92,7 @@ module Public
           :guest_email,
           :guest_phone,
           :guest_country,
+          :guest_city,
           :guest_document_type,
           :guest_government_id,
           :guest_home_address,

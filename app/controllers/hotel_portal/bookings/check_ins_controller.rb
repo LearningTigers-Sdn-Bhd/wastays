@@ -69,7 +69,7 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
   def booking_params
     params.fetch(:booking, {}).permit(
       :guest_name, :guest_email, :guest_phone, :checked_in_at, :checked_out_at,
-      :guest_country, :guest_gender, :guest_document_type, :guest_government_id, :guest_update_intent,
+      :guest_country, :guest_city, :guest_gender, :guest_document_type, :guest_government_id, :guest_update_intent,
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
       :guarantee_method, :tourism_tax_collected,
       booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ]

@@ -28,5 +28,23 @@ RSpec.describe "Public::Bookings", type: :request do
       expect(response.body).to include("RM 500.00")
       expect(response.body).to include("2 Nights")
     end
+
+    it "shows e-invoice download when ready" do
+      create(:e_invoice_submission,
+        hotel: hotel,
+        booking: booking,
+        status: "valid",
+        internal_id: "SAH-300000001",
+        uuid: "26ZBY0Y5YVQX868FNJRC",
+        submission_uid: "4MCJS3QHYW358H8CNJRC",
+        long_id: "T19FQ4RT6FJDCBSENJRCRPVK10IW8KKW1782101467",
+        submitted_at: Time.current,
+        validated_at: Time.current
+      )
+
+      get booking_path(booking.confirmation_token)
+
+      expect(response.body).to include("Download E-Invoice")
+    end
   end
 end

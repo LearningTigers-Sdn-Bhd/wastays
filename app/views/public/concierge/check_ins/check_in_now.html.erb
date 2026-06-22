@@ -119,6 +119,11 @@
           </div>
 
           <div>
+            <%= f.label :guest_city, "City", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.text_field :guest_city, value: @booking.guest_city, class: "form-input py-3 px-5 border border-neutral-border", required: true, placeholder: "e.g. Kuala Lumpur" %>
+          </div>
+
+          <div>
             <%= f.label :guest_home_address, "Home Address", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
             <%= f.text_area :guest_home_address, value: @booking.guest_home_address, class: "form-input py-3 px-5 border border-neutral-border", required: true, rows: 3, placeholder: "e.g. No. 12, Jalan Ampang, 50450 Kuala Lumpur, Malaysia" %>
           </div>

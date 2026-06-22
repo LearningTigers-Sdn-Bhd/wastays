@@ -1,4 +1,5 @@
 <div class="grid gap-4 lg:grid-cols-2">
+  <% guest_e_invoice_submission = booking.e_invoice_submissions.guest_facing.valid.recent_first.first %>
   <section class="overflow-hidden rounded-lg border border-slate-200 bg-white">
     <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
       <h2 class="inline-flex items-center gap-2 text-sm font-semibold text-slate-950"><span class="inline-flex size-6 items-center justify-center rounded-md bg-slate-100 text-slate-700"><%= cached_icon "files", class: "size-3.5" %></span> Documents</h2>
@@ -23,6 +24,18 @@
         <div class="flex items-center justify-between px-4 py-3 text-slate-400">
           <span class="inline-flex items-center gap-2"><span class="inline-flex size-6 items-center justify-center rounded-md bg-slate-100 text-slate-400"><%= cached_icon "file-text", class: "size-3.5" %></span> Invoice</span>
           <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">After checkout</span>
+        </div>
+      <% end %>
+
+      <% if guest_e_invoice_submission %>
+        <%= link_to e_invoice_booking_path(booking.confirmation_token), target: "_blank", class: "flex items-center justify-between px-4 py-3 text-slate-700 hover:bg-slate-50", data: { turbo: false } do %>
+          <span class="inline-flex items-center gap-2"><span class="inline-flex size-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-700"><%= cached_icon "badge-check", class: "size-3.5" %></span> E-Invoice</span>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold text-slate-500">Download <%= cached_icon "download", class: "size-3" %></span>
+        <% end %>
+      <% else %>
+        <div class="flex items-center justify-between px-4 py-3 text-slate-400">
+          <span class="inline-flex items-center gap-2"><span class="inline-flex size-6 items-center justify-center rounded-md bg-slate-100 text-slate-400"><%= cached_icon "badge-check", class: "size-3.5" %></span> E-Invoice</span>
+          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">When ready</span>
         </div>
       <% end %>
     </div>

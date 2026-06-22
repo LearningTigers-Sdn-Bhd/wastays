@@ -28,7 +28,7 @@ module HotelPortal
 
         def editable_booking_params
           booking_params.slice(
-            :guest_name, :guest_email, :guest_phone, :guest_country, :guest_gender,
+            :guest_name, :guest_email, :guest_phone, :guest_country, :guest_city, :guest_gender,
             :guest_document_type, :guest_government_id, :source, :guarantee_method
           )
         end

@@ -14,6 +14,26 @@ module EInvoice
     GENERAL_CONSUMER_TIN     = "EI00000000010"
     DEFAULT_CURRENCY         = "MYR"
     ORIGIN_COUNTRY_CODE      = "MYS"
+    COUNTRY_LIST_ID          = "ISO3166-1"
+    COUNTRY_LIST_AGENCY_ID   = "6"
+    UNIT_CODE_EACH           = "C62"
+    MALAYSIA_STATE_CODES     = {
+      "johor bahru" => "01",
+      "alor setar" => "02",
+      "kota bharu" => "03",
+      "melaka" => "04",
+      "seremban" => "05",
+      "kuantan" => "06",
+      "george town" => "07",
+      "ipoh" => "08",
+      "kangar" => "09",
+      "shah alam" => "10",
+      "kota kinabalu" => "12",
+      "kuching" => "13",
+      "kuala lumpur" => "14",
+      "labuan" => "15",
+      "putrajaya" => "16"
+    }.freeze
     ZERO_ALLOWANCE_CHARGE    = {
       "ChargeIndicator" => [ { "_" => false } ],
       "Amount" => [ { "_" => 0, "currencyID" => DEFAULT_CURRENCY } ]
@@ -106,12 +126,11 @@ module EInvoice
           { "ID" => [ { "_" => supplier[:brn], "schemeID" => "BRN" } ] }
         ],
         "PostalAddress" => [ supplier_address(supplier) ],
-        "PartyLegalEntity" => [ { "CompanyID" => [ { "_" => supplier[:brn] } ] } ],
+        "PartyLegalEntity" => [ { "RegistrationName" => [ { "_" => supplier[:name] } ] } ],
         "Contact" => [ {
           "Telephone" => [ { "_" => supplier[:phone] } ],
           "ElectronicMail" => [ { "_" => supplier[:email] } ]
-        } ],
-        "PartyName" => [ { "Name" => [ { "_" => supplier[:name] } ] } ]
+        } ]
       }.tap do |party|
         if supplier[:sst_registration_number].present?
           party["PartyIdentification"] << { "ID" => [ { "_" => supplier[:sst_registration_number], "schemeID" => "SST" } ] }
@@ -173,36 +192,36 @@ module EInvoice
           { "Line" => [ { "_" => supplier[:address_line2].to_s } ] },
           { "Line" => [ { "_" => "" } ] }
         ],
-        "Country" => [ { "IdentificationCode" => [ { "_" => supplier[:country_code] } ] } ]
+        "Country" => [ { "IdentificationCode" => [ country_identification_code(supplier[:country_code]) ] } ]
       }
     end
 
     def buyer_party
       {
         "PartyIdentification" => [
-          { "ID" => [ { "_" => GENERAL_CONSUMER_TIN, "schemeID" => "TIN" } ] }
+          { "ID" => [ { "_" => GENERAL_CONSUMER_TIN, "schemeID" => "TIN" } ] },
+          { "ID" => [ buyer_identifier ] }
         ],
         "PostalAddress" => [ buyer_address ],
-        "PartyLegalEntity" => [ { "CompanyID" => [ { "_" => GENERAL_CONSUMER_TIN } ] } ],
+        "PartyLegalEntity" => [ { "RegistrationName" => [ { "_" => @booking.guest_name.to_s } ] } ],
         "Contact" => [ {
           "Telephone" => [ { "_" => format_phone(@booking.guest_phone) } ],
           "ElectronicMail" => [ { "_" => @booking.guest_email.to_s } ]
-        } ],
-        "PartyName" => [ { "Name" => [ { "_" => @booking.guest_name.to_s } ] } ]
+        } ]
       }
     end
 
     def buyer_address
       {
-        "CityName" => [ { "_" => "" } ],
+        "CityName" => [ { "_" => buyer_city } ],
         "PostalZone" => [ { "_" => "00000" } ],
-        "CountrySubentityCode" => [ { "_" => "00" } ],
+        "CountrySubentityCode" => [ { "_" => buyer_state_code } ],
         "AddressLine" => [
           { "Line" => [ { "_" => @booking.guest_home_address.presence || "NA" } ] },
           { "Line" => [ { "_" => "" } ] },
           { "Line" => [ { "_" => "" } ] }
         ],
-        "Country" => [ { "IdentificationCode" => [ { "_" => guest_country_code } ] } ]
+        "Country" => [ { "IdentificationCode" => [ country_identification_code(guest_country_code) ] } ]
       }
     end
 
@@ -218,7 +237,7 @@ module EInvoice
 
         {
           "ID" => [ { "_" => (idx + 1).to_s } ],
-          "InvoiceQuantity" => [ { "_" => qty, "unitCode" => "NIT" } ],
+          "InvoicedQuantity" => [ { "_" => qty, "unitCode" => UNIT_CODE_EACH } ],
           "LineExtensionAmount" => [ { "_" => subtotal.to_f.round(2), "currencyID" => currency } ],
           "AllowanceCharge" => [ zero_allowance_charge ],
           "TaxTotal" => [ {
@@ -314,6 +333,39 @@ module EInvoice
       else
         "MYS"
       end
+    end
+
+    def buyer_identifier
+      value = @booking.guest_government_id.to_s.gsub(/[^A-Za-z0-9]/, "").presence || "NA"
+      { "_" => value, "schemeID" => buyer_identifier_scheme }
+    end
+
+    def buyer_identifier_scheme
+      case @booking.guest_document_type.to_s
+      when "ic" then "NRIC"
+      when "passport" then "PASSPORT"
+      else "BRN"
+      end
+    end
+
+    def buyer_city
+      @booking.guest_city.to_s.presence || raise(ArgumentError, "Booking guest city is required")
+    end
+
+    def buyer_state_code
+      return "17" unless guest_country_code == "MYS"
+
+      MALAYSIA_STATE_CODES.fetch(buyer_city.to_s.strip.downcase) do
+        raise ArgumentError, "Booking guest city must map to a valid Malaysia state code"
+      end
+    end
+
+    def country_identification_code(code)
+      {
+        "_" => code,
+        "listID" => COUNTRY_LIST_ID,
+        "listAgencyID" => COUNTRY_LIST_AGENCY_ID
+      }
     end
 
     def format_phone(phone)

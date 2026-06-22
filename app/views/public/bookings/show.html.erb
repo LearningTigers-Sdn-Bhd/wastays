@@ -249,16 +249,26 @@
             </div>
           </div>
 
+          <% guest_e_invoice_submission = @booking.e_invoice_submissions.guest_facing.valid.recent_first.first %>
+
           <!-- Footer Actions -->
           <div class="pt-8 border-t border-neutral-border/40 flex items-center justify-between print:hidden">
             <%= link_to root_path, class: "group inline-flex items-center gap-x-2 px-6 py-3 bg-neutral-bg hover:bg-neutral-border/40 text-[11px] font-bold text-neutral-text-secondary hover:text-brand-primary rounded-xl transition-all border border-neutral-border/50 uppercase tracking-widest shadow-sm" do %>
               <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               Return to Home
             <% end %>
-            <%= link_to receipt_booking_path(@booking.confirmation_token), class: "group inline-flex items-center gap-x-2 px-6 py-3 bg-[#0a2e29] hover:bg-[#0d3d35] text-[11px] font-bold text-[#d9c5a0] rounded-xl transition-all border border-[#d9c5a0]/20 uppercase tracking-widest shadow-sm", data: { turbo: false } do %>
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-              Download Receipt
-            <% end %>
+            <div class="flex items-center gap-3">
+              <% if guest_e_invoice_submission %>
+                <%= link_to e_invoice_booking_path(@booking.confirmation_token), class: "group inline-flex items-center gap-x-2 px-6 py-3 bg-[#0a2e29] hover:bg-[#0d3d35] text-[11px] font-bold text-[#d9c5a0] rounded-xl transition-all border border-[#d9c5a0]/20 uppercase tracking-widest shadow-sm", data: { turbo: false } do %>
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                  Download E-Invoice
+                <% end %>
+              <% end %>
+              <%= link_to receipt_booking_path(@booking.confirmation_token), class: "group inline-flex items-center gap-x-2 px-6 py-3 bg-[#0a2e29] hover:bg-[#0d3d35] text-[11px] font-bold text-[#d9c5a0] rounded-xl transition-all border border-[#d9c5a0]/20 uppercase tracking-widest shadow-sm", data: { turbo: false } do %>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                Download Receipt
+              <% end %>
+            </div>
           </div>
         </div>
       </div>
