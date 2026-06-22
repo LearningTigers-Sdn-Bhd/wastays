@@ -252,6 +252,14 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include("Post Payment")
       expect(response.body).to include("Post Charge")
       expect(response.body).to include("Post Adjustment")
+      expect(response.body).to include("Generate Report")
+      expect(response.body).to include("Folio Ledger")
+      expect(response.body).to include("Download PDF")
+      expect(response.body).to include("Download CSV")
+      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :pdf))
+      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :csv))
+      expect(response.body).to include("Booking Invoices")
+      expect(response.body).to include("Available after checkout.")
       expect(response.body).to include("More Actions")
       expect(response.body).to include("Issue Refund")
 
@@ -269,6 +277,9 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("No posting actions available")
+      expect(response.body).to include("Generate Report")
+      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :pdf))
+      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :csv))
       expect(response.body).not_to include("Post Payment")
       expect(response.body).not_to include("Post Charge")
       expect(response.body).not_to include("Post Adjustment")
@@ -294,6 +305,9 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Financial posting is temporarily unavailable.")
+      expect(response.body).to include("Generate Report")
+      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :pdf))
+      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :csv))
       expect(response.body).to include("Night audit is currently running for this business date.")
       expect(response.body).to include("View Night Audit")
       expect(response.body).to include(hotel_night_audit_path(hotel, night_audit))
@@ -323,6 +337,9 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Normal folio posting is blocked.")
+      expect(response.body).to include("Generate Report")
+      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :pdf))
+      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :csv))
       expect(response.body).to include("Night audit is blocked. Resolve blockers from the Night Audit page, then retry audit.")
       expect(response.body).to include("View Night Audit Blockers")
       expect(response.body).to include(resolve_hotel_night_audit_path(hotel, night_audit))
@@ -350,11 +367,32 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Normal posting actions are unavailable for a closed folio.")
+      expect(response.body).to include("Generate Report")
+      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :pdf))
+      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :csv))
       expect(response.body).not_to include("Post Payment")
       expect(response.body).not_to include("Post Charge")
       expect(response.body).not_to include("Post Adjustment")
       expect(response.body).not_to include("Issue Refund")
       expect(response.body).to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
+    end
+
+    it "enables booking invoice report only for completed bookings with closed folios" do
+      open_booking = create_booking_with_folio(guest_name: "Open Invoice Guest", confirmation_token: "BK-OPEN-INV", folio_number: 613, charges: 100)
+      completed_booking = create_booking_with_folio(guest_name: "Completed Invoice Guest", confirmation_token: "BK-DONE-INV", folio_number: 614, charges: 100, status: "closed", booking_status: "completed")
+
+      get hotel_folio_path(hotel, open_booking)
+
+      open_html = Nokogiri::HTML(response.body)
+      expect(open_html.text.squish).to include("Booking Invoices Available after checkout.")
+      expect(open_html.at_css(%(a[href="#{invoice_hotel_folio_path(hotel, open_booking, format: :pdf)}"]))).to be_nil
+
+      get hotel_folio_path(hotel, completed_booking)
+
+      completed_html = Nokogiri::HTML(response.body)
+      invoice_link = completed_html.at_css(%(a[href="#{invoice_hotel_folio_path(hotel, completed_booking, format: :pdf)}"]))
+      expect(invoice_link).to be_present
+      expect(invoice_link.text.squish).to eq("Booking Invoices")
     end
 
     it "renders one horizontal ledger table with posted balance as a section summary only" do
@@ -377,16 +415,76 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     end
   end
 
+  describe "GET /hotel/:hotel_id/folios/:booking_id/invoice" do
+    it "returns a PDF for a closed folio" do
+      booking = create_booking_with_folio(guest_name: "Invoice Guest", confirmation_token: "BK-PDF", folio_number: 611, charges: 100, status: "closed")
+
+      get invoice_hotel_folio_path(hotel, booking, format: :pdf)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.headers["Content-Disposition"]).to include("inline")
+    end
+
+    it "redirects when the folio is open" do
+      booking = create_booking_with_folio(guest_name: "Open Guest", confirmation_token: "BK-OPEN", folio_number: 612, charges: 100)
+
+      get invoice_hotel_folio_path(hotel, booking, format: :pdf)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to eq("Folio invoice is only available for checked-out bookings with a closed folio.")
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/folios/:booking_id/ledger" do
+    it "downloads a CSV for the current folio" do
+      booking = create_booking_with_folio(guest_name: "Ledger Export Guest", confirmation_token: "BK-LEDGER-CSV", room_number: "804", folio_number: 615, charges: 125)
+
+      get ledger_hotel_folio_path(hotel, booking, format: :csv)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.content_type).to include("text/csv")
+      expect(response.headers["Content-Disposition"]).to include("folio-ledger")
+      expect(response.body).to include("Booking Ref,Guest Name")
+      expect(response.body).to include("BK-LEDGER-CSV")
+      expect(response.body).to include("Ledger Export Guest")
+      expect(response.body).to include("804")
+      expect(response.body).to include("125.0")
+    end
+
+    it "renders a PDF for the current folio" do
+      booking = create_booking_with_folio(guest_name: "Ledger Export PDF Guest", confirmation_token: "BK-LEDGER-PDF", room_number: "805", folio_number: 616, charges: 135)
+
+      get ledger_hotel_folio_path(hotel, booking, format: :pdf)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.content_type).to include("application/pdf")
+      expect(response.headers["Content-Disposition"]).to include("inline")
+      expect(response.headers["Content-Disposition"]).to include("folio-ledger")
+      expect(response.body.dup.force_encoding("BINARY")[0, 5]).to eq("%PDF-")
+    end
+
+    it "redirects when the booking has no folio" do
+      booking = create(:booking, hotel: hotel)
+
+      get ledger_hotel_folio_path(hotel, booking, format: :csv)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(flash[:alert]).to eq("Booking has no folio.")
+    end
+  end
+
   def grant_permission(slug)
     permission = Permission.find_or_create_by!(slug: slug) { |record| record.name = slug.humanize }
     role.permissions << permission unless role.permissions.exists?(permission.id)
   end
 
-  def create_booking_with_folio(guest_name:, confirmation_token:, folio_number:, room_number: nil, charges: 0, payments: 0, adjustments: 0, status: "open", check_in: Date.current, check_out: Date.current)
+  def create_booking_with_folio(guest_name:, confirmation_token:, folio_number:, room_number: nil, charges: 0, payments: 0, adjustments: 0, status: "open", booking_status: "confirmed", check_in: Date.current, check_out: Date.current)
     room_type = create(:room_type, hotel: hotel)
     booking = create(
       :booking,
       hotel: hotel,
+      status: booking_status,
       guest_name: guest_name,
       confirmation_token: confirmation_token,
       check_in: Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: check_in, kind: :check_in),

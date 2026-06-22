@@ -33,6 +33,30 @@ module HotelPortal
         disposition: request.format.pdf? ? "inline" : "attachment"
     end
 
+    def ledger
+      @booking = current_hotel.bookings.includes(:booking_rooms, booking_folio: { folio_transactions: :transaction_code }).find(params[:booking_id])
+      return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio." unless @booking.booking_folio
+
+      ledger_report = ::Reports::Bookings::GenerateFolioLedger.new(booking: @booking, printed_by: current_user&.name)
+      filename = "folio-ledger-#{@booking.formatted_folio_number.presence || @booking.confirmation_token}"
+
+      respond_to do |format|
+        format.csv do
+          send_data ledger_report.generate_csv,
+            filename: "#{filename}.csv",
+            type: "text/csv",
+            disposition: "attachment"
+        end
+
+        format.pdf do
+          send_data ledger_report.generate_pdf,
+            filename: "#{filename}.pdf",
+            type: "application/pdf",
+            disposition: "inline"
+        end
+      end
+    end
+
     private
 
     def set_navigation_context

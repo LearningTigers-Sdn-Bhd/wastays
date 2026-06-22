@@ -339,6 +339,7 @@ Rails.application.routes.draw do
 
     resources :folios, only: [ :index, :show ], param: :booking_id do
       get :invoice, on: :member
+      get :ledger, on: :member
       resources :transactions, only: [ :create ], controller: "folios/transactions" do
         post :reverse, on: :member
       end

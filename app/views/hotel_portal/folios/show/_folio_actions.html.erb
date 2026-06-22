@@ -11,6 +11,48 @@
   </div>
 
   <div class="flex flex-wrap items-center gap-2">
+    <div class="relative inline-block text-left" data-controller="dropdown" data-dropdown-align="left">
+      <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="true">
+        <%= cached_icon "file-text", class: "size-3" %>
+        Generate Report
+        <%= cached_icon "chevron-down", class: "size-3" %>
+      </button>
+      <div data-dropdown-target="menu" class="hidden absolute left-0 z-50 mt-2 w-60 origin-top-left rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-950/10 focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
+        <div class="group relative">
+          <button type="button" role="menuitem" aria-haspopup="true" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none">
+            <%= cached_icon "receipt-text", class: "size-4 text-slate-500" %>
+            <span>Folio Ledger</span>
+            <%= cached_icon "chevron-right", class: "ml-auto size-4 text-slate-400" %>
+          </button>
+          <div class="hidden absolute left-full top-0 z-50 ml-1 w-44 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-950/10 group-hover:block group-focus-within:block" role="menu" aria-label="Folio Ledger exports">
+            <%= link_to ledger_hotel_folio_path(hotel, booking, format: :pdf), role: "menuitem", target: "_blank", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none", data: { turbo: false } do %>
+              <%= cached_icon "file-text", class: "size-4 text-slate-500" %>
+              <span>Download PDF</span>
+            <% end %>
+            <%= link_to ledger_hotel_folio_path(hotel, booking, format: :csv), role: "menuitem", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none", data: { turbo: false } do %>
+              <%= cached_icon "table", class: "size-4 text-slate-500" %>
+              <span>Download CSV</span>
+            <% end %>
+          </div>
+        </div>
+
+        <% if folio_show.booking_invoice_report_available? %>
+          <%= link_to invoice_hotel_folio_path(hotel, booking, format: :pdf), role: "menuitem", target: "_blank", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none", data: { turbo: false } do %>
+            <%= cached_icon "file-text", class: "size-4 text-slate-500" %>
+            <span>Booking Invoices</span>
+          <% end %>
+        <% else %>
+          <button type="button" role="menuitem" disabled class="flex w-full cursor-not-allowed items-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-400">
+            <%= cached_icon "file-text", class: "mt-0.5 size-4 text-slate-300" %>
+            <span>
+              <span class="block">Booking Invoices</span>
+              <span class="mt-0.5 block text-xs font-medium text-slate-400">Available after checkout.</span>
+            </span>
+          </button>
+        <% end %>
+      </div>
+    </div>
+
     <% if folio_show.actions_blocked? %>
       <div class="max-w-2xl">
         <p class="text-sm font-black text-slate-900"><%= folio_show.actions_blocked_title %></p>
@@ -53,7 +95,7 @@
             Issue Refund
           </button>
         <% end %>
-        <% [ [ "Transfer Charge", "arrow-right" ], [ "Print Folio", "file-text" ], [ "Generate Invoice", "file-text" ], [ "Void / Reverse", "rotate-ccw" ] ].each do |label, icon| %>
+        <% [ [ "Transfer Charge", "arrow-right" ], [ "Print Folio", "file-text" ], [ "Void / Reverse", "rotate-ccw" ] ].each do |label, icon| %>
           <button type="button" role="menuitem" disabled class="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-400">
             <%= cached_icon icon, class: "size-4 text-slate-300" %>
             <span><%= label %></span>

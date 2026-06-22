@@ -371,6 +371,10 @@ module HotelPortal
       can_post_payment? || can_post_charge? || can_post_adjustment? || can_execute_refund?
     end
 
+    def booking_invoice_report_available?
+      booking.checked_out? && folio&.closed?
+    end
+
     def charge_transaction_codes
       hotel.transaction_codes.active.charge.order(:code)
     end
