@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::GuestFolioPresenter do
-  subject(:presenter) { described_class.new(booking: booking, printed_by: "F. Suhaila") }
+RSpec.describe Reports::Bookings::GenerateFolioRecords do
+  subject(:records) { described_class.new(booking: booking, printed_by: "F. Suhaila").call }
 
   let(:hotel) do
     create(:hotel,
@@ -130,29 +130,29 @@ RSpec.describe Invoices::GuestFolioPresenter do
   end
 
   it "builds guest and folio metadata for the document" do
-    expect(presenter.document_title).to eq("GUEST FOLIO / INVOICE")
-    expect(presenter.hotel_info_rows).to include(
+    expect(records.document_title).to eq("GUEST FOLIO / INVOICE")
+    expect(records.hotel_info_rows).to include(
       [ "Hotel Name", "Hotel ABC Resort" ],
       [ "Address", "Jalan Pantai Cenang, Langkawi, Malaysia" ],
       [ "Contact", "+60 12-345 6789 · frontdesk@example.com" ]
     )
-    expect(presenter.guest_folio_detail_rows).to include([ "Guest Name", "John Doe" ])
-    expect(presenter.guest_folio_detail_rows).to include([ "Nationality", "Foreign Tourist" ])
-    expect(presenter.guest_folio_detail_rows).to include([ "Invoice No", "ABC-30098231" ])
-    expect(presenter.guest_folio_detail_rows).to include([ "Currency", "MYR" ])
-    expect(presenter.booking_stay_detail_rows).to include([ "Room No / Type", "412 / Deluxe King" ])
-    expect(presenter.booking_stay_detail_rows).to include([ "Folio No", "ABC-30000451" ])
-    expect(presenter.booking_stay_detail_rows).to include([ "Confirm No", "BK-778291" ])
+    expect(records.guest_folio_detail_rows).to include([ "Guest Name", "John Doe" ])
+    expect(records.guest_folio_detail_rows).to include([ "Nationality", "Foreign Tourist" ])
+    expect(records.guest_folio_detail_rows).to include([ "Invoice No", "ABC-30098231" ])
+    expect(records.guest_folio_detail_rows).to include([ "Currency", "MYR" ])
+    expect(records.booking_stay_detail_rows).to include([ "Room No / Type", "412 / Deluxe King" ])
+    expect(records.booking_stay_detail_rows).to include([ "Folio No", "ABC-30000451" ])
+    expect(records.booking_stay_detail_rows).to include([ "Confirm No", "BK-778291" ])
   end
 
   it "omits missing optional hotel information rows" do
     hotel.update!(contact_phone: nil, contact_email: nil)
 
-    expect(described_class.new(booking: booking).hotel_info_rows.map(&:first)).not_to include("Contact")
+    expect(described_class.new(booking: booking).call.hotel_info_rows.map(&:first)).not_to include("Contact")
   end
 
   it "shows generated tax and charge rows separately with source-derived codes" do
-    rows = presenter.transaction_rows
+    rows = records.transaction_rows
 
     expect(rows.map(&:code)).to eq([ "RM-ACC", "RM-ACC_SVC-CHG", "RM-ACC_SST", "RM-ACC_TTX-FRN", "FB-REST", "PAY-CARD" ])
     expect(rows[0]).to have_attributes(
@@ -168,7 +168,7 @@ RSpec.describe Invoices::GuestFolioPresenter do
   end
 
   it "uses user-facing payment labels and safe references" do
-    payment = presenter.transaction_rows.last
+    payment = records.transaction_rows.last
 
     expect(payment.description).to eq("Payment - Card Terminal")
     expect(payment.secondary_description).to eq("Card Ref: 552190")
@@ -177,13 +177,13 @@ RSpec.describe Invoices::GuestFolioPresenter do
   end
 
   it "formats invoice amount cells without repeating currency" do
-    expect(presenter.amount(504)).to eq("504.00")
-    expect(presenter.credit_amount(504)).to eq("(504.00)")
-    expect(presenter.money(504)).to eq("MYR 504.00")
+    expect(records.amount(504)).to eq("504.00")
+    expect(records.credit_amount(504)).to eq("(504.00)")
+    expect(records.money(504)).to eq("MYR 504.00")
   end
 
   it "builds summary rows that reconcile to the displayed transaction rows" do
-    summary = presenter.summary_rows.index_by(&:label)
+    summary = records.summary_rows.index_by(&:label)
 
     expect(summary.fetch("Room Revenue, net").amount).to eq(250.to_d)
     expect(summary.fetch("F&B / Other Revenue, net").amount).to eq(85.50.to_d)
@@ -196,10 +196,10 @@ RSpec.describe Invoices::GuestFolioPresenter do
   end
 
   it "only shows used legend codes and relevant notes" do
-    expect(presenter.legend_rows).to include([ "RM-ACC", "Room / Accommodation" ], [ "RM-ACC_SVC-CHG", "Service Charge 10%" ], [ "PAY-CARD", "Card Terminal" ])
-    expect(presenter.legend_rows.map(&:first)).not_to include("UNUSED")
-    expect(presenter.notes).to include("SST is not applied on top of Tourism Tax.")
-    expect(presenter.notes).to include("Service Charge is shown separately from government tax.")
+    expect(records.legend_rows).to include([ "RM-ACC", "Room / Accommodation" ], [ "RM-ACC_SVC-CHG", "Service Charge 10%" ], [ "PAY-CARD", "Card Terminal" ])
+    expect(records.legend_rows.map(&:first)).not_to include("UNUSED")
+    expect(records.notes).to include("SST is not applied on top of Tourism Tax.")
+    expect(records.notes).to include("Service Charge is shown separately from government tax.")
   end
 
   it "hides fully reversed transaction noise" do
@@ -221,9 +221,22 @@ RSpec.describe Invoices::GuestFolioPresenter do
       reversal_of_transaction: original)
     original.update!(voided_by_transaction: reversal)
 
-    fresh_presenter = described_class.new(booking: booking)
+    fresh_records = described_class.new(booking: booking).call
 
-    expect(fresh_presenter.transaction_rows.map(&:description)).not_to include("Wrong room charge", "Reversal of transaction")
-    expect(fresh_presenter.total_due).to eq(390.50.to_d)
+    expect(fresh_records.transaction_rows.map(&:description)).not_to include("Wrong room charge", "Reversal of transaction")
+    expect(fresh_records.total_due).to eq(390.50.to_d)
+  end
+
+  it "rejects bookings without a folio" do
+    booking_without_folio = create(:booking, hotel: hotel)
+
+    expect { described_class.new(booking: booking_without_folio).call }.to raise_error(described_class::UnavailableError)
+  end
+
+  it "rejects open folios" do
+    open_booking = create(:booking, hotel: hotel)
+    create(:booking_folio, booking: open_booking, hotel: hotel, status: "open")
+
+    expect { described_class.new(booking: open_booking).call }.to raise_error(described_class::UnavailableError)
   end
 end

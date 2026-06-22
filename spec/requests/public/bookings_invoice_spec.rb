@@ -31,8 +31,23 @@ RSpec.describe "Public::Bookings invoice", type: :request do
     )
   end
 
+  def create_closed_folio_with_charge!(target_booking)
+    folio = create(:booking_folio, booking: target_booking, hotel: hotel, status: "closed", invoice_number: 123)
+    code = create(:transaction_code, hotel: hotel, code: "RM-ACC", name: "Room / Accommodation", kind: "charge", category: "accommodation")
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_code: code,
+      transaction_type: "charge",
+      category: "accommodation",
+      amount: 200,
+      description: "Room Charge - Standard Room")
+    folio
+  end
+
   describe "GET /bookings/:id/invoice" do
     it "returns a PDF for a valid confirmation token" do
+      create_closed_folio_with_charge!(booking)
+
       get invoice_booking_path(booking.confirmation_token)
 
       expect(response).to have_http_status(:ok)
@@ -42,15 +57,7 @@ RSpec.describe "Public::Bookings invoice", type: :request do
     end
 
     it "uses the redesigned guest folio invoice when the booking has a folio" do
-      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "closed", invoice_number: 123)
-      code = create(:transaction_code, hotel: hotel, code: "RM-ACC", name: "Room / Accommodation", kind: "charge", category: "accommodation")
-      create(:folio_transaction,
-        booking_folio: folio,
-        transaction_code: code,
-        transaction_type: "charge",
-        category: "accommodation",
-        amount: 200,
-        description: "Room Charge - Standard Room")
+      create_closed_folio_with_charge!(booking)
 
       get invoice_booking_path(booking.confirmation_token)
 
@@ -58,6 +65,12 @@ RSpec.describe "Public::Bookings invoice", type: :request do
       expect(text).to include("GUEST FOLIO / INVOICE")
       expect(text).to include("Room Charge - Standard Room")
       expect(text).to include("SUMMARY (MYR)")
+    end
+
+    it "returns 404 when the booking has no closed folio" do
+      get invoice_booking_path(booking.confirmation_token)
+
+      expect(response).to have_http_status(:not_found)
     end
 
     it "returns 404 for an unknown token" do

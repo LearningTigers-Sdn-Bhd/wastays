@@ -33,11 +33,13 @@ module Admin
     end
 
     def invoice
-      pdf_bytes = InvoicePdfService.new(@booking).generate
+      pdf_bytes = ::Reports::Bookings::GenerateInvoice.new(booking: @booking).generate
       send_data pdf_bytes,
         filename: "wastays-invoice-#{@booking.confirmation_token}.pdf",
         type: "application/pdf",
         disposition: "inline"
+    rescue ::Reports::Bookings::GenerateFolioRecords::UnavailableError
+      redirect_to admin_booking_path(@booking), alert: "Invoice is only available after checkout."
     end
 
     private

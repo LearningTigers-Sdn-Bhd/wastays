@@ -29,6 +29,16 @@ RSpec.describe BookingMailer, type: :mailer do
       room_type_snapshot: { "name" => "Deluxe King" }
     )
   end
+  let(:folio) { create(:booking_folio, booking: booking, hotel: hotel, status: "closed", invoice_number: 123) }
+
+  before do
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_type: "charge",
+      category: "accommodation",
+      amount: 300,
+      description: "Room Charge - Deluxe King")
+  end
 
   subject(:mail) { described_class.invoice(booking) }
 
@@ -49,5 +59,12 @@ RSpec.describe BookingMailer, type: :mailer do
   it "has exactly one non-inline attachment" do
     non_inline = mail.attachments.reject(&:inline?)
     expect(non_inline.count).to eq(1)
+  end
+
+  it "does not generate an invoice for a booking without a closed folio" do
+    booking_without_folio = create(:booking, hotel: hotel, guest_email: "no-folio@example.com")
+
+    expect { described_class.invoice(booking_without_folio).message }
+      .to raise_error(::Reports::Bookings::GenerateFolioRecords::UnavailableError)
   end
 end

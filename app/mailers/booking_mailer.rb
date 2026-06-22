@@ -30,7 +30,7 @@ class BookingMailer < ApplicationMailer
 
     attachments["wastays-invoice-#{booking.confirmation_token}.pdf"] = {
       mime_type: "application/pdf",
-      content:   InvoicePdfService.new(booking).generate
+      content:   ::Reports::Bookings::GenerateInvoice.new(booking: booking).generate
     }
 
     mail(

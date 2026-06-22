@@ -34,6 +34,19 @@ RSpec.describe 'Admin::Bookings', type: :request do
     sign_in_as(superadmin)
   end
 
+  def create_closed_folio_with_charge!(target_booking)
+    folio = create(:booking_folio, booking: target_booking, hotel: target_booking.hotel, status: "closed", invoice_number: 123)
+    code = create(:transaction_code, hotel: target_booking.hotel, code: "RM-ACC", name: "Room / Accommodation", kind: "charge", category: "accommodation")
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_code: code,
+      transaction_type: "charge",
+      category: "accommodation",
+      amount: 520,
+      description: "Room Charge - Deluxe Room")
+    folio
+  end
+
   describe 'GET /admin/bookings/:id' do
     it 'renders the booking detail header with back link and summary description' do
       get admin_booking_path(booking)
@@ -59,6 +72,25 @@ RSpec.describe 'Admin::Bookings', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('Pre Check-In Status')
       expect(response.body).to include('Completed')
+    end
+  end
+
+  describe 'GET /admin/bookings/:id/invoice' do
+    it 'returns a PDF for a booking with a closed folio' do
+      create_closed_folio_with_charge!(booking)
+
+      get invoice_admin_booking_path(booking)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.headers["Content-Disposition"]).to include("inline")
+    end
+
+    it 'redirects when the booking has no closed folio' do
+      get invoice_admin_booking_path(booking)
+
+      expect(response).to redirect_to(admin_booking_path(booking))
+      expect(flash[:alert]).to eq("Invoice is only available after checkout.")
     end
   end
 end

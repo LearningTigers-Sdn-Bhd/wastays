@@ -4,7 +4,7 @@ require "rails_helper"
 require "pdf/reader"
 require "stringio"
 
-RSpec.describe FolioInvoicePdfService do
+RSpec.describe ::Reports::Bookings::GenerateInvoice do
   let(:hotel) do
     create(:hotel,
       name: "Hotel ABC Resort",
@@ -94,55 +94,67 @@ RSpec.describe FolioInvoicePdfService do
 
   describe "#generate" do
     it "renders the redesigned guest folio invoice text" do
-      text = pdf_text(described_class.new(booking, printed_by: "F. Suhaila").generate)
+      travel_to Time.zone.local(2026, 6, 22, 14, 35, 0) do
+        text = pdf_text(described_class.new(booking: booking, printed_by: "F. Suhaila").generate)
 
-      expect(text).to include("GUEST FOLIO / INVOICE")
-      expect(text).to include("HOTEL INFORMATION")
-      expect(text).to include("Hotel Name")
-      expect(text).to include("Hotel ABC Resort")
-      expect(text).to include("Jalan Pantai Cenang, Langkawi, Malaysia")
-      expect(text).to include("+60 12-345 6789")
-      expect(text).to include("frontdesk@example.com")
-      expect(text).to include("GUEST / FOLIO DETAILS")
-      expect(text).to include("BOOKING / STAY DETAILS")
-      expect(text).to include("Guest Name")
-      expect(text).to include("John Doe")
-      expect(text).to include("Invoice No")
-      expect(text).to include("Date")
-      expect(text).to include("Code")
-      expect(text).to include("Description")
-      expect(text).to include("Qty")
-      expect(text).to include("Net (MYR)")
-      expect(text).to include("Charges (MYR)")
-      expect(text).to include("Gross (MYR)")
-      expect(text).to include("Room Charge - Deluxe King")
-      expect(text).to include("RM-ACC")
-      expect(text).to include("RM-ACC_SST")
-      expect(text).to include("SST 8%")
-      expect(text).to include("Payment - Cash")
-      expect(text).to include("Receipt: RCP-000821")
-      expect(text).to include("Refund - Refund")
-      expect(text).to include("-20.00")
-      expect(text).not_to include("(20.00)")
-      expect(text).to include("SUMMARY (MYR)")
-      expect(text).to include("Room Revenue, net")
-      expect(text).to include("Total Due")
-      expect(text).to include("Balance")
-      expect(text).to include("Transaction Code Legend")
-      expect(text).to include("Guest Signature")
-      expect(text).to include("Authorised Signature")
-      expect(text).to include("Printed by: F. Suhaila")
-      expect(text).not_to include("Guest Name:")
-      expect(text).not_to include("MYR 100.00")
+        expect(text).to include("GUEST FOLIO / INVOICE")
+        expect(text).to include("HOTEL INFORMATION")
+        expect(text).to include("Hotel Name")
+        expect(text).to include("Hotel ABC Resort")
+        expect(text).to include("Jalan Pantai Cenang, Langkawi, Malaysia")
+        expect(text).to include("+60 12-345 6789")
+        expect(text).to include("frontdesk@example.com")
+        expect(text).to include("GUEST / FOLIO DETAILS")
+        expect(text).to include("BOOKING / STAY DETAILS")
+        expect(text).to include("Guest Name")
+        expect(text).to include("John Doe")
+        expect(text).to include("Invoice No")
+        expect(text).to include("Date")
+        expect(text).to include("Code")
+        expect(text).to include("Description")
+        expect(text).to include("Qty")
+        expect(text).to include("Net (MYR)")
+        expect(text).to include("Charges (MYR)")
+        expect(text).to include("Gross (MYR)")
+        expect(text).to include("Room Charge - Deluxe King")
+        expect(text).to include("RM-ACC")
+        expect(text).to include("RM-ACC_SST")
+        expect(text).to include("SST 8%")
+        expect(text).to include("Payment - Cash")
+        expect(text).to include("Receipt: RCP-000821")
+        expect(text).to include("Refund - Refund")
+        expect(text).to include("-20.00")
+        expect(text).not_to include("(20.00)")
+        expect(text).to include("SUMMARY (MYR)")
+        expect(text).to include("Room Revenue, net")
+        expect(text).to include("Total Due")
+        expect(text).to include("Balance")
+        expect(text).to include("Transaction Code Legend")
+        expect(text).to include("Guest Signature")
+        expect(text).to include("Authorised Signature")
+        expect(text).to include("Printed at 22 Jun 2026 14:35 by F. Suhaila")
+        expect(text).to include("Page 1 of")
+        expect(text).not_to include("Printed by: F. Suhaila")
+        expect(text).not_to include("Guest Name:")
+        expect(text).not_to include("MYR 100.00")
+      end
     end
 
     it "does not expose internal folio metadata" do
-      text = pdf_text(described_class.new(booking).generate)
+      text = pdf_text(described_class.new(booking: booking).generate)
 
       expect(text).not_to include("night_audit_id")
       expect(text).not_to include("catch_up_key")
       expect(text).not_to include("posting_source")
       expect(text).not_to include("booking_payment")
+    end
+
+    it "rejects open folios" do
+      open_booking = create(:booking, hotel: hotel)
+      create(:booking_folio, booking: open_booking, hotel: hotel, status: "open")
+
+      expect { described_class.new(booking: open_booking).generate }
+        .to raise_error(::Reports::Bookings::GenerateFolioRecords::UnavailableError)
     end
   end
 

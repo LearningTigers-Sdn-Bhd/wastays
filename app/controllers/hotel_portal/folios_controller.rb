@@ -27,7 +27,7 @@ module HotelPortal
         return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Folio invoice is only available for checked-out bookings with a closed folio."
       end
 
-      send_data FolioInvoicePdfService.new(@booking).generate,
+      send_data ::Reports::Bookings::GenerateInvoice.new(booking: @booking, printed_by: current_user&.name).generate,
         filename: "folio-invoice-#{@booking.formatted_invoice_number || @booking.confirmation_token}.pdf",
         type: "application/pdf",
         disposition: request.format.pdf? ? "inline" : "attachment"
