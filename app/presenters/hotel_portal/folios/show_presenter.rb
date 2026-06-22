@@ -25,10 +25,11 @@ module HotelPortal
       keyword_init: true
     )
 
-    def initialize(booking:, hotel:, user: nil)
+    def initialize(booking:, hotel:, user: nil, projected_lines: nil)
       @booking = booking
       @hotel = hotel
       @user = user
+      @projected_lines_override = projected_lines
       @booking_presenter = HotelPortal::BookingPresenter.new(booking, hotel)
     end
 
@@ -444,6 +445,8 @@ module HotelPortal
     end
 
     def projected_lines
+      return @projected_lines_override unless @projected_lines_override.nil?
+
       @projected_lines ||= Array(folio&.projected_forecasts).map do |forecast|
         {
           date: forecast.stay_date,
@@ -616,6 +619,8 @@ module HotelPortal
     def fallback_code(transaction_type, category, description = nil)
       text = "#{category} #{description}".downcase
       return "ROOM" if category.to_s == "accommodation"
+      return "EARLY_DEP" if category.to_s == "early_departure_charge"
+      return "LATE_CO" if category.to_s == "late_checkout_charge"
       return "SST" if text.include?("sst")
       return "TTX" if text.include?("tourism")
       return "SVC" if text.include?("service charge")

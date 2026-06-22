@@ -81,6 +81,30 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
     expect(row.action_label).to eq("—")
   end
 
+  it "uses explicit projected lines when building checkout ledger rows" do
+    create(:folio_forecasted_charge, booking_folio: folio, amount: 30, stay_date: Date.new(2026, 6, 18), charge_kind: "accommodation")
+    folio_show = described_class.new(
+      booking: booking,
+      hotel: hotel,
+      projected_lines: [
+        {
+          date: Date.new(2026, 6, 10),
+          description: "Early checkout charge - Night 1",
+          amount: 50,
+          category: "early_departure_charge"
+        }
+      ]
+    )
+
+    row = folio_show.forecasted_rows.first
+
+    expect(folio_show.forecasted_rows.size).to eq(1)
+    expect(row.date_label).to eq("10 Jun")
+    expect(row.code).to eq("EARLY_DEP")
+    expect(row.description).to eq("Early checkout charge - Night 1")
+    expect(row.debit).to eq("50.00")
+  end
+
   it "shows parent and generated tax charge rows with codes, reference, and running balance" do
     charge_code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
     tax_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
