@@ -88,7 +88,7 @@ module Bookings
         return OpenStruct.new(success?: false, errors: [ e.message ])
       end
 
-      booking.total_amount = financial_snapshot.room_total + financial_snapshot.tax_total
+      booking.total_amount = financial_snapshot.room_total + Booking.non_tourism_tax_total_for(financial_snapshot.tax_lines)
       booking.tax_lines = financial_snapshot.tax_lines
       booking.tax_posting_snapshot = financial_snapshot.tax_posting_snapshot
       tourism_tax = booking.tax_lines.find { |tax| tax["type"].to_s == "tourism_tax" }
@@ -155,6 +155,7 @@ module Bookings
 
             InventoryManager.new(booking).deduct
             sync_guest(booking, selected_guest)
+            Folios::InitializeForBooking.call(booking: booking, user: @user, lock: false)
 
             # Record Audit Log
             Bookings::RecordAuditLog.call!(

@@ -4,17 +4,17 @@ module Folios
   class ProcessCatchUpCharges
     include NightlyChargeCalculation
 
-    def self.call(booking:, user:, is_reinstate: false, posting_date: nil)
-      new(booking: booking, user: user, is_reinstate: is_reinstate, posting_date: posting_date).call
+    def self.call(booking:, user:, is_reinstate: false, posting_date: nil, reason: nil)
+      new(booking: booking, user: user, is_reinstate: is_reinstate, posting_date: posting_date, reason: reason).call
     end
 
-    def initialize(booking:, user:, is_reinstate: false, posting_date: nil)
+    def initialize(booking:, user:, is_reinstate: false, posting_date: nil, reason: nil)
       @booking = booking
       @folio = booking.booking_folio
       @user = user
       @hotel = booking.hotel
       @is_reinstate = is_reinstate
-      @posting_date = posting_date&.to_date
+      @reason = reason.to_s.presence
     end
 
     def call
@@ -105,7 +105,8 @@ module Folios
           category: :accommodation,
           user: @user,
           description: description,
-          posting_date: @posting_date || date,
+          posting_date: date,
+          catch_up_key: charge_key,
           options: {
             override_night_audit: true,
             correction_reason: "late_checkin_catch_up",
@@ -117,11 +118,13 @@ module Folios
               rate_source: nightly_rate_snapshot_for(room, date).present? ? "nightly_rate_snapshot" : "legacy_subtotal_average",
               nightly_rate_snapshot: nightly_rate_snapshot_for(room, date),
               is_reinstate: @is_reinstate
-            }
+            }.merge(reason_metadata)
           }
         ).call
 
-        raise "Failed to post accommodation catch-up charge: #{result.error}" unless result.success?
+        next if result.success? || already_posted?(charge_key)
+
+        raise "Failed to post accommodation catch-up charge: #{result.error}"
       end
     end
 
@@ -152,7 +155,8 @@ module Folios
           category: :tax,
           user: @user,
           description: description,
-          posting_date: @posting_date || date,
+          posting_date: date,
+          catch_up_key: charge_key,
           options: {
             override_night_audit: true,
             correction_reason: "late_checkin_catch_up",
@@ -163,11 +167,13 @@ module Folios
               stay_date: date.iso8601,
               tax_line: tax_line,
               is_reinstate: @is_reinstate
-            }
+            }.merge(reason_metadata)
           }
         ).call
 
-        raise "Failed to post tax catch-up charge: #{result.error}" unless result.success?
+        next if result.success? || already_posted?(charge_key)
+
+        raise "Failed to post tax catch-up charge: #{result.error}"
       end
     end
 
@@ -181,9 +187,15 @@ module Folios
       # Check both standard audit keys and catch-up keys to be safe
       nightly_key = charge_key.sub("catch_up:", "")
       @folio.folio_transactions.charge
-        .where("metadata->>'catch_up_key' = ? OR metadata->>'nightly_charge_key' = ?", charge_key, nightly_key)
+        .where("catch_up_key = :charge_key OR metadata->>'catch_up_key' = :charge_key OR metadata->>'nightly_charge_key' = :nightly_key", charge_key: charge_key, nightly_key: nightly_key)
         .where(voided_by_transaction_id: nil)
         .exists?
+    end
+
+    def reason_metadata
+      return {} if @reason.blank?
+
+      { backdate_reason: @reason }
     end
   end
 end

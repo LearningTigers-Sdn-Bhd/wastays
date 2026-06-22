@@ -1,4 +1,6 @@
 require "rails_helper"
+require "pdf/reader"
+require "stringio"
 
 RSpec.describe "Public::Bookings invoice", type: :request do
   let(:hotel) { create(:hotel, status: "approved") }
@@ -29,14 +31,46 @@ RSpec.describe "Public::Bookings invoice", type: :request do
     )
   end
 
+  def create_closed_folio_with_charge!(target_booking)
+    folio = create(:booking_folio, booking: target_booking, hotel: hotel, status: "closed", invoice_number: 123)
+    code = create(:transaction_code, hotel: hotel, code: "RM-ACC", name: "Room / Accommodation", kind: "charge", category: "accommodation")
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_code: code,
+      transaction_type: "charge",
+      category: "accommodation",
+      amount: 200,
+      description: "Room Charge - Standard Room")
+    folio
+  end
+
   describe "GET /bookings/:id/invoice" do
     it "returns a PDF for a valid confirmation token" do
+      create_closed_folio_with_charge!(booking)
+
       get invoice_booking_path(booking.confirmation_token)
 
       expect(response).to have_http_status(:ok)
       expect(response.content_type).to eq("application/pdf")
       expect(response.headers["Content-Disposition"]).to include("inline")
       expect(response.headers["Content-Disposition"]).to include("wastays-invoice-WS-INVTEST1.pdf")
+    end
+
+    it "uses the redesigned guest folio invoice when the booking has a folio" do
+      create_closed_folio_with_charge!(booking)
+
+      get invoice_booking_path(booking.confirmation_token)
+
+      text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
+      expect(text).to include("GUEST FOLIO / INVOICE")
+      expect(text).to include("Room Charge - Standard Room")
+      expect(text).to include("SUMMARY (MYR)")
+    end
+
+    it "returns 404 when the booking has no closed folio" do
+      get invoice_booking_path(booking.confirmation_token)
+
+      expect(response).to have_http_status(:not_found)
     end
 
     it "returns 404 for an unknown token" do

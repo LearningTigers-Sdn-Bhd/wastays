@@ -14,6 +14,7 @@ RSpec.describe HotelPortal::GlobalSearchService do
   it "includes pages for empty query" do
     results = described_class.new(hotel, "").perform
     expect(results).to include(hash_including(title: "Arrival Board", group: "Pages"))
+    expect(results).to include(hash_including(title: "Folios", group: "Pages"))
   end
 
   it "returns booking result for matching query" do

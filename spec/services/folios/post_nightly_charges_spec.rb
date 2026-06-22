@@ -64,6 +64,43 @@ RSpec.describe Folios::PostNightlyCharges do
     expect(tax.metadata["tax_line"]["source"]).to eq("hotel_sst")
   end
 
+  it "posts tax transactions with tax transaction codes from ROOM rule snapshots" do
+    hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    room_code.update!(is_taxable: true)
+    room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+    room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      guest_country: "Singapore",
+      check_in: business_date,
+      check_out: business_date + 1.day)
+    booking_room = create(:booking_room,
+      booking: booking,
+      subtotal: 100.0,
+      nightly_rate_snapshot: {
+        business_date.iso8601 => { "price" => "100.00", "source" => "room_rate" }
+      })
+    snapshot = Bookings::BuildFinancialSnapshot.new(
+      hotel: hotel,
+      check_in: booking.check_in,
+      check_out: booking.check_out,
+      guest_country: booking.guest_country,
+      room_items: [ { quantity: booking_room.quantity, nightly_rate_snapshot: booking_room.nightly_rate_snapshot } ]
+    ).call
+    booking.update!(tax_lines: snapshot.tax_lines, tax_posting_snapshot: snapshot.tax_posting_snapshot)
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+
+    described_class.call(night_audit: night_audit, user: user)
+
+    tax_charges = folio.folio_transactions.charge.where(category: "tax").order(:amount)
+    expect(tax_charges.map { |transaction| transaction.transaction_code.system_key }).to contain_exactly("sst_tax", "tourism_tax")
+    expect(tax_charges.map { |transaction| transaction.metadata.dig("tax_line", "source") }.uniq).to eq([ "transaction_code_tax_rule" ])
+    expect(folio.folio_forecasted_charges.actualized.where(charge_kind: "tax").count).to eq(2)
+  end
+
   it "does not post a checkout-day charge" do
     booking = create(:booking,
       hotel: hotel,

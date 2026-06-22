@@ -282,34 +282,60 @@ export default class extends Controller {
   populateTaxesBreakdown(taxLines) {
     const container = this.taxesBreakdownTarget
     container.innerHTML = ""
-    
-    if (taxLines.length === 0) {
+
+    const payableTaxLines = taxLines.filter((tax) => !this.isTourismTax(tax))
+    const tourismTaxTotal = taxLines
+      .filter((tax) => this.isTourismTax(tax))
+      .reduce((sum, tax) => sum + parseFloat(tax.amount || 0), 0)
+
+    if (payableTaxLines.length === 0 && tourismTaxTotal === 0) {
       container.appendChild(this.buildSubtotalRow("Taxes Subtotal", 0))
       return
     }
 
     let subtotal = 0
-    taxLines.forEach(tax => {
+    payableTaxLines.forEach(tax => {
       const amount = parseFloat(tax.amount || 0)
       subtotal += amount
 
-      const row = document.createElement("div")
-      row.className = "flex justify-between items-center gap-4 py-0.5"
-      
-      const label = document.createElement("span")
-      label.className = "min-w-0 truncate pr-2"
-      label.textContent = tax.name
-      
-      const value = document.createElement("span")
-      value.className = "font-medium text-slate-700 whitespace-nowrap tabular-nums"
-      value.textContent = `MYR ${amount.toFixed(2)}`
-      
-      row.appendChild(label)
-      row.appendChild(value)
-      container.appendChild(row)
+      container.appendChild(this.buildAmountRow(tax.name, amount))
     })
 
     container.appendChild(this.buildSubtotalRow("Taxes Subtotal", subtotal))
+
+    if (tourismTaxTotal > 0) {
+      container.appendChild(this.buildInformationalAmountRow("Tourism Tax (collect at check-in)", tourismTaxTotal))
+    }
+  }
+
+  isTourismTax(tax) {
+    const type = (tax.type || "").toString()
+    const primaryTaxKey = (tax.primary_tax_key || "").toString()
+    return [type, primaryTaxKey].some((value) => value === "tourism_tax" || value === "ttx")
+  }
+
+  buildAmountRow(labelText, amount) {
+    const row = document.createElement("div")
+    row.className = "flex justify-between items-center gap-4 py-0.5"
+
+    const label = document.createElement("span")
+    label.className = "min-w-0 truncate pr-2"
+    label.textContent = labelText
+
+    const value = document.createElement("span")
+    value.className = "font-medium text-slate-700 whitespace-nowrap tabular-nums"
+    value.textContent = `MYR ${amount.toFixed(2)}`
+
+    row.appendChild(label)
+    row.appendChild(value)
+    return row
+  }
+
+  buildInformationalAmountRow(labelText, amount) {
+    const row = this.buildAmountRow(labelText, amount)
+    row.className = "mt-2 flex justify-between items-center gap-4 rounded-xl bg-amber-50 px-3 py-2 text-amber-800"
+    row.lastElementChild.className = "font-bold whitespace-nowrap tabular-nums"
+    return row
   }
 
   buildSubtotalRow(labelText, amount) {

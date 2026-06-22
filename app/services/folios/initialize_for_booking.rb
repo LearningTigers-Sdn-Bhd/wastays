@@ -29,11 +29,7 @@ module Folios
         folio = @booking.booking_folio
 
         unless folio.present?
-          NightAudits::OperationalChangeGuard.call!(
-            hotel: @booking.hotel,
-            action: :create_folio,
-            night_audit: @options[:night_audit]
-          )
+          guard_folio_creation!
           folio = create_folio!
 
           Folios::SyncExistingPayments.call(folio: folio, user: @user, options: @options)
@@ -47,6 +43,22 @@ module Folios
     def create_folio!
       folio_number = HotelCounter.increment!(hotel: @booking.hotel, type: "folio")
       @booking.create_booking_folio!(hotel: @booking.hotel, folio_number: folio_number)
+    end
+
+    def guard_folio_creation!
+      return if system_confirmation_initialization?
+
+      NightAudits::OperationalChangeGuard.call!(
+        hotel: @booking.hotel,
+        action: :create_folio,
+        night_audit: @options[:night_audit]
+      )
+    end
+
+    def system_confirmation_initialization?
+      @user.nil? &&
+        @options[:system_folio_initialization] == true &&
+        @options[:posting_source] == "booking_confirmation"
     end
   end
 end

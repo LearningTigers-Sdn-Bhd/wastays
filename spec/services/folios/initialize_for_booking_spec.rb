@@ -67,4 +67,32 @@ RSpec.describe Folios::InitializeForBooking do
 
     expect(booking.reload.booking_folio).to be_nil
   end
+
+  it "allows system confirmation to create a non-posting folio while night audit is running" do
+    booking.hotel.current_business_date_record.update!(status: "audit_running")
+
+    folio = described_class.call(
+      booking: booking,
+      user: nil,
+      options: { system_folio_initialization: true, posting_source: "booking_confirmation" }
+    )
+
+    expect(folio).to be_persisted
+    expect(folio.folio_transactions).to be_empty
+  end
+
+  it "does not let system confirmation bypass payment posting guards during night audit" do
+    create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
+    booking.hotel.current_business_date_record.update!(status: "audit_running")
+
+    expect {
+      described_class.call(
+        booking: booking,
+        user: nil,
+        options: { system_folio_initialization: true, posting_source: "booking_confirmation" }
+      )
+    }.to raise_error(/currently in night audit/)
+
+    expect(booking.reload.booking_folio).to be_nil
+  end
 end

@@ -1,4 +1,7 @@
 <%= render "hotel_portal/folios/show/page",
   booking: @booking,
   presenter: @presenter,
-  back_path: hotel_booking_path(current_hotel, @booking) %>
+  folio_show: @folio_show,
+  back_path: @folio_back_path,
+  back_label: @folio_back_label,
+  folio_origin: @folio_origin %>

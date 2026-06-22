@@ -8,10 +8,13 @@ class BookingFolio < ApplicationRecord
   has_many :deposits, dependent: :restrict_with_error
   has_many :financial_audit_events, dependent: :restrict_with_error
 
+  enum :status, { open: "open", closed: "closed" }, validate: true
+
   validates :folio_number, presence: true, uniqueness: { scope: :hotel_id }
   validates :status, presence: true
   validates :invoice_number, uniqueness: { scope: :hotel_id, allow_nil: true }
   validate :hotel_matches_booking
+  validate :closed_folio_reopen_must_be_authorized
   before_destroy :guard_night_audit_operational_change
 
   def outstanding_balance
@@ -62,4 +65,22 @@ class BookingFolio < ApplicationRecord
 
     errors.add(:hotel, "must match booking hotel")
   end
+
+  def closed_folio_reopen_must_be_authorized
+    return unless will_save_change_to_status?
+    return unless status_in_database == "closed" && status == "open"
+    return if @reopen_for_correction_authorized
+
+    errors.add(:status, "can only be reopened through the controlled correction workflow")
+  end
+
+  def authorize_reopen_for_correction!
+    @reopen_for_correction_authorized = true
+  end
+
+  def clear_reopen_for_correction_authorization!
+    @reopen_for_correction_authorized = false
+  end
+
+  private :authorize_reopen_for_correction!, :clear_reopen_for_correction_authorization!
 end

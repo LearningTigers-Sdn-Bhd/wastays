@@ -1,0 +1,21 @@
+<header class="space-y-4">
+  <div>
+    <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Folios</h1>
+    <p class="mt-1 max-w-3xl text-sm font-medium text-slate-600">Review open balances, refund due folios, checkout readiness, and guest folio activity.</p>
+  </div>
+
+  <div class="grid grid-cols-2 overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm lg:grid-cols-4">
+    <% folio_index.summary_cards.each do |card| %>
+      <div class="border-b border-r border-slate-200 px-4 py-3 last:border-r-0 lg:border-b-0">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex size-7 items-center justify-center rounded-md <%= card[:class] %>">
+            <%= cached_icon card[:icon], class: "size-3.5" %>
+          </span>
+          <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500"><%= card[:label] %></p>
+        </div>
+        <p class="mt-2 text-2xl font-black tabular-nums tracking-tight text-slate-950"><%= card[:value] %></p>
+        <p class="mt-1 text-xs font-medium text-slate-500"><%= card[:description] %></p>
+      </div>
+    <% end %>
+  </div>
+</header>

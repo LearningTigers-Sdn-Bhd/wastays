@@ -13,6 +13,7 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
     create(:booking_room, booking: booking, subtotal: 200.0)
     booking.update(tax_lines: [ { "name" => "SST", "amount" => "12.00" } ])
+    folio
     # Ensure folio exists and is linked
     booking.reload
   end
@@ -33,10 +34,54 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
       expect(room_charge.description).to eq("Backdated Check-in (Room Charge) - #{past_date.strftime('%d %b %Y')}")
       expect(room_charge.metadata["stay_date"]).to eq(past_date.iso8601)
       expect(room_charge.metadata["posting_source"]).to eq("catch_up")
+      expect(room_charge.catch_up_key).to eq("catch_up:#{booking.id}:#{past_date.iso8601}:accommodation:#{booking.booking_rooms.first.id}")
+      expect(room_charge.metadata["catch_up_key"]).to eq(room_charge.catch_up_key)
+      expect(room_charge.posting_date).to eq(past_date)
 
       tax_charge = folio.folio_transactions.find_by(category: "tax")
       expect(tax_charge.amount).to eq(12.0)
       expect(tax_charge.description).to eq("Backdated Check-in Tax: SST - #{past_date.strftime('%d %b %Y')}")
+      expect(tax_charge.catch_up_key).to eq("catch_up:#{booking.id}:#{past_date.iso8601}:tax:sst:0")
+      expect(tax_charge.metadata["catch_up_key"]).to eq(tax_charge.catch_up_key)
+    end
+
+    it "does not duplicate catch-up charges when retried" do
+      described_class.call(booking: booking, user: user)
+
+      expect {
+        described_class.call(booking: booking, user: user)
+      }.not_to change { folio.folio_transactions.charge.count }
+
+      expect(folio.folio_transactions.charge.where(category: "accommodation").count).to eq(1)
+      expect(folio.folio_transactions.charge.where(category: "tax").count).to eq(1)
+    end
+
+    it "does not duplicate a legacy metadata-only catch-up transaction" do
+      room = booking.booking_rooms.first
+      catch_up_key = "catch_up:#{booking.id}:#{past_date.iso8601}:accommodation:#{room.id}"
+      create(:folio_transaction,
+        booking_folio: folio,
+        transaction_type: "charge",
+        category: "accommodation",
+        amount: 200.0,
+        catch_up_key: nil,
+        metadata: { catch_up_key: catch_up_key })
+
+      expect {
+        described_class.call(booking: booking, user: user)
+      }.to change { folio.folio_transactions.charge.count }.by(1)
+
+      expect(folio.folio_transactions.charge.where(category: "accommodation").count).to eq(1)
+      expect(folio.folio_transactions.charge.where(category: "tax").count).to eq(1)
+    end
+
+    it "enforces catch-up uniqueness at the database level" do
+      catch_up_key = "catch_up:#{booking.id}:#{past_date.iso8601}:accommodation:#{booking.booking_rooms.first.id}"
+      create(:folio_transaction, booking_folio: folio, catch_up_key: catch_up_key)
+
+      expect {
+        create(:folio_transaction, booking_folio: folio, catch_up_key: catch_up_key)
+      }.to raise_error(ActiveRecord::RecordNotUnique)
     end
 
     it "posts charges with reinstate description when is_reinstate is true" do

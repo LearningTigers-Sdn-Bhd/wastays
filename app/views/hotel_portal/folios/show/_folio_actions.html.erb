@@ -1,75 +1,166 @@
-<% folio = booking.booking_folio %>
 <% redirect_to_folio = local_assigns[:redirect_to_folio] || false %>
-<% can_post = folio&.status == "open" %>
-<% can_post_payment = can_post && current_user.has_permission?("post_folio_payments", hotel: hotel) %>
-<% can_post_charge = can_post && current_user.has_permission?("post_folio_charges", hotel: hotel) %>
-<% can_execute_refund = can_post && current_user.has_permission?("execute_folio_refunds", hotel: hotel) %>
-<% adjustment_category_options = [] %>
-<% adjustment_category_options += %w[adjustment discount other] if can_post && current_user.has_permission?("post_folio_adjustments", hotel: hotel) %>
-<% adjustment_category_options << "correction" if can_post && current_user.has_permission?("post_folio_corrections", hotel: hotel) %>
-<% adjustment_category_options << "write_off" if can_post && current_user.has_permission?("post_folio_write_offs", hotel: hotel) %>
-<% can_post_adjustment = adjustment_category_options.any? %>
+<% folio_origin = local_assigns[:folio_origin] %>
+<% folio_show = local_assigns[:folio_show] %>
 
-<% if can_post_payment || can_post_charge || can_post_adjustment || can_execute_refund %>
-  <div class="flex flex-wrap items-center gap-2">
-    <% if can_post_payment %>
-      <button type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700" onclick="document.getElementById('folio-payment-modal-<%= booking.id %>').showModal()">Add Payment</button>
-    <% end %>
-    <% if can_post_charge %>
-      <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50" onclick="document.getElementById('folio-charge-modal-<%= booking.id %>').showModal()">Add Charge</button>
-    <% end %>
-    <% if can_post_adjustment %>
-      <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50" onclick="document.getElementById('folio-adjustment-modal-<%= booking.id %>').showModal()">Add Adjustment</button>
-    <% end %>
-    <% if can_execute_refund %>
-      <button type="button" class="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-50" onclick="document.getElementById('folio-refund-modal-<%= booking.id %>').showModal()">Issue Refund</button>
-    <% end %>
+<div class="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+  <div class="mb-3 flex items-center gap-2">
+    <span class="inline-flex size-7 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+      <%= cached_icon "settings", class: "size-3.5" %>
+    </span>
+    <h2 class="text-sm font-black uppercase tracking-[0.18em] text-slate-700">Actions</h2>
   </div>
 
-  <% if can_post_payment %>
+  <div class="flex flex-wrap items-center gap-2">
+    <div class="relative inline-block text-left" data-controller="dropdown" data-dropdown-align="left">
+      <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="true">
+        <%= cached_icon "file-text", class: "size-3" %>
+        Generate Report
+        <%= cached_icon "chevron-down", class: "size-3" %>
+      </button>
+      <div data-dropdown-target="menu" class="hidden absolute left-0 z-50 mt-2 w-60 origin-top-left rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-950/10 focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
+        <div class="group relative">
+          <button type="button" role="menuitem" aria-haspopup="true" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none">
+            <%= cached_icon "receipt-text", class: "size-4 text-slate-500" %>
+            <span>Folio Ledger</span>
+            <%= cached_icon "chevron-right", class: "ml-auto size-4 text-slate-400" %>
+          </button>
+          <div class="hidden absolute left-full top-0 z-50 ml-1 w-44 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-950/10 group-hover:block group-focus-within:block" role="menu" aria-label="Folio Ledger exports">
+            <%= link_to ledger_hotel_folio_path(hotel, booking, format: :pdf), role: "menuitem", target: "_blank", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none", data: { turbo: false } do %>
+              <%= cached_icon "file-text", class: "size-4 text-slate-500" %>
+              <span>Download PDF</span>
+            <% end %>
+            <%= link_to ledger_hotel_folio_path(hotel, booking, format: :csv), role: "menuitem", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none", data: { turbo: false } do %>
+              <%= cached_icon "table", class: "size-4 text-slate-500" %>
+              <span>Download CSV</span>
+            <% end %>
+          </div>
+        </div>
+
+        <% if folio_show.booking_invoice_report_available? %>
+          <%= link_to invoice_hotel_folio_path(hotel, booking, format: :pdf), role: "menuitem", target: "_blank", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none", data: { turbo: false } do %>
+            <%= cached_icon "file-text", class: "size-4 text-slate-500" %>
+            <span>Booking Invoices</span>
+          <% end %>
+        <% else %>
+          <button type="button" role="menuitem" disabled class="flex w-full cursor-not-allowed items-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-400">
+            <%= cached_icon "file-text", class: "mt-0.5 size-4 text-slate-300" %>
+            <span>
+              <span class="block">Booking Invoices</span>
+              <span class="mt-0.5 block text-xs font-medium text-slate-400">Available after checkout.</span>
+            </span>
+          </button>
+        <% end %>
+      </div>
+    </div>
+
+    <% if folio_show.actions_blocked? %>
+      <div class="max-w-2xl">
+        <p class="text-sm font-black text-slate-900"><%= folio_show.actions_blocked_title %></p>
+        <p class="mt-1 text-sm font-medium text-slate-500"><%= folio_show.actions_blocked_reason %></p>
+        <% if folio_show.actions_blocked_url.present? %>
+          <%= link_to folio_show.actions_blocked_link_label, folio_show.actions_blocked_url, class: "mt-3 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
+        <% end %>
+      </div>
+    <% elsif folio_show.action_section_state == :closed %>
+      <span class="text-sm font-medium text-slate-500"><%= folio_show.closed_folio_action_message %></span>
+    <% elsif folio_show.normal_folio_actions_available? %>
+    <% if folio_show.can_post_payment? %>
+      <button type="button" class="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-slate-700" onclick="document.getElementById('folio-payment-modal-<%= booking.id %>').showModal()">
+        <%= cached_icon "credit-card", class: "size-3" %>
+        Post Payment
+      </button>
+    <% end %>
+    <% if folio_show.can_post_charge? %>
+      <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" onclick="document.getElementById('folio-charge-modal-<%= booking.id %>').showModal()">
+        <%= cached_icon "plus", class: "size-3" %>
+        Post Charge
+      </button>
+    <% end %>
+    <% if folio_show.can_post_adjustment? %>
+      <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-black text-amber-800 shadow-sm transition hover:bg-amber-50" onclick="document.getElementById('folio-adjustment-modal-<%= booking.id %>').showModal()">
+        <%= cached_icon "receipt-text", class: "size-3" %>
+        Post Adjustment
+      </button>
+    <% end %>
+
+    <div class="relative inline-block text-left" data-controller="dropdown" data-dropdown-align="right">
+      <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="true">
+        More Actions
+        <%= cached_icon "chevron-down", class: "size-3" %>
+      </button>
+      <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-950/10 focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
+        <% if folio_show.can_execute_refund? %>
+          <button type="button" role="menuitem" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" onclick="document.getElementById('folio-refund-modal-<%= booking.id %>').showModal()">
+            <%= cached_icon "rotate-ccw", class: "size-4 text-amber-600" %>
+            Issue Refund
+          </button>
+        <% end %>
+        <% [ [ "Transfer Charge", "arrow-right" ], [ "Print Folio", "file-text" ], [ "Void / Reverse", "rotate-ccw" ] ].each do |label, icon| %>
+          <button type="button" role="menuitem" disabled class="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-400">
+            <%= cached_icon icon, class: "size-4 text-slate-300" %>
+            <span><%= label %></span>
+          </button>
+        <% end %>
+      </div>
+    </div>
+    <% else %>
+      <span class="text-sm font-medium text-slate-500">No posting actions available</span>
+    <% end %>
+  </div>
+</div>
+
+<% if folio_show.normal_folio_actions_available? %>
+  <% if folio_show.can_post_payment? %>
     <%= render "hotel_portal/folios/transactions/modal",
         booking: booking,
         hotel: hotel,
         modal_id: "folio-payment-modal-#{booking.id}",
-        title: "Add Payment",
-        description: "Record a staff-posted cash payment against this folio.",
+        title: "Post Payment",
+        description: "Record a staff-posted payment against this folio.",
         transaction_type: "payment",
-        category: "cash",
+        category: nil,
+        payment_source_options: ::Folios::PaymentSource.options,
+        include_reference_fields: true,
         signed_amount: false,
-        submit_label: "Add Payment",
-        redirect_to_folio: redirect_to_folio %>
+        submit_label: "Post Payment",
+        redirect_to_folio: redirect_to_folio,
+        folio_origin: folio_origin %>
   <% end %>
 
-  <% if can_post_charge %>
+  <% if folio_show.can_post_charge? %>
     <%= render "hotel_portal/folios/transactions/modal",
         booking: booking,
         hotel: hotel,
         modal_id: "folio-charge-modal-#{booking.id}",
         title: "Add Charge",
-        description: "Record a manual other charge. Accommodation and tax are posted by audit flows.",
+        description: "Record a manual charge using a transaction code preset.",
         transaction_type: "charge",
-        category: "other",
+        category: nil,
+        transaction_code_options: folio_show.charge_transaction_codes,
+        include_reference_fields: true,
         signed_amount: false,
         submit_label: "Add Charge",
-        redirect_to_folio: redirect_to_folio %>
+        redirect_to_folio: redirect_to_folio,
+        folio_origin: folio_origin %>
   <% end %>
 
-  <% if can_post_adjustment %>
+  <% if folio_show.can_post_adjustment? %>
     <%= render "hotel_portal/folios/transactions/modal",
         booking: booking,
         hotel: hotel,
         modal_id: "folio-adjustment-modal-#{booking.id}",
-        title: "Add Adjustment",
+        title: "Post Adjustment",
         description: "Record an authorized adjustment, correction, discount, write-off, or other adjustment.",
         transaction_type: "adjustment",
         category: nil,
-        category_options: adjustment_category_options,
+        category_options: folio_show.adjustment_category_options,
         signed_amount: true,
-        submit_label: "Add Adjustment",
-        redirect_to_folio: redirect_to_folio %>
+        submit_label: "Post Adjustment",
+        redirect_to_folio: redirect_to_folio,
+        folio_origin: folio_origin %>
   <% end %>
 
-  <% if can_execute_refund %>
+  <% if folio_show.can_execute_refund? %>
     <%= render "hotel_portal/folios/transactions/modal",
         booking: booking,
         hotel: hotel,
@@ -78,8 +169,11 @@
         description: "Enter a positive refund amount. It will be recorded as a negative refund payment.",
         transaction_type: "payment",
         category: "refund",
+        refund_source_options: ::Folios::RefundSource.options,
+        include_reference_fields: true,
         signed_amount: false,
         submit_label: "Issue Refund",
-        redirect_to_folio: redirect_to_folio %>
+        redirect_to_folio: redirect_to_folio,
+        folio_origin: folio_origin %>
   <% end %>
 <% end %>

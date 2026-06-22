@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class FolioTransaction < ApplicationRecord
-  CHARGE_CATEGORIES = %w[accommodation tax fb no_show_charge late_checkout_charge early_departure_charge other].freeze
+  CHARGE_CATEGORIES = %w[accommodation tax fb parking no_show_charge cancellation_charge late_checkout_charge early_departure_charge other].freeze
   PAYMENT_CATEGORIES = %w[gateway_payment cash refund booking_payment].freeze
   ADJUSTMENT_CATEGORIES = %w[adjustment correction discount write_off other].freeze
   CATEGORIES_BY_TYPE = {
@@ -30,6 +30,7 @@ class FolioTransaction < ApplicationRecord
   }.freeze
 
   belongs_to :booking_folio
+  belongs_to :transaction_code, optional: true
   belongs_to :night_audit, optional: true
   belongs_to :user, optional: true
   belongs_to :reversal_of_transaction, class_name: "FolioTransaction", optional: true
@@ -52,6 +53,7 @@ class FolioTransaction < ApplicationRecord
   validates :transaction_type, presence: true
   validates :category, presence: true
   validates :description, presence: true
+  validates :currency, presence: true
   validates :posting_date, presence: true
   validate :category_allowed_for_transaction_type
   validate :amount_sign_matches_transaction_type
@@ -59,6 +61,7 @@ class FolioTransaction < ApplicationRecord
   validate :night_audit_matches_hotel
   validate :night_audit_matches_metadata, on: :create
 
+  before_validation :assign_transaction_code, on: :create
   before_validation :assign_gl_code, on: :create
   before_update :prevent_immutable_changes
   before_destroy :prevent_destroy
@@ -89,10 +92,45 @@ class FolioTransaction < ApplicationRecord
   private
 
   def assign_gl_code
-    return if gl_code.present? || category.blank? || hotel.blank?
+    return if gl_code.present? || hotel.blank?
 
-    mapping = hotel.hotel_general_ledger_maps.find_by(transaction_category: category)
-    self.gl_code = mapping&.gl_code
+    mapping = hotel.hotel_general_ledger_maps.find_by(transaction_category: category) if category.present?
+    self.gl_code = mapping&.gl_code.presence || transaction_code&.gl_account_code
+  end
+
+  def assign_transaction_code
+    return if transaction_code.present? || category.blank? || hotel.blank? || !hotel.persisted?
+
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    self.transaction_code = tax_transaction_code || category_transaction_code
+  end
+
+  def tax_transaction_code
+    return unless category == "tax"
+
+    tax_line = metadata.to_h["tax_line"].presence || metadata.to_h[:tax_line].presence || {}
+    tax_id = tax_line["tax_id"].presence || tax_line[:tax_id].presence
+    if tax_id.present?
+      tax = hotel.hotel_taxes.find_by(id: tax_id)
+      return tax.ensure_transaction_code if tax.present?
+    end
+
+    tax_type = tax_line["type"].presence || tax_line[:type].presence
+    system_key =
+      case tax_type.to_s
+      when "sst" then "sst_tax"
+      when "tourism_tax" then "tourism_tax"
+      end
+    return if system_key.blank?
+
+    hotel.transaction_codes.find_by(system_key: system_key)
+  end
+
+  def category_transaction_code
+    system_key = Financials::EnsureDefaultTransactionCodes.system_key_for_category(category)
+    return if system_key.blank?
+
+    hotel.transaction_codes.find_by(system_key: system_key)
   end
 
   def category_allowed_for_transaction_type
