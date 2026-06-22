@@ -113,7 +113,7 @@ module Bookings
     def restricted?(rate_plan)
       rates = rates_for(rate_plan)
       return true if @apply_stop_sell && rates.any?(&:stop_sell?)
-      return true if @apply_arrival_departure && arrival_departure_restricted?(rates)
+      return true if @apply_arrival_departure && arrival_departure_restricted?(rates, rate_plan)
       return true if @apply_stay_length && stay_length_restricted?(rates)
 
       false
@@ -123,9 +123,13 @@ module Bookings
       @room_type.room_rates.where(rate_plan: rate_plan, date: stay_dates).to_a
     end
 
-    def arrival_departure_restricted?(rates)
-      rates.find { |rate| rate.date == stay_dates.first }&.closed_to_arrival? ||
-        rates.find { |rate| rate.date == stay_dates.last }&.closed_to_departure?
+    def arrival_departure_restricted?(rates, rate_plan)
+      return true if rates.find { |rate| rate.date == @check_in }&.closed_to_arrival?
+
+      checkout_rate = @room_type.room_rates.find_by(rate_plan: rate_plan, date: @check_out)
+      return true if checkout_rate&.closed_to_departure?
+
+      rates.find { |rate| rate.date == stay_dates.last }&.closed_to_departure?
     end
 
     def stay_length_restricted?(rates)

@@ -19,10 +19,10 @@ class Public::QuotesController < ApplicationController
       redirect_to root_path
     end
 
-    @quote = Public::QuotePresenter.new(quote, view_context)
+    @display_currency = display_currency_for_request(quote)
+    @quote = Public::QuotePresenter.new(quote, view_context, @display_currency)
     @hotel = Public::HotelPresenter.new(quote.hotel, view_context)
     @quote_items = @quote.booking_quote_items
-    @display_currency = display_currency_for_request
     @payment_gateway = @hotel.checkout_payment_gateway || "razorpay"
     @payment_ready = @hotel.effective_payment_setting(@payment_gateway).present?
   end
@@ -34,6 +34,8 @@ class Public::QuotesController < ApplicationController
     if email.blank?
       return render json: { found: false, message: "Email is required." }, status: :unprocessable_content
     end
+
+
 
     guest = Guest.find_by(email: email)
     found = guest.present?
@@ -48,11 +50,11 @@ class Public::QuotesController < ApplicationController
   private
 
   def quote_params
-    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency)
+    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency, :rate_plan_id)
   end
 
-  def display_currency_for_request
-    @quote.display_currency.presence ||
+  def display_currency_for_request(quote)
+    quote.display_currency.presence ||
       DisplayCurrencyResolver.new(params: params, cookies: cookies, request: request).call
   end
 

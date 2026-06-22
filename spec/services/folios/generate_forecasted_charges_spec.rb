@@ -139,8 +139,9 @@ RSpec.describe Folios::GenerateForecastedCharges do
     end
 
     it "allocates rounding remainder to the final night" do
-      booking.update!(check_in: Date.current, check_out: Date.current + 3.days)
       booking_room.update!(subtotal: 100.0)
+      booking.update!(check_in: Date.current, check_out: Date.current + 3.days)
+      booking.booking_rooms.reload
 
       described_class.call(booking_folio: folio)
 

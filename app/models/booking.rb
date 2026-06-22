@@ -69,6 +69,7 @@ class Booking < ApplicationRecord
 
   validates :status, presence: true, inclusion: { in: STATUSES }
   validate :status_transition_must_be_allowed, if: :status_changed_on_persisted_record?
+  validate :check_cta_ctd_restrictions
   validates :no_show_review_business_date, presence: true, if: -> { status == "review_no_show" }
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
@@ -400,5 +401,52 @@ class Booking < ApplicationRecord
   def normalize_guest_data
     self.guest_email = guest_email&.downcase&.strip
     self.guest_country = guest_country&.split&.map(&:capitalize)&.join(" ") if guest_country.present?
+  end
+
+  def check_cta_ctd_restrictions
+    return unless %w[pending confirmed review_no_show checked_in review_due_out checkout_required].include?(status)
+    return unless new_record? || check_in_changed? || check_out_changed?
+    return if new_record? && booking_rooms.target.empty?
+
+    room_types = booking_rooms.map(&:room_type).compact
+    return if room_types.empty?
+
+    room_types.each do |room_type|
+      rate_plan_ids = [ nil ]
+      if booking_rooms.present?
+        rate_plan_ids += booking_rooms.map(&:rate_plan_id).compact
+      end
+      if rate_plan_ids.include?(nil)
+        standard_plan = room_type.rate_plans.first
+        rate_plan_ids << standard_plan.id if standard_plan
+      end
+      rate_plan_ids.uniq!
+
+      # CTA Check on check-in date
+      if check_in.present?
+        room_rates_at_check_in = RoomRate.where(
+          room_type_id: room_type.id,
+          date: check_in.to_date,
+          rate_plan_id: rate_plan_ids
+        )
+
+        if room_rates_at_check_in.any?(&:closed_to_arrival?)
+          errors.add(:check_in, "date (#{check_in.to_date}) is closed to arrival (CTA) for this rate plan.")
+        end
+      end
+
+      # CTD Check on check_out date
+      if check_out.present?
+        room_rates_at_check_out = RoomRate.where(
+          room_type_id: room_type.id,
+          date: check_out.to_date,
+          rate_plan_id: rate_plan_ids
+        )
+
+        if room_rates_at_check_out.any?(&:closed_to_departure?)
+          errors.add(:check_out, "date (#{check_out.to_date}) is closed to departure (CTD) for this rate plan.")
+        end
+      end
+    end
   end
 end

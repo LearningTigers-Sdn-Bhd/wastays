@@ -32,4 +32,51 @@ RSpec.describe "Hotel rate calendar", type: :system do
     # Sold-out day has disabled styling
     expect(page).to have_css(".opacity-25", wait: 5)
   end
+
+  it "enforces min_stay restriction by disabling check-out dates and preventing selection" do
+    tomorrow = today + 1.day
+    RoomRate.where(room_type: room_type, date: tomorrow).update_all(min_stay: 3)
+
+    visit hotel_path(hotel)
+    find("[data-action='click->rate-calendar#openPicker']").click
+
+    # Click check-in date as tomorrow
+    tomorrow_str = tomorrow.to_s
+    find("[data-date='#{tomorrow_str}']").click
+
+    # Check-in date should be highlighted
+    expect(page).to have_css(".bg-brand-primary", text: tomorrow.day.to_s)
+
+    # Checkout tomorrow + 1 (1 night stay) should be disabled because min stay is 3 nights
+    next_day_str = (tomorrow + 1.day).to_s
+    expect(page).to have_css("[data-date='#{next_day_str}'].opacity-25.cursor-not-allowed")
+
+    # Click on the disabled date — should not set check-out or close picker
+    find("[data-date='#{next_day_str}']").click
+    expect(page).to have_button("Clear") # Calendar is still open
+
+    # Tomorrow + 3 (3 nights stay) should NOT be disabled
+    valid_checkout_str = (tomorrow + 3.days).to_s
+    expect(page).not_to have_css("[data-date='#{valid_checkout_str}'].opacity-25.cursor-not-allowed")
+
+    # Click on the valid check-out date — should close picker and confirm selection
+    find("[data-date='#{valid_checkout_str}']").click
+    expect(page).not_to have_button("Clear") # Calendar is closed
+  end
+
+  it "enforces max_stay restriction by disabling check-out dates beyond the limit" do
+    tomorrow = today + 1.day
+    RoomRate.where(room_type: room_type, date: tomorrow).update_all(max_stay: 2)
+
+    visit hotel_path(hotel)
+    find("[data-action='click->rate-calendar#openPicker']").click
+
+    # Click check-in date as tomorrow
+    tomorrow_str = tomorrow.to_s
+    find("[data-date='#{tomorrow_str}']").click
+
+    # Tomorrow + 3 (3 nights stay) should be disabled because max stay is 2 nights
+    invalid_checkout_str = (tomorrow + 3.days).to_s
+    expect(page).to have_css("[data-date='#{invalid_checkout_str}'].opacity-25.cursor-not-allowed")
+  end
 end

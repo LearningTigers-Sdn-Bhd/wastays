@@ -56,6 +56,8 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
         expect(json["days"].first["min_price"]).to eq(200.0)
         expect(json["days"].first["available"]).to be true
         expect(json["days"].first["rooms_left"]).to eq(5)
+        expect(json["days"].first["min_stay"]).to be_nil
+        expect(json["days"].first["max_stay"]).to be_nil
       end
 
       it "includes currency and date range" do

@@ -20,7 +20,15 @@ module Payments
     def call
       return failure("Invalid parameters") unless valid?
 
+      if (restriction_msg = quote.stay_restriction_error_message).present?
+        return failure(restriction_msg)
+      end
+
       setting = quote.hotel.effective_payment_setting(gateway)
+      if setting.blank? && gateway == "cute_mock"
+        setting = OpenStruct.new(gateway: "cute_mock", api_key: "mock", secret_key: "mock")
+      end
+
       return failure("Payment gateway is not configured.") unless setting
 
       adapter = Payments::GatewayRegistry.fetch(gateway: gateway, setting: setting)

@@ -4,6 +4,10 @@ const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 
 export default class extends Controller {
   static targets = ["checkIn", "checkOut", "dateDisplay"]
+  static values = {
+    minStay: { type: Number, default: 1 },
+    maxStay: { type: Number, default: null }
+  }
 
   connect() {
     this.open = false
@@ -84,6 +88,19 @@ export default class extends Controller {
       this.checkOutTarget.value = ""
       this._updateDisplay(iso, null)
     } else {
+      const minStay = this.hasMinStayValue ? this.minStayValue : 1
+      const maxStay = this.hasMaxStayValue ? this.maxStayValue : null
+      
+      const checkInParts = this.selecting.split("-").map(Number)
+      const checkInDate = new Date(checkInParts[0], checkInParts[1] - 1, checkInParts[2])
+      const currentParts = iso.split("-").map(Number)
+      const currentDate = new Date(currentParts[0], currentParts[1] - 1, currentParts[2])
+      const nights = Math.round((currentDate - checkInDate) / (1000 * 60 * 60 * 24))
+
+      if (nights < minStay || (maxStay !== null && nights > maxStay)) {
+        return
+      }
+
       this.checkOutTarget.value = iso
       this._updateDisplay(this.selecting, iso)
       this.selecting = null
@@ -197,6 +214,23 @@ export default class extends Controller {
       if (!d) return `<div class="w-12 h-12"></div>`
 
       const isPast = d.iso < today
+      let disabled = isPast
+
+      if (this.selecting && d.iso > this.selecting) {
+        const minStay = this.hasMinStayValue ? this.minStayValue : 1
+        const maxStay = this.hasMaxStayValue ? this.maxStayValue : null
+        
+        const checkInParts = this.selecting.split("-").map(Number)
+        const checkInDate = new Date(checkInParts[0], checkInParts[1] - 1, checkInParts[2])
+        const currentParts = d.iso.split("-").map(Number)
+        const currentDate = new Date(currentParts[0], currentParts[1] - 1, currentParts[2])
+        const nights = Math.round((currentDate - checkInDate) / (1000 * 60 * 60 * 24))
+
+        if (nights < minStay || (maxStay !== null && nights > maxStay)) {
+          disabled = true
+        }
+      }
+
       const isStart = d.iso === rangeStart
       const isEnd = d.iso === rangeEnd
       const inRange = rangeStart && rangeEnd && d.iso > rangeStart && d.iso < rangeEnd
@@ -216,7 +250,7 @@ export default class extends Controller {
       let circleCls = "w-10 h-10 flex items-center justify-center rounded-full transition-all duration-150 relative z-10 "
       if (isStart || isEnd) {
         circleCls += "bg-brand-primary text-white shadow-md scale-105"
-      } else if (isPast) {
+      } else if (disabled) {
         circleCls += "opacity-25 cursor-not-allowed text-neutral-400"
       } else if (isHover) {
         circleCls += "bg-brand-primary/10 text-brand-primary cursor-pointer"
@@ -229,7 +263,7 @@ export default class extends Controller {
       }
 
       const numCls = `text-sm font-bold ${isStart || isEnd ? "text-white" : "text-neutral-900"}`
-      const attrs = isPast ? "" :
+      const attrs = disabled ? "" :
         `data-action="click->date-range-picker#pickDay mouseenter->date-range-picker#hoverDay" data-date="${d.iso}"`
 
       return `

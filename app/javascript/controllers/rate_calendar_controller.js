@@ -92,6 +92,20 @@ export default class extends Controller {
       this._updateDisplay(iso, null)
     } else {
       // Second pick — confirm range
+      const checkInInfo = this.cache.get(this.selecting)
+      const minStay = (checkInInfo && checkInInfo.min_stay != null) ? checkInInfo.min_stay : 1
+      const maxStay = (checkInInfo && checkInInfo.max_stay != null) ? checkInInfo.max_stay : null
+      
+      const checkInParts = this.selecting.split("-").map(Number)
+      const checkInDate = new Date(checkInParts[0], checkInParts[1] - 1, checkInParts[2])
+      const currentParts = iso.split("-").map(Number)
+      const currentDate = new Date(currentParts[0], currentParts[1] - 1, currentParts[2])
+      const nights = Math.round((currentDate - checkInDate) / (1000 * 60 * 60 * 24))
+
+      if (nights < minStay || (maxStay !== null && nights > maxStay)) {
+        return
+      }
+
       this.checkOutTarget.value = iso
       this._updateDisplay(this.selecting, iso)
       this.selecting = null
@@ -198,7 +212,24 @@ export default class extends Controller {
       const info     = this.cache.get(d.iso)
       const isPast   = d.iso < today
       const soldOut  = info && !info.available
-      const disabled = isPast || soldOut
+      
+      let disabled = isPast || soldOut
+
+      if (this.selecting && d.iso > this.selecting) {
+        const checkInInfo = this.cache.get(this.selecting)
+        const minStay = (checkInInfo && checkInInfo.min_stay != null) ? checkInInfo.min_stay : 1
+        const maxStay = (checkInInfo && checkInInfo.max_stay != null) ? checkInInfo.max_stay : null
+        
+        const checkInParts = this.selecting.split("-").map(Number)
+        const checkInDate = new Date(checkInParts[0], checkInParts[1] - 1, checkInParts[2])
+        const currentParts = d.iso.split("-").map(Number)
+        const currentDate = new Date(currentParts[0], currentParts[1] - 1, currentParts[2])
+        const nights = Math.round((currentDate - checkInDate) / (1000 * 60 * 60 * 24))
+
+        if (nights < minStay || (maxStay !== null && nights > maxStay)) {
+          disabled = true
+        }
+      }
 
       const isStart  = d.iso === rangeStart
       const isEnd    = d.iso === rangeEnd
@@ -250,8 +281,8 @@ export default class extends Controller {
         priceHtml = `<span class="text-[8px] mr-0.5">${sym}</span>${amt}`
       }
 
-      const actions = disabled ? "" :
-        `data-action="click->rate-calendar#pickDay mouseenter->rate-calendar#hoverDay" data-date="${d.iso}"`
+      const actions = `data-date="${d.iso}"` + (disabled ? "" :
+        ` data-action="click->rate-calendar#pickDay mouseenter->rate-calendar#hoverDay"`)
 
       const tooltip = info?.min_price ? `title="${this._fmt(info.min_price)}/night"` : ""
 
