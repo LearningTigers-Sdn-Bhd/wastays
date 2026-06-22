@@ -166,7 +166,10 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
       expect(page).to have_text("MYR 64.00")
     end
 
-    category_options = find_field("Category").all("option").map(&:text)
-    expect(category_options).not_to include("Tax")
+    within("turbo-frame#offcanvas_drawer") do
+      category_input = find("input[type='hidden'][name='transaction_code[category]']", visible: :all)
+      expect(category_input.value).to eq("fb")
+      expect(page).to have_no_select("Category", options: [ "Tax" ])
+    end
   end
 end
