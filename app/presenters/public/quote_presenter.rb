@@ -24,8 +24,8 @@ module Public
     alias_method :cancellation_policy_text, :cancellation_policy
 
     def formatted_total
-      if display_currency.present? && display_total_amount.present?
-        CurrencyFormatter.format(display_total_amount, currency: display_currency)
+      if @display_currency.present? && @display_currency == display_currency && display_total_amount.present?
+        CurrencyFormatter.format(display_total_amount, currency: @display_currency)
       else
         @view_context.display_amount(total_amount, quote_currency: currency, display_currency: @display_currency, hotel: hotel)
       end
@@ -48,7 +48,7 @@ module Public
     alias_method :display_check_out, :formatted_check_out
 
     def total_amount_display(display_currency, hotel)
-      if display_currency.present? && display_total_amount.present?
+      if display_currency.present? && display_currency == self.display_currency && display_total_amount.present?
         CurrencyFormatter.format(display_total_amount, currency: display_currency)
       else
         @view_context.display_amount(total_amount, quote_currency: currency, display_currency: display_currency, hotel: hotel)

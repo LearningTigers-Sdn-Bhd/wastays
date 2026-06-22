@@ -19,7 +19,7 @@ class Public::QuotesController < ApplicationController
       redirect_to root_path
     end
 
-    @display_currency = display_currency_for_request
+    @display_currency = display_currency_for_request(quote)
     @quote = Public::QuotePresenter.new(quote, view_context, @display_currency)
     @hotel = Public::HotelPresenter.new(quote.hotel, view_context)
     @quote_items = @quote.booking_quote_items
@@ -53,8 +53,8 @@ class Public::QuotesController < ApplicationController
     params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency, :rate_plan_id)
   end
 
-  def display_currency_for_request
-    @quote.display_currency.presence ||
+  def display_currency_for_request(quote)
+    quote.display_currency.presence ||
       DisplayCurrencyResolver.new(params: params, cookies: cookies, request: request).call
   end
 
