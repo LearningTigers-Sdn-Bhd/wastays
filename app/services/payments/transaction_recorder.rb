@@ -65,6 +65,7 @@ module Payments
       transaction = find_existing(attrs) || PaymentTransaction.new
       transaction.assign_attributes(attrs.compact)
       transaction.save!
+      stamp_booking_collector!(transaction)
 
       if transaction.captured_at.present? && transaction.booking.present? && transaction.booking.booking_folio.present?
         Folios::RecordPaymentFromGateway.call(transaction)
@@ -101,5 +102,16 @@ module Payments
       "pending"
     end
     private_class_method :normalize_status
+
+    def self.stamp_booking_collector!(transaction)
+      booking = transaction.booking
+      return unless booking
+      return unless transaction.captured_at.present? || transaction.status == "captured"
+      return unless transaction.wastays_collected_payment?
+      return if booking.fund_collector == "wastays"
+
+      booking.update!(fund_collector: "wastays")
+    end
+    private_class_method :stamp_booking_collector!
   end
 end

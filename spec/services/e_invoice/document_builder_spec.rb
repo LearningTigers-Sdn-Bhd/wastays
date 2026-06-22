@@ -6,6 +6,7 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
     let(:booking) do
       create(:booking,
         hotel: hotel,
+        booking_quote: nil,
         guest_name: "John Doe",
         guest_email: "john@example.com",
         guest_phone: "+60123456789",
@@ -63,6 +64,75 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
 
       # LHDN math constraint validation: LineExtensionAmount = InvoiceQuantity * PriceAmount
       expect(line_extension_amount).to eq(quantity * price_amount)
+    end
+
+    it "uses WAStays as the supplier for WAStays-collected bookings" do
+      decoded_json = JSON.parse(Base64.strict_decode64(subject[:document]))
+      supplier = decoded_json.dig("Invoice", 0, "AccountingSupplierParty", 0, "Party", 0)
+
+      expect(supplier.dig("PartyName", 0, "Name", 0, "_")).to eq("Jesselton Pixel Sdn Bhd")
+      expect(supplier.dig("PartyIdentification", 0, "ID", 0, "_")).to eq("C1234567890")
+    end
+
+    context "when the hotel collected payment directly" do
+      let(:booking) do
+        create(:booking,
+          :direct_hotel_payment,
+          hotel: hotel,
+          booking_quote: nil,
+          guest_name: "John Doe",
+          guest_email: "john@example.com",
+          guest_phone: "+60123456789",
+          check_in: 2.days.ago,
+          check_out: Date.today,
+          total_amount: 424.00,
+          currency: "MYR"
+        )
+      end
+
+      before do
+        create(:e_invoice_setting, :intermediary_ready, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
+      end
+
+      it "uses the hotel as the supplier" do
+        decoded_json = JSON.parse(Base64.strict_decode64(subject[:document]))
+        supplier = decoded_json.dig("Invoice", 0, "AccountingSupplierParty", 0, "Party", 0)
+
+        expect(supplier.dig("PartyName", 0, "Name", 0, "_")).to eq(hotel.name)
+        expect(supplier.dig("PartyIdentification", 0, "ID", 0, "_")).to eq("C9988776655")
+        expect(supplier.dig("PartyIdentification", 1, "ID", 0, "_")).to eq("202399887766")
+      end
+    end
+
+    context "when booking has no rooms" do
+      before { booking_room.destroy! }
+
+      it "raises an argument error" do
+        expect { described_class.new(booking).build }
+          .to raise_error(ArgumentError, "Booking has no rooms")
+      end
+    end
+
+    context "when MyInvois credentials are blank" do
+      before do
+        allow(Rails.application.credentials).to receive(:myinvois).and_return(double(to_h: {}))
+      end
+
+      it "raises an argument error" do
+        context = EInvoice::SubmissionContext::Context.new(
+          booking: booking,
+          hotel: hotel,
+          setting: nil,
+          fund_collector: "wastays",
+          submission_mode: "taxpayer",
+          supplier_name: nil,
+          supplier_tin: nil,
+          represented_taxpayer_tin: nil
+        )
+
+        expect { described_class.new(booking, context: context).build }
+          .to raise_error(ArgumentError, "MyInvois credentials not configured")
+      end
     end
   end
 end

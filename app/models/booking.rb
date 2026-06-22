@@ -21,13 +21,42 @@ class Booking < ApplicationRecord
   has_many :complaint_requests, dependent: :destroy
   has_many :check_out_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
-  has_one :e_invoice_submission, dependent: :destroy
+  has_many :e_invoice_submissions, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :status_transition_event
 
+  FUND_COLLECTORS = %w[unknown wastays hotel].freeze
+
   def online?
     source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
+  end
+
+  def direct_hotel_payment?
+    resolved_fund_collector == "hotel"
+  end
+
+  def guest_invoice_submission
+    e_invoice_submissions.guest_facing.recent_first.first
+  end
+
+  def payout_self_billed_submission
+    e_invoice_submissions.for_scenario("payout_self_billed_invoice").recent_first.first
+  end
+
+  def resolved_fund_collector
+    return fund_collector if fund_collector.present? && fund_collector != "unknown"
+
+    if payment_transactions.any? { |transaction| transaction.direct_hotel_payment? } ||
+        source == "walk_in" ||
+        guarantee_method == "manual_at_hotel"
+      "hotel"
+    elsif booking_quote_id.present? ||
+        payment_transactions.any? { |transaction| transaction.wastays_collected_payment? }
+      "wastays"
+    else
+      "unknown"
+    end
   end
 
   def check_in=(value)
@@ -73,6 +102,7 @@ class Booking < ApplicationRecord
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
   validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_blank: true }
   validates :deposit_status, inclusion: { in: DEPOSIT_STATUSES, allow_nil: true }
+  validates :fund_collector, inclusion: { in: FUND_COLLECTORS }
 
   def primary_guest
     booking_guests.find_by(is_primary: true)&.guest
@@ -84,6 +114,7 @@ class Booking < ApplicationRecord
 
   before_validation :generate_confirmation_token, on: :create
   before_validation :normalize_guest_data
+  before_validation :default_fund_collector
 
   scope :recent_first, -> { order(created_at: :desc) }
   scope :confirmed, -> { where(status: "confirmed") }
@@ -94,6 +125,7 @@ class Booking < ApplicationRecord
   scope :active, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "review_due_out", "checkout_required" ]) }
   scope :revenue_generating, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "review_due_out", "checkout_required", "completed", "no_show" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
+  scope :wastays_collected, -> { where(fund_collector: "wastays") }
 
   scope :search, ->(query) {
     return all if query.blank?
@@ -117,7 +149,7 @@ class Booking < ApplicationRecord
   }
 
   scope :unbatched_upcoming, ->(cutoff_date) {
-    completed.where(payout_batch_id: nil).where("checked_out_at > ?", cutoff_date)
+    completed.wastays_collected.where(payout_batch_id: nil).where("checked_out_at > ?", cutoff_date)
   }
 
   def self.analytics_summary(start_date, end_date, query: nil, base_scope: nil)
@@ -216,6 +248,24 @@ class Booking < ApplicationRecord
 
   def payout_eligible?
     status == "completed" && payout_status == "pending"
+  end
+
+  private
+
+  def default_fund_collector
+    return if FUND_COLLECTORS.include?(fund_collector)
+
+    self.fund_collector = if source == "walk_in" || guarantee_method == "manual_at_hotel"
+      "hotel"
+    elsif booking_quote_id.present?
+      "wastays"
+    elsif payment_transactions.any? { |transaction| transaction.direct_hotel_payment? }
+      "hotel"
+    elsif payment_transactions.any? { |transaction| transaction.wastays_collected_payment? }
+      "wastays"
+    else
+      "unknown"
+    end
   end
 
   before_save :set_payout_status, if: :status_changed?

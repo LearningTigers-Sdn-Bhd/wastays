@@ -409,6 +409,10 @@ Rails.application.routes.draw do
 
     resource :e_invoice_setting, only: [ :show, :update ], controller: "e_invoice_settings"
     resources :e_invoice_submissions, only: [ :index, :show, :create ] do
+      collection do
+        patch :update_payment_receiver
+      end
+
       member do
         post :refresh_status
         post :cancel

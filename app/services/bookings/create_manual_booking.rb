@@ -96,6 +96,7 @@ module Bookings
       booking.tourism_tax_applied = booking.tourism_tax_amount.positive?
 
       booking.status = "confirmed"
+      booking.fund_collector = "hotel"
       booking.hotel_snapshot = @hotel.booking_snapshot.merge("room_number" => @room_number)
 
       if @record_payment == "1" || @record_payment == true

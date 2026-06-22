@@ -16,11 +16,11 @@ module MyInvois
   #
   # Also activates mock if ENV["MYINVOIS_MOCK"] = "true" regardless of credentials.
   module ClientFactory
-    def self.build
+    def self.build(mode: :taxpayer, represented_taxpayer_tin: nil)
       if mock?
-        MyInvois::MockClient.new
+        MyInvois::MockClient.new(mode: mode, represented_taxpayer_tin: represented_taxpayer_tin)
       else
-        MyInvois::Client.new
+        MyInvois::Client.new(mode: mode, represented_taxpayer_tin: represented_taxpayer_tin)
       end
     end
 

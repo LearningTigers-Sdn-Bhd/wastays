@@ -16,11 +16,24 @@ module MyInvois
   #     name: "Jesselton Pixel Sdn Bhd"
   #     ... (other fields still needed for document building)
   class MockClient
-    def initialize
+    class << self
+      attr_accessor :submit_documents_override, :document_details_override
+
+      def reset_overrides!
+        self.submit_documents_override = nil
+        self.document_details_override = nil
+      end
+    end
+
+    def initialize(mode: :taxpayer, represented_taxpayer_tin: nil)
+      @mode = mode.to_s
+      @represented_taxpayer_tin = represented_taxpayer_tin
       Rails.logger.info("[MyInvois::MockClient] Using mock client — no real API calls will be made.")
     end
 
     def submit_documents(documents)
+      return normalize_override(self.class.submit_documents_override, documents:) if self.class.submit_documents_override.present?
+
       doc = documents.first || {}
       code_number = doc[:codeNumber] || doc["codeNumber"] || "MOCK-INV-001"
       mock_uuid   = "MOCK-#{SecureRandom.hex(8).upcase}"
@@ -36,6 +49,8 @@ module MyInvois
             "invoiceCodeNumber" => code_number
           }
         ],
+        "authMode"            => @mode,
+        "onBehalfOf"          => @represented_taxpayer_tin,
         "rejectedDocuments"   => []
       }
     end
@@ -50,6 +65,8 @@ module MyInvois
     end
 
     def get_document_details(uuid)
+      return normalize_override(self.class.document_details_override, uuid:) if self.class.document_details_override.present?
+
       mock_long_id = "MOCKLONG#{SecureRandom.hex(10).upcase}"
 
       Rails.logger.info("[MyInvois::MockClient] get_document_details — UUID: #{uuid}")
@@ -72,6 +89,12 @@ module MyInvois
 
     def validate_tin(tin, id_type:, id_value:)
       { "tin" => tin, "status" => "Valid" }
+    end
+
+    private
+
+    def normalize_override(override, **kwargs)
+      override.respond_to?(:call) ? override.call(**kwargs) : override
     end
   end
 end

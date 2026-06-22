@@ -5,7 +5,10 @@ module HotelPortal
     before_action :authorize_view_bookings!
 
     def show
-      @booking = current_hotel.bookings.includes(booking_folio: [ { folio_transactions: :user }, :folio_forecasted_charges ]).find(params[:booking_id])
+      @booking = current_hotel.bookings.includes(
+        :e_invoice_submissions,
+        booking_folio: [ { folio_transactions: :user }, :folio_forecasted_charges ]
+      ).find(params[:booking_id])
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
       set_breadcrumbs
       render "hotel_portal/folios/show/index"

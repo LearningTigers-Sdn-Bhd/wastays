@@ -1,6 +1,7 @@
 class PayoutBatch < ApplicationRecord
   belongs_to :hotel
   has_many :bookings, dependent: :nullify
+  has_many :e_invoice_submissions, dependent: :nullify
 
   has_one_attached :receipt
 

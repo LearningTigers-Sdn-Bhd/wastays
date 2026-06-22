@@ -6,8 +6,15 @@
     "invalid"   => "bg-red-50 text-red-700",
     "cancelled" => "bg-slate-100 text-slate-400 line-through"
   }
+  labels = {
+    "valid" => "Ready",
+    "submitted" => "Sent",
+    "pending" => "Preparing",
+    "invalid" => "Rejected",
+    "cancelled" => "Cancelled"
+  }
   color = colors.fetch(submission.status, "bg-slate-100 text-slate-600")
 %>
 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold <%= color %>">
-  <%= submission.status_label %>
+  <%= labels.fetch(submission.status, submission.status_label) %>
 </span>

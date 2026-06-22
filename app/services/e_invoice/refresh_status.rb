@@ -14,7 +14,10 @@ module EInvoice
     def call
       return { success: false, error: "No UUID to poll." } if @submission.uuid.blank?
 
-      client   = MyInvois::ClientFactory.build
+      client = MyInvois::ClientFactory.build(
+        mode: @submission.submission_mode.to_sym,
+        represented_taxpayer_tin: @submission.represented_taxpayer_tin
+      )
       response = client.get_document_details(@submission.uuid)
 
       new_status = map_status(response["status"])
@@ -24,7 +27,7 @@ module EInvoice
         status:       new_status,
         long_id:      long_id,
         raw_response: @submission.raw_response.merge("details" => response),
-        validated_at: (Time.current if new_status == "valid")
+        validated_at: (new_status == "valid" ? Time.current : nil)
       )
 
       { success: true, submission: @submission }

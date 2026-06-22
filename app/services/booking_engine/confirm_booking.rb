@@ -73,7 +73,8 @@ module BookingEngine
           tax_lines: tax_lines,
           tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
           reservation_number: reservation_num,
-          receipt_number: receipt_num
+          receipt_number: receipt_num,
+          fund_collector: "wastays"
         )
 
 

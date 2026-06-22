@@ -1,6 +1,22 @@
 require "rails_helper"
 
 RSpec.describe EInvoiceSubmission, type: :model do
+  describe "#document_scenario_label" do
+    it "maps scenario label" do
+      submission = build(:e_invoice_submission, document_scenario: "commission_invoice")
+
+      expect(submission.document_scenario_label).to eq("WAStays service fee invoice")
+    end
+  end
+
+  describe "#status_label" do
+    it "maps friendly status labels" do
+      submission = build(:e_invoice_submission, status: "submitted")
+
+      expect(submission.status_label).to eq("Sent")
+    end
+  end
+
   describe "#validation_url" do
     let(:hotel) { create(:hotel) }
     let(:booking) { create(:booking, hotel: hotel) }

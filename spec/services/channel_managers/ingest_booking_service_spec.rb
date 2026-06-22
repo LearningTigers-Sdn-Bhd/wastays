@@ -40,6 +40,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(result.booking.persisted?).to be(true)
     expect(result.booking.guest_name).to eq("John Doe")
     expect(result.booking.hotel).to eq(hotel)
+    expect(result.booking.fund_collector).to eq("unknown")
     expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 1, 1 ])
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: result.booking)
   end

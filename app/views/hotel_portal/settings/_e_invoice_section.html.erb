@@ -1,14 +1,28 @@
 <% setting = current_hotel.e_invoice_setting || current_hotel.build_e_invoice_setting %>
+<%
+  hotel_detail_checks = [
+    ["Hotel tax number (TIN)", setting.hotel_tin.present?],
+    ["Business registration number (BRN / SSM)", setting.hotel_brn.present?],
+    ["MSIC code", setting.supplier_msic_code.present?],
+    ["Business description", setting.supplier_business_description.present?],
+    ["Hotel contact phone", setting.supplier_contact_phone.present?],
+    ["Hotel contact email", setting.supplier_contact_email.present?],
+    ["Address line 1", setting.supplier_address_line1.present?],
+    ["City", setting.supplier_city.present?],
+    ["Postal code", setting.supplier_postal_code.present?],
+    ["State code", setting.supplier_state_code.present?]
+  ]
+  missing_hotel_details = hotel_detail_checks.reject { |_, ready| ready }.map(&:first)
+%>
 
 <%# ── E-Invoice Config Card ── %>
-<section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+<section class="rounded-2xl border border-slate-200 bg-white shadow-sm" data-controller="e-invoice-settings">
   <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">E-Invoice (MyInvois)</h2>
         <p class="mt-1 text-sm font-medium text-slate-600">
-          Enable LHDN e-invoice submission for bookings at this hotel.
-          WAStays (Jesselton Pixel Sdn Bhd) issues all invoices as the supplier.
+          Turn on e-invoice for this hotel and choose whether WAStays can help submit hotel-issued e-invoices.
         </p>
       </div>
       <% if setting.enabled? %>
@@ -27,12 +41,34 @@
     <%= form_with model: setting, url: hotel_e_invoice_setting_path(current_hotel), method: :patch, local: true do |f| %>
       <%= hidden_field_tag :form_id, "einvoice_settings" %>
 
+      <% if !setting.enabled? %>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+          <p class="text-sm font-semibold text-slate-900">E-invoice is currently turned off</p>
+          <p class="mt-1 text-xs text-slate-500">Turn it on when your hotel is ready to send e-invoices from closed folios.</p>
+        </div>
+      <% elsif setting.intermediary_enabled? && missing_hotel_details.any? %>
+        <div class="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+          <p class="text-sm font-semibold text-amber-900">Hotel-issued e-invoices are not fully set up yet</p>
+          <p class="mt-1 text-xs text-amber-700">Please complete: <%= missing_hotel_details.join(", ") %>.</p>
+        </div>
+      <% elsif setting.intermediary_enabled? %>
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+          <p class="text-sm font-semibold text-emerald-900">Hotel-issued e-invoices are ready</p>
+          <p class="mt-1 text-xs text-emerald-700">WAStays can help submit e-invoices when the guest pays the hotel directly.</p>
+        </div>
+      <% else %>
+        <div class="rounded-xl border border-blue-200 bg-blue-50 px-5 py-4">
+          <p class="text-sm font-semibold text-blue-900">WAStays-issued e-invoices are ready</p>
+          <p class="mt-1 text-xs text-blue-700">Turn on the hotel-issued option below if you also want WAStays to help submit direct hotel payment cases.</p>
+        </div>
+      <% end %>
+
       <%# Enable toggle %>
       <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
         <div>
-          <p class="text-sm font-semibold text-slate-900">Enable E-Invoice Submission</p>
+          <p class="text-sm font-semibold text-slate-900">Turn on e-invoice for this hotel</p>
           <p class="mt-0.5 text-xs text-slate-500">
-            When enabled, staff can submit e-invoices to LHDN for closed folios.
+            When turned on, your team can send e-invoices for closed folios.
           </p>
         </div>
         <label class="relative inline-flex cursor-pointer items-center">
@@ -41,37 +77,149 @@
         </label>
       </div>
 
-      <%# Hotel TIN/BRN for Phase 2 (hotel as buyer on payout invoices) %>
-      <div>
-        <p class="mb-3 text-sm font-semibold text-slate-900">Hotel Tax Details <span class="font-normal text-slate-400">(for payout invoices — optional now)</span></p>
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <%= f.label :hotel_tin, "Hotel TIN", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
-            <%= f.text_field :hotel_tin, placeholder: "e.g. C1234567890",
-                class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-            <p class="mt-1 text-xs text-slate-400">Hotel's LHDN TIN. Used as buyer on payout invoices.</p>
+      <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+        <div>
+          <p class="text-sm font-semibold text-slate-900">Let WAStays submit hotel-issued e-invoices</p>
+          <p class="mt-0.5 text-xs text-slate-500">
+            Use this when the guest pays the hotel directly and WAStays helps submit the hotel's e-invoice to LHDN.
+          </p>
+        </div>
+        <label class="relative inline-flex cursor-pointer items-center">
+          <%= f.check_box :intermediary_enabled, class: "sr-only peer", data: { action: "change->e-invoice-settings#toggleDetails", e_invoice_settings_target: "intermediaryToggle" } %>
+          <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
+        </label>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+          <p class="text-sm font-semibold text-slate-900">If guest pays WAStays</p>
+          <ul class="mt-2 space-y-1 text-xs text-slate-600">
+            <li>WAStays issues the e-invoice</li>
+            <li>Hotel does not need to issue a separate guest e-invoice</li>
+            <li>This works once e-invoice is turned on</li>
+          </ul>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+          <p class="text-sm font-semibold text-slate-900">If guest pays hotel directly</p>
+          <ul class="mt-2 space-y-1 text-xs text-slate-600">
+            <li>Hotel issues the e-invoice</li>
+            <li>WAStays can help submit it to LHDN</li>
+            <li>Hotel details below must be completed first</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="<%= setting.intermediary_enabled? ? "" : "hidden " %>rounded-2xl border border-slate-200 bg-white px-5 py-5" data-e-invoice-settings-target="detailsSection">
+          <div class="mb-4">
+            <p class="text-sm font-semibold text-slate-900">Hotel e-invoice details</p>
+            <p class="mt-1 text-xs text-slate-500">
+              Fill in these details for cases where the hotel issues the e-invoice and WAStays helps submit it.
+            </p>
           </div>
-          <div>
-            <%= f.label :hotel_brn, "Hotel BRN (SSM)", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
-            <%= f.text_field :hotel_brn, placeholder: "e.g. 202301234567",
-                class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-            <p class="mt-1 text-xs text-slate-400">Hotel's SSM registration number.</p>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <%= f.label :hotel_tin, "Hotel tax number (TIN)", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :hotel_tin, placeholder: "e.g. C1234567890",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Required for hotel-issued e-invoices. Example format: C1234567890.</p>
+            </div>
+            <div>
+              <%= f.label :hotel_brn, "Business registration number (BRN / SSM)", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :hotel_brn, placeholder: "e.g. 202301234567",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Your hotel's registered business number.</p>
+            </div>
+            <div>
+              <%= f.label :supplier_msic_code, "MSIC code", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :supplier_msic_code, placeholder: "e.g. 55101",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Business activity code. Example for hotels: 55101.</p>
+            </div>
+            <div>
+              <%= f.label :supplier_business_description, "Business description", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :supplier_business_description, placeholder: "e.g. Hotel accommodation services",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Describe the hotel's business in plain words.</p>
+            </div>
+            <div>
+              <%= f.label :supplier_contact_phone, "Hotel contact phone", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.telephone_field :supplier_contact_phone, placeholder: "e.g. +6088123456",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Phone number shown in the hotel e-invoice details.</p>
+            </div>
+            <div>
+              <%= f.label :supplier_contact_email, "Hotel contact email", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.email_field :supplier_contact_email, placeholder: "finance@hotel.com",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Best email for finance or billing contact.</p>
+            </div>
+            <div class="sm:col-span-2">
+              <%= f.label :supplier_address_line1, "Address line 1", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :supplier_address_line1, placeholder: "Street address",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Main registered business address.</p>
+            </div>
+            <div class="sm:col-span-2">
+              <%= f.label :supplier_address_line2, "Address line 2", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :supplier_address_line2, placeholder: "Suite, floor, or optional second line",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Optional extra address information.</p>
+            </div>
+            <div>
+              <%= f.label :supplier_city, "City", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :supplier_city, placeholder: current_hotel.city,
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">City for the registered business address.</p>
+            </div>
+            <div>
+              <%= f.label :supplier_postal_code, "Postal code", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :supplier_postal_code, placeholder: "e.g. 88000",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Postal code for the registered address.</p>
+            </div>
+            <div>
+              <%= f.label :supplier_state_code, "State code", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :supplier_state_code, placeholder: "e.g. 12",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">LHDN state code, not full state name. Example: Sabah = 12.</p>
+            </div>
+            <div>
+              <%= f.label :supplier_country_code, "Country code", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :supplier_country_code, placeholder: "MYS",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Usually MYS for Malaysia.</p>
+            </div>
+            <div>
+              <%= f.label :supplier_sst_registration_number, "SST registration number (optional)", class: "mb-1.5 block text-sm font-medium text-slate-700" %>
+              <%= f.text_field :supplier_sst_registration_number, placeholder: "Optional",
+                  class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <p class="mt-1 text-xs text-slate-400">Only fill this if the hotel has an SST registration number.</p>
+            </div>
           </div>
         </div>
+
+      <div class="<%= setting.intermediary_enabled? ? "hidden " : "" %>rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-5" data-e-invoice-settings-target="detailsHiddenState">
+          <p class="text-sm font-semibold text-slate-900">Hotel-issued setup is hidden for now</p>
+          <p class="mt-1 text-xs text-slate-500">
+            Turn on “Let WAStays submit hotel-issued e-invoices” to fill in the hotel's e-invoice details.
+          </p>
       </div>
 
       <%# Info box %>
       <div class="rounded-xl border border-blue-100 bg-blue-50 px-5 py-4 text-xs text-blue-800 space-y-1">
-        <p class="font-semibold">How it works</p>
+        <p class="font-semibold">Before you start</p>
         <ul class="list-disc list-inside space-y-0.5 text-blue-700">
-          <li>WAStays submits e-invoices to LHDN using <strong>Jesselton Pixel Sdn Bhd's</strong> TIN as supplier.</li>
-          <li>Invoices are issued to guests (buyer) upon checkout of a closed folio.</li>
-          <li>No action required from the hotel on MyInvois — WAStays handles all submissions.</li>
+          <li>Only closed folios can be sent as e-invoices.</li>
+          <li>The system decides who issues the e-invoice based on who received the guest's payment.</li>
+          <li>If the hotel issues the e-invoice, the hotel details above must be complete.</li>
+          <li>You can review sent e-invoices from the records list below.</li>
         </ul>
       </div>
 
       <div class="flex justify-end border-t border-slate-200 pt-4">
-        <%= f.submit "Save E-Invoice Settings",
+        <%= f.submit "Save e-invoice settings",
             class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 cursor-pointer" %>
       </div>
     <% end %>
@@ -83,7 +231,7 @@
 <% if submissions.any? %>
   <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4 sm:px-8">
-      <h2 class="text-base font-bold text-slate-950">Recent Submissions</h2>
+      <h2 class="text-base font-bold text-slate-950">Recent e-invoice records</h2>
       <%= link_to "View All →", hotel_e_invoice_submissions_path(current_hotel),
           class: "text-sm font-semibold text-blue-600 hover:text-blue-800" %>
     </div>
