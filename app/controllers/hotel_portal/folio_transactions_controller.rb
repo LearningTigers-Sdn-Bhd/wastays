@@ -162,7 +162,8 @@ module HotelPortal
         :note,
         :payment_source,
         :refund_source,
-        :booking_folio_id
+        :booking_folio_id,
+        :routing_override_reason
       )
     end
 
@@ -251,6 +252,7 @@ module HotelPortal
       metadata = {}
       metadata[:reference] = folio_transaction_params[:reference].to_s.strip if folio_transaction_params[:reference].present?
       metadata[:note] = folio_transaction_params[:note].to_s.strip if folio_transaction_params[:note].present?
+      options[:routing_override_reason] = folio_transaction_params[:routing_override_reason].to_s.strip if folio_transaction_params[:routing_override_reason].present?
       if refund_transaction? && folio_transaction_params[:refund_source].present?
         metadata[:refund_source] = folio_transaction_params[:refund_source].to_s.strip
       end

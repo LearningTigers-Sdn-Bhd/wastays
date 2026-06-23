@@ -92,10 +92,37 @@ module Folios
       checkout_date = @booking.check_out.to_date
       unsettled = FolioForecastedCharge.where(booking_folio_id: folios.map(&:id)).forecast
         .where(arel_table[:stay_date].lt(checkout_date))
+        .reject { |forecast| matching_posted_charge_exists?(forecast) }
       return if unsettled.none?
 
-      dates = unsettled.pluck(:stay_date).uniq.sort
+      dates = unsettled.map(&:stay_date).uniq.sort
       "Missing nightly charges for: #{dates.map { |d| d.strftime('%d %b') }.join(', ')}. Please ensure all nightly charges are posted before checkout."
+    end
+
+    def matching_posted_charge_exists?(forecast)
+      nightly_key = Folios::ChargePostingKeys.nightly_charge_key(
+        booking: @booking,
+        date: forecast.stay_date,
+        charge_kind: forecast.charge_kind,
+        identity: forecast.identity
+      )
+      catch_up_key = Folios::ChargePostingKeys.catch_up_charge_key(
+        booking: @booking,
+        date: forecast.stay_date,
+        charge_kind: forecast.charge_kind,
+        identity: forecast.identity
+      )
+
+      FolioTransaction.joins(:booking_folio)
+        .where(booking_folios: { booking_id: @booking.id })
+        .charge
+        .where(voided_by_transaction_id: nil)
+        .where(
+          "metadata->>'nightly_charge_key' = :nightly_key OR catch_up_key = :catch_up_key OR metadata->>'catch_up_key' = :catch_up_key",
+          nightly_key: nightly_key,
+          catch_up_key: catch_up_key
+        )
+        .exists?
     end
 
     def arel_table

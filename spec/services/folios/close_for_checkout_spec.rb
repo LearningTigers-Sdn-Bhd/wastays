@@ -159,6 +159,45 @@ RSpec.describe Folios::CloseForCheckout do
       expect(result.error).to include(check_in.strftime('%d %b'))
     end
 
+    it "does not fail for a forecast when a matching nightly charge exists on another booking folio" do
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel)
+      forecast = folio.folio_forecasted_charges.forecast.order(:stay_date).first
+      key = Folios::ChargePostingKeys.nightly_charge_key(booking: booking, date: forecast.stay_date, charge_kind: forecast.charge_kind, identity: forecast.identity)
+      create(:folio_transaction,
+        booking_folio: company_folio,
+        transaction_type: :charge,
+        category: "accommodation",
+        amount: forecast.amount,
+        metadata: { nightly_charge_key: key })
+      forecast.update!(status: "forecast")
+
+      result = described_class.call(booking: booking, user: user)
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("Missing nightly charges for")
+      expect(result.error).not_to include(forecast.stay_date.strftime("%d %b"))
+    end
+
+    it "does not fail for a forecast when a matching catch-up charge exists on another booking folio" do
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel)
+      forecast = folio.folio_forecasted_charges.forecast.order(:stay_date).first
+      key = Folios::ChargePostingKeys.catch_up_charge_key(booking: booking, date: forecast.stay_date, charge_kind: forecast.charge_kind, identity: forecast.identity)
+      create(:folio_transaction,
+        booking_folio: company_folio,
+        transaction_type: :charge,
+        category: "accommodation",
+        amount: forecast.amount,
+        catch_up_key: key,
+        metadata: { catch_up_key: key })
+      forecast.update!(status: "forecast")
+
+      result = described_class.call(booking: booking, user: user)
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("Missing nightly charges for")
+      expect(result.error).not_to include(forecast.stay_date.strftime("%d %b"))
+    end
+
     it "syncs forecasts before validation so legacy open folios cannot bypass missing-charge checks" do
       folio.folio_forecasted_charges.destroy_all
 

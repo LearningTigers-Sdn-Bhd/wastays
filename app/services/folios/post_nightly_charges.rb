@@ -28,7 +28,7 @@ module Folios
         end
 
         begin
-          booking.booking_folio.with_lock do
+          booking.with_lock do
             post_accommodation_charges(booking)
             post_tax_charges(booking)
           end
@@ -63,6 +63,7 @@ module Folios
           amount: amount,
           category: "accommodation",
           description: "Room Charge - #{@business_date}",
+          transaction_code: room_transaction_code,
           metadata: nightly_metadata(booking, "accommodation", booking_room.id).merge(
             rate_source: nightly_rate_snapshot_for(booking_room, @business_date).present? ? "nightly_rate_snapshot" : "legacy_subtotal_average",
             nightly_rate_snapshot: nightly_rate_snapshot_for(booking_room, @business_date)
@@ -84,28 +85,40 @@ module Folios
           amount: amount,
           category: "tax",
           description: "Tax: #{tax_line_name(tax_line)} - #{@business_date}",
+          transaction_code: transaction_code_for_tax_line(tax_line),
           metadata: nightly_metadata(booking, "tax", tax_identity).merge(tax_line: tax_line)
         )
       end
     end
 
-    def insert_transaction!(booking:, amount:, category:, description:, metadata:)
-      existing_transaction = posted_transaction(booking.booking_folio, metadata[:nightly_charge_key])
+    def insert_transaction!(booking:, amount:, category:, description:, transaction_code:, metadata:)
+      existing_transaction = posted_transaction(booking, metadata[:nightly_charge_key])
       if existing_transaction
         actualize_forecast!(booking, existing_transaction, metadata)
         record_skipped(item_for(booking, metadata[:nightly_charge_key], category: category, reason: "Nightly charge already posted", folio_transaction_id: existing_transaction.id))
         return
       end
 
+      route = Folios::ResolveTargetFolio.call(booking: booking, transaction_code: transaction_code)
+      unless route.success?
+        record_failed(item_for(booking, metadata[:nightly_charge_key], category: category, reason: route.error))
+        raise "Failed to resolve nightly folio charge route: #{route.error}"
+      end
+
       result = Folios::InsertTransaction.new(
-        booking_folio: booking.booking_folio,
+        booking_folio: route.folio,
         amount: amount,
         transaction_type: :charge,
         category: category,
         user: @user,
         description: description,
         posting_date: @business_date,
-        options: @options.merge(posting_source: "night_audit", night_audit: @night_audit, metadata: metadata)
+        options: @options.merge(
+          posting_source: "night_audit",
+          night_audit: @night_audit,
+          transaction_code: transaction_code,
+          metadata: metadata.merge(route_source: route.route_source, route_metadata: route.route_metadata)
+        )
       ).call
 
       if result.success?
@@ -114,7 +127,7 @@ module Folios
         return
       end
 
-      existing_transaction = posted_transaction(booking.booking_folio, metadata[:nightly_charge_key])
+      existing_transaction = posted_transaction(booking, metadata[:nightly_charge_key])
       if existing_transaction
         actualize_forecast!(booking, existing_transaction, metadata)
         record_skipped(item_for(booking, metadata[:nightly_charge_key], category: category, reason: "Nightly charge already posted", folio_transaction_id: existing_transaction.id))
@@ -125,16 +138,35 @@ module Folios
       raise "Failed to post nightly folio charge: #{result.error}"
     end
 
-    def posted_transaction(folio, nightly_charge_key)
-      folio.folio_transactions.charge.where(voided_by_transaction_id: nil).find_by("metadata->>'nightly_charge_key' = ?", nightly_charge_key)
+    def posted_transaction(booking, nightly_charge_key)
+      FolioTransaction.joins(:booking_folio)
+        .where(booking_folios: { booking_id: booking.id })
+        .charge
+        .where(voided_by_transaction_id: nil)
+        .find_by("metadata->>'nightly_charge_key' = ?", nightly_charge_key)
     end
 
     def actualize_forecast!(booking, transaction, metadata)
-      forecast = booking.booking_folio.folio_forecasted_charges
+      forecast = FolioForecastedCharge.joins(:booking_folio)
+        .where(booking_folios: { booking_id: booking.id })
         .forecast
         .find_by(stay_date: @business_date, charge_kind: metadata[:charge_kind], identity: metadata[:forecast_identity])
 
       forecast&.actualize!(transaction: transaction)
+    end
+
+    def room_transaction_code
+      @room_transaction_code ||= @hotel.transaction_codes.find_by(system_key: "room_revenue")
+    end
+
+    def transaction_code_for_tax_line(tax_line)
+      id = tax_line["transaction_code_id"].presence || tax_line[:transaction_code_id].presence
+      return @hotel.transaction_codes.find_by(id: id) if id.present?
+
+      case tax_line["type"].presence || tax_line[:type].presence
+      when "sst" then @hotel.transaction_codes.find_by(system_key: "sst_tax")
+      when "tourism_tax" then @hotel.transaction_codes.find_by(system_key: "tourism_tax")
+      end
     end
 
     def nightly_metadata(booking, charge_kind, identity)

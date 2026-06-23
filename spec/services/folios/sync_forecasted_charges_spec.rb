@@ -52,7 +52,7 @@ RSpec.describe Folios::SyncForecastedCharges do
       described_class.call(booking_folio: folio)
 
       expect(folio.folio_forecasted_charges.forecast.where(stay_date: business_date)).to be_none
-      expect(folio.folio_forecasted_charges.superseded.where(stay_date: business_date).count).to eq(1)
+      expect(folio.folio_forecasted_charges.actualized.where(stay_date: business_date).count).to eq(1)
       expect(folio.folio_forecasted_charges.forecast.where(stay_date: business_date + 1.day).count).to eq(1)
     end
 
@@ -117,6 +117,71 @@ RSpec.describe Folios::SyncForecastedCharges do
 
       expect(folio.folio_forecasted_charges.forecast).to be_none
       expect(folio.folio_forecasted_charges.superseded.count).to eq(2)
+    end
+
+    it "creates ROOM forecasts only on the routed target folio" do
+      company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+
+      described_class.call(booking_folio: folio)
+
+      expect(folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation")).to be_none
+      expect(company_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation").count).to eq(2)
+    end
+
+    it "routes SST and TTX forecasts independently by their transaction codes" do
+      company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+      ttx_code = hotel.transaction_codes.find_by!(system_key: "tourism_tax")
+      booking.update!(tax_posting_snapshot: {
+        business_date.iso8601 => [
+          { "name" => "SST", "amount" => "8.00", "type" => "sst", "transaction_code_id" => sst_code.id },
+          { "name" => "Tourism Tax", "amount" => "10.00", "type" => "tourism_tax", "transaction_code_id" => ttx_code.id }
+        ],
+        (business_date + 1.day).iso8601 => [
+          { "name" => "SST", "amount" => "8.00", "type" => "sst", "transaction_code_id" => sst_code.id },
+          { "name" => "Tourism Tax", "amount" => "10.00", "type" => "tourism_tax", "transaction_code_id" => ttx_code.id }
+        ]
+      })
+      create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: sst_code, target_folio: company_folio)
+      create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: ttx_code, target_folio: folio)
+
+      described_class.call(booking_folio: folio)
+
+      expect(company_folio.folio_forecasted_charges.forecast.where(charge_kind: "tax").pluck(:identity)).to contain_exactly("sst:0", "sst:0")
+      expect(folio.folio_forecasted_charges.forecast.where(charge_kind: "tax").pluck(:identity)).to contain_exactly("tourism_tax:1", "tourism_tax:1")
+    end
+
+    it "supersedes future forecasts on the old folio when routing changes" do
+      described_class.call(booking_folio: folio)
+      company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+
+      described_class.call(booking_folio: folio)
+
+      expect(folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation")).to be_none
+      expect(folio.folio_forecasted_charges.superseded.where(charge_kind: "accommodation").count).to eq(2)
+      expect(company_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation").count).to eq(2)
+    end
+
+    it "does not move or supersede actualized forecasts when routing changes" do
+      described_class.call(booking_folio: folio)
+      forecast = folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation").first
+      transaction = create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: forecast.amount)
+      forecast.actualize!(transaction: transaction)
+      company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+
+      described_class.call(booking_folio: folio)
+
+      expect(forecast.reload.status).to eq("actualized")
+      expect(forecast.booking_folio).to eq(folio)
+      expect(transaction.reload.booking_folio).to eq(folio)
     end
   end
 end

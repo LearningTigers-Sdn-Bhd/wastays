@@ -54,10 +54,13 @@ module Folios
       return failure("Amount must be greater than zero.") if requires_positive_amount? && !@amount.positive?
       return failure("Amount can't be zero.") if @transaction_type == "adjustment" && @amount.zero?
 
+      routing_result = resolve_manual_charge_folio
+      return failure(routing_result.error) unless routing_result.success?
+
       result = nil
       ActiveRecord::Base.transaction do
         result = Folios::InsertTransaction.new(
-          booking_folio: @folio,
+          booking_folio: routing_result.folio || @folio,
           amount: normalized_amount,
           transaction_type: @transaction_type,
           category: @category,
@@ -69,7 +72,7 @@ module Folios
               posting_source: @options[:posting_source].presence || "staff",
               posted_from: "booking_show",
               posted_by_user_id: @user&.id
-            )
+            ).merge(route_metadata(routing_result))
           ).merge(transaction_code: @transaction_code)
         ).call
 
@@ -89,6 +92,45 @@ module Folios
     end
 
     private
+
+    def resolve_manual_charge_folio
+      return OpenStruct.new(success?: true, folio: @folio, route_source: nil, route_metadata: {}, error: nil) unless manual_charge_with_code?
+
+      resolved = Folios::ResolveTargetFolio.call(booking: @folio.booking, transaction_code: @transaction_code, actor: @user, permission_context: @options[:permission_context] || @user)
+      return resolved unless resolved.success?
+      return resolved if resolved.folio.id == @folio.id
+
+      Folios::ResolveTargetFolio.call(
+        booking: @folio.booking,
+        transaction_code: @transaction_code,
+        override_target_folio: @folio,
+        override_reason: routing_override_reason,
+        actor: @user,
+        permission_context: @options[:permission_context] || @user
+      )
+    end
+
+    def manual_charge_with_code?
+      @transaction_type == "charge" && @transaction_code.present?
+    end
+
+    def routing_override_reason
+      @options[:routing_override_reason].presence ||
+        @options[:override_reason].presence ||
+        @options.dig(:metadata, :routing_override_reason).presence ||
+        @options.dig(:metadata, "routing_override_reason").presence ||
+        @options.dig(:metadata, :note).presence ||
+        @options.dig(:metadata, "note").presence
+    end
+
+    def route_metadata(routing_result)
+      return {} if routing_result.route_source.blank?
+
+      {
+        route_source: routing_result.route_source,
+        route_metadata: routing_result.route_metadata
+      }
+    end
 
     def apply_payment_source
       return unless staff_payment?
@@ -201,8 +243,12 @@ module Folios
         amount = tax_rule.compute(@amount.abs).to_d
         next if amount.zero?
 
+        tax_transaction_code = tax_rule.posting_transaction_code
+        routing_result = resolve_tax_folio(parent_transaction, tax_transaction_code)
+        return [ failure(routing_result.error) ] unless routing_result.success?
+
         Folios::InsertTransaction.new(
-          booking_folio: @folio,
+          booking_folio: routing_result.folio,
           amount: amount,
           transaction_type: "charge",
           category: "tax",
@@ -211,18 +257,51 @@ module Folios
           posting_date: @posting_date,
           options: @options.merge(
             posting_source: @options[:posting_source].presence || "staff",
-            transaction_code: tax_rule.posting_transaction_code,
+            transaction_code: tax_transaction_code,
+            parent_transaction: parent_transaction_for_tax_line(parent_transaction, routing_result.folio),
             metadata: (@options[:metadata] || {}).merge(
               posting_source: @options[:posting_source].presence || "staff",
               posted_from: "booking_show",
               posted_by_user_id: @user&.id,
+              parent_transaction_id: parent_transaction.id,
               parent_folio_transaction_id: parent_transaction.id,
+              parent_transaction_code_id: parent_transaction.transaction_code_id,
+              parent_transaction_code_code: parent_transaction.transaction_code&.code,
               source_transaction_code_id: @transaction_code.id,
+              source_transaction_code_code: @transaction_code.code,
               tax_line: tax_line(tax_rule, amount)
-            )
+            ).merge(route_metadata(routing_result))
           )
         ).call
       end.compact
+    end
+
+    def resolve_tax_folio(parent_transaction, tax_transaction_code)
+      return parent_tax_route(parent_transaction) if tax_transaction_code.blank?
+
+      child_rule = @folio.booking.folio_routing_rules.active.find_by(transaction_code: tax_transaction_code)
+      return parent_tax_route(parent_transaction) if child_rule.blank?
+
+      Folios::ResolveTargetFolio.call(
+        booking: @folio.booking,
+        transaction_code: tax_transaction_code,
+        actor: @user,
+        permission_context: @options[:permission_context] || @user
+      )
+    end
+
+    def parent_tax_route(parent_transaction)
+      Folios::ResolveTargetFolio.call(
+        booking: @folio.booking,
+        transaction_code: parent_transaction.transaction_code,
+        parent_transaction: parent_transaction,
+        actor: @user,
+        permission_context: @options[:permission_context] || @user
+      )
+    end
+
+    def parent_transaction_for_tax_line(parent_transaction, target_folio)
+      parent_transaction if parent_transaction.booking_folio_id == target_folio&.id
     end
 
     def active_tax_rules
@@ -238,6 +317,8 @@ module Folios
         type: tax_rule.tax_line_type,
         transaction_code_id: posting_transaction_code&.id,
         transaction_code_code: posting_transaction_code&.code,
+        source_transaction_code_id: @transaction_code.id,
+        source_transaction_code_code: @transaction_code.code,
         rate_type: tax_rule.rate_type,
         rate: tax_rule.amount.to_d.to_s("F"),
         basis: "staff_charge",
