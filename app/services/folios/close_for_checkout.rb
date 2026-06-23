@@ -16,32 +16,43 @@ module Folios
     end
 
     def call
-      folio = @booking.booking_folio
-      return failure("Booking has no folio.") unless folio
+      folios = @booking.booking_folios.includes(:folio_forecasted_charges, :folio_transactions).to_a
+      return failure("Booking has no folio.") if folios.empty?
+      primary_folio = @booking.booking_folio || folios.first
 
-      folio.with_lock do
-        folio.reload
-        return failure("Folio is already closed.", folio: folio) if folio.status == "closed"
+      @booking.with_lock do
+        folios.each(&:lock!)
+        folios.each(&:reload)
+        if folios.any?(&:closed?)
+          message = folios.one? ? "Folio is already closed." : "One or more folios are already closed."
+          return failure(message, folio: primary_folio)
+        end
+        return failure("Voided folios cannot be checked out.", folio: primary_folio) if folios.any?(&:voided?)
 
-        posting_guard_error = validate_checkout_business_date(folio)
-        return failure(posting_guard_error, folio: folio) if posting_guard_error.present?
+        posting_guard_error = validate_checkout_business_date(primary_folio)
+        return failure(posting_guard_error, folio: primary_folio) if posting_guard_error.present?
 
-        sync_error = sync_payment_and_refund_state(folio)
-        return failure(sync_error, folio: folio) if sync_error.present?
+        sync_error = sync_payment_and_refund_state(primary_folio)
+        return failure(sync_error, folio: primary_folio) if sync_error.present?
 
-        Folios::SyncForecastedCharges.call(booking_folio: folio)
+        folios.each { |folio| Folios::SyncForecastedCharges.call(booking_folio: folio) }
+        folios.each(&:reload)
 
-        missing_charges_error = validate_all_nights_posted(folio)
-        return failure(missing_charges_error, folio: folio) if missing_charges_error.present?
+        missing_charges_error = validate_all_nights_posted(folios)
+        return failure(missing_charges_error, folio: primary_folio) if missing_charges_error.present?
 
-        balance = calculate_fresh_balance(folio)
-        return failure("Cannot check out with outstanding balance of #{formatted_balance(balance)}.", folio: folio, balance: balance) if balance.positive?
-        return failure("Cannot check out with credit balance of #{formatted_balance(balance)}. Process refund or adjustment first.", folio: folio, balance: balance) if balance.negative?
+        balance = folios.sum { |folio| calculate_fresh_balance(folio) }
+        return failure("Cannot check out with outstanding balance of #{formatted_balance(balance)}.", folio: primary_folio, balance: balance) if balance.positive?
+        return failure("Cannot check out with credit balance of #{formatted_balance(balance)}. Process refund or adjustment first.", folio: primary_folio, balance: balance) if balance.negative?
 
-        invoice_num = HotelCounter.increment!(hotel: folio.hotel, type: "invoice")
-        folio.update!(status: "closed", invoice_number: invoice_num)
-        record_financial_audit_event!(folio, balance)
-        success(folio: folio, balance: balance)
+        invoice_num = HotelCounter.increment!(hotel: primary_folio.hotel, type: "invoice")
+        folios.each do |folio|
+          attributes = { status: "closed", closed_at: Time.current, closed_by: @user }
+          attributes[:invoice_number] = invoice_num if folio.id == primary_folio.id
+          folio.update!(attributes)
+          record_financial_audit_event!(folio, calculate_fresh_balance(folio))
+        end
+        success(folio: primary_folio.reload, balance: balance)
       end
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
@@ -67,9 +78,9 @@ module Folios
       e.message
     end
 
-    def validate_all_nights_posted(folio)
+    def validate_all_nights_posted(folios)
       checkout_date = @booking.check_out.to_date
-      unsettled = folio.unsettled_forecasts
+      unsettled = FolioForecastedCharge.where(booking_folio_id: folios.map(&:id)).forecast
         .where(arel_table[:stay_date].lt(checkout_date))
       return if unsettled.none?
 
