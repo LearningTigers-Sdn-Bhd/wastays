@@ -69,5 +69,55 @@ module Public
     def first_room_type_photo_attached?
       summary_photo.present?
     end
+
+    def primary_photo
+      gallery_photos.first || first_room_type_photo
+    end
+
+    def secondary_photos_with_fallbacks
+      (1..4).map do |i|
+        if gallery_photos[i].present?
+          { photo: gallery_photos[i], is_attachment: true }
+        else
+          { photo: fallback_images[i - 1], is_attachment: false }
+        end
+      end
+    end
+
+    def has_photos?
+      photos.attached? && gallery_count.positive?
+    end
+
+    def google_maps_search_url
+      if google_map_link.present?
+        google_map_link
+      else
+        "https://www.google.com/maps/search/?api=1&query=#{ERB::Util.url_encode("#{name}, #{full_address}")}"
+      end
+    end
+
+    def google_maps_embed_url
+      query = if google_map_link.present?
+                if google_map_link =~ %r{/maps/place/([^/@?]+)}
+                  CGI.unescape($1).gsub("+", " ")
+                elsif google_map_link =~ /@(-?\d+\.\d+),(-?\d+\.\d+)/
+                  "#{$1},#{$2}"
+                elsif google_map_link =~ /[?&]query=([^&]+)/
+                  CGI.unescape($1).gsub("+", " ")
+                elsif google_map_link =~ /[?&]q=([^&]+)/
+                  CGI.unescape($1).gsub("+", " ")
+                else
+                  google_map_link.include?("maps.app.goo.gl") || google_map_link.include?("goo.gl/maps") ? "#{name}, #{full_address}" : google_map_link
+                end
+      else
+                "#{name}, #{full_address}"
+      end
+
+      "https://maps.google.com/maps?q=#{ERB::Util.url_encode(query)}&t=&z=15&ie=UTF8&iwloc=&output=embed"
+    end
+
+    def currency_dropdown_options
+      CurrencyCatalog::COMMON_CODES.map { |code| [ code, code ] }
+    end
   end
 end
