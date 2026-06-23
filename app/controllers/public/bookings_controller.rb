@@ -22,11 +22,13 @@ class Public::BookingsController < ApplicationController
 
   def invoice
     @booking = Booking.find_by!(confirmation_token: params[:id])
-    pdf_bytes = InvoicePdfService.new(@booking).generate
+    pdf_bytes = ::Reports::Bookings::GenerateInvoice.new(booking: @booking).generate
     send_data pdf_bytes,
       filename: "wastays-invoice-#{@booking.confirmation_token}.pdf",
       type: "application/pdf",
       disposition: "inline"
+  rescue ::Reports::Bookings::GenerateFolioRecords::UnavailableError
+    head :not_found
   end
 
   def e_invoice

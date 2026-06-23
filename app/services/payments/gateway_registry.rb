@@ -10,6 +10,8 @@ module Payments
         Payments::GatewayAdapters::Razorpay.new(setting)
       when "curlec"
         Payments::GatewayAdapters::Curlec.new(setting)
+      when "cute_mock"
+        Payments::GatewayAdapters::Mock.new(setting)
       else
         raise UnsupportedGatewayError, "Unsupported gateway: #{gateway}"
       end

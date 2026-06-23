@@ -258,6 +258,8 @@ RSpec.describe NightAudits::Run do
       check_out: business_date + 1.day,
       checked_in_at: business_date.beginning_of_day)
 
+    expect(Folios::PostNightlyCharges).not_to receive(:call)
+
     result = run_audit
 
     expect(result.success?).to be(false)

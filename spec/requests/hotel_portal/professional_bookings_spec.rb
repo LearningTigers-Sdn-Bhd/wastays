@@ -11,7 +11,10 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
   let(:existing_guest) { create(:guest, created_by_hotel: hotel, name: "Existing Guest", email: "existing@example.com") }
 
   before do
-    hotel.hotel_taxes.create!(name: "SST", amount: 6, rate_type: "percentage")
+    hotel_tax = hotel.hotel_taxes.create!(name: "SST", amount: 6, rate_type: "percentage")
+    room_revenue_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    room_revenue_code.update!(is_taxable: true)
+    room_revenue_code.transaction_code_taxes.create!(hotel_tax: hotel_tax)
     role = create(:role, account: hotel.account, name: "Admin", slug: "admin")
     role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings', name: 'View Bookings'))
     role.permissions << (Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings', name: 'Manage Bookings'))

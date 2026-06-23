@@ -1,0 +1,15 @@
+<% label_text = local_assigns[:label] %>
+<% aria_label = local_assigns[:aria_label] || label_text %>
+<% input_options = { checked: checked, class: "sr-only peer" } %>
+<% input_options[:onchange] = onchange if local_assigns[:onchange].present? %>
+<% input_options[:aria] = { label: aria_label } if aria_label.present? %>
+
+<label class="flex min-h-12 items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
+  <% if label_text.present? %>
+    <span class="text-sm font-medium text-slate-600"><%= label_text %></span>
+  <% end %>
+  <span class="relative inline-flex items-center">
+    <%= form.check_box field, input_options, "1", "0" %>
+    <span class="peer h-6 w-11 rounded-full bg-red-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-full"></span>
+  </span>
+</label>

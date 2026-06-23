@@ -44,22 +44,36 @@ module HotelPortal
         rows = []
         rows << spreadsheet_row([ "Metric", "Value" ])
         rows << spreadsheet_row([ "Total Bookings", @report.totals[:booking_count] ])
-        rows << spreadsheet_row([ "Room Revenue", money(@report.totals[:room_revenue]) ])
-        rows << spreadsheet_row([ "Tax", money(@report.totals[:tax_amount]) ])
-        rows << spreadsheet_row([ "Total Revenue", money(@report.totals[:total_revenue]) ])
+        rows << spreadsheet_row([ "Accommodation", money(@report.totals[:accommodation]) ])
+        rows << spreadsheet_row([ "Other Charges", money(@report.totals[:other_charges]) ])
+        rows << spreadsheet_row([ "Tax", money(@report.totals[:tax]) ])
+        rows << spreadsheet_row([ "Total Charges", money(@report.totals[:total_charges]) ])
+        rows << spreadsheet_row([ "Discount", money(@report.totals[:discount]) ])
+        rows << spreadsheet_row([ "Online Payment", money(@report.totals[:gateway_payment]) ])
+        rows << spreadsheet_row([ "Cash Payment", money(@report.totals[:cash_payment]) ])
+        rows << spreadsheet_row([ "Deposit", money(@report.totals[:booking_payment]) ])
+        rows << spreadsheet_row([ "Refund", money(@report.totals[:refund]) ])
+        rows << spreadsheet_row([ "Net Amount", money(@report.totals[:net_amount]) ])
         rows.join("\n")
       end
 
       def daily_rows
         rows = []
-        rows << spreadsheet_row([ "Date", "Bookings", "Room Revenue", "Tax", "Total Revenue" ])
+        rows << spreadsheet_row([ "Date", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Discount", "Online", "Cash", "Deposit", "Refund", "Net" ])
         @report.rows.each do |row|
           rows << spreadsheet_row([
             row[:date].strftime("%Y-%m-%d"),
             row[:booking_count],
-            money(row[:room_revenue]),
-            money(row[:tax_amount]),
-            money(row[:total_revenue])
+            money(row[:accommodation]),
+            money(row[:other_charges]),
+            money(row[:tax]),
+            money(row[:total_charges]),
+            money(row[:discount]),
+            money(row[:gateway_payment]),
+            money(row[:cash_payment]),
+            money(row[:booking_payment]),
+            money(row[:refund]),
+            money(row[:net_amount])
           ])
         end
         rows.join("\n")
@@ -67,14 +81,16 @@ module HotelPortal
 
       def source_rows
         rows = []
-        rows << spreadsheet_row([ "Source", "Bookings", "Room Revenue", "Tax", "Total Revenue" ])
+        rows << spreadsheet_row([ "Source", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Net" ])
         @report.source_rows.each do |row|
           rows << spreadsheet_row([
             row[:source],
             row[:booking_count],
-            money(row[:room_revenue]),
-            money(row[:tax_amount]),
-            money(row[:total_revenue])
+            money(row[:accommodation]),
+            money(row[:other_charges]),
+            money(row[:tax]),
+            money(row[:total_charges]),
+            money(row[:net_amount])
           ])
         end
         rows.join("\n")

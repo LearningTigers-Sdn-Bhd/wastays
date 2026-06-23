@@ -1,0 +1,60 @@
+<div class="mx-auto max-w-[1600px] space-y-8 pb-20">
+  <div class="px-4 md:px-0">
+    <div class="mt-5">
+      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Transaction Codes</h1>
+      <p class="mt-1 text-sm font-medium text-slate-600">Configure transaction codes used when posting charges, refunds, payments, and adjustments to guest folios.</p>
+    </div>
+  </div>
+
+  <div data-controller="tabs"
+       data-tabs-default-tab-value="<%= @presenter.active_tab %>"
+       class="space-y-6 px-4 md:px-0">
+    <%= render "tabs", presenter: @presenter %>
+
+    <div id="default_codes-panel"
+         data-tabs-target="panel"
+         data-tab-panel="default_codes"
+         class="<%= @presenter.active_tab == "default_codes" ? "space-y-6" : "hidden space-y-6" %>"
+         role="tabpanel"
+         data-testid="transaction-codes-default-codes-panel">
+      <% @presenter.default_code_sections.each do |section| %>
+        <%= render "default_codes",
+                   transaction_codes: section[:transaction_codes],
+                   title: section[:title],
+                   description: section[:description],
+                   empty_message: section[:empty_message],
+                   test_id: section[:test_id],
+                   action: section[:action] %>
+      <% end %>
+    </div>
+
+    <div id="additional_service_codes-panel"
+         data-tabs-target="panel"
+         data-tab-panel="additional_service_codes"
+         class="<%= @presenter.active_tab == "additional_service_codes" ? "space-y-6" : "hidden space-y-6" %>"
+          role="tabpanel"
+          data-testid="transaction-codes-additional-service-codes-panel">
+      <div class="flex justify-end">
+        <%= link_to "New Code",
+                    hotel_new_transaction_code_path(current_hotel),
+                    data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" },
+                    class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-700" %>
+      </div>
+      <%= render "default_codes",
+                 transaction_codes: @presenter.additional_service_codes,
+                 title: "Additional Service Codes",
+                 description: "Hotel-specific non-tax transaction codes for additional service postings.",
+                 empty_message: "No additional service transaction codes found.",
+                 test_id: "transaction-codes-additional-service-list" %>
+    </div>
+
+    <div id="configuration-panel"
+         data-tabs-target="panel"
+         data-tab-panel="configuration"
+         class="<%= @presenter.active_tab == "configuration" ? "space-y-6" : "hidden space-y-6" %>"
+         role="tabpanel"
+         data-testid="transaction-codes-configuration-panel">
+      <%= render "configuration", configuration: @presenter.transaction_configuration %>
+    </div>
+  </div>
+</div>

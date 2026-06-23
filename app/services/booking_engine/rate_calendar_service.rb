@@ -1,6 +1,6 @@
 module BookingEngine
   class RateCalendarService
-    Day = Struct.new(:date, :min_price, :available, :rooms_left, keyword_init: true)
+    Day = Struct.new(:date, :min_price, :available, :rooms_left, :min_stay, :max_stay, keyword_init: true)
     MAX_WINDOW_DAYS = 180
 
     def initialize(hotel:, start_date:, end_date:, room_count: 1)
@@ -61,6 +61,18 @@ module BookingEngine
       # This is a bit complex to do in one query, so we'll handle it during mapping.
       base_prices_by_room_type = room_types.where("max_adults >= ?", @room_count).pluck(:id, :base_price).to_h
 
+      room_rates_data = RoomRate
+        .joins("INNER JOIN room_inventories ri
+                ON ri.room_type_id = room_rates.room_type_id
+               AND ri.date         = room_rates.date")
+        .where(room_type_id: room_type_ids, date: dates)
+        .where(ri: { status: "open" })
+        .where("ri.quantity >= ?", @room_count)
+        .select("room_rates.date, room_rates.min_stay, room_rates.max_stay")
+        .to_a
+
+      rates_by_date = room_rates_data.group_by(&:date)
+
       days = dates.map do |d|
         rooms_left = inventories[d].to_i
 
@@ -75,11 +87,22 @@ module BookingEngine
           price = base_prices_by_room_type.values.min
         end
 
+        day_rates = rates_by_date[d] || []
+        if day_rates.empty?
+          min_stay = nil
+          max_stay = nil
+        else
+          min_stay = day_rates.any? { |r| r.min_stay.nil? } ? nil : day_rates.map(&:min_stay).compact.min
+          max_stay = day_rates.any? { |r| r.max_stay.nil? } ? nil : day_rates.map(&:max_stay).compact.max
+        end
+
         Day.new(
           date: d,
           min_price: price&.to_f,
           available: price.present? && rooms_left > 0,
-          rooms_left: rooms_left
+          rooms_left: rooms_left,
+          min_stay: min_stay,
+          max_stay: max_stay
         )
       end
 

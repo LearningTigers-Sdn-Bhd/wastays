@@ -22,11 +22,6 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
     if early_departure_checkout?(timestamp)
       options = { timestamp: timestamp }
-      if params[:override_night_audit] == "1"
-        options[:override_night_audit] = true
-        options[:correction_reason] = params[:retroactive_reason]
-        options[:correction_note] = "Early departure override"
-      end
 
       result = Bookings::ProcessEarlyDeparture.call(
         booking: @booking,
@@ -109,18 +104,12 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   end
 
   def transition_status(status, timestamp, success_notice)
-    options = {}
-    if params[:override_night_audit] == "1"
-      options[:override_night_audit] = true
-      options[:reason] = params[:retroactive_reason]
-    end
-
     result = Bookings::TransitionStatus.new(
       booking: @booking,
       status: status,
       timestamp: timestamp,
       user: current_user,
-      options: options
+      options: {}
     ).call
 
     if result.success?
@@ -166,11 +155,6 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     ActiveRecord::Base.transaction do
       if early_departure_checkout?(timestamp)
         options = { timestamp: timestamp }
-        if params[:override_night_audit] == "1"
-          options[:override_night_audit] = true
-          options[:correction_reason] = params[:retroactive_reason]
-          options[:correction_note] = "Early departure override"
-        end
 
         res = Bookings::ProcessEarlyDeparture.call(
           booking: @booking,
@@ -223,7 +207,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
     return OpenStruct.new(success?: false, error: "Booking has no folio.") unless @booking.booking_folio
     raise Pundit::NotAuthorizedError unless current_user.has_permission?("post_folio_payments", hotel: current_hotel)
-    return OpenStruct.new(success?: false, error: "Checkout payment method is not supported.") unless checkout_payment_method == "cash"
+    return OpenStruct.new(success?: false, error: "Checkout payment method is not supported.") unless checkout_payment_source.present?
 
     balance = @booking.booking_folio.outstanding_balance.to_d
     return OpenStruct.new(success?: true) unless balance.positive?
@@ -237,7 +221,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
       amount: checkout_payment_amount,
       description: checkout_payment_description,
       posting_date: current_hotel.current_business_date,
-      options: checkout_blocker_resolution_options
+      options: checkout_payment_posting_options
     )
   end
 
@@ -264,12 +248,42 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   end
 
   def checkout_payment_description
-    reference = params[:checkout_payment_reference].presence
-    [ "Checkout payment via Cash", reference && "Receipt #{reference}" ].compact.join(" - ")
+    reference = checkout_payment_reference
+    [ "Checkout payment via #{checkout_payment_source.label}", reference && "#{checkout_payment_source.reference_prefix} #{reference}" ].compact.join(" - ")
   end
 
   def checkout_payment_method
-    params[:checkout_payment_method].presence || "cash"
+    params[:checkout_payment_method].to_s.strip.presence || "cash"
+  end
+
+  def checkout_payment_source
+    return @checkout_payment_source if defined?(@checkout_payment_source)
+    return @checkout_payment_source = nil unless checkout_payment_method.in?(%w[cash card])
+
+    @checkout_payment_source = Folios::PaymentSource.fetch(checkout_payment_method)
+  end
+
+  def checkout_payment_reference
+    params[:checkout_payment_reference].to_s.strip.presence
+  end
+
+  def checkout_payment_posting_options
+    options = checkout_blocker_resolution_options
+    metadata = options.fetch(:metadata, {}).merge(checkout_payment_reference_metadata)
+
+    options.merge(
+      payment_source: checkout_payment_source.key,
+      metadata: metadata
+    )
+  end
+
+  def checkout_payment_reference_metadata
+    return {} if checkout_payment_reference.blank?
+
+    {
+      reference: checkout_payment_reference,
+      checkout_payment_source.reference_key => checkout_payment_reference
+    }
   end
 
   def render_checkout_sheet_error(error)

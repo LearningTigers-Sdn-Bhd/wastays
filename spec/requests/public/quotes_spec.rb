@@ -1,6 +1,44 @@
 require "rails_helper"
 
 RSpec.describe "Public::Quotes", type: :request do
+  describe "POST /quotes" do
+    let!(:account) { create(:account) }
+    let!(:hotel) { create(:hotel, account: account, status: "approved") }
+    let!(:room_type) { create(:room_type, hotel: hotel, max_adults: 2, quantity: 5, base_price: 100) }
+    let!(:rate_plan) { create(:rate_plan, room_type: room_type, name: "2-4 Night Rate", currency: "MYR") }
+    let(:check_in) { Date.current }
+    let(:check_out) { check_in + 1.day }
+
+    before do
+      RoomInventory.create!(room_type: room_type, date: check_in, quantity: 5, status: "open")
+      RoomRate.create!(room_type: room_type, date: check_in, price: 100, currency: "MYR")
+      RoomRate.create!(
+        room_type: room_type,
+        rate_plan: rate_plan,
+        date: check_in,
+        price: 120,
+        currency: "MYR",
+        min_stay: 2,
+        max_stay: 4
+      )
+    end
+
+    it "rejects quote creation when the selected rate plan violates min/max stay restrictions" do
+      post quotes_path, params: {
+        hotel_id: hotel.slug,
+        room_type_id: room_type.id,
+        check_in: check_in,
+        check_out: check_out,
+        adults: 2,
+        rate_plan_id: rate_plan.id
+      }
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("No valid rate is available for these dates.")
+      expect(BookingQuote.count).to eq(0)
+    end
+  end
+
   describe "GET /quotes/:id/guest_lookup" do
     let(:quote) { create(:booking_quote) }
 

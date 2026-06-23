@@ -1,0 +1,27 @@
+<section class="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+  <%= form_with url: hotel_folios_path(current_hotel), method: :get, class: "space-y-3", data: { controller: "auto-submit", turbo_frame: "folios_results", turbo_action: "advance" } do |f| %>
+    <div class="relative">
+      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <%= cached_icon "search", stroke_width: 2.25, class: "size-4 text-slate-400" %>
+      </div>
+      <%= f.text_field :query,
+        value: folio_index.query,
+        placeholder: "Search guest, booking ref, folio ref, room...",
+        class: "block w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm font-medium placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10",
+        data: { action: "input->auto-submit#submit" } %>
+    </div>
+
+    <div class="flex items-center gap-2 overflow-x-auto py-1">
+      <% folio_index.filter_options.each do |option| %>
+        <% input_id = "folio_filter_#{option[:key]}" %>
+        <div class="shrink-0">
+          <input type="radio" name="filter" value="<%= option[:key] == "all" ? "" : option[:key] %>" id="<%= input_id %>" class="sr-only peer" <%= "checked" if folio_index.active_filter?(option[:key]) %> data-action="change->auto-submit#submitNow">
+          <label for="<%= input_id %>" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-black uppercase tracking-wider text-slate-600 shadow-sm transition hover:bg-slate-50 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white">
+            <%= option[:label] %>
+            <span class="tabular-nums opacity-70"><%= option[:count] %></span>
+          </label>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</section>

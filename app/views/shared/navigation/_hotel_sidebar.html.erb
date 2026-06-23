@@ -24,7 +24,7 @@
       <% visible_items = hotel_visible_items(section.items) %>
       <% next if visible_items.blank? %>
 
-      <div class="sidebar-nav-group">
+      <div class="sidebar-nav-group" aria-label="<%= section.label %>" data-section-label="<%= section.label %>">
         <span class="sidebar-section-label"><%= section.label %></span>
         <div class="space-y-0.5">
           <% visible_items.each do |item| %>

@@ -207,6 +207,11 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_content("Resolve Audit Blockers")
       expect(page).to have_content("Missing Check-In Timestamps")
       expect(page).to have_content("Aisha Tan")
+      click_button "Folios"
+      expect(page).to have_content("Missing Folios")
+      expect(page).to have_content("Recover Folio")
+      expect(page).to have_link("View Booking")
+      expect(page).to have_no_link("Go to Folio")
 
       visit hotel_night_audits_path(hotel)
       within("[data-testid='blockers-table']") do

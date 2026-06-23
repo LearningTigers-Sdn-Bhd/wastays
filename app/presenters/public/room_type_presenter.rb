@@ -26,6 +26,10 @@ module Public
       pricing_summary[:rate_plan_name].presence || "Best available rate"
     end
 
+    def stay_restriction_error
+      @availability_service&.stay_restriction_error_message(@room_type)
+    end
+
     def details_json
       {
         name: name,

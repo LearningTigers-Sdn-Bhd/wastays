@@ -223,6 +223,18 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(booking.reload.guest_name).to be_present
   end
 
+  it "shows no-show review actions in the edit-booking offcanvas" do
+    booking = create(:booking, hotel: hotel, status: "review_no_show", no_show_review_business_date: Date.current)
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
+    get hotel_booking_transaction_edit_booking_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Backdated Check-in")
+    expect(response.body).to include("Mark No-show")
+    expect(response.body).to include(hotel_booking_transaction_mark_no_show_path(hotel, booking))
+  end
+
   it "creates and immediately checks in a walk-in booking" do
     expect {
       post hotel_booking_transaction_walk_in_check_in_path(hotel), params: {
@@ -240,6 +252,8 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     }.to change(Booking, :count).by(1)
 
     expect(Booking.last).to be_checked_in
+    expect(Booking.last.booking_folio).to be_present
+    expect(BookingFolio.where(booking: Booking.last).count).to eq(1)
     expect(response).to redirect_to(hotel_booking_path(hotel, Booking.last))
   end
 
@@ -275,6 +289,52 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
       expect(response).to have_http_status(:success), path
       expect(response.body).to include('turbo-frame id="offcanvas_drawer"'), path
     end
+  end
+
+  it "completes no-show finalization from the offcanvas" do
+    booking = create(
+      :booking,
+      hotel: hotel,
+      status: "review_no_show",
+      no_show_review_business_date: Date.current,
+      check_in: Date.current,
+      check_out: Date.current + 2.days,
+      tax_lines: []
+    )
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 200.0)
+
+    post mark_no_show_hotel_booking_path(hotel, booking),
+      headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include('action="complete_offcanvas"')
+    expect(response.body).to include(CGI.escapeHTML(hotel_booking_path(hotel, booking)))
+    expect(booking.reload.status).to eq("no_show")
+  end
+
+  it "re-renders no-show finalization errors in the offcanvas" do
+    booking = create(
+      :booking,
+      hotel: hotel,
+      status: "review_no_show",
+      no_show_review_business_date: Date.current,
+      check_in: Date.current,
+      check_out: Date.current + 2.days,
+      tax_lines: []
+    )
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 200.0)
+    start_business_date_audit(hotel)
+
+    post mark_no_show_hotel_booking_path(hotel, booking),
+      headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('action="update"')
+    expect(response.body).to include('target="offcanvas_drawer"')
+    expect(response.body).to include("No-show could not be confirmed.")
+    expect(response.body).to include(NightAudits::OperationalChangeGuard::ERROR_MESSAGE)
+    expect(booking.reload.status).to eq("review_no_show")
   end
 
   it "blocks manual no-show finalization while night audit is running" do
@@ -420,6 +480,8 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     }
 
     expect(booking.reload.status).to eq("checked_in")
+    expect(booking.booking_folio).to be_present
+    expect(BookingFolio.where(booking: booking).count).to eq(1)
     log = BookingAuditLog.where(auditable: booking, action_type: "check_in").last
     expect(log.metadata["backdate_reason_category"]).to eq("System / internet issue")
     expect(log.metadata["backdate_reason_details"]).to be_blank

@@ -47,10 +47,10 @@ module HotelPortal
 
       def draw_summary(pdf)
         cards = [
-          [ "Room Revenue", money(@report.totals[:room_revenue]) ],
-          [ "Tax", money(@report.totals[:tax_amount]) ],
-          [ "Total Revenue", money(@report.totals[:total_revenue]) ],
-          [ "Total Bookings", @report.totals[:booking_count].to_s ]
+          [ "Bookings", @report.totals[:booking_count].to_s ],
+          [ "Total Charges", money(@report.totals[:total_charges]) ],
+          [ "Total Payments", money(@report.totals[:total_payments]) ],
+          [ "Net Amount", money(@report.totals[:net_amount]) ]
         ]
 
         card_gap = 10
@@ -96,17 +96,24 @@ module HotelPortal
 
         rows = @report.rows.map do |row|
           [
-            row[:date].strftime("%d %b %Y"),
+            row[:date].strftime("%d %b"),
             row[:booking_count].to_s,
-            money(row[:room_revenue]),
-            money(row[:tax_amount]),
-            money(row[:total_revenue])
+            money(row[:accommodation]),
+            money(row[:other_charges]),
+            money(row[:tax]),
+            money(row[:total_charges]),
+            money(row[:discount]),
+            money(row[:gateway_payment]),
+            money(row[:cash_payment]),
+            money(row[:booking_payment]),
+            money(row[:refund]),
+            money(row[:net_amount])
           ]
         end
 
         pdf.table([
-          [ "Date", "Bookings", "Room Revenue", "Tax", "Total Revenue" ]
-        ] + rows, width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }) do
+          [ "Date", "Bkgs", "Accom", "Other", "Tax", "Charges", "Disc", "Online", "Cash", "Deposit", "Refund", "Net" ]
+        ] + rows, width: pdf.bounds.width, cell_style: { size: 7, padding: [ 4, 4, 4, 4 ] }) do
           row(0).font_style = :bold
           row(0).background_color = "F1F5F9"
         end
@@ -125,14 +132,16 @@ module HotelPortal
           [
             row[:source],
             row[:booking_count].to_s,
-            money(row[:room_revenue]),
-            money(row[:tax_amount]),
-            money(row[:total_revenue])
+            money(row[:accommodation]),
+            money(row[:other_charges]),
+            money(row[:tax]),
+            money(row[:total_charges]),
+            money(row[:net_amount])
           ]
         end
 
         pdf.table([
-          [ "Source", "Bookings", "Room Revenue", "Tax", "Total Revenue" ]
+          [ "Source", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Net" ]
         ] + rows, width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }) do
           row(0).font_style = :bold
           row(0).background_color = "F1F5F9"
@@ -140,7 +149,7 @@ module HotelPortal
       end
 
       def money(value)
-        format("MYR %.2f", value.to_d)
+        format("%.2f", value.to_d)
       end
     end
   end

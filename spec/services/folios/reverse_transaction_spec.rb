@@ -137,6 +137,110 @@ RSpec.describe Folios::ReverseTransaction, type: :service do
     expect(result.error).to eq("Reversal transactions cannot be reversed.")
   end
 
+  it "reverses a taxable parent and generated tax children atomically" do
+    parent = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "fb", amount: 100, description: "Restaurant charge")
+    tax = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "charge",
+      category: "tax",
+      amount: 8,
+      description: "SST",
+      metadata: { "parent_folio_transaction_id" => parent.id, "tax_line" => { "type" => "sst" } }
+    )
+
+    expect {
+      @result = described_class.call(
+        transaction: parent,
+        user: user,
+        correction_reason: "Posting error",
+        correction_note: "Wrong amount"
+      )
+    }.to change(FolioTransaction, :count).by(2)
+
+    expect(@result).to be_success
+    parent_reversal = parent.reload.voided_by_transaction
+    tax_reversal = tax.reload.voided_by_transaction
+    expect(parent_reversal).to have_attributes(amount: -100.to_d, reversal_of_transaction: parent)
+    expect(tax_reversal).to have_attributes(amount: -8.to_d, reversal_of_transaction: tax)
+    expect(@result.transactions).to match_array([ parent_reversal, tax_reversal ])
+  end
+
+  it "rejects direct reversal of generated tax children" do
+    parent = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "fb", amount: 100)
+    tax = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "charge",
+      category: "tax",
+      amount: 8,
+      metadata: { "parent_folio_transaction_id" => parent.id, "tax_line" => { "type" => "sst" } }
+    )
+
+    expect {
+      @result = described_class.call(
+        transaction: tax,
+        user: user,
+        correction_reason: "Posting error",
+        correction_note: "Reverse tax only"
+      )
+    }.not_to change(FolioTransaction, :count)
+
+    expect(@result).not_to be_success
+    expect(@result.error).to eq("Generated tax rows reverse with their parent charge.")
+    expect(tax.reload.voided_by_transaction).to be_nil
+  end
+
+  it "rolls back the full tax group when any reversal row fails" do
+    parent = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "fb", amount: 100)
+    tax = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "charge",
+      category: "tax",
+      amount: 8,
+      metadata: { "parent_folio_transaction_id" => parent.id, "tax_line" => { "type" => "sst" } }
+    )
+
+    allow_any_instance_of(Folios::ReverseTransaction).to receive(:reversal_category).and_wrap_original do |method, original|
+      original == tax ? "not_allowed" : method.call(original)
+    end
+
+    expect {
+      @result = described_class.call(
+        transaction: parent,
+        user: user,
+        correction_reason: "Posting error",
+        correction_note: "Rollback group"
+      )
+    }.not_to change(FolioTransaction, :count)
+
+    expect(@result).not_to be_success
+    expect(parent.reload.voided_by_transaction).to be_nil
+    expect(tax.reload.voided_by_transaction).to be_nil
+  end
+
+  it "rejects gateway payment reversal from the folio ledger" do
+    transaction = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "payment",
+      category: "gateway_payment",
+      amount: 80,
+      metadata: { "payment_transaction_id" => "123", "posting_source" => "gateway_payment" }
+    )
+
+    result = described_class.call(
+      transaction: transaction,
+      user: user,
+      correction_reason: "Payment error",
+      correction_note: "Use refund workflow"
+    )
+
+    expect(result).not_to be_success
+    expect(result.error).to eq("Gateway payments must use the payment refund or reconciliation workflow.")
+  end
+
   it "records override metadata when reversing onto a closed folio" do
     folio.update!(status: "closed")
     transaction = create(:folio_transaction, booking_folio: folio)
@@ -145,8 +249,7 @@ RSpec.describe Folios::ReverseTransaction, type: :service do
       transaction: transaction,
       user: user,
       correction_reason: "Manager override",
-      correction_note: "Correct closed folio",
-      options: { override_closed_folio: true }
+      correction_note: "Correct closed folio"
     )
 
     expect(result).to be_success

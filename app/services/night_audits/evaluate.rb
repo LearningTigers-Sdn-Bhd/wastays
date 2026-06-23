@@ -48,6 +48,7 @@ module NightAudits
         "due_out_not_checked_out",
         "checked_in_missing_timestamp",
         "completed_missing_timestamp",
+        "missing_folio",
         "captured_payment_not_synced",
         "refund_not_synced",
         "outstanding_folio_balance"
@@ -279,6 +280,7 @@ module NightAudits
           "status" => booking.status,
           "check_in" => booking.check_in,
           "check_out" => booking.check_out,
+          "room_numbers" => booking.room_numbers.presence,
           "reason" => reason
         }
       end

@@ -36,31 +36,38 @@
       <div class="flex justify-between items-end border-t border-neutral-border pt-4">
         <div>
           <% if search_ready %>
-            <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest mb-1">Total for Stay</p>
-            
-            <p class="text-2xl font-black text-neutral-text-primary">
-              <%= room_type.display_total_price(display_currency) %>
-            </p>
-            <p class="text-[10px] text-neutral-text-secondary italic">
-              <%= room_type.rate_plan_name %> · charged in <%= room_type.pricing_summary[:currency] %><%= display_currency != room_type.pricing_summary[:currency] ? " · estimate" : "" %>
-            </p>
+            <% if (restriction_error = room_type.stay_restriction_error).present? %>
+              <p class="text-xs font-bold text-status-error flex items-start gap-x-1.5 mt-1">
+                <svg class="w-4 h-4 shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <%= restriction_error %>
+              </p>
             <% else %>
+              <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest mb-1">Total for Stay</p>
+              
+              <p class="text-2xl font-black text-neutral-text-primary">
+                <%= room_type.display_total_price(display_currency) %>
+              </p>
+              <p class="text-[10px] text-neutral-text-secondary italic">
+                <%= room_type.rate_plan_name %> · charged in <%= room_type.pricing_summary[:currency] %><%= display_currency != room_type.pricing_summary[:currency] ? " · estimate" : "" %>
+              </p>
+            <% end %>
+          <% else %>
             <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest">Total for Stay</p>
             <p class="text-sm font-bold text-neutral-text-secondary">Select dates to see price</p>
-            <% end %>
-            </div>
+          <% end %>
+        </div>
 
-            <%= form_with url: quotes_path, method: :post do |f| %>
-            <%= f.hidden_field :hotel_id, value: hotel.id %>
-            <%= f.hidden_field :room_type_id, value: room_type.id %>
-            <%= f.hidden_field :check_in, value: check_in&.to_s %>
-            <%= f.hidden_field :check_out, value: check_out&.to_s %>
-            <%= f.hidden_field :adults, value: adults %>
-            <%= f.hidden_field :children, value: children %>
-            <%= f.hidden_field :room_count, value: room_count %>
-            <%= f.hidden_field :display_currency, value: display_currency %>
+        <%= form_with url: quotes_path, method: :post do |f| %>
+          <%= f.hidden_field :hotel_id, value: hotel.id %>
+          <%= f.hidden_field :room_type_id, value: room_type.id %>
+          <%= f.hidden_field :check_in, value: check_in&.to_s %>
+          <%= f.hidden_field :check_out, value: check_out&.to_s %>
+          <%= f.hidden_field :adults, value: adults %>
+          <%= f.hidden_field :children, value: children %>
+          <%= f.hidden_field :room_count, value: room_count %>
+          <%= f.hidden_field :display_currency, value: display_currency %>
 
-            <%= f.submit "Reserve Now",                       disabled: !search_ready,
+          <%= f.submit "Reserve Now",                       disabled: !search_ready || room_type.stay_restriction_error.present?,
                        class: "btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 shadow-lg shadow-brand-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" %>
         <% end %>
       </div>

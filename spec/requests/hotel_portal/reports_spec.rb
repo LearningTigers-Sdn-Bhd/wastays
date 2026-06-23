@@ -493,4 +493,108 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("PAID-EXPORT")
     end
   end
+
+  describe "GET /refund_report" do
+    let(:start_date) { Date.new(2026, 5, 7) }
+    let(:end_date) { Date.new(2026, 5, 8) }
+
+    it "renders refund records for selected range" do
+      booking = create(:booking, hotel: hotel, guest_name: "Refund Guest", confirmation_token: "WS-RFD")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe King")
+      create(:booking_room, booking: booking, room_type: room_type, quantity: 1)
+      refund_request = create(:refund_request, booking: booking, status: "completed", refund_amount: 80.0, reason: "Guest cancelled")
+      create(
+        :folio_transaction,
+        booking_folio: folio,
+        transaction_type: "payment",
+        category: "refund",
+        amount: -80.0,
+        posting_date: start_date,
+        metadata: { refund_request_id: refund_request.id, refund_source: "bank_transfer", reference: "BNK-123" }
+      )
+      create(
+        :folio_transaction,
+        booking_folio: folio,
+        transaction_type: "payment",
+        category: "cash",
+        amount: 80.0,
+        posting_date: start_date
+      )
+
+      get refund_report_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Monthly Refund Report")
+      expect(response.body).to include("Refund Guest")
+      expect(response.body).to include("WS-RFD")
+      expect(response.body).to include("Deluxe King")
+      expect(response.body).to include("Bank transfer")
+      expect(response.body).to include("BNK-123")
+      expect(response.body).to include("Guest cancelled")
+      expect(response.body).to include("80.00")
+    end
+
+    it "does not include refunds from another hotel or outside range" do
+      booking = create(:booking, hotel: hotel, guest_name: "Shown Guest")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(
+        :folio_transaction,
+        booking_folio: folio,
+        transaction_type: "payment",
+        category: "refund",
+        amount: -50.0,
+        posting_date: start_date
+      )
+
+      other_booking = create(:booking, hotel: create(:hotel), guest_name: "Other Hotel Guest")
+      other_folio = create(:booking_folio, booking: other_booking, hotel: other_booking.hotel)
+      create(
+        :folio_transaction,
+        booking_folio: other_folio,
+        transaction_type: "payment",
+        category: "refund",
+        amount: -75.0,
+        posting_date: start_date
+      )
+
+      old_booking = create(:booking, hotel: hotel, guest_name: "Old Refund Guest")
+      old_folio = create(:booking_folio, booking: old_booking, hotel: hotel)
+      create(
+        :folio_transaction,
+        booking_folio: old_folio,
+        transaction_type: "payment",
+        category: "refund",
+        amount: -30.0,
+        posting_date: start_date - 3.days
+      )
+
+      get refund_report_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Shown Guest")
+      expect(response.body).not_to include("Other Hotel Guest")
+      expect(response.body).not_to include("Old Refund Guest")
+    end
+
+    it "groups this year refunds by month" do
+      booking = create(:booking, hotel: hotel, guest_name: "Monthly Guest", confirmation_token: "WS-MON")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(
+        :folio_transaction,
+        booking_folio: folio,
+        transaction_type: "payment",
+        category: "refund",
+        amount: -40.0,
+        posting_date: Date.new(2026, 5, 7)
+      )
+
+      get refund_report_hotel_reports_path(hotel), params: { date_preset: "this_year" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Month")
+      expect(response.body).to include("May 2026")
+      expect(response.body).not_to include("07 May 2026")
+    end
+  end
 end

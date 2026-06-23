@@ -284,6 +284,13 @@ Rails.application.routes.draw do
     end
 
     resources :nearby_attractions, except: [ :show ]
+    resource :taxes_fees, only: [ :show, :update ], path: "taxes-fees"
+    get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes
+    get "transaction-codes/new", to: "transaction_codes#new", as: :new_transaction_code
+    post "transaction-codes", to: "transaction_codes#create"
+    patch "transaction-codes/configuration", to: "transaction_codes#update_configuration", as: :transaction_code_configuration
+    get "transaction-codes/:id/edit", to: "transaction_codes#edit", as: :edit_transaction_code
+    patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
 
     resources :bookings, only: [ :index, :show, :update ] do
       collection do
@@ -333,8 +340,9 @@ Rails.application.routes.draw do
       get "cancel-booking/:booking_id", to: "cancel_bookings#show", as: :cancel_booking
     end
 
-    resources :folios, only: [ :show ], param: :booking_id do
+    resources :folios, only: [ :index, :show ], param: :booking_id do
       get :invoice, on: :member
+      get :ledger, on: :member
       resources :transactions, only: [ :create ], controller: "folios/transactions" do
         post :reverse, on: :member
       end
@@ -373,12 +381,15 @@ Rails.application.routes.draw do
         get :deposit_liability
         get :folio_ledger
         get :journal_batches
-        get :sst      end
+        get :sst
+        get :refund_report
+      end
     end
     resources :night_audits, only: [ :index, :show, :create ] do
       member do
         get :resolve
         get :blockers
+        post :resolve_missing_folio
       end
     end
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
@@ -400,7 +411,7 @@ Rails.application.routes.draw do
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
-    resources :hotel_taxes, only: %i[index create update destroy]
+    resources :hotel_taxes, only: %i[index new create edit update destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board

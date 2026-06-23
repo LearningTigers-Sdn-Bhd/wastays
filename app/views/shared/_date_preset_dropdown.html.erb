@@ -1,0 +1,14 @@
+<!-- Time period dropdown for date filtering - adds before date fields -->
+<div class="date-preset-wrapper" data-controller="date-preset">
+  <div class="inline-flex items-center gap-2">
+    <select
+      name="date_preset"
+      id="date_preset_<%= SecureRandom.hex(4) %>"
+      class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none focus:ring-0"
+      data-action="change->date-preset#toggleCustom"
+    >
+      <%= options_for_select(date_preset_options, @date_preset || "this_month") %>
+    </select>
+    <span class="text-xs font-medium text-slate-400">or</span>
+  </div>
+</div>

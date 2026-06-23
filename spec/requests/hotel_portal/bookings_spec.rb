@@ -112,6 +112,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("Operations")
       expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
       expect(response.body).to include(booking.confirmation_token)
+      expect(response.body).to include(%(href="#{hotel_folio_path(hotel, booking)}"))
+      expect(response.body).not_to include(%(href="#{hotel_folio_path(hotel, booking)}?origin=folios"))
     end
 
     it "renders URL-addressable booking show tab panels" do
@@ -198,10 +200,10 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_folio_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Add Payment")
-      expect(response.body).to include("Add Charge")
+      expect(response.body).to include("Post Payment")
+      expect(response.body).to include("Post Charge")
       expect(response.body).not_to include("Issue Refund")
-      expect(response.body).not_to include("Add Adjustment")
+      expect(response.body).not_to include("Post Adjustment")
     end
 
     it "filters folio adjustment categories by granular permission" do
@@ -211,7 +213,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_folio_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Add Adjustment")
+      expect(response.body).to include("Post Adjustment")
       expect(response.body).to include('value="write_off"')
       expect(response.body).not_to include('value="correction"')
       expect(response.body).not_to include('value="discount"')
@@ -220,14 +222,14 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "renders the compact folio summary and grouped ledger" do
       booking.update!(currency: "SGD", check_out: Date.current + 2.days)
       folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-      charge = create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 125, description: "Room charge")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 125, description: "Room charge")
       create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 50, description: "Booking payment")
       create(:folio_forecasted_charge, booking_folio: folio, stay_date: Date.current + 1.day, amount: 75, description: "Future room charge")
 
       get hotel_folio_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Folio #{booking.confirmation_token}")
+      expect(response.body).to include("Folio #{booking.formatted_folio_number}")
       expect(response.body).to include("Guest")
       expect(response.body).to include("Stay")
       expect(response.body).to include("Back to Booking")
@@ -235,20 +237,19 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
       expect(response.body).to include(%(href="#{hotel_booking_path(hotel, booking)}"))
       expect(response.body).to include("Folio Ledger")
-      expect(response.body).to include("Outstanding")
+      expect(response.body).to include("Current Balance")
       expect(response.body).to include("Posted Charges")
-      expect(response.body).to include("Forecasted")
-      expect(response.body).to include("Stay Total")
+      expect(response.body).to include("Payments / Refunds")
+      expect(response.body).to include("Upcoming Charges")
       expect(response.body).to include("SGD 150.00")
-      expect(response.body).to include("SGD 200.00")
+      expect(response.body).to include("SGD 125.00")
       expect(response.body).to include("Posted Transactions")
-      expect(response.body).to include("Upcoming / Forecasted Charges")
-      expect(response.body).to include("##{charge.id}")
+      expect(response.body).to include("Upcoming Charges")
+      expect(response.body).to include("Room charge")
       expect(response.body).to include('data-section="posted"')
       expect(response.body).to include('aria-expanded="true"')
       expect(response.body).to include('data-section="forecasted"')
       expect(response.body).to include('data-folio-ledger-section-param="forecasted"')
-      expect(response.body).not_to include('aria-expanded="false"')
       expect(response.body).to include("Future room charge")
     end
   end
@@ -289,9 +290,12 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).not_to include("Post Payment")
       expect(response.body).not_to include("Post Adjustment")
       expect(response.body).to include("Pending")
-      expect(response.body).to include("Forecast charges to post")
+      expect(response.body).to include("Upcoming charges to post")
       expect(response.body).to include("Existing transactions")
       expect(response.body).to include("Early checkout charge - Night 1")
+      expect(response.body).to include("Description / Reference")
+      expect(response.body).to include("Debit")
+      expect(response.body).to include("Credit")
       expect(response.body).to include("Outstanding balance")
       expect(response.body).to include('data-checkout-summary="true"')
       expect(response.body).to include('data-checkout-card="details"')
@@ -304,14 +308,21 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "renders only the checkout details card for a scheduled checkout" do
       booking.update!(check_out: Date.current)
       booking.transition_status_to!("checked_in", event: "check_in")
-      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
 
       get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-checkout-card="details"')
       expect(response.body).not_to include('data-checkout-card="early-departure"')
-      expect(response.body.scan("Ready for checkout").size).to eq(1)
+      expect(response.body).to include('data-controller="checkout-settlement"')
+      expect(response.body).to include('data-checkout-settlement-required-amount-value="100.00"')
+      expect(response.body).to include('data-checkout-settlement-target="amountInput"')
+      expect(response.body).to include('input-&gt;checkout-settlement#validate')
+      expect(response.body).to include('data-checkout-settlement-target="submitButton"')
+      expect(response.body).to include('<option selected="selected" value="cash">Cash</option>')
+      expect(response.body).to include('<option value="card">Card</option>')
     end
 
     it "prefills the actual checkout time from scheduled checkout when checkout is required" do
@@ -466,7 +477,38 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include(CGI.escapeHTML(hotel_booking_path(hotel, booking, checkout_success: true)))
       expect(booking.reload.status).to eq("completed")
       expect(folio.reload.status).to eq("closed")
-      expect(folio.folio_transactions.payment.last.description).to include("RCPT-1")
+      payment = folio.folio_transactions.payment.last
+      expect(payment.description).to include("Receipt RCPT-1")
+      expect(payment.metadata["payment_source"]).to eq("cash")
+      expect(payment.metadata["source_references"]).to eq("receipt_reference" => "RCPT-1")
+    end
+
+    it "posts checkout card settlement with card payment source metadata" do
+      grant_permission("post_folio_payments")
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_payment_method: "card",
+          checkout_payment_amount: "100.00",
+          checkout_payment_reference: "AUTH-1"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(booking.reload.status).to eq("completed")
+      expect(folio.reload.status).to eq("closed")
+      payment = folio.folio_transactions.payment.last
+      expect(payment.transaction_code.code).to eq("CARD")
+      expect(payment.category).to eq("gateway_payment")
+      expect(payment.description).to include("Checkout payment via Card Terminal - Card Ref AUTH-1")
+      expect(payment.metadata["payment_source"]).to eq("card")
+      expect(payment.metadata["source_references"]).to eq("card_reference" => "AUTH-1")
     end
 
     it "returns timeline-board checkout-sheet submissions to the Booking Timeline Board" do
@@ -788,6 +830,29 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         "tax_total" => 0,
         "tax_lines" => []
       )
+    end
+
+    it "separates tourism tax from payable taxes for foreign guests" do
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.update!(is_taxable: true)
+      room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+      room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+
+      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s,
+        guest_country: "Singapore"
+      }
+
+      body = JSON.parse(response.body)
+      expect(response).to have_http_status(:success)
+      expect(body["total_amount"].to_d).to eq(216.to_d)
+      expect(body["room_total"].to_d).to eq(200.to_d)
+      expect(body["tax_total"].to_d).to eq(16.to_d)
+      expect(body["tourism_tax_total"].to_d).to eq(20.to_d)
+      expect(body["tax_lines"].map { |line| line["type"] }).to include("sst", "tourism_tax")
     end
 
     it "returns 0 if params are missing" do

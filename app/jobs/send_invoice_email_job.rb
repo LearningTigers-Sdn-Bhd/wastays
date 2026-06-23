@@ -6,5 +6,7 @@ class SendInvoiceEmailJob < ApplicationJob
     return unless booking
 
     BookingMailer.invoice(booking).deliver_now
+  rescue ::Reports::Bookings::GenerateFolioRecords::UnavailableError => e
+    Rails.logger.warn("SendInvoiceEmailJob skipped booking #{booking_id}: #{e.message}")
   end
 end

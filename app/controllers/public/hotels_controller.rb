@@ -34,7 +34,7 @@ class Public::HotelsController < ApplicationController
           room_count: @room_count
         )
       )
-      @room_types = @availability_service.available_rooms_for_hotel(@hotel)
+      @room_types = @availability_service.available_rooms_for_hotel(@hotel, allow_restricted: true)
     else
       @availability_service = nil
       @room_types = @hotel.room_types
@@ -49,9 +49,10 @@ class Public::HotelsController < ApplicationController
                                       hotel_sort_order.index(category) || hotel_sort_order.size
                                     }
 
-    # Decorate for view
+    # Decorate for view and sort restricted rooms to the bottom
     @hotel = Public::HotelPresenter.new(@hotel, view_context)
     @room_types = @room_types.map { |rt| Public::RoomTypePresenter.new(rt, @hotel, @availability_service, view_context) }
+                             .sort_by { |rt| rt.stay_restriction_error.present? ? 1 : 0 }
   end
 
   def rate_calendar
@@ -76,7 +77,14 @@ class Public::HotelsController < ApplicationController
       start_date: start_date.iso8601,
       end_date: end_date.iso8601,
       days: result[:days].map { |d|
-        { date: d.date.iso8601, min_price: d.min_price, available: d.available, rooms_left: d.rooms_left }
+        {
+          date: d.date.iso8601,
+          min_price: d.min_price,
+          available: d.available,
+          rooms_left: d.rooms_left,
+          min_stay: d.min_stay,
+          max_stay: d.max_stay
+        }
       }
     }
   rescue ArgumentError => e

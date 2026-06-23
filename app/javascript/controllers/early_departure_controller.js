@@ -20,6 +20,7 @@ export default class extends Controller {
     } else {
       this.customFieldsTarget.classList.add("hidden")
       this.amountInputTarget.value = 0
+      this.notifySettlement(0)
     }
   }
 
@@ -36,5 +37,13 @@ export default class extends Controller {
 
     this.amountInputTarget.value = finalAmount.toFixed(2)
     this.displayAmountTarget.textContent = `${this.currencyValue} ${finalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    this.notifySettlement(finalAmount)
+  }
+
+  notifySettlement(amount) {
+    this.element.dispatchEvent(new CustomEvent("checkout-settlement:charge-changed", {
+      bubbles: true,
+      detail: { amount }
+    }))
   }
 }

@@ -9,7 +9,10 @@ module BookingEngine
 
     def call
       @quote.with_lock do
-        return OpenStruct.new(success?: true, booking: existing_booking) if existing_booking
+        if (booking = existing_booking)
+          initialize_folio(booking)
+          return OpenStruct.new(success?: true, booking: booking)
+        end
 
         # 1. Double check quote haven't expired (though it should have been held)
         if quote_expired?
@@ -44,7 +47,7 @@ module BookingEngine
         tax_lines = financial_snapshot.tax_lines
         tourism_tax = tax_lines.find { |tax| tax["type"].to_s == "tourism_tax" }
         tourism_tax_amount = tourism_tax ? tourism_tax["amount"].to_d : 0
-        payable_total = financial_snapshot.room_total + financial_snapshot.tax_total
+        payable_total = financial_snapshot.room_total + Booking.non_tourism_tax_total_for(tax_lines)
 
         booking = Booking.new(
           booking_quote: @quote,
@@ -79,13 +82,24 @@ module BookingEngine
         )
 
 
+        @quote.booking_quote_items.each do |item|
+          booking.booking_rooms.build(
+            room_type: item.room_type,
+            quantity: item.quantity,
+            subtotal: item.subtotal,
+            room_type_snapshot: item.room_type_snapshot,
+            nightly_rate_snapshot: normalized_nightly_rate_snapshot(item.nightly_rate_snapshot),
+            occupancy_snapshot: item.occupancy_snapshot
+          )
+        end
+
         if booking.save
           # 3. Link Guest Profile
           guest_result = GuestArrival::CreateOrMatchGuest.new(
             name: @payment_details[:guest_name],
             email: @payment_details[:guest_email],
             phone: @payment_details[:guest_phone],
-            government_id: @payment_details[:government_id],
+            government_id: @payment_details[:guest_government_id],
             gender: gender,
             country: guest_country,
             document_type: document_type,
@@ -100,17 +114,7 @@ module BookingEngine
           # 4. Initialize Pre-checkin
           GuestArrival::StartPreCheckin.new(booking).call
 
-          # 5. Create Booking Rooms
-          @quote.booking_quote_items.each do |item|
-            booking.booking_rooms.create!(
-              room_type: item.room_type,
-              quantity: item.quantity,
-              subtotal: item.subtotal,
-              room_type_snapshot: item.room_type_snapshot,
-              nightly_rate_snapshot: item.nightly_rate_snapshot,
-              occupancy_snapshot: item.occupancy_snapshot
-            )
-          end
+          initialize_folio(booking)
 
           # 4. Finalize Quote status
           @quote.update!(status: "converted", special_requests: @payment_details[:special_requests])
@@ -138,6 +142,24 @@ module BookingEngine
 
     def existing_booking
       Booking.find_by(booking_quote_id: @quote.id)
+    end
+
+    def initialize_folio(booking)
+      Folios::InitializeForBooking.call(
+        booking: booking,
+        user: nil,
+        options: {
+          system_folio_initialization: true,
+          posting_source: "booking_confirmation"
+        },
+        lock: false
+      )
+    end
+
+    def normalized_nightly_rate_snapshot(snapshot)
+      snapshot.to_h.transform_keys(&:to_s).transform_values do |value|
+        value.respond_to?(:to_h) ? value.to_h.transform_keys(&:to_s) : { "price" => value }
+      end
     end
 
     def quote_expired?

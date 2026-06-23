@@ -35,16 +35,23 @@ RSpec.describe BookingEngine::ConfirmBooking do
   end
 
   describe '#call' do
+    before do
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.update!(is_taxable: true)
+      room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+    end
+
     it 'creates booking, rooms, guest link, pre-checkin, and converts quote' do
       dispatcher = instance_double(Notifications::Dispatcher, call: [])
       allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
 
+      result = nil
       expect {
-        described_class.new(quote_token: quote.token, payment_details: payment_details).call
+        result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
+        expect(result.success?).to be(true), result.message
       }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything)
 
-      result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
-      expect(result.success?).to be(true)
+      expect(result.success?).to be(true), result.message
       booking = result.booking
       expect(booking).to be_persisted
       expect(booking.status).to eq('confirmed')
@@ -59,6 +66,8 @@ RSpec.describe BookingEngine::ConfirmBooking do
 
       expect(booking.booking_rooms.count).to eq(1)
       expect(booking.booking_rooms.first.room_type).to eq(room_type)
+      expect(booking.booking_folio).to be_present
+      expect(booking.booking_folio).to be_open
 
       expect(booking.pre_checkin).to be_present
       expect(booking.pre_checkin.status).to eq('pending')
@@ -86,9 +95,19 @@ RSpec.describe BookingEngine::ConfirmBooking do
 
       result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
 
-      expect(result.success?).to be(true)
+      expect(result.success?).to be(true), result.message
       expect(result.booking).to eq(existing)
       expect(Booking.where(booking_quote_id: quote.id).count).to eq(1)
+      expect(existing.reload.booking_folio).to be_present
+    end
+
+    it "creates a folio while Night Audit is running without bypassing payment posting guards" do
+      hotel.current_business_date_record.update!(status: "audit_running")
+
+      result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
+
+      expect(result.success?).to be(true), result.message
+      expect(result.booking.booking_folio).to be_present
     end
 
     it 'fails for expired quote' do

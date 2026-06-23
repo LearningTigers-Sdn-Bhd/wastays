@@ -22,18 +22,31 @@ RSpec.describe SendInvoiceEmailJob, type: :job do
       room_type_snapshot: { "name" => room_type.name }
     )
   end
+  let(:folio) { create(:booking_folio, booking: booking, hotel: hotel, status: "closed", invoice_number: 123) }
 
   describe "#perform" do
     it "delivers the invoice email for an existing booking" do
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 200)
+
       expect {
         described_class.new.perform(booking.id)
       }.to change { ActionMailer::Base.deliveries.count }.by(1)
     end
 
     it "sends to the booking guest email" do
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 200)
+
       described_class.new.perform(booking.id)
       last_email = ActionMailer::Base.deliveries.last
       expect(last_email.to).to include(booking.guest_email)
+    end
+
+    it "skips bookings without a closed folio" do
+      expect(Rails.logger).to receive(:warn).with(/SendInvoiceEmailJob skipped booking #{booking.id}/)
+
+      expect {
+        described_class.new.perform(booking.id)
+      }.not_to change { ActionMailer::Base.deliveries.count }
     end
 
     it "silently returns when booking does not exist" do

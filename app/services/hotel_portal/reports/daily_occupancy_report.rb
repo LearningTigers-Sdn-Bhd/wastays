@@ -7,14 +7,16 @@ module HotelPortal
 
       SOLD_STATUSES = %w[confirmed checked_in completed].freeze
 
-      def initialize(hotel:, start_date:, end_date:)
+      def initialize(hotel:, start_date:, end_date:, date_preset: nil)
         @hotel = hotel
         @start_date = start_date.to_date
         @end_date = end_date.to_date
+        @date_preset = date_preset.to_s
       end
 
       def call
         rows = date_range.map { |date| build_row(date) }
+        rows = monthly? ? aggregate_monthly(rows) : rows
         sold_sum = rows.sum { |row| row[:rooms_sold] }
         available_sum = rows.sum { |row| row[:rooms_available] }
         revenue_sum = rows.sum { |row| row[:room_revenue] }
@@ -35,6 +37,29 @@ module HotelPortal
       end
 
       private
+
+      def monthly?
+        @date_preset == "this_year"
+      end
+
+      def aggregate_monthly(rows)
+        rows.group_by { |row| row[:date].beginning_of_month }
+            .map do |month, month_rows|
+          sold = month_rows.sum { |row| row[:rooms_sold].to_i }
+          available = month_rows.sum { |row| row[:rooms_available].to_i }
+          revenue = month_rows.sum { |row| row[:room_revenue].to_d }
+
+          {
+            date: month,
+            rooms_sold: sold,
+            rooms_available: available,
+            room_revenue: revenue.round(2),
+            occupancy_rate: ratio(sold, available),
+            adr: ratio(revenue, sold),
+            revpar: ratio(revenue, available)
+          }
+        end
+      end
 
       def build_row(date)
         sold = 0

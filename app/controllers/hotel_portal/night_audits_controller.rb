@@ -63,6 +63,24 @@ module HotelPortal
       }
     end
 
+    def resolve_missing_folio
+      @night_audit = current_hotel.night_audits.find(params[:id])
+      booking = current_hotel.bookings.find(params[:booking_id])
+
+      result = ::NightAudits::ResolveMissingFolio.call(
+        night_audit: @night_audit,
+        booking: booking,
+        actor: current_user,
+        reason: params[:reason]
+      )
+
+      if result.success?
+        redirect_to resolve_hotel_night_audit_path(current_hotel, @night_audit), notice: result.message
+      else
+        redirect_to resolve_hotel_night_audit_path(current_hotel, @night_audit), alert: result.message
+      end
+    end
+
     def create
       business_date = requested_business_date
       force_roll = ActiveModel::Type::Boolean.new.cast(params.dig(:night_audit, :force_roll)) || false

@@ -86,6 +86,59 @@ RSpec.describe Folios::CloseForCheckout do
     expect(folio.reload.status).to eq("open")
   end
 
+  it "syncs captured local payments before calculating checkout balance" do
+    folio = create(:booking_folio, booking: booking, status: "open")
+    create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+    payment = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
+
+    result = described_class.call(booking: booking, user: user)
+
+    expect(result.success?).to be(true)
+    expect(folio.reload.status).to eq("closed")
+    expect(folio.folio_transactions.payment.where("metadata->>'payment_transaction_id' = ?", payment.id.to_s)).to exist
+  end
+
+  it "keeps the folio open when a captured payment cannot be synced" do
+    folio = create(:booking_folio, booking: booking, status: "open")
+    create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+    create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
+    allow(Folios::RecordPaymentFromGateway).to receive(:call).and_return(OpenStruct.new(success?: false, error: "sync failed"))
+
+    result = described_class.call(booking: booking, user: user)
+
+    expect(result.success?).to be(false)
+    expect(result.error).to eq("Cannot check out: captured payment is not synced to the folio.")
+    expect(folio.reload.status).to eq("open")
+  end
+
+  it "syncs completed local refunds before recalculating checkout balance" do
+    folio = create(:booking_folio, booking: booking, status: "open")
+    create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+    create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100.0)
+    refund = create(:refund_request, booking: booking, status: "completed", refund_amount: 20.0)
+
+    result = described_class.call(booking: booking, user: user)
+
+    expect(result.success?).to be(false)
+    expect(result.error).to eq("Cannot check out with outstanding balance of MYR 20.00.")
+    expect(folio.reload.status).to eq("open")
+    expect(folio.folio_transactions.payment.where("metadata->>'refund_request_id' = ?", refund.id.to_s)).to exist
+  end
+
+  it "keeps the folio open when a completed refund cannot be synced" do
+    folio = create(:booking_folio, booking: booking, status: "open")
+    create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+    create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100.0)
+    create(:refund_request, booking: booking, status: "completed", refund_amount: 20.0)
+    allow(Folios::RecordRefund).to receive(:call).and_return(OpenStruct.new(success?: false, error: "sync failed"))
+
+    result = described_class.call(booking: booking, user: user)
+
+    expect(result.success?).to be(false)
+    expect(result.error).to eq("Cannot check out: completed refund is not synced to the folio.")
+    expect(folio.reload.status).to eq("open")
+  end
+
   context "with past nights" do
     let(:check_in) { 2.days.ago.to_date }
     let(:booking) { create(:booking, status: "checked_in", check_in: check_in, check_out: Date.current) }
