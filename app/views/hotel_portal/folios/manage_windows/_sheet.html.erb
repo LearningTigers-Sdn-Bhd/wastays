@@ -16,20 +16,27 @@
           <p class="mt-1 text-xs font-semibold text-slate-500">Primary folio changes affect where new untargeted transactions are posted.</p>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-4" data-controller="folio-window-payer">
           <div>
             <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Name</label>
-            <%= text_field_tag "booking_folio[name]", @folio.name, required: true, placeholder: "Company Folio", class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            <%= text_field_tag "booking_folio[name]", @folio.name, required: true, placeholder: "External Folio", class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
           </div>
 
           <div class="grid gap-3 sm:grid-cols-2">
             <div>
               <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Type</label>
-              <%= select_tag "booking_folio[folio_type]", options_for_select([["Guest", "guest"], ["Company", "company"], ["Custom", "custom"]], @folio.folio_type.presence || "custom"), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <%= select_tag "booking_folio[folio_type]",
+                options_for_select([ [ "Guest", "guest" ], [ "External", "external" ], [ "House", "house" ] ], @folio.folio_type.presence || "external"),
+                data: { folio_window_payer_target: "folioType", action: "change->folio-window-payer#sync" },
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
             </div>
             <div>
               <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Payer</label>
-              <%= select_tag "booking_folio[payer_type]", options_for_select([["Guest", "guest"], ["Company", "company"], ["Custom", "custom"]], @folio.payer_type.presence || "guest"), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+              <%= hidden_field_tag "booking_folio[payer_type]", @folio.payer_type.presence || "company", id: "booking_folio_locked_payer_type", disabled: true, data: { folio_window_payer_target: "lockedPayer" } %>
+              <%= select_tag "booking_folio[payer_type]",
+                options_for_select([ [ "Guest", "guest" ], [ "Company", "company" ], [ "Agent", "agent" ], [ "Hotel", "hotel" ], [ "Custom", "custom" ] ], @folio.payer_type.presence || "company"),
+                data: { folio_window_payer_target: "payerType" },
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0 disabled:bg-slate-100 disabled:text-slate-500" %>
             </div>
           </div>
 

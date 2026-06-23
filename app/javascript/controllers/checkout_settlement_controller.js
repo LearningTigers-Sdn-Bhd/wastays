@@ -1,7 +1,16 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["amountInput", "submitButton", "outstandingAmount", "totalChargesAmount"]
+  static targets = [
+    "amountInput",
+    "submitButton",
+    "outstandingAmount",
+    "totalChargesAmount",
+    "actionSelect",
+    "detailRow",
+    "paymentFields",
+    "reasonFields"
+  ]
   static values = {
     currency: { type: String, default: "MYR" },
     requiredAmount: Number,
@@ -11,6 +20,7 @@ export default class extends Controller {
   connect() {
     this.currentRequiredAmount = this.roundMoney(this.requiredAmountValue)
     this.currentEarlyDepartureCharge = 0
+    this.updateSettlementDetails()
     this.validate()
   }
 
@@ -33,12 +43,15 @@ export default class extends Controller {
   }
 
   validate() {
-    if (!this.hasAmountInputTarget || !this.hasSubmitButtonTarget || this.currentRequiredAmount <= 0) {
+    if (!this.hasSubmitButtonTarget) {
       return
     }
 
-    const amount = this.roundMoney(Number.parseFloat(this.amountInputTarget.value || "0"))
-    const valid = amount === this.currentRequiredAmount
+    let valid = true
+    if (this.hasAmountInputTarget && this.currentRequiredAmount > 0) {
+      const amount = this.roundMoney(Number.parseFloat(this.amountInputTarget.value || "0"))
+      valid = amount === this.currentRequiredAmount
+    }
 
     this.submitButtonTarget.disabled = !valid
     this.submitButtonTarget.classList.toggle("cursor-not-allowed", !valid)
@@ -48,12 +61,40 @@ export default class extends Controller {
 
   updateSummary() {
     if (this.hasOutstandingAmountTarget) {
-      this.outstandingAmountTarget.textContent = this.formatMoney(this.currentRequiredAmount)
+      this.outstandingAmountTarget.textContent = `${this.currencyValue} ${this.formatMoney(this.currentRequiredAmount)}`
     }
 
     if (this.hasTotalChargesAmountTarget) {
       this.totalChargesAmountTarget.textContent = `${this.currencyValue} ${this.formatMoney(this.totalChargesValue + this.currentEarlyDepartureCharge)}`
     }
+  }
+
+  updateSettlementDetails() {
+    this.detailRowTargets.forEach((row) => {
+      const folioId = row.dataset.folioId
+      const action = this.selectedActionFor(folioId)
+      const visible = ["pay_now", "keep_open", "manager_review", "write_off_approval"].includes(action)
+
+      row.classList.toggle("hidden", !visible)
+      this.toggleFields(row, "paymentFields", action === "pay_now")
+      this.toggleFields(row, "reasonFields", ["keep_open", "manager_review", "write_off_approval"].includes(action))
+    })
+  }
+
+  selectedActionFor(folioId) {
+    const select = this.actionSelectTargets.find((target) => target.dataset.folioId === folioId)
+    return select ? select.value : ""
+  }
+
+  toggleFields(row, targetName, enabled) {
+    row.querySelectorAll(`[data-checkout-settlement-target='${targetName}']`).forEach((container) => {
+      container.classList.toggle("hidden", !enabled)
+      container.querySelectorAll("input, select, textarea").forEach((input) => {
+        if (input.dataset.requiredForAction === "true") {
+          input.required = enabled
+        }
+      })
+    })
   }
 
   formatMoney(value) {
