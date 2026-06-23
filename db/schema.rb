@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_20_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -743,6 +743,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_20_000000) do
     t.integer "arrival_grace_period", default: 7200, null: false
     t.string "pre_suspension_status"
     t.bigint "plan_id"
+    t.string "google_map_link"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true

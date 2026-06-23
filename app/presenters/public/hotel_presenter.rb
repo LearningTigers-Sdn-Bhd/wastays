@@ -88,6 +88,34 @@ module Public
       photos.attached? && gallery_count.positive?
     end
 
+    def google_maps_search_url
+      if google_map_link.present?
+        google_map_link
+      else
+        "https://www.google.com/maps/search/?api=1&query=#{ERB::Util.url_encode("#{name}, #{full_address}")}"
+      end
+    end
+
+    def google_maps_embed_url
+      query = if google_map_link.present?
+                if google_map_link =~ %r{/maps/place/([^/@?]+)}
+                  CGI.unescape($1).gsub("+", " ")
+                elsif google_map_link =~ /@(-?\d+\.\d+),(-?\d+\.\d+)/
+                  "#{$1},#{$2}"
+                elsif google_map_link =~ /[?&]query=([^&]+)/
+                  CGI.unescape($1).gsub("+", " ")
+                elsif google_map_link =~ /[?&]q=([^&]+)/
+                  CGI.unescape($1).gsub("+", " ")
+                else
+                  google_map_link.include?("maps.app.goo.gl") || google_map_link.include?("goo.gl/maps") ? "#{name}, #{full_address}" : google_map_link
+                end
+      else
+                "#{name}, #{full_address}"
+      end
+
+      "https://maps.google.com/maps?q=#{ERB::Util.url_encode(query)}&t=&z=15&ie=UTF8&iwloc=&output=embed"
+    end
+
     def currency_dropdown_options
       CurrencyCatalog::COMMON_CODES.map { |code| [ code, code ] }
     end
