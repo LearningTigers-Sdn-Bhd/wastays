@@ -67,6 +67,32 @@ RSpec.describe BookingFolio, type: :model do
       expect(build(:booking_folio, status: "reopened")).not_to be_valid
     end
 
+    it "accepts the supported folio window and payer types" do
+      expect(build(:booking_folio, folio_type: "guest", payer_type: "guest")).to be_valid
+      expect(build(:booking_folio, folio_type: "external", payer_type: "company")).to be_valid
+      expect(build(:booking_folio, folio_type: "external", payer_type: "agent")).to be_valid
+      expect(build(:booking_folio, folio_type: "external", payer_type: "hotel")).to be_valid
+      expect(build(:booking_folio, folio_type: "external", payer_type: "custom")).to be_valid
+      expect(build(:booking_folio, folio_type: "house", payer_type: "hotel")).to be_valid
+    end
+
+    it "rejects retired folio window types" do
+      expect(build(:booking_folio, folio_type: "company")).not_to be_valid
+      expect(build(:booking_folio, folio_type: "custom")).not_to be_valid
+      expect(build(:booking_folio, folio_type: "group")).not_to be_valid
+      expect(build(:booking_folio, folio_type: "master")).not_to be_valid
+    end
+
+    it "normalizes locked payer types" do
+      guest_folio = build(:booking_folio, folio_type: "guest", payer_type: "company")
+      house_folio = build(:booking_folio, folio_type: "house", payer_type: "custom")
+
+      expect(guest_folio).to be_valid
+      expect(guest_folio.payer_type).to eq("guest")
+      expect(house_folio).to be_valid
+      expect(house_folio.payer_type).to eq("hotel")
+    end
+
     it "allows multiple folios for the same booking when only one is primary" do
       primary = create(:booking_folio, hotel: booking.hotel, booking: booking, folio_number: 1)
       secondary = build(:booking_folio, :secondary, hotel: booking.hotel, booking: booking, folio_number: 2)
@@ -176,6 +202,13 @@ RSpec.describe BookingFolio, type: :model do
       folio = create(:booking_folio)
 
       expect { folio.update_column(:status, "reopened") }.to raise_error(ActiveRecord::StatementInvalid)
+    end
+
+    it "rejects folio and payer types outside the allowed sets" do
+      folio = create(:booking_folio)
+
+      expect { folio.update_column(:folio_type, "company") }.to raise_error(ActiveRecord::StatementInvalid)
+      expect { folio.update_column(:payer_type, "owner") }.to raise_error(ActiveRecord::StatementInvalid)
     end
   end
 

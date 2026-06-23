@@ -13,7 +13,7 @@ FactoryBot.define do
 
     trait :secondary do
       name { "Company Folio" }
-      folio_type { "company" }
+      folio_type { "external" }
       payer_type { "company" }
       is_primary { false }
     end

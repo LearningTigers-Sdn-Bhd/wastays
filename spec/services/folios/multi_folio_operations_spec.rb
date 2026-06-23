@@ -14,7 +14,7 @@ RSpec.describe "Multi-folio operations" do
   describe Folios::CreateFolio do
     it "creates a non-primary folio and records an operation log" do
       expect {
-        @result = described_class.call(booking: booking, user: user, attributes: { name: "Incidentals", folio_type: "custom", payer_type: "guest" })
+        @result = described_class.call(booking: booking, user: user, attributes: { name: "Incidentals", folio_type: "external", payer_type: "guest" })
       }.to change(BookingFolio, :count).by(1).and change(FolioOperationLog, :count).by(1)
 
       expect(@result).to be_success
@@ -23,6 +23,25 @@ RSpec.describe "Multi-folio operations" do
       expect(@result.folio.folio_sequence).to eq(3)
       expect(@result.folio.folio_reference_display).to eq("#{booking.reload.folio_account_reference_display}/3")
       expect(FolioOperationLog.last.operation_type).to eq("create_folio")
+    end
+
+    it "defaults new folios to external company payer" do
+      result = described_class.call(booking: booking, user: user, attributes: {})
+
+      expect(result).to be_success
+      expect(result.folio.name).to eq("External Folio")
+      expect(result.folio.folio_type).to eq("external")
+      expect(result.folio.payer_type).to eq("company")
+    end
+
+    it "coerces locked guest and house payer types" do
+      guest_result = described_class.call(booking: booking, user: user, attributes: { folio_type: "guest", payer_type: "company" })
+      house_result = described_class.call(booking: booking, user: user, attributes: { folio_type: "house", payer_type: "custom" })
+
+      expect(guest_result).to be_success
+      expect(guest_result.folio.payer_type).to eq("guest")
+      expect(house_result).to be_success
+      expect(house_result.folio.payer_type).to eq("hotel")
     end
 
     it "does not change references when a new folio becomes primary" do
@@ -34,7 +53,7 @@ RSpec.describe "Multi-folio operations" do
         user: user,
         attributes: {
           name: "Company Primary",
-          folio_type: "company",
+          folio_type: "external",
           payer_type: "company",
           is_primary: "1",
           set_folio_as_primary_reason: "Company pays"
@@ -56,6 +75,25 @@ RSpec.describe "Multi-folio operations" do
       expect(result).to be_success
       expect(company_folio.reload.name).to eq("ABC Sdn Bhd")
       expect(FolioOperationLog.last).to have_attributes(operation_type: "rename_folio", reason: "Company billing")
+    end
+  end
+
+  describe Folios::UpdateFolio do
+    it "coerces locked payer types and logs the normalized values" do
+      result = described_class.call(
+        folio: company_folio,
+        user: user,
+        attributes: {
+          folio_type: "house",
+          payer_type: "company",
+          reason: "House use"
+        }
+      )
+
+      expect(result).to be_success
+      expect(company_folio.reload).to be_folio_type_house
+      expect(company_folio.payer_type).to eq("hotel")
+      expect(FolioOperationLog.last.metadata.dig("changes", "payer_type", "to")).to eq("hotel")
     end
   end
 

@@ -481,7 +481,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect {
         post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { name: "Company Folio", folio_type: "company", payer_type: "company" }
+          booking_folio: { name: "Company Folio", folio_type: "external", payer_type: "company" }
         }
       }.not_to change(BookingFolio, :count)
 
@@ -494,7 +494,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect {
         post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { name: "Company Folio", folio_type: "company", payer_type: "company" }
+          booking_folio: { name: "Company Folio", folio_type: "external", payer_type: "company" }
         }
       }.to change { booking.booking_folios.count }.by(1)
         .and change(FolioOperationLog.where(operation_type: "create_folio"), :count).by(1)
@@ -503,6 +503,37 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(folio).not_to be_is_primary
       expect(folio.name).to eq("Company Folio")
       expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
+    end
+
+    it "creates external folio windows with every supported payer type" do
+      grant_permission("manage_folio_windows")
+      booking = create_booking_with_folio(guest_name: "External Payers", confirmation_token: "BK-PAYERS", folio_number: 627)
+
+      expect {
+        %w[guest company agent hotel custom].each do |payer_type|
+          post windows_hotel_folio_path(hotel, booking), params: {
+            booking_folio: { name: "#{payer_type.humanize} Folio", folio_type: "external", payer_type: payer_type }
+          }
+        end
+      }.to change { booking.booking_folios.count }.by(5)
+
+      expect(booking.booking_folios.order(:id).last(5).map(&:payer_type)).to eq(%w[guest company agent hotel custom])
+    end
+
+    it "coerces locked payer types submitted through the controller" do
+      grant_permission("manage_folio_windows")
+      booking = create_booking_with_folio(guest_name: "Locked Payers", confirmation_token: "BK-LOCK", folio_number: 628)
+
+      post windows_hotel_folio_path(hotel, booking), params: {
+        booking_folio: { name: "Guest Locked", folio_type: "guest", payer_type: "company" }
+      }
+      post windows_hotel_folio_path(hotel, booking), params: {
+        booking_folio: { name: "House Locked", folio_type: "house", payer_type: "custom" }
+      }
+
+      guest_locked, house_locked = booking.booking_folios.order(:id).last(2)
+      expect(guest_locked.payer_type).to eq("guest")
+      expect(house_locked.payer_type).to eq("hotel")
     end
 
     it "renders the add folio window form in the right offcanvas" do
@@ -516,6 +547,10 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include("Add Folio Window")
       expect(response.body).to include("Set this folio as primary")
       expect(response.body).to include("booking_folio[set_folio_as_primary_reason]")
+      expect(response.body).to include(%(<option selected="selected" value="external">External</option>))
+      expect(response.body).to include(%(<option value="house">House</option>))
+      expect(response.body).to include(%(<option value="agent">Agent</option>))
+      expect(response.body).to include(%(<option value="hotel">Hotel</option>))
     end
 
     it "creates a folio as primary when requested with a primary reason" do
@@ -527,7 +562,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
         post windows_hotel_folio_path(hotel, booking), params: {
           booking_folio: {
             name: "Company Folio",
-            folio_type: "company",
+            folio_type: "external",
             payer_type: "company",
             is_primary: "1",
             set_folio_as_primary_reason: "Company pays all charges"
@@ -548,7 +583,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect {
         post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { name: "Company Folio", folio_type: "company", payer_type: "company", is_primary: "1" }
+          booking_folio: { name: "Company Folio", folio_type: "external", payer_type: "company", is_primary: "1" }
         }
       }.not_to change(BookingFolio, :count)
 
@@ -601,7 +636,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
         patch window_hotel_folio_path(hotel, booking, secondary), params: {
           booking_folio: {
             name: "Company Folio",
-            folio_type: "company",
+            folio_type: "external",
             payer_type: "company",
             is_primary: "1",
             set_folio_as_primary_reason: "Company is now responsible"
