@@ -12,7 +12,6 @@ RSpec.describe EInvoicePdfService do
       guest_document_type: "ic",
       guest_government_id: "820916125537",
       guest_home_address: "No. 12, Jalan Ampang",
-      guest_postcode: "50450",
       guest_city: "Kuala Lumpur",
       guest_country: "Malaysia",
       confirmation_token: "WS-TESTEINV1",

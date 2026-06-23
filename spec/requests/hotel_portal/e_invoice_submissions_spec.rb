@@ -53,9 +53,7 @@ RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
     end
 
     context "when booking folio is not closed" do
-      before do
-        folio.update!(status: "open")
-      end
+      let!(:folio) { create(:booking_folio, booking: booking, status: "open") }
 
       it "redirects back with alert" do
         post hotel_e_invoice_submissions_path(hotel, booking_id: booking.id)

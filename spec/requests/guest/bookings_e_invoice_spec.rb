@@ -32,7 +32,6 @@ RSpec.describe "Guest::Bookings e-invoice", type: :request do
       guest_document_type: "ic",
       guest_government_id: "820916125537",
       guest_home_address: "No. 12, Jalan Ampang",
-      guest_postcode: "50450",
       guest_city: "Kuala Lumpur",
       guest_country: "Malaysia",
       total_amount: 300.0,

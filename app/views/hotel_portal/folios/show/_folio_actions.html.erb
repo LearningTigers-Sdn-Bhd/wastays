@@ -179,7 +179,7 @@
 <% end %>
 
 <%# E-Invoice Submission — shown for closed folios when e-invoice is enabled %>
-<% if folio&.status == "closed" && current_hotel.e_invoice_setting&.enabled? %>
+<% if folio_show.folio&.status == "closed" && current_hotel.e_invoice_setting&.enabled? %>
   <% current_scenario = booking.direct_hotel_payment? ? "hotel_intermediary_guest_invoice" : "guest_invoice" %>
   <% existing_submission = booking.e_invoice_submissions.select { |submission| submission.document_scenario == current_scenario }.max_by(&:created_at) %>
   <div class="mt-2 border-t border-slate-100 pt-3">

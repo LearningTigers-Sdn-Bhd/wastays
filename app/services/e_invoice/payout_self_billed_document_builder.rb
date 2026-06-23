@@ -208,6 +208,5 @@ module EInvoice
     def wastays_name
       @creds[:name].to_s.presence || "Jesselton Pixel Sdn Bhd"
     end
-
   end
 end

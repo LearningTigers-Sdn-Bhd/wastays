@@ -39,7 +39,7 @@ RSpec.describe EInvoice::Submit, type: :service do
     end
 
     context "when booking has no closed folio" do
-      before { folio.update!(status: "open") }
+      let!(:folio) { create(:booking_folio, booking: booking, status: "open") }
 
       it "returns failure" do
         result = described_class.call(booking)
@@ -130,7 +130,7 @@ RSpec.describe EInvoice::Submit, type: :service do
         expect(submission.validated_at).to be_nil
         expect(submission.raw_response).to eq({
           "submissionUid" => "sub-123",
-          "acceptedDocuments" => [{ "uuid" => "uuid-123" }]
+          "acceptedDocuments" => [ { "uuid" => "uuid-123" } ]
         })
         expect(submission.error_details).to eq({})
       end
