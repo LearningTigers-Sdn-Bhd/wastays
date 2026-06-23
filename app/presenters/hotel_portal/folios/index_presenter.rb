@@ -195,7 +195,11 @@ module HotelPortal
       end
 
       def folio_reference
-        booking.formatted_folio_number.presence || folio.folio_number.to_s
+        folio.folio_reference_display.presence || booking.folio_account_reference_display.presence || folio.folio_number.to_s
+      end
+
+      def folio_account_reference
+        booking.folio_account_reference_display.presence || booking.formatted_folio_number.presence || "-"
       end
 
       def room_label

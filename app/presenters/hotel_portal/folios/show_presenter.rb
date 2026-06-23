@@ -20,31 +20,81 @@ module HotelPortal
       :action_kind,
       :modal_title,
       :transaction_id,
+      :forecast_id,
+      :movement_allowed,
       :row_kind,
       :reversed,
       keyword_init: true
     )
 
-    def initialize(booking:, hotel:, user: nil, projected_lines: nil)
+    def initialize(booking:, hotel:, user: nil, projected_lines: nil, active_folio_id: nil)
       @booking = booking
       @hotel = hotel
       @user = user
       @projected_lines_override = projected_lines
+      @active_folio_id = active_folio_id.presence
       @booking_presenter = HotelPortal::BookingPresenter.new(booking, hotel)
     end
 
     attr_reader :booking, :hotel, :user
 
     def folio
-      booking.booking_folio
+      @folio ||= begin
+        selected = folios.detect { |candidate| candidate.id.to_s == @active_folio_id.to_s } if @active_folio_id.present?
+        selected || booking.booking_folio || folios.first
+      end
+    end
+
+    def folios
+      @folios ||= booking.booking_folios.to_a.sort_by { |candidate| [ candidate.is_primary? ? 0 : 1, candidate.open? ? 0 : 1, candidate.folio_sequence.to_i, candidate.folio_number.to_i, candidate.id ] }
+    end
+
+    def active_folio_id
+      folio&.id
+    end
+
+    def other_open_folios
+      folios.select { |candidate| candidate.open? && candidate.id != active_folio_id }
+    end
+
+    def can_manage_folio_windows?
+      permitted?("manage_folio_windows")
+    end
+
+    def can_manage_folio_movements?
+      can_show_normal_folio_actions? && permitted?("manage_folio_movements") && other_open_folios.any?
+    end
+
+    def folio_window_rows
+      folios.map do |candidate|
+        {
+          id: candidate.id,
+          name: candidate.display_name,
+          payer: candidate.payer_type.to_s.humanize,
+          type: candidate.folio_type.to_s.humanize,
+          status: candidate.status.to_s.humanize,
+          reference: candidate.folio_reference_display,
+          balance: money(candidate.projected_outstanding_balance),
+          active: candidate.id == active_folio_id,
+          primary: candidate.is_primary?
+        }
+      end
+    end
+
+    def active_folio_window_row
+      folio_window_rows.find { |row| row[:active] } || folio_window_rows.first
     end
 
     def currency
-      booking.currency.presence || "MYR"
+      folio&.currency.presence || booking.currency.presence || "MYR"
     end
 
     def folio_reference
-      booking.formatted_folio_number.presence || folio&.folio_number.presence || booking.confirmation_token
+      folio&.folio_reference_display.presence || booking.confirmation_token
+    end
+
+    def folio_account_reference
+      booking.folio_account_reference_display.presence || booking.confirmation_token
     end
 
     def booking_reference
@@ -52,7 +102,7 @@ module HotelPortal
     end
 
     def header_subtitle
-      "Booking #{booking_reference} · #{guest_name} · #{stay_summary}"
+      "Manage folio windows, posting actions, and ledger activity for this booking."
     end
 
     def guest_name
@@ -210,11 +260,12 @@ module HotelPortal
     def folio_detail_rows
       [
         [ "Booking Reference", booking_reference ],
+        [ "Folio Account Reference", folio_account_reference ],
         [ "Folio Reference", folio_reference ],
         [ "Guest", guest_name ],
         [ "Room", room_summary ],
         [ "Stay / Nights", formatted_stay_nights ],
-        [ "Folio Type", "Booking folio" ]
+        [ "Currency", currency ]
       ]
     end
 
@@ -245,15 +296,9 @@ module HotelPortal
 
     def checkout_blockers
       @checkout_blockers ||= begin
-        blockers = []
-        blockers << "Guest owes #{money(current_balance)}" if current_balance.positive?
-        blockers << "Hotel owes guest #{money(current_balance.abs)}" if current_balance.negative?
-        blockers << "#{forecasted_rows.size} upcoming #{'charge'.pluralize(forecasted_rows.size)} pending" if forecasted_rows.any?
-        blockers << "Audit is running" if hotel.current_business_date_record&.audit_running?
-        blockers << "Audit is blocked" if hotel.current_business_date_record&.audit_blocked?
+        blockers = booking_checkout_readiness.blockers.dup
         blockers << "Captured payment is not synced" if unsynced_captured_payment?
         blockers << "Completed refund is not synced" if unsynced_completed_refund?
-        blockers << "Folio is closed" if folio&.status == "closed"
         blockers.presence || [ "Review booking checkout status" ]
       end
     end
@@ -449,6 +494,7 @@ module HotelPortal
 
       @projected_lines ||= Array(folio&.projected_forecasts).map do |forecast|
         {
+          forecast_id: forecast.id,
           date: forecast.stay_date,
           description: forecast.description,
           amount: forecast.amount,
@@ -470,16 +516,16 @@ module HotelPortal
 
     def checkout_ready?
       if @checkout_ready.nil?
-        @checkout_ready = current_balance.zero? &&
-          forecasted_rows.empty? &&
-          folio&.status == "open" &&
-          !hotel.current_business_date_record&.audit_running? &&
-          !hotel.current_business_date_record&.audit_blocked? &&
+        @checkout_ready = booking_checkout_readiness.ready? &&
           !unsynced_captured_payment? &&
           !unsynced_completed_refund?
       end
 
       @checkout_ready
+    end
+
+    def booking_checkout_readiness
+      @booking_checkout_readiness ||= ::Folios::BookingCheckoutReadiness.call(booking: booking, hotel: hotel)
     end
 
     def unsynced_captured_payment?
@@ -570,6 +616,8 @@ module HotelPortal
         action_kind: action_kind,
         modal_title: action_kind == :reverse ? policy.modal_title : nil,
         transaction_id: transaction.id,
+        forecast_id: nil,
+        movement_allowed: transaction.charge? && !tax_transaction?(transaction) && !transaction.reversed? && transaction.reversal_of_transaction_id.blank?,
         row_kind: :posted,
         reversed: transaction.reversed?
       )
@@ -596,6 +644,8 @@ module HotelPortal
         action_kind: :none,
         modal_title: nil,
         transaction_id: nil,
+        forecast_id: line[:forecast_id],
+        movement_allowed: line[:forecast_id].present?,
         row_kind: :forecasted,
         reversed: false
       )
