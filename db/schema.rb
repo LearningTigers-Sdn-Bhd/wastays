@@ -131,11 +131,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.datetime "updated_at", null: false
     t.bigint "hotel_id", null: false
     t.integer "invoice_number"
-    t.index ["booking_id"], name: "index_booking_folios_on_booking_id", unique: true
+    t.string "name", null: false
+    t.string "folio_type", default: "guest", null: false
+    t.string "payer_type", default: "guest", null: false
+    t.bigint "payer_id"
+    t.boolean "is_primary", default: false, null: false
+    t.string "currency", null: false
+    t.datetime "opened_at", null: false
+    t.datetime "closed_at"
+    t.bigint "created_by_id"
+    t.bigint "closed_by_id"
+    t.integer "folio_sequence"
+    t.index ["booking_id", "folio_sequence"], name: "idx_booking_folios_on_booking_folio_sequence", unique: true, where: "(folio_sequence IS NOT NULL)"
+    t.index ["booking_id", "is_primary"], name: "index_booking_folios_on_primary_booking", unique: true, where: "is_primary"
+    t.index ["booking_id"], name: "index_booking_folios_on_booking_id"
+    t.index ["closed_by_id"], name: "index_booking_folios_on_closed_by_id"
+    t.index ["created_by_id"], name: "index_booking_folios_on_created_by_id"
     t.index ["hotel_id", "folio_number"], name: "index_booking_folios_on_hotel_id_and_folio_number", unique: true
+    t.index ["hotel_id", "folio_type"], name: "index_booking_folios_on_hotel_id_and_folio_type"
     t.index ["hotel_id", "invoice_number"], name: "index_booking_folios_on_hotel_id_and_invoice_number", unique: true, where: "(invoice_number IS NOT NULL)"
+    t.index ["hotel_id", "status"], name: "index_booking_folios_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_booking_folios_on_hotel_id"
-    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'closed'::character varying]::text[])", name: "booking_folios_status_allowed"
+    t.check_constraint "folio_type::text = ANY (ARRAY['guest'::character varying, 'company'::character varying, 'custom'::character varying, 'group'::character varying, 'master'::character varying, 'house'::character varying]::text[])", name: "booking_folios_folio_type_allowed"
+    t.check_constraint "payer_type::text = ANY (ARRAY['guest'::character varying, 'company'::character varying, 'custom'::character varying]::text[])", name: "booking_folios_payer_type_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'closed'::character varying, 'voided'::character varying]::text[])", name: "booking_folios_status_allowed"
   end
 
   create_table "booking_guests", force: :cascade do |t|
@@ -271,6 +290,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.date "no_show_review_business_date"
     t.boolean "tourism_tax_collected", default: false, null: false
     t.text "special_requests"
+    t.string "folio_account_reference"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id_unique", unique: true, where: "(booking_quote_id IS NOT NULL)"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["check_in"], name: "index_bookings_on_check_in"
@@ -278,6 +298,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
     t.index ["corporate_entity_id"], name: "index_bookings_on_corporate_entity_id"
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
+    t.index ["hotel_id", "folio_account_reference"], name: "idx_bookings_on_hotel_folio_account_reference", unique: true, where: "(folio_account_reference IS NOT NULL)"
     t.index ["hotel_id", "status", "no_show_review_business_date"], name: "index_bookings_on_hotel_status_no_show_review_date"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
@@ -482,6 +503,34 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.index ["booking_folio_id"], name: "index_folio_forecasted_charges_on_booking_folio_id"
   end
 
+  create_table "folio_operation_logs", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "booking_id", null: false
+    t.bigint "actor_id"
+    t.string "operation_type", null: false
+    t.bigint "source_folio_id"
+    t.bigint "target_folio_id"
+    t.bigint "source_transaction_id"
+    t.bigint "target_transaction_id"
+    t.decimal "amount", precision: 10, scale: 2
+    t.string "currency"
+    t.string "operation_key"
+    t.text "reason"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_folio_operation_logs_on_actor_id"
+    t.index ["booking_id"], name: "index_folio_operation_logs_on_booking_id"
+    t.index ["hotel_id", "booking_id", "created_at"], name: "idx_folio_operation_logs_on_booking_time"
+    t.index ["hotel_id"], name: "index_folio_operation_logs_on_hotel_id"
+    t.index ["operation_key"], name: "index_folio_operation_logs_on_operation_key"
+    t.index ["operation_type"], name: "index_folio_operation_logs_on_operation_type"
+    t.index ["source_folio_id"], name: "index_folio_operation_logs_on_source_folio_id"
+    t.index ["source_transaction_id"], name: "index_folio_operation_logs_on_source_transaction_id"
+    t.index ["target_folio_id"], name: "index_folio_operation_logs_on_target_folio_id"
+    t.index ["target_transaction_id"], name: "index_folio_operation_logs_on_target_transaction_id"
+  end
+
   create_table "folio_transactions", force: :cascade do |t|
     t.bigint "booking_folio_id", null: false
     t.decimal "amount", precision: 10, scale: 2, null: false
@@ -503,6 +552,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.bigint "night_audit_id"
     t.string "catch_up_key"
     t.bigint "transaction_code_id"
+    t.bigint "parent_transaction_id"
+    t.bigint "split_from_transaction_id"
+    t.bigint "moved_from_transaction_id"
+    t.string "transfer_group_id"
+    t.string "operation_key"
     t.index "booking_folio_id, ((metadata ->> 'early_checkout_charge_key'::text))", name: "index_folio_transactions_on_early_checkout_charge", unique: true, where: "(metadata ? 'early_checkout_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'nightly_charge_key'::text))", name: "index_folio_transactions_on_nightly_charge", unique: true, where: "(metadata ? 'nightly_charge_key'::text)"
     t.index "booking_folio_id, ((metadata ->> 'no_show_charge_key'::text))", name: "index_folio_transactions_on_no_show_charge", unique: true, where: "(metadata ? 'no_show_charge_key'::text)"
@@ -513,11 +567,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.index ["booking_folio_id"], name: "index_folio_transactions_on_booking_folio_id"
     t.index ["category"], name: "index_folio_transactions_on_category"
     t.index ["gl_code"], name: "index_folio_transactions_on_gl_code"
+    t.index ["moved_from_transaction_id"], name: "index_folio_transactions_on_moved_from_transaction_id"
     t.index ["night_audit_id"], name: "index_folio_transactions_on_night_audit_id"
+    t.index ["operation_key"], name: "index_folio_transactions_on_operation_key"
+    t.index ["parent_transaction_id"], name: "index_folio_transactions_on_parent_transaction_id"
     t.index ["posting_date"], name: "index_folio_transactions_on_posting_date"
     t.index ["reversal_of_transaction_id"], name: "index_folio_transactions_on_reversal_of_transaction_id"
+    t.index ["split_from_transaction_id"], name: "index_folio_transactions_on_split_from_transaction_id"
     t.index ["transaction_code_id"], name: "index_folio_transactions_on_transaction_code_id"
     t.index ["transaction_type"], name: "index_folio_transactions_on_transaction_type"
+    t.index ["transfer_group_id"], name: "index_folio_transactions_on_transfer_group_id"
     t.index ["user_id"], name: "index_folio_transactions_on_user_id"
     t.index ["voided_by_transaction_id"], name: "index_folio_transactions_on_voided_by_transaction_id"
   end
@@ -1445,6 +1504,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
   add_foreign_key "booking_audit_logs", "users"
   add_foreign_key "booking_folios", "bookings"
   add_foreign_key "booking_folios", "hotels"
+  add_foreign_key "booking_folios", "users", column: "closed_by_id"
+  add_foreign_key "booking_folios", "users", column: "created_by_id"
   add_foreign_key "booking_guests", "bookings"
   add_foreign_key "booking_guests", "guests"
   add_foreign_key "booking_notes", "bookings"
@@ -1479,8 +1540,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
   add_foreign_key "financial_audit_events", "refund_requests"
   add_foreign_key "folio_forecasted_charges", "booking_folios"
   add_foreign_key "folio_forecasted_charges", "folio_transactions", column: "actualizing_transaction_id"
+  add_foreign_key "folio_operation_logs", "booking_folios", column: "source_folio_id"
+  add_foreign_key "folio_operation_logs", "booking_folios", column: "target_folio_id"
+  add_foreign_key "folio_operation_logs", "bookings"
+  add_foreign_key "folio_operation_logs", "folio_transactions", column: "source_transaction_id"
+  add_foreign_key "folio_operation_logs", "folio_transactions", column: "target_transaction_id"
+  add_foreign_key "folio_operation_logs", "hotels"
+  add_foreign_key "folio_operation_logs", "users", column: "actor_id"
   add_foreign_key "folio_transactions", "booking_folios"
+  add_foreign_key "folio_transactions", "folio_transactions", column: "moved_from_transaction_id"
+  add_foreign_key "folio_transactions", "folio_transactions", column: "parent_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "reversal_of_transaction_id"
+  add_foreign_key "folio_transactions", "folio_transactions", column: "split_from_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "voided_by_transaction_id"
   add_foreign_key "folio_transactions", "night_audits", on_delete: :restrict
   add_foreign_key "folio_transactions", "transaction_codes"

@@ -57,6 +57,7 @@ class Hotel < ApplicationRecord
   has_many :hotel_general_ledger_maps, dependent: :destroy
   has_many :journal_batches, dependent: :destroy
   has_many :financial_audit_events, dependent: :restrict_with_error
+  has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy

@@ -35,11 +35,20 @@ class FolioTransaction < ApplicationRecord
   belongs_to :user, optional: true
   belongs_to :reversal_of_transaction, class_name: "FolioTransaction", optional: true
   belongs_to :voided_by_transaction, class_name: "FolioTransaction", optional: true
+  belongs_to :parent_transaction, class_name: "FolioTransaction", optional: true
+  belongs_to :split_from_transaction, class_name: "FolioTransaction", optional: true
+  belongs_to :moved_from_transaction, class_name: "FolioTransaction", optional: true
   has_many :financial_audit_events, dependent: :restrict_with_error
+  has_many :folio_operation_logs, foreign_key: :source_transaction_id, dependent: :restrict_with_error
   has_one :reversal_transaction,
     class_name: "FolioTransaction",
     foreign_key: :reversal_of_transaction_id,
     inverse_of: :reversal_of_transaction
+  has_many :child_transactions,
+    class_name: "FolioTransaction",
+    foreign_key: :parent_transaction_id,
+    inverse_of: :parent_transaction,
+    dependent: :restrict_with_error
 
   delegate :hotel, to: :booking_folio, allow_nil: true
 
@@ -58,6 +67,7 @@ class FolioTransaction < ApplicationRecord
   validate :category_allowed_for_transaction_type
   validate :amount_sign_matches_transaction_type
   validate :reversal_reference_is_valid
+  validate :lineage_references_are_valid
   validate :night_audit_matches_hotel
   validate :night_audit_matches_metadata, on: :create
 
@@ -161,6 +171,24 @@ class FolioTransaction < ApplicationRecord
       errors.add(:reversal_of_transaction, "can't reference itself")
     elsif booking_folio_id.present? && reversal_of_transaction.booking_folio_id != booking_folio_id
       errors.add(:reversal_of_transaction, "must belong to the same folio")
+    end
+  end
+
+  def lineage_references_are_valid
+    validate_lineage_reference(parent_transaction, :parent_transaction, same_folio: true)
+    validate_lineage_reference(split_from_transaction, :split_from_transaction)
+    validate_lineage_reference(moved_from_transaction, :moved_from_transaction)
+  end
+
+  def validate_lineage_reference(reference, attribute, same_folio: false)
+    return if reference.blank?
+
+    if reference == self
+      errors.add(attribute, "can't reference itself")
+    elsif same_folio && booking_folio_id.present? && reference.booking_folio_id != booking_folio_id
+      errors.add(attribute, "must belong to the same folio")
+    elsif !same_folio && booking_folio&.booking_id.present? && reference.booking_folio&.booking_id != booking_folio.booking_id
+      errors.add(attribute, "must belong to the same booking")
     end
   end
 
