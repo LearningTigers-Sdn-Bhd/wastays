@@ -5,10 +5,11 @@ module HotelPortal
     class SstReport
       Result = Struct.new(:start_date, :end_date, :rows, :totals, keyword_init: true)
 
-      def initialize(hotel:, start_date:, end_date:)
+      def initialize(hotel:, start_date:, end_date:, date_preset: nil)
         @hotel = hotel
         @start_date = start_date.to_date
         @end_date = end_date.to_date
+        @date_preset = date_preset.to_s
       end
 
       def call
@@ -65,6 +66,7 @@ module HotelPortal
           booking_id: booking.id,
           invoice_number: booking.invoice_number.presence || booking.confirmation_token,
           guest_name: booking.guest_name,
+          report_month: booking.check_in.to_date.beginning_of_month,
           check_in: booking.check_in,
           check_out: booking.check_out,
           stay_dates: "#{booking.check_in.strftime('%d %b %Y')} - #{booking.check_out.strftime('%d %b %Y')}",

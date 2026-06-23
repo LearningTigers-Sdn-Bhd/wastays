@@ -13,7 +13,12 @@
         </p>
       </div>
 
-      <%= form_with url: daily_revenue_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "daily-revenue-range-form" do |f| %>
+      <%= form_with url: daily_revenue_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "daily-revenue-range-form", data: { controller: "date-preset" } do |f| %>
+        <div data-controller="date-preset">
+          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Time Period</label>
+          <%= select_tag :date_preset, options_for_select(date_preset_options, params[:date_preset] || "this_month"), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
+        </div>
+        <div id="custom-date-range" class="<%= params[:date_preset] == 'custom' ? 'flex' : 'hidden' %> gap-3">
         <div>
           <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Start Date</label>
           <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
@@ -21,6 +26,7 @@
         <div>
           <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">End Date</label>
           <%= f.date_field :end_date, value: @report.end_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
+        </div>
         </div>
         <% if feature_enabled_for_hotel?("excel_pdf_export") %>
         <% export_disabled = @report.rows.empty? %>
@@ -47,40 +53,76 @@
     </div>
   </div>
 
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4">
+    <div class="p-6 md:border-r md:border-slate-200">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Bookings</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @report.totals[:booking_count] %></h2>
+    </div>
+    <div class="p-6 md:border-r md:border-slate-200">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Charges</p>
+      <h2 class="text-2xl font-bold tabular-nums tracking-tight text-slate-950">MYR <%= number_with_precision(@report.totals[:total_charges], precision: 2) %></h2>
+    </div>
+    <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Payments</p>
+      <h2 class="text-2xl font-bold tabular-nums tracking-tight text-slate-950">MYR <%= number_with_precision(@report.totals[:total_payments], precision: 2) %></h2>
+    </div>
+    <div class="bg-slate-50/30 p-6">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Net Amount</p>
+      <h2 class="text-2xl font-bold tabular-nums tracking-tight text-emerald-700">MYR <%= number_with_precision(@report.totals[:net_amount], precision: 2) %></h2>
+    </div>
+  </div>
+
+  <!-- Daily Breakdown -->
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="px-6 py-5 border-b border-slate-100">
-      <h2 class="text-lg font-bold tracking-tight text-slate-950">Daily Revenue Breakdown</h2>
+      <h2 class="text-lg font-bold tracking-tight text-slate-950"><%= params[:date_preset] == "this_year" ? "Monthly Breakdown" : "Daily Breakdown" %></h2>
     </div>
     <div class="overflow-x-auto">
       <table class="min-w-full">
         <thead class="bg-slate-100">
           <tr>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Date</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Bookings</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Room Revenue</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Tax</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Total Revenue</th>
+            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600"><%= params[:date_preset] == "this_year" ? "Month" : "Date" %></th>
+            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Bookings</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Accommodation</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Other Charges</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Tax</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Total Charges</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Discount</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Online</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Cash</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Deposit</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Refund</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Net</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 bg-white">
           <% if @report.rows.any? %>
             <% @report.rows.each do |row| %>
-              <tr>
-                <td class="px-6 py-4 text-sm font-semibold text-slate-900"><%= row[:date].strftime("%d %b %Y") %></td>
-                <td class="px-6 py-4 text-sm text-slate-700"><%= row[:booking_count] %></td>
-                <td class="px-6 py-4 text-sm text-slate-700">MYR <%= number_with_precision(row[:room_revenue], precision: 2) %></td>
-                <td class="px-6 py-4 text-sm text-slate-700">MYR <%= number_with_precision(row[:tax_amount], precision: 2) %></td>
-                <td class="px-6 py-4 text-sm font-semibold text-emerald-700">MYR <%= number_with_precision(row[:total_revenue], precision: 2) %></td>
+              <tr class="hover:bg-slate-50/50">
+                <td class="px-4 py-3 text-sm font-semibold text-slate-900 whitespace-nowrap"><%= params[:date_preset] == "this_year" ? row[:date].strftime("%b %Y") : row[:date].strftime("%d %b") %></td>
+                <td class="px-4 py-3 text-sm text-slate-700"><%= row[:booking_count] %></td>
+                <td class="px-4 py-3 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:accommodation], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:other_charges], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:tax], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm font-semibold text-slate-900 text-right">MYR <%= number_with_precision(row[:total_charges], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm text-red-500 text-right">- MYR <%= number_with_precision(row[:discount], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:gateway_payment], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:cash_payment], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:booking_payment], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm text-red-500 text-right">- MYR <%= number_with_precision(row[:refund], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm font-bold text-emerald-700 text-right">MYR <%= number_with_precision(row[:net_amount], precision: 2) %></td>
               </tr>
             <% end %>
           <% else %>
-            <tr><td colspan="5" class="px-6 py-20 text-center text-sm font-medium text-slate-500">No daily revenue data for this selected period.</td></tr>
+            <tr><td colspan="12" class="px-6 py-20 text-center text-sm font-medium text-slate-500">No daily revenue data for this selected period.</td></tr>
           <% end %>
         </tbody>
       </table>
     </div>
   </div>
 
+  <!-- Revenue by Source -->
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="px-6 py-5 border-b border-slate-100">
       <h2 class="text-lg font-bold tracking-tight text-slate-950">Revenue by Source</h2>
@@ -91,9 +133,11 @@
           <tr>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Source</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Bookings</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Room Revenue</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Tax</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Total Revenue</th>
+            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Accommodation</th>
+            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Other Charges</th>
+            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Tax</th>
+            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Total Charges</th>
+            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Payments</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 bg-white">
@@ -102,43 +146,18 @@
               <tr>
                 <td class="px-6 py-4 text-sm font-semibold text-slate-900"><%= row[:source] %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= row[:booking_count] %></td>
-                <td class="px-6 py-4 text-sm text-slate-700">MYR <%= number_with_precision(row[:room_revenue], precision: 2) %></td>
-                <td class="px-6 py-4 text-sm text-slate-700">MYR <%= number_with_precision(row[:tax_amount], precision: 2) %></td>
-                <td class="px-6 py-4 text-sm font-semibold text-emerald-700">MYR <%= number_with_precision(row[:total_revenue], precision: 2) %></td>
+                <td class="px-6 py-4 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:accommodation], precision: 2) %></td>
+                <td class="px-6 py-4 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:other_charges], precision: 2) %></td>
+                <td class="px-6 py-4 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:tax], precision: 2) %></td>
+                <td class="px-6 py-4 text-sm font-semibold text-slate-900 text-right">MYR <%= number_with_precision(row[:total_charges], precision: 2) %></td>
+                <td class="px-6 py-4 text-sm font-semibold text-emerald-700 text-right">MYR <%= number_with_precision(row[:net_amount], precision: 2) %></td>
               </tr>
             <% end %>
           <% else %>
-            <tr><td colspan="5" class="px-6 py-20 text-center text-sm font-medium text-slate-500">No source revenue data for this selected period.</td></tr>
+            <tr><td colspan="7" class="px-6 py-20 text-center text-sm font-medium text-slate-500">No source revenue data for this selected period.</td></tr>
           <% end %>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-
-<script>
-  (() => {
-    const init = () => {
-      const form = document.getElementById("daily-revenue-range-form");
-      if (!form || form.dataset.bound === "true") return;
-      form.dataset.bound = "true";
-
-      const startInput = form.querySelector('input[name="start_date"]');
-      const endInput = form.querySelector('input[name="end_date"]');
-      if (!startInput || !endInput) return;
-
-      const submit = () => {
-        if (startInput.value && endInput.value && endInput.value < startInput.value) {
-          endInput.value = startInput.value;
-        }
-        form.requestSubmit();
-      };
-
-      startInput.addEventListener("change", submit);
-      endInput.addEventListener("change", submit);
-    };
-
-    document.addEventListener("turbo:load", init);
-    document.addEventListener("DOMContentLoaded", init);
-  })();
-</script>

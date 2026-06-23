@@ -8,7 +8,7 @@ module HotelPortal
 
     PAYOUT_TABS = %w[upcoming paid].freeze
 
-    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches sst]
+    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches sst refund_report]
     before_action :authorize_view_payouts!, only: %i[payouts]
     before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
     before_action -> { require_feature!("arrivals_departures_list") }, only: %i[arrivals_departures]
@@ -143,7 +143,8 @@ module HotelPortal
       @report = HotelPortal::Reports::DailyOccupancyReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
-        end_date: @report_end_date
+        end_date: @report_end_date,
+        date_preset: params[:date_preset]
       ).call
 
       respond_to do |format|
@@ -176,7 +177,8 @@ module HotelPortal
       @report = HotelPortal::Reports::DailyRevenueReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
-        end_date: @report_end_date
+        end_date: @report_end_date,
+        date_preset: params[:date_preset]
       ).call
 
       respond_to do |format|
@@ -209,7 +211,8 @@ module HotelPortal
       @report = HotelPortal::Reports::ManagersFlashReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
-        end_date: @report_end_date
+        end_date: @report_end_date,
+        date_preset: params[:date_preset]
       ).call
 
       respond_to do |format|
@@ -271,7 +274,7 @@ module HotelPortal
     end
 
     def deposit_liability
-      @report_as_of_date = parse_single_report_date(params[:as_of_date]) || parse_single_report_date(params[:date]) || current_hotel.business_date_for || Date.current
+      @report_as_of_date = parse_deposit_liability_date
       @report = HotelPortal::Reports::DepositLiabilityReport.new(
         hotel: current_hotel,
         as_of_date: @report_as_of_date
@@ -389,7 +392,8 @@ module HotelPortal
       @report = HotelPortal::Reports::SstReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
-        end_date: @report_end_date
+        end_date: @report_end_date,
+        date_preset: params[:date_preset]
       ).call
 
       respond_to do |format|
@@ -417,9 +421,70 @@ module HotelPortal
       end
     end
 
+    def refund_report
+      @report_start_date, @report_end_date = parse_report_date_range
+      @report = HotelPortal::Reports::RefundReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date,
+        date_preset: params[:date_preset]
+      ).call
+
+      respond_to do |format|
+        format.html
+        format.csv do
+          csv = HotelPortal::Reports::RefundReportCsvExportService.new(report: @report).generate
+          send_data csv,
+            filename: "refund-report-#{@report.start_date}-#{@report.end_date}.csv",
+            type: "text/csv"
+        end
+        format.any(:xls) do
+          workbook = HotelPortal::Reports::RefundReportExcelExportService.new(report: @report).generate
+          send_data workbook,
+            filename: "refund-report-#{@report.start_date}-#{@report.end_date}.xls",
+            type: "application/vnd.ms-excel",
+            disposition: "attachment"
+        end
+        format.pdf do
+          pdf = HotelPortal::Reports::RefundReportPdfExportService.new(hotel: current_hotel, report: @report).generate
+          send_data pdf,
+            filename: "refund-report-#{@report.start_date}-#{@report.end_date}.pdf",
+            type: "application/pdf",
+            disposition: "attachment"
+        end
+      end
+    end
+
     private
 
     def parse_report_date_range
+      # Handle date_preset parameter (e.g., "2026-05", "this_month", "custom")
+      date_preset = params[:date_preset]
+
+      if date_preset.present?
+        case date_preset
+        when "all_time"
+          return [ Date.new(2024, 1, 1), Date.current ]
+        when "this_year"
+          return [ Date.current.beginning_of_year, Date.current.end_of_year ]
+        when "last_month"
+          last_month = 1.month.ago.to_date
+          return [ last_month.beginning_of_month, last_month.end_of_month ]
+        when "this_month"
+          return [ Date.current.beginning_of_month, Date.current.end_of_month ]
+        when "custom"
+          start = params[:start_date].present? ? params[:start_date].to_date : Date.current.beginning_of_month
+          end_date = params[:end_date].present? ? params[:end_date].to_date : Date.current.end_of_month
+          return [ start, end_date ]
+        else
+          # Check if it's a specific month (e.g. "2026-03")
+          if date_preset =~ /\A\d{4}-\d{2}\z/
+            start_date = Date.parse("#{date_preset}-01")
+            return [ start_date, start_date.end_of_month ]
+          end
+        end
+      end
+
       # Backward compatible: if only `date` is provided, treat it as one-day range.
       if params[:start_date].blank? && params[:end_date].blank? && params[:date].present?
         parsed_date = parse_single_report_date(params[:date])
@@ -442,6 +507,34 @@ module HotelPortal
       Date.parse(value.to_s)
     rescue ArgumentError, TypeError
       nil
+    end
+
+    def parse_deposit_liability_date
+      date_preset = params[:date_preset]
+
+      if date_preset.present?
+        case date_preset
+        when "all_time", "this_year"
+          # As of report - use current date for these
+          return Date.current
+        when "last_month"
+          last_month = 1.month.ago.to_date
+          return last_month.end_of_month
+        when "this_month"
+          return Date.current.end_of_month
+        when "custom"
+          # Use user-provided as_of_date or default to end of month
+          return parse_single_report_date(params[:as_of_date]) || Date.current.end_of_month
+        else
+          # Check if it's a specific month (e.g. "2026-03")
+          if date_preset =~ /\A\d{4}-\d{2}\z/
+            return Date.parse("#{date_preset}-01").end_of_month
+          end
+        end
+      end
+
+      # Fallback: use as_of_date param or date param or default
+      parse_single_report_date(params[:as_of_date]) || parse_single_report_date(params[:date]) || current_hotel.business_date_for || Date.current
     end
 
     def authorize_view_reports!

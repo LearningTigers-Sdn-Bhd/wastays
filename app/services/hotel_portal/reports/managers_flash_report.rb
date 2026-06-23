@@ -5,15 +5,17 @@ module HotelPortal
     class ManagersFlashReport
       Result = Struct.new(:start_date, :end_date, :rows, :totals, keyword_init: true)
 
-      def initialize(hotel:, start_date:, end_date:)
+      def initialize(hotel:, start_date:, end_date:, date_preset: nil)
         @hotel = hotel
         @start_date = start_date.to_date
         @end_date = end_date.to_date
+        @date_preset = date_preset.to_s
       end
 
       def call
         # 1. Fetch Daily Data
         daily_metrics = fetch_daily_metrics
+        daily_metrics = monthly? ? aggregate_monthly(daily_metrics) : daily_metrics
 
         # 2. Calculate Totals
         totals = calculate_totals(daily_metrics)
@@ -27,6 +29,36 @@ module HotelPortal
       end
 
       private
+
+      def monthly?
+        @date_preset == "this_year"
+      end
+
+      def aggregate_monthly(rows)
+        rows.group_by { |row| row[:date].beginning_of_month }
+            .map do |month, month_rows|
+          rooms_sold = month_rows.sum { |row| row[:rooms_sold].to_i }
+          rooms_available = month_rows.sum { |row| row[:rooms_available].to_i }
+          booking_revenue = month_rows.sum { |row| row[:booking_revenue].to_d }
+          room_revenue = month_rows.sum { |row| row[:room_revenue].to_d }
+          tax_amount = month_rows.sum { |row| row[:tax_amount].to_d }
+          other_revenue = month_rows.sum { |row| row[:other_revenue].to_d }
+
+          {
+            date: month,
+            rooms_sold: rooms_sold,
+            rooms_available: rooms_available,
+            occupancy_rate: ratio(rooms_sold, rooms_available),
+            adr: ratio(booking_revenue, rooms_sold),
+            revpar: ratio(booking_revenue, rooms_available),
+            booking_revenue: booking_revenue.round(2),
+            room_revenue: room_revenue.round(2),
+            tax_amount: tax_amount.round(2),
+            other_revenue: other_revenue.round(2),
+            total_revenue: (room_revenue + tax_amount + other_revenue).round(2)
+          }
+        end
+      end
 
       def fetch_daily_metrics
         # Generate date series for the range to ensure we have rows for every day

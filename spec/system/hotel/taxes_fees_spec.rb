@@ -20,11 +20,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     RolePermission.find_or_create_by!(role: role, permission: view_payouts_permission)
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
-
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   it "shows finance pages in the finance sidebar section" do

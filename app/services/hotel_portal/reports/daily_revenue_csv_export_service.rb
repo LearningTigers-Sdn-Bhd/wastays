@@ -11,15 +11,22 @@ module HotelPortal
 
       def generate
         CSV.generate(headers: true) do |csv|
-          csv << [ "Date", "Bookings", "Room Revenue", "Tax", "Total Revenue" ]
+          csv << [ "Date", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Discount", "Online", "Cash", "Deposit", "Refund", "Net" ]
 
           @report.rows.each do |row|
             csv << [
               row[:date].strftime("%Y-%m-%d"),
               row[:booking_count],
-              money(row[:room_revenue]),
-              money(row[:tax_amount]),
-              money(row[:total_revenue])
+              money(row[:accommodation]),
+              money(row[:other_charges]),
+              money(row[:tax]),
+              money(row[:total_charges]),
+              money(row[:discount]),
+              money(row[:gateway_payment]),
+              money(row[:cash_payment]),
+              money(row[:booking_payment]),
+              money(row[:refund]),
+              money(row[:net_amount])
             ]
           end
         end
@@ -28,7 +35,7 @@ module HotelPortal
       private
 
       def money(value)
-        format("MYR %.2f", value.to_d)
+        format("%.2f", value.to_d)
       end
     end
   end

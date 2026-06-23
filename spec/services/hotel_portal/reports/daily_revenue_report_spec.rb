@@ -23,19 +23,19 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
 
     expect(report.rows.size).to eq(2)
     expect(report.source_rows.map { |r| r[:source] }).to include("Walk-in", "Agoda")
-    expect(report.totals[:room_revenue]).to eq(300.to_d)
-    expect(report.totals[:tax_amount]).to eq(10.to_d)
-    expect(report.totals[:total_revenue]).to eq(310.to_d)
+    expect(report.totals[:accommodation]).to eq(300.to_d)
+    expect(report.totals[:tax]).to eq(10.to_d)
+    expect(report.totals[:total_charges]).to eq(310.to_d)
     expect(report.totals[:booking_count]).to eq(2)
 
     # Check daily rows
     row1 = report.rows.find { |r| r[:date] == Date.new(2026, 5, 6) }
-    expect(row1[:room_revenue]).to eq(100.to_d)
-    expect(row1[:tax_amount]).to eq(10.to_d)
+    expect(row1[:accommodation]).to eq(100.to_d)
+    expect(row1[:tax]).to eq(10.to_d)
     expect(row1[:booking_count]).to eq(1)
 
     row2 = report.rows.find { |r| r[:date] == Date.new(2026, 5, 7) }
-    expect(row2[:room_revenue]).to eq(200.to_d)
+    expect(row2[:accommodation]).to eq(200.to_d)
     expect(row2[:booking_count]).to eq(1)
   end
 
@@ -56,7 +56,7 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
     row = report.rows.find { |r| r[:date] == start_date }
-    expect(row[:room_revenue]).to eq(0.to_d)
+    expect(row[:accommodation]).to eq(100.to_d)
     expect(row[:booking_count]).to eq(1) # Still counted as active because a booking_id had accommodation activity
   end
 
@@ -68,7 +68,7 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
 
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
-    expect(report.totals[:room_revenue]).to eq(0)
+    expect(report.totals[:accommodation]).to eq(0)
   end
 
   it "includes all charge categories (e.g., F&B) in revenue" do
@@ -80,9 +80,9 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
 
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
-    expect(report.totals[:room_revenue]).to eq(0)
-    expect(report.totals[:other_revenue]).to eq(125.to_d)
-    expect(report.totals[:total_revenue]).to eq(125.to_d)
+    expect(report.totals[:accommodation]).to eq(0)
+    expect(report.totals[:other_charges]).to eq(125.to_d)
+    expect(report.totals[:total_charges]).to eq(125.to_d)
     expect(report.totals[:booking_count]).to eq(1)
   end
 end

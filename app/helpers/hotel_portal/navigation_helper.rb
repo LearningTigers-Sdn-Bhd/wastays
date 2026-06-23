@@ -11,12 +11,13 @@ module HotelPortal
       financial_nav_items = [
         NavItem.new(label: "Summary", path: hotel_reports_path(current_hotel), icon: "file-spreadsheet", active: controller_name == "reports" && action_name == "index"),
         NavItem.new(label: "Manager's Flash Report", path: managers_flash_hotel_reports_path(current_hotel), icon: "trending-up", active: controller_name == "reports" && action_name == "managers_flash", plan_feature: "housekeeper_productivity"),
-        NavItem.new(label: "Daily Revenue", path: daily_revenue_hotel_reports_path(current_hotel), icon: "arrow-down-right", active: controller_name == "reports" && action_name == "daily_revenue", plan_feature: "revenue_allocation_per_night"),
-        NavItem.new(label: "Arrivals & Departures", path: arrivals_departures_hotel_reports_path(current_hotel), icon: "arrow-up-right", active: controller_name == "reports" && action_name == "arrivals_departures", plan_feature: "arrivals_departures_list"),
-        NavItem.new(label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), icon: "pie-chart", active: controller_name == "reports" && action_name == "daily_occupancy", plan_feature: "daily_occupancy_revenue"),
-        NavItem.new(label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), icon: "credit-card", active: controller_name == "reports" && action_name == "outstanding_balance", plan_feature: "outstanding_balance_noshow"),
-        NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "banknote", active: controller_name == "reports" && action_name == "deposit_liability"),
-        NavItem.new(label: "SST Report", path: sst_hotel_reports_path(current_hotel), icon: "receipt", active: controller_name == "reports" && action_name == "sst")
+        NavItem.new(label: "Daily Revenue", path: daily_revenue_hotel_reports_path(current_hotel), icon: "coins", active: controller_name == "reports" && action_name == "daily_revenue", plan_feature: "revenue_allocation_per_night"),
+        NavItem.new(label: "Refund Report", path: refund_report_hotel_reports_path(current_hotel), icon: "credit-card", active: controller_name == "reports" && action_name == "refund_report"),
+        NavItem.new(label: "Arrivals & Departures", path: arrivals_departures_hotel_reports_path(current_hotel), icon: "users", active: controller_name == "reports" && action_name == "arrivals_departures", plan_feature: "arrivals_departures_list"),
+        NavItem.new(label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), icon: "percent", active: controller_name == "reports" && action_name == "daily_occupancy", plan_feature: "daily_occupancy_revenue"),
+        NavItem.new(label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), icon: "wallet", active: controller_name == "reports" && action_name == "outstanding_balance", plan_feature: "outstanding_balance_noshow"),
+        NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "landmark", active: controller_name == "reports" && action_name == "deposit_liability"),
+        NavItem.new(label: "SST Report", path: sst_hotel_reports_path(current_hotel), icon: "calculator", active: controller_name == "reports" && action_name == "sst")
       ]
       financial_nav_active = financial_nav_items.any?(&:active)
 
