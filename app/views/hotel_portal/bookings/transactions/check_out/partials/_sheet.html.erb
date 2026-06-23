@@ -10,6 +10,8 @@
 else
   balance
 end %>
+<% booking_checkout_readiness = Folios::BookingCheckoutReadiness.call(booking: booking, hotel: hotel) %>
+<% projected_checkout_balance = booking_checkout_readiness.projected_balance unless early_departure %>
 <% held_deposits = booking.deposits.where(status: "collected") %>
 <% held_deposit_total = held_deposits.sum(:amount).to_d %>
 <% checkout_total_charges = (folio&.total_charges || 0).to_d + early_checkout_lines.sum { |line| line[:amount].to_d } %>

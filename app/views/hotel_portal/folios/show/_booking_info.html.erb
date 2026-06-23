@@ -1,0 +1,39 @@
+<% folio_show = local_assigns.fetch(:folio_show) %>
+<% ready = folio_show.checkout_readiness_label == "Ready" %>
+
+<section class="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+  <div class="flex items-center gap-2 border-b border-slate-200 px-4 py-3">
+    <span class="inline-flex size-7 items-center justify-center rounded-md bg-blue-50 text-blue-700">
+      <%= cached_icon "book-open", class: "size-3.5" %>
+    </span>
+    <h2 class="text-sm font-black uppercase tracking-[0.18em] text-slate-700">Booking Info</h2>
+  </div>
+
+  <div class="grid gap-0 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
+    <table class="w-full table-fixed text-sm">
+      <tbody class="divide-y divide-slate-200">
+        <% folio_show.folio_detail_rows.each do |label, value| %>
+          <tr>
+            <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48"><%= label %></th>
+            <td class="px-4 py-2 font-semibold tabular-nums text-slate-950"><%= value %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <div class="flex min-h-full flex-col justify-center border-t border-slate-200 bg-slate-50/70 p-4 lg:border-l lg:border-t-0">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex size-8 items-center justify-center rounded-md <%= ready ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700" %>">
+          <%= cached_icon "door-open", class: "size-4" %>
+        </span>
+        <div>
+          <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Checkout Readiness</p>
+          <p class="text-base font-black text-slate-950"><%= folio_show.checkout_readiness_label %></p>
+        </div>
+      </div>
+
+      <p class="mt-4 text-sm font-black text-slate-950"><%= folio_show.checkout_status_label %></p>
+      <p class="mt-1 text-sm font-semibold text-slate-500"><%= folio_show.checkout_status_description %></p>
+    </div>
+  </div>
+</section>

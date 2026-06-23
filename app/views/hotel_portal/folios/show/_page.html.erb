@@ -1,4 +1,3 @@
-<% back_label = local_assigns[:back_label].presence || "Back to Booking" %>
 <% folio_origin = local_assigns[:folio_origin] %>
 <% folio_show = local_assigns.fetch(:folio_show) %>
 
@@ -10,18 +9,13 @@
         <p class="mt-1 max-w-3xl text-sm font-medium text-slate-600"><%= folio_show.header_subtitle %></p>
       </div>
 
-      <%= link_to back_path, class: "inline-flex items-center justify-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 sm:self-auto" do %>
-        <%= cached_icon "arrow-left", stroke_width: 2.25, class: "size-3.5" %>
-        <%= back_label %>
-      <% end %>
+      <%= render "hotel_portal/folios/show/report_dropdown", booking: booking, hotel: current_hotel, folio_show: folio_show %>
     </div>
 
-    <%= render "hotel_portal/folios/show/page_summary", folio_show: folio_show %>
+    <%= render "hotel_portal/folios/show/booking_info", folio_show: folio_show %>
   </header>
 
-  <%= render "hotel_portal/folios/show/checkout_status", folio_show: folio_show %>
+  <%= render "hotel_portal/folios/show/financial_metrics", folio_show: folio_show %>
 
-  <%= render "hotel_portal/folios/show/folio_actions", booking: booking, hotel: current_hotel, folio_show: folio_show, redirect_to_folio: true, folio_origin: folio_origin %>
-
-  <%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: booking, hotel: current_hotel, folio_origin: folio_origin %>
+  <%= render "hotel_portal/folios/show/folio_windows", booking: booking, hotel: current_hotel, folio_show: folio_show, folio_origin: folio_origin %>
 </div>
