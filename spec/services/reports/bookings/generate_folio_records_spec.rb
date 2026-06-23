@@ -141,7 +141,8 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.guest_folio_detail_rows).to include([ "Invoice No", "ABC-30098231" ])
     expect(records.guest_folio_detail_rows).to include([ "Currency", "MYR" ])
     expect(records.booking_stay_detail_rows).to include([ "Room No / Type", "412 / Deluxe King" ])
-    expect(records.booking_stay_detail_rows).to include([ "Folio No", "ABC-30000451" ])
+    expect(records.booking_stay_detail_rows).to include([ "Folio Account Reference", "ABC-30000451" ])
+    expect(records.booking_stay_detail_rows).to include([ "Folio Reference", "ABC-30000451/1" ])
     expect(records.booking_stay_detail_rows).to include([ "Confirm No", "BK-778291" ])
   end
 

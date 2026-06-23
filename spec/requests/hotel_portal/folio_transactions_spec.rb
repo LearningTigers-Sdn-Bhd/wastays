@@ -42,6 +42,16 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       folio
     end
 
+    it "renders the posting sheet in the offcanvas frame" do
+      get new_hotel_folio_transaction_path(hotel, booking, transaction_type: "payment", active_folio_id: folio.id, redirect_to_folio: true)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include(%(turbo-frame id="offcanvas_drawer"))
+      expect(response.body).to include("Post Payment")
+      expect(response.body).to include("Target Folio")
+      expect(response.body).to include(folio.display_name)
+    end
+
     it "posts a cash payment" do
       expect {
         post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash payment", posting_date: Date.current)
@@ -49,6 +59,27 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
 
       expect(response).to redirect_to(hotel_booking_path(hotel, booking))
       expect(folio.folio_transactions.last.category).to eq("cash")
+    end
+
+    it "posts a cash payment to the selected secondary folio" do
+      target_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+      primary_payment_count = folio.folio_transactions.payment.count
+
+      expect {
+        post_transaction(
+          transaction_type: "payment",
+          category: "cash",
+          payment_source: "cash",
+          amount: "100.00",
+          description: "Cash payment",
+          posting_date: Date.current,
+          booking_folio_id: target_folio.id
+        )
+      }.to change { target_folio.folio_transactions.payment.count }.by(1)
+
+      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(folio.folio_transactions.payment.count).to eq(primary_payment_count)
+      expect(target_folio.folio_transactions.last.category).to eq("cash")
     end
 
     it "stores reference and note metadata for staff-posted cash payments" do
@@ -194,7 +225,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         }
       }.to change { folio.folio_transactions.payment.count }.by(1)
 
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios"))
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios", active_folio_id: folio.id))
     end
 
     it "posts an other charge" do
@@ -206,6 +237,19 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
 
       expect(folio.folio_transactions.last.category).to eq("other")
       expect(folio.folio_transactions.last.transaction_code).to eq(code)
+    end
+
+    it "posts a charge to the selected secondary folio" do
+      target_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+      code = create(:transaction_code, hotel: hotel, kind: "charge", category: "other")
+      primary_charge_count = folio.folio_transactions.charge.count
+
+      expect {
+        post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "25.00", description: "Lost key", posting_date: Date.current, booking_folio_id: target_folio.id)
+      }.to change { target_folio.folio_transactions.charge.count }.by(1)
+
+      expect(folio.folio_transactions.charge.count).to eq(primary_charge_count)
+      expect(target_folio.folio_transactions.last.transaction_code).to eq(code)
     end
 
     it "adds a charge from a transaction code and generated attached taxes, then redirects to folio" do
@@ -233,7 +277,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         }
       }.to change(FolioTransaction, :count).by(2)
 
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking))
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
       parent = folio.folio_transactions.find_by!(transaction_code: code)
       tax = folio.folio_transactions.where(category: "tax").sole
       expect(parent.category).to eq("fb")
@@ -321,6 +365,39 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       }.to change { folio.folio_transactions.adjustment.count }.by(1)
 
       expect(folio.folio_transactions.last.category).to eq("write_off")
+    end
+
+    it "posts an adjustment to the selected secondary folio" do
+      target_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+      primary_adjustment_count = folio.folio_transactions.adjustment.count
+
+      expect {
+        post_transaction(transaction_type: "adjustment", category: "adjustment", amount: "50.00", description: "Manager adjustment", posting_date: Date.current, booking_folio_id: target_folio.id)
+      }.to change { target_folio.folio_transactions.adjustment.count }.by(1)
+
+      expect(folio.folio_transactions.adjustment.count).to eq(primary_adjustment_count)
+      expect(target_folio.folio_transactions.last.category).to eq("adjustment")
+    end
+
+    it "rejects a selected folio from another booking" do
+      other_booking = create(:booking, hotel: hotel)
+      other_folio = create(:booking_folio, booking: other_booking, hotel: hotel)
+
+      expect {
+        post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: Date.current, booking_folio_id: other_folio.id)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(flash[:alert]).to eq("Selected folio is not available for this booking.")
+    end
+
+    it "rejects a selected closed folio" do
+      target_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "closed")
+
+      expect {
+        post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: Date.current, booking_folio_id: target_folio.id)
+      }.not_to change(FolioTransaction, :count)
+
+      expect(flash[:alert]).to eq("Selected folio is not available for this booking.")
     end
 
     it "rejects disallowed manual charge categories" do
@@ -483,6 +560,62 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios"))
     end
 
+    it "requires manage_folio_movements permission to move charges" do
+      transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
+      target_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+
+      expect {
+        post move_hotel_folio_transaction_path(hotel, booking, transaction), params: {
+          redirect_to_folio: "true",
+          folio_operation: { target_folio_id: target_folio.id, reason: "Route to company" }
+        }
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
+      expect(flash[:alert]).to include("permission")
+    end
+
+    it "moves a posted charge to another folio and keeps the active folio selected" do
+      grant_permission("manage_folio_movements")
+      transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
+      target_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+
+      expect {
+        post move_hotel_folio_transaction_path(hotel, booking, transaction), params: {
+          redirect_to_folio: "true",
+          folio_operation: { target_folio_id: target_folio.id, reason: "Route to company" }
+        }
+      }.to change(FolioTransaction, :count).by(2)
+        .and change(FolioOperationLog.where(operation_type: "move_transaction"), :count).by(1)
+
+      moved = target_folio.folio_transactions.charge.order(:id).last
+      expect(moved.amount).to eq(100.to_d)
+      expect(moved.moved_from_transaction).to eq(transaction)
+      expect(transaction.reload.voided_by_transaction).to be_present
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: target_folio.id))
+    end
+
+    it "splits a posted charge to another folio and keeps the active folio selected" do
+      grant_permission("manage_folio_movements")
+      transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
+      target_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+
+      expect {
+        post split_hotel_folio_transaction_path(hotel, booking, transaction), params: {
+          redirect_to_folio: "true",
+          folio_operation: { target_folio_id: target_folio.id, amount: "40.00", reason: "Company covers part" }
+        }
+      }.to change(FolioTransaction, :count).by(3)
+        .and change(FolioOperationLog.where(operation_type: "split_transaction"), :count).by(1)
+
+      source_remainder = folio.folio_transactions.charge.where(split_from_transaction: transaction).order(:id).last
+      target_split = target_folio.folio_transactions.charge.where(split_from_transaction: transaction).order(:id).last
+      expect(source_remainder.amount).to eq(60.to_d)
+      expect(target_split.amount).to eq(40.to_d)
+      expect(transaction.reload.voided_by_transaction).to be_present
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: target_folio.id))
+    end
+
     it "rejects reversal without a correction reason" do
       transaction = create(:folio_transaction, booking_folio: folio)
 
@@ -529,6 +662,15 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     }.not_to change(FolioTransaction, :count)
 
     expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(flash[:alert]).to include("permission")
+  end
+
+  it "requires the matching granular permission to render the posting sheet" do
+    folio
+
+    get new_hotel_folio_transaction_path(hotel, booking, transaction_type: "payment", active_folio_id: folio.id)
+
+    expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
     expect(flash[:alert]).to include("permission")
   end
 

@@ -229,7 +229,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_folio_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Folio #{booking.formatted_folio_number}")
+      expect(response.body).to include("Account Reference")
+      expect(response.body).to include("#{booking.reload.folio_account_reference_display}/1")
       expect(response.body).to include("Guest")
       expect(response.body).to include("Stay")
       expect(response.body).to include("Back to Booking")

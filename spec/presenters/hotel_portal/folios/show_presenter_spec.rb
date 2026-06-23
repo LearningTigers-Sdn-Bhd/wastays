@@ -26,17 +26,19 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
   end
 
   it "uses the folio reference instead of the booking confirmation as the title reference" do
-    expect(presenter.folio_reference).to eq(booking.formatted_folio_number)
+    expect(presenter.folio_account_reference).to eq(booking.reload.folio_account_reference_display)
+    expect(presenter.folio_reference).to eq("#{booking.folio_account_reference_display}/1")
     expect(presenter.booking_reference).to eq("8XXCF4")
-    expect(presenter.header_subtitle).to eq("Booking 8XXCF4 · Hanami Saki · 18 Jun - 19 Jun 2026")
+    expect(presenter.header_subtitle).to eq("Manage folio windows, posting actions, and ledger activity for this booking.")
   end
 
   it "builds split folio details and financial metric items" do
     create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "booking_payment", amount: 100)
     create(:folio_forecasted_charge, booking_folio: folio, amount: 100, stay_date: Date.new(2026, 6, 18), charge_kind: "accommodation")
 
-    expect(presenter.folio_detail_rows.map(&:first)).to eq([ "Booking Reference", "Folio Reference", "Guest", "Room", "Stay / Nights", "Folio Type" ])
+    expect(presenter.folio_detail_rows.map(&:first)).to eq([ "Booking Reference", "Folio Account Reference", "Folio Reference", "Guest", "Room", "Stay / Nights", "Currency" ])
     expect(presenter.folio_detail_rows).to include([ "Stay / Nights", "18 Jun 2026 - 19 Jun 2026 / 1 Night" ])
+    expect(presenter.folio_detail_rows).not_to include([ "Folio Type", "Booking folio" ])
     expect(presenter.financial_metric_rows.map(&:first)).to eq([ "Current Balance", "Balance State", "Posted Charges", "Payments / Refunds", "Upcoming Charges", "Checkout Readiness" ])
     expect(presenter.financial_metric_rows).to include([ "Payments / Refunds", "MYR 100.00" ])
     expect(presenter.financial_metric_rows).to include([ "Checkout Readiness", "Not ready" ])

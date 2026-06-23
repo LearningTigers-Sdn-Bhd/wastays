@@ -19,16 +19,68 @@ RSpec.describe BookingFolio, type: :model do
 
   describe "validations" do
     let(:booking) { create(:booking) }
-    subject { BookingFolio.new(hotel: booking.hotel, booking: booking, folio_number: 123, status: "open") }
+    subject do
+      BookingFolio.new(
+        hotel: booking.hotel,
+        booking: booking,
+        folio_number: 123,
+        status: "open",
+        name: "Guest Folio",
+        folio_type: "guest",
+        payer_type: "guest",
+        currency: "MYR",
+        opened_at: Time.current
+      )
+    end
 
     it { should validate_presence_of(:folio_number) }
     it { should validate_uniqueness_of(:folio_number).scoped_to(:hotel_id) }
     it { should validate_presence_of(:status) }
 
-    it "only accepts open and closed statuses" do
+    it "assigns required defaults" do
+      folio = build(:booking_folio, name: nil, currency: nil, opened_at: nil)
+
+      expect(folio).to be_valid
+      expect(folio.name).to eq("Guest Folio")
+      expect(folio.currency).to eq("MYR")
+      expect(folio.opened_at).to be_present
+      expect(folio.folio_sequence).to eq(1)
+    end
+
+    it "assigns stable account and derived folio references" do
+      primary = create(:booking_folio, hotel: booking.hotel, booking: booking, folio_number: 381)
+      secondary = create(:booking_folio, :secondary, hotel: booking.hotel, booking: booking, folio_number: 382)
+
+      account_reference = booking.reload.folio_account_reference_display
+
+      expect(account_reference).to eq(booking.formatted_folio_number)
+      expect(primary.reload.folio_sequence).to eq(1)
+      expect(secondary.reload.folio_sequence).to eq(2)
+      expect(primary.folio_reference_display).to eq("#{account_reference}/1")
+      expect(secondary.folio_reference_display).to eq("#{account_reference}/2")
+    end
+
+    it "accepts open, closed, and voided statuses" do
       expect(build(:booking_folio, status: "open")).to be_valid
       expect(build(:booking_folio, status: "closed")).to be_valid
+      expect(build(:booking_folio, status: "voided")).to be_valid
       expect(build(:booking_folio, status: "reopened")).not_to be_valid
+    end
+
+    it "allows multiple folios for the same booking when only one is primary" do
+      primary = create(:booking_folio, hotel: booking.hotel, booking: booking, folio_number: 1)
+      secondary = build(:booking_folio, :secondary, hotel: booking.hotel, booking: booking, folio_number: 2)
+
+      expect(primary).to be_is_primary
+      expect(secondary).to be_valid
+    end
+
+    it "rejects multiple primary folios for the same booking" do
+      create(:booking_folio, hotel: booking.hotel, booking: booking, folio_number: 1)
+      duplicate_primary = build(:booking_folio, hotel: booking.hotel, booking: booking, folio_number: 2)
+
+      expect(duplicate_primary).not_to be_valid
+      expect(duplicate_primary.errors[:is_primary]).to include("has already been taken")
     end
 
     it "allows the same folio number for different hotels" do
@@ -124,6 +176,15 @@ RSpec.describe BookingFolio, type: :model do
       folio = create(:booking_folio)
 
       expect { folio.update_column(:status, "reopened") }.to raise_error(ActiveRecord::StatementInvalid)
+    end
+  end
+
+  describe "destroy protections" do
+    it "prevents deleting the last folio for a booking" do
+      folio = create(:booking_folio)
+
+      expect(folio.destroy).to be(false)
+      expect(folio.errors[:base]).to include("Cannot delete the last folio for a booking.")
     end
   end
 
