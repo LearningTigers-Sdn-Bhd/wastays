@@ -18,14 +18,34 @@ module HotelPortal
       [ "adjustment", "write_off" ] => "post_folio_write_offs"
     }.freeze
 
+    def new
+      @active_folio = sheet_folio
+      return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no open folio." if @active_folio.blank?
+
+      @open_folios = @booking.booking_folios.open.order(is_primary: :desc, folio_sequence: :asc, folio_number: :asc, id: :asc).to_a
+      @transaction_type = params[:transaction_type].to_s
+      @category = params[:category].presence
+      @amount = params[:amount]
+      @redirect_to_folio = params[:redirect_to_folio] == "true"
+      @redirect_to_checkout = params[:redirect_to_checkout] == "true"
+      @folio_origin = params[:folio_origin].presence
+      assign_sheet_config
+      return redirect_to hotel_folio_path(current_hotel, @booking, active_folio_id: @active_folio.id), alert: "You do not have permission to post this folio transaction." unless allowed_to_view_posting_sheet?
+
+      render "hotel_portal/folios/transactions/offcanvas"
+    end
+
     def create
-      unless @booking.booking_folio
-        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
+      target_folio = posting_folio
+
+      unless target_folio
+        message = folio_transaction_params[:booking_folio_id].present? ? "Selected folio is not available for this booking." : "Booking has no folio."
+        return redirect_after_post(alert: message)
       end
       return redirect_after_post(alert: "You do not have permission to post this folio transaction.") unless allowed_to_post_folio_transaction?
 
       result = ::Folios::PostStaffTransaction.call(
-        folio: @booking.booking_folio,
+        folio: target_folio,
         user: current_user,
         transaction_type: folio_transaction_params[:transaction_type],
         category: folio_transaction_params[:category],
@@ -37,9 +57,9 @@ module HotelPortal
       )
 
       if result.success?
-        redirect_after_post(notice: "Folio transaction posted.")
+        redirect_after_post(notice: "Folio transaction posted.", active_folio_id: target_folio.id)
       else
-        redirect_after_post(alert: result.error)
+        redirect_after_post(alert: result.error, active_folio_id: target_folio.id)
       end
     end
 
@@ -71,13 +91,52 @@ module HotelPortal
       end
     end
 
+    def move
+      transaction = booking_transaction_scope.find(params[:id])
+      target_folio = @booking.booking_folios.find(folio_operation_params[:target_folio_id])
+      result = ::Folios::MoveTransaction.call(
+        transaction: transaction,
+        target_folio: target_folio,
+        user: current_user,
+        reason: folio_operation_params[:reason],
+        posting_date: current_hotel.current_business_date
+      )
+
+      if result.success?
+        redirect_after_post(notice: "Folio transaction moved.", active_folio_id: target_folio.id)
+      else
+        redirect_after_post(alert: result.error, active_folio_id: transaction.booking_folio_id)
+      end
+    end
+
+    def split
+      transaction = booking_transaction_scope.find(params[:id])
+      target_folio = @booking.booking_folios.find(folio_operation_params[:target_folio_id])
+      result = ::Folios::SplitTransaction.call(
+        transaction: transaction,
+        target_folio: target_folio,
+        user: current_user,
+        reason: folio_operation_params[:reason],
+        amount: folio_operation_params[:amount],
+        percent: folio_operation_params[:percent],
+        posting_date: current_hotel.current_business_date
+      )
+
+      if result.success?
+        redirect_after_post(notice: "Folio transaction split.", active_folio_id: target_folio.id)
+      else
+        redirect_after_post(alert: result.error, active_folio_id: transaction.booking_folio_id)
+      end
+    end
+
     private
 
     def redirect_after_post(options = {})
+      active_folio_id = options.delete(:active_folio_id)
       if params[:redirect_to_checkout] == "true"
         redirect_to hotel_booking_transaction_check_out_path(current_hotel, @booking), options
       elsif params[:redirect_to_folio] == "true"
-        redirect_to hotel_folio_path(current_hotel, @booking, folio_origin_params), options
+        redirect_to hotel_folio_path(current_hotel, @booking, folio_origin_params.merge(active_folio_id: active_folio_id).compact), options
       else
         redirect_to hotel_booking_path(current_hotel, @booking), options
       end
@@ -88,7 +147,7 @@ module HotelPortal
     end
 
     def set_booking
-      @booking = current_hotel.bookings.find(params[:booking_id])
+      @booking = current_hotel.bookings.find(params[:booking_id] || params[:folio_booking_id])
     end
 
     def folio_transaction_params
@@ -102,8 +161,84 @@ module HotelPortal
         :reference,
         :note,
         :payment_source,
-        :refund_source
+        :refund_source,
+        :booking_folio_id
       )
+    end
+
+    def sheet_folio
+      selected = scoped_booking_folios.open.find_by(id: params[:active_folio_id]) if params[:active_folio_id].present?
+      selected || @booking.booking_folio&.then { |folio| folio.open? ? folio : nil } || scoped_booking_folios.open.order(:folio_sequence, :folio_number, :id).first
+    end
+
+    def posting_folio
+      if folio_transaction_params[:booking_folio_id].present?
+        scoped_booking_folios.open.find_by(id: folio_transaction_params[:booking_folio_id])
+      else
+        @booking.booking_folio
+      end
+    end
+
+    def scoped_booking_folios
+      @booking.booking_folios.where(hotel_id: current_hotel.id)
+    end
+
+    def assign_sheet_config
+      case [ @transaction_type, @category.to_s ]
+      when [ "payment", "refund" ]
+        @sheet_title = "Issue Refund"
+        @sheet_description = "Enter a positive refund amount. It will be recorded as a negative refund payment."
+        @refund_source_options = ::Folios::RefundSource.options
+        @signed_amount = false
+        @submit_label = "Issue Refund"
+      when [ "payment", "" ]
+        @sheet_title = "Post Payment"
+        @sheet_description = "Record a staff-posted payment against the selected folio."
+        @payment_source_options = ::Folios::PaymentSource.options
+        @signed_amount = false
+        @submit_label = "Post Payment"
+      when [ "charge", "" ]
+        @sheet_title = "Add Charge"
+        @sheet_description = "Record a manual charge using a transaction code preset."
+        @transaction_code_options = current_hotel.transaction_codes.active.charge.order(:code)
+        @signed_amount = false
+        @submit_label = "Add Charge"
+      when [ "adjustment", "" ]
+        @sheet_title = "Post Adjustment"
+        @sheet_description = "Record an authorized adjustment, correction, discount, write-off, or other adjustment."
+        @category_options = adjustment_category_options
+        @signed_amount = true
+        @submit_label = "Post Adjustment"
+      else
+        @sheet_title = "Post Folio Transaction"
+        @sheet_description = "Record a folio transaction against the selected folio."
+        @category_options = []
+        @signed_amount = false
+        @submit_label = "Post Transaction"
+      end
+    end
+
+    def adjustment_category_options
+      options = []
+      options += %w[adjustment discount other] if current_user.has_permission?("post_folio_adjustments", hotel: current_hotel)
+      options << "correction" if current_user.has_permission?("post_folio_corrections", hotel: current_hotel)
+      options << "write_off" if current_user.has_permission?("post_folio_write_offs", hotel: current_hotel)
+      options
+    end
+
+    def allowed_to_view_posting_sheet?
+      case [ @transaction_type, @category.to_s ]
+      when [ "payment", "refund" ]
+        current_user.has_permission?("execute_folio_refunds", hotel: current_hotel)
+      when [ "payment", "" ]
+        current_user.has_permission?("post_folio_payments", hotel: current_hotel)
+      when [ "charge", "" ]
+        current_user.has_permission?("post_folio_charges", hotel: current_hotel)
+      when [ "adjustment", "" ]
+        adjustment_category_options.any?
+      else
+        false
+      end
     end
 
     def posting_options
@@ -150,6 +285,14 @@ module HotelPortal
         :correction_reason,
         :correction_note
       )
+    end
+
+    def folio_operation_params
+      params.require(:folio_operation).permit(:target_folio_id, :reason, :amount, :percent)
+    end
+
+    def booking_transaction_scope
+      FolioTransaction.joins(:booking_folio).where(booking_folios: { booking_id: @booking.id, hotel_id: current_hotel.id })
     end
   end
 end

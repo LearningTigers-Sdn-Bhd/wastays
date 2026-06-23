@@ -340,8 +340,17 @@ Rails.application.routes.draw do
     resources :folios, only: [ :index, :show ], param: :booking_id do
       get :invoice, on: :member
       get :ledger, on: :member
-      resources :transactions, only: [ :create ], controller: "folios/transactions" do
+      get "windows/new", action: :new_window, on: :member, as: :new_window
+      post :windows, action: :create_window, on: :member
+      get "windows/:folio_id/edit", action: :edit_window, on: :member, as: :edit_window
+      patch "windows/:folio_id", action: :update_window, on: :member, as: :window
+      post "windows/:folio_id/close", action: :close_window, on: :member, as: :close_window
+      post "windows/:folio_id/reopen", action: :reopen_window, on: :member, as: :reopen_window
+      post "forecasts/:forecast_id/move", action: :move_forecast, on: :member, as: :move_forecast
+      resources :transactions, only: [ :new, :create ], controller: "folios/transactions" do
         post :reverse, on: :member
+        post :move, on: :member
+        post :split, on: :member
       end
     end
 
