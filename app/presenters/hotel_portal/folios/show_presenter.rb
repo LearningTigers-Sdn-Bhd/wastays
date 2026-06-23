@@ -27,12 +27,74 @@ module HotelPortal
       keyword_init: true
     )
 
-    def initialize(booking:, hotel:, user: nil, projected_lines: nil, active_folio_id: nil)
+    BillingInstructionRow = Struct.new(
+      :rule,
+      :code,
+      :charge_label,
+      :target_label,
+      :target_reference,
+      :status,
+      :source,
+      :editable,
+      :children,
+      :expanded,
+      keyword_init: true
+    )
+
+    BillingInstructionChildRow = Struct.new(
+      :rule,
+      :code,
+      :charge_label,
+      :target_label,
+      :target_reference,
+      :status,
+      :source,
+      :enabled,
+      keyword_init: true
+    )
+
+    RoutePreviewRow = Struct.new(
+      :date_label,
+      :code,
+      :description,
+      :amount,
+      :source,
+      :warning,
+      keyword_init: true
+    )
+
+    RoutePreviewGroup = Struct.new(
+      :folio,
+      :target_label,
+      :target_reference,
+      :total,
+      :rows,
+      keyword_init: true
+    )
+
+    ActivityLogRow = Struct.new(
+      :time_label,
+      :action_label,
+      :actor_label,
+      :details,
+      keyword_init: true
+    )
+
+    VALID_TABS = %w[ledger billing_instructions route_preview activity_log].freeze
+    TAB_LABELS = {
+      "ledger" => "Ledger",
+      "billing_instructions" => "Billing Instructions",
+      "route_preview" => "Route Preview",
+      "activity_log" => "Activity Log"
+    }.freeze
+
+    def initialize(booking:, hotel:, user: nil, projected_lines: nil, active_folio_id: nil, active_tab: nil)
       @booking = booking
       @hotel = hotel
       @user = user
       @projected_lines_override = projected_lines
       @active_folio_id = active_folio_id.presence
+      @active_tab = active_tab.presence
       @booking_presenter = HotelPortal::BookingPresenter.new(booking, hotel)
     end
 
@@ -53,6 +115,25 @@ module HotelPortal
       folio&.id
     end
 
+    def active_tab
+      VALID_TABS.include?(@active_tab.to_s) ? @active_tab.to_s : "ledger"
+    end
+
+    def active_tab_label
+      TAB_LABELS.fetch(active_tab)
+    end
+
+    def page_tabs
+      TAB_LABELS.map do |name, label|
+        {
+          name: name,
+          label: label,
+          icon: tab_icon(name),
+          active: name == active_tab
+        }
+      end
+    end
+
     def other_open_folios
       folios.select { |candidate| candidate.open? && candidate.id != active_folio_id }
     end
@@ -63,6 +144,10 @@ module HotelPortal
 
     def can_manage_folio_movements?
       can_show_normal_folio_actions? && permitted?("manage_folio_movements") && other_open_folios.any?
+    end
+
+    def can_manage_billing_instructions?
+      permitted?("manage_folio_movements") && folios.any?(&:open?)
     end
 
     def folio_window_rows
@@ -422,7 +507,76 @@ module HotelPortal
     end
 
     def charge_transaction_codes
-      hotel.transaction_codes.active.charge.order(:code)
+      @charge_transaction_codes ||= begin
+        codes = hotel.transaction_codes.active.charge.includes(:transaction_code_taxes).order(:code).to_a
+        hotel_tax_code_ids = hotel.hotel_taxes.where(transaction_code_id: codes.map(&:id)).pluck(:transaction_code_id)
+
+        codes.reject { |code| hotel_tax_code_ids.include?(code.id) && !code.system_required? }
+      end
+    end
+
+    def billing_instruction_rows
+      parent_code_ids = charge_transaction_codes.map(&:id)
+      folio_routing_rules.select { |rule| parent_code_ids.include?(rule.transaction_code_id) }.map do |rule|
+        BillingInstructionRow.new(
+          rule: rule,
+          code: rule.transaction_code&.code || "—",
+          charge_label: rule.transaction_code&.name || "Unknown charge",
+          target_label: rule.target_folio&.display_name || "Missing folio",
+          target_reference: rule.target_folio&.folio_reference_display,
+          status: rule.active? ? "Active" : "Inactive",
+          source: "Rule",
+          editable: can_manage_billing_instructions?,
+          children: billing_instruction_child_rows(rule.transaction_code, rule),
+          expanded: billing_instruction_child_rows(rule.transaction_code, rule).any?
+        )
+      end
+    end
+
+    def default_billing_instruction_rows
+      routed_code_ids = folio_routing_rules.select(&:active?).map(&:transaction_code_id)
+      charge_transaction_codes.reject { |code| routed_code_ids.include?(code.id) }.map do |code|
+        BillingInstructionRow.new(
+          rule: nil,
+          code: code.code,
+          charge_label: code.name,
+          target_label: folio&.display_name || "Primary folio",
+          target_reference: folio&.folio_reference_display,
+          status: "System",
+          source: "Default",
+          editable: false,
+          children: billing_instruction_child_rows(code),
+          expanded: billing_instruction_child_rows(code).any?
+        )
+      end
+    end
+
+    def route_preview_groups
+      route_preview.grouped_by_folio.map do |target_folio, rows|
+        preview_rows = rows.map { |row| route_preview_row(row) }
+        RoutePreviewGroup.new(
+          folio: target_folio,
+          target_label: target_folio&.display_name || "Unresolved",
+          target_reference: target_folio&.folio_reference_display,
+          total: rows.sum { |row| row[:amount].to_d },
+          rows: preview_rows
+        )
+      end.sort_by { |group| [ group.folio.nil? ? 1 : 0, group.target_label.to_s ] }
+    end
+
+    def route_preview_line_count
+      route_preview.rows.size
+    end
+
+    def activity_log_rows
+      folio_operation_logs.map do |log|
+        ActivityLogRow.new(
+          time_label: log.created_at.strftime("%d %b %H:%M"),
+          action_label: log.operation_type.to_s.tr("_", " ").titleize,
+          actor_label: log.actor&.name.presence || "System",
+          details: operation_log_details(log)
+        )
+      end
     end
 
     def mobile_summary_items
@@ -513,6 +667,100 @@ module HotelPortal
     end
 
     private
+
+    def tab_icon(name)
+      {
+        "ledger" => "receipt-text",
+        "billing_instructions" => "route",
+        "route_preview" => "map",
+        "activity_log" => "history"
+      }.fetch(name)
+    end
+
+    def folio_routing_rules
+      @folio_routing_rules ||= booking.folio_routing_rules.includes(:transaction_code, :target_folio, :created_by, :updated_by).order(active: :desc, created_at: :asc, id: :asc).to_a
+    end
+
+    def active_folio_routing_rules_by_transaction_code_id
+      @active_folio_routing_rules_by_transaction_code_id ||= folio_routing_rules.select(&:active?).index_by(&:transaction_code_id)
+    end
+
+    def billing_instruction_child_rows(transaction_code, parent_rule = nil)
+      return [] if transaction_code.blank?
+
+      transaction_code.transaction_code_taxes.includes(:hotel_tax).map do |tax_rule|
+        child_code = tax_rule.posting_transaction_code
+        child_rule = active_folio_routing_rules_by_transaction_code_id[child_code&.id]
+        target_folio = child_rule&.target_folio || parent_rule&.target_folio || folio
+
+        BillingInstructionChildRow.new(
+          rule: child_rule,
+          code: composite_tax_code(transaction_code, child_code, tax_rule),
+          charge_label: tax_rule.display_name,
+          target_label: target_folio&.display_name || "Primary folio",
+          target_reference: target_folio&.folio_reference_display,
+          status: tax_rule.enabled_for_posting? ? (child_rule.present? ? "Active" : "Follows parent") : "Disabled",
+          source: child_rule.present? ? "Rule" : "Attached tax/fee",
+          enabled: tax_rule.enabled_for_posting?
+        )
+      end
+    end
+
+    def composite_tax_code(parent_code, child_code, tax_rule)
+      child_label = child_code&.code.presence || tax_rule.tax_line_type.to_s.upcase.presence || "TAX"
+      "#{parent_code.code}_#{child_label}"
+    end
+
+    def route_preview
+      @route_preview ||= ::Folios::RoutePreview.call(booking: booking, actor: user)
+    end
+
+    def route_preview_row(row)
+      RoutePreviewRow.new(
+        date_label: row[:date].strftime("%d %b"),
+        code: row[:display_code_label],
+        description: row[:description],
+        amount: money(row[:amount]),
+        source: route_source_label(row[:route_source]),
+        warning: row[:warning]
+      )
+    end
+
+    def route_source_label(source)
+      case source
+      when "routing_rule" then "Rule"
+      when "follows_parent" then "Follows"
+      when "manual_override" then "Override"
+      when "primary_folio" then "Default"
+      else "Preview"
+      end
+    end
+
+    def folio_operation_logs
+      @folio_operation_logs ||= booking.folio_operation_logs
+        .includes(:actor, :source_folio, :target_folio, :source_transaction, :target_transaction)
+        .order(created_at: :desc, id: :desc)
+        .limit(50)
+        .to_a
+    end
+
+    def operation_log_details(log)
+      metadata = log.metadata.to_h
+      case log.operation_type
+      when "create_routing_rule", "update_routing_rule", "deactivate_routing_rule"
+        [
+          metadata["transaction_code_code"],
+          log.target_folio&.display_name || metadata["target_folio_reference"],
+          log.reason.presence
+        ].compact_blank.join(" -> ")
+      when "move_transaction", "split_transaction", "move_forecast"
+        [ log.source_folio&.display_name, log.target_folio&.display_name, log.reason.presence ].compact_blank.join(" -> ")
+      when "create_folio", "rename_folio", "set_default_folio", "close_folio", "reopen_folio"
+        [ log.target_folio&.display_name || log.source_folio&.display_name, log.reason.presence ].compact_blank.join(" · ")
+      else
+        log.reason.presence || metadata.except("previous").compact.to_a.map { |key, value| "#{key.to_s.humanize}: #{value}" }.join(" · ").presence || "—"
+      end.presence || "—"
+    end
 
     def checkout_ready?
       if @checkout_ready.nil?

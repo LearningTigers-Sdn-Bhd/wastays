@@ -473,6 +473,178 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(ledger).to include("Company Charge")
       expect(ledger).not_to include("Room Charge")
     end
+
+    it "renders top-level folio tabs and updates breadcrumbs for the active tab" do
+      booking = create_booking_with_folio(guest_name: "Tabbed Guest", confirmation_token: "BK-TABS", folio_number: 629)
+
+      get hotel_folio_path(hotel, booking, tab: "billing_instructions")
+
+      html = Nokogiri::HTML(response.body)
+      tabs = html.at_css("[data-testid='folio-tabs']")
+      breadcrumb_tab = html.at_css("[data-tabs-breadcrumb-label]")
+
+      expect(response).to have_http_status(:success)
+      expect(tabs.text.squish).to include("Ledger")
+      expect(tabs.text.squish).to include("Billing Instructions")
+      expect(tabs.text.squish).to include("Route Preview")
+      expect(tabs.text.squish).to include("Activity Log")
+      expect(html.at_css("[data-testid='folio-billing-instructions-panel']")).to be_present
+      expect(breadcrumb_tab.text.squish).to eq("Billing Instructions")
+    end
+
+    it "keeps folio window subtabs inside the ledger panel only" do
+      booking = create_booking_with_folio(guest_name: "Subtab Guest", confirmation_token: "BK-SUBTAB", folio_number: 630)
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 631)
+
+      get hotel_folio_path(hotel, booking)
+
+      html = Nokogiri::HTML(response.body)
+      ledger_panel = html.at_css("[data-testid='folio-ledger-panel']")
+      billing_panel = html.at_css("[data-testid='folio-billing-instructions-panel']")
+
+      expect(ledger_panel.at_css("turbo-frame#folio_windows_frame")).to be_present
+      expect(ledger_panel.text.squish).to include("Guest Folio")
+      expect(billing_panel.at_css("turbo-frame#folio_windows_frame")).to be_nil
+    end
+
+    it "renders billing instructions, route preview, and activity log panels" do
+      grant_permission("manage_folio_movements")
+      booking = create_booking_with_folio(guest_name: "Panels Guest", confirmation_token: "BK-PANELS", folio_number: 632)
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 633, name: "Company Folio")
+      code = create(:transaction_code, hotel: hotel, code: "FNB-P", name: "Food and Beverage", category: "fb")
+      create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: code, target_folio: company_folio)
+      create(:folio_operation_log, hotel: hotel, booking: booking, actor: user, operation_type: "create_routing_rule", target_folio: company_folio, metadata: { "transaction_code_code" => "FNB-P" })
+
+      get hotel_folio_path(hotel, booking, tab: "activity_log")
+
+      body = response.body
+
+      expect(response).to have_http_status(:success)
+      expect(body).to include("FNB-P")
+      expect(body).to include("Company Folio")
+      expect(body).to include("Route Preview")
+      expect(body).to include("Preview only. This does not move posted transactions.")
+      expect(body).to include("Activity Log")
+      expect(body).to include("Create Routing Rule")
+    end
+
+    it "renders attached taxes and fees as clickable nested billing instruction rows" do
+      grant_permission("manage_folio_movements")
+      booking = create_booking_with_folio(guest_name: "Nested Taxes Guest", confirmation_token: "BK-NESTED-#{SecureRandom.uuid}", folio_number: 640)
+      hotel.update!(sst_enabled: true)
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+
+      get hotel_folio_path(hotel, booking, tab: "billing_instructions")
+
+      html = Nokogiri::HTML(response.body)
+      parent_row = html.css("tr[data-billing-instructions-row-key][aria-expanded='true']").find { |row| row.text.include?("ROOM") }
+      expect(parent_row).to be_present
+
+      child_row = html.at_css("tr[data-billing-instructions-key='#{parent_row['data-billing-instructions-row-key']}']")
+      child_headers = child_row.css("thead th").map { |header| header.text.squish }
+
+      expect(parent_row["data-action"]).to include("billing-instructions#toggle")
+      expect(parent_row.css("td").last.text.squish).to include("Taxes/Fees")
+      expect(parent_row.css("td").last.text.squish).not_to eq("—")
+      expect(child_headers).to eq([ "Code", "Tax / Fee", "Target Folio", "Status" ])
+      expect(child_headers).not_to include("Action")
+      expect(child_row.text.squish).to include("ROOM_TAX_SST")
+      expect(child_row.text.squish).to include("Follows parent")
+      expect(response.body).not_to include("Attached Taxes / Fees")
+    end
+  end
+
+  describe "billing instruction routing rules" do
+    it "requires manage_folio_movements permission" do
+      booking = create_booking_with_folio(guest_name: "No Rule Permission", confirmation_token: "BK-NORULE", folio_number: 634)
+      code = create(:transaction_code, hotel: hotel, code: "ROOM-P", name: "Room Charge", category: "accommodation")
+
+      expect {
+        post routing_rules_hotel_folio_path(hotel, booking), params: {
+          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: booking.booking_folio.id }
+        }
+      }.not_to change(FolioRoutingRule, :count)
+
+      expect(response).to have_http_status(:forbidden).or have_http_status(:redirect)
+    end
+
+    it "creates, edits, and deactivates a billing instruction with activity logs" do
+      grant_permission("manage_folio_movements")
+      booking = create_booking_with_folio(guest_name: "Rule Manager", confirmation_token: "BK-RULE", folio_number: 635)
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 636, name: "Company Folio")
+      guest_folio = booking.booking_folio
+      code = create(:transaction_code, hotel: hotel, code: "ROOM-R", name: "Room Charge", category: "accommodation")
+
+      get new_routing_rule_hotel_folio_path(hotel, booking, origin: "folios")
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Add Billing Instruction")
+      expect(response.body).to include("ROOM-R")
+
+      expect {
+        post routing_rules_hotel_folio_path(hotel, booking, origin: "folios", active_folio_id: guest_folio.id), params: {
+          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: company_folio.id }
+        }
+      }.to change(FolioRoutingRule, :count).by(1)
+        .and change(FolioOperationLog.where(operation_type: "create_routing_rule"), :count).by(1)
+
+      rule = FolioRoutingRule.last
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios", tab: "billing_instructions", active_folio_id: guest_folio.id))
+      expect(rule.target_folio).to eq(company_folio)
+
+      expect {
+        patch routing_rule_hotel_folio_path(hotel, booking, rule), params: {
+          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: guest_folio.id, active: "1" }
+        }
+      }.to change(FolioOperationLog.where(operation_type: "update_routing_rule"), :count).by(1)
+
+      expect(rule.reload.target_folio).to eq(guest_folio)
+
+      expect {
+        patch deactivate_routing_rule_hotel_folio_path(hotel, booking, rule)
+      }.to change(FolioOperationLog.where(operation_type: "deactivate_routing_rule"), :count).by(1)
+
+      expect(rule.reload).not_to be_active
+    end
+
+    it "renders attached tax selectors and saves only explicit child overrides" do
+      grant_permission("manage_folio_movements")
+      booking = create_booking_with_folio(guest_name: "Tax Rule Manager", confirmation_token: "BK-TAXRULE", folio_number: 637)
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 638, name: "Company Folio")
+      tax_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 639, name: "Tax Folio")
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+      sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+      ttx_code = hotel.transaction_codes.find_by!(system_key: "tourism_tax")
+      code.update!(is_taxable: true)
+      code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+      code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+
+      get new_routing_rule_hotel_folio_path(hotel, booking, origin: "folios")
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("FNB_TAX_SST")
+      expect(response.body).to include("FNB_TAX_TTX")
+
+      expect {
+        post routing_rules_hotel_folio_path(hotel, booking), params: {
+          folio_routing_rule: {
+            transaction_code_id: code.id,
+            target_folio_id: company_folio.id,
+            child_rules: {
+              sst_code.id => { transaction_code_id: sst_code.id, target_folio_id: company_folio.id, enabled: "1" },
+              ttx_code.id => { transaction_code_id: ttx_code.id, target_folio_id: tax_folio.id, enabled: "1" }
+            }
+          }
+        }
+      }.to change(FolioRoutingRule, :count).by(2)
+
+      expect(FolioRoutingRule.active.find_by(booking: booking, transaction_code: code).target_folio).to eq(company_folio)
+      expect(FolioRoutingRule.active.find_by(booking: booking, transaction_code: sst_code)).to be_nil
+      expect(FolioRoutingRule.active.find_by(booking: booking, transaction_code: ttx_code).target_folio).to eq(tax_folio)
+    end
   end
 
   describe "POST /hotel/:hotel_id/folios/:booking_id/windows" do
@@ -502,7 +674,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       folio = booking.booking_folios.order(:id).last
       expect(folio).not_to be_is_primary
       expect(folio.name).to eq("Company Folio")
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id, tab: "ledger"))
     end
 
     it "creates external folio windows with every supported payer type" do
@@ -623,7 +795,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       }.to change(FolioOperationLog.where(operation_type: "reopen_folio"), :count).by(1)
 
       expect(folio.reload).to be_open
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id, tab: "ledger"))
     end
 
     it "sets an existing secondary folio as primary from the edit form" do

@@ -347,6 +347,11 @@ Rails.application.routes.draw do
       post "windows/:folio_id/close", action: :close_window, on: :member, as: :close_window
       post "windows/:folio_id/reopen", action: :reopen_window, on: :member, as: :reopen_window
       post "forecasts/:forecast_id/move", action: :move_forecast, on: :member, as: :move_forecast
+      get "routing_rules/new", to: "folios/routing_rules#new", on: :member, as: :new_routing_rule
+      post "routing_rules", to: "folios/routing_rules#create", on: :member, as: :routing_rules
+      get "routing_rules/:routing_rule_id/edit", to: "folios/routing_rules#edit", on: :member, as: :edit_routing_rule
+      patch "routing_rules/:routing_rule_id", to: "folios/routing_rules#update", on: :member, as: :routing_rule
+      patch "routing_rules/:routing_rule_id/deactivate", to: "folios/routing_rules#deactivate", on: :member, as: :deactivate_routing_rule
       resources :transactions, only: [ :new, :create ], controller: "folios/transactions" do
         post :reverse, on: :member
         post :move, on: :member

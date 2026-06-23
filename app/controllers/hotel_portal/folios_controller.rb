@@ -14,10 +14,17 @@ module HotelPortal
 
     def show
       @booking = current_hotel.bookings
-        .includes({ booking_rooms: :room_type }, booking_folios: [ { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges ])
+        .includes(
+          { booking_rooms: :room_type },
+          :payment_transactions,
+          :refund_request,
+          booking_folios: [ { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges ],
+          folio_routing_rules: [ :transaction_code, :target_folio, :created_by, :updated_by ],
+          folio_operation_logs: [ :actor, :source_folio, :target_folio, :source_transaction, :target_transaction ]
+        )
         .find(params[:booking_id])
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-      @folio_show = HotelPortal::Folios::ShowPresenter.new(booking: @booking, hotel: current_hotel, user: current_user, active_folio_id: params[:active_folio_id])
+      @folio_show = HotelPortal::Folios::ShowPresenter.new(booking: @booking, hotel: current_hotel, user: current_user, active_folio_id: params[:active_folio_id], active_tab: params[:tab])
       set_navigation_context
       set_breadcrumbs
       render "hotel_portal/folios/show/index"
@@ -60,9 +67,9 @@ module HotelPortal
       result = ::Folios::CreateFolio.call(booking: booking, user: current_user, attributes: folio_window_params)
 
       if result.success?
-        redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: result.folio.id, **folio_origin_params), notice: "Folio window created."
+        redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: result.folio.id, **folio_redirect_state(tab: "ledger")), notice: "Folio window created."
       else
-        redirect_to hotel_folio_path(current_hotel, booking, **folio_origin_params), alert: result.error
+        redirect_to hotel_folio_path(current_hotel, booking, **folio_redirect_state(tab: "ledger")), alert: result.error
       end
     end
 
@@ -76,7 +83,7 @@ module HotelPortal
         attributes: folio_window_params
       )
 
-      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_origin_params),
+      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
         result.success? ? { notice: "Folio window updated." } : { alert: result.error }
     end
 
@@ -86,7 +93,7 @@ module HotelPortal
       folio = booking.booking_folios.find(params[:folio_id])
       result = ::Folios::CloseFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
 
-      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_origin_params),
+      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
         result.success? ? { notice: "Folio window closed." } : { alert: result.error }
     end
 
@@ -96,7 +103,7 @@ module HotelPortal
       folio = booking.booking_folios.find(params[:folio_id])
       result = ::Folios::ReopenFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
 
-      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_origin_params),
+      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
         result.success? ? { notice: "Folio window reopened." } : { alert: result.error }
     end
 
@@ -112,7 +119,7 @@ module HotelPortal
         reason: folio_operation_params[:reason]
       )
 
-      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: (result.success? ? target_folio.id : forecast.booking_folio_id), **folio_origin_params),
+      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: (result.success? ? target_folio.id : forecast.booking_folio_id), **folio_redirect_state(tab: "ledger")),
         result.success? ? { notice: "Upcoming charge moved." } : { alert: result.error }
     end
 
@@ -171,14 +178,15 @@ module HotelPortal
           { label: "Finance" },
           { label: "Folios", path: hotel_folios_path(current_hotel) },
           { label: @booking.folio_account_reference_display.presence || @booking.confirmation_token, path: hotel_folio_path(current_hotel, @booking, origin: "folios") },
-          { label: "Folio Ledger" }
+          { label: @folio_show.active_tab_label, tab_label: true }
         )
       else
         override_breadcrumbs(
           { label: "Operations" },
           { label: "Bookings", path: hotel_bookings_path(current_hotel) },
           { label: @booking.confirmation_token, path: hotel_booking_path(current_hotel, @booking) },
-          { label: "Folio Ledger" }
+          { label: "Folio Ledger", path: hotel_folio_path(current_hotel, @booking) },
+          { label: @folio_show.active_tab_label, tab_label: true }
         )
       end
     end
@@ -209,6 +217,10 @@ module HotelPortal
 
     def folio_origin_params
       params[:origin] == "folios" || params[:folio_origin] == "folios" ? { origin: "folios" } : {}
+    end
+
+    def folio_redirect_state(tab:)
+      folio_origin_params.merge(tab: tab).compact
     end
   end
 end

@@ -17,5 +17,63 @@
 
   <%= render "hotel_portal/folios/show/financial_metrics", folio_show: folio_show %>
 
-  <%= render "hotel_portal/folios/show/folio_windows", booking: booking, hotel: current_hotel, folio_show: folio_show, folio_origin: folio_origin %>
+  <div data-controller="tabs"
+       data-tabs-default-tab-value="<%= folio_show.active_tab %>"
+       data-tabs-parameter-name-value="tab"
+       class="space-y-4">
+    <nav class="<%= dashboard_tab_container_classes %>" data-testid="folio-tabs">
+      <div class="flex min-w-max items-center gap-1" role="tablist" aria-label="Folio page sections">
+        <% folio_show.page_tabs.each do |tab| %>
+          <button type="button"
+                  data-tabs-target="tab"
+                  data-tab-name="<%= tab[:name] %>"
+                  data-tab-label="<%= tab[:label] %>"
+                  data-action="click->tabs#switch"
+                  data-active="<%= tab[:active] %>"
+                  class="<%= dashboard_tab_classes %>"
+                  aria-controls="folio-<%= tab[:name].dasherize %>-panel"
+                  role="tab">
+            <%= cached_icon tab[:icon], class: "size-4", aria: { hidden: true } %>
+            <%= tab[:label] %>
+          </button>
+        <% end %>
+      </div>
+    </nav>
+
+    <div id="folio-ledger-panel"
+         data-tabs-target="panel"
+         data-tab-panel="ledger"
+         class="<%= folio_show.active_tab == "ledger" ? "" : "hidden" %>"
+         role="tabpanel"
+         data-testid="folio-ledger-panel">
+      <%= render "hotel_portal/folios/show/folio_windows", booking: booking, hotel: current_hotel, folio_show: folio_show, folio_origin: folio_origin %>
+    </div>
+
+    <div id="folio-billing-instructions-panel"
+         data-tabs-target="panel"
+         data-tab-panel="billing_instructions"
+         class="<%= folio_show.active_tab == "billing_instructions" ? "" : "hidden" %>"
+         role="tabpanel"
+         data-testid="folio-billing-instructions-panel">
+      <%= render "hotel_portal/folios/show/billing_instructions", booking: booking, hotel: current_hotel, folio_show: folio_show, folio_origin: folio_origin %>
+    </div>
+
+    <div id="folio-route-preview-panel"
+         data-tabs-target="panel"
+         data-tab-panel="route_preview"
+         class="<%= folio_show.active_tab == "route_preview" ? "" : "hidden" %>"
+         role="tabpanel"
+         data-testid="folio-route-preview-panel">
+      <%= render "hotel_portal/folios/show/route_preview", folio_show: folio_show %>
+    </div>
+
+    <div id="folio-activity-log-panel"
+         data-tabs-target="panel"
+         data-tab-panel="activity_log"
+         class="<%= folio_show.active_tab == "activity_log" ? "" : "hidden" %>"
+         role="tabpanel"
+         data-testid="folio-activity-log-panel">
+      <%= render "hotel_portal/folios/show/activity_log", folio_show: folio_show %>
+    </div>
+  </div>
 </div>

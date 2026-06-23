@@ -11,7 +11,7 @@
     </div>
 
     <% if folio_show.can_manage_folio_windows? %>
-      <%= link_to new_window_hotel_folio_path(hotel, booking, origin: folio_origin),
+      <%= link_to new_window_hotel_folio_path(hotel, booking, origin: folio_origin, tab: "ledger", active_folio_id: folio_show.active_folio_id),
           class: "inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-slate-700",
           data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
         + Add Folio
@@ -23,7 +23,7 @@
     <div class="rounded-md border border-slate-200 bg-white p-1.5">
       <nav class="flex items-center gap-1 overflow-x-auto" aria-label="Folio windows">
         <% folio_show.folio_window_rows.each do |row| %>
-          <%= link_to hotel_folio_path(hotel, booking, active_folio_id: row[:id], origin: folio_origin),
+          <%= link_to hotel_folio_path(hotel, booking, active_folio_id: row[:id], origin: folio_origin, tab: "ledger"),
               class: "inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium transition-all duration-150 #{row[:active] ? "bg-blue-600 text-white font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}",
               data: { turbo_frame: folio_windows_frame_id, turbo_action: "advance" },
               aria: { current: row[:active] ? "page" : nil } do %>
@@ -50,7 +50,7 @@
 
             <div class="flex flex-wrap items-center gap-2">
               <% if folio_show.can_manage_folio_windows? && active_folio&.open? %>
-                <%= link_to edit_window_hotel_folio_path(hotel, booking, active_folio, origin: folio_origin),
+                <%= link_to edit_window_hotel_folio_path(hotel, booking, active_folio, origin: folio_origin, tab: "ledger", active_folio_id: active_folio.id),
                     class: "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50",
                     data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
                   <%= cached_icon "pencil", class: "size-3" %>
