@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class BookingFolio < ApplicationRecord
-  FOLIO_TYPES = %w[guest company custom group master house].freeze
-  PAYER_TYPES = %w[guest company custom].freeze
+  FOLIO_TYPES = %w[guest external house].freeze
+  PAYER_TYPES = %w[guest company agent hotel custom].freeze
 
   belongs_to :hotel
   belongs_to :booking
@@ -33,6 +33,7 @@ class BookingFolio < ApplicationRecord
   validate :last_primary_folio_cannot_be_unset
   validate :closed_folio_fields_are_restricted, on: :update
   before_validation :assign_defaults
+  before_validation :normalize_payer_type
   after_create :ensure_booking_folio_account_reference
   before_destroy :guard_night_audit_operational_change
   before_destroy :prevent_destroying_last_folio
@@ -113,6 +114,15 @@ class BookingFolio < ApplicationRecord
     self.currency ||= booking&.currency.presence || hotel&.default_currency.presence || "MYR"
     self.opened_at ||= Time.current
     self.folio_sequence ||= next_folio_sequence if booking.present?
+  end
+
+  def normalize_payer_type
+    case folio_type
+    when "guest"
+      self.payer_type = "guest"
+    when "house"
+      self.payer_type = "hotel"
+    end
   end
 
   def next_folio_sequence

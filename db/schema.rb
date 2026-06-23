@@ -152,8 +152,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.index ["hotel_id", "invoice_number"], name: "index_booking_folios_on_hotel_id_and_invoice_number", unique: true, where: "(invoice_number IS NOT NULL)"
     t.index ["hotel_id", "status"], name: "index_booking_folios_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_booking_folios_on_hotel_id"
-    t.check_constraint "folio_type::text = ANY (ARRAY['guest'::character varying, 'company'::character varying, 'custom'::character varying, 'group'::character varying, 'master'::character varying, 'house'::character varying]::text[])", name: "booking_folios_folio_type_allowed"
-    t.check_constraint "payer_type::text = ANY (ARRAY['guest'::character varying, 'company'::character varying, 'custom'::character varying]::text[])", name: "booking_folios_payer_type_allowed"
+    t.check_constraint "folio_type::text = ANY (ARRAY['guest'::character varying, 'external'::character varying, 'house'::character varying]::text[])", name: "booking_folios_folio_type_allowed"
+    t.check_constraint "payer_type::text = ANY (ARRAY['guest'::character varying, 'company'::character varying, 'agent'::character varying, 'hotel'::character varying, 'custom'::character varying]::text[])", name: "booking_folios_payer_type_allowed"
     t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'closed'::character varying, 'voided'::character varying]::text[])", name: "booking_folios_status_allowed"
   end
 

@@ -9,6 +9,7 @@ class FolioOperationLog < ApplicationRecord
     split_transaction
     move_forecast
     close_folio
+    checkout_exception
     reopen_folio
     void_folio
     correction
