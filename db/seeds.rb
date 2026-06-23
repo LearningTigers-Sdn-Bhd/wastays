@@ -150,6 +150,8 @@ platform_permissions = [
   { name: 'Post Folio Adjustments', slug: 'post_folio_adjustments' },
   { name: 'Post Folio Corrections', slug: 'post_folio_corrections' },
   { name: 'Post Folio Write-Offs', slug: 'post_folio_write_offs' },
+  { name: 'Manage Folio Windows', slug: 'manage_folio_windows' },
+  { name: 'Manage Folio Movements', slug: 'manage_folio_movements' },
   { name: 'Manage GL Mappings', slug: 'manage_general_ledger_maps' },
   { name: 'View Reports', slug: 'view_reports' },
   { name: 'View Payouts', slug: 'view_payouts' },
