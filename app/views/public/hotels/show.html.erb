@@ -180,33 +180,26 @@
       <aside class="lg:w-80">
         <div class="sticky top-[130px] space-y-6">
           <%# Location Map Card %>
-          <div class="card p-0 overflow-hidden relative group cursor-pointer shadow-sm border border-neutral-border">
+          <div class="card p-6 bg-white relative group cursor-pointer shadow-sm">
             <%# Interactive Overlay Link %>
-            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors z-10"></div>
-            <a href="https://www.google.com/maps/search/?api=1&query=<%= u(@hotel.full_address) %>" 
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors z-10 rounded-xl"></div>
+            <a href="https://www.google.com/maps/search/?api=1&query=<%= u("#{@hotel.name}, #{@hotel.full_address}") %>" 
                target="_blank" 
                rel="noopener noreferrer" 
                class="absolute inset-0 z-20" 
                title="Open <%= @hotel.name %> on Google Maps">
             </a>
 
-            <%# Map Frame %>
-            <div class="h-40 w-full bg-neutral-bg">
-              <iframe
-                width="100%"
-                height="100%"
-                style="border:0;"
-                loading="lazy"
-                allowfullscreen
-                referrerpolicy="no-referrer-when-downgrade"
-                src="https://maps.google.com/maps?q=<%= u(@hotel.full_address) %>&t=&z=15&ie=UTF8&iwloc=&output=embed">
-              </iframe>
-            </div>
-
-            <%# Card Footer with Address & Icon %>
-            <div class="p-3.5 bg-white border-t border-neutral-bg flex items-center justify-between text-xs font-bold text-neutral-text-primary">
-              <span class="truncate pr-2" title="<%= @hotel.full_address %>"><%= @hotel.full_address %></span>
-              <span class="text-brand-primary shrink-0 flex items-center gap-1">
+            <%# Card Header with Link on Right %>
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-neutral-bg">
+              <h3 class="text-xs font-black text-neutral-text-primary uppercase tracking-widest flex items-center gap-x-2">
+                <svg class="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                Location
+              </h3>
+              <span class="text-xs font-bold text-brand-primary flex items-center gap-1">
                 View on Map
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
@@ -214,6 +207,20 @@
                   <line x1="10" y1="14" x2="21" y2="3"></line>
                 </svg>
               </span>
+            </div>
+
+            <%# Map Frame %>
+            <div class="h-40 w-full bg-neutral-bg rounded-lg overflow-hidden border border-neutral-border">
+              <iframe
+                width="100%"
+                height="100%"
+                style="border:0;"
+                loading="lazy"
+                allowfullscreen
+                referrerpolicy="no-referrer-when-downgrade"
+                src="https://maps.google.com/maps?q=<%= u("#{@hotel.name}, #{@hotel.full_address}") %>&t=&z=15&ie=UTF8&iwloc=&output=embed">
+              </iframe>
+            </div>
             </div>
           </div>
 
