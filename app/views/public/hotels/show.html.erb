@@ -46,26 +46,24 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[420px]">
       <div class="md:col-span-2 md:row-span-2 aspect-[2/1] md:aspect-auto rounded-2xl overflow-hidden shadow-lg group cursor-pointer" 
            data-action="click->gallery-toggle#show">
-        <% if @hotel.gallery_photos.first.present? %>
-          <%= image_tag @hotel.gallery_photos.first, class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" %>
-        <% elsif @hotel.room_types.first&.photos&.attached? %>
-          <%= image_tag @hotel.room_types.first.photos.first, class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" %>
+        <% if @hotel.primary_photo.present? %>
+          <%= image_tag @hotel.primary_photo, class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" %>
         <% else %>
           <div class="w-full h-full bg-neutral-border flex items-center justify-center">
             <svg class="w-16 h-16 text-neutral-text-secondary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
           </div>
         <% end %>
       </div>
-      <% (1..4).each do |i| %>
+      <% @hotel.secondary_photos_with_fallbacks.each_with_index do |item, index| %>
         <div class="hidden md:block rounded-2xl overflow-hidden shadow-md group relative cursor-pointer" 
              data-action="click->gallery-toggle#show">
-          <% if @hotel.gallery_photos[i].present? %>
-            <%= image_tag @hotel.gallery_photos[i], class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500", alt: @hotel.name %>
+          <% if item[:is_attachment] %>
+            <%= image_tag item[:photo], class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500", alt: @hotel.name %>
           <% else %>
-            <img src="<%= @hotel.fallback_images[i - 1] %>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Hotel Image">
+            <img src="<%= item[:photo] %>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Hotel Image">
           <% end %>
 
-          <% if i == 4 %>
+          <% if index == 3 %>
             <div class="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
               <span class="inline-flex items-center gap-x-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-neutral-text-primary shadow-sm">
                 <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
@@ -76,8 +74,8 @@
         </div>
       <% end %>
     </div>
-
-    <% if @hotel.photos.attached? && @hotel.gallery_count.positive? %>
+ 
+    <% if @hotel.has_photos? %>
       <div class="mt-4 md:hidden">
         <button type="button" data-action="click->gallery-toggle#show" class="inline-flex w-full items-center justify-center gap-x-2 rounded-xl border border-neutral-border bg-white px-4 py-3 text-sm font-semibold text-neutral-text-primary shadow-sm hover:bg-neutral-bg">
           <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
@@ -142,7 +140,7 @@
                   <%= hidden_field_tag key, value %>
                 <% end %>
                 <%= f.select :display_currency,
-                             options_for_select(CurrencyCatalog::COMMON_CODES.map { |code| [ code, code ] }, @display_currency),
+                             options_for_select(@hotel.currency_dropdown_options, @display_currency),
                              {},
                              class: "rounded-lg border border-neutral-border bg-white px-3 py-2 text-xs font-bold text-neutral-text-primary",
                              onchange: "this.form.submit()",
@@ -180,37 +178,25 @@
       <aside class="lg:w-80">
         <div class="sticky top-[130px] space-y-6">
           <%# Location Map Card %>
-          <div class="card p-6 bg-white relative group cursor-pointer shadow-sm">
-            <%# Interactive Overlay Link %>
-            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors z-10 rounded-xl"></div>
-            <a href="https://www.google.com/maps/search/?api=1&query=<%= u("#{@hotel.name}, #{@hotel.full_address}") %>" 
-               target="_blank" 
-               rel="noopener noreferrer" 
-               class="absolute inset-0 z-20" 
-               title="Open <%= @hotel.name %> on Google Maps">
-            </a>
-
-            <%# Card Header with Link on Right %>
+          <div class="card p-6 bg-white shadow-sm">
+            <%# Card Header %>
             <div class="flex justify-between items-center mb-4 pb-3 border-b border-neutral-bg">
               <h3 class="text-xs font-black text-neutral-text-primary uppercase tracking-widest flex items-center gap-x-2">
-                <svg class="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
+                <%= cached_icon "map-pin", class: "w-4 h-4 text-brand-primary" %>
                 Location
               </h3>
-              <span class="text-xs font-bold text-brand-primary flex items-center gap-1">
-                View on Map
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
-                  <polyline points="15 3 21 3 21 9"></polyline>
-                  <line x1="10" y1="14" x2="21" y2="3"></line>
-                </svg>
-              </span>
             </div>
 
-            <%# Map Frame %>
-            <div class="h-40 w-full bg-neutral-bg rounded-lg overflow-hidden border border-neutral-border">
+            <%# Map Frame Wrapper %>
+            <div class="h-40 w-full bg-neutral-bg rounded-lg overflow-hidden border border-neutral-border relative group cursor-pointer">
+              <%# Interactive Overlay Link %>
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors z-10"></div>
+              <a href="https://www.google.com/maps/search/?api=1&query=<%= u("#{@hotel.name}, #{@hotel.full_address}") %>" 
+                 target="_blank" 
+                 rel="noopener noreferrer" 
+                 class="absolute inset-0 z-20" 
+                 title="Open <%= @hotel.name %> on Google Maps">
+              </a>
               <iframe
                 width="100%"
                 height="100%"

@@ -69,5 +69,27 @@ module Public
     def first_room_type_photo_attached?
       summary_photo.present?
     end
+
+    def primary_photo
+      gallery_photos.first || first_room_type_photo
+    end
+
+    def secondary_photos_with_fallbacks
+      (1..4).map do |i|
+        if gallery_photos[i].present?
+          { photo: gallery_photos[i], is_attachment: true }
+        else
+          { photo: fallback_images[i - 1], is_attachment: false }
+        end
+      end
+    end
+
+    def has_photos?
+      photos.attached? && gallery_count.positive?
+    end
+
+    def currency_dropdown_options
+      CurrencyCatalog::COMMON_CODES.map { |code| [ code, code ] }
+    end
   end
 end
