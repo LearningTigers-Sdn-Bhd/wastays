@@ -46,6 +46,7 @@ class Hotel < ApplicationRecord
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
   has_many :booking_folios, dependent: :restrict_with_error
+  has_many :folio_routing_rules, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :destroy
   has_many :transaction_codes, dependent: :destroy

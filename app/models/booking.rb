@@ -17,6 +17,7 @@ class Booking < ApplicationRecord
   has_one :refund_request, dependent: :destroy
   has_many :booking_folios, dependent: :destroy
   has_one :booking_folio, -> { where(is_primary: true) }, dependent: :destroy
+  has_many :folio_routing_rules, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_one_attached :id_front
   has_one_attached :id_back

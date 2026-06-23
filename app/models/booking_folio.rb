@@ -10,6 +10,7 @@ class BookingFolio < ApplicationRecord
   belongs_to :closed_by, class_name: "User", optional: true
   has_many :folio_transactions, dependent: :restrict_with_error
   has_many :folio_forecasted_charges, dependent: :destroy
+  has_many :target_folio_routing_rules, class_name: "FolioRoutingRule", foreign_key: :target_folio_id, dependent: :restrict_with_error
   has_many :deposits, dependent: :restrict_with_error
   has_many :financial_audit_events, dependent: :restrict_with_error
   has_many :source_operation_logs, class_name: "FolioOperationLog", foreign_key: :source_folio_id, dependent: :restrict_with_error

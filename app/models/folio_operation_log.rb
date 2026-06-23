@@ -8,6 +8,9 @@ class FolioOperationLog < ApplicationRecord
     move_transaction
     split_transaction
     move_forecast
+    create_routing_rule
+    update_routing_rule
+    deactivate_routing_rule
     close_folio
     checkout_exception
     reopen_folio

@@ -531,6 +531,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.index ["target_transaction_id"], name: "index_folio_operation_logs_on_target_transaction_id"
   end
 
+  create_table "folio_routing_rules", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "booking_id", null: false
+    t.bigint "transaction_code_id", null: false
+    t.bigint "target_folio_id", null: false
+    t.boolean "active", default: true, null: false
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id", "transaction_code_id"], name: "idx_folio_routing_rules_one_active_per_code", unique: true, where: "active"
+    t.index ["booking_id"], name: "index_folio_routing_rules_on_booking_id"
+    t.index ["created_by_id"], name: "index_folio_routing_rules_on_created_by_id"
+    t.index ["hotel_id"], name: "index_folio_routing_rules_on_hotel_id"
+    t.index ["target_folio_id"], name: "index_folio_routing_rules_on_target_folio_id"
+    t.index ["transaction_code_id"], name: "index_folio_routing_rules_on_transaction_code_id"
+    t.index ["updated_by_id"], name: "index_folio_routing_rules_on_updated_by_id"
+  end
+
   create_table "folio_transactions", force: :cascade do |t|
     t.bigint "booking_folio_id", null: false
     t.decimal "amount", precision: 10, scale: 2, null: false
@@ -1547,6 +1566,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
   add_foreign_key "folio_operation_logs", "folio_transactions", column: "target_transaction_id"
   add_foreign_key "folio_operation_logs", "hotels"
   add_foreign_key "folio_operation_logs", "users", column: "actor_id"
+  add_foreign_key "folio_routing_rules", "booking_folios", column: "target_folio_id"
+  add_foreign_key "folio_routing_rules", "bookings"
+  add_foreign_key "folio_routing_rules", "hotels"
+  add_foreign_key "folio_routing_rules", "transaction_codes"
+  add_foreign_key "folio_routing_rules", "users", column: "created_by_id"
+  add_foreign_key "folio_routing_rules", "users", column: "updated_by_id"
   add_foreign_key "folio_transactions", "booking_folios"
   add_foreign_key "folio_transactions", "folio_transactions", column: "moved_from_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "parent_transaction_id"
