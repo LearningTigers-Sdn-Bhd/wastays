@@ -150,11 +150,78 @@
           </div>
 
           <div class="space-y-6">
-            <% if @search_ready && @room_types.empty? %>
+            <% if @search_ready && @allocation_options.empty? %>
               <div class="card p-8 text-center">
                 <h3 class="text-lg font-bold text-neutral-text-primary mb-2">No rooms available for selected dates</h3>
-                <p class="text-sm text-neutral-text-secondary mb-6">Try changing your check-in/check-out dates to see available options.</p>
+                <p class="text-sm text-neutral-text-secondary mb-6">Try changing your check-in/check-out dates or guest count to see available options.</p>
                 <%= link_to "Edit Search", "#", data: { action: "click->rate-calendar#openPicker" }, class: "btn btn-secondary px-8" %>
+              </div>
+            <% end %>
+
+            <% if @allocation_options.any? %>
+              <div class="space-y-4">
+                <p class="text-xs font-bold text-neutral-text-secondary uppercase tracking-widest">Recommended Stay Bundles</p>
+                <% @allocation_options.each do |option| %>
+                  <div class="card p-6 border-2 border-brand-primary/10 hover:border-brand-primary/30 transition-colors shadow-sm">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                      <div class="flex-1">
+                        <div class="flex items-center gap-x-2 mb-2">
+                          <span class="badge bg-brand-primary/10 text-brand-primary font-bold">Best Value</span>
+                          <span class="text-sm font-bold text-neutral-text-primary"><%= option.rooms_summary %></span>
+                        </div>
+                        <p class="text-xs text-neutral-text-secondary">
+                          Perfectly fits <%= pluralize(@adults + @children, 'guest') %> across <%= pluralize(option.rooms.sum(&:quantity), 'room') %>.
+                        </p>
+                      </div>
+
+                      <div class="text-center md:text-right">
+                        <p class="text-2xl font-black text-neutral-text-primary">
+                          <%= option.display_total_price(@display_currency, @hotel) %>
+                        </p>
+                        <p class="text-[10px] text-neutral-text-secondary italic mb-3">Total for <%= pluralize((@check_out - @check_in).to_i, 'night') %></p>
+                        
+                        <%= form_with url: quotes_path, method: :post, local: true do |f| %>
+                          <%= f.hidden_field :hotel_id, value: @hotel.slug %>
+                          <%= f.hidden_field :check_in, value: @check_in %>
+                          <%= f.hidden_field :check_out, value: @check_out %>
+                          <%= f.hidden_field :adults, value: @adults %>
+                          <%= f.hidden_field :children, value: @children %>
+                          <% option.allocations_params.each_with_index do |alloc, index| %>
+                            <%= hidden_field_tag "allocations[][room_type_id]", alloc[:room_type_id] %>
+                            <%= hidden_field_tag "allocations[][quantity]", alloc[:quantity] %>
+                          <% end %>
+                          <%= f.submit "Book this Bundle", class: "btn btn-primary px-8" %>
+                        <% end %>
+                      </div>
+                    </div>
+                    
+                    <%# Details of rooms in this allocation %>
+                    <div class="mt-4 pt-4 border-t border-neutral-bg grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <% option.rooms.each do |allocated_room| %>
+                        <div class="flex items-center gap-x-3">
+                          <div class="w-12 h-12 rounded-lg bg-neutral-bg overflow-hidden flex-none">
+                            <% if allocated_room.room_type.photos.attached? %>
+                              <%= image_tag allocated_room.room_type.photos.first, class: "w-full h-full object-cover" %>
+                            <% end %>
+                          </div>
+                          <div>
+                            <p class="text-xs font-bold text-neutral-text-primary"><%= allocated_room.quantity %>x <%= allocated_room.room_type.name %></p>
+                            <p class="text-[10px] text-neutral-text-secondary"><%= allocated_room.room_type.max_capacity %> pax per room</p>
+                          </div>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+
+              <div class="relative py-4">
+                <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div class="w-full border-t border-neutral-border"></div>
+                </div>
+                <div class="relative flex justify-center">
+                  <span class="bg-neutral-bg px-3 text-sm text-neutral-text-secondary">Or select individual rooms</span>
+                </div>
               </div>
             <% end %>
 

@@ -203,7 +203,7 @@
                                     <% room_name = room.room_type_snapshot.is_a?(Hash) ? room.room_type_snapshot["name"].presence : nil %>
                                     <% room_name = room_name.presence || room.room_type&.name || "Room" %>
                                     <span class="inline-flex items-center rounded-lg bg-slate-50 border border-slate-100 px-3 py-1.5 text-[10px] font-bold text-slate-600 uppercase">
-                                      <span class="text-slate-900 mr-2"><%= room.quantity %>x</span> <%= room_name %>
+                                      <span class="text-slate-900 mr-2">1x</span> <%= room_name %>
                                     </span>
                                   <% end %>
                                 </div>

@@ -1,5 +1,6 @@
 class Public::HotelsController < ApplicationController
   skip_before_action :authenticate_user! if respond_to?(:authenticate_user!)
+  before_action :set_agent_account, only: :show
 
   def index
     @availability_service = BookingEngine::AvailabilityService.new(params)
@@ -31,13 +32,16 @@ class Public::HotelsController < ApplicationController
         params.to_unsafe_h.merge(
           check_in: @check_in,
           check_out: @check_out,
-          room_count: @room_count
+          room_count: @room_count,
+          corporate_rate: current_agent_account.present?
         )
       )
-      @room_types = @availability_service.available_rooms_for_hotel(@hotel, allow_restricted: true)
+      @allocation_options = @availability_service.allocation_options_for_hotel(@hotel)
+      @room_types = @allocation_options.flat_map { |opt| opt.rooms.map(&:room_type) }.uniq
     else
       @availability_service = nil
       @room_types = @hotel.room_types
+      @allocation_options = []
     end
 
     hotel_sort_order = [ "General", "Services", "Parking", "Safety And Security", "Food And Drink", "Activities", "Outdoors", "Pets" ]
@@ -51,6 +55,7 @@ class Public::HotelsController < ApplicationController
 
     # Decorate for view and sort restricted rooms to the bottom
     @hotel = Public::HotelPresenter.new(@hotel, view_context)
+    @allocation_options = @allocation_options.map { |opt| Public::AllocationOptionPresenter.new(opt, view_context) }
     @room_types = @room_types.map { |rt| Public::RoomTypePresenter.new(rt, @hotel, @availability_service, view_context) }
                              .sort_by { |rt| rt.stay_restriction_error.present? ? 1 : 0 }
   end
@@ -104,5 +109,20 @@ class Public::HotelsController < ApplicationController
 
   def display_currency_for_request
     DisplayCurrencyResolver.new(params: params, cookies: cookies, request: request).call
+  end
+
+  def set_agent_account
+    return unless params[:agent_code].present?
+
+    @hotel = Hotel.friendly.find(params[:id])
+    agent = @hotel.agent_accounts.find_by(agent_code: params[:agent_code].upcase)
+
+    if agent
+      session[:agent_account_id] = agent.id
+      flash.now[:notice] = "Agent Code Applied: #{agent.name}"
+    else
+      session[:agent_account_id] = nil
+      flash.now[:alert] = "Invalid Agent Code"
+    end
   end
 end

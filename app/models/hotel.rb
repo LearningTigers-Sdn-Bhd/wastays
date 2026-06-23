@@ -79,6 +79,7 @@ class Hotel < ApplicationRecord
   has_many :room_statuses, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :destroy
   has_many :room_blocks, dependent: :destroy
+  has_many :agent_accounts, dependent: :destroy
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
 

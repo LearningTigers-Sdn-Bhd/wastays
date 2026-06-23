@@ -5,48 +5,112 @@ module BookingEngine
     def initialize(params)
       hotel_key = params[:hotel_id].to_s
       @hotel = Hotel.where(slug: hotel_key).first || Hotel.find(hotel_key)
-      @room_type = @hotel.room_types.find(params[:room_type_id])
+      @allocations = Array(params[:allocations]) # Array of { room_type_id: X, quantity: Y }
+      # Backward compatibility for single room selection
+      if @allocations.empty? && params[:room_type_id].present?
+        @allocations << { room_type_id: params[:room_type_id], quantity: params[:room_count] || 1 }
+      end
+
       @check_in = parse_date(params[:check_in])
       @check_out = parse_date(params[:check_out])
       @adults = (params[:adults].presence || 2).to_i
       @children = (params[:children].presence || 0).to_i
-      @room_count = (params[:room_count].presence || 1).to_i
+      @infants = (params[:infants].presence || 0).to_i
       @guest_name = params[:guest_name]
       @guest_email = params[:guest_email]
       @guest_phone = params[:guest_phone]
       @special_requests = params[:special_requests]
       @display_currency = CurrencyCatalog.normalize(params[:display_currency], fallback: nil)
       @rate_plan_id = params[:rate_plan_id]
+      @corporate_rate = [ true, "true", 1, "1" ].include?(params[:corporate_rate])
+      @agent_account_id = params[:agent_account_id]
     end
 
     def call
       validation_error = validate_dates
       return OpenStruct.new(success?: false, message: validation_error) if validation_error.present?
 
+      # 1. Expand allocations into individual rooms
+      flat_rooms = []
+      @allocations.each do |alloc|
+        begin
+          room_type = @hotel.room_types.find(alloc[:room_type_id] || alloc["room_type_id"])
+          quantity = (alloc[:quantity] || alloc["quantity"]).to_i
+          quantity.times { flat_rooms << room_type }
+        rescue ActiveRecord::RecordNotFound
+          return OpenStruct.new(success?: false, message: "Invalid room type selected.")
+        end
+      end
+
+      return OpenStruct.new(success?: false, message: "No rooms selected.") if flat_rooms.empty?
+
       BookingQuote.transaction do
-        # 1. Revalidate availability one last time
+        # 1. Revalidate availability
         availability_service = BookingEngine::AvailabilityService.new(
           check_in: @check_in,
           check_out: @check_out,
           adults: @adults,
           children: @children,
-          room_count: @room_count
+          infants: @infants,
+          corporate_rate: @corporate_rate
         )
 
-        available_rooms = availability_service.available_rooms_for_hotel(@hotel)
-        unless available_rooms.include?(@room_type)
-          return OpenStruct.new(success?: false, message: "Room is no longer available for these dates.")
+        # 2. Distribute guests
+        flat_rooms = flat_rooms.sort_by { |rt| -rt.max_capacity }
+        occupancies = availability_service.send(:distribute_guests, @adults, @children, @infants, flat_rooms)
+        if occupancies.nil?
+          return OpenStruct.new(success?: false, message: "The selected rooms do not have enough capacity or require more adults to supervise each room.")
         end
 
-        # 2. Calculate total amount from the selected rate plan or lowest available.
-        rate_plan = @rate_plan_id.present? ? @room_type.rate_plans.find_by(id: @rate_plan_id) : nil
-        pricing_summary = availability_service.pricing_summary_for(@room_type, rate_plan: rate_plan)
-        return OpenStruct.new(success?: false, message: "No valid rate is available for these dates.") if pricing_summary.blank?
+        # Group rooms by [room_type, adults, children, infants]
+        grouped_allocations = Hash.new(0)
+        occupancies.each do |occ|
+          grouped_allocations[[ occ[:room_type], occ[:adults], occ[:children], occ[:infants] ]] += 1
+        end
 
-        nightly_rates = pricing_summary[:nightly_rates]
-        total_amount = pricing_summary[:total_price]
-        quote_currency = pricing_summary[:currency]
-        display_snapshot = display_snapshot_for(total_amount, quote_currency)
+        allocation_data = []
+        total_quote_amount = 0.to_d
+        quote_currency = nil
+
+        grouped_allocations.each do |(room_type, r_adults, r_children, r_infants), quantity|
+          rate_plan = @rate_plan_id.present? ? room_type.rate_plans.find_by(id: @rate_plan_id) : nil
+          pricing_summary = availability_service.pricing_summary_for(
+            room_type,
+            rate_plan: rate_plan,
+            adults: r_adults,
+            children: r_children,
+            infants: r_infants,
+            room_count: 1
+          )
+
+          if pricing_summary.blank?
+            return OpenStruct.new(success?: false, message: "No valid rate for room #{room_type.name} with selected occupancy.")
+          end
+
+          # Check inventory
+          stay_dates_list = (@check_in...@check_out).to_a
+          inventories = room_type.room_inventories.select { |inv| stay_dates_list.include?(inv.date) }
+          total_qty_needed = grouped_allocations.select { |(rt, _a, _c, _i), _q| rt.id == room_type.id }.sum { |_, q| q }
+          unless inventories.count == stay_dates_list.count && inventories.all? { |inv| inv.status == "open" && inv.quantity >= total_qty_needed }
+            return OpenStruct.new(success?: false, message: "Room #{room_type.name} is no longer available.")
+          end
+
+          quote_currency ||= pricing_summary[:currency]
+          subtotal = pricing_summary[:nightly_price] * quantity * stay_dates_list.count
+          total_quote_amount += subtotal
+
+          allocation_data << {
+            room_type: room_type,
+            quantity: quantity,
+            subtotal: subtotal,
+            pricing_summary: pricing_summary,
+            adults: r_adults,
+            children: r_children,
+            infants: r_infants
+          }
+        end
+
+        display_snapshot = display_snapshot_for(total_quote_amount, quote_currency)
 
         # 3. Create Quote with snapshots
         quote = BookingQuote.new(
@@ -55,7 +119,8 @@ module BookingEngine
           check_out: @check_out,
           adults: @adults,
           children: @children,
-          total_amount: total_amount,
+          infants: @infants,
+          total_amount: total_quote_amount,
           currency: quote_currency,
           display_currency: display_snapshot[:currency],
           display_total_amount: display_snapshot[:amount],
@@ -67,19 +132,29 @@ module BookingEngine
           guest_name: @guest_name,
           guest_email: @guest_email,
           guest_phone: @guest_phone,
-          special_requests: @special_requests
+          special_requests: @special_requests,
+          agent_account_id: @agent_account_id
         )
 
         if quote.save
-          # 4. Create Quote Item
-          quote.booking_quote_items.create!(
-            room_type: @room_type,
-            quantity: @room_count,
-            subtotal: total_amount,
-            room_type_snapshot: @room_type.as_json,
-            nightly_rate_snapshot: nightly_rates.transform_values(&:as_json),
-            occupancy_snapshot: { max_adults: @room_type.max_adults, max_children: @room_type.max_children }
-          )
+          # 4. Create Quote Items
+          allocation_data.each do |data|
+            quote.booking_quote_items.create!(
+              room_type: data[:room_type],
+              quantity: data[:quantity],
+              subtotal: data[:subtotal],
+              room_type_snapshot: data[:room_type].as_json,
+              nightly_rate_snapshot: data[:pricing_summary][:nightly_rates].transform_values(&:as_json),
+              occupancy_snapshot: {
+                max_adults: data[:room_type].max_adults,
+                max_children: data[:room_type].max_children,
+                actual_occupancy: data[:adults] + data[:children] + data[:infants],
+                adults: data[:adults],
+                children: data[:children],
+                infants: data[:infants]
+              }
+            )
+          end
 
           # Record Audit Log
           Bookings::RecordAuditLog.call(

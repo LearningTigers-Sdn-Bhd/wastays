@@ -37,12 +37,13 @@ module Bookings
           id: @booking.hotel_id,
           name: @booking.hotel.name
         },
-        rooms: @booking.booking_rooms.map do |br|
+        rooms: @booking.booking_rooms.group_by(&:room_type_id).map do |room_type_id, rooms|
+          first_room = rooms.first
           {
-            room_type: br.room_type.name,
-            quantity: br.quantity,
-            subtotal: br.subtotal.to_f,
-            room_number: br.room_number
+            room_type: first_room.room_type.name,
+            quantity: rooms.size,
+            subtotal: rooms.sum { |r| r.subtotal.to_f }.round(2),
+            room_number: rooms.map(&:room_number).compact.presence&.join(", ")
           }
         end,
         created_at: @booking.created_at,

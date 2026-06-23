@@ -223,9 +223,11 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     end
   end
 
-  xit "opens a booking from the keyboard and closes the amend-stay drawer", js: true do
-    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
+  it "opens a booking from the keyboard and closes the amend-stay drawer", js: true do
+    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    wait_for_booking_timeline_controller
 
+    expect(page).to have_selector("[data-booking-actions-id-value='#{@booking.id}']", wait: 10)
     booking_block = find("[data-booking-actions-id-value='#{@booking.id}']")
     booking_block.send_keys(:enter)
 
@@ -239,8 +241,9 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)
   end
 
-  xit "opens today slot actions and prefills the selected room", js: true do
-    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
+  it "opens today slot actions and prefills the selected room", js: true do
+    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    wait_for_booking_timeline_controller
     board_url = page.current_url
 
     cell = find("[data-room-number='102'][data-date='#{@business_date}']")

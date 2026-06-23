@@ -152,12 +152,13 @@ module ChannelManagers
             phone: booking.guest_phone,
             country: booking.guest_country
           },
-          rooms: booking.booking_rooms.map do |br|
+          rooms: booking.booking_rooms.group_by { |br| [ br.room_type_id, br.rate_plan_id ] }.map do |(room_type_id, rate_plan_id), rooms|
+            br = rooms.first
             {
               room_type_id: mapping_for(br.room_type).external_id,
               rate_plan_id: mapping_for(br.rate_plan || br.room_type.rate_plans.first).external_id,
-              count: br.quantity,
-              amount: format("%.2f", br.subtotal.to_f)
+              count: rooms.size,
+              amount: format("%.2f", rooms.sum { |r| r.subtotal.to_f })
             }
           end
         }

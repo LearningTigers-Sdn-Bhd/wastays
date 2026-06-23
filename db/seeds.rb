@@ -98,7 +98,7 @@ module SeedData
       tourism_tax_amount: tourism_tax_applied ? hotel.send(:tourism_tax_amount_for, guest_attrs[:country]) : 0
     )
 
-    BookingRoom.create!(booking: booking, room_type: room_type, quantity: 1, subtotal: room_type.base_price * nights)
+    BookingRoom.create!(booking: booking, room_type: room_type, subtotal: room_type.base_price * nights)
 
     guest = upsert_guest(guest_attrs)
     BookingGuest.find_or_create_by!(booking: booking, guest: guest, is_primary: true)

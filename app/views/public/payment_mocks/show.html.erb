@@ -1,4 +1,51 @@
-<div>
-  <h1 class="font-bold text-4xl">Public::PaymentMocks#show</h1>
-  <p>Find me in app/views/public/payment_mocks/show.html.erb</p>
+<div class="max-w-2xl mx-auto py-12 px-4">
+  <div class="card p-8">
+    <h1 class="text-2xl font-black text-neutral-text-primary mb-6">Mock Payment Gateway</h1>
+    <p class="text-sm text-neutral-text-secondary mb-8">This is a simulated payment gateway for testing purposes.</p>
+
+    <%= form_with url: mock_payment_path(quote_token: @quote.token), method: :post, local: true do |f| %>
+      <div class="space-y-6">
+        <div>
+          <%= f.label "guest_details[name]", "Name", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+          <%= f.text_field "guest_details[name]", id: "guest_details_name", value: @quote.guest_name, required: true, class: "form-input w-full rounded-xl" %>
+        </div>
+
+        <div>
+          <%= f.label "guest_details[email]", "Email", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+          <%= f.email_field "guest_details[email]", id: "guest_details_email", value: @quote.guest_email, required: true, class: "form-input w-full rounded-xl" %>
+        </div>
+
+        <div>
+          <%= f.label "guest_details[phone]", "WhatsApp Number", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+          <%= f.text_field "guest_details[phone]", id: "guest_details_phone", value: @quote.guest_phone, required: true, class: "form-input w-full rounded-xl" %>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <%= f.label "guest_details[gender]", "Gender", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.select "guest_details[gender]", options_for_select([["Male", "male"], ["Female", "female"]]), { prompt: "Select gender" }, { id: "guest_details_gender", required: true, class: "form-select w-full rounded-xl" } %>
+          </div>
+          <div>
+            <%= f.label "guest_details[country]", "Country", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.text_field "guest_details[country]", id: "guest_details_country", required: true, class: "form-input w-full rounded-xl" %>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <%= f.label "guest_details[document_type]", "Document Type", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.select "guest_details[document_type]", options_for_select([["MyKad / IC", "ic"], ["Passport", "passport"]]), { prompt: "Select" }, { id: "guest_details_document_type", required: true, class: "form-select w-full rounded-xl" } %>
+          </div>
+          <div>
+            <%= f.label "guest_details[government_id]", "ID / Passport Number", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+            <%= f.text_field "guest_details[government_id]", id: "government_id", required: true, class: "form-input w-full rounded-xl" %>
+          </div>
+        </div>
+
+        <div class="pt-6">
+          <%= f.submit "Confirm Payment", class: "btn btn-primary w-full py-4 text-lg font-black" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
 </div>

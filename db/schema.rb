@@ -56,6 +56,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "agent_accounts", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "name", null: false
+    t.string "agent_code", null: false
+    t.string "account_type", null: false
+    t.string "contact_email"
+    t.string "contact_phone"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "agent_code"], name: "index_agent_accounts_on_hotel_id_and_agent_code", unique: true
+    t.index ["hotel_id"], name: "index_agent_accounts_on_hotel_id"
+  end
+
   create_table "amenities", force: :cascade do |t|
     t.string "name"
     t.string "slug"
@@ -362,8 +375,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.decimal "display_total_amount", precision: 10, scale: 2
     t.decimal "display_exchange_rate", precision: 18, scale: 8
     t.string "display_rate_source"
-    t.text "special_requests"
     t.bigint "partner_id"
+    t.bigint "agent_account_id"
+    t.integer "infants", default: 0, null: false
+    t.text "special_requests"
+    t.index ["agent_account_id"], name: "index_booking_quotes_on_agent_account_id"
     t.index ["hotel_id"], name: "index_booking_quotes_on_hotel_id"
     t.index ["partner_id"], name: "index_booking_quotes_on_partner_id"
     t.index ["token"], name: "index_booking_quotes_on_token", unique: true
@@ -372,7 +388,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   create_table "booking_rooms", force: :cascade do |t|
     t.bigint "booking_id", null: false
     t.bigint "room_type_id", null: false
-    t.integer "quantity", default: 1, null: false
     t.decimal "subtotal", precision: 10, scale: 2, null: false
     t.jsonb "room_type_snapshot", default: {}, null: false
     t.jsonb "nightly_rate_snapshot", default: {}, null: false
@@ -458,12 +473,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.datetime "check_in", null: false
     t.datetime "check_out", null: false
     t.date "no_show_review_business_date"
+    t.bigint "agent_account_id"
+    t.integer "infants", default: 0, null: false
     t.boolean "tourism_tax_collected", default: false, null: false
     t.text "special_requests"
     t.string "folio_account_reference"
     t.boolean "vip", default: false, null: false
     t.bigint "group_booking_id"
     t.integer "group_position"
+    t.index ["agent_account_id"], name: "index_bookings_on_agent_account_id"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["check_in"], name: "index_bookings_on_check_in"
@@ -1153,6 +1171,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.boolean "concierge_enabled", default: true, null: false
     t.string "pre_suspension_status"
     t.bigint "plan_id"
+    t.boolean "pax_pricing_only", default: false, null: false
+    t.boolean "allow_pax_pricing", default: false, null: false
     t.string "google_map_link"
     t.boolean "geolocation_enabled", default: true, null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
@@ -1565,6 +1585,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.datetime "updated_at", null: false
     t.text "description"
     t.bigint "hotel_id", null: false
+    t.decimal "single_supplement", precision: 10, scale: 2, default: "0.0", null: false
+    t.decimal "child_price_multiplier", precision: 3, scale: 2, default: "1.0", null: false
+    t.decimal "infant_price_multiplier", precision: 3, scale: 2, default: "0.0", null: false
+    t.integer "base_occupancy", default: 2, null: false
+    t.decimal "extra_pax_charge", precision: 10, scale: 2, default: "0.0", null: false
     t.index ["hotel_id"], name: "index_rate_plans_on_hotel_id"
   end
 
@@ -1702,6 +1727,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.decimal "ota_price", precision: 10, scale: 2
     t.string "applied_rule_type"
     t.decimal "corporate_price", precision: 10, scale: 2
+    t.decimal "single_supplement", precision: 10, scale: 2
+    t.integer "base_occupancy"
+    t.decimal "extra_pax_charge", precision: 10, scale: 2
     t.index ["rate_plan_id"], name: "index_room_rates_on_rate_plan_id"
     t.index ["room_type_id", "rate_plan_id", "date", "currency"], name: "index_room_rates_on_rt_rp_date_curr", unique: true
     t.index ["room_type_id"], name: "index_room_rates_on_room_type_id"
@@ -1862,6 +1890,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "agent_accounts", "hotels"
   add_foreign_key "ar_invoices", "booking_folios"
   add_foreign_key "ar_invoices", "hotel_corporate_accounts"
   add_foreign_key "ar_invoices", "hotels"
@@ -1898,6 +1927,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   add_foreign_key "booking_notes", "users"
   add_foreign_key "booking_quote_items", "booking_quotes"
   add_foreign_key "booking_quote_items", "room_types"
+  add_foreign_key "booking_quotes", "agent_accounts"
   add_foreign_key "booking_quotes", "hotels"
   add_foreign_key "booking_quotes", "partners"
   add_foreign_key "booking_rooms", "bookings"
@@ -1908,6 +1938,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   add_foreign_key "booking_tax_inclusion_overrides", "hotels"
   add_foreign_key "booking_tax_inclusion_overrides", "transaction_codes"
   add_foreign_key "booking_tax_inclusion_overrides", "users", column: "actor_id"
+  add_foreign_key "bookings", "agent_accounts"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "group_bookings"
   add_foreign_key "bookings", "hotels"
@@ -2017,8 +2048,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   add_foreign_key "notification_deliveries", "bookings"
   add_foreign_key "notification_deliveries", "hotels"
   add_foreign_key "onboarding_sessions", "hotels"
-  add_foreign_key "payment_transactions", "ar_payments"
   add_foreign_key "partners", "hotels"
+  add_foreign_key "payment_transactions", "ar_payments"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
   add_foreign_key "payment_transactions", "corporate_ar_payment_intents"

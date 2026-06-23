@@ -133,6 +133,16 @@
           <%= f.hidden_field :room_count, value: room_count, data: { hotel_search_bar_target: "roomCountInput" } %>
         </div>
 
+        <%# Agent Code segment %>
+        <div class="flex items-center justify-center px-3 sm:px-4 py-2 flex-1 min-w-0 border-r border-neutral-border cursor-pointer">
+          <div class="text-center min-w-0">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary leading-none mb-0.5 text-center">Agent Code</p>
+            <%= f.text_field :agent_code, value: params[:agent_code] || current_agent_account&.agent_code, 
+                placeholder: "Optional",
+                class: "text-xs sm:text-sm font-semibold text-neutral-text-primary bg-transparent border-none p-0 focus:ring-0 text-center w-full placeholder:text-neutral-text-secondary/50" %>
+          </div>
+        </div>
+
         <%# Search button %>
         <%= f.button type: "submit",
               class: "flex-none flex items-center justify-center gap-x-2 h-10 w-10 sm:w-auto sm:px-4 m-1 rounded-full bg-brand-primary text-white hover:bg-brand-primary/90 transition-colors" do %>

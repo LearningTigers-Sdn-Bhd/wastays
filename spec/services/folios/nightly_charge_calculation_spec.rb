@@ -35,13 +35,12 @@ RSpec.describe Folios::NightlyChargeCalculation do
       booking = create(:booking, check_in: Date.current, check_out: Date.current + 2.days)
       booking_room = create(:booking_room,
         booking: booking,
-        quantity: 2,
         subtotal: 1_000,
         nightly_rate_snapshot: {
           Date.current.iso8601 => { "price" => "125.50" }
         })
 
-      expect(calculator.nightly_room_amount(booking_room, Date.current)).to eq(251.to_d)
+      expect(calculator.nightly_room_amount(booking_room, Date.current)).to eq(125.50.to_d)
     end
   end
 end

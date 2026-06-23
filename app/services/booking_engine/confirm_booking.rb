@@ -68,6 +68,7 @@ module BookingEngine
           check_out: @quote.check_out,
           adults: @quote.adults,
           children: @quote.children,
+          infants: @quote.infants,
           hotel_snapshot: @quote.hotel_snapshot,
           cancellation_policy_snapshot: @quote.cancellation_policy_snapshot,
           status: "confirmed",
@@ -83,19 +84,28 @@ module BookingEngine
           tax_lines: tax_lines,
           tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
           reservation_number: reservation_num,
-          receipt_number: receipt_num
+          receipt_number: receipt_num,
+          agent_account_id: @quote.agent_account_id
         )
 
 
         @quote.booking_quote_items.each do |item|
-          booking.booking_rooms.build(
-            room_type: item.room_type,
-            quantity: item.quantity,
-            subtotal: item.subtotal,
-            room_type_snapshot: item.room_type_snapshot,
-            nightly_rate_snapshot: normalized_nightly_rate_snapshot(item.nightly_rate_snapshot),
-            occupancy_snapshot: item.occupancy_snapshot
-          )
+          rate_plan_id = nil
+          if item.nightly_rate_snapshot.present?
+            first_rate_data = item.nightly_rate_snapshot.values.first
+            rate_plan_id = first_rate_data["rate_plan_id"] if first_rate_data.is_a?(Hash)
+          end
+
+          item.quantity.times do
+            booking.booking_rooms.build(
+              room_type: item.room_type,
+              rate_plan_id: rate_plan_id,
+              subtotal: (item.subtotal.to_d / item.quantity).round(2),
+              room_type_snapshot: item.room_type_snapshot,
+              nightly_rate_snapshot: normalized_nightly_rate_snapshot(item.nightly_rate_snapshot),
+              occupancy_snapshot: item.occupancy_snapshot
+            )
+          end
         end
 
         if booking.save

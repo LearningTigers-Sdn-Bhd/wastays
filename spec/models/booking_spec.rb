@@ -92,20 +92,14 @@ RSpec.describe Booking, type: :model do
     end
 
     it "is false for one booked room" do
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type)
 
       expect(booking.reload).not_to be_group_booking
     end
 
-    it "is true for an aggregated multi-room row" do
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 2)
-
-      expect(booking.reload).to be_group_booking
-    end
-
-    it "is true for multiple single-quantity rows" do
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1)
+    it "is true for multiple booking room rows" do
+      create(:booking_room, booking: booking, room_type: room_type)
+      create(:booking_room, booking: booking, room_type: room_type)
 
       expect(booking.reload).to be_group_booking
     end

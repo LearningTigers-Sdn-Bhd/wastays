@@ -15,7 +15,7 @@ RSpec.describe HotelPortal::Reports::DailyOccupancyReport, type: :service do
       create(:room_inventory, room_type: room_type, date: end_date, quantity: 10, status: "open")
 
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, total_amount: 400)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 300)
+      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 150)
 
       create(:booking, hotel: other_hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, total_amount: 500)
 
@@ -58,7 +58,7 @@ RSpec.describe HotelPortal::Reports::DailyOccupancyReport, type: :service do
     it "falls back to booking total_amount when booking_room subtotal is zero" do
       room_type = create(:room_type, hotel: hotel, quantity: 5)
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date, check_out: start_date + 2.days, total_amount: 240)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1, subtotal: 0)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 0)
 
       result = described_class.new(hotel: hotel, start_date: start_date, end_date: start_date).call
 

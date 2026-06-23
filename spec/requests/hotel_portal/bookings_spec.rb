@@ -35,7 +35,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
   describe "GET /index" do
       before do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
-      BookingRoom.create!(booking: booking, room_type: room_type, room_type_snapshot: { "name" => room_type.name }, quantity: 1, subtotal: booking.total_amount)
+      BookingRoom.create!(booking: booking, room_type: room_type, room_type_snapshot: { "name" => room_type.name }, subtotal: booking.total_amount)
       create(:pre_checkin, booking: booking, status: "completed", document_status: "uploaded")
     end
 
@@ -110,7 +110,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
     it "returns http success" do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101", room_type_snapshot: { "name" => room_type.name }, quantity: 1, subtotal: booking.total_amount)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101", room_type_snapshot: { "name" => room_type.name }, subtotal: booking.total_amount)
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
       get booking_details_path(booking)
@@ -1021,7 +1021,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
     before do
       grant_permission("post_folio_charges")
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1, room_number: "101")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
     end
 
     it "updates the checkout period and applies the charge" do

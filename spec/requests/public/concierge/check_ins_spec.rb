@@ -13,7 +13,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
   let(:booking) do
     b = create(:booking, hotel: hotel, guest_name: "Ahmad Zulkifli", status: "confirmed",
                check_in: Date.today, check_out: Date.today + 1)
-    b.booking_rooms.create!(room_type: room_type, quantity: 1, subtotal: 200,
+    b.booking_rooms.create!(room_type: room_type, subtotal: 200,
                              room_type_snapshot: { "name" => room_type.name })
     b
   end

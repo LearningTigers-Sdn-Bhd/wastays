@@ -23,7 +23,6 @@ RSpec.describe Notifications::PayloadBuilders::CheckOutReceiptMessage do
       :booking_room,
       booking: booking,
       room_type: room_type,
-      quantity: 1,
       subtotal: 320.0,
       room_number: "104",
       room_type_snapshot: { "name" => "Executive King" }

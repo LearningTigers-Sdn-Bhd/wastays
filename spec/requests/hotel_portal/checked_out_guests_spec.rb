@@ -95,7 +95,6 @@ RSpec.describe "HotelPortal::CheckedOutGuests", type: :request do
       booking: booking,
       room_type: room_type,
       room_type_snapshot: { "name" => room_type.name },
-      quantity: 1,
       subtotal: booking.total_amount
     )
   end

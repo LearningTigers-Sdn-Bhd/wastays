@@ -69,7 +69,7 @@
           <p class="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-text-secondary mb-1">Room Details</p>
           <div class="space-y-0.5">
             <% @booking.booking_rooms.each do |booking_room| %>
-              <p class="text-xs font-bold text-neutral-text-primary"><%= booking_room.quantity %>x <%= booking_room.room_type_snapshot["name"] %></p>
+              <p class="text-xs font-bold text-neutral-text-primary">1x <%= booking_room.room_type_snapshot["name"] %></p>
             <% end %>
           </div>
         </div>

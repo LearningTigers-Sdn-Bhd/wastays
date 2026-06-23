@@ -34,6 +34,10 @@ class RoomType < ApplicationRecord
     Array(super).flatten.compact.map(&:to_s).reject(&:blank?)
   end
 
+  def max_capacity
+    max_adults.to_i + max_children.to_i
+  end
+
   def attach_photos_with_limit(photo_files)
     photo_files = Array(photo_files).reject(&:blank?)
     remaining_slots = [ MAX_PHOTOS - photos.count, 0 ].max
