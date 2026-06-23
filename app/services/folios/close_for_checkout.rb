@@ -13,6 +13,7 @@ module Folios
       @user = user
       @checked_out_at = checked_out_at
       @options = options
+      @exception_folio_ids = Array(@options[:exception_folio_ids]).map(&:to_i)
     end
 
     def call
@@ -23,7 +24,7 @@ module Folios
       @booking.with_lock do
         folios.each(&:lock!)
         folios.each(&:reload)
-        if folios.any?(&:closed?)
+        if folios.any?(&:closed?) && !multi_folio_exception_checkout?
           message = folios.one? ? "Folio is already closed." : "One or more folios are already closed."
           return failure(message, folio: primary_folio)
         end
@@ -41,18 +42,27 @@ module Folios
         missing_charges_error = validate_all_nights_posted(folios)
         return failure(missing_charges_error, folio: primary_folio) if missing_charges_error.present?
 
-        balance = folios.sum { |folio| calculate_fresh_balance(folio) }
-        return failure("Cannot check out with outstanding balance of #{formatted_balance(balance)}.", folio: primary_folio, balance: balance) if balance.positive?
-        return failure("Cannot check out with credit balance of #{formatted_balance(balance)}. Process refund or adjustment first.", folio: primary_folio, balance: balance) if balance.negative?
+        balances = folios.index_with { |folio| calculate_fresh_balance(folio) }
+        closable_folios = folios.reject { |folio| exception_folio?(folio) || folio.closed? }
+        invalid_closable = closable_folios.find { |folio| !balances.fetch(folio).zero? }
+        if invalid_closable.present?
+          balance = balances.fetch(invalid_closable)
+          return legacy_balance_failure(balance, primary_folio, balances) unless multi_folio_exception_checkout?
+
+          return failure("Cannot check out with #{invalid_closable.display_name} balance of #{formatted_balance(balance)}.", folio: primary_folio, balance: total_balance(balances))
+        end
+
+        guest_exception = folios.find { |folio| guest_folio?(folio) && exception_folio?(folio) }
+        return failure("#{guest_exception.display_name}: guest folio must be financially resolved before checkout.", folio: primary_folio, balance: total_balance(balances)) if guest_exception.present?
 
         invoice_num = HotelCounter.increment!(hotel: primary_folio.hotel, type: "invoice")
-        folios.each do |folio|
+        closable_folios.each do |folio|
           attributes = { status: "closed", closed_at: Time.current, closed_by: @user }
           attributes[:invoice_number] = invoice_num if folio.id == primary_folio.id
           folio.update!(attributes)
-          record_financial_audit_event!(folio, calculate_fresh_balance(folio))
+          record_financial_audit_event!(folio, balances.fetch(folio))
         end
-        success(folio: primary_folio.reload, balance: balance)
+        success(folio: primary_folio.reload, balance: total_balance(balances))
       end
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
@@ -98,6 +108,30 @@ module Folios
       adjustments = FolioTransaction.adjustment.where(booking_folio_id: folio.id).sum(:amount)
 
       charges.to_d - payments.to_d + adjustments.to_d
+    end
+
+    def multi_folio_exception_checkout?
+      @options.key?(:exception_folio_ids)
+    end
+
+    def exception_folio?(folio)
+      @exception_folio_ids.include?(folio.id)
+    end
+
+    def guest_folio?(folio)
+      folio.folio_type == "guest" && folio.payer_type == "guest"
+    end
+
+    def total_balance(balances)
+      balances.values.sum(&:to_d)
+    end
+
+    def legacy_balance_failure(balance, primary_folio, balances)
+      if balance.positive?
+        failure("Cannot check out with outstanding balance of #{formatted_balance(balance)}.", folio: primary_folio, balance: total_balance(balances))
+      else
+        failure("Cannot check out with credit balance of #{formatted_balance(balance)}. Process refund or adjustment first.", folio: primary_folio, balance: total_balance(balances))
+      end
     end
 
     def sync_payment_and_refund_state(folio)

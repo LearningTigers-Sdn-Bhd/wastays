@@ -27,9 +27,9 @@ module HotelPortal
       authorize_manage_folio_windows!
       @booking = current_hotel.bookings.find(params[:booking_id])
       @folio = @booking.booking_folios.build(
-        name: "Custom Folio",
-        folio_type: "custom",
-        payer_type: "guest",
+        name: "External Folio",
+        folio_type: "external",
+        payer_type: "company",
         currency: @booking.currency.presence || current_hotel.default_currency
       )
       @sheet_title = "Add Folio Window"

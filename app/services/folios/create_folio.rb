@@ -48,8 +48,8 @@ module Folios
         folio_number: folio_number,
         folio_sequence: next_folio_sequence,
         name: @attributes[:name].presence || default_name,
-        folio_type: @attributes[:folio_type].presence || "custom",
-        payer_type: @attributes[:payer_type].presence || "guest",
+        folio_type: @attributes[:folio_type].presence || "external",
+        payer_type: @attributes[:payer_type].presence || "company",
         payer_id: @attributes[:payer_id].presence,
         is_primary: false,
         status: "open",
@@ -72,9 +72,9 @@ module Folios
 
     def default_name
       case @attributes[:folio_type].to_s
-      when "company" then "Company Folio"
       when "guest" then "Guest Folio"
-      else "Custom Folio"
+      when "house" then "House Folio"
+      else "External Folio"
       end
     end
 
