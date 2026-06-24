@@ -185,6 +185,30 @@ RSpec.describe Folios::PostStaffTransaction do
     expect(result.transaction.metadata["route_source"]).to eq("routing_rule")
   end
 
+  it "posts a manual charge to the selected secondary folio when no routing rule exists" do
+    hotel = folio.hotel
+    booking = folio.booking
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+
+    result = described_class.call(
+      folio: company_folio,
+      user: user,
+      transaction_type: "charge",
+      category: nil,
+      transaction_code_id: code.id,
+      amount: "50.00",
+      description: "Restaurant charge",
+      options: { require_transaction_code: true }
+    )
+
+    expect(result.success?).to be(true)
+    expect(result.transaction.booking_folio).to eq(company_folio)
+    expect(result.transaction.metadata["route_source"]).to eq("selected_folio")
+    expect(result.transaction.metadata.dig("route_metadata", "selected_folio_id")).to eq(company_folio.id)
+  end
+
   it "requires permission and reason when selected folio overrides routing" do
     hotel = folio.hotel
     booking = folio.booking

@@ -99,6 +99,7 @@ module Folios
       resolved = Folios::ResolveTargetFolio.call(booking: @folio.booking, transaction_code: @transaction_code, actor: @user, permission_context: @options[:permission_context] || @user)
       return resolved unless resolved.success?
       return resolved if resolved.folio.id == @folio.id
+      return selected_folio_route if resolved.route_source == "primary_folio"
 
       Folios::ResolveTargetFolio.call(
         booking: @folio.booking,
@@ -107,6 +108,16 @@ module Folios
         override_reason: routing_override_reason,
         actor: @user,
         permission_context: @options[:permission_context] || @user
+      )
+    end
+
+    def selected_folio_route
+      OpenStruct.new(
+        success?: true,
+        folio: @folio,
+        route_source: "selected_folio",
+        route_metadata: { selected_folio_id: @folio.id },
+        error: nil
       )
     end
 
