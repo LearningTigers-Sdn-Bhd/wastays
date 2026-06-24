@@ -106,6 +106,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
         :start_date, :end_date, :apply_inventory, :apply_rates, :apply_restrictions,
         :quantity, :status, :price, :currency, :min_stay, :max_stay,
         :closed_to_arrival, :closed_to_departure, :stop_sell, :mode,
+        :base_occupancy, :extra_pax_charge, :single_supplement,
         room_type_ids: [], rate_plan_ids: [], modified_fields: []
       ).to_h.symbolize_keys
     end
@@ -332,6 +333,9 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :closed_to_departure,
       :stop_sell,
       :mode,
+      :base_occupancy,
+      :extra_pax_charge,
+      :single_supplement,
       room_type_ids: [],
       rate_plan_ids: [],
       view_currencies: [],

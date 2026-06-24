@@ -2,7 +2,7 @@
 
 module HotelPortal
   class SettingsController < HotelPortal::BaseController
-    SETTINGS_TABS = %w[general ai notifications banking].freeze
+    SETTINGS_TABS = %w[general rates tax ai notifications banking].freeze
 
     before_action :set_account
     before_action :set_hotel
@@ -25,6 +25,8 @@ module HotelPortal
         update_settings
       elsif params[:payment_setting].present?
         redirect_to hotel_settings_path(@hotel, tab: active_settings_tab), alert: "Payment gateway credentials are managed by superadmin."
+      elsif params[:rate_plans].present?
+        update_rate_plans
       else
         update_banking_details
       end
@@ -60,6 +62,35 @@ module HotelPortal
         @account.build_banking_detail unless @account.banking_detail
         append_settings_tab_breadcrumb
         render :index, status: :unprocessable_entity
+      end
+    end
+
+    def update_rate_plans
+      authorize_settings_update!
+
+      rate_plans_params = params.require(:rate_plans).permit!
+
+      success = true
+      ActiveRecord::Base.transaction do
+        rate_plans_params.each do |rp_id, rp_attrs|
+          rate_plan = @hotel.rate_plans.find(rp_id)
+          
+          if rp_attrs.key?(:room_type_ids)
+            rt_ids = Array(rp_attrs.delete(:room_type_ids)).reject(&:blank?).map(&:to_i)
+            rate_plan.room_type_ids = rt_ids
+          end
+
+          unless rate_plan.update(rp_attrs)
+            success = false
+            raise ActiveRecord::Rollback
+          end
+        end
+      end
+
+      if success
+        redirect_to hotel_settings_path(@hotel, tab: "rates"), notice: "Rate settings updated successfully."
+      else
+        redirect_to hotel_settings_path(@hotel, tab: "rates"), alert: "Failed to update some rate plans. Please verify the values."
       end
     end
 

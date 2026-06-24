@@ -515,6 +515,7 @@ Rails.application.routes.draw do
     patch "settings", to: "settings#update"
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
     resources :hotel_taxes, only: %i[index new create edit update destroy]
+    resources :rate_plans, only: %i[create destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board

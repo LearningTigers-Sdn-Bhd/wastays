@@ -245,7 +245,8 @@
                              data-rate-plan-id="tier_walk_in_<%= row.room_type_id %>"
                              data-room-type-id="<%= row.room_type_id %>"
                              data-date="<%= date %>"
-                             data-price="<%= cell[:price] %>">
+                             data-price="<%= cell[:price] %>"
+                             data-sell-mode="<%= cell[:sell_mode] %>">
                           <div class="flex flex-col items-center justify-center min-h-[28px] sm:min-h-[32px]">
                             <% if cell[:conversion_missing] %>
                               <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
@@ -266,7 +267,8 @@
                              data-rate-plan-id="tier_corporate_<%= row.room_type_id %>"
                              data-room-type-id="<%= row.room_type_id %>"
                              data-date="<%= date %>"
-                             data-price="<%= cell[:price] %>">
+                             data-price="<%= cell[:price] %>"
+                             data-sell-mode="<%= cell[:sell_mode] %>">
                           <div class="flex flex-col items-center justify-center min-h-[28px] sm:min-h-[32px]">
                             <% if cell[:conversion_missing] %>
                               <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
@@ -287,7 +289,8 @@
                              data-rate-plan-id="tier_ota_<%= row.room_type_id %>"
                              data-room-type-id="<%= row.room_type_id %>"
                              data-date="<%= date %>"
-                             data-price="<%= cell[:price] %>">
+                             data-price="<%= cell[:price] %>"
+                             data-sell-mode="<%= cell[:sell_mode] %>">
                           <div class="flex flex-col items-center justify-center min-h-[28px] sm:min-h-[32px]">
                             <% if cell[:conversion_missing] %>
                               <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
@@ -313,7 +316,11 @@
                                 data-max-stay="<%= cell[:max_stay] %>"
                                 data-closed-to-arrival="<%= cell[:closed_to_arrival] %>"
                                 data-closed-to-departure="<%= cell[:closed_to_departure] %>"
-                                data-stop-sell="<%= cell[:stop_sell] %>">
+                                data-stop-sell="<%= cell[:stop_sell] %>"
+                                data-single-supplement="<%= cell[:single_supplement] %>"
+                                data-base-occupancy="<%= cell[:base_occupancy] %>"
+                                data-extra-pax-charge="<%= cell[:extra_pax_charge] %>"
+                                data-sell-mode="<%= cell[:sell_mode] %>">
                           <div class="flex flex-col items-center justify-center min-h-[28px] sm:min-h-[32px]">
                             <% if cell[:applied_rule_type].present? && cell[:applied_rule_type] != "base" %>
                               <% 

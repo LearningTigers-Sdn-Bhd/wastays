@@ -40,6 +40,169 @@
              data-testid="settings-notifications-panel">
           <%= render "notifications_section" %>
         </div>
+
+        <div id="rates-panel"
+             data-tabs-target="panel"
+             data-tab-panel="rates"
+             class="<%= @presenter.active_tab == "rates" ? "space-y-6" : "hidden space-y-6" %>"
+             role="tabpanel"
+             data-testid="settings-rates-panel">
+          <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+              <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Rate Settings & Per-Pax Rules</h2>
+              <p class="mt-1 text-sm font-medium text-slate-600">Configure how guest rates are calculated based on occupancy, extra guests, children, and infants.</p>
+            </div>
+
+            <div class="px-6 py-5 sm:px-8">
+              <%= form_with url: hotel_settings_path(@hotel, tab: "rates"), method: :patch, local: true, class: "space-y-8" do |f| %>
+                <div class="space-y-6">
+                  <% @presenter.rate_plans.each do |rate_plan| %>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-4">
+                      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div class="flex items-center gap-x-2">
+                          <h3 class="text-sm font-bold text-slate-900"><%= rate_plan.name %></h3>
+                          <% if rate_plan.special_tier? %>
+                            <span class="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">Virtual Tier</span>
+                          <% elsif rate_plan.name.to_s.strip.downcase == "standard rate" %>
+                            <span class="inline-flex items-center rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">System Default</span>
+                          <% end %>
+                        </div>
+                        <div class="flex items-center gap-x-3">
+                          <span class="inline-flex items-center rounded-md bg-slate-950/5 px-2.5 py-1 text-xs font-bold text-slate-600">
+                            <%= rate_plan.currency %>
+                          </span>
+                          <% unless rate_plan.special_tier? || rate_plan.name.to_s.strip.downcase == "standard rate" %>
+                            <%= link_to "Delete", hotel_rate_plan_path(@hotel, rate_plan), data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to delete '#{rate_plan.name}'? This will permanently remove the rate plan." }, class: "text-xs font-bold text-red-600 hover:text-red-700 transition" %>
+                          <% end %>
+                        </div>
+                      </div>
+
+                      <div class="grid gap-6 md:grid-cols-3">
+                        <div>
+                          <%= label_tag "rate_plans[#{rate_plan.id}][sell_mode]", "Sell Mode", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                          <%= select_tag "rate_plans[#{rate_plan.id}][sell_mode]", options_for_select([["Per Room (Extra guest charges)", "per_room"], ["Per Person (Pax rates + single supplement)", "per_person"]], rate_plan.sell_mode), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                        </div>
+
+                        <div>
+                          <%= label_tag "rate_plans[#{rate_plan.id}][base_occupancy]", "Base Occupancy (Per Room)", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                          <%= number_field_tag "rate_plans[#{rate_plan.id}][base_occupancy]", rate_plan.base_occupancy, min: 1, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                        </div>
+
+                        <div>
+                          <%= label_tag "rate_plans[#{rate_plan.id}][extra_pax_charge]", "Extra Guest Charge (#{rate_plan.currency})", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                          <%= number_field_tag "rate_plans[#{rate_plan.id}][extra_pax_charge]", rate_plan.extra_pax_charge, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                        </div>
+                      </div>
+
+                      <div class="grid gap-6 md:grid-cols-3">
+                        <div>
+                          <%= label_tag "rate_plans[#{rate_plan.id}][single_supplement]", "Single Supplement (#{rate_plan.currency})", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                          <%= number_field_tag "rate_plans[#{rate_plan.id}][single_supplement]", rate_plan.single_supplement, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                        </div>
+
+                        <div>
+                          <%= label_tag "rate_plans[#{rate_plan.id}][child_price_multiplier]", "Child Price Multiplier", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                          <%= number_field_tag "rate_plans[#{rate_plan.id}][child_price_multiplier]", rate_plan.child_price_multiplier, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                        </div>
+
+                        <div>
+                          <%= label_tag "rate_plans[#{rate_plan.id}][infant_price_multiplier]", "Infant Price Multiplier", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                          <%= number_field_tag "rate_plans[#{rate_plan.id}][infant_price_multiplier]", rate_plan.infant_price_multiplier, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                        </div>
+                      </div>
+
+                      <div class="border-t border-slate-200/60 pt-4">
+                        <span class="mb-2 block text-sm font-semibold text-slate-900">Applies to Room Categories</span>
+                        <div class="flex flex-wrap gap-x-6 gap-y-2">
+                          <% @hotel.room_types.order(:id).each do |room_type| %>
+                            <label class="inline-flex items-center gap-x-2 text-sm text-slate-700 cursor-pointer">
+                              <%= check_box_tag "rate_plans[#{rate_plan.id}][room_type_ids][]", room_type.id, rate_plan.room_types.include?(room_type), class: "rounded border-slate-300 text-slate-900 focus:ring-slate-900 size-4" %>
+                              <span><%= room_type.name %></span>
+                            </label>
+                          <% end %>
+                          <%= hidden_field_tag "rate_plans[#{rate_plan.id}][room_type_ids][]", "" %>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+
+                <div class="flex justify-end border-t border-slate-200 pt-4">
+                  <%= f.submit "Save Rate Settings", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
+                </div>
+              <% end %>
+            </div>
+          </section>
+
+          <!-- Create Rate Plan Card -->
+          <section class="mt-8 rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+              <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Create New Rate Plan</h2>
+              <p class="mt-1 text-sm font-medium text-slate-600">Add a custom pricing rate plan for your rooms.</p>
+            </div>
+
+            <div class="px-6 py-5 sm:px-8">
+              <%= form_with model: [@hotel, RatePlan.new], url: hotel_rate_plans_path(@hotel), local: true, class: "space-y-6" do |f| %>
+                <div class="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <%= f.label :name, "Rate Plan Name", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                    <%= f.text_field :name, placeholder: "e.g. Non-Refundable Rate, Bed & Breakfast", required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                  </div>
+
+                  <div>
+                    <%= f.label :sell_mode, "Sell Mode", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                    <%= f.select :sell_mode, [["Per Room (Extra guest charges)", "per_room"], ["Per Person (Pax rates + single supplement)", "per_person"]], {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                  </div>
+                </div>
+
+                <div class="grid gap-6 md:grid-cols-3">
+                  <div>
+                    <%= f.label :base_occupancy, "Base Occupancy (Per Room)", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                    <%= f.number_field :base_occupancy, value: 2, min: 1, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                  </div>
+
+                  <div>
+                    <%= f.label :extra_pax_charge, "Extra Guest Charge", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                    <%= f.number_field :extra_pax_charge, value: 0.00, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                  </div>
+
+                  <div>
+                    <%= f.label :single_supplement, "Single Supplement", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                    <%= f.number_field :single_supplement, value: 0.00, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                  </div>
+                </div>
+
+                <div class="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <%= f.label :child_price_multiplier, "Child Price Multiplier", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                    <%= f.number_field :child_price_multiplier, value: 1.00, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                  </div>
+
+                  <div>
+                    <%= f.label :infant_price_multiplier, "Infant Price Multiplier", class: "mb-2 block text-sm font-medium text-slate-900" %>
+                    <%= f.number_field :infant_price_multiplier, value: 0.00, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+                  </div>
+                </div>
+
+                <div class="border-t border-slate-200/60 pt-4">
+                  <span class="mb-2 block text-sm font-semibold text-slate-900">Assign to Room Categories</span>
+                  <div class="flex flex-wrap gap-x-6 gap-y-2">
+                    <% @hotel.room_types.order(:id).each do |room_type| %>
+                      <label class="inline-flex items-center gap-x-2 text-sm text-slate-700 cursor-pointer">
+                        <%= check_box_tag "room_type_ids[]", room_type.id, true, class: "rounded border-slate-300 text-slate-900 focus:ring-slate-900 size-4" %>
+                        <span><%= room_type.name %></span>
+                      </label>
+                    <% end %>
+                  </div>
+                </div>
+
+                <div class="flex justify-end border-t border-slate-200 pt-4">
+                  <%= f.submit "Create Rate Plan", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
+                </div>
+              <% end %>
+            </div>
+          </section>
+        </div>
       <% end %>
 
       <% if current_user.has_permission?("manage_account") %>
@@ -52,6 +215,7 @@
           <%= render "banking_section" %>
         </div>
       <% end %>
+
     </div>
   <% else %>
     <div class="mx-4 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center md:mx-0">

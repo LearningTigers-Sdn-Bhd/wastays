@@ -66,7 +66,7 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
       check_out = Time.zone.parse("#{start_date + 2.days} 12:00:00")
 
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: check_in, check_out: check_out)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type)
 
       presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
       row = presenter.rows.find { |r| r.inventory_row? && r.room_type_id == room_type.id }
@@ -75,6 +75,23 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
       expect(presenter.cell_for(row, start_date)[:sold_count]).to eq(1)
       expect(presenter.cell_for(row, start_date + 1.day)[:sold_count]).to eq(1)
       expect(presenter.cell_for(row, start_date + 2.days)[:sold_count]).to eq(0)
+    end
+  end
+
+  describe '#sold_counts_by_room_type' do
+    it 'correctly calculates sold counts using date ranges even when database check_in/check_out are time-zoned' do
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: [ "101" ], quantity: 5)
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: start_date + 2.days, status: "confirmed")
+      create(:booking_room, booking: booking, room_type: room_type)
+
+      # Re-initialize presenter to capture the new room type and booking
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+      
+      sold_counts = presenter.send(:sold_counts_by_room_type)
+
+      expect(sold_counts[room_type.id][start_date]).to eq(1)
+      expect(sold_counts[room_type.id][start_date + 1.day]).to eq(1)
+      expect(sold_counts[room_type.id][start_date + 2.days]).to eq(0)
     end
   end
 end

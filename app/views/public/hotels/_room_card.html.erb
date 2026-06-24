@@ -31,6 +31,32 @@
             </div>
           <% end %>
         </div>
+
+        <% if search_ready && room_type.per_pax_billing? %>
+          <div class="mb-4 rounded-xl bg-indigo-50/50 border border-indigo-100/50 p-3.5 text-xs text-indigo-950 shadow-sm space-y-2">
+            <div class="flex items-center gap-1.5 font-black uppercase tracking-wider text-[10px] text-indigo-700">
+              <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" /></svg>
+              <span>Per-Pax Booking Rules</span>
+            </div>
+            <div class="grid grid-cols-2 gap-y-1.5 gap-x-4 text-[11px] font-semibold text-indigo-900/90">
+              <div>Base Occupancy: <span class="font-bold text-indigo-950"><%= room_type.rate_plan_base_occupancy %> pax</span></div>
+              <% if supplement = room_type.rate_plan_single_supplement(display_currency) %>
+                <div>Single Supplement: <span class="font-bold text-indigo-950"><%= supplement %></span></div>
+              <% end %>
+              <% if extra_charge = room_type.rate_plan_extra_pax_charge(display_currency) %>
+                <div>Extra Guest Charge: <span class="font-bold text-indigo-950"><%= extra_charge %></span></div>
+              <% end %>
+              <% if room_type.rate_plan_child_multiplier.to_f != 1.0 %>
+                <div>Child Rate: <span class="font-bold text-indigo-950"><%= (room_type.rate_plan_child_multiplier.to_f * 100).to_i %>%</span></div>
+              <% end %>
+              <% if room_type.rate_plan_infant_multiplier.to_f > 0 %>
+                <div>Infant Rate: <span class="font-bold text-indigo-950"><%= (room_type.rate_plan_infant_multiplier.to_f * 100).to_i %>%</span></div>
+              <% else %>
+                <div>Infant Rate: <span class="font-bold text-indigo-950">Free</span></div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
       </div>
 
       <div class="flex justify-between items-end border-t border-neutral-border pt-4">
@@ -57,6 +83,7 @@
           <% end %>
         </div>
 
+        <% infants = local_assigns[:infants] || 0 %>
         <%= form_with url: quotes_path, method: :post do |f| %>
           <%= f.hidden_field :hotel_id, value: hotel.id %>
           <%= f.hidden_field :room_type_id, value: room_type.id %>
@@ -64,6 +91,7 @@
           <%= f.hidden_field :check_out, value: check_out&.to_s %>
           <%= f.hidden_field :adults, value: adults %>
           <%= f.hidden_field :children, value: children %>
+          <%= f.hidden_field :infants, value: infants %>
           <%= f.hidden_field :room_count, value: room_count %>
           <%= f.hidden_field :display_currency, value: display_currency %>
 

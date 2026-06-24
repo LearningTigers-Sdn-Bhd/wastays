@@ -29,6 +29,10 @@ export default class extends Controller {
     "currentQuantityHint",
     "currentStatusHint",
     "priceField",
+    "priceLabel",
+    "baseOccupancyField",
+    "extraPaxChargeField",
+    "singleSupplementField",
     "currencyField",
     "minStayField",
     "maxStayField",
@@ -89,12 +93,26 @@ export default class extends Controller {
       }
       frame.addEventListener("turbo:frame-load", this.reapplyHighlightsHandler)
     }
+
+    // Close any open tooltips when clicking outside
+    this.closeAllTooltipsHandler = (e) => {
+      if (!e.target.closest('[data-tooltip-id]')) {
+        document.querySelectorAll('[id$="-tip"]').forEach(t => {
+          t.classList.add("hidden", "opacity-0", "scale-95")
+          t.classList.remove("opacity-100", "scale-100")
+        })
+      }
+    }
+    document.addEventListener("click", this.closeAllTooltipsHandler)
   }
 
   disconnect() {
     const frame = document.getElementById("inventory_calendar_frame")
     if (frame && this.reapplyHighlightsHandler) {
       frame.removeEventListener("turbo:frame-load", this.reapplyHighlightsHandler)
+    }
+    if (this.closeAllTooltipsHandler) {
+      document.removeEventListener("click", this.closeAllTooltipsHandler)
     }
   }
 
@@ -147,6 +165,7 @@ export default class extends Controller {
     // In bulk mode, we treat all fields as 'empty' initially
     this.initialValues = {
       quantity: "", status: "", price: "", 
+      base_occupancy: "", extra_pax_charge: "", single_supplement: "",
       min_stay: "", max_stay: "", 
       closed_to_arrival: false, closed_to_departure: false, stop_sell: false
     }
@@ -192,9 +211,17 @@ export default class extends Controller {
       if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = ""
       if (this.hasCurrentQuantityHintTarget) this.currentQuantityHintTarget.textContent = ""
       this.priceFieldTarget.value = data.price || ""
+      if (this.hasBaseOccupancyFieldTarget) this.baseOccupancyFieldTarget.value = data.baseOccupancy || ""
+      if (this.hasExtraPaxChargeFieldTarget) this.extraPaxChargeFieldTarget.value = data.extraPaxCharge || ""
+      if (this.hasSingleSupplementFieldTarget) this.singleSupplementFieldTarget.value = data.singleSupplement || ""
       
       const currency = data.currency || this.baseCurrencyValue || this.defaultCurrencyValue || "MYR"
       this.syncCurrencySelect(currency)
+
+      if (this.hasPriceLabelTarget) {
+        const suffix = data.sellMode === "per_person" ? " - Per Person" : " - Per Room"
+        this.priceLabelTarget.textContent = `Price (${currency})${suffix}`
+      }
 
       this.minStayFieldTarget.value = data.minStay || ""
       this.maxStayFieldTarget.value = data.maxStay || ""
@@ -218,6 +245,9 @@ export default class extends Controller {
       quantity: this.quantityFieldTarget.value,
       status: this.statusFieldTarget.value,
       price: this.priceFieldTarget.value,
+      base_occupancy: this.hasBaseOccupancyFieldTarget ? this.baseOccupancyFieldTarget.value : "",
+      extra_pax_charge: this.hasExtraPaxChargeFieldTarget ? this.extraPaxChargeFieldTarget.value : "",
+      single_supplement: this.hasSingleSupplementFieldTarget ? this.singleSupplementFieldTarget.value : "",
       min_stay: this.minStayFieldTarget.value,
       max_stay: this.maxStayFieldTarget.value,
       closed_to_arrival: this.ctaFieldTarget.checked,
@@ -291,7 +321,7 @@ export default class extends Controller {
     }
 
     const applyInventory = modifiedFields.some(f => ["quantity", "status"].includes(f))
-    const applyRates = modifiedFields.includes("price")
+    const applyRates = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement"].includes(f))
     const applyRestrictions = modifiedFields.some(f => ["min_stay", "max_stay", "closed_to_arrival", "closed_to_departure", "stop_sell"].includes(f))
 
     const change = {
@@ -307,6 +337,9 @@ export default class extends Controller {
       quantity: currentValues.quantity,
       status: currentValues.status,
       price: currentValues.price,
+      base_occupancy: currentValues.base_occupancy,
+      extra_pax_charge: currentValues.extra_pax_charge,
+      single_supplement: currentValues.single_supplement,
       currency: this.baseCurrencyValue || this.defaultCurrencyValue || "MYR",
       min_stay: currentValues.min_stay,
       max_stay: currentValues.max_stay,
@@ -334,9 +367,23 @@ export default class extends Controller {
       if (invParts.length > 0) details.push(invParts.join(", "))
     }
     
-    if (modifiedFields.includes("price")) {
+    const rateModified = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement"].includes(f))
+    if (rateModified) {
       actions.push("Rates")
-      details.push(`Price: ${this.baseCurrencyValue || "MYR"} ${values.price}`)
+      const rateParts = []
+      if (modifiedFields.includes("price") && values.price !== "") {
+        rateParts.push(`Price: ${this.baseCurrencyValue || "MYR"} ${values.price}`)
+      }
+      if (modifiedFields.includes("base_occupancy") && values.base_occupancy !== "") {
+        rateParts.push(`Base Occ: ${values.base_occupancy}`)
+      }
+      if (modifiedFields.includes("extra_pax_charge") && values.extra_pax_charge !== "") {
+        rateParts.push(`Extra Pax: ${this.baseCurrencyValue || "MYR"} ${values.extra_pax_charge}`)
+      }
+      if (modifiedFields.includes("single_supplement") && values.single_supplement !== "") {
+        rateParts.push(`Single Supp: ${this.baseCurrencyValue || "MYR"} ${values.single_supplement}`)
+      }
+      if (rateParts.length > 0) details.push(rateParts.join(", "))
     }
     
     if (modifiedFields.some(f => ["min_stay", "max_stay", "closed_to_arrival", "closed_to_departure", "stop_sell"].includes(f))) {
@@ -409,6 +456,9 @@ export default class extends Controller {
 
             this.markCellDirty(testid, {
               price: change.apply_rates ? change.price : undefined,
+              base_occupancy: change.apply_rates ? change.base_occupancy : undefined,
+              extra_pax_charge: change.apply_rates ? change.extra_pax_charge : undefined,
+              single_supplement: change.apply_rates ? change.single_supplement : undefined,
               currency: change.currency,
               min_stay: change.apply_restrictions ? change.min_stay : undefined,
               max_stay: change.apply_restrictions ? change.max_stay : undefined,
@@ -474,6 +524,9 @@ export default class extends Controller {
         if (data.closed_to_arrival !== undefined) cell.dataset.closedToArrival = data.closed_to_arrival ? "true" : "false"
         if (data.closed_to_departure !== undefined) cell.dataset.closedToDeparture = data.closed_to_departure ? "true" : "false"
         if (data.stop_sell !== undefined) cell.dataset.stopSell = data.stop_sell ? "true" : "false"
+        if (data.base_occupancy !== undefined && data.base_occupancy !== "") cell.dataset.baseOccupancy = data.base_occupancy
+        if (data.extra_pax_charge !== undefined && data.extra_pax_charge !== "") cell.dataset.extraPaxCharge = data.extra_pax_charge
+        if (data.single_supplement !== undefined && data.single_supplement !== "") cell.dataset.singleSupplement = data.single_supplement
       }
     }
   }
@@ -762,6 +815,12 @@ export default class extends Controller {
     this.quantityFieldTarget.value = ""
     this.statusFieldTarget.value = ""
     this.priceFieldTarget.value = ""
+    if (this.hasPriceLabelTarget) {
+      this.priceLabelTarget.textContent = `Price (${this.baseCurrencyValue || "MYR"})`
+    }
+    if (this.hasBaseOccupancyFieldTarget) this.baseOccupancyFieldTarget.value = ""
+    if (this.hasExtraPaxChargeFieldTarget) this.extraPaxChargeFieldTarget.value = ""
+    if (this.hasSingleSupplementFieldTarget) this.singleSupplementFieldTarget.value = ""
     if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = ""
     if (this.hasCurrentQuantityHintTarget) this.currentQuantityHintTarget.textContent = ""
     
@@ -861,5 +920,55 @@ export default class extends Controller {
     const target = event.currentTarget
     const fieldName = target.name.split("[").pop().replace("]", "")
     this.touchedFields.add(fieldName)
+  }
+
+  showTooltip(event) {
+    if (window.innerWidth < 1024) return
+    const id = event.currentTarget.dataset.tooltipId
+    const tip = document.getElementById(id)
+    if (tip) {
+      tip.classList.remove("hidden")
+      void tip.offsetWidth
+      tip.classList.remove("opacity-0", "scale-95")
+      tip.classList.add("opacity-100", "scale-100")
+    }
+  }
+
+  hideTooltip(event) {
+    if (window.innerWidth < 1024) return
+    const id = event.currentTarget.dataset.tooltipId
+    const tip = document.getElementById(id)
+    if (tip) {
+      tip.classList.add("opacity-0", "scale-95")
+      tip.classList.remove("opacity-100", "scale-100")
+      setTimeout(() => {
+        if (tip.classList.contains("opacity-0")) {
+          tip.classList.add("hidden")
+        }
+      }, 200)
+    }
+  }
+
+  toggleTooltip(event) {
+    event.preventDefault()
+    event.stopPropagation()
+    const id = event.currentTarget.dataset.tooltipId
+    const tip = document.getElementById(id)
+    if (tip) {
+      const isHidden = tip.classList.contains("hidden")
+      
+      // Close all other tooltips first
+      document.querySelectorAll('[id$="-tip"]').forEach(t => {
+        t.classList.add("hidden", "opacity-0", "scale-95")
+        t.classList.remove("opacity-100", "scale-100")
+      })
+
+      if (isHidden) {
+        tip.classList.remove("hidden")
+        void tip.offsetWidth
+        tip.classList.remove("opacity-0", "scale-95")
+        tip.classList.add("opacity-100", "scale-100")
+      }
+    }
   }
 }

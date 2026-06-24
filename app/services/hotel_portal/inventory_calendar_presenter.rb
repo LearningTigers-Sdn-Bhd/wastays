@@ -9,11 +9,14 @@ module HotelPortal
       def rate_plan_id = rate_plan&.id
       def label = room_type.name
       def sublabel
+        target_plan = rate_plan || room_type.rate_plans.sort_by(&:id).first
+        suffix = (target_plan&.sell_mode == "per_person") ? " (Per Person)" : ""
+
         case kind
-        when :walk_in then "Walk-in Rate"
-        when :corporate then "Corporate Rate"
-        when :ota then "OTA Rate"
-        else rate_plan&.name
+        when :walk_in then "Walk-in Rate#{suffix}"
+        when :corporate then "Corporate Rate#{suffix}"
+        when :ota then "OTA Rate#{suffix}"
+        else "#{rate_plan&.name}#{suffix}"
         end
       end
       def inventory_row? = kind == :availability
@@ -174,6 +177,7 @@ module HotelPortal
         estimated: display_conversion.present? && native_currency != formatted_currency,
         conversion_missing: conversion_missing,
         is_modified: actual_price.present?,
+        sell_mode: rate_plan&.sell_mode || "per_room",
         restriction_badges: [],
         restriction_compact: nil
       }
@@ -295,6 +299,10 @@ module HotelPortal
         closed_to_departure: rate&.closed_to_departure? || false,
         stop_sell: rate&.stop_sell? || false,
         applied_rule_type: rate&.applied_rule_type,
+        single_supplement: rate&.single_supplement || rate_plan.single_supplement,
+        base_occupancy: rate&.base_occupancy || rate_plan.base_occupancy,
+        extra_pax_charge: rate&.extra_pax_charge || rate_plan.extra_pax_charge,
+        sell_mode: rate_plan.sell_mode,
         restriction_badges: restriction_badges(rate),
         restriction_compact: restriction_compact(rate)
       }

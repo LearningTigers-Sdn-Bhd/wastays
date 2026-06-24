@@ -279,5 +279,32 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(rate.price.to_f).to eq(150.0)
       expect(rate.corporate_price.to_f).to eq(200.0)
     end
+
+    it "updates base_occupancy, extra_pax_charge, and single_supplement when rates are modified" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      rate_plan = room_type.rate_plans.first
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
+          apply_rates: "1",
+          base_occupancy: "3",
+          extra_pax_charge: "60.00",
+          single_supplement: "30.00",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(true)
+      rate = rate_plan.room_rates.find_by(date: start_date, currency: "MYR")
+      expect(rate.base_occupancy).to eq(3)
+      expect(rate.extra_pax_charge.to_f).to eq(60.0)
+      expect(rate.single_supplement.to_f).to eq(30.0)
+    end
   end
 end

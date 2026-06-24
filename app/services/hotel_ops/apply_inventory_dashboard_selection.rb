@@ -14,7 +14,7 @@ module HotelOps
       return failure("Choose at least one action to apply.") unless apply_inventory? || apply_rates? || apply_restrictions?
       return failure("Start date is required.") if start_date.blank?
       return failure("End date is required.") if end_date.blank?
-      return failure("Price is required when applying rates.") if apply_rates? && price.blank?
+      return failure("Price is required when applying rates.") if apply_rates? && price.blank? && selection[:single_supplement].blank? && selection[:base_occupancy].blank? && selection[:extra_pax_charge].blank?
 
       ActiveRecord::Base.transaction do
         Thread.current[:skip_ari_sync] = true
@@ -87,6 +87,27 @@ module HotelOps
 
     def price
       raw = selection[:price]
+      return nil if raw.blank?
+
+      BigDecimal(raw.to_s)
+    end
+
+    def base_occupancy
+      raw = selection[:base_occupancy]
+      return nil if raw.blank?
+
+      raw.to_i
+    end
+
+    def extra_pax_charge
+      raw = selection[:extra_pax_charge]
+      return nil if raw.blank?
+
+      BigDecimal(raw.to_s)
+    end
+
+    def single_supplement
+      raw = selection[:single_supplement]
       return nil if raw.blank?
 
       BigDecimal(raw.to_s)
@@ -206,7 +227,10 @@ module HotelOps
             max_stay: rate.max_stay,
             closed_to_arrival: rate.closed_to_arrival,
             closed_to_departure: rate.closed_to_departure,
-            stop_sell: rate.stop_sell
+            stop_sell: rate.stop_sell,
+            base_occupancy: rate.base_occupancy,
+            extra_pax_charge: rate.extra_pax_charge&.to_f,
+            single_supplement: rate.single_supplement&.to_f
           }
 
           # Apply price update.
@@ -216,7 +240,19 @@ module HotelOps
             when :walk_in then rate.walk_in_price = price
             when :corporate then rate.corporate_price = price
             when :ota then rate.ota_price = price
-            else rate.price = price
+            else
+              rate.price = price if selection[:price].present?
+            end
+
+            # Apply per-pax rules
+            if selection[:modified_fields].present?
+              rate.base_occupancy = base_occupancy if selection[:modified_fields].include?("base_occupancy")
+              rate.extra_pax_charge = extra_pax_charge if selection[:modified_fields].include?("extra_pax_charge")
+              rate.single_supplement = single_supplement if selection[:modified_fields].include?("single_supplement")
+            else
+              rate.base_occupancy = base_occupancy if selection.key?(:base_occupancy) && selection[:base_occupancy].present?
+              rate.extra_pax_charge = extra_pax_charge if selection.key?(:extra_pax_charge) && selection[:extra_pax_charge].present?
+              rate.single_supplement = single_supplement if selection.key?(:single_supplement) && selection[:single_supplement].present?
             end
           end
 
@@ -250,7 +286,10 @@ module HotelOps
               max_stay: rate.max_stay,
               closed_to_arrival: rate.closed_to_arrival,
               closed_to_departure: rate.closed_to_departure,
-              stop_sell: rate.stop_sell
+              stop_sell: rate.stop_sell,
+              base_occupancy: rate.base_occupancy,
+              extra_pax_charge: rate.extra_pax_charge&.to_f,
+              single_supplement: rate.single_supplement&.to_f
             },
             metadata: { source: "inventory_dashboard_selection", rate_tier: tier || "online" }
           )
@@ -306,7 +345,10 @@ module HotelOps
         old_values[:max_stay] != rate.max_stay ||
         old_values[:closed_to_arrival] != rate.closed_to_arrival ||
         old_values[:closed_to_departure] != rate.closed_to_departure ||
-        old_values[:stop_sell] != rate.stop_sell
+        old_values[:stop_sell] != rate.stop_sell ||
+        old_values[:base_occupancy] != rate.base_occupancy ||
+        old_values[:extra_pax_charge] != rate.extra_pax_charge&.to_f ||
+        old_values[:single_supplement] != rate.single_supplement&.to_f
     end
 
     def cast_boolean(value)

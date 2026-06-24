@@ -316,6 +316,12 @@
                     <span class="text-neutral-text-secondary">Stay Length</span>
                     <span class="font-bold text-neutral-text-primary"><%= @quote.stay_length_text %></span>
                   </div>
+                  <div class="flex justify-between">
+                    <span class="text-neutral-text-secondary">Guests</span>
+                    <span class="font-bold text-neutral-text-primary">
+                      <%= @quote.adults %> Adults · <%= @quote.children %> Children<%= " · #{@quote.infants} Infant#{"s" if @quote.infants.to_i > 1}" if @quote.infants.to_i > 0 %>
+                    </span>
+                  </div>
                 </div>
 
                 <div class="space-y-3 mb-8">
