@@ -15,20 +15,35 @@ export default class extends Controller {
     this.update()
   }
 
-  toggleSingle() {
-    const allChecked = this.checkboxTargets.every(cb => cb.checked)
-    const noneChecked = this.checkboxTargets.every(cb => !cb.checked)
+  toggleSingle(event) {
+    const targetCheckbox = event.target
+    const guestId = targetCheckbox.value
+    const isChecked = targetCheckbox.checked
+
+    // Sync state between desktop and mobile checkboxes for the same guest
+    this.checkboxTargets.forEach(cb => {
+      if (cb.value === guestId) {
+        cb.checked = isChecked
+      }
+    })
+
+    // Update master selectAll checkbox state based on desktop checkbox values
+    const desktopCheckboxes = this.checkboxTargets.filter(cb => !cb.closest('.lg:hidden'))
+    const allChecked = desktopCheckboxes.length > 0 && desktopCheckboxes.every(cb => cb.checked)
+    const noneChecked = desktopCheckboxes.every(cb => !cb.checked)
     
     if (this.hasSelectAllTarget) {
       this.selectAllTarget.checked = allChecked
       this.selectAllTarget.indeterminate = !allChecked && !noneChecked
     }
+    
     this.update()
   }
 
   update() {
     const checkedCheckboxes = this.checkboxTargets.filter(cb => cb.checked)
-    const selectedCount = checkedCheckboxes.length
+    const uniqueIds = [...new Set(checkedCheckboxes.map(cb => cb.value))]
+    const selectedCount = uniqueIds.length
 
     if (selectedCount > 0) {
       if (this.hasBannerTarget) {
@@ -41,8 +56,7 @@ export default class extends Controller {
       }
 
       if (this.hasIdsInputTarget) {
-        const ids = checkedCheckboxes.map(cb => cb.value)
-        this.idsInputTarget.value = JSON.stringify(ids)
+        this.idsInputTarget.value = JSON.stringify(uniqueIds)
       }
     } else {
       if (this.hasBannerTarget) {

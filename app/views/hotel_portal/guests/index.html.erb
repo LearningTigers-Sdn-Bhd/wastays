@@ -83,7 +83,7 @@
                   <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">ID / Passport</th>
                   <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Stays</th>
                   <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Last Stayed</th>
-                  <th scope="col" class="px-3 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Lifetime Value</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Lifetime Value</th>
                   <th scope="col" class="py-4 pl-3 pr-4 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:pl-4 sm:pr-6">Action</th>
                 </tr>
               </thead>
@@ -128,7 +128,7 @@
                     <td class="px-3 py-4 whitespace-nowrap text-sm text-slate-700 sm:px-4">
                       <%= pluralize(guest_stays_count(guest), "stay") %>
                     </td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-slate-700 sm:px-4">
+                    <td class="px-3 py-4 text-sm text-slate-700 sm:px-4">
                       <% if guest.try(:last_stay_at).present? %>
                         <div class="flex flex-col gap-0.5">
                           <span class="font-medium text-slate-900"><%= guest.last_stay_at.strftime("%I:%M %p") %></span>
@@ -138,8 +138,8 @@
                         —
                       <% end %>
                     </td>
-                    <td class="px-3 py-4 text-right sm:px-4 whitespace-nowrap">
-                      <div class="flex justify-end gap-1.5">
+                    <td class="px-3 py-4 text-left sm:px-4 whitespace-nowrap">
+                      <div class="flex justify-start gap-1.5">
                         <% if totals.any? %>
                           <% totals.each do |currency, amount| %>
                             <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 whitespace-nowrap">
@@ -275,9 +275,9 @@
         <% if can_delete %>
           <!-- Floating Bulk Action Banner -->
           <div data-bulk-select-target="banner" 
-               class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-4 bg-slate-900 text-white px-6 py-3.5 rounded-2xl shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
-            <span data-bulk-select-target="count" class="text-sm font-semibold text-slate-200">0 guests selected</span>
-            <div class="h-4 w-px bg-slate-700"></div>
+               class="fixed bottom-6 left-1/2 lg:left-[58%] -translate-x-1/2 z-50 hidden items-center gap-4 bg-white text-slate-900 px-6 py-3.5 rounded-2xl shadow-xl border border-slate-200 ring-4 ring-slate-950/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+            <span data-bulk-select-target="count" class="text-sm font-semibold text-slate-700">0 guests selected</span>
+            <div class="h-4 w-px bg-slate-200"></div>
             <div class="flex items-center gap-2">
               <%= form_with url: bulk_destroy_hotel_guests_path(current_hotel), method: :delete, data: { turbo_confirm: "Are you sure you want to delete the selected guest records? This will hide them from the directory but preserve their historic booking data.", turbo_confirm_title: "Delete Guests", turbo_confirm_color: "red", turbo_frame: "_top" } do |f| %>
                 <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
@@ -287,7 +287,7 @@
               <% end %>
               <button type="button" 
                       data-action="click->bulk-select#clear" 
-                      class="rounded-xl border border-slate-700 bg-transparent px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                      class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition">
                 Cancel
               </button>
             </div>
