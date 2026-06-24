@@ -63,7 +63,9 @@ RSpec.describe HotelDemoManagement::ResetState do
       user = create(:user, account: account)
       booking = create(:booking, hotel: hotel)
       folio = create(:booking_folio, hotel: hotel, booking: booking)
-      create(:folio_transaction, booking_folio: folio, user: user)
+      transaction = create(:folio_transaction, booking_folio: folio, user: user)
+      create(:folio_operation_log, hotel: hotel, booking: booking, source_folio: folio, source_transaction: transaction)
+      create(:folio_routing_rule, hotel: hotel, booking: booking, target_folio: folio)
       create(:payment_transaction, booking: booking, booking_quote: nil)
       create(:night_audit, hotel: hotel, performed_by_user: user)
       create(:hotel_business_date, hotel: hotel, business_date: hotel.current_business_date - 1.day, status: "closed")
@@ -83,6 +85,8 @@ RSpec.describe HotelDemoManagement::ResetState do
       expect(hotel.bookings).to be_empty
       expect(BookingFolio.where(id: folio.id)).to be_empty
       expect(FolioTransaction.where(booking_folio_id: folio.id)).to be_empty
+      expect(FolioOperationLog.where(booking_id: booking.id)).to be_empty
+      expect(FolioRoutingRule.where(booking_id: booking.id)).to be_empty
       expect(PaymentTransaction.where(booking_id: booking.id)).to be_empty
       expect(hotel.night_audits).to be_empty
       expect(hotel.hotel_business_dates.current.count).to eq(1)
