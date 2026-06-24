@@ -1,0 +1,37 @@
+<div>
+  <h1 class="text-3xl font-bold tracking-tight">Corporate dashboard</h1>
+  <p class="mt-2 text-slate-600">Hotels currently connected to <%= current_user.account.name %>.</p>
+</div>
+
+<div class="mt-8 grid gap-5 md:grid-cols-2">
+  <% @relationships.each do |relationship| %>
+    <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 class="text-xl font-bold"><%= relationship.hotel.name %></h2>
+      <p class="mt-1 text-sm text-slate-600"><%= relationship.hotel.city %>, <%= relationship.hotel.country %></p>
+      <dl class="mt-5 grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <dt class="text-slate-500">Relationship</dt>
+          <dd class="font-bold"><%= relationship.relationship_type.humanize %></dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Direct billing</dt>
+          <dd class="font-bold"><%= relationship.direct_bill_enabled? ? "Enabled" : "Disabled" %></dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Credit limit</dt>
+          <dd class="font-bold"><%= relationship.credit_limit.present? ? "#{relationship.credit_currency} #{relationship.credit_limit}" : "Not set" %></dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Payment terms</dt>
+          <dd class="font-bold"><%= relationship.payment_terms_days.present? ? "#{relationship.payment_terms_days} days" : "Not set" %></dd>
+        </div>
+      </dl>
+    </article>
+  <% end %>
+</div>
+
+<% if @relationships.empty? %>
+  <div class="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-slate-500">
+    No active hotel relationships are available.
+  </div>
+<% end %>

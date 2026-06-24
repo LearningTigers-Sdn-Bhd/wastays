@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Corporate Portal | WAStays" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= javascript_importmap_tags %>
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-950">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-9 w-auto" %>
+        <div class="flex items-center gap-4 text-sm">
+          <span class="font-medium"><%= current_user.account.name %></span>
+          <%= button_to "Log out", logout_path, method: :delete, class: "font-bold text-slate-600 hover:text-slate-950" %>
+        </div>
+      </div>
+    </header>
+    <main class="mx-auto max-w-6xl px-6 py-10">
+      <%= render "shared/feedback/flash_toasts", flash: flash %>
+      <%= yield %>
+    </main>
+  </body>
+</html>
