@@ -228,6 +228,27 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios", active_folio_id: folio.id))
     end
 
+    it "completes the offcanvas after a Turbo Stream folio transaction post" do
+      expect {
+        post hotel_folio_transactions_path(hotel, booking), params: {
+          redirect_to_folio: "true",
+          folio_transaction: {
+            transaction_type: "payment",
+            category: "cash",
+            payment_source: "cash",
+            amount: "100.00",
+            description: "Cash payment",
+            posting_date: Date.current
+          }
+        }, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+      }.to change { folio.folio_transactions.payment.count }.by(1)
+
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include(%(action="complete_offcanvas"))
+      expect(response.body).to include(%(target="offcanvas_drawer"))
+      expect(response.body).to include(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
+    end
+
     it "posts an other charge" do
       code = create(:transaction_code, hotel: hotel, kind: "charge", category: "other")
 
@@ -557,7 +578,28 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         }
       }.to change { folio.folio_transactions.adjustment.count }.by(1)
 
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios"))
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios", active_folio_id: folio.id))
+    end
+
+    it "reverses a payment posted on a secondary company folio" do
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+      transaction = create(:folio_transaction, booking_folio: company_folio, transaction_type: "payment", category: "cash", amount: 100)
+
+      expect {
+        post reverse_hotel_folio_transaction_path(hotel, booking, transaction), params: {
+          redirect_to_folio: "true",
+          folio_transaction: {
+            correction_reason: "Posting error",
+            correction_note: "Wrong company folio payment"
+          }
+        }
+      }.to change { company_folio.folio_transactions.payment.where(category: "refund").count }.by(1)
+
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: company_folio.id))
+      reversal = company_folio.folio_transactions.order(:id).last
+      expect(reversal.reversal_of_transaction).to eq(transaction)
+      expect(reversal.amount).to eq(-100.to_d)
+      expect(transaction.reload.voided_by_transaction).to eq(reversal)
     end
 
     it "requires manage_folio_movements permission to move charges" do

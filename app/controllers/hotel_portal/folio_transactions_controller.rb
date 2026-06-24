@@ -2,6 +2,8 @@
 
 module HotelPortal
   class FolioTransactionsController < BaseController
+    include OffcanvasTransactionCompletion
+
     before_action :set_booking
 
     FOLIO_POSTING_PERMISSIONS = {
@@ -68,7 +70,7 @@ module HotelPortal
         return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
       end
 
-      transaction = @booking.booking_folio.folio_transactions.find(params[:id])
+      transaction = booking_transaction_scope.find(params[:id])
       policy = ::Folios::TransactionActionPolicy.new(
         transaction: transaction,
         user: current_user,
@@ -85,9 +87,9 @@ module HotelPortal
       )
 
       if result.success?
-        redirect_after_post(notice: "Folio transaction reversed.")
+        redirect_after_post(notice: "Folio transaction reversed.", active_folio_id: transaction.booking_folio_id)
       else
-        redirect_after_post(alert: result.error)
+        redirect_after_post(alert: result.error, active_folio_id: transaction.booking_folio_id)
       end
     end
 
@@ -133,12 +135,21 @@ module HotelPortal
 
     def redirect_after_post(options = {})
       active_folio_id = options.delete(:active_folio_id)
-      if params[:redirect_to_checkout] == "true"
-        redirect_to hotel_booking_transaction_check_out_path(current_hotel, @booking), options
+      destination = if params[:redirect_to_checkout] == "true"
+        hotel_booking_transaction_check_out_path(current_hotel, @booking)
       elsif params[:redirect_to_folio] == "true"
-        redirect_to hotel_folio_path(current_hotel, @booking, folio_origin_params.merge(active_folio_id: active_folio_id).compact), options
+        hotel_folio_path(current_hotel, @booking, folio_origin_params.merge(active_folio_id: active_folio_id).compact)
       else
-        redirect_to hotel_booking_path(current_hotel, @booking), options
+        hotel_booking_path(current_hotel, @booking)
+      end
+
+      respond_to do |format|
+        format.turbo_stream do
+          flash[:notice] = options[:notice] if options[:notice].present?
+          flash[:alert] = options[:alert] if options[:alert].present?
+          render_offcanvas_completion(destination)
+        end
+        format.html { redirect_to destination, options }
       end
     end
 
