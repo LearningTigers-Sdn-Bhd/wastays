@@ -128,6 +128,12 @@ Rails.application.routes.draw do
 
     get "staff-invitations/:token", to: "staff_invitations#show", as: :staff_invitation
     patch "staff-invitations/:token", to: "staff_invitations#update"
+    get "corporate-invitations/:token", to: "corporate_invitations#show", as: :corporate_invitation
+    patch "corporate-invitations/:token", to: "corporate_invitations#update"
+  end
+
+  scope "/corporate", module: :corporate_portal, as: :corporate do
+    get "dashboard", to: "dashboard#index", as: :dashboard
   end
 
   # Superadmin dashboard
@@ -267,6 +273,15 @@ Rails.application.routes.draw do
       patch :reactivate, on: :member
     end
     resources :staff_invitations, only: [ :update, :destroy ] do
+      post :resend, on: :member
+    end
+    resources :corporate_accounts, only: [ :index, :new, :create ], path: "corporate-accounts" do
+      member do
+        patch :suspend
+        patch :reactivate
+      end
+    end
+    resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
       post :resend, on: :member
     end
     resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions" do

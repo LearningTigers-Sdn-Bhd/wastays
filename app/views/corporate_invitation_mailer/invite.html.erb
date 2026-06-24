@@ -1,0 +1,7 @@
+<h1><%= @hotel.name %> invited you to connect a corporate account</h1>
+
+<p><%= @inviter.name %> invited you to connect a corporate account with <strong><%= @hotel.name %></strong> for corporate billing.</p>
+
+<p><a href="<%= @accept_url %>">Accept corporate invitation</a></p>
+
+<p>This invitation expires at <%= @expires_at %>.</p>

@@ -83,6 +83,7 @@ module HotelPortal
           label: "Team Management",
           items: [
             NavItem.new(label: "Staff Management", path: hotel_users_path(current_hotel), search_text: "Staff Management Users Roles Access Team", active: controller_name == "users", icon: "users", permission: "manage_users"),
+            NavItem.new(label: "Corporate Managements", path: hotel_corporate_accounts_path(current_hotel), search_text: "Corporate Managements Corporate Accounts Direct Bill Credit Terms External Payers", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
             NavItem.new(label: "Roles & Permissions", path: hotel_roles_path(current_hotel), search_text: "Roles Permissions Access Control Team", active: controller_name == "roles", icon: "shield-check", permission: "manage_users", plan_feature: "role_based_access_control")
           ]
         ),
