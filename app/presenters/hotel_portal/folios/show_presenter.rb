@@ -155,7 +155,7 @@ module HotelPortal
         {
           id: candidate.id,
           name: candidate.display_name,
-          payer: candidate.payer_type.to_s.humanize,
+          payer: candidate.payer_display_label,
           type: candidate.folio_type.to_s.humanize,
           status: candidate.status.to_s.humanize,
           reference: candidate.folio_reference_display,

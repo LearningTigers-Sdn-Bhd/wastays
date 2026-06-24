@@ -33,6 +33,8 @@ RSpec.describe BookingFolio, type: :model do
       )
     end
 
+    let(:hotel_corporate_account) { create(:hotel_corporate_account, hotel: booking.hotel) }
+
     it { should validate_presence_of(:folio_number) }
     it { should validate_uniqueness_of(:folio_number).scoped_to(:hotel_id) }
     it { should validate_presence_of(:status) }
@@ -69,7 +71,7 @@ RSpec.describe BookingFolio, type: :model do
 
     it "accepts the supported folio window and payer types" do
       expect(build(:booking_folio, folio_type: "guest", payer_type: "guest")).to be_valid
-      expect(build(:booking_folio, folio_type: "external", payer_type: "company")).to be_valid
+      expect(build(:booking_folio, folio_type: "external", payer_type: "company", hotel_corporate_account: hotel_corporate_account, hotel: booking.hotel, booking: booking)).to be_valid
       expect(build(:booking_folio, folio_type: "external", payer_type: "agent")).to be_valid
       expect(build(:booking_folio, folio_type: "external", payer_type: "hotel")).to be_valid
       expect(build(:booking_folio, folio_type: "external", payer_type: "custom")).to be_valid
@@ -84,13 +86,34 @@ RSpec.describe BookingFolio, type: :model do
     end
 
     it "normalizes locked payer types" do
-      guest_folio = build(:booking_folio, folio_type: "guest", payer_type: "company")
+      guest_folio = build(:booking_folio, folio_type: "guest", payer_type: "company", hotel_corporate_account: hotel_corporate_account)
       house_folio = build(:booking_folio, folio_type: "house", payer_type: "custom")
 
       expect(guest_folio).to be_valid
       expect(guest_folio.payer_type).to eq("guest")
+      expect(guest_folio.hotel_corporate_account).to be_nil
       expect(house_folio).to be_valid
       expect(house_folio.payer_type).to eq("hotel")
+    end
+
+    it "requires an active same-hotel Company & Government account for company payer folios" do
+      missing = build(:booking_folio, folio_type: "external", payer_type: "company", hotel_corporate_account: nil)
+      suspended = build(:booking_folio, folio_type: "external", payer_type: "company", hotel: booking.hotel, booking: booking, hotel_corporate_account: create(:hotel_corporate_account, hotel: booking.hotel, status: "suspended"))
+      wrong_hotel = build(:booking_folio, folio_type: "external", payer_type: "company", hotel: booking.hotel, booking: booking, hotel_corporate_account: create(:hotel_corporate_account))
+
+      expect(missing).not_to be_valid
+      expect(missing.errors[:hotel_corporate_account]).to include("must be selected for Company & Government folios")
+      expect(suspended).not_to be_valid
+      expect(suspended.errors[:hotel_corporate_account]).to include("must be active")
+      expect(wrong_hotel).not_to be_valid
+      expect(wrong_hotel.errors[:hotel_corporate_account]).to include("must belong to the folio hotel")
+    end
+
+    it "does not block unrelated edits to legacy company folios without a linked account" do
+      folio = create(:booking_folio, folio_type: "external", payer_type: "agent")
+      folio.update_columns(payer_type: "company", hotel_corporate_account_id: nil)
+
+      expect(folio.update(name: "Legacy Company Folio")).to be(true)
     end
 
     it "allows multiple folios for the same booking when only one is primary" do

@@ -117,10 +117,11 @@ module HotelPortal
       end
 
       def balance_for(folio)
-        amount = folio.projected_outstanding_balance.to_d
-        return amount unless folio.is_primary? && early_checkout_lines.any?
-
-        amount + early_checkout_lines.sum { |line| line[:amount].to_d }
+        if folio.is_primary? && early_checkout_lines.any?
+          folio.outstanding_balance.to_d + early_checkout_lines.sum { |line| line[:amount].to_d }
+        else
+          folio.projected_outstanding_balance.to_d
+        end
       end
 
       def action_options_for(folio, balance)
@@ -173,7 +174,7 @@ module HotelPortal
         return "Agent" if text.match?(/agent|travel/)
         return "Hotel" if text.match?(/house/)
 
-        folio.payer_type.to_s.humanize
+        folio.payer_display_label
       end
 
       def status_label_for(folio, balance)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_24_000003) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_24_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -144,11 +144,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_24_000003) do
     t.bigint "created_by_id"
     t.bigint "closed_by_id"
     t.integer "folio_sequence"
+    t.bigint "hotel_corporate_account_id"
     t.index ["booking_id", "folio_sequence"], name: "idx_booking_folios_on_booking_folio_sequence", unique: true, where: "(folio_sequence IS NOT NULL)"
     t.index ["booking_id", "is_primary"], name: "index_booking_folios_on_primary_booking", unique: true, where: "is_primary"
     t.index ["booking_id"], name: "index_booking_folios_on_booking_id"
     t.index ["closed_by_id"], name: "index_booking_folios_on_closed_by_id"
     t.index ["created_by_id"], name: "index_booking_folios_on_created_by_id"
+    t.index ["hotel_corporate_account_id"], name: "index_booking_folios_on_hotel_corporate_account_id"
     t.index ["hotel_id", "folio_number"], name: "index_booking_folios_on_hotel_id_and_folio_number", unique: true
     t.index ["hotel_id", "folio_type"], name: "index_booking_folios_on_hotel_id_and_folio_type"
     t.index ["hotel_id", "invoice_number"], name: "index_booking_folios_on_hotel_id_and_invoice_number", unique: true, where: "(invoice_number IS NOT NULL)"
@@ -1489,6 +1491,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_24_000003) do
   add_foreign_key "booking_audit_logs", "hotels"
   add_foreign_key "booking_audit_logs", "users"
   add_foreign_key "booking_folios", "bookings"
+  add_foreign_key "booking_folios", "hotel_corporate_accounts"
   add_foreign_key "booking_folios", "hotels"
   add_foreign_key "booking_folios", "users", column: "closed_by_id"
   add_foreign_key "booking_folios", "users", column: "created_by_id"

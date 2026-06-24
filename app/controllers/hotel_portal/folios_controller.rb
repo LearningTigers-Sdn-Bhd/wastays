@@ -18,7 +18,7 @@ module HotelPortal
           { booking_rooms: :room_type },
           :payment_transactions,
           :refund_request,
-          booking_folios: [ { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges ],
+          booking_folios: [ { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges, { hotel_corporate_account: :corporate_account } ],
           folio_routing_rules: [ :transaction_code, :target_folio, :created_by, :updated_by ],
           folio_operation_logs: [ :actor, :source_folio, :target_folio, :source_transaction, :target_transaction ]
         )
@@ -33,6 +33,7 @@ module HotelPortal
     def new_window
       authorize_manage_folio_windows!
       @booking = current_hotel.bookings.find(params[:booking_id])
+      set_company_government_accounts
       @folio = @booking.booking_folios.build(
         name: "External Folio",
         folio_type: "external",
@@ -52,6 +53,7 @@ module HotelPortal
       authorize_manage_folio_windows!
       @booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
       @folio = @booking.booking_folios.find(params[:folio_id])
+      set_company_government_accounts
       @sheet_title = "Edit Folio Window"
       @sheet_description = "Update folio details or make this the primary folio for the booking."
       @form_url = window_hotel_folio_path(current_hotel, @booking, @folio)
@@ -136,7 +138,7 @@ module HotelPortal
     end
 
     def ledger
-      @booking = current_hotel.bookings.includes(:booking_rooms, booking_folios: { folio_transactions: :transaction_code }).find(params[:booking_id])
+      @booking = current_hotel.bookings.includes(:booking_rooms, booking_folios: [ { folio_transactions: :transaction_code }, { hotel_corporate_account: :corporate_account } ]).find(params[:booking_id])
       return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio." unless @booking.booking_folio
 
       ledger_report = ::Reports::Bookings::GenerateFolioLedger.new(booking: @booking, printed_by: current_user&.name)
@@ -208,7 +210,14 @@ module HotelPortal
     end
 
     def folio_window_params
-      params.fetch(:booking_folio, {}).permit(:name, :folio_type, :payer_type, :payer_id, :currency, :reason, :is_primary, :set_folio_as_primary_reason)
+      params.fetch(:booking_folio, {}).permit(:name, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency, :reason, :is_primary, :set_folio_as_primary_reason)
+    end
+
+    def set_company_government_accounts
+      @company_government_accounts = current_hotel.hotel_corporate_accounts
+        .active
+        .includes(corporate_account: :users)
+        .order(created_at: :desc)
     end
 
     def folio_operation_params

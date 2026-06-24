@@ -63,7 +63,7 @@ module Folios
 
       folios.each do |folio|
         params = params_for(folio)
-        action = params[:action].to_s
+        action = action_for(folio)
         balance = folio.projected_outstanding_balance.to_d
         allowed_actions = allowed_actions_for(folio, balance)
 
@@ -161,7 +161,7 @@ module Folios
 
         [ "refund_credit_handling" ]
       elsif company_folio?(folio)
-        return [ PAYMENT_ACTION, "keep_open" ] if balance.positive?
+        return company_folio_positive_balance_actions(folio) if balance.positive?
         return [ CLOSE_ACTION ] if balance.zero?
 
         [ "refund_credit_handling", "keep_open" ]
@@ -173,7 +173,7 @@ module Folios
     end
 
     def folios
-      @folios ||= @booking.booking_folios.includes(:folio_transactions, :folio_forecasted_charges).order(:id).to_a
+      @folios ||= @booking.booking_folios.includes(:folio_transactions, :folio_forecasted_charges, hotel_corporate_account: :corporate_account).order(:id).to_a
     end
 
     def params_for(folio)
@@ -181,7 +181,18 @@ module Folios
     end
 
     def action_for(folio)
-      params_for(folio)[:action].to_s
+      if guest_folio?(folio)
+        balance = folio.projected_outstanding_balance.to_d
+        if balance.positive?
+          PAYMENT_ACTION
+        elsif balance.zero?
+          CLOSE_ACTION
+        else
+          "refund_credit_handling"
+        end
+      else
+        params_for(folio)[:action].to_s
+      end
     end
 
     def payment_amount_for(folio)
@@ -206,6 +217,19 @@ module Folios
 
     def company_folio?(folio)
       folio.payer_type == "company"
+    end
+
+    def company_folio_positive_balance_actions(folio)
+      actions = [ PAYMENT_ACTION ]
+      actions << "keep_open" if direct_bill_enabled?(folio)
+      actions
+    end
+
+    def direct_bill_enabled?(folio)
+      relationship = folio.hotel_corporate_account
+      return true if relationship.blank?
+
+      relationship.present? && relationship.active? && relationship.direct_bill_enabled?
     end
 
     def can_post_payments?

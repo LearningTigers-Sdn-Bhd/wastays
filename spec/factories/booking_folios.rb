@@ -6,6 +6,7 @@ FactoryBot.define do
     name { "Guest Folio" }
     folio_type { "guest" }
     payer_type { "guest" }
+    hotel_corporate_account { payer_type == "company" ? association(:hotel_corporate_account, hotel: hotel) : nil }
     is_primary { true }
     currency { booking.currency.presence || "MYR" }
     opened_at { Time.current }

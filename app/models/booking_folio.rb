@@ -6,6 +6,7 @@ class BookingFolio < ApplicationRecord
 
   belongs_to :hotel
   belongs_to :booking
+  belongs_to :hotel_corporate_account, optional: true
   belongs_to :created_by, class_name: "User", optional: true
   belongs_to :closed_by, class_name: "User", optional: true
   has_many :folio_transactions, dependent: :restrict_with_error
@@ -30,11 +31,13 @@ class BookingFolio < ApplicationRecord
   validates :folio_sequence, uniqueness: { scope: :booking_id, allow_nil: true }
   validates :is_primary, uniqueness: { scope: :booking_id, conditions: -> { where(is_primary: true) }, if: :is_primary? }
   validate :hotel_matches_booking
+  validate :company_payer_requires_active_hotel_corporate_account
   validate :closed_folio_reopen_must_be_authorized
   validate :last_primary_folio_cannot_be_unset
   validate :closed_folio_fields_are_restricted, on: :update
   before_validation :assign_defaults
   before_validation :normalize_payer_type
+  before_validation :clear_hotel_corporate_account_unless_company_payer
   after_create :ensure_booking_folio_account_reference
   before_destroy :guard_night_audit_operational_change
   before_destroy :prevent_destroying_last_folio
@@ -70,6 +73,15 @@ class BookingFolio < ApplicationRecord
 
   def display_option_label
     [ display_name, folio_reference_display ].compact_blank.join(" · ")
+  end
+
+  def payer_display_label
+    case payer_type
+    when "company"
+      [ "Company & Government", hotel_corporate_account&.corporate_account&.name ].compact_blank.join(": ")
+    else
+      payer_type.to_s.humanize
+    end
   end
 
   def account_reference
@@ -126,6 +138,10 @@ class BookingFolio < ApplicationRecord
     end
   end
 
+  def clear_hotel_corporate_account_unless_company_payer
+    self.hotel_corporate_account = nil unless payer_type == "company"
+  end
+
   def next_folio_sequence
     scope = booking.booking_folios
     scope = scope.where.not(id: id) if persisted?
@@ -136,6 +152,23 @@ class BookingFolio < ApplicationRecord
     return if hotel_id.blank? || booking.blank? || hotel_id == booking.hotel_id
 
     errors.add(:hotel, "must match booking hotel")
+  end
+
+  def company_payer_requires_active_hotel_corporate_account
+    return unless payer_type == "company"
+
+    if hotel_corporate_account.blank?
+      return unless new_record? || will_save_change_to_payer_type? || will_save_change_to_hotel_corporate_account_id?
+
+      errors.add(:hotel_corporate_account, "must be selected for Company & Government folios")
+      return
+    end
+
+    if hotel_id.present? && hotel_corporate_account.hotel_id != hotel_id
+      errors.add(:hotel_corporate_account, "must belong to the folio hotel")
+    end
+
+    errors.add(:hotel_corporate_account, "must be active") unless hotel_corporate_account.active?
   end
 
   def closed_folio_reopen_must_be_authorized

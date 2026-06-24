@@ -245,7 +245,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   def checkout_booking_scope
     current_hotel.bookings.includes(
       :deposits,
-      booking_folios: [ :folio_forecasted_charges, { folio_transactions: :user } ]
+        booking_folios: [ :folio_forecasted_charges, { folio_transactions: :user }, { hotel_corporate_account: :corporate_account } ]
     )
   end
 

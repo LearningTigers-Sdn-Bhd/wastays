@@ -6,8 +6,9 @@ RSpec.describe Folios::ProcessCheckoutActions do
   let(:hotel) { create(:hotel) }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", currency: "MYR") }
   let(:user) { create(:user, :superadmin) }
+  let(:company_relationship) { create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true) }
   let!(:guest_folio) { create(:booking_folio, booking: booking, hotel: hotel) }
-  let!(:company_folio) { create(:booking_folio, :secondary, booking: booking, hotel: hotel) }
+  let!(:company_folio) { create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: company_relationship) }
   let(:posting_date) { Date.current }
 
   before do
@@ -99,6 +100,32 @@ RSpec.describe Folios::ProcessCheckoutActions do
     })
 
     expect(result.error).to eq("Company Folio: reason is required for keep open.")
+  end
+
+  it "rejects keep open for Company & Government folios without direct bill enabled" do
+    company_relationship.update!(direct_bill_enabled: false)
+    create(:folio_transaction, booking_folio: company_folio, amount: 100)
+
+    result = call_service({
+      guest_folio.id.to_s => { action: "close" },
+      company_folio.id.to_s => { action: "keep_open", reason: "No direct bill" }
+    })
+
+    expect(result.error).to eq("Company Folio: Keep open is not allowed.")
+  end
+
+  it "keeps legacy unlinked company folios eligible for keep open" do
+    company_folio.update_columns(hotel_corporate_account_id: nil)
+    create(:folio_transaction, booking_folio: company_folio, amount: 100)
+
+    expect {
+      @result = call_service({
+        guest_folio.id.to_s => { action: "close" },
+        company_folio.id.to_s => { action: "keep_open", reason: "Legacy direct billing" }
+      })
+    }.to change(FolioOperationLog.where(operation_type: "checkout_exception"), :count).by(1)
+
+    expect(@result).to be_success
   end
 
   it "records an approved checkout exception" do

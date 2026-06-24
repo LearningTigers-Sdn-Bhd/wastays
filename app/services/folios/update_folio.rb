@@ -32,9 +32,10 @@ module Folios
           previous_folio_type = @folio.folio_type
           previous_payer_type = @folio.payer_type
           previous_payer_id = @folio.payer_id
+          previous_hotel_corporate_account_id = @folio.hotel_corporate_account_id
 
           @folio.update!(folio_attributes)
-          log_update!(previous_name, previous_folio_type, previous_payer_type, previous_payer_id)
+          log_update!(previous_name, previous_folio_type, previous_payer_type, previous_payer_id, previous_hotel_corporate_account_id)
           set_primary! if set_as_primary? && !@folio.is_primary?
         end
       end
@@ -54,16 +55,18 @@ module Folios
         folio_type: @attributes[:folio_type],
         payer_type: @attributes[:payer_type],
         payer_id: @attributes[:payer_id].presence,
+        hotel_corporate_account_id: @attributes[:hotel_corporate_account_id].presence,
         currency: @attributes[:currency]
       }.compact
     end
 
-    def log_update!(previous_name, previous_folio_type, previous_payer_type, previous_payer_id)
+    def log_update!(previous_name, previous_folio_type, previous_payer_type, previous_payer_id, previous_hotel_corporate_account_id)
       changes = {
         name: [ previous_name, @folio.name ],
         folio_type: [ previous_folio_type, @folio.folio_type ],
         payer_type: [ previous_payer_type, @folio.payer_type ],
-        payer_id: [ previous_payer_id, @folio.payer_id ]
+        payer_id: [ previous_payer_id, @folio.payer_id ],
+        hotel_corporate_account_id: [ previous_hotel_corporate_account_id, @folio.hotel_corporate_account_id ]
       }.select { |_key, (before, after)| before != after }
       return if changes.empty?
 

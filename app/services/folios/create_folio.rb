@@ -51,6 +51,7 @@ module Folios
         folio_type: @attributes[:folio_type].presence || "external",
         payer_type: @attributes[:payer_type].presence || "company",
         payer_id: @attributes[:payer_id].presence,
+        hotel_corporate_account_id: @attributes[:hotel_corporate_account_id].presence,
         is_primary: false,
         status: "open",
         currency: @attributes[:currency].presence || @booking.currency.presence || @hotel.default_currency,
@@ -91,7 +92,8 @@ module Folios
           name: folio.name,
           folio_type: folio.folio_type,
           payer_type: folio.payer_type,
-          payer_id: folio.payer_id
+          payer_id: folio.payer_id,
+          hotel_corporate_account_id: folio.hotel_corporate_account_id
         }
       )
     end

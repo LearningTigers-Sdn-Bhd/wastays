@@ -1,7 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["folioType", "payerType", "lockedPayer"]
+  static targets = ["folioType", "payerType", "lockedPayer", "companyAccountWrapper", "companyAccountSelect"]
+  static values = { requiresCompanyAccount: Boolean, originalPayer: String }
 
   connect() {
     this.sync()
@@ -20,6 +21,22 @@ export default class extends Controller {
       this.lockedPayerTarget.disabled = true
       if (!this.payerTypeTarget.value) this.payerTypeTarget.value = "company"
     }
+
+    this.syncCompanyAccount()
+  }
+
+  syncCompanyAccount() {
+    if (!this.hasCompanyAccountWrapperTarget || !this.hasCompanyAccountSelectTarget) return
+
+    const companyPayer = this.payerTypeTarget.value === "company"
+    this.companyAccountWrapperTarget.hidden = !companyPayer
+    this.companyAccountSelectTarget.disabled = !companyPayer
+    this.companyAccountSelectTarget.required = companyPayer && this.requiresCompanyAccount()
+    if (!companyPayer) this.companyAccountSelectTarget.value = ""
+  }
+
+  requiresCompanyAccount() {
+    return this.requiresCompanyAccountValue || this.originalPayerValue !== "company"
   }
 
   lockedPayerFor(folioType) {
