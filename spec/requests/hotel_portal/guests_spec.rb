@@ -275,7 +275,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       end
 
       it "soft deletes selected guests" do
-        delete bulk_destroy_hotel_guests_path(hotel), params: { guest_ids: [guest1.id, guest2.id].to_json }
+        delete bulk_destroy_hotel_guests_path(hotel), params: { guest_ids: [ guest1.id, guest2.id ].to_json }
 
         expect(response).to redirect_to(hotel_guests_path(hotel))
         expect(flash[:notice]).to eq("Selected guest records removed successfully.")
@@ -286,7 +286,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
 
     context "when user does not have delete permission" do
       it "redirects to root path with not authorized alert" do
-        delete bulk_destroy_hotel_guests_path(hotel), params: { guest_ids: [guest1.id, guest2.id].to_json }
+        delete bulk_destroy_hotel_guests_path(hotel), params: { guest_ids: [ guest1.id, guest2.id ].to_json }
 
         expect(response).to redirect_to(root_path)
         expect(flash[:alert]).to include("not authorized")

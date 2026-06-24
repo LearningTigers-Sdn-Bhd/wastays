@@ -89,6 +89,7 @@
               </thead>
               <tbody class="divide-y divide-slate-200 bg-white">
                 <% @guests.each_with_index do |guest, index| %>
+                  <% presenter = Guests::GuestPresenter.new(guest) %>
                   <% totals = guest_currency_totals(guest) %>
                   <tr class="group align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
                     <% if can_delete %>
@@ -104,35 +105,35 @@
                       <td class="px-6 py-4 sm:px-8">
                     <% end %>
                       <div class="flex flex-col gap-1.5">
-                        <span class="text-sm font-semibold text-slate-900 block truncate max-w-[140px] xl:max-w-none" title="<%= safe_guest_attr(guest, :name)&.titleize %>"><%= safe_guest_attr(guest, :name)&.titleize %></span>
+                        <span class="text-sm font-semibold text-slate-900 block truncate max-w-[140px] xl:max-w-none" title="<%= presenter.formatted_name %>"><%= presenter.formatted_name %></span>
                         <span class="text-xs text-slate-500">
-                          <%= safe_guest_attr(guest, :gender)&.capitalize || "Unspecified" %>
+                          <%= presenter.formatted_gender %>
                         </span>
                       </div>
                     </td>
                     <td class="px-3 py-4 whitespace-nowrap text-sm text-slate-700 sm:px-4">
-                      <%= safe_guest_attr(guest, :country) || "Unknown country" %>
+                      <%= presenter.formatted_country %>
                     </td>
                     <td class="px-3 py-4 sm:px-4">
                       <div class="flex flex-col gap-1">
-                        <span class="text-sm text-slate-900 block truncate max-w-[160px] xl:max-w-none" title="<%= safe_guest_attr(guest, :email) %>"><%= safe_guest_attr(guest, :email) %></span>
-                        <span class="text-sm text-slate-600"><%= safe_guest_attr(guest, :phone) %></span>
+                        <span class="text-sm text-slate-900 block truncate max-w-[160px] xl:max-w-none" title="<%= presenter.email %>"><%= presenter.email %></span>
+                        <span class="text-sm text-slate-600"><%= presenter.phone %></span>
                       </div>
                     </td>
                     <td class="px-3 py-4 sm:px-4">
                       <div class="flex flex-col gap-1">
-                        <span class="text-sm font-medium text-slate-900"><%= safe_guest_attr(guest, :government_id) %></span>
-                        <span class="text-xs uppercase tracking-[0.08em] text-slate-500"><%= safe_guest_attr(guest, :document_type)&.upcase || "ID" %></span>
+                        <span class="text-sm font-medium text-slate-900"><%= presenter.government_id %></span>
+                        <span class="text-xs uppercase tracking-[0.08em] text-slate-500"><%= presenter.formatted_document_type %></span>
                       </div>
                     </td>
                     <td class="px-3 py-4 whitespace-nowrap text-sm text-slate-700 sm:px-4">
                       <%= pluralize(guest_stays_count(guest), "stay") %>
                     </td>
                     <td class="px-3 py-4 text-sm text-slate-700 sm:px-4">
-                      <% if guest.try(:last_stay_at).present? %>
+                      <% if presenter.last_stay_present? %>
                         <div class="flex flex-col gap-0.5">
-                          <span class="font-medium text-slate-900"><%= guest.last_stay_at.strftime("%I:%M %p") %></span>
-                          <span class="text-xs text-slate-500"><%= guest.last_stay_at.strftime("%d %b %Y") %></span>
+                          <span class="font-medium text-slate-900"><%= presenter.last_stay_time %></span>
+                          <span class="text-xs text-slate-500"><%= presenter.last_stay_date %></span>
                         </div>
                       <% else %>
                         —
@@ -185,6 +186,7 @@
               </label>
             <% end %>
             <% @guests.each do |guest| %>
+              <% presenter = Guests::GuestPresenter.new(guest) %>
               <% totals = guest_currency_totals(guest) %>
               <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm relative">
                 <% if can_delete %>
@@ -199,9 +201,9 @@
                 <div class="flex items-start justify-between gap-3">
                   <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Guest</p>
-                    <p class="mt-1 text-sm font-semibold text-slate-900"><%= safe_guest_attr(guest, :name) %></p>
+                    <p class="mt-1 text-sm font-semibold text-slate-900"><%= presenter.formatted_name %></p>
                     <p class="mt-1 text-xs text-slate-500">
-                      <%= safe_guest_attr(guest, :gender)&.capitalize || "Unspecified" %>
+                      <%= presenter.formatted_gender %>
                     </p>
                   </div>
                 </div>
@@ -209,16 +211,16 @@
                 <dl class="mt-4 space-y-3 text-sm">
                   <div>
                     <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Country</dt>
-                    <dd class="mt-1 text-slate-700"><%= safe_guest_attr(guest, :country) || "Unknown country" %></dd>
+                    <dd class="mt-1 text-slate-700"><%= presenter.formatted_country %></dd>
                   </div>
                   <div>
                     <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Contact</dt>
-                    <dd class="mt-1 text-slate-700"><%= safe_guest_attr(guest, :email) %></dd>
-                    <dd class="text-slate-600"><%= safe_guest_attr(guest, :phone) %></dd>
+                    <dd class="mt-1 text-slate-700"><%= presenter.email %></dd>
+                    <dd class="text-slate-600"><%= presenter.phone %></dd>
                   </div>
                   <div>
                     <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">ID / Passport</dt>
-                    <dd class="mt-1 text-slate-700"><%= safe_guest_attr(guest, :government_id) %></dd>
+                    <dd class="mt-1 text-slate-700"><%= presenter.government_id %></dd>
                   </div>
                   <div class="flex items-start justify-between gap-3">
                     <div>
@@ -228,9 +230,9 @@
                     <div class="text-right">
                       <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Last Stayed</dt>
                       <dd class="mt-1 text-slate-700">
-                        <% if guest.try(:last_stay_at).present? %>
-                          <span class="block font-medium text-slate-900"><%= guest.last_stay_at.strftime("%I:%M %p") %></span>
-                          <span class="block text-xs text-slate-500"><%= guest.last_stay_at.strftime("%d %b %Y") %></span>
+                        <% if presenter.last_stay_present? %>
+                          <span class="block font-medium text-slate-900"><%= presenter.last_stay_time %></span>
+                          <span class="block text-xs text-slate-500"><%= presenter.last_stay_date %></span>
                         <% else %>
                           —
                         <% end %>

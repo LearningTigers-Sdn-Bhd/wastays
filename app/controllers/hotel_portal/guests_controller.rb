@@ -2,7 +2,7 @@
 
 module HotelPortal
   class GuestsController < HotelPortal::BaseController
-    helper_method :safe_guest_attr, :guest_stays_count, :guest_currency_totals
+    helper_method :guest_stays_count, :guest_currency_totals
 
     before_action -> { require_feature!("unified_guest_profile") }
     before_action :authorize_view_guest_records!, only: %i[index show]
@@ -36,6 +36,7 @@ module HotelPortal
     end
 
     def show
+      @presenter = Guests::GuestPresenter.new(@guest)
       query = Guests::GuestBookingsQuery.new(hotel: current_hotel, guest: @guest)
       @all_bookings = query.all_bookings
       @bookings = query.bookings(page: params[:page])
@@ -93,9 +94,7 @@ module HotelPortal
       end
     end
 
-    def safe_guest_attr(guest, attribute)
-      Guests::GuestPresenter.new(guest).public_send(attribute)
-    end
+
 
     def guest_stays_count(guest)
       @guest_stays_count.fetch(guest.id, 0)
@@ -119,7 +118,8 @@ module HotelPortal
 
     def set_breadcrumbs
       if @guest&.persisted?
-        append_breadcrumb safe_guest_attr(@guest, :name), hotel_guest_path(current_hotel, @guest)
+        presenter = Guests::GuestPresenter.new(@guest)
+        append_breadcrumb presenter.name, hotel_guest_path(current_hotel, @guest)
         append_breadcrumb "Edit" if action_name.in?([ "edit", "update" ])
       else
         append_breadcrumb "New"
@@ -130,7 +130,7 @@ module HotelPortal
       params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id)
     end
 
-    private
+
 
     def authorize_view_guest_records!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_guest_records", hotel: current_hotel)
