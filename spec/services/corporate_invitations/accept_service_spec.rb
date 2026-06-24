@@ -7,7 +7,6 @@ RSpec.describe CorporateInvitations::AcceptService do
     create(
       :corporate_invitation,
       email: "billing@acme.test",
-      corporate_type: "company",
       relationship_type: "direct_bill",
       direct_bill_enabled: true,
       credit_limit: "5000",
@@ -39,7 +38,6 @@ RSpec.describe CorporateInvitations::AcceptService do
     user = User.find_by!(email: invitation.email)
     expect(user.account).to have_attributes(name: "Acme Sdn Bhd")
     expect(HotelCorporateAccount.find_by!(corporate_account: user.account)).to have_attributes(
-      corporate_type: "company",
       relationship_type: "direct_bill",
       direct_bill_enabled: true,
       credit_limit: 5000.to_d,

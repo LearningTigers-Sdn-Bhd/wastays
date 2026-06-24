@@ -3,9 +3,9 @@
     <header class="shrink-0 border-b border-slate-200 bg-white">
       <div class="flex items-start justify-between gap-4 px-6 py-5">
         <div>
-          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Corporate Management</p>
-          <h2 class="mt-1 text-xl font-bold tracking-tight text-slate-950">Invite corporate account</h2>
-          <p class="mt-1 text-xs font-medium text-slate-500">The recipient will choose their corporate account name when accepting.</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Company & Government Accounts</p>
+          <h2 class="mt-1 text-xl font-bold tracking-tight text-slate-950">Invite Company & Government Account</h2>
+          <p class="mt-1 text-xs font-medium text-slate-500">The recipient will choose their account name when accepting.</p>
         </div>
         <button type="button" class="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" data-action="click->offcanvas#close" aria-label="Close invitation form">
           <%= cached_icon "x", stroke_width: 2.5, class: "size-5" %>
@@ -33,10 +33,6 @@
             <div>
               <%= f.label :email, "Corporate contact email", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
               <%= f.email_field :email, value: @corporate_invitation.email, required: true, autocomplete: "email", class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
-            </div>
-            <div>
-              <%= f.label :corporate_type, "Corporate type", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-              <%= f.text_field :corporate_type, value: @corporate_invitation.corporate_type, placeholder: "Optional", class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
             </div>
           </section>
 

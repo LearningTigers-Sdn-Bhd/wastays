@@ -9,7 +9,6 @@ RSpec.describe CorporateInvitations::CreateService do
   let(:attributes) do
     {
       email: "billing@acme.test",
-      corporate_type: "company",
       relationship_type: "direct_bill",
       direct_bill_enabled: true,
       credit_limit: "5000",
@@ -25,7 +24,6 @@ RSpec.describe CorporateInvitations::CreateService do
       result = described_class.new(hotel: hotel, invited_by_user: inviter, attributes: attributes).call
       expect(result).to be_success
       expect(result.invitation.metadata).to include(
-        "corporate_type" => "company",
         "relationship_type" => "direct_bill",
         "direct_bill_enabled" => true,
         "credit_limit" => "5000.0",

@@ -2,7 +2,6 @@
 
 class CorporateInvitation < Invitation
   store_accessor :metadata,
-    :corporate_type,
     :relationship_type,
     :direct_bill_enabled,
     :credit_limit,

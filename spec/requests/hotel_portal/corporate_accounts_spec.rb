@@ -59,10 +59,9 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     create(:user, email: "staff@example.com")
 
     post hotel_corporate_accounts_path(hotel), params: {
-      corporate_invitation: {
-        email: "staff@example.com",
-        corporate_type: "agency",
-        relationship_type: "direct_bill",
+        corporate_invitation: {
+          email: "staff@example.com",
+          relationship_type: "direct_bill",
         credit_currency: "MYR"
       }
     }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
@@ -70,7 +69,6 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response).to have_http_status(:unprocessable_content)
     expect(response.body).to include("hotel staff")
     expect(response.body).to include("staff@example.com")
-    expect(response.body).to include("agency")
     expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
   end
 

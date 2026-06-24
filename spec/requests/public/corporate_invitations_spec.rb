@@ -45,7 +45,7 @@ RSpec.describe "Public::CorporateInvitations", type: :request do
     post login_path, params: { email: user.email, password: user.password }
     follow_redirect!
 
-    expect(response.body).to include("Connect your corporate account")
+    expect(response.body).to include("Connect your Company & Government Account")
 
     expect {
       patch corporate_invitation_path(token)

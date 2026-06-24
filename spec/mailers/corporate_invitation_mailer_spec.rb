@@ -9,6 +9,6 @@ RSpec.describe CorporateInvitationMailer, type: :mailer do
   it "sends the corporate acceptance URL" do
     expect(mail.to).to eq([ "billing@acme.test" ])
     expect(mail.body.encoded).to include(corporate_invitation_url("raw-token"))
-    expect(mail.body.encoded).to include("connect a corporate account")
+    expect(mail.body.encoded).to include("connect a Company & Government Account")
   end
 end

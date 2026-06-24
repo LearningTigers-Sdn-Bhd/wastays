@@ -24,11 +24,11 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     create(:user, email: "staff@example.com")
     visit hotel_corporate_accounts_path(hotel)
 
-    expect(page).to have_content("Corporate Management")
-    expect(page).to have_link("Corporate Managements")
+    expect(page).to have_content("Company & Government Accounts")
+    expect(page).to have_link("Company & Government Accounts")
 
-    click_link "Invite corporate account"
-    expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Invite corporate account")
+    click_link "Invite Company & Government Account"
+    expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Invite Company & Government Account")
     expect(page).to have_no_field("Company name")
 
     within("#offcanvas_drawer") do
@@ -37,10 +37,9 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     end
     expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 2)
 
-    click_link "Invite corporate account"
+    click_link "Invite Company & Government Account"
     within("#offcanvas_drawer") do
       fill_in "Corporate contact email", with: "staff@example.com"
-      fill_in "Corporate type", with: "agency"
       select "Direct bill", from: "Relationship"
       click_button "Send invitation"
     end
@@ -48,7 +47,6 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     within("#offcanvas_drawer") do
       expect(page).to have_content("hotel staff")
       expect(page).to have_field("Corporate contact email", with: "staff@example.com")
-      expect(page).to have_field("Corporate type", with: "agency")
 
       fill_in "Corporate contact email", with: "billing@example.com"
       click_button "Send invitation"

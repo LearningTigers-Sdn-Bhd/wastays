@@ -16,11 +16,11 @@ module CorporateInvitations
 
       user = User.find_by(email: email)
       return failure("This email belongs to a hotel staff account. Use a separate corporate email.") if user && !user.corporate?
-      return failure("This corporate account is suspended.") if user&.account&.status == "suspended"
+      return failure("This Company & Government Account is suspended.") if user&.account&.status == "suspended"
 
       if user
         relationship = @hotel.hotel_corporate_accounts.find_by(corporate_account: user.account)
-        return failure("This corporate account is already linked to this hotel.") if relationship&.active?
+        return failure("This Company & Government Account is already linked to this hotel.") if relationship&.active?
         return failure("This corporate relationship is suspended. Reactivate it instead of sending a new invitation.") if relationship&.suspended?
       end
 
@@ -49,7 +49,6 @@ module CorporateInvitations
         account: @hotel.account,
         invited_by_user: @invited_by_user,
         email: email,
-        corporate_type: @attributes[:corporate_type],
         relationship_type: @attributes[:relationship_type].presence || "standard",
         direct_bill_enabled: ActiveModel::Type::Boolean.new.cast(@attributes[:direct_bill_enabled]) || false,
         credit_limit: @attributes[:credit_limit].presence,

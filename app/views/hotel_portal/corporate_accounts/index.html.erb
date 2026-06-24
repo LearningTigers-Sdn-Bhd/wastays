@@ -1,14 +1,14 @@
 <div class="mx-auto max-w-6xl space-y-8 pb-20">
   <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
     <div>
-      <h1 class="text-3xl font-bold tracking-tight text-slate-950">Corporate Management</h1>
+      <h1 class="text-3xl font-bold tracking-tight text-slate-950">Company & Government Accounts</h1>
       <p class="mt-1 text-sm text-slate-600">Invite external payers and manage direct-billing relationships for this hotel.</p>
     </div>
     <%= link_to new_hotel_corporate_account_path(current_hotel),
       class: "inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700",
       data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
       <%= cached_icon "plus", stroke_width: 2.5, class: "size-4" %>
-      Invite corporate account
+      Invite Company & Government Account
     <% end %>
   </div>
 
@@ -36,14 +36,14 @@
 
   <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="border-b border-slate-200 px-6 py-5">
-      <h2 class="text-lg font-bold text-slate-950">Linked corporate accounts</h2>
+      <h2 class="text-lg font-bold text-slate-950">Linked Company & Government Accounts</h2>
     </div>
     <% if @relationships.any? %>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
           <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
             <tr>
-              <th class="px-6 py-3">Company</th>
+              <th class="px-6 py-3">Account</th>
               <th class="px-6 py-3">Contact</th>
               <th class="px-6 py-3">Terms</th>
               <th class="px-6 py-3">Status</th>
@@ -70,7 +70,7 @@
         </table>
       </div>
     <% else %>
-      <p class="px-6 py-10 text-center text-sm text-slate-500">No corporate accounts are linked yet.</p>
+      <p class="px-6 py-10 text-center text-sm text-slate-500">No Company & Government Accounts are linked yet.</p>
     <% end %>
   </section>
 </div>

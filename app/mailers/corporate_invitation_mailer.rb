@@ -10,6 +10,6 @@ class CorporateInvitationMailer < ApplicationMailer
 
     attachments.inline["long-logo.png"] = File.read(Rails.root.join("app/assets/images/logo/long-logo.png"))
 
-    mail(to: invitation.email, subject: "#{@hotel.name} invited you to connect a corporate account")
+    mail(to: invitation.email, subject: "#{@hotel.name} invited you to connect a Company & Government Account")
   end
 end
