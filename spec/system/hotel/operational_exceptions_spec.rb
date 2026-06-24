@@ -91,7 +91,7 @@ RSpec.describe "Operational Exceptions", type: :system do
 
       # Wait for the compact early-departure controls to appear.
       expect(page).to have_content(/Early departure/i, wait: 10)
-      expect(page).to have_content("Upcoming charges to post")
+      expect(page).to have_content("Pending charges will post when checkout is completed")
 
       # Select Apply Charge
       find("input[name='apply_charge'][value='true']", visible: :all).trigger("click")

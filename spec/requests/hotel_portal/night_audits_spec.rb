@@ -298,6 +298,31 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     end
   end
 
+  describe "POST #resolve_missing_nightly_charges" do
+    it "delegates the repair and redirects to blocker resolution" do
+      business_date = Date.current
+      booking = create(:booking, hotel: hotel)
+      night_audit = create(:night_audit, hotel: hotel, business_date: business_date, status: "blocked")
+      result = OpenStruct.new(success?: true, message: "Nightly charges repaired. Retry Night Audit.")
+      allow(NightAudits::ResolveMissingNightlyCharges).to receive(:call).and_return(result)
+      sign_in(user)
+
+      post resolve_missing_nightly_charges_hotel_night_audit_path(hotel, night_audit), params: {
+        booking_id: booking.id,
+        reason: "Repair request"
+      }
+
+      expect(NightAudits::ResolveMissingNightlyCharges).to have_received(:call).with(
+        night_audit: night_audit,
+        booking: booking,
+        actor: user,
+        reason: "Repair request"
+      )
+      expect(response).to redirect_to(resolve_hotel_night_audit_path(hotel, night_audit))
+      expect(flash[:notice]).to eq("Nightly charges repaired. Retry Night Audit.")
+    end
+  end
+
   it "shows structured run results on the audit page" do
     night_audit = create(:night_audit,
       hotel: hotel,
