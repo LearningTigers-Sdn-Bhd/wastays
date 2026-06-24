@@ -12,6 +12,12 @@ export default class extends Controller {
     this.checkboxTargets.forEach(checkbox => {
       checkbox.checked = checked
     })
+    if (this.hasSelectAllTarget) {
+      this.selectAllTargets.forEach(selectAll => {
+        selectAll.checked = checked
+        selectAll.indeterminate = false
+      })
+    }
     this.update()
   }
 
@@ -28,13 +34,15 @@ export default class extends Controller {
     })
 
     // Update master selectAll checkbox state based on desktop checkbox values
-    const desktopCheckboxes = this.checkboxTargets.filter(cb => !cb.closest('.lg:hidden'))
+    const desktopCheckboxes = this.checkboxTargets.filter(cb => cb.closest('table'))
     const allChecked = desktopCheckboxes.length > 0 && desktopCheckboxes.every(cb => cb.checked)
     const noneChecked = desktopCheckboxes.every(cb => !cb.checked)
     
     if (this.hasSelectAllTarget) {
-      this.selectAllTarget.checked = allChecked
-      this.selectAllTarget.indeterminate = !allChecked && !noneChecked
+      this.selectAllTargets.forEach(selectAll => {
+        selectAll.checked = allChecked
+        selectAll.indeterminate = !allChecked && !noneChecked
+      })
     }
     
     this.update()
@@ -69,8 +77,10 @@ export default class extends Controller {
       }
       
       if (this.hasSelectAllTarget) {
-        this.selectAllTarget.checked = false
-        this.selectAllTarget.indeterminate = false
+        this.selectAllTargets.forEach(selectAll => {
+          selectAll.checked = false
+          selectAll.indeterminate = false
+        })
       }
     }
   }
@@ -78,8 +88,10 @@ export default class extends Controller {
   clear() {
     this.checkboxTargets.forEach(cb => cb.checked = false)
     if (this.hasSelectAllTarget) {
-      this.selectAllTarget.checked = false
-      this.selectAllTarget.indeterminate = false
+      this.selectAllTargets.forEach(selectAll => {
+        selectAll.checked = false
+        selectAll.indeterminate = false
+      })
     }
     this.update()
   }

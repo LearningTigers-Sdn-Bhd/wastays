@@ -1,4 +1,4 @@
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+<div class="max-w-[1600px] mx-auto pb-36 lg:pb-20 space-y-8">
   <div class="px-4 md:px-0">
     <div class="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -74,17 +74,17 @@
                              data-action="change->bulk-select#toggleAll"
                              class="size-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer">
                     </th>
-                    <th scope="col" class="py-4 pl-2 pr-3 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:pl-3 sm:pr-4">Guest</th>
+                    <th scope="col" class="py-4 pl-2 pr-3 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:pl-3 sm:pr-4 whitespace-nowrap">Guest</th>
                   <% else %>
-                    <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Guest</th>
+                    <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8 whitespace-nowrap">Guest</th>
                   <% end %>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Country</th>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Contact</th>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">ID / Passport</th>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Stays</th>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Last Stayed</th>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Lifetime Value</th>
-                  <th scope="col" class="py-4 pl-3 pr-4 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:pl-4 sm:pr-6">Action</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4 whitespace-nowrap">Country</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4 whitespace-nowrap">Contact</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4 whitespace-nowrap">ID / Passport</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4 whitespace-nowrap">Stays</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4 whitespace-nowrap">Last Stayed</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4 whitespace-nowrap">Lifetime Value</th>
+                  <th scope="col" class="py-4 pl-3 pr-4 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:pl-4 sm:pr-6 whitespace-nowrap">Action</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-200 bg-white">
@@ -175,6 +175,15 @@
           </div>
 
           <div class="space-y-4 p-4 sm:p-6 lg:hidden">
+            <% if can_delete %>
+              <label class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 shadow-sm cursor-pointer select-none">
+                <span class="text-sm font-semibold text-slate-800">Select All Guests</span>
+                <input type="checkbox" 
+                       data-bulk-select-target="selectAll" 
+                       data-action="change->bulk-select#toggleAll"
+                       class="size-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer">
+              </label>
+            <% end %>
             <% @guests.each do |guest| %>
               <% totals = guest_currency_totals(guest) %>
               <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm relative">
@@ -275,22 +284,24 @@
         <% if can_delete %>
           <!-- Floating Bulk Action Banner -->
           <div data-bulk-select-target="banner" 
-               class="fixed bottom-6 left-1/2 lg:left-[58%] -translate-x-1/2 z-50 hidden items-center gap-4 bg-white text-slate-900 px-6 py-3.5 rounded-2xl shadow-xl border border-slate-200 ring-4 ring-slate-950/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
-            <span data-bulk-select-target="count" class="text-sm font-semibold text-slate-700">0 guests selected</span>
-            <div class="h-4 w-px bg-slate-200"></div>
-            <div class="flex items-center gap-2">
-              <%= form_with url: bulk_destroy_hotel_guests_path(current_hotel), method: :delete, data: { turbo_confirm: "Are you sure you want to delete the selected guest records? This will hide them from the directory but preserve their historic booking data.", turbo_confirm_title: "Delete Guests", turbo_confirm_color: "red", turbo_frame: "_top" } do |f| %>
-                <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
-                <button type="submit" class="inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-500 transition">
-                  Delete
-                </button>
-              <% end %>
+               class="fixed bottom-[76px] lg:bottom-6 left-1/2 lg:left-[58%] -translate-x-1/2 z-50 hidden items-center justify-between lg:justify-start w-[calc(100%-2rem)] lg:w-auto gap-3 lg:gap-4 bg-white text-slate-900 px-4 py-3 lg:px-6 lg:py-3.5 rounded-2xl shadow-xl border border-slate-200 ring-4 ring-slate-950/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+            <div class="flex items-center gap-1.5">
+              <span data-bulk-select-target="count" class="text-sm font-semibold text-slate-700">0 guests selected</span>
               <button type="button" 
                       data-action="click->bulk-select#clear" 
-                      class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition">
-                Cancel
+                      class="inline-flex items-center justify-center rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+                      title="Clear selection">
+                <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
             </div>
+            <div class="h-4 w-px bg-slate-200"></div>
+            <%= form_with url: bulk_destroy_hotel_guests_path(current_hotel), method: :delete, data: { turbo_confirm: "Are you sure you want to delete the selected guest records? This will hide them from the directory but preserve their historic booking data.", turbo_confirm_title: "Delete Guests", turbo_confirm_color: "red", turbo_frame: "_top" } do |f| %>
+              <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+              <button type="submit" class="inline-flex items-center gap-x-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-500 transition">
+                <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                Delete
+              </button>
+            <% end %>
           </div>
         <% end %>
       </div>
