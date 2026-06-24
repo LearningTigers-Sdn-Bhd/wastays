@@ -7,7 +7,7 @@ module HotelPortal
     before_action -> { require_feature!("unified_guest_profile") }
     before_action :authorize_view_guest_records!, only: %i[index show]
     before_action :authorize_manage_bookings!, only: %i[search new create edit update]
-    before_action :authorize_delete_guest_record!, only: %i[destroy]
+    before_action :authorize_delete_guest_record!, only: %i[destroy bulk_destroy]
     before_action :set_guest, only: [ :show, :edit, :update, :destroy ]
     before_action :set_breadcrumbs, only: [ :show, :new, :create, :edit, :update ]
 
@@ -69,6 +69,22 @@ module HotelPortal
 
     def destroy
       result = Guests::DestroyService.new(guest: @guest, hotel: current_hotel).call
+
+      if result.success?
+        redirect_to hotel_guests_path(current_hotel), notice: result.message, status: :see_other
+      else
+        redirect_to hotel_guests_path(current_hotel), alert: result.message, status: :see_other
+      end
+    end
+
+    def bulk_destroy
+      guest_ids = begin
+        JSON.parse(params[:guest_ids] || "[]")
+      rescue JSON::ParserError
+        []
+      end
+
+      result = Guests::BulkDestroyService.new(guest_ids: guest_ids, hotel: current_hotel).call
 
       if result.success?
         redirect_to hotel_guests_path(current_hotel), notice: result.message, status: :see_other

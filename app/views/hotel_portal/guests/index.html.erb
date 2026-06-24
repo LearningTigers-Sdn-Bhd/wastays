@@ -45,155 +45,192 @@
     </div>
 
     <%= turbo_frame_tag "guests_results" do %>
-      <% if @guests.any? %>
-        <div class="hidden lg:block overflow-x-auto">
-          <table class="min-w-full table-fixed">
-            <colgroup>
-              <col class="w-[18%]">
-              <col class="w-[8%]">
-              <col class="w-[19%]">
-              <col class="w-[13%]">
-              <col class="w-[7%]">
-              <col class="w-[10%]">
-              <col class="w-[12%]">
-              <col class="w-[13%]">
-            </colgroup>
-            <thead class="bg-slate-100">
-              <tr>
-                <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Guest</th>
-                <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Country</th>
-                <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Contact</th>
-                <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">ID / Passport</th>
-                <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Stays</th>
-                <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Last Stayed</th>
-                <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Lifetime Value</th>
-                <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200 bg-white">
-              <% @guests.each_with_index do |guest, index| %>
-                <% totals = guest_currency_totals(guest) %>
-                <tr class="align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
-                  <td class="px-6 py-4 sm:px-8">
-                    <div class="flex flex-col gap-1.5">
-                      <span class="text-sm font-semibold text-slate-900"><%= safe_guest_attr(guest, :name)&.titleize %></span>
-                      <span class="text-xs text-slate-500">
-                        <%= safe_guest_attr(guest, :gender)&.capitalize || "Unspecified" %>
-                      </span>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                    <%= safe_guest_attr(guest, :country) || "Unknown country" %>
-                  </td>
-                  <td class="px-6 py-4">
-                    <div class="flex flex-col gap-1">
-                      <span class="text-sm text-slate-900"><%= safe_guest_attr(guest, :email) %></span>
-                      <span class="text-sm text-slate-600"><%= safe_guest_attr(guest, :phone) %></span>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4">
-                    <div class="flex flex-col gap-1">
-                      <span class="text-sm font-medium text-slate-900"><%= safe_guest_attr(guest, :government_id) %></span>
-                      <span class="text-xs uppercase tracking-[0.08em] text-slate-500"><%= safe_guest_attr(guest, :document_type)&.upcase || "ID" %></span>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                    <%= pluralize(guest_stays_count(guest), "stay") %>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                    <% if guest.try(:last_stay_at).present? %>
-                      <div class="flex flex-col gap-0.5">
-                        <span class="font-medium text-slate-900"><%= guest.last_stay_at.strftime("%I:%M %p") %></span>
-                        <span class="text-xs text-slate-500"><%= guest.last_stay_at.strftime("%d %b %Y") %></span>
-                      </div>
-                    <% else %>
-                      —
-                    <% end %>
-                  </td>
-                  <td class="px-6 py-4">
-                    <div class="flex flex-wrap gap-2">
-                      <% if totals.any? %>
-                        <% totals.each do |currency, amount| %>
-                          <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
-                            <%= currency %> <%= number_with_precision(amount, precision: 2) %>
-                          </span>
-                        <% end %>
-                      <% else %>
-                        <span class="text-sm text-slate-400">—</span>
-                      <% end %>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 text-right whitespace-nowrap sm:px-8">
-                    <div class="flex items-center justify-end gap-2">
-                      <%= link_to hotel_guest_path(current_hotel, guest), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50", data: { turbo_frame: "_top" } do %>
-                        <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                        View Timeline
-                      <% end %>
-                      <% if current_user.has_permission?("delete_guest_record", hotel: current_hotel) %>
-                        <%= button_to hotel_guest_path(current_hotel, guest),
-                                      method: :delete,
-                                      data: { turbo_confirm: "Are you sure you want to delete this guest record? This will hide them from the directory but preserve their historic booking data.", turbo_confirm_title: "Delete Guest", turbo_confirm_color: "red", turbo_frame: "_top" },
-                                      class: "inline-flex items-center justify-center size-8 rounded-lg border border-red-200 bg-white text-red-500 shadow-sm transition hover:bg-red-50 hover:text-red-700",
-                                      title: "Delete Guest" do %>
-                          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                        <% end %>
-                      <% end %>
-                    </div>
-                  </td>
+      <% can_delete = current_user.has_permission?("delete_guest_record", hotel: current_hotel) %>
+      <div <% if can_delete %>data-controller="bulk-select"<% end %> class="relative">
+        <% if @guests.any? %>
+          <div class="hidden lg:block overflow-x-auto">
+            <table class="min-w-full table-fixed">
+              <colgroup>
+                <% if can_delete %>
+                  <col class="w-[3%]">
+                  <col class="w-[19%]">
+                <% else %>
+                  <col class="w-[22%]">
+                <% end %>
+                <col class="w-[8%]">
+                <col class="w-[18%]">
+                <col class="w-[11%]">
+                <col class="w-[6%]">
+                <col class="w-[11%]">
+                <col class="w-[11%]">
+                <col class="w-[13%]">
+              </colgroup>
+              <thead class="bg-slate-100">
+                <tr>
+                  <% if can_delete %>
+                    <th scope="col" class="py-4 pl-4 pr-0 text-left sm:pl-6">
+                      <input type="checkbox" 
+                             data-bulk-select-target="selectAll" 
+                             data-action="change->bulk-select#toggleAll"
+                             class="size-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer">
+                    </th>
+                    <th scope="col" class="py-4 pl-2 pr-3 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:pl-3 sm:pr-4">Guest</th>
+                  <% else %>
+                    <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Guest</th>
+                  <% end %>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Country</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Contact</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">ID / Passport</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Stays</th>
+                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Last Stayed</th>
+                  <th scope="col" class="px-3 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-4">Lifetime Value</th>
+                  <th scope="col" class="py-4 pl-3 pr-4 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:pl-4 sm:pr-6">Action</th>
                 </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="space-y-4 p-4 sm:p-6 lg:hidden">
-          <% @guests.each do |guest| %>
-            <% totals = guest_currency_totals(guest) %>
-            <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Guest</p>
-                  <p class="mt-1 text-sm font-semibold text-slate-900"><%= safe_guest_attr(guest, :name) %></p>
-                  <p class="mt-1 text-xs text-slate-500">
-                    <%= safe_guest_attr(guest, :gender)&.capitalize || "Unspecified" %>
-                  </p>
-                </div>
-              </div>
-
-              <dl class="mt-4 space-y-3 text-sm">
-                <div>
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Country</dt>
-                  <dd class="mt-1 text-slate-700"><%= safe_guest_attr(guest, :country) || "Unknown country" %></dd>
-                </div>
-                <div>
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Contact</dt>
-                  <dd class="mt-1 text-slate-700"><%= safe_guest_attr(guest, :email) %></dd>
-                  <dd class="text-slate-600"><%= safe_guest_attr(guest, :phone) %></dd>
-                </div>
-                <div>
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">ID / Passport</dt>
-                  <dd class="mt-1 text-slate-700"><%= safe_guest_attr(guest, :government_id) %></dd>
-                </div>
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Stays</dt>
-                    <dd class="mt-1 text-slate-700"><%= pluralize(guest_stays_count(guest), "stay") %></dd>
-                  </div>
-                  <div class="text-right">
-                    <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Last Stayed</dt>
-                    <dd class="mt-1 text-slate-700">
+              </thead>
+              <tbody class="divide-y divide-slate-200 bg-white">
+                <% @guests.each_with_index do |guest, index| %>
+                  <% totals = guest_currency_totals(guest) %>
+                  <tr class="group align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
+                    <% if can_delete %>
+                      <td class="py-4 pl-4 pr-0 sm:pl-6">
+                        <input type="checkbox" 
+                               value="<%= guest.id %>"
+                               data-bulk-select-target="checkbox"
+                               data-action="change->bulk-select#toggleSingle"
+                               class="size-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer">
+                      </td>
+                      <td class="py-4 pl-2 pr-3 sm:pl-3 sm:pr-4">
+                    <% else %>
+                      <td class="px-6 py-4 sm:px-8">
+                    <% end %>
+                      <div class="flex flex-col gap-1.5">
+                        <span class="text-sm font-semibold text-slate-900 block truncate max-w-[140px] xl:max-w-none" title="<%= safe_guest_attr(guest, :name)&.titleize %>"><%= safe_guest_attr(guest, :name)&.titleize %></span>
+                        <span class="text-xs text-slate-500">
+                          <%= safe_guest_attr(guest, :gender)&.capitalize || "Unspecified" %>
+                        </span>
+                      </div>
+                    </td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-slate-700 sm:px-4">
+                      <%= safe_guest_attr(guest, :country) || "Unknown country" %>
+                    </td>
+                    <td class="px-3 py-4 sm:px-4">
+                      <div class="flex flex-col gap-1">
+                        <span class="text-sm text-slate-900 block truncate max-w-[160px] xl:max-w-none" title="<%= safe_guest_attr(guest, :email) %>"><%= safe_guest_attr(guest, :email) %></span>
+                        <span class="text-sm text-slate-600"><%= safe_guest_attr(guest, :phone) %></span>
+                      </div>
+                    </td>
+                    <td class="px-3 py-4 sm:px-4">
+                      <div class="flex flex-col gap-1">
+                        <span class="text-sm font-medium text-slate-900"><%= safe_guest_attr(guest, :government_id) %></span>
+                        <span class="text-xs uppercase tracking-[0.08em] text-slate-500"><%= safe_guest_attr(guest, :document_type)&.upcase || "ID" %></span>
+                      </div>
+                    </td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-slate-700 sm:px-4">
+                      <%= pluralize(guest_stays_count(guest), "stay") %>
+                    </td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-slate-700 sm:px-4">
                       <% if guest.try(:last_stay_at).present? %>
-                        <span class="block font-medium text-slate-900"><%= guest.last_stay_at.strftime("%I:%M %p") %></span>
-                        <span class="block text-xs text-slate-500"><%= guest.last_stay_at.strftime("%d %b %Y") %></span>
+                        <div class="flex flex-col gap-0.5">
+                          <span class="font-medium text-slate-900"><%= guest.last_stay_at.strftime("%I:%M %p") %></span>
+                          <span class="text-xs text-slate-500"><%= guest.last_stay_at.strftime("%d %b %Y") %></span>
+                        </div>
                       <% else %>
                         —
                       <% end %>
-                    </dd>
+                    </td>
+                    <td class="px-3 py-4 text-right sm:px-4 whitespace-nowrap">
+                      <div class="flex justify-end gap-1.5">
+                        <% if totals.any? %>
+                          <% totals.each do |currency, amount| %>
+                            <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 whitespace-nowrap">
+                              <%= currency %> <%= number_with_precision(amount, precision: 2) %>
+                            </span>
+                          <% end %>
+                        <% else %>
+                          <span class="text-sm text-slate-400">—</span>
+                        <% end %>
+                      </div>
+                    </td>
+                    <td class="py-4 pl-3 pr-4 text-right whitespace-nowrap sm:pl-4 sm:pr-6">
+                      <div class="flex items-center justify-end gap-2">
+                        <%= link_to hotel_guest_path(current_hotel, guest), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50", data: { turbo_frame: "_top" } do %>
+                          <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                          View Timeline
+                        <% end %>
+                        <% if can_delete %>
+                          <%= button_to hotel_guest_path(current_hotel, guest),
+                                        method: :delete,
+                                        data: { turbo_confirm: "Are you sure you want to delete this guest record? This will hide them from the directory but preserve their historic booking data.", turbo_confirm_title: "Delete Guest", turbo_confirm_color: "red", turbo_frame: "_top" },
+                                        class: "opacity-0 group-hover:opacity-100 transition-opacity duration-200 inline-flex items-center justify-center size-8 rounded-lg border border-red-200 bg-white text-red-500 shadow-sm hover:bg-red-50 hover:text-red-700",
+                                        title: "Delete Guest" do %>
+                            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                          <% end %>
+                        <% end %>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="space-y-4 p-4 sm:p-6 lg:hidden">
+            <% @guests.each do |guest| %>
+              <% totals = guest_currency_totals(guest) %>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm relative">
+                <% if can_delete %>
+                  <div class="absolute top-4 right-4">
+                    <input type="checkbox" 
+                           value="<%= guest.id %>"
+                           data-bulk-select-target="checkbox"
+                           data-action="change->bulk-select#toggleSingle"
+                           class="size-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer">
+                  </div>
+                <% end %>
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Guest</p>
+                    <p class="mt-1 text-sm font-semibold text-slate-900"><%= safe_guest_attr(guest, :name) %></p>
+                    <p class="mt-1 text-xs text-slate-500">
+                      <%= safe_guest_attr(guest, :gender)&.capitalize || "Unspecified" %>
+                    </p>
                   </div>
                 </div>
-                <div class="text-right">
+
+                <dl class="mt-4 space-y-3 text-sm">
+                  <div>
+                    <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Country</dt>
+                    <dd class="mt-1 text-slate-700"><%= safe_guest_attr(guest, :country) || "Unknown country" %></dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Contact</dt>
+                    <dd class="mt-1 text-slate-700"><%= safe_guest_attr(guest, :email) %></dd>
+                    <dd class="text-slate-600"><%= safe_guest_attr(guest, :phone) %></dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">ID / Passport</dt>
+                    <dd class="mt-1 text-slate-700"><%= safe_guest_attr(guest, :government_id) %></dd>
+                  </div>
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Stays</dt>
+                      <dd class="mt-1 text-slate-700"><%= pluralize(guest_stays_count(guest), "stay") %></dd>
+                    </div>
+                    <div class="text-right">
+                      <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Last Stayed</dt>
+                      <dd class="mt-1 text-slate-700">
+                        <% if guest.try(:last_stay_at).present? %>
+                          <span class="block font-medium text-slate-900"><%= guest.last_stay_at.strftime("%I:%M %p") %></span>
+                          <span class="block text-xs text-slate-500"><%= guest.last_stay_at.strftime("%d %b %Y") %></span>
+                        <% else %>
+                          —
+                        <% end %>
+                      </dd>
+                    </div>
+                  </div>
+                  <div>
                     <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Lifetime Value</dt>
-                    <dd class="mt-1 flex flex-wrap justify-end gap-1.5">
+                    <dd class="mt-1 flex flex-wrap gap-1.5">
                       <% if totals.any? %>
                         <% totals.each do |currency, amount| %>
                           <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700">
@@ -204,36 +241,58 @@
                         <span class="text-slate-400">—</span>
                       <% end %>
                     </dd>
-                </div>
-              </dl>
+                  </div>
+                </dl>
 
-              <div class="mt-4 flex justify-end gap-2">
-                <%= link_to hotel_guest_path(current_hotel, guest), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50", data: { turbo_frame: "_top" } do %>
-                  <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                  View Timeline
-                <% end %>
-                <% if current_user.has_permission?("delete_guest_record", hotel: current_hotel) %>
-                  <%= button_to hotel_guest_path(current_hotel, guest),
-                                method: :delete,
-                                data: { turbo_confirm: "Are you sure you want to delete this guest record? This will hide them from the directory but preserve their historic booking data.", turbo_confirm_title: "Delete Guest", turbo_confirm_color: "red", turbo_frame: "_top" },
-                                class: "inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-1.5 text-red-500 shadow-sm transition hover:bg-red-50 hover:text-red-700",
-                                title: "Delete Guest" do %>
-                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                <div class="mt-4 flex justify-end gap-2">
+                  <%= link_to hotel_guest_path(current_hotel, guest), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50", data: { turbo_frame: "_top" } do %>
+                    <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    View Timeline
                   <% end %>
-                <% end %>
+                  <% if can_delete %>
+                    <%= button_to hotel_guest_path(current_hotel, guest),
+                                  method: :delete,
+                                  data: { turbo_confirm: "Are you sure you want to delete this guest record? This will hide them from the directory but preserve their historic booking data.", turbo_confirm_title: "Delete Guest", turbo_confirm_color: "red", turbo_frame: "_top" },
+                                  class: "inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-1.5 text-red-500 shadow-sm transition hover:bg-red-50 hover:text-red-700",
+                                  title: "Delete Guest" do %>
+                      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    <% end %>
+                  <% end %>
+                </div>
               </div>
-            </div>
-<%# Close loop %>
-          <% end %>
-        </div>
-      <% else %>
-        <div class="px-6 py-12 text-center sm:px-8">
-          <p class="text-sm font-medium text-slate-500">No guests recorded yet for this property.</p>
-        </div>
-      <% end %>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="px-6 py-12 text-center sm:px-8">
+            <p class="text-sm font-medium text-slate-500">No guests recorded yet for this property.</p>
+          </div>
+        <% end %>
 
-      <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
-        <%= paginate @guests %>
+        <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+          <%= paginate @guests %>
+        </div>
+
+        <% if can_delete %>
+          <!-- Floating Bulk Action Banner -->
+          <div data-bulk-select-target="banner" 
+               class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-4 bg-slate-900 text-white px-6 py-3.5 rounded-2xl shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+            <span data-bulk-select-target="count" class="text-sm font-semibold text-slate-200">0 guests selected</span>
+            <div class="h-4 w-px bg-slate-700"></div>
+            <div class="flex items-center gap-2">
+              <%= form_with url: bulk_destroy_hotel_guests_path(current_hotel), method: :delete, data: { turbo_confirm: "Are you sure you want to delete the selected guest records? This will hide them from the directory but preserve their historic booking data.", turbo_confirm_title: "Delete Guests", turbo_confirm_color: "red", turbo_frame: "_top" } do |f| %>
+                <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+                <button type="submit" class="inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-500 transition">
+                  Delete
+                </button>
+              <% end %>
+              <button type="button" 
+                      data-action="click->bulk-select#clear" 
+                      class="rounded-xl border border-slate-700 bg-transparent px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                Cancel
+              </button>
+            </div>
+          </div>
+        <% end %>
       </div>
     <% end %>
   </div>
