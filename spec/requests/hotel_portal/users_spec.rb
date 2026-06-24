@@ -64,6 +64,16 @@ RSpec.describe "HotelPortal::Users", type: :request do
       expect(flash[:alert]).to eq("This user already has active access to this property.")
     end
 
+    it "rejects an email belonging to a corporate user" do
+      corporate_user = create(:user, :corporate)
+
+      expect {
+        post hotel_users_path(hotel), params: { email: corporate_user.email, role_id: staff_role.id }
+      }.not_to change(StaffInvitation, :count)
+
+      expect(flash[:alert]).to include("corporate account")
+    end
+
     it "allows inviting users who have deactivated access" do
       existing_user = create(:user, account: account, email: "deactivatedstaff@example.com")
       UserHotelAccess.create!(user: existing_user, hotel: hotel, role: staff_role, deactivated_at: Time.current)
