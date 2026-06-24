@@ -8,7 +8,10 @@ module AiConcierge
         end
 
         def call
-          documents = hotel.knowledge_documents.where(category: "faq", embedding_status: "indexed").includes(:chunks)
+          documents = hotel.knowledge_documents
+            .where(category: "faq", embedding_status: "indexed")
+            .order(:created_at, :id)
+            .includes(:chunks)
           faq_text = format_documents(documents)
           answer_payload = HybridAnswerBuilder.new(
             hotel: hotel,
