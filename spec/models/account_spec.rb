@@ -30,4 +30,11 @@ RSpec.describe Account, type: :model do
       expect(Account::STATUSES).to match_array(%w[active suspended pending_review])
     end
   end
+
+  describe 'account kinds' do
+    it 'supports hotel and corporate accounts' do
+      expect(build(:account)).to be_hotel
+      expect(build(:account, :corporate)).to be_corporate
+    end
+  end
 end

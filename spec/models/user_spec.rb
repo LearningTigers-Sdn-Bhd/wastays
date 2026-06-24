@@ -11,7 +11,7 @@ RSpec.describe User, type: :model do
     subject { build(:user) }
 
     it { should validate_presence_of(:email) }
-    it { should validate_uniqueness_of(:email) }
+    it { should validate_uniqueness_of(:email).case_insensitive }
     it { should allow_value('test@example.com').for(:email) }
     it { should_not allow_value('invalid-email').for(:email) }
     it { should validate_presence_of(:name) }
@@ -20,7 +20,7 @@ RSpec.describe User, type: :model do
 
   describe 'roles' do
     it 'defines allowed roles' do
-      expect(User::ROLES).to match_array(%w[superadmin admin hotel_staff salesperson])
+      expect(User::ROLES).to match_array(%w[superadmin admin hotel_staff salesperson corporate])
     end
 
     describe '#superadmin?' do
@@ -45,6 +45,29 @@ RSpec.describe User, type: :model do
         user = build(:user, role: 'hotel_staff')
         expect(user.admin?).to be false
       end
+    end
+
+    describe '#corporate?' do
+      it 'returns true only for corporate users' do
+        expect(build(:user, :corporate)).to be_corporate
+        expect(build(:user)).not_to be_corporate
+      end
+    end
+  end
+
+  describe 'account kind validation' do
+    it 'requires corporate users to belong to corporate accounts' do
+      user = build(:user, role: "corporate")
+
+      expect(user).not_to be_valid
+      expect(user.errors[:account]).to include("must be a corporate account")
+    end
+
+    it 'prevents hotel users from belonging to corporate accounts' do
+      user = build(:user, account: build(:account, :corporate), role: "hotel_staff")
+
+      expect(user).not_to be_valid
+      expect(user.errors[:account]).to include("must be a hotel account")
     end
   end
 end

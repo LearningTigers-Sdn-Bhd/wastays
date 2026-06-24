@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_24_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -22,7 +22,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "pre_suspension_status"
-    t.index ["slug"], name: "index_accounts_on_slug"
+    t.string "account_kind", default: "hotel", null: false
+    t.index ["account_kind"], name: "index_accounts_on_account_kind"
+    t.index ["slug"], name: "index_accounts_on_slug", unique: true
+    t.check_constraint "account_kind::text = ANY (ARRAY['hotel'::character varying, 'corporate'::character varying]::text[])", name: "accounts_account_kind_allowed"
   end
 
   create_table "active_storage_attachments", force: :cascade do |t|
@@ -618,6 +621,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.index ["hotel_id"], name: "index_hotel_business_dates_on_hotel_id"
   end
 
+  create_table "hotel_corporate_accounts", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "corporate_account_id", null: false
+    t.string "relationship_type", default: "standard", null: false
+    t.boolean "direct_bill_enabled", default: false, null: false
+    t.decimal "credit_limit", precision: 12, scale: 2
+    t.string "credit_currency", null: false
+    t.integer "payment_terms_days"
+    t.string "status", default: "active", null: false
+    t.datetime "suspended_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "corporate_type"
+    t.index ["corporate_account_id", "status"], name: "idx_hotel_corporate_accounts_on_account_and_status"
+    t.index ["corporate_account_id"], name: "index_hotel_corporate_accounts_on_corporate_account_id"
+    t.index ["hotel_id", "corporate_account_id"], name: "idx_hotel_corporate_accounts_unique_relationship", unique: true
+    t.index ["hotel_id", "status"], name: "idx_hotel_corporate_accounts_on_hotel_and_status"
+    t.index ["hotel_id"], name: "index_hotel_corporate_accounts_on_hotel_id"
+    t.check_constraint "credit_limit IS NULL OR credit_limit >= 0::numeric", name: "hotel_corporate_accounts_credit_limit_nonnegative"
+    t.check_constraint "payment_terms_days IS NULL OR payment_terms_days >= 0", name: "hotel_corporate_accounts_payment_terms_nonnegative"
+    t.check_constraint "relationship_type::text = ANY (ARRAY['standard'::character varying, 'direct_bill'::character varying]::text[])", name: "hotel_corporate_accounts_relationship_type_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying]::text[])", name: "hotel_corporate_accounts_status_allowed"
+  end
+
   create_table "hotel_counters", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.string "counter_type", null: false
@@ -833,6 +860,34 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.index ["hotel_id"], name: "index_inventory_audit_logs_on_hotel_id"
     t.index ["room_type_id"], name: "index_inventory_audit_logs_on_room_type_id"
     t.index ["user_id"], name: "index_inventory_audit_logs_on_user_id"
+  end
+
+  create_table "invitations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "hotel_id", null: false
+    t.bigint "role_id"
+    t.bigint "invited_by_user_id", null: false
+    t.string "email", null: false
+    t.string "name"
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "accepted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "kind", default: "staff", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.index ["accepted_at"], name: "index_invitations_on_accepted_at"
+    t.index ["account_id"], name: "index_invitations_on_account_id"
+    t.index ["expires_at"], name: "index_invitations_on_expires_at"
+    t.index ["hotel_id", "email"], name: "index_pending_staff_invites_on_hotel_and_email", unique: true, where: "(accepted_at IS NULL)"
+    t.index ["hotel_id"], name: "index_invitations_on_hotel_id"
+    t.index ["invited_by_user_id"], name: "index_invitations_on_invited_by_user_id"
+    t.index ["kind"], name: "index_invitations_on_kind"
+    t.index ["role_id"], name: "index_invitations_on_role_id"
+    t.index ["token_digest"], name: "index_invitations_on_token_digest", unique: true
+    t.check_constraint "kind::text <> 'corporate'::text OR metadata ? 'relationship_type'::text AND ((metadata ->> 'relationship_type'::text) = ANY (ARRAY['standard'::text, 'direct_bill'::text]))", name: "invitations_corporate_fields_required"
+    t.check_constraint "kind::text <> 'staff'::text OR role_id IS NOT NULL", name: "invitations_staff_role_required"
+    t.check_constraint "kind::text = ANY (ARRAY['staff'::character varying, 'corporate'::character varying]::text[])", name: "invitations_kind_allowed"
   end
 
   create_table "journal_batch_entries", force: :cascade do |t|
@@ -1342,28 +1397,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.index ["status"], name: "index_setup_fee_rules_on_active_global_default", unique: true, where: "(((status)::text = 'active'::text) AND (settable_type IS NULL) AND (settable_id IS NULL))"
   end
 
-  create_table "staff_invitations", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.bigint "hotel_id", null: false
-    t.bigint "role_id", null: false
-    t.bigint "invited_by_user_id", null: false
-    t.string "email", null: false
-    t.string "name"
-    t.string "token_digest", null: false
-    t.datetime "expires_at", null: false
-    t.datetime "accepted_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["accepted_at"], name: "index_staff_invitations_on_accepted_at"
-    t.index ["account_id"], name: "index_staff_invitations_on_account_id"
-    t.index ["expires_at"], name: "index_staff_invitations_on_expires_at"
-    t.index ["hotel_id", "email"], name: "index_pending_staff_invites_on_hotel_and_email", unique: true, where: "(accepted_at IS NULL)"
-    t.index ["hotel_id"], name: "index_staff_invitations_on_hotel_id"
-    t.index ["invited_by_user_id"], name: "index_staff_invitations_on_invited_by_user_id"
-    t.index ["role_id"], name: "index_staff_invitations_on_role_id"
-    t.index ["token_digest"], name: "index_staff_invitations_on_token_digest", unique: true
-  end
-
   create_table "transaction_code_taxes", force: :cascade do |t|
     t.bigint "transaction_code_id", null: false
     t.bigint "hotel_tax_id"
@@ -1426,8 +1459,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "time_zone", default: "Kuala Lumpur", null: false
+    t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
     t.index ["account_id"], name: "index_users_on_account_id"
-    t.index ["email"], name: "index_users_on_email"
+    t.index ["account_id"], name: "index_users_on_unique_corporate_account", unique: true, where: "((role)::text = 'corporate'::text)"
   end
 
   create_table "webhook_endpoints", force: :cascade do |t|
@@ -1514,6 +1548,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
   add_foreign_key "folio_transactions", "users"
   add_foreign_key "hotel_business_dates", "hotels"
   add_foreign_key "hotel_business_dates", "users", column: "force_closed_by_id", on_delete: :nullify
+  add_foreign_key "hotel_corporate_accounts", "accounts", column: "corporate_account_id"
+  add_foreign_key "hotel_corporate_accounts", "hotels"
   add_foreign_key "hotel_counters", "hotels"
   add_foreign_key "hotel_general_ledger_maps", "hotels"
   add_foreign_key "hotel_knowledge_chunks", "hotel_knowledge_documents"
@@ -1533,6 +1569,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
+  add_foreign_key "invitations", "accounts"
+  add_foreign_key "invitations", "hotels"
+  add_foreign_key "invitations", "roles"
+  add_foreign_key "invitations", "users", column: "invited_by_user_id"
   add_foreign_key "journal_batch_entries", "journal_batches"
   add_foreign_key "journal_batches", "hotels"
   add_foreign_key "nearby_attractions", "hotels"
@@ -1579,10 +1619,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_23_053224) do
   add_foreign_key "room_statuses", "room_types"
   add_foreign_key "room_statuses", "users", column: "last_changed_by_id"
   add_foreign_key "room_types", "hotels"
-  add_foreign_key "staff_invitations", "accounts"
-  add_foreign_key "staff_invitations", "hotels"
-  add_foreign_key "staff_invitations", "roles"
-  add_foreign_key "staff_invitations", "users", column: "invited_by_user_id"
   add_foreign_key "transaction_code_taxes", "hotel_taxes"
   add_foreign_key "transaction_code_taxes", "transaction_codes"
   add_foreign_key "transaction_codes", "hotels"
