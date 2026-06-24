@@ -6,11 +6,12 @@ module Folios
   class ResolveTargetFolio
     PERMISSION = "manage_folio_movements"
 
-    def self.call(booking:, transaction_code:, parent_transaction: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil)
+    def self.call(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil)
       new(
         booking: booking,
         transaction_code: transaction_code,
         parent_transaction: parent_transaction,
+        fallback_transaction_code: fallback_transaction_code,
         override_target_folio: override_target_folio,
         override_reason: override_reason,
         actor: actor,
@@ -18,11 +19,12 @@ module Folios
       ).call
     end
 
-    def initialize(booking:, transaction_code:, parent_transaction: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil)
+    def initialize(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil)
       @booking = booking
       @hotel = booking&.hotel
       @transaction_code = transaction_code
       @parent_transaction = parent_transaction
+      @fallback_transaction_code = fallback_transaction_code
       @override_target_folio = override_target_folio
       @override_reason = override_reason.to_s.strip
       @actor = actor
@@ -45,6 +47,7 @@ module Folios
       return parent_route if @parent_transaction.present?
       return override_route if @override_target_folio.present?
       return rule_route if active_rule.present?
+      return fallback_route if valid_fallback_transaction_code?
 
       [ @booking&.booking_folio, "primary_folio", {}, nil ]
     end
@@ -70,6 +73,29 @@ module Folios
 
     def rule_route
       [ active_rule.target_folio, "routing_rule", { folio_routing_rule_id: active_rule.id }, nil ]
+    end
+
+    def fallback_route
+      route = self.class.call(
+        booking: @booking,
+        transaction_code: @fallback_transaction_code,
+        actor: @actor,
+        permission_context: @permission_context
+      )
+      metadata = {
+        fallback_transaction_code_id: @fallback_transaction_code.id,
+        fallback_transaction_code_code: @fallback_transaction_code.code,
+        inherited_route_source: route.route_source,
+        inherited_route_metadata: route.route_metadata
+      }.compact
+
+      return [ nil, "follows_parent", metadata, route.error ] unless route.success?
+
+      [ route.folio, "follows_parent", metadata, nil ]
+    end
+
+    def valid_fallback_transaction_code?
+      @fallback_transaction_code.present? && @fallback_transaction_code.id != @transaction_code&.id
     end
 
     def active_rule

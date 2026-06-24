@@ -155,7 +155,7 @@ module Folios
         end
 
         transaction_code = transaction_code_for_tax_line(tax_line)
-        route = resolve_route(transaction_code)
+        route = resolve_route(transaction_code, fallback_transaction_code: source_transaction_code_for_tax_line(tax_line))
         raise "Failed to resolve tax catch-up charge route: #{route.error}" unless route.success?
 
         result = Folios::InsertTransaction.new(
@@ -207,8 +207,12 @@ module Folios
         .exists?
     end
 
-    def resolve_route(transaction_code)
-      Folios::ResolveTargetFolio.call(booking: @booking, transaction_code: transaction_code)
+    def resolve_route(transaction_code, fallback_transaction_code: nil)
+      Folios::ResolveTargetFolio.call(
+        booking: @booking,
+        transaction_code: transaction_code,
+        fallback_transaction_code: fallback_transaction_code
+      )
     end
 
     def room_transaction_code
@@ -223,6 +227,13 @@ module Folios
       when "sst" then @hotel.transaction_codes.find_by(system_key: "sst_tax")
       when "tourism_tax" then @hotel.transaction_codes.find_by(system_key: "tourism_tax")
       end
+    end
+
+    def source_transaction_code_for_tax_line(tax_line)
+      id = tax_line["source_transaction_code_id"].presence || tax_line[:source_transaction_code_id].presence
+      return @hotel.transaction_codes.find_by(id: id) if id.present?
+
+      nil
     end
 
     def reason_metadata

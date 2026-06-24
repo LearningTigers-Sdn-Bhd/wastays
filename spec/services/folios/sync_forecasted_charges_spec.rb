@@ -155,6 +155,30 @@ RSpec.describe Folios::SyncForecastedCharges do
       expect(folio.folio_forecasted_charges.forecast.where(charge_kind: "tax").pluck(:identity)).to contain_exactly("tourism_tax:1", "tourism_tax:1")
     end
 
+    it "places attached tax forecasts with the routed parent folio" do
+      company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+      booking.update!(tax_posting_snapshot: {
+        business_date.iso8601 => [
+          {
+            "name" => "SST",
+            "amount" => "8.00",
+            "type" => "sst",
+            "transaction_code_id" => sst_code.id,
+            "source_transaction_code_id" => room_code.id
+          }
+        ]
+      })
+      create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+
+      described_class.call(booking_folio: folio)
+
+      expect(company_folio.folio_forecasted_charges.forecast.where(stay_date: business_date).pluck(:charge_kind)).to contain_exactly("accommodation", "tax")
+      expect(folio.folio_forecasted_charges.forecast.where(stay_date: business_date)).to be_none
+    end
+
     it "supersedes future forecasts on the old folio when routing changes" do
       described_class.call(booking_folio: folio)
       company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)

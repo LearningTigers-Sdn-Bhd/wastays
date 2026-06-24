@@ -71,4 +71,24 @@ RSpec.describe Folios::RoutePreview do
     expect(room_row[:target_folio]).to eq(company_folio)
     expect(posted.reload.booking_folio).to eq(guest_folio)
   end
+
+  it "routes attached taxes with the parent ROOM rule unless explicitly overridden" do
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+    booking.update!(tax_posting_snapshot: {
+      business_date.iso8601 => [
+        {
+          "name" => "SST",
+          "amount" => "8.00",
+          "type" => "sst",
+          "transaction_code_id" => sst_code.id,
+          "source_transaction_code_id" => room_code.id
+        }
+      ]
+    })
+
+    tax_row = described_class.call(booking: booking).rows.find { |row| row[:transaction_code] == sst_code }
+
+    expect(tax_row[:target_folio]).to eq(company_folio)
+    expect(tax_row[:route_source]).to eq("follows_parent")
+  end
 end

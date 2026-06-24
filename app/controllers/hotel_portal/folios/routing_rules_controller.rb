@@ -109,6 +109,7 @@ module HotelPortal
           ::NightAudits::OperationalChangeGuard.call!(hotel: current_hotel, action: :update_folio)
           @routing_rule.save!
           sync_child_routing_rules!
+          refresh_forecasts!
           log_operation!(operation_type, previous_attributes: previous_attributes)
         end
         true
@@ -168,6 +169,11 @@ module HotelPortal
           child_rule.assign_attributes(target_folio_id: target_folio_id, active: true, updated_by: current_user)
           child_rule.save!
         end
+      end
+
+      def refresh_forecasts!
+        primary_folio = @booking.booking_folio
+        ::Folios::SyncForecastedCharges.call(booking_folio: primary_folio) if primary_folio.present?
       end
 
       def routable_charge_codes

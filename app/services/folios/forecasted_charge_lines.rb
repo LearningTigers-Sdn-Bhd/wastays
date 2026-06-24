@@ -4,16 +4,17 @@ module Folios
   class ForecastedChargeLines
     include NightlyChargeCalculation
 
-    def self.call(booking:)
-      new(booking:).call
+    def self.call(booking:, dates: nil)
+      new(booking:, dates:).call
     end
 
-    def initialize(booking:)
+    def initialize(booking:, dates: nil)
       @booking = booking
+      @dates = dates
     end
 
     def call
-      (@booking.check_in.to_date...@booking.check_out.to_date).flat_map do |date|
+      stay_dates.flat_map do |date|
         accommodation_lines(date) + tax_lines(date)
       end
     end
@@ -54,6 +55,8 @@ module Folios
           description: "Tax: #{tax_line_name(tax_line)} - #{date}",
           transaction_code: transaction_code,
           transaction_code_id: transaction_code&.id,
+          fallback_transaction_code: source_transaction_code(tax_line),
+          fallback_transaction_code_id: source_transaction_code(tax_line)&.id,
           tax_line: tax_line
         }
       end
@@ -71,6 +74,21 @@ module Folios
       when "sst" then @booking.hotel.transaction_codes.find_by(system_key: "sst_tax")
       when "tourism_tax" then @booking.hotel.transaction_codes.find_by(system_key: "tourism_tax")
       end
+    end
+
+    def source_transaction_code(tax_line)
+      id = tax_line["source_transaction_code_id"].presence || tax_line[:source_transaction_code_id].presence
+      return @booking.hotel.transaction_codes.find_by(id: id) if id.present?
+
+      nil
+    end
+
+    def stay_dates
+      booking_dates = (@booking.check_in.to_date...@booking.check_out.to_date).to_a
+      return booking_dates if @dates.blank?
+
+      requested_dates = Array(@dates).flat_map { |value| value.is_a?(Range) ? value.to_a : value }.map(&:to_date)
+      booking_dates & requested_dates
     end
   end
 end

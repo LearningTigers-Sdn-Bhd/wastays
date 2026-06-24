@@ -36,6 +36,38 @@ RSpec.describe Folios::ResolveTargetFolio do
     expect(result.route_metadata[:folio_routing_rule_id]).to be_present
   end
 
+  it "inherits the fallback transaction code route when no child rule exists" do
+    sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+
+    result = described_class.call(
+      booking: booking,
+      transaction_code: sst_code,
+      fallback_transaction_code: room_code
+    )
+
+    expect(result).to be_success
+    expect(result.folio).to eq(company_folio)
+    expect(result.route_source).to eq("follows_parent")
+    expect(result.route_metadata[:fallback_transaction_code_id]).to eq(room_code.id)
+  end
+
+  it "uses an explicit child rule before the fallback route" do
+    sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: sst_code, target_folio: guest_folio)
+
+    result = described_class.call(
+      booking: booking,
+      transaction_code: sst_code,
+      fallback_transaction_code: room_code
+    )
+
+    expect(result).to be_success
+    expect(result.folio).to eq(guest_folio)
+    expect(result.route_source).to eq("routing_rule")
+  end
+
   it "uses a valid manual override before an active routing rule" do
     create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
     grant_permission(actor, "manage_folio_movements", hotel)

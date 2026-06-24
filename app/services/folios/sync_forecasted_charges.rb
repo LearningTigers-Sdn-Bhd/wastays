@@ -111,7 +111,7 @@ module Folios
         .where(booking_folios: { booking_id: @booking.id })
         .charge
         .where(
-          "metadata->>'nightly_charge_key' = :nightly_key OR catch_up_key = :catch_up_key OR metadata->>'catch_up_key' = :catch_up_key",
+          "metadata->>'nightly_charge_key' = :nightly_key OR metadata->>'reconciles_nightly_charge_key' = :nightly_key OR catch_up_key = :catch_up_key OR metadata->>'catch_up_key' = :catch_up_key",
           nightly_key: nightly_key,
           catch_up_key: catch_up_key
         )
@@ -126,7 +126,11 @@ module Folios
     def routed_target_folio(line)
       @routed_target_folios ||= {}
       @routed_target_folios[forecast_key(line)] ||= begin
-        route = Folios::ResolveTargetFolio.call(booking: @booking, transaction_code: line[:transaction_code])
+        route = Folios::ResolveTargetFolio.call(
+          booking: @booking,
+          transaction_code: line[:transaction_code],
+          fallback_transaction_code: line[:fallback_transaction_code]
+        )
         route.success? ? route.folio : nil
       end
     end

@@ -88,6 +88,29 @@ RSpec.describe Folios::ProcessCatchUpCharges, type: :service do
       expect(folio.folio_transactions.charge.find_by(category: "tax").transaction_code).to eq(sst_code)
     end
 
+    it "routes attached tax catch-up lines with the parent ROOM rule" do
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+      booking.update!(tax_posting_snapshot: {
+        past_date.iso8601 => [
+          {
+            "name" => "SST",
+            "amount" => "12.00",
+            "type" => "sst",
+            "transaction_code_id" => sst_code.id,
+            "source_transaction_code_id" => room_code.id
+          }
+        ]
+      })
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+      create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+
+      described_class.call(booking: booking, user: user)
+
+      expect(company_folio.folio_transactions.charge.pluck(:category)).to contain_exactly("accommodation", "tax")
+    end
+
     it "does not duplicate a legacy metadata-only catch-up transaction" do
       room = booking.booking_rooms.first
       catch_up_key = "catch_up:#{booking.id}:#{past_date.iso8601}:accommodation:#{room.id}"

@@ -203,6 +203,38 @@ RSpec.describe Folios::PostNightlyCharges do
     expect(guest_folio.folio_transactions.charge.find_by(transaction_code: ttx_code).amount).to eq(10.0)
   end
 
+  it "routes attached nightly taxes with ROOM unless a child rule overrides them" do
+    hotel.update!(sst_enabled: true)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day,
+      tax_posting_snapshot: {
+        business_date.iso8601 => [
+          {
+            "name" => "SST",
+            "amount" => "8.00",
+            "type" => "sst",
+            "transaction_code_id" => sst_code.id,
+            "source_transaction_code_id" => room_code.id
+          }
+        ]
+      })
+    create(:booking_room, booking: booking, subtotal: 100.0)
+    create(:booking_folio, hotel: hotel, booking: booking)
+    company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+
+    described_class.call(night_audit: night_audit, user: user)
+
+    expect(company_folio.folio_transactions.charge.pluck(:category)).to contain_exactly("accommodation", "tax")
+    expect(company_folio.folio_transactions.charge.find_by(category: "tax").metadata["route_source"]).to eq("follows_parent")
+  end
+
   it "records a missing folio as a skipped item" do
     booking = create(:booking,
       hotel: hotel,
