@@ -401,7 +401,10 @@ Rails.application.routes.draw do
     end
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
     resources :guests, only: [ :index, :show, :new, :create, :edit, :update, :destroy ] do
-      get :search, on: :collection
+      collection do
+        get :search
+        delete :bulk_destroy
+      end
     end
     resources :in_house_guests, only: [ :index ]
     get "settings", to: "settings#index", as: :settings
