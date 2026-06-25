@@ -37,7 +37,7 @@ class Public::HotelsController < ApplicationController
         )
       )
       @allocation_options = @availability_service.allocation_options_for_hotel(@hotel)
-      @room_types = @allocation_options.flat_map { |opt| opt.rooms.map(&:room_type) }.uniq
+      @room_types = @hotel.room_types
     else
       @availability_service = nil
       @room_types = @hotel.room_types

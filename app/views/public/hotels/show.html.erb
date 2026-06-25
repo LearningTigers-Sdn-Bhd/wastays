@@ -227,6 +227,12 @@
               </div>
             <% end %>
 
+          <div class="space-y-6"
+               data-controller="room-selector"
+               data-room-selector-adults-value="<%= @adults %>"
+               data-room-selector-children-value="<%= @children %>"
+               data-room-selector-currency-value="<%= @display_currency %>">
+
             <% @room_types.each do |room_type| %>
               <%= render "room_card",
                          room_type: room_type,
@@ -240,6 +246,49 @@
                          room_count: @room_count,
                          display_currency: @display_currency %>
             <% end %>
+
+            <%# Sticky Bottom Cart Bar %>
+            <div data-room-selector-target="stickyBar"
+                 class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-border shadow-2xl p-4 transition-all duration-300 transform translate-y-full opacity-0 lg:left-0 lg:right-0">
+              <div class="max-w-[85rem] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex-1 text-left w-full">
+                  <div class="flex items-center gap-x-2 mb-1.5">
+                    <span class="inline-flex items-center gap-x-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                      <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0z" /></svg>
+                      Custom Selection
+                    </span>
+                    <span data-room-selector-target="summaryText" class="text-sm font-bold text-neutral-text-primary"></span>
+                  </div>
+                  <div data-room-selector-target="validationWarning" class="text-xs font-bold text-red-600 flex items-center gap-1">
+                    <svg class="size-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+                    <span></span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+                  <div class="text-left sm:text-right">
+                    <p class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest">Total Price</p>
+                    <p data-room-selector-target="totalPriceText" class="text-xl sm:text-2xl font-black text-neutral-text-primary"></p>
+                  </div>
+
+                  <%= form_with url: quotes_path, method: :post, local: true, class: "flex items-center" do |f| %>
+                    <%= f.hidden_field :hotel_id, value: @hotel.slug %>
+                    <%= f.hidden_field :check_in, value: @check_in %>
+                    <%= f.hidden_field :check_out, value: @check_out %>
+                    <%= f.hidden_field :adults, value: @adults %>
+                    <%= f.hidden_field :children, value: @children %>
+                    <%= f.hidden_field :infants, value: @infants %>
+                    <%= f.hidden_field :display_currency, value: @display_currency %>
+                    
+                    <div data-room-selector-target="formInputs" class="hidden"></div>
+
+                    <%= f.submit "Book Selected",
+                                 data: { room_selector_target: "submitButton" },
+                                 class: "btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 shadow-lg shadow-brand-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" %>
+                  <% end %>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

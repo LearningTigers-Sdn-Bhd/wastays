@@ -14,12 +14,42 @@ module Public
       @pricing_summary ||= @availability_service&.pricing_summary_for(@room_type) || {}
     end
 
+    def single_room_pricing_summary
+      @single_room_pricing_summary ||= @availability_service&.pricing_summary_for(@room_type, room_count: 1) || {}
+    end
+
     def display_total_price(display_currency)
       return unless pricing_summary[:total_price]
       @view_context.display_amount(pricing_summary[:total_price],
                                    quote_currency: pricing_summary[:currency],
                                    display_currency: display_currency,
                                    hotel: @hotel)
+    end
+
+    def display_single_room_total_price(display_currency)
+      return unless single_room_pricing_summary[:total_price]
+      @view_context.display_amount(single_room_pricing_summary[:total_price],
+                                   quote_currency: single_room_pricing_summary[:currency],
+                                   display_currency: display_currency,
+                                   hotel: @hotel)
+    end
+
+    def single_room_total_price_value
+      single_room_pricing_summary[:total_price]&.to_f || 0.0
+    end
+
+    def available_quantity
+      return 0 unless @availability_service
+      check_in = @availability_service.check_in
+      check_out = @availability_service.check_out
+      return 0 if check_in.blank? || check_out.blank? || check_out <= check_in
+
+      stay_dates = (check_in...check_out).to_a
+      inventories = @room_type.room_inventories.select { |inv| stay_dates.include?(inv.date) }
+      return 0 unless inventories.count == stay_dates.count
+      return 0 if inventories.any? { |inv| inv.status != "open" }
+
+      inventories.map(&:quantity).min || 0
     end
 
     def rate_plan_name
