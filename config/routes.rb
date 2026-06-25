@@ -275,12 +275,22 @@ Rails.application.routes.draw do
     resources :staff_invitations, only: [ :update, :destroy ] do
       post :resend, on: :member
     end
-    resources :corporate_accounts, only: [ :index, :new, :create ], path: "corporate-accounts" do
-      member do
-        patch :suspend
-        patch :reactivate
+    scope "accounts-receivable" do
+      resources :corporate_accounts, only: [ :index, :new, :create ], path: "corporate-accounts" do
+        member do
+          patch :suspend
+          patch :reactivate
+        end
       end
+      resources :ar_invoices, only: [ :index, :show ], path: "invoices"
+      resources :ar_payments, only: [ :index, :new, :create ], path: "payments"
     end
+
+    get "corporate-accounts", to: redirect { |params, _request| "/hotel/#{params[:hotel_id]}/accounts-receivable/corporate-accounts" }, as: nil
+    get "corporate-accounts/new", to: redirect { |params, _request| "/hotel/#{params[:hotel_id]}/accounts-receivable/corporate-accounts/new" }, as: nil
+    get "ar-invoices", to: redirect { |params, _request| "/hotel/#{params[:hotel_id]}/accounts-receivable/invoices" }, as: nil
+    get "ar-invoices/:id", to: redirect { |params, _request| "/hotel/#{params[:hotel_id]}/accounts-receivable/invoices/#{params[:id]}" }, as: nil
+    get "ar-payments/new", to: redirect { |params, _request| "/hotel/#{params[:hotel_id]}/accounts-receivable/payments/new" }, as: nil
     resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
       post :resend, on: :member
     end

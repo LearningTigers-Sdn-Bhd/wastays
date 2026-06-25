@@ -40,6 +40,13 @@ module HotelPortal
       ]
       knowledge_nav_active = knowledge_nav_items.any?(&:active)
 
+      accounts_receivable_nav_items = [
+        NavItem.new(label: "Corporate Accounts", path: hotel_corporate_accounts_path(current_hotel), search_text: "Corporate Accounts Government Direct Bill Credit Terms External Payers Accounts Receivable", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
+        NavItem.new(label: "AR Invoices", path: hotel_ar_invoices_path(current_hotel), search_text: "AR Invoices Accounts Receivable Direct Bill Aging Finance", active: controller_name == "ar_invoices", icon: "file-text", permission: "view_reports"),
+        NavItem.new(label: "AR Payments", path: hotel_ar_payments_path(current_hotel), search_text: "AR Payments Corporate Payments Accounts Receivable Finance", active: controller_name == "ar_payments", icon: "landmark", permission: "view_reports")
+      ]
+      accounts_receivable_nav_active = accounts_receivable_nav_items.any?(&:active)
+
       @_hotel_sidebar_sections = [
         NavSection.new(
           label: "Home",
@@ -74,6 +81,7 @@ module HotelPortal
           label: "Finance",
           items: [
             NavItem.new(label: "Folios", path: hotel_folios_path(current_hotel), search_text: "Folios Ledger Guest Balances Refund Due Finance", active: controller_name == "folios" && action_name == "index", icon: "book-open", permission: "view_bookings"),
+            NavItem.new(label: "Accounts Receivable", path: hotel_ar_invoices_path(current_hotel), search_text: "Accounts Receivable Corporate Accounts AR Invoices AR Payments Direct Bill Finance", active: accounts_receivable_nav_active, icon: "file-text", children: accounts_receivable_nav_items, permission: [ "view_reports", "manage_corporate_accounts" ]),
             NavItem.new(label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel), search_text: "Taxes Fees Property Finance", active: controller_name == "taxes_fees", icon: "receipt", permission: "manage_hotel_profile"),
             NavItem.new(label: "Transaction Codes", path: hotel_transaction_codes_path(current_hotel), search_text: "Transaction Codes Posting Finance", active: controller_name == "transaction_codes", icon: "badge-percent", permission: "manage_hotel_profile"),
             NavItem.new(label: "Payouts", path: payouts_hotel_reports_path(current_hotel), search_text: "Payouts Settlements Finance", active: controller_name == "reports" && action_name == "payouts", icon: "credit-card", permission: "view_payouts")
@@ -83,7 +91,6 @@ module HotelPortal
           label: "Team Management",
           items: [
             NavItem.new(label: "Staff Management", path: hotel_users_path(current_hotel), search_text: "Staff Management Users Roles Access Team", active: controller_name == "users", icon: "users", permission: "manage_users"),
-            NavItem.new(label: "Company & Government Accounts", path: hotel_corporate_accounts_path(current_hotel), search_text: "Company Government Accounts Direct Bill Credit Terms External Payers", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
             NavItem.new(label: "Roles & Permissions", path: hotel_roles_path(current_hotel), search_text: "Roles Permissions Access Control Team", active: controller_name == "roles", icon: "shield-check", permission: "manage_users", plan_feature: "role_based_access_control")
           ]
         ),
