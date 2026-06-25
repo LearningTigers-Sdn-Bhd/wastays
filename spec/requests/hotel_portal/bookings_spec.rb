@@ -350,6 +350,24 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("active_folio_id=#{company_folio.id}")
     end
 
+    it "shows Direct Bill for eligible positive-balance company folios" do
+      booking.update!(check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: relationship)
+      create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 604.80)
+
+      get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Direct Bill")
+      expect(response.body).to include(%(value="direct_bill"))
+      expect(response.body).to include("AR invoice will be issued to #{relationship.corporate_account.name}")
+      expect(response.body).to include("checkout_folios[#{guest_folio.id}][action]")
+      expect(response.body).to include("checkout_folios[#{company_folio.id}][action]")
+    end
+
     it "prefills the actual checkout time from scheduled checkout when checkout is required" do
       scheduled_checkout = Time.find_zone(hotel.hotel_time_zone).local(2026, 6, 12, 12, 0)
       booking.update!(check_out: scheduled_checkout)
@@ -544,6 +562,39 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(payment.description).to include("Checkout payment for Guest Folio via Card Terminal - Card Ref AUTH-1")
       expect(payment.metadata["payment_source"]).to eq("card")
       expect(payment.metadata["source_references"]).to eq("card_reference" => "AUTH-1")
+    end
+
+    it "checks out with Direct Bill for an eligible company folio and creates an AR invoice" do
+      booking.update!(check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true, payment_terms_days: 21)
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: relationship)
+      create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 604.80)
+
+      expect {
+        post check_out_hotel_booking_path(hotel, booking),
+          params: {
+            checkout_sheet: "1",
+            checked_out_at: Time.current.to_s,
+            checkout_folios: {
+              guest_folio.id.to_s => { action: "close" },
+              company_folio.id.to_s => { action: "direct_bill", amount: "604.80" }
+            }
+          },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      }.to change(ArInvoice, :count).by(1)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(booking.reload.status).to eq("completed")
+      expect(guest_folio.reload).to be_closed
+      expect(company_folio.reload).to be_closed
+      expect(company_folio.ar_invoice).to have_attributes(
+        amount: 604.80.to_d,
+        hotel_corporate_account: relationship,
+        due_on: hotel.current_business_date + 21.days
+      )
     end
 
     it "returns timeline-board checkout-sheet submissions to the Booking Timeline Board" do

@@ -637,6 +637,78 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: target_folio.id))
     end
 
+    it "renders the move offcanvas with attached tax folio selectors" do
+      grant_permission("manage_folio_movements")
+      room_code = create(:transaction_code, hotel: hotel, code: "ROOM-MOVE", name: "Room Charge", kind: "charge", category: "accommodation")
+      tax_code = create(:transaction_code, hotel: hotel, code: "TTX-MOVE", name: "Tourism Tax", kind: "charge", category: "tax")
+      transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100, transaction_code: room_code)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "tax", amount: 10, description: "Tourism Tax", transaction_code: tax_code, metadata: { parent_folio_transaction_id: transaction.id, tax_line: { type: "tourism_tax" } })
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+
+      get move_hotel_folio_transaction_path(hotel, booking, transaction), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Move Transaction")
+      expect(response.body).to include("Attached Taxes / Fees")
+      expect(response.body).to include("Follow target folio")
+      expect(response.body).to include("Company Folio")
+    end
+
+    it "renders nightly-style attached taxes in the move offcanvas" do
+      grant_permission("manage_folio_movements")
+      room_code = create(:transaction_code, hotel: hotel, code: "ROOM-NIGHT", name: "Room Charge", kind: "charge", category: "accommodation")
+      tax_code = create(:transaction_code, hotel: hotel, code: "TTX-NIGHT", name: "Tourism Tax", kind: "charge", category: "tax")
+      transaction = create(:folio_transaction,
+        booking_folio: folio,
+        transaction_type: "charge",
+        category: "accommodation",
+        amount: 100,
+        posting_date: Date.current,
+        transaction_code: room_code,
+        metadata: { stay_date: Date.current.iso8601 })
+      create(:folio_transaction,
+        booking_folio: folio,
+        transaction_type: "charge",
+        category: "tax",
+        amount: 10,
+        description: "Tourism Tax",
+        posting_date: Date.current,
+        transaction_code: tax_code,
+        metadata: { stay_date: Date.current.iso8601, tax_line: { type: "tourism_tax", source_transaction_code_id: room_code.id } })
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+
+      get move_hotel_folio_transaction_path(hotel, booking, transaction), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Attached Taxes / Fees")
+      expect(response.body).to include("TTX-NIGHT")
+      expect(response.body).to include("Follow target folio")
+    end
+
+    it "moves attached taxes to explicitly selected folios" do
+      grant_permission("manage_folio_movements")
+      transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
+      tax = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "tax", amount: 10, description: "Tourism Tax", metadata: { parent_folio_transaction_id: transaction.id, tax_line: { type: "tourism_tax" } })
+      target_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+      tax_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+
+      expect {
+        post move_hotel_folio_transaction_path(hotel, booking, transaction), params: {
+          redirect_to_folio: "true",
+          folio_operation: {
+            target_folio_id: target_folio.id,
+            reason: "Route room to company and tax elsewhere",
+            tax_routes: {
+              tax.id => { transaction_id: tax.id, target_folio_id: tax_folio.id }
+            }
+          }
+        }
+      }.to change(FolioTransaction, :count).by(4)
+
+      expect(target_folio.folio_transactions.charge.where(moved_from_transaction: transaction)).to exist
+      expect(tax_folio.folio_transactions.charge.where(moved_from_transaction: tax)).to exist
+    end
+
     it "splits a posted charge to another folio and keeps the active folio selected" do
       grant_permission("manage_folio_movements")
       transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)

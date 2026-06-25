@@ -593,6 +593,17 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios", tab: "billing_instructions", active_folio_id: guest_folio.id))
       expect(rule.target_folio).to eq(company_folio)
 
+      patch routing_rule_hotel_folio_path(hotel, booking, rule), params: {
+        folio_routing_rule: { transaction_code_id: code.id, target_folio_id: guest_folio.id, active: "1" }
+      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include(hotel_folio_path(hotel, booking))
+
+      rule.reload.update!(target_folio: company_folio)
+
       expect {
         patch routing_rule_hotel_folio_path(hotel, booking, rule), params: {
           folio_routing_rule: { transaction_code_id: code.id, target_folio_id: guest_folio.id, active: "1" }
@@ -606,6 +617,24 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       }.to change(FolioOperationLog.where(operation_type: "deactivate_routing_rule"), :count).by(1)
 
       expect(rule.reload).not_to be_active
+    end
+
+    it "creates a billing instruction and completes the offcanvas for Turbo Stream submissions" do
+      grant_permission("manage_folio_movements")
+      booking = create_booking_with_folio(guest_name: "Rule Sheet", confirmation_token: "BK-RULE-SHEET", folio_number: 645)
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 646, name: "Company Folio")
+      code = create(:transaction_code, hotel: hotel, code: "ROOM-S", name: "Room Charge", category: "accommodation")
+
+      expect {
+        post routing_rules_hotel_folio_path(hotel, booking, active_folio_id: booking.booking_folio.id), params: {
+          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: company_folio.id }
+        }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+      }.to change(FolioRoutingRule, :count).by(1)
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include(hotel_folio_path(hotel, booking))
     end
 
     it "renders attached tax selectors and saves only explicit child overrides" do
@@ -703,6 +732,23 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(folio.name).to eq("Company Folio")
       expect(folio.hotel_corporate_account).to eq(relationship)
       expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id, tab: "ledger"))
+    end
+
+    it "creates a folio window and completes the offcanvas for Turbo Stream submissions" do
+      grant_permission("manage_folio_windows")
+      booking = create_booking_with_folio(guest_name: "Window Turbo", confirmation_token: "BK-WIN-TURBO", folio_number: 647)
+      relationship = create(:hotel_corporate_account, hotel: hotel)
+
+      expect {
+        post windows_hotel_folio_path(hotel, booking), params: {
+          booking_folio: { name: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id }
+        }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+      }.to change { booking.booking_folios.count }.by(1)
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include(hotel_folio_path(hotel, booking))
     end
 
     it "rejects Company & Government folio windows without a selected account" do
@@ -832,6 +878,16 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(folio.reload.name).to eq("Guest Main")
 
+      patch window_hotel_folio_path(hotel, booking, folio), params: {
+        booking_folio: { name: "Guest Main Turbo", reason: "Clarify payer again" }
+      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include(hotel_folio_path(hotel, booking))
+      expect(folio.reload.name).to eq("Guest Main Turbo")
+
       expect {
         post close_window_hotel_folio_path(hotel, booking, folio), params: {
           booking_folio: { reason: "Settled" }
@@ -848,6 +904,49 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(folio.reload).to be_open
       expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id, tab: "ledger"))
+    end
+
+    it "closes an eligible company folio as Direct Bill from the window close action" do
+      grant_permission("manage_folio_windows")
+      booking = create_booking_with_folio(guest_name: "Direct Bill", confirmation_token: "BK-DBILL", folio_number: 627)
+      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true, payment_terms_days: 14)
+      folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 628, hotel_corporate_account: relationship)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 250)
+
+      get hotel_folio_path(hotel, booking, active_folio_id: folio.id)
+      expect(response.body).to include("Close as Direct Bill")
+
+      expect {
+        post close_window_hotel_folio_path(hotel, booking, folio), params: {
+          booking_folio: { settlement_method: "direct_bill", reason: "Approved corporate credit" }
+        }
+      }.to change(ArInvoice, :count).by(1)
+
+      expect(folio.reload).to be_closed
+      expect(folio.ar_invoice).to have_attributes(amount: 250.to_d, due_on: hotel.current_business_date + 14.days)
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id, tab: "ledger"))
+    end
+
+    it "leaves positive company folios open when Direct Bill is disabled" do
+      grant_permission("manage_folio_windows")
+      booking = create_booking_with_folio(guest_name: "No Direct Bill", confirmation_token: "BK-NODB", folio_number: 629)
+      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: false)
+      folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 630, hotel_corporate_account: relationship)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 250)
+
+      get hotel_folio_path(hotel, booking, active_folio_id: folio.id)
+
+      expect(response.body).to include("Direct Bill is not enabled for this account")
+      expect(response.body).not_to include("Close as Direct Bill")
+
+      expect {
+        post close_window_hotel_folio_path(hotel, booking, folio), params: {
+          booking_folio: { reason: "Try close" }
+        }
+      }.not_to change(ArInvoice, :count)
+
+      expect(flash[:alert]).to eq("Cannot close folio with non-zero balance of MYR 250.00.")
+      expect(folio.reload).to be_open
     end
 
     it "sets an existing secondary folio as primary from the edit form" do

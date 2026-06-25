@@ -102,30 +102,59 @@ RSpec.describe Folios::ProcessCheckoutActions do
     expect(result.error).to eq("Company Folio: reason is required for keep open.")
   end
 
-  it "rejects keep open for Company & Government folios without direct bill enabled" do
+  it "allows keeping Company & Government folios open without Direct Bill enabled" do
     company_relationship.update!(direct_bill_enabled: false)
     create(:folio_transaction, booking_folio: company_folio, amount: 100)
 
-    result = call_service({
-      guest_folio.id.to_s => { action: "close" },
-      company_folio.id.to_s => { action: "keep_open", reason: "No direct bill" }
-    })
+    expect {
+      @result = call_service({
+        guest_folio.id.to_s => { action: "close" },
+        company_folio.id.to_s => { action: "keep_open", reason: "No direct bill" }
+      })
+    }.to change(FolioOperationLog.where(operation_type: "checkout_exception"), :count).by(1)
 
-    expect(result.error).to eq("Company Folio: Keep open is not allowed.")
+    expect(@result).to be_success
+    expect(@result.exception_folio_ids).to eq([ company_folio.id ])
   end
 
-  it "keeps legacy unlinked company folios eligible for keep open" do
+  it "keeps unlinked Company & Government folios open when Direct Bill is not available" do
     company_folio.update_columns(hotel_corporate_account_id: nil)
     create(:folio_transaction, booking_folio: company_folio, amount: 100)
 
     expect {
       @result = call_service({
         guest_folio.id.to_s => { action: "close" },
-        company_folio.id.to_s => { action: "keep_open", reason: "Legacy direct billing" }
+        company_folio.id.to_s => { action: "keep_open", reason: "Missing direct billing" }
       })
     }.to change(FolioOperationLog.where(operation_type: "checkout_exception"), :count).by(1)
 
     expect(@result).to be_success
+    expect(@result.exception_folio_ids).to eq([ company_folio.id ])
+  end
+
+  it "accepts Direct Bill for eligible Company & Government folios" do
+    create(:folio_transaction, booking_folio: company_folio, amount: 100)
+
+    result = call_service({
+      guest_folio.id.to_s => { action: "close" },
+      company_folio.id.to_s => { action: "direct_bill", amount: "100.00" }
+    })
+
+    expect(result).to be_success
+    expect(result.direct_bill_folio_ids).to eq([ company_folio.id ])
+    expect(result.exception_folio_ids).to eq([])
+  end
+
+  it "rejects Direct Bill when the Company & Government account is not eligible" do
+    company_relationship.update!(direct_bill_enabled: false)
+    create(:folio_transaction, booking_folio: company_folio, amount: 100)
+
+    result = call_service({
+      guest_folio.id.to_s => { action: "close" },
+      company_folio.id.to_s => { action: "direct_bill", amount: "100.00" }
+    })
+
+    expect(result.error).to eq("Company Folio: Direct bill is not allowed.")
   end
 
   it "records an approved checkout exception" do

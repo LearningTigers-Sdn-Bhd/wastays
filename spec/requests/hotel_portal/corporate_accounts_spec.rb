@@ -22,6 +22,8 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     get hotel_corporate_accounts_path(hotel)
 
     expect(response).to have_http_status(:success)
+    expect(response.body).to include("Corporate Accounts")
+    expect(hotel_corporate_accounts_path(hotel)).to include("/accounts-receivable/corporate-accounts")
     expect(response.body).to include(visible.corporate_account.name)
     expect(response.body).not_to include(hidden.corporate_account.name)
   end
@@ -31,6 +33,7 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
+    expect(response.body).to include("Invite Corporate Account")
     expect(response.body).to include("Corporate contact email")
     expect(response.body).not_to include("Company name")
   end
@@ -104,5 +107,11 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect {
       delete hotel_corporate_invitation_path(hotel, invitation)
     }.to change(CorporateInvitation, :count).by(-1)
+  end
+
+  it "redirects the legacy corporate accounts path to Accounts Receivable" do
+    get "/hotel/#{hotel.slug}/corporate-accounts"
+
+    expect(response).to redirect_to("/hotel/#{hotel.slug}/accounts-receivable/corporate-accounts")
   end
 end

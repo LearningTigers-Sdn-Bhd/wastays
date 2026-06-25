@@ -24,11 +24,11 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     create(:user, email: "staff@example.com")
     visit hotel_corporate_accounts_path(hotel)
 
-    expect(page).to have_content("Company & Government Accounts")
-    expect(page).to have_link("Company & Government Accounts")
+    expect(page).to have_content("Corporate Accounts")
+    expect(page).to have_link("Corporate Accounts")
 
-    click_link "Invite Company & Government Account"
-    expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Invite Company & Government Account")
+    click_link "Invite Corporate Account"
+    expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Invite Corporate Account")
     expect(page).to have_no_field("Company name")
 
     within("#offcanvas_drawer") do
@@ -37,7 +37,7 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     end
     expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 2)
 
-    click_link "Invite Company & Government Account"
+    click_link "Invite Corporate Account"
     within("#offcanvas_drawer") do
       fill_in "Corporate contact email", with: "staff@example.com"
       select "Direct bill", from: "Relationship"
