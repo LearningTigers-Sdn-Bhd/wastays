@@ -28,6 +28,19 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response.body).not_to include(hidden.corporate_account.name)
   end
 
+  it "shows warning-only credit exposure for near-limit accounts" do
+    relationship = create(:hotel_corporate_account, hotel: hotel, credit_limit: 100, direct_bill_enabled: true)
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: relationship)
+    create(:ar_invoice, hotel: hotel, booking_folio: folio, hotel_corporate_account: relationship, amount: 90, outstanding_amount: 90)
+
+    get hotel_corporate_accounts_path(hotel)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Projected AR exposure MYR 90.00 is 90% of credit limit MYR 100.00")
+    expect(response.body).to include("Direct Bill is still allowed")
+  end
+
   it "renders the invitation form in the offcanvas frame" do
     get new_hotel_corporate_account_path(hotel), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
@@ -109,9 +122,9 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     }.to change(CorporateInvitation, :count).by(-1)
   end
 
-  it "redirects the legacy corporate accounts path to Accounts Receivable" do
+  it "does not expose the legacy corporate accounts path" do
     get "/hotel/#{hotel.slug}/corporate-accounts"
 
-    expect(response).to redirect_to("/hotel/#{hotel.slug}/accounts-receivable/corporate-accounts")
+    expect(response).to have_http_status(:not_found)
   end
 end
