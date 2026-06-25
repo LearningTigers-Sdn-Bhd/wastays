@@ -40,7 +40,13 @@ module Bookings
             lock: false
           )
           post_no_show_charges(folio)
-          folio.folio_forecasted_charges.supersede_all!
+          @closure_result = Folios::CloseNoShowFolios.call(
+            booking: @booking,
+            user: @user,
+            business_date: @business_date,
+            night_audit: @night_audit
+          )
+          raise @closure_result.error unless @closure_result.success?
           @booking.transition_status_to!("no_show", event: @automatic ? "auto_mark_no_show" : "mark_no_show")
           Bookings::InventoryManager.new(@booking).release_by_dates(@business_date + 1.day, @booking.check_out.to_date)
           release_assigned_rooms_to_ready
@@ -79,7 +85,7 @@ module Bookings
         )
       end
 
-      tax_postings_for(@booking, @business_date).each_with_index do |tax_line, index|
+      tax_postings_for(@booking, @business_date).reject { |tax_line| Booking.tourism_tax_line?(tax_line) }.each_with_index do |tax_line, index|
         amount = tax_line_amount(tax_line)
         next if amount.zero?
 
@@ -162,11 +168,16 @@ module Bookings
     end
 
     def success
-      OpenStruct.new(success?: true, booking: @booking)
+      OpenStruct.new(
+        success?: true,
+        booking: @booking,
+        closed_folios: @closure_result&.closed_folios || [],
+        skipped_folios: @closure_result&.skipped_folios || []
+      )
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, error: error)
+      OpenStruct.new(success?: false, error: error, closed_folios: [], skipped_folios: [])
     end
   end
 end
