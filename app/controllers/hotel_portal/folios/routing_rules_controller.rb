@@ -3,6 +3,8 @@
 module HotelPortal
   module Folios
     class RoutingRulesController < HotelPortal::BaseController
+      include OffcanvasTransactionCompletion
+
       before_action :authorize_manage_folio_movements!
       before_action :set_booking
       before_action :set_routing_rule, only: %i[edit update deactivate]
@@ -37,12 +39,12 @@ module HotelPortal
         @routing_rule.updated_by = current_user
 
         if save_with_log("create_routing_rule")
-          redirect_to folio_path_for_billing, notice: "Billing instruction created."
+          respond_with_offcanvas_completion(folio_path_for_billing, notice: "Billing instruction created.")
         else
-          redirect_to folio_path_for_billing, alert: @routing_rule.errors.full_messages.to_sentence
+          respond_with_offcanvas_completion(folio_path_for_billing, alert: @routing_rule.errors.full_messages.to_sentence)
         end
       rescue StandardError => e
-        redirect_to folio_path_for_billing, alert: e.message
+        respond_with_offcanvas_completion(folio_path_for_billing, alert: e.message)
       end
 
       def update
@@ -51,12 +53,12 @@ module HotelPortal
         @routing_rule.updated_by = current_user
 
         if save_with_log("update_routing_rule", previous_attributes: previous_attributes)
-          redirect_to folio_path_for_billing, notice: "Billing instruction updated."
+          respond_with_offcanvas_completion(folio_path_for_billing, notice: "Billing instruction updated.")
         else
-          redirect_to folio_path_for_billing, alert: @routing_rule.errors.full_messages.to_sentence
+          respond_with_offcanvas_completion(folio_path_for_billing, alert: @routing_rule.errors.full_messages.to_sentence)
         end
       rescue StandardError => e
-        redirect_to folio_path_for_billing, alert: e.message
+        respond_with_offcanvas_completion(folio_path_for_billing, alert: e.message)
       end
 
       def deactivate
@@ -65,12 +67,12 @@ module HotelPortal
         @routing_rule.updated_by = current_user
 
         if save_with_log("deactivate_routing_rule", previous_attributes: previous_attributes)
-          redirect_to folio_path_for_billing, notice: "Billing instruction deactivated."
+          respond_with_offcanvas_completion(folio_path_for_billing, notice: "Billing instruction deactivated.")
         else
-          redirect_to folio_path_for_billing, alert: @routing_rule.errors.full_messages.to_sentence
+          respond_with_offcanvas_completion(folio_path_for_billing, alert: @routing_rule.errors.full_messages.to_sentence)
         end
       rescue StandardError => e
-        redirect_to folio_path_for_billing, alert: e.message
+        respond_with_offcanvas_completion(folio_path_for_billing, alert: e.message)
       end
 
       private
@@ -218,6 +220,17 @@ module HotelPortal
         allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
           current_user.has_permission?("manage_folio_movements", hotel: current_hotel)
         raise Pundit::NotAuthorizedError unless allowed
+      end
+
+      def respond_with_offcanvas_completion(destination, notice: nil, alert: nil)
+        respond_to do |format|
+          format.turbo_stream do
+            flash[:notice] = notice if notice.present?
+            flash[:alert] = alert if alert.present?
+            render_offcanvas_completion(destination)
+          end
+          format.html { redirect_to destination, { notice: notice, alert: alert }.compact }
+        end
       end
     end
   end

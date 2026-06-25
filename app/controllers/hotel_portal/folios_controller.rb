@@ -2,6 +2,8 @@
 
 module HotelPortal
   class FoliosController < BaseController
+    include OffcanvasTransactionCompletion
+
     before_action :authorize_view_bookings!
 
     def index
@@ -18,7 +20,7 @@ module HotelPortal
           { booking_rooms: :room_type },
           :payment_transactions,
           :refund_request,
-          booking_folios: [ { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges, { hotel_corporate_account: :corporate_account } ],
+          booking_folios: [ :ar_invoice, { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges, { hotel_corporate_account: :corporate_account } ],
           folio_routing_rules: [ :transaction_code, :target_folio, :created_by, :updated_by ],
           folio_operation_logs: [ :actor, :source_folio, :target_folio, :source_transaction, :target_transaction ]
         )
@@ -69,9 +71,15 @@ module HotelPortal
       result = ::Folios::CreateFolio.call(booking: booking, user: current_user, attributes: folio_window_params)
 
       if result.success?
-        redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: result.folio.id, **folio_redirect_state(tab: "ledger")), notice: "Folio window created."
+        respond_with_offcanvas_completion(
+          hotel_folio_path(current_hotel, booking, active_folio_id: result.folio.id, **folio_redirect_state(tab: "ledger")),
+          notice: "Folio window created."
+        )
       else
-        redirect_to hotel_folio_path(current_hotel, booking, **folio_redirect_state(tab: "ledger")), alert: result.error
+        respond_with_offcanvas_completion(
+          hotel_folio_path(current_hotel, booking, **folio_redirect_state(tab: "ledger")),
+          alert: result.error
+        )
       end
     end
 
@@ -85,15 +93,22 @@ module HotelPortal
         attributes: folio_window_params
       )
 
-      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
-        result.success? ? { notice: "Folio window updated." } : { alert: result.error }
+      respond_with_offcanvas_completion(
+        hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
+        **(result.success? ? { notice: "Folio window updated." } : { alert: result.error })
+      )
     end
 
     def close_window
       authorize_manage_folio_windows!
       booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
       folio = booking.booking_folios.find(params[:folio_id])
-      result = ::Folios::CloseFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
+      result = ::Folios::CloseFolio.call(
+        folio: folio,
+        user: current_user,
+        reason: folio_window_params[:reason],
+        settlement_method: folio_window_params[:settlement_method]
+      )
 
       redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
         result.success? ? { notice: "Folio window closed." } : { alert: result.error }
@@ -210,7 +225,7 @@ module HotelPortal
     end
 
     def folio_window_params
-      params.fetch(:booking_folio, {}).permit(:name, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency, :reason, :is_primary, :set_folio_as_primary_reason)
+      params.fetch(:booking_folio, {}).permit(:name, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency, :reason, :settlement_method, :is_primary, :set_folio_as_primary_reason)
     end
 
     def set_company_government_accounts
@@ -230,6 +245,17 @@ module HotelPortal
 
     def folio_redirect_state(tab:)
       folio_origin_params.merge(tab: tab).compact
+    end
+
+    def respond_with_offcanvas_completion(destination, notice: nil, alert: nil)
+      respond_to do |format|
+        format.turbo_stream do
+          flash[:notice] = notice if notice.present?
+          flash[:alert] = alert if alert.present?
+          render_offcanvas_completion(destination)
+        end
+        format.html { redirect_to destination, { notice: notice, alert: alert }.compact }
+      end
     end
   end
 end
