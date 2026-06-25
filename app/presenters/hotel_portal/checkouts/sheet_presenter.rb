@@ -7,7 +7,8 @@ module HotelPortal
 
       PAYMENT_METHOD_OPTIONS = [ [ "Cash", "cash" ], [ "Card", "card" ] ].freeze
       EXCEPTION_ACTIONS = %w[keep_open manager_review write_off_approval].freeze
-      INPUT_ACTIONS = %w[pay_now keep_open manager_review write_off_approval].freeze
+      DIRECT_BILL_ACTION = "direct_bill"
+      INPUT_ACTIONS = %w[pay_now direct_bill keep_open manager_review write_off_approval].freeze
 
       FolioRow = Struct.new(
         :folio,
@@ -40,7 +41,7 @@ module HotelPortal
 
       def folios
         @folios ||= booking.booking_folios
-          .includes(:folio_transactions, :folio_forecasted_charges)
+          .includes(:folio_transactions, :folio_forecasted_charges, hotel_corporate_account: :corporate_account)
           .order(is_primary: :desc, folio_sequence: :asc, folio_number: :asc, id: :asc)
           .to_a
       end
@@ -132,7 +133,7 @@ module HotelPortal
         when :guest
           guest_action_options(balance)
         when :company
-          company_action_options(balance)
+          company_action_options(folio, balance)
         else
           custom_action_options(balance)
         end
@@ -145,8 +146,14 @@ module HotelPortal
         [ [ "Refund / Credit Handling", "refund_credit_handling" ] ]
       end
 
-      def company_action_options(balance)
-        return [ [ "Pay Now", "pay_now" ], [ "Keep Open", "keep_open" ] ] if balance.positive?
+      def company_action_options(folio, balance)
+        if balance.positive?
+          options = []
+          options << [ "Direct Bill", DIRECT_BILL_ACTION ] if direct_bill_enabled?(folio)
+          options << [ "Pay Now", "pay_now" ]
+          options << [ "Keep Open", "keep_open" ]
+          return options
+        end
         return [ [ "Close", "close" ] ] if balance.zero?
 
         [ [ "Refund / Credit Handling", "refund_credit_handling" ], [ "Keep Open", "keep_open" ] ]
@@ -167,6 +174,11 @@ module HotelPortal
         return :company if folio.payer_type == "company"
 
         :custom
+      end
+
+      def direct_bill_enabled?(folio)
+        relationship = folio.hotel_corporate_account
+        relationship.present? && relationship.active? && relationship.direct_bill_enabled?
       end
 
       def payer_label_for(folio)

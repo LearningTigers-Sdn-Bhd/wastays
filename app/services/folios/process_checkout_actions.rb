@@ -5,6 +5,7 @@ require "ostruct"
 module Folios
   class ProcessCheckoutActions
     PAYMENT_ACTION = "pay_now"
+    DIRECT_BILL_ACTION = "direct_bill"
     CLOSE_ACTION = "close"
     BLOCKING_ACTIONS = %w[refund_credit_handling voided].freeze
     EXCEPTION_ACTIONS = %w[keep_open manager_review write_off_approval].freeze
@@ -29,6 +30,7 @@ module Folios
       @posting_date = posting_date
       @options = options
       @exception_folio_ids = []
+      @direct_bill_folio_ids = []
     end
 
     def call
@@ -41,13 +43,15 @@ module Folios
         when PAYMENT_ACTION
           result = post_payment(folio)
           return failure(result.error) unless result.success?
+        when DIRECT_BILL_ACTION
+          @direct_bill_folio_ids << folio.id
         when *EXCEPTION_ACTIONS
           @exception_folio_ids << folio.id
           log_exception(folio)
         end
       end
 
-      success(exception_folio_ids: @exception_folio_ids)
+      success(exception_folio_ids: @exception_folio_ids, direct_bill_folio_ids: @direct_bill_folio_ids)
     rescue StandardError => e
       failure(e.message)
     end
@@ -76,6 +80,11 @@ module Folios
           return "#{folio.display_name}: payment amount must equal #{money(balance)}." unless payment_amount_for(folio) == balance
           return "#{folio.display_name}: payment method is not supported." unless payment_method_for(folio).in?(PAYMENT_METHODS)
           return "You do not have permission to post checkout payments." unless can_post_payments?
+        end
+
+        if action == DIRECT_BILL_ACTION
+          return "#{folio.display_name}: Direct Bill is not available." unless direct_bill_enabled?(folio)
+          return "#{folio.display_name}: Direct Bill requires a positive balance." unless balance.positive?
         end
 
         if EXCEPTION_ACTIONS.include?(action) && reason_for(folio).blank?
@@ -221,14 +230,13 @@ module Folios
 
     def company_folio_positive_balance_actions(folio)
       actions = [ PAYMENT_ACTION ]
-      actions << "keep_open" if direct_bill_enabled?(folio)
+      actions << DIRECT_BILL_ACTION if direct_bill_enabled?(folio)
+      actions << "keep_open"
       actions
     end
 
     def direct_bill_enabled?(folio)
       relationship = folio.hotel_corporate_account
-      return true if relationship.blank?
-
       relationship.present? && relationship.active? && relationship.direct_bill_enabled?
     end
 
@@ -241,12 +249,12 @@ module Folios
       "#{@booking.currency.presence || @hotel.default_currency.presence || 'MYR'} #{format('%.2f', amount.to_d)}"
     end
 
-    def success(exception_folio_ids:)
-      OpenStruct.new(success?: true, exception_folio_ids: exception_folio_ids)
+    def success(exception_folio_ids:, direct_bill_folio_ids:)
+      OpenStruct.new(success?: true, exception_folio_ids: exception_folio_ids, direct_bill_folio_ids: direct_bill_folio_ids)
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, error: error, exception_folio_ids: [])
+      OpenStruct.new(success?: false, error: error, exception_folio_ids: [], direct_bill_folio_ids: [])
     end
   end
 end

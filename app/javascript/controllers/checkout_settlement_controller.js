@@ -9,7 +9,8 @@ export default class extends Controller {
     "actionSelect",
     "detailRow",
     "paymentFields",
-    "reasonFields"
+    "reasonFields",
+    "directBillFields"
   ]
   static values = {
     currency: { type: String, default: "MYR" },
@@ -73,11 +74,12 @@ export default class extends Controller {
     this.detailRowTargets.forEach((row) => {
       const folioId = row.dataset.folioId
       const action = this.selectedActionFor(folioId)
-      const visible = ["pay_now", "keep_open", "manager_review", "write_off_approval"].includes(action)
+      const visible = ["pay_now", "direct_bill", "keep_open", "manager_review", "write_off_approval"].includes(action)
 
       row.classList.toggle("hidden", !visible)
       this.toggleFields(row, "paymentFields", action === "pay_now")
       this.toggleFields(row, "reasonFields", ["keep_open", "manager_review", "write_off_approval"].includes(action))
+      this.toggleFields(row, "directBillFields", action === "direct_bill")
     })
   }
 

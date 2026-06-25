@@ -184,10 +184,11 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
         status: "completed",
         timestamp: timestamp,
         user: current_user,
-        options: {
-          defer_side_effects: true,
-          exception_folio_ids: settlement_result&.exception_folio_ids.to_a
-        }.merge(checkout_blocker_resolution_options)
+          options: {
+            defer_side_effects: true,
+            exception_folio_ids: settlement_result&.exception_folio_ids.to_a,
+            direct_bill_folio_ids: settlement_result&.direct_bill_folio_ids.to_a
+          }.merge(checkout_blocker_resolution_options)
       ).call
 
       unless result.success?

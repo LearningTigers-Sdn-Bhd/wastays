@@ -24,6 +24,9 @@
           <%= link_to "Cancel", hotel_booking_transaction_cancel_booking_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-50" %>
         <% elsif booking.status == "no_show" %>
           <%= link_to "Reinstate", hotel_booking_transaction_reinstate_no_show_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700" %>
+          <% if current_user.has_permission?("post_folio_corrections", hotel: current_hotel) && Bookings::RepairNoShowTourismTax.needed?(booking) %>
+            <%= link_to "Repair No-show Folio", hotel_booking_transaction_repair_no_show_folio_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-xl border border-amber-200 bg-white px-4 py-2.5 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-50" %>
+          <% end %>
         <% elsif booking.status == "checked_in" %>
           <%= link_to hotel_booking_transaction_check_out_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
             Check Out

@@ -14,6 +14,7 @@ module Folios
       @checked_out_at = checked_out_at
       @options = options
       @exception_folio_ids = Array(@options[:exception_folio_ids]).map(&:to_i)
+      @direct_bill_folio_ids = Array(@options[:direct_bill_folio_ids]).map(&:to_i)
     end
 
     def call
@@ -44,7 +45,7 @@ module Folios
 
         balances = folios.index_with { |folio| calculate_fresh_balance(folio) }
         closable_folios = folios.reject { |folio| exception_folio?(folio) || folio.closed? }
-        invalid_closable = closable_folios.find { |folio| !balances.fetch(folio).zero? }
+        invalid_closable = closable_folios.find { |folio| invalid_closable_balance?(folio, balances.fetch(folio)) }
         if invalid_closable.present?
           balance = balances.fetch(invalid_closable)
           return legacy_balance_failure(balance, primary_folio, balances) unless multi_folio_exception_checkout?
@@ -60,7 +61,9 @@ module Folios
           attributes = { status: "closed", closed_at: Time.current, closed_by: @user }
           attributes[:invoice_number] = invoice_num if folio.id == primary_folio.id
           folio.update!(attributes)
+          ar_invoice = create_direct_bill_ar_invoice!(folio, balances.fetch(folio)) if direct_bill_folio?(folio)
           record_financial_audit_event!(folio, balances.fetch(folio))
+          record_direct_bill_audit_event!(folio, ar_invoice, balances.fetch(folio)) if ar_invoice.present?
         end
         success(folio: primary_folio.reload, balance: total_balance(balances))
       end
@@ -145,6 +148,31 @@ module Folios
       @exception_folio_ids.include?(folio.id)
     end
 
+    def direct_bill_folio?(folio)
+      @direct_bill_folio_ids.include?(folio.id)
+    end
+
+    def invalid_closable_balance?(folio, balance)
+      return false if balance.zero?
+      return !valid_direct_bill_close?(folio, balance) if direct_bill_folio?(folio)
+
+      true
+    end
+
+    def valid_direct_bill_close?(folio, balance)
+      relationship = folio.hotel_corporate_account
+      folio.payer_type == "company" &&
+        balance.positive? &&
+        relationship.present? &&
+        relationship.active? &&
+        relationship.direct_bill_enabled? &&
+        folio.ar_invoice.blank?
+    end
+
+    def create_direct_bill_ar_invoice!(folio, balance)
+      Folios::CreateDirectBillArInvoice.call!(folio: folio, balance: balance)
+    end
+
     def guest_folio?(folio)
       folio.folio_type == "guest" && folio.payer_type == "guest"
     end
@@ -225,6 +253,29 @@ module Folios
           invoice_number: folio.invoice_number,
           balance: balance.to_s,
           checked_out_at: checked_out_at_for_metadata
+        }
+      )
+    end
+
+    def record_direct_bill_audit_event!(folio, ar_invoice, balance)
+      relationship = folio.hotel_corporate_account
+      FinancialControls::AuditEventRecorder.call!(
+        hotel: folio.hotel,
+        business_date: folio.hotel.current_business_date,
+        event_type: "direct_bill_folio_closed",
+        source: "checkout",
+        actor: @user,
+        booking_folio: folio,
+        booking: @booking,
+        amount: balance,
+        currency: folio.currency,
+        metadata: {
+          ar_invoice_id: ar_invoice.id,
+          ar_invoice_number: ar_invoice.invoice_number,
+          hotel_corporate_account_id: relationship.id,
+          corporate_account_id: relationship.corporate_account_id,
+          due_on: ar_invoice.due_on.iso8601,
+          settlement_method: "direct_bill"
         }
       )
     end
