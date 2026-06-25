@@ -330,6 +330,7 @@ Rails.application.routes.draw do
         post :check_out, to: "bookings/checkouts#create"
         post :reinstate, to: "bookings/reinstatements#create"
         post :mark_no_show, to: "bookings/no_shows#create"
+        post :repair_no_show_folio, to: "bookings/no_show_folio_repairs#create"
         post :cancel, to: "bookings/cancellations#create"
         post :add_guest, to: "bookings/guests#create"
         post :process_late_checkout, to: "bookings/checkouts#process_late_checkout"
@@ -359,6 +360,7 @@ Rails.application.routes.draw do
       get "late-checkout/:booking_id", to: "late_checkouts#show", as: :late_checkout
       get "reinstate-no-show/:booking_id", to: "reinstate_no_shows#show", as: :reinstate_no_show
       get "mark-no-show/:booking_id", to: "mark_no_shows#show", as: :mark_no_show
+      get "repair-no-show-folio/:booking_id", to: "repair_no_show_folios#show", as: :repair_no_show_folio
       get "cancel-booking/:booking_id", to: "cancel_bookings#show", as: :cancel_booking
     end
 
