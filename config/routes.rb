@@ -134,6 +134,9 @@ Rails.application.routes.draw do
 
   scope "/corporate", module: :corporate_portal, as: :corporate do
     get "dashboard", to: "dashboard#index", as: :dashboard
+    resource :profile, only: [ :show ]
+    resources :ar_invoices, only: [ :index, :show ], path: "invoices"
+    resources :ar_payments, only: [ :index ], path: "payments"
   end
 
   # Superadmin dashboard

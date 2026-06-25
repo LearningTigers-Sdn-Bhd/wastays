@@ -1,0 +1,52 @@
+<% sections = corporate_sidebar_sections %>
+<% footer_items = corporate_sidebar_footer_items %>
+
+<% corporate_sidebar_header = capture do %>
+  <div class="flex items-center gap-x-2.5 px-4 py-3 sidebar-header sidebar-header-container" title="<%= current_user.account.name %>" aria-label="Corporate account: <%= current_user.account.name %>">
+    <span class="inline-flex justify-center items-center size-7 rounded-lg bg-brand-primary/10 text-brand-primary shadow-xs ring-1 ring-brand-primary/20 shrink-0">
+      <%= cached_icon "building-2", class: "size-4 shrink-0" %>
+    </span>
+    <span class="text-sm font-semibold text-neutral-text-primary truncate sidebar-label"><%= current_user.account.name.truncate(24) %></span>
+  </div>
+<% end %>
+
+<% render_sidebar_nav = lambda do %>
+  <nav class="flex-1 px-4 py-3 space-y-6">
+    <% sections.each do |section| %>
+      <div class="sidebar-nav-group" aria-label="<%= section.label %>" data-section-label="<%= section.label %>">
+        <span class="sidebar-section-label"><%= section.label %></span>
+        <div class="space-y-0.5">
+          <% section.items.each do |item| %>
+            <a class="sidebar-nav-link <%= item.active ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>"
+               href="<%= item.path %>"
+               data-sidebar-route
+               data-sidebar-tooltip="<%= item.label %>"
+               aria-label="<%= item.label %>">
+              <%= cached_icon item.icon, class: "size-4 shrink-0" %>
+              <span><%= item.label %></span>
+            </a>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </nav>
+<% end %>
+
+<% corporate_nav_html = capture(&render_sidebar_nav) %>
+<% corporate_footer_html = capture do %>
+  <% footer_items.each do |item| %>
+    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item.path %>" data-sidebar-tooltip="<%= item.label %>" aria-label="<%= item.label %>">
+      <%= cached_icon item.icon, class: "size-4 shrink-0" %>
+      <span><%= item.label %></span>
+    </a>
+  <% end %>
+<% end %>
+
+<%= render "shared/navigation/sidebar_shell",
+           sidebar_key: "corporate",
+           home_path: corporate_dashboard_path,
+           header_html: corporate_sidebar_header,
+           nav_html: corporate_nav_html,
+           footer_html: corporate_footer_html,
+           search_enabled: false,
+           permanent_sidebar: true %>
