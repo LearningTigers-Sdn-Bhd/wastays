@@ -579,6 +579,24 @@ class Hotel < ApplicationRecord
     ])
   end
 
+  def latitude
+    return nil if google_map_link.blank?
+    if google_map_link =~ /@(-?\d+\.\d+),(-?\d+\.\d+)/
+      $1.to_f
+    elsif google_map_link =~ /!3d(-?\d+\.\d+).*!4d(-?\d+\.\d+)/
+      $1.to_f
+    end
+  end
+
+  def longitude
+    return nil if google_map_link.blank?
+    if google_map_link =~ /@(-?\d+\.\d+),(-?\d+\.\d+)/
+      $2.to_f
+    elsif google_map_link =~ /!3d(-?\d+\.\d+).*!4d(-?\d+\.\d+)/
+      $2.to_f
+    end
+  end
+
   def should_generate_new_friendly_id?
     name_changed? || slug.blank?
   end

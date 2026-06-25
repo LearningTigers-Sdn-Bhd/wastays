@@ -94,7 +94,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-2">
                       <% unless row[:status] == "cancelled" %>
-                        <%= link_to "Open", row[:booking_url], class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
+                        <%= link_to "Open", row[:booking_url], data: { turbo_frame: "_top" }, class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
                       <% end %>
                       <%= button_to row[:archive_action], row[:archive_url], method: :patch, class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
                     </div>

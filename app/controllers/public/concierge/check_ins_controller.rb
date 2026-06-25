@@ -53,18 +53,39 @@ module Public
         if needs_registration?
           unless save_guest_registration
             @error_code = :registration_error
+            @error = "Please check the details below and try again."
             render(mobile_request? ? "check_in_now_mobile" : :check_in_now, status: :unprocessable_content)
             return
           end
         end
 
-        result = ::Concierge::SelfCheckIn.new(booking: @booking).call
+        result = ::Concierge::SelfCheckIn.new(
+          booking: @booking,
+          latitude: params[:latitude],
+          longitude: params[:longitude]
+        ).call
 
         if result.success?
           session[:concierge_check_in_room] = result.room_number
           redirect_to concierge_check_in_success_path(@hotel.slug)
         else
           @error_code = result.error_code
+          @error = case @error_code
+          when :wrong_date
+                     "Your check-in date is #{@booking.check_in.strftime('%d %b %Y')}. You can check in on that day#{@hotel.property_policy&.check_in_time.present? ? ' from ' + @hotel.property_policy.check_in_time : ''}."
+          when :too_early
+                     "Check-in opens at #{@hotel.property_policy.check_in_time}. Please come back later or see the front desk."
+          when :no_room_available
+                     "No rooms are ready right now. Please proceed to the front desk and our staff will check you in shortly."
+          when :registration_error
+                     "Please check the details below and try again."
+          when :too_far_away
+                     "You are too far from the hotel to self-check-in. Self-check-in is only available when you are physically at the property."
+          when :missing_location
+                     "Location access is required for verification. Please enable GPS and allow location permissions."
+          else
+                     result.message.presence || "Something went wrong. Please try again or see the front desk."
+          end
           render(mobile_request? ? "check_in_now_mobile" : :check_in_now, status: :unprocessable_content)
         end
       end

@@ -104,6 +104,32 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         expect(response.body).to include(Date.tomorrow.strftime("%d %b %Y"))
       end
     end
+
+    context "with geolocation check enabled" do
+      before do
+        hotel.update!(google_map_link: "https://www.google.com/maps/place/Sample+Hotel/@5.9771228,116.0622732,15z")
+        create(:room_inventory, room_type: room_type, date: Date.today,
+               quantity: 1, status: "open", available_room_numbers: [ "101" ])
+      end
+
+      it "fails with :missing_location when no coordinates are submitted" do
+        post concierge_submit_check_in_path(hotel.slug)
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Location access is required")
+      end
+
+      it "fails with :too_far_away when coordinates are outside radius" do
+        post concierge_submit_check_in_path(hotel.slug), params: { latitude: 3.1390, longitude: 101.6869 }
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("too far from the hotel")
+      end
+
+      it "succeeds when coordinates are within the radius" do
+        post concierge_submit_check_in_path(hotel.slug), params: { latitude: 5.9772, longitude: 116.0623 }
+        expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
+        expect(booking.reload.status).to eq("checked_in")
+      end
+    end
   end
 
   describe "late flow — past check-in time, pre-checkin not done" do

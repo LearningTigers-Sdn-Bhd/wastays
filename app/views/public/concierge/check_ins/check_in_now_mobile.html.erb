@@ -79,7 +79,14 @@
     </div>
 
     <%# Guest registration form %>
-    <%= form_with model: @booking, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: { controller: "scanner" } do |f| %>
+    <%= form_with model: @booking, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: {
+          controller: "scanner geolocation-check-in",
+          geolocation_check_in_hotel_latitude_value: @hotel.latitude,
+          geolocation_check_in_hotel_longitude_value: @hotel.longitude,
+          geolocation_check_in_allowed_radius_value: 300
+        } do |f| %>
+      <%= hidden_field_tag :latitude, nil, data: { geolocation_check_in_target: "latitude" } %>
+      <%= hidden_field_tag :longitude, nil, data: { geolocation_check_in_target: "longitude" } %>
       <% unless @booking&.pre_checkin&.completed? %>
         <div class="rounded-2xl border border-neutral-border/50 bg-white p-6 shadow-sm space-y-8">
           <div>
@@ -215,8 +222,10 @@
 
       <%# Submit button positioned at the bottom %>
       <div class="fixed bottom-0 left-0 right-0 p-6 bg-landing-bg/95 backdrop-blur-md z-30">
+        <div data-geolocation-check-in-target="status"></div>
         <%= submit_tag "CONFIRM CHECK IN",
-              class: "w-full bg-brand-primary text-white font-black py-5 rounded-xl shadow-xl shadow-brand-primary/30 active:scale-[0.98] transition-all cursor-pointer tracking-widest text-sm" %>
+              class: "w-full bg-brand-primary text-white font-black py-5 rounded-xl shadow-xl shadow-brand-primary/30 active:scale-[0.98] transition-all cursor-pointer tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed mt-2",
+              data: { geolocation_check_in_target: "submitButton" } %>
       </div>
     <% end %>
 
