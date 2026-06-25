@@ -15,6 +15,9 @@ module HotelPortal
         .unaccepted
         .includes(:invited_by_user)
         .order(created_at: :desc)
+      @credit_exposures = @relationships.index_with do |relationship|
+        ArInvoices::CreditExposure.call(hotel_corporate_account: relationship)
+      end
     end
 
     def new

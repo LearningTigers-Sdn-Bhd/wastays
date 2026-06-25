@@ -135,6 +135,7 @@
   <% folio_show.folios.each do |folio| %>
     <% if folio.open? %>
       <% direct_bill_available = folio.payer_type == "company" && folio.hotel_corporate_account&.active? && folio.hotel_corporate_account&.direct_bill_enabled? && folio.outstanding_balance.to_d.positive? %>
+      <% credit_exposure = ArInvoices::CreditExposure.call(hotel_corporate_account: folio.hotel_corporate_account, pending_amount: folio.outstanding_balance) if direct_bill_available %>
       <dialog id="close-folio-window-<%= folio.id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
         <div class="bg-white" onclick="event.stopPropagation()">
           <div class="border-b border-slate-100 px-6 py-5">
@@ -154,6 +155,11 @@
               <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-900">
                 Direct Bill will close this folio with its current positive balance and issue an AR invoice to <%= folio.hotel_corporate_account.corporate_account.name %>.
               </div>
+              <% if credit_exposure&.warning? %>
+                <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+                  <%= credit_exposure.warning_message %>
+                </div>
+              <% end %>
             <% end %>
             <div>
               <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Reason</label>
