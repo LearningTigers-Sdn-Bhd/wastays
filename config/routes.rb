@@ -378,6 +378,7 @@ Rails.application.routes.draw do
       patch "routing_rules/:routing_rule_id", to: "folios/routing_rules#update", on: :member, as: :routing_rule
       patch "routing_rules/:routing_rule_id/deactivate", to: "folios/routing_rules#deactivate", on: :member, as: :deactivate_routing_rule
       resources :transactions, only: [ :new, :create ], controller: "folios/transactions" do
+        get :move, on: :member, action: :move_form
         post :reverse, on: :member
         post :move, on: :member
         post :split, on: :member

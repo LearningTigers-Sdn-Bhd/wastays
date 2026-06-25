@@ -109,7 +109,7 @@ module Folios
             reversal_of_transaction: original,
             correction_reason: "split_transaction",
             correction_note: @reason,
-            metadata: split_metadata(original).merge(reversed_transaction_id: original.id)
+            metadata: reversal_metadata(original).merge(reversed_transaction_id: original.id)
           )
         ).call
 
@@ -205,6 +205,17 @@ module Folios
         split_from_transaction_id: original.id,
         split_ratio: split_ratio.to_s("F"),
         posted_by_user_id: @user&.id
+      )
+    end
+
+    def reversal_metadata(original)
+      split_metadata(original).except(
+        "nightly_charge_key",
+        :nightly_charge_key,
+        "reconciles_nightly_charge_key",
+        :reconciles_nightly_charge_key,
+        "catch_up_key",
+        :catch_up_key
       )
     end
 

@@ -65,6 +65,19 @@ module HotelPortal
       end
     end
 
+    def move_form
+      return redirect_after_post(alert: "You do not have permission to move folio transactions.") unless allowed_to_manage_folio_movements?
+
+      @transaction = booking_transaction_scope.includes(:transaction_code).find(params[:id])
+      @source_folio = @transaction.booking_folio
+      @open_folios = @booking.booking_folios.open.order(is_primary: :desc, folio_sequence: :asc, folio_number: :asc, id: :asc).to_a
+      @target_folios = @open_folios.reject { |folio| folio.id == @source_folio.id }
+      @tax_transactions = attached_tax_transactions(@transaction)
+      @folio_origin = params[:folio_origin].presence || params[:origin].presence
+
+      render "hotel_portal/folios/transactions/move/offcanvas"
+    end
+
     def reverse
       unless @booking.booking_folio
         return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
@@ -101,7 +114,8 @@ module HotelPortal
         target_folio: target_folio,
         user: current_user,
         reason: folio_operation_params[:reason],
-        posting_date: current_hotel.current_business_date
+        posting_date: current_hotel.current_business_date,
+        tax_routes: tax_route_params
       )
 
       if result.success?
@@ -282,6 +296,11 @@ module HotelPortal
       slug.present? && current_user.has_permission?(slug, hotel: current_hotel)
     end
 
+    def allowed_to_manage_folio_movements?
+      current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
+        current_user.has_permission?("manage_folio_movements", hotel: current_hotel)
+    end
+
     def posting_permission_slug
       type = folio_transaction_params[:transaction_type].to_s
       category = folio_transaction_params[:category].to_s
@@ -301,11 +320,29 @@ module HotelPortal
     end
 
     def folio_operation_params
-      params.require(:folio_operation).permit(:target_folio_id, :reason, :amount, :percent)
+      params.require(:folio_operation).permit(:target_folio_id, :reason, :amount, :percent, tax_routes: [ :transaction_id, :target_folio_id ])
+    end
+
+    def tax_route_params
+      folio_operation_params[:tax_routes].to_h.values.each_with_object({}) do |attributes, routes|
+        attributes = attributes.to_h.with_indifferent_access
+        transaction_id = attributes[:transaction_id].presence
+        next if transaction_id.blank?
+
+        routes[transaction_id.to_s] = attributes[:target_folio_id].presence
+      end
     end
 
     def booking_transaction_scope
       FolioTransaction.joins(:booking_folio).where(booking_folios: { booking_id: @booking.id, hotel_id: current_hotel.id })
+    end
+
+    def generated_tax_children(transaction)
+      attached_tax_transactions(transaction)
+    end
+
+    def attached_tax_transactions(transaction)
+      ::Folios::AttachedTaxTransactions.call(transaction)
     end
   end
 end
