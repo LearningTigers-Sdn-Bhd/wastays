@@ -287,7 +287,13 @@ Rails.application.routes.draw do
       end
       get "aging", to: "ar_invoices#aging", as: :ar_aging
       resources :ar_invoices, only: [ :index, :show ], path: "invoices"
-      resources :ar_payments, only: [ :index, :new, :create ], path: "payments"
+      resources :ar_statements, only: [ :index, :show ], path: "statements"
+      resources :ar_payments, only: [ :index, :show, :new, :create ], path: "payments" do
+        get :eligible_invoices, on: :collection
+        resources :allocations, only: [ :create ], controller: "ar_payment_allocations" do
+          resource :reversal, only: [ :create ], controller: "ar_payment_allocation_reversals"
+        end
+      end
     end
 
     resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do

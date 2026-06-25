@@ -42,6 +42,14 @@ RSpec.describe ArPayments::RecordPayment do
     expect(invoice.reload).to have_attributes(paid_amount: 40.to_d, outstanding_amount: 60.to_d, status: "partially_paid")
   end
 
+  it "records a fully unapplied payment" do
+    result = call_service(amount: 100, allocations: {})
+
+    expect(result).to be_success
+    expect(result.ar_payment).to have_attributes(allocated_amount: 0.to_d, unallocated_amount: 100.to_d)
+    expect(result.ar_payment.allocation_status).to eq("unapplied")
+  end
+
   it "keeps AR payments separate from guest folio payments" do
     invoice = create_invoice(amount: 100)
 

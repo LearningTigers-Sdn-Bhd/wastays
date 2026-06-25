@@ -3,11 +3,24 @@
 module HotelPortal
   class ArPaymentsController < BaseController
     before_action :authorize_view_reports!
+    before_action :authorize_manage_ar_payments!, only: %i[new create eligible_invoices]
 
     def index
-      @ar_payments = current_hotel.ar_payments
-        .includes(:ar_payment_allocations, hotel_corporate_account: :corporate_account)
-        .order(received_at: :desc, created_at: :desc)
+      @presenter = HotelPortal::ArPayments::IndexPresenter.new(hotel: current_hotel, params: params)
+    end
+
+    def show
+      payment = current_hotel.ar_payments
+        .includes(
+          { ar_payment_allocations: [ :ar_invoice, { reversal: :reversed_by } ] },
+          hotel_corporate_account: :corporate_account
+        )
+        .find(params[:id])
+      @presenter = HotelPortal::ArPayments::ShowPresenter.new(
+        payment: payment,
+        hotel: current_hotel,
+        can_manage: can_manage_ar_payments?
+      )
     end
 
     def new
@@ -16,7 +29,7 @@ module HotelPortal
 
     def create
       @hotel_corporate_account = current_hotel.hotel_corporate_accounts.find(ar_payment_params[:hotel_corporate_account_id])
-      result = ArPayments::RecordPayment.call(
+      result = ::ArPayments::RecordPayment.call(
         hotel: current_hotel,
         hotel_corporate_account: @hotel_corporate_account,
         user: current_user,
@@ -30,13 +43,19 @@ module HotelPortal
       )
 
       if result.success?
-        redirect_to redirect_after_create, notice: "Corporate payment recorded."
+        redirect_to hotel_ar_payment_path(current_hotel, result.ar_payment), notice: "Corporate payment recorded."
       else
         set_context
         @ar_payment_error = result.error
         flash.now[:alert] = result.error
         render :new, status: :unprocessable_content
       end
+    end
+
+    def eligible_invoices
+      @hotel_corporate_account = current_hotel.hotel_corporate_accounts.find_by(id: params[:hotel_corporate_account_id])
+      @open_invoices = open_invoices
+      render partial: "invoice_allocations", locals: { open_invoices: @open_invoices, source_invoice: nil }
     end
 
     private
@@ -58,14 +77,6 @@ module HotelPortal
         .order(due_on: :asc, invoice_number: :asc)
     end
 
-    def redirect_after_create
-      if ar_payment_params[:ar_invoice_id].present?
-        hotel_ar_invoice_path(current_hotel, ar_payment_params[:ar_invoice_id])
-      else
-        hotel_ar_invoices_path(current_hotel)
-      end
-    end
-
     def ar_payment_params
       params.fetch(:ar_payment, {}).permit(:hotel_corporate_account_id, :ar_invoice_id, :amount, :currency, :reference_number, :received_at, :payment_method, :notes)
     end
@@ -76,6 +87,14 @@ module HotelPortal
 
     def authorize_view_reports!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_reports", hotel: current_hotel)
+    end
+
+    def authorize_manage_ar_payments!
+      raise Pundit::NotAuthorizedError unless can_manage_ar_payments?
+    end
+
+    def can_manage_ar_payments?
+      current_user.has_permission?("manage_ar_payments", hotel: current_hotel)
     end
   end
 end

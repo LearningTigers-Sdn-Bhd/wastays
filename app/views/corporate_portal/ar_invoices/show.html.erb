@@ -49,7 +49,8 @@
     <div class="border-b border-slate-200 px-6 py-5">
       <h2 class="text-lg font-bold text-slate-950">Payment Allocations</h2>
     </div>
-    <% if @ar_invoice.ar_payment_allocations.any? %>
+    <% active_allocations = @ar_invoice.ar_payment_allocations.reject(&:reversed?) %>
+    <% if active_allocations.any? %>
       <div class="overflow-x-auto">
         <table class="w-full min-w-[760px] text-left text-sm">
           <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
@@ -61,7 +62,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <% @ar_invoice.ar_payment_allocations.each do |allocation| %>
+            <% active_allocations.each do |allocation| %>
               <tr>
                 <td class="px-6 py-4 text-slate-600"><%= allocation.ar_payment.received_at.strftime("%d %b %Y") %></td>
                 <td class="px-6 py-4 font-semibold text-slate-950"><%= allocation.ar_payment.reference_number %></td>

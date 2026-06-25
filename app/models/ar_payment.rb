@@ -17,14 +17,38 @@ class ArPayment < ApplicationRecord
   validate :hotel_corporate_account_matches_hotel
 
   def allocated_amount
-    ar_payment_allocations.sum(:amount)
+    if ar_payment_allocations.loaded?
+      ar_payment_allocations.reject(&:reversed?).sum { |allocation| allocation.amount.to_d }
+    else
+      ar_payment_allocations.active.sum(:amount)
+    end
   end
 
   def unallocated_amount
     amount.to_d - allocated_amount.to_d
   end
 
+  def allocation_status
+    return "unapplied" if allocated_amount.zero?
+    return "fully_allocated" if unallocated_amount.zero?
+
+    "partially_allocated"
+  end
+
+  before_update :prevent_update
+  before_destroy :prevent_destroy
+
   private
+
+  def prevent_update
+    errors.add(:base, "AR payments are immutable.")
+    throw :abort
+  end
+
+  def prevent_destroy
+    errors.add(:base, "AR payments are immutable and cannot be deleted.")
+    throw :abort
+  end
 
   def hotel_corporate_account_matches_hotel
     return if hotel.blank? || hotel_corporate_account.blank?

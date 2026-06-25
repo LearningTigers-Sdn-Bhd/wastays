@@ -82,6 +82,7 @@ module HotelPortal
 
       def allocation_rows
         @allocation_rows ||= invoice.ar_payment_allocations
+          .reject(&:reversed?)
           .sort_by { |allocation| [ allocation.ar_payment.received_at, allocation.id ] }
           .reverse
           .map do |allocation|

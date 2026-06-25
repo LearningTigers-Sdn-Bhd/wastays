@@ -143,6 +143,7 @@ platform_permissions = [
   { name: 'Manage Night Audit', slug: 'manage_night_audit' },
   { name: 'Manage Users', slug: 'manage_users' },
   { name: 'Manage Corporate Accounts', slug: 'manage_corporate_accounts' },
+  { name: 'Manage AR Payments', slug: 'manage_ar_payments' },
   { name: 'Manage Room Status', slug: 'manage_room_status' },
   { name: 'Post Charges', slug: 'post_charges' },
   { name: 'Post Folio Charges', slug: 'post_folio_charges' },

@@ -71,8 +71,7 @@ module ArPayments
       return "Payment amount must be greater than zero." unless @amount.positive?
       return "Payment reference number can't be blank." if @reference_number.blank?
       return "Received date can't be blank." if @received_at.blank?
-      return "Payment method is not supported." unless @payment_method.in?(ArPayment::PAYMENT_METHODS)
-      return "At least one invoice allocation is required." if allocation_rows.empty?
+      "Payment method is not supported." unless @payment_method.in?(ArPayment::PAYMENT_METHODS)
     end
 
     def validate_allocations
@@ -110,7 +109,7 @@ module ArPayments
     end
 
     def invoices
-      @invoices ||= ArInvoice.where(id: allocation_rows.map { |row| row[:invoice_id] }).to_a
+      @invoices ||= @hotel.ar_invoices.where(id: allocation_rows.map { |row| row[:invoice_id] }).to_a
     end
 
     def invoices_by_id

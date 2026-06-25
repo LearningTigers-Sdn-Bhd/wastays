@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_24_000008) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_25_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -117,6 +117,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_24_000008) do
     t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'partially_paid'::character varying, 'paid'::character varying, 'overdue'::character varying, 'void'::character varying]::text[])", name: "ar_invoices_status_allowed"
   end
 
+  create_table "ar_payment_allocation_reversals", force: :cascade do |t|
+    t.bigint "ar_payment_allocation_id", null: false
+    t.bigint "reversed_by_id", null: false
+    t.text "reason", null: false
+    t.datetime "reversed_at", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ar_payment_allocation_id"], name: "idx_ar_allocation_reversals_unique", unique: true
+    t.index ["reversed_by_id"], name: "index_ar_payment_allocation_reversals_on_reversed_by_id"
+  end
+
   create_table "ar_payment_allocations", force: :cascade do |t|
     t.bigint "ar_payment_id", null: false
     t.bigint "ar_invoice_id", null: false
@@ -126,7 +138,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_24_000008) do
     t.datetime "updated_at", null: false
     t.index ["ar_invoice_id", "created_at"], name: "idx_ar_allocations_on_invoice_created_at"
     t.index ["ar_invoice_id"], name: "index_ar_payment_allocations_on_ar_invoice_id"
-    t.index ["ar_payment_id", "ar_invoice_id"], name: "idx_ar_allocations_unique_payment_invoice", unique: true
+    t.index ["ar_payment_id", "ar_invoice_id"], name: "idx_ar_allocations_on_payment_invoice"
     t.index ["ar_payment_id"], name: "index_ar_payment_allocations_on_ar_payment_id"
     t.check_constraint "amount > 0::numeric", name: "ar_payment_allocations_amount_positive"
   end
@@ -1550,6 +1562,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_24_000008) do
   add_foreign_key "ar_invoices", "booking_folios"
   add_foreign_key "ar_invoices", "hotel_corporate_accounts"
   add_foreign_key "ar_invoices", "hotels"
+  add_foreign_key "ar_payment_allocation_reversals", "ar_payment_allocations"
+  add_foreign_key "ar_payment_allocation_reversals", "users", column: "reversed_by_id"
   add_foreign_key "ar_payment_allocations", "ar_invoices"
   add_foreign_key "ar_payment_allocations", "ar_payments"
   add_foreign_key "ar_payments", "hotel_corporate_accounts"

@@ -11,7 +11,7 @@ module CorporatePortal
 
     def show
       @ar_invoice = corporate_ar_invoices
-        .includes(:hotel, :booking_folio, ar_payment_allocations: :ar_payment, hotel_corporate_account: :corporate_account)
+        .includes(:hotel, :booking_folio, ar_payment_allocations: [ :ar_payment, :reversal ], hotel_corporate_account: :corporate_account)
         .find(params[:id])
       append_breadcrumb "AR-#{@ar_invoice.invoice_number}", corporate_ar_invoice_path(@ar_invoice)
     end
