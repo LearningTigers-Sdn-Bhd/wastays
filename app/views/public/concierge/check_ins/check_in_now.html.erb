@@ -81,7 +81,7 @@
         controller: "scanner geolocation-check-in",
         geolocation_check_in_hotel_latitude_value: @hotel.latitude,
         geolocation_check_in_hotel_longitude_value: @hotel.longitude,
-        geolocation_check_in_allowed_radius_value: 300
+        geolocation_check_in_allowed_radius_value: 100
       } do |f| %>
     <%= hidden_field_tag :latitude, nil, data: { geolocation_check_in_target: "latitude" } %>
     <%= hidden_field_tag :longitude, nil, data: { geolocation_check_in_target: "longitude" } %>

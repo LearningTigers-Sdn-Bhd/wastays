@@ -100,7 +100,7 @@ module Concierge
 
     def too_far?
       distance = calculate_distance(@latitude, @longitude, @hotel.latitude, @hotel.longitude)
-      distance > 300.0
+      distance > 100.0
     end
 
     def calculate_distance(lat1, lon1, lat2, lon2)

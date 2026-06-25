@@ -5,7 +5,7 @@ export default class extends Controller {
   static values = {
     hotelLatitude: Number,
     hotelLongitude: Number,
-    allowedRadius: { type: Number, default: 300 }
+    allowedRadius: { type: Number, default: 100 }
   }
 
   connect() {

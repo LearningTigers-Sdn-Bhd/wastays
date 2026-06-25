@@ -171,7 +171,7 @@ RSpec.describe Concierge::SelfCheckIn do
     end
 
     it "allows check-in if coordinates are close to the hotel" do
-      # Coordinates very close (within 300m of 5.9771228, 116.0622732)
+      # Coordinates very close (within 100m of 5.9771228, 116.0622732)
       result = call(latitude: 5.9772, longitude: 116.0623)
       expect(result.success?).to be true
       expect(booking.reload.status).to eq("checked_in")
