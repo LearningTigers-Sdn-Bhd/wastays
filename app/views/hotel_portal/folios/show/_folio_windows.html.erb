@@ -106,6 +106,14 @@
                   <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">Account Reference</th>
                   <td class="px-4 py-2 font-semibold tabular-nums text-slate-950"><%= folio_show.folio_account_reference %></td>
                 </tr>
+                <% if active_folio&.ar_invoice.present? %>
+                  <tr>
+                    <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">AR Invoice</th>
+                    <td colspan="3" class="px-4 py-2 font-semibold tabular-nums text-slate-950">
+                      <%= link_to "AR-#{active_folio.ar_invoice.invoice_number}", hotel_ar_invoice_path(hotel, active_folio.ar_invoice), class: "underline decoration-slate-300 underline-offset-2 hover:text-slate-600" %>
+                    </td>
+                  </tr>
+                <% end %>
               </tbody>
             </table>
           </div>
@@ -126,21 +134,34 @@
 <% if folio_show.can_manage_folio_windows? %>
   <% folio_show.folios.each do |folio| %>
     <% if folio.open? %>
+      <% direct_bill_available = folio.payer_type == "company" && folio.hotel_corporate_account&.active? && folio.hotel_corporate_account&.direct_bill_enabled? && folio.outstanding_balance.to_d.positive? %>
       <dialog id="close-folio-window-<%= folio.id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
         <div class="bg-white" onclick="event.stopPropagation()">
           <div class="border-b border-slate-100 px-6 py-5">
             <h3 class="text-lg font-bold text-slate-900">Close <%= folio.display_name %></h3>
-            <p class="mt-1 text-sm text-slate-500">Only zero-balance folios with no pending charges can be closed.</p>
+            <% if direct_bill_available %>
+              <p class="mt-1 text-sm text-slate-500">Close this Company & Government folio as Direct Bill and create an AR invoice.</p>
+            <% elsif folio.payer_type == "company" && folio.outstanding_balance.to_d.positive? %>
+              <p class="mt-1 text-sm text-slate-500">Direct Bill is not enabled for this account. Leave the folio open or settle before close.</p>
+            <% else %>
+              <p class="mt-1 text-sm text-slate-500">Only zero-balance folios with no pending charges can be closed.</p>
+            <% end %>
           </div>
           <%= form_with url: close_window_hotel_folio_path(hotel, booking, folio), method: :post, local: true, class: "space-y-4 p-6" do %>
             <%= hidden_field_tag :folio_origin, folio_origin if folio_origin.present? %>
+            <% if direct_bill_available %>
+              <%= hidden_field_tag "booking_folio[settlement_method]", "direct_bill" %>
+              <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-900">
+                Direct Bill will close this folio with its current positive balance and issue an AR invoice to <%= folio.hotel_corporate_account.corporate_account.name %>.
+              </div>
+            <% end %>
             <div>
               <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Reason</label>
               <%= text_field_tag "booking_folio[reason]", nil, placeholder: "Optional internal reason", class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" %>
             </div>
             <div class="flex justify-end gap-2 pt-2">
               <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" onclick="this.closest('dialog').close()">Cancel</button>
-              <%= submit_tag "Close Folio", class: "rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+              <%= submit_tag(direct_bill_available ? "Close as Direct Bill" : "Close Folio", class: "rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700") %>
             </div>
           <% end %>
         </div>
