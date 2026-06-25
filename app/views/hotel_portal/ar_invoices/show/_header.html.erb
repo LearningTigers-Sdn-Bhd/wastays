@@ -6,6 +6,7 @@
       <p class="mt-1 text-sm font-medium text-slate-600"><%= presenter.company_name %></p>
     </div>
 
+    <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
     <div class="flex flex-wrap items-center gap-2">
       <%= link_to(new_hotel_ar_payment_path(current_hotel, ar_invoice_id: ar_invoice.id, hotel_corporate_account_id: ar_invoice.hotel_corporate_account_id),
                   class: "inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2") do %>
@@ -13,5 +14,6 @@
         Record Received Payment
       <% end %>
     </div>
+    <% end %>
   </div>
 </header>

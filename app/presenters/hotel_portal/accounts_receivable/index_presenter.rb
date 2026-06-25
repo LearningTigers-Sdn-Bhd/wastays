@@ -57,12 +57,26 @@ module HotelPortal
         @due_on ||= parse_date(params[:due_on])
       end
 
+      def selected_balance
+        @selected_balance ||= params[:balance].to_s == "outstanding" ? "outstanding" : nil
+      end
+
       def query
         params[:query].to_s.strip
       end
 
       def filters_active?
-        query.present? || selected_status.present? || selected_corporate_account_id.present? || due_on.present?
+        query.present? || selected_status.present? || selected_corporate_account_id.present? || due_on.present? || selected_balance.present?
+      end
+
+      def pagination_params
+        {
+          query: query.presence,
+          status: selected_status,
+          hotel_corporate_account_id: selected_corporate_account_id,
+          due_on: due_on&.iso8601,
+          balance: selected_balance
+        }.compact
       end
 
       def summary_metrics
@@ -113,6 +127,7 @@ module HotelPortal
           scope = scope.where(status: selected_status) if selected_status.present?
           scope = scope.where(hotel_corporate_account_id: selected_corporate_account_id) if selected_corporate_account_id.present?
           scope = scope.where(due_on: due_on) if due_on.present?
+          scope = scope.with_open_balance if selected_balance == "outstanding"
           scope
         end
       end

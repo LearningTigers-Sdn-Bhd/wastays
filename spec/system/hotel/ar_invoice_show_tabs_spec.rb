@@ -31,6 +31,7 @@ RSpec.describe "Hotel AR invoice show tabs", type: :system, js: true do
 
   before do
     role.permissions << Permission.find_or_create_by!(slug: "view_reports") { |record| record.name = "View reports" }
+    role.permissions << Permission.find_or_create_by!(slug: "manage_ar_payments") { |record| record.name = "Manage AR Payments" }
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
     sign_in_through_ui(user)
   end

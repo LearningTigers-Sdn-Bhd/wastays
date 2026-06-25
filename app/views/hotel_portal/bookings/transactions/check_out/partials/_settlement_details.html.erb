@@ -43,7 +43,7 @@
                         class: "w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none",
                         data: { required_for_action: "true" } %>
                 </div>
-                <% credit_exposure = ArInvoices::CreditExposure.call(hotel_corporate_account: row.folio.hotel_corporate_account, pending_amount: row.balance) if row.folio.hotel_corporate_account.present? && row.balance.to_d.positive? %>
+                <% credit_exposure = ArInvoices::CreditExposure.call(hotel_corporate_account: row.folio.hotel_corporate_account, pending_amount: row.balance, pending_currency: row.folio.currency) if row.folio.hotel_corporate_account.present? && row.balance.to_d.positive? %>
                 <div class="hidden rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-900" data-checkout-settlement-target="directBillFields">
                   AR invoice will be issued to <%= row.folio.hotel_corporate_account&.corporate_account&.name || "the company account" %>. Due date follows the account payment terms.
                   <% if credit_exposure&.warning? %>

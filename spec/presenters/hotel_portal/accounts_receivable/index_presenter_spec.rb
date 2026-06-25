@@ -57,14 +57,24 @@ RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
       expect(filtered.filters_active?).to be(true)
     end
 
-    it "ignores invalid account, status, and date filters without escaping hotel scope" do
+    it "filters positive outstanding balances and preserves the filter for pagination" do
+      outstanding = presenter_for(balance: "outstanding")
+
+      expect(outstanding.paginated_rows.map(&:booking_reference)).to eq([ "BK-ATLAS" ])
+      expect(outstanding.selected_balance).to eq("outstanding")
+      expect(outstanding.pagination_params).to include(balance: "outstanding")
+      expect(outstanding.filters_active?).to be(true)
+    end
+
+    it "ignores invalid account, status, date, and balance filters without escaping hotel scope" do
       other_hotel = create(:hotel, status: "approved")
       create_invoice(hotel: other_hotel, confirmation_token: "BK-HIDDEN", folio_number: 999)
 
       invalid = presenter_for(
         hotel_corporate_account_id: "999999",
         status: "not-a-status",
-        due_on: "not-a-date"
+        due_on: "not-a-date",
+        balance: "all-the-money"
       )
 
       expect(invalid.paginated_rows.map(&:booking_reference)).to contain_exactly("BK-ATLAS", "BK-BEACON")

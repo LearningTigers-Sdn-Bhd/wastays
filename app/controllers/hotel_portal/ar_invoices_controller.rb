@@ -11,14 +11,15 @@ module HotelPortal
 
     def aging
       ArInvoices::RefreshOverdueStatuses.call(hotel: current_hotel)
-      @aging_report = ArInvoices::AgingReport.call(hotel: current_hotel)
+      report = ArInvoices::AgingReport.call(hotel: current_hotel)
+      @presenter = HotelPortal::AccountsReceivable::AgingPresenter.new(report: report)
     end
 
     def show
       @ar_invoice = current_hotel.ar_invoices
         .includes(
           { booking_folio: :booking },
-          { ar_payment_allocations: :ar_payment },
+          { ar_payment_allocations: [ :ar_payment, :reversal ] },
           hotel_corporate_account: :corporate_account
         )
         .find(params[:id])

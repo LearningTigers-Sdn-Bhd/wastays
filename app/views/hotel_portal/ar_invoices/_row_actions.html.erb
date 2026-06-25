@@ -22,11 +22,12 @@
       View Folio
     <% end %>
 
-    <div class="my-1 border-t border-slate-100"></div>
-
-    <%= link_to new_hotel_ar_payment_path(current_hotel, ar_invoice_id: row.invoice.id, hotel_corporate_account_id: row.invoice.hotel_corporate_account_id), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:bg-slate-50 focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
-      <%= cached_icon "hand-coins", class: "size-4 text-emerald-600" %>
-      Record Received Payment
+    <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
+      <div class="my-1 border-t border-slate-100"></div>
+      <%= link_to new_hotel_ar_payment_path(current_hotel, ar_invoice_id: row.invoice.id, hotel_corporate_account_id: row.invoice.hotel_corporate_account_id), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:bg-slate-50 focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
+        <%= cached_icon "hand-coins", class: "size-4 text-emerald-600" %>
+        Record Received Payment
+      <% end %>
     <% end %>
   </div>
 </div>

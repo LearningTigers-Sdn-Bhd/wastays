@@ -33,7 +33,7 @@ RSpec.describe "Hotel AR invoices index", type: :system, js: true do
   end
 
   before do
-    %w[view_reports view_bookings].each do |slug|
+    %w[view_reports view_bookings manage_ar_payments].each do |slug|
       role.permissions << Permission.find_or_create_by!(slug: slug) { |record| record.name = slug.humanize }
     end
     create(:user_hotel_access, user: user, hotel: hotel, role: role)

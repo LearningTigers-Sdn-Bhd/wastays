@@ -29,20 +29,25 @@ module ArInvoices
       end
     end
 
-    def self.call(hotel_corporate_account:, pending_amount: 0)
-      new(hotel_corporate_account: hotel_corporate_account, pending_amount: pending_amount).call
+    def self.call(hotel_corporate_account:, pending_amount: 0, pending_currency: nil)
+      new(
+        hotel_corporate_account: hotel_corporate_account,
+        pending_amount: pending_amount,
+        pending_currency: pending_currency
+      ).call
     end
 
-    def initialize(hotel_corporate_account:, pending_amount: 0)
+    def initialize(hotel_corporate_account:, pending_amount: 0, pending_currency: nil)
       @hotel_corporate_account = hotel_corporate_account
       @pending_amount = pending_amount.to_d
+      @pending_currency = pending_currency.presence
     end
 
     def call
       Result.new(
         hotel_corporate_account: @hotel_corporate_account,
         current_outstanding: current_outstanding,
-        pending_amount: @pending_amount,
+        pending_amount: comparable_pending_amount,
         projected_exposure: projected_exposure,
         credit_limit: credit_limit,
         credit_currency: credit_currency,
@@ -55,11 +60,15 @@ module ArInvoices
     private
 
     def current_outstanding
-      @current_outstanding ||= @hotel_corporate_account.ar_invoices.with_open_balance.sum(:outstanding_amount).to_d
+      @current_outstanding ||= @hotel_corporate_account.ar_invoices
+        .with_open_balance
+        .where(currency: credit_currency)
+        .sum(:outstanding_amount)
+        .to_d
     end
 
     def projected_exposure
-      current_outstanding + @pending_amount
+      current_outstanding + comparable_pending_amount
     end
 
     def credit_limit
@@ -68,6 +77,12 @@ module ArInvoices
 
     def credit_currency
       @hotel_corporate_account.credit_currency.presence || @hotel_corporate_account.hotel.default_currency.presence || "MYR"
+    end
+
+    def comparable_pending_amount
+      return @pending_amount if @pending_currency.blank? || @pending_currency == credit_currency
+
+      0.to_d
     end
 
     def usage_percentage

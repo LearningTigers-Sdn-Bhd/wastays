@@ -8,9 +8,10 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
   let(:view_reports) { Permission.find_or_create_by!(slug: "view_reports") { |permission| permission.name = "View Reports" } }
+  let(:manage_ar_payments) { Permission.find_or_create_by!(slug: "manage_ar_payments") { |permission| permission.name = "Manage AR Payments" } }
 
   before do
-    role.permissions << view_reports
+    role.permissions << [ view_reports, manage_ar_payments ]
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
   end
@@ -132,19 +133,54 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/accounts-receivable/aging" do
-    it "renders hotel scoped aging rows and credit exposure warnings" do
-      relationship = create(:hotel_corporate_account, hotel: hotel, credit_limit: 100, direct_bill_enabled: true)
+    it "renders the responsive currency-safe aging report with invoice handoff links" do
+      relationship = create(:hotel_corporate_account, hotel: hotel, credit_limit: 100, credit_currency: "MYR", direct_bill_enabled: true)
       invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING", folio_number: 601, amount: 90, relationship: relationship, due_on: Date.current - 10.days)
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING-USD", folio_number: 602, amount: 25, relationship: relationship, due_on: Date.current - 40.days, currency: "USD")
       hidden = create_ar_invoice_for(hotel: other_hotel, confirmation_token: "BK-AGING-HIDDEN", folio_number: 960, amount: 999)
 
       get hotel_ar_aging_path(hotel)
 
+      document = Nokogiri::HTML(response.body)
+      myr_row = document.at_css("[data-testid='aging-row-#{relationship.id}-MYR']")
+      usd_row = document.at_css("[data-testid='aging-row-#{relationship.id}-USD']")
+      mobile_card = document.at_css("[data-testid='aging-card-#{relationship.id}-MYR']")
+      invoices_url = hotel_ar_invoices_path(hotel, hotel_corporate_account_id: relationship.id, balance: "outstanding")
+
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Aging Report")
+      expect(response.body).to include("Outstanding corporate balances as of")
+      expect(response.body).to include("Current")
+      expect(response.body).to include("1–30 days")
+      expect(response.body).to include("Total outstanding")
       expect(response.body).to include(invoice.corporate_account.name)
-      expect(response.body).to include("90.00")
+      expect(response.body).to include("MYR 90.00")
+      expect(response.body).to include("USD 25.00")
       expect(response.body).to include("Near limit")
+      expect(response.body).to include("Not comparable")
+      expect(response.body).to include("Credit limit is configured in MYR")
+      expect(myr_row["role"]).to eq("link")
+      expect(myr_row["tabindex"]).to eq("0")
+      expect(myr_row["data-clickable-row-url-value"]).to eq(invoices_url)
+      expect(usd_row["data-clickable-row-url-value"]).to eq(invoices_url)
+      expect(mobile_card["data-clickable-row-url-value"]).to eq(invoices_url)
       expect(response.body).not_to include(hidden.corporate_account.name)
+    end
+
+    it "renders a purposeful empty state when no balances are outstanding" do
+      create_ar_invoice_for(
+        hotel: hotel,
+        confirmation_token: "BK-AGING-PAID",
+        folio_number: 603,
+        amount: 100,
+        outstanding_amount: 0,
+        status: "paid"
+      )
+
+      get hotel_ar_aging_path(hotel)
+
+      expect(response.body).to include("No outstanding AR balances")
+      expect(response.body).to include("Paid, void, and zero-balance invoices do not appear")
     end
   end
 
@@ -308,7 +344,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       }.to change(ArPayment, :count).by(1)
         .and change(ArPaymentAllocation, :count).by(2)
 
-      expect(response).to redirect_to(hotel_ar_invoices_path(hotel))
+      expect(response).to redirect_to(hotel_ar_payment_path(hotel, ArPayment.last))
       expect(first.reload).to be_paid
       expect(second.reload).to have_attributes(paid_amount: 150.to_d, outstanding_amount: 50.to_d, status: "partially_paid")
     end
@@ -337,18 +373,29 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
     end
   end
 
-  def create_ar_invoice_for(hotel:, confirmation_token:, folio_number:, amount:, relationship: nil, due_on: nil)
-    booking = create(:booking, hotel: hotel, confirmation_token: confirmation_token)
+  def create_ar_invoice_for(
+    hotel:,
+    confirmation_token:,
+    folio_number:,
+    amount:,
+    relationship: nil,
+    due_on: nil,
+    currency: "MYR",
+    outstanding_amount: amount,
+    status: "open"
+  )
+    booking = create(:booking, hotel: hotel, confirmation_token: confirmation_token, currency: currency)
     relationship ||= create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
-    folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: folio_number, hotel_corporate_account: relationship)
+    folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: folio_number, hotel_corporate_account: relationship, currency: currency)
     create(:ar_invoice,
       hotel: hotel,
       booking_folio: folio,
       hotel_corporate_account: relationship,
       amount: amount,
-      paid_amount: 0,
-      outstanding_amount: amount,
-      currency: "MYR",
+      paid_amount: amount.to_d - outstanding_amount.to_d,
+      outstanding_amount: outstanding_amount,
+      status: status,
+      currency: currency,
       due_on: due_on || Date.current + 30.days,
       issued_on: (due_on || Date.current + 30.days) - 30.days)
   end

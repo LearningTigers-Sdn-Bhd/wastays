@@ -8,7 +8,21 @@ module ArInvoices
       end
     end
 
-    Row = Struct.new(:hotel_corporate_account, :corporate_account, :credit_limit, :credit_currency, :buckets, :total_outstanding, :credit_exposure, keyword_init: true)
+    Row = Struct.new(
+      :hotel_corporate_account,
+      :corporate_account,
+      :currency,
+      :credit_limit,
+      :credit_currency,
+      :buckets,
+      :total_outstanding,
+      :credit_exposure,
+      keyword_init: true
+    ) do
+      def credit_comparable?
+        currency == credit_currency
+      end
+    end
 
     Result = Struct.new(:hotel, :as_of_date, :rows, :totals, keyword_init: true)
 
@@ -22,7 +36,8 @@ module ArInvoices
     end
 
     def call
-      rows = grouped_invoices.map { |relationship, invoices| row_for(relationship, invoices) }
+      rows = grouped_invoices.map { |(relationship, currency), invoices| row_for(relationship, currency, invoices) }
+        .sort_by { |row| [ -row.total_outstanding, row.corporate_account.name.to_s.downcase, row.currency ] }
       Result.new(hotel: @hotel, as_of_date: @as_of_date, rows: rows, totals: totals_for(rows))
     end
 
@@ -36,10 +51,10 @@ module ArInvoices
     end
 
     def grouped_invoices
-      invoices.group_by(&:hotel_corporate_account)
+      invoices.group_by { |invoice| [ invoice.hotel_corporate_account, invoice.currency ] }
     end
 
-    def row_for(relationship, invoices)
+    def row_for(relationship, currency, invoices)
       buckets = empty_buckets
       invoices.each do |invoice|
         bucket_name = bucket_for(invoice)
@@ -51,6 +66,7 @@ module ArInvoices
       Row.new(
         hotel_corporate_account: relationship,
         corporate_account: relationship.corporate_account,
+        currency: currency,
         credit_limit: relationship.credit_limit,
         credit_currency: credit_exposure.credit_currency,
         buckets: bucket_totals,
@@ -74,13 +90,15 @@ module ArInvoices
     end
 
     def totals_for(rows)
-      rows.each_with_object(empty_buckets) do |row, totals|
-        totals[:current] += row.buckets.current.to_d
-        totals[:days_1_30] += row.buckets.days_1_30.to_d
-        totals[:days_31_60] += row.buckets.days_31_60.to_d
-        totals[:days_61_90] += row.buckets.days_61_90.to_d
-        totals[:days_over_90] += row.buckets.days_over_90.to_d
-      end.then { |totals| BucketTotals.new(**totals) }
+      rows.group_by(&:currency).transform_values do |currency_rows|
+        currency_rows.each_with_object(empty_buckets) do |row, totals|
+          totals[:current] += row.buckets.current.to_d
+          totals[:days_1_30] += row.buckets.days_1_30.to_d
+          totals[:days_31_60] += row.buckets.days_31_60.to_d
+          totals[:days_61_90] += row.buckets.days_61_90.to_d
+          totals[:days_over_90] += row.buckets.days_over_90.to_d
+        end.then { |totals| BucketTotals.new(**totals) }
+      end
     end
   end
 end
