@@ -1,0 +1,59 @@
+<%= form_with url: hotel_ar_invoices_path(current_hotel), method: :get, class: "space-y-2 px-4 md:px-0", data: { controller: "auto-submit", turbo_frame: "ar_invoices_results", turbo_action: "advance" } do |form| %>
+  <div class="flex flex-col gap-3 md:flex-row">
+    <div class="relative flex-1">
+      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <%= cached_icon "search", stroke_width: 2, class: "size-4 text-slate-400" %>
+      </div>
+      <%= form.text_field :query,
+        value: presenter.query,
+        placeholder: "Search invoice, corporate account, booking, or folio...",
+        class: "block w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm shadow-sm transition-all placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10",
+        data: { action: "input->auto-submit#submit" } %>
+    </div>
+
+    <div class="relative w-full md:w-72">
+      <div class="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
+        <%= cached_icon "building-2", stroke_width: 2, class: "size-4 text-slate-400" %>
+      </div>
+      <%= form.select :hotel_corporate_account_id,
+        options_for_select(
+          presenter.corporate_account_options.map { |option| [option.name, option.id] },
+          presenter.selected_corporate_account_id
+        ),
+        { include_blank: "All corporate accounts" },
+        class: "block w-full appearance-none rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-9 text-sm shadow-sm transition-all focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10",
+        data: { action: "change->auto-submit#submitNow" } %>
+    </div>
+
+    <div class="relative w-full md:w-56">
+      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <%= cached_icon "calendar", stroke_width: 2, class: "size-4 text-slate-400" %>
+      </div>
+      <%= form.date_field :due_on,
+        value: presenter.due_on,
+        aria: { label: "Due on" },
+        class: "block w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm shadow-sm transition-all focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10",
+        data: { action: "change->auto-submit#submitNow" } %>
+    </div>
+  </div>
+
+  <div class="-mx-0.5 flex items-center gap-2 overflow-x-auto px-0.5 py-2 no-scrollbar">
+    <div class="shrink-0">
+      <input type="radio" name="status" value="" id="ar_status_all" class="peer sr-only" <%= "checked" if presenter.selected_status.blank? %> data-action="change->auto-submit#submitNow">
+      <label for="ar_status_all" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white">
+        <%= cached_icon "filter", stroke_width: 2.5, class: "size-3.5" %>
+        All
+      </label>
+    </div>
+
+    <% presenter.status_options.each do |status| %>
+      <div class="shrink-0">
+        <input type="radio" name="status" value="<%= status[:key] %>" id="ar_status_<%= status[:key] %>" class="peer sr-only" <%= "checked" if presenter.selected_status == status[:key] %> data-action="change->auto-submit#submitNow">
+        <label for="ar_status_<%= status[:key] %>" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 <%= status[:class] %>">
+          <%= cached_icon status[:icon], stroke_width: 2.5, class: "size-3.5" %>
+          <%= status[:label] %>
+        </label>
+      </div>
+    <% end %>
+  </div>
+<% end %>

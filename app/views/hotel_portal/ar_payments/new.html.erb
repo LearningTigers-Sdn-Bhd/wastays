@@ -90,7 +90,7 @@
 
     <div class="flex justify-end gap-2">
       <%= link_to "Cancel", (@source_invoice ? hotel_ar_invoice_path(current_hotel, @source_invoice) : hotel_ar_invoices_path(current_hotel)), class: "rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-100" %>
-      <%= submit_tag "Record Payment", class: "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+      <%= submit_tag "Record Received Payment", class: "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
     </div>
   <% end %>
 </div>

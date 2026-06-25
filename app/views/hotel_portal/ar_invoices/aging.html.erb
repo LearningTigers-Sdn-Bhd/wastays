@@ -1,0 +1,66 @@
+<div class="mx-auto max-w-7xl space-y-6 pb-20">
+  <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Accounts Receivable</p>
+      <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Aging Report</h1>
+      <p class="mt-1 text-sm text-slate-600">Outstanding AR balances as of <%= @aging_report.as_of_date.strftime("%d %b %Y") %>.</p>
+    </div>
+  </div>
+
+  <section class="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+    <% [ [ "Current", @aging_report.totals.current ], [ "1-30", @aging_report.totals.days_1_30 ], [ "31-60", @aging_report.totals.days_31_60 ], [ "61-90", @aging_report.totals.days_61_90 ], [ "90+", @aging_report.totals.days_over_90 ], [ "Total", @aging_report.totals.total ] ].each do |label, amount| %>
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500"><%= label %></p>
+        <p class="mt-2 text-xl font-black text-slate-950"><%= current_hotel.default_currency %> <%= number_with_precision(amount, precision: 2) %></p>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-6 py-5">
+      <h2 class="text-lg font-bold text-slate-950">Aging by Corporate Account</h2>
+    </div>
+    <% if @aging_report.rows.any? %>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[1100px] text-left text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+            <tr>
+              <th class="px-6 py-3">Corporate Account</th>
+              <th class="px-6 py-3 text-right">Credit Limit</th>
+              <th class="px-6 py-3 text-right">Current</th>
+              <th class="px-6 py-3 text-right">1-30</th>
+              <th class="px-6 py-3 text-right">31-60</th>
+              <th class="px-6 py-3 text-right">61-90</th>
+              <th class="px-6 py-3 text-right">90+</th>
+              <th class="px-6 py-3 text-right">Total</th>
+              <th class="px-6 py-3">Credit Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <% @aging_report.rows.each do |row| %>
+              <tr>
+                <td class="px-6 py-4 font-bold text-slate-950"><%= row.corporate_account.name %></td>
+                <td class="px-6 py-4 text-right tabular-nums text-slate-600"><%= row.credit_limit.present? ? "#{row.credit_currency} #{number_with_precision(row.credit_limit, precision: 2)}" : "Not set" %></td>
+                <td class="px-6 py-4 text-right tabular-nums text-slate-700"><%= number_with_precision(row.buckets.current, precision: 2) %></td>
+                <td class="px-6 py-4 text-right tabular-nums text-slate-700"><%= number_with_precision(row.buckets.days_1_30, precision: 2) %></td>
+                <td class="px-6 py-4 text-right tabular-nums text-slate-700"><%= number_with_precision(row.buckets.days_31_60, precision: 2) %></td>
+                <td class="px-6 py-4 text-right tabular-nums text-slate-700"><%= number_with_precision(row.buckets.days_61_90, precision: 2) %></td>
+                <td class="px-6 py-4 text-right tabular-nums text-slate-700"><%= number_with_precision(row.buckets.days_over_90, precision: 2) %></td>
+                <td class="px-6 py-4 text-right font-bold tabular-nums text-slate-950"><%= row.credit_currency %> <%= number_with_precision(row.total_outstanding, precision: 2) %></td>
+                <td class="px-6 py-4">
+                  <% if row.credit_exposure.warning? %>
+                    <span class="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-bold text-amber-800"><%= row.credit_exposure.warning_state.humanize %></span>
+                  <% else %>
+                    <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">OK</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="px-6 py-10 text-center text-sm text-slate-500">No outstanding AR balances.</p>
+    <% end %>
+  </section>
+</div>

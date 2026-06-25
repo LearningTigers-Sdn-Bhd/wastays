@@ -5,15 +5,24 @@ module HotelPortal
     before_action :authorize_view_reports!
 
     def index
-      @ar_invoices = current_hotel.ar_invoices
-        .includes(:booking_folio, hotel_corporate_account: :corporate_account)
-        .order(due_on: :asc, issued_on: :desc, invoice_number: :desc)
+      ArInvoices::RefreshOverdueStatuses.call(hotel: current_hotel)
+      @presenter = HotelPortal::AccountsReceivable::IndexPresenter.new(hotel: current_hotel, params: params)
+    end
+
+    def aging
+      ArInvoices::RefreshOverdueStatuses.call(hotel: current_hotel)
+      @aging_report = ArInvoices::AgingReport.call(hotel: current_hotel)
     end
 
     def show
       @ar_invoice = current_hotel.ar_invoices
-        .includes(:booking_folio, ar_payment_allocations: :ar_payment, hotel_corporate_account: :corporate_account)
+        .includes(
+          { booking_folio: :booking },
+          { ar_payment_allocations: :ar_payment },
+          hotel_corporate_account: :corporate_account
+        )
         .find(params[:id])
+      @presenter = HotelPortal::AccountsReceivable::ShowPresenter.new(invoice: @ar_invoice, hotel: current_hotel)
     end
 
     private
