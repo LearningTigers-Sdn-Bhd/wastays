@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_24_000005) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_24_000008) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -88,6 +88,67 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_24_000005) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_app_configs_on_key", unique: true
+  end
+
+  create_table "ar_invoices", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "booking_folio_id", null: false
+    t.bigint "hotel_corporate_account_id", null: false
+    t.integer "invoice_number", null: false
+    t.string "status", default: "open", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "currency", null: false
+    t.date "issued_on", null: false
+    t.date "due_on", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "paid_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.decimal "outstanding_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.index ["booking_folio_id"], name: "index_ar_invoices_on_booking_folio_id", unique: true
+    t.index ["hotel_corporate_account_id", "status"], name: "index_ar_invoices_on_hotel_corporate_account_id_and_status"
+    t.index ["hotel_corporate_account_id"], name: "index_ar_invoices_on_hotel_corporate_account_id"
+    t.index ["hotel_id", "invoice_number"], name: "index_ar_invoices_on_hotel_id_and_invoice_number", unique: true
+    t.index ["hotel_id", "status", "due_on"], name: "index_ar_invoices_on_hotel_id_and_status_and_due_on"
+    t.index ["hotel_id"], name: "index_ar_invoices_on_hotel_id"
+    t.check_constraint "amount > 0::numeric", name: "ar_invoices_amount_positive"
+    t.check_constraint "outstanding_amount >= 0::numeric", name: "ar_invoices_outstanding_amount_nonnegative"
+    t.check_constraint "paid_amount >= 0::numeric", name: "ar_invoices_paid_amount_nonnegative"
+    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'partially_paid'::character varying, 'paid'::character varying, 'overdue'::character varying, 'void'::character varying]::text[])", name: "ar_invoices_status_allowed"
+  end
+
+  create_table "ar_payment_allocations", force: :cascade do |t|
+    t.bigint "ar_payment_id", null: false
+    t.bigint "ar_invoice_id", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ar_invoice_id", "created_at"], name: "idx_ar_allocations_on_invoice_created_at"
+    t.index ["ar_invoice_id"], name: "index_ar_payment_allocations_on_ar_invoice_id"
+    t.index ["ar_payment_id", "ar_invoice_id"], name: "idx_ar_allocations_unique_payment_invoice", unique: true
+    t.index ["ar_payment_id"], name: "index_ar_payment_allocations_on_ar_payment_id"
+    t.check_constraint "amount > 0::numeric", name: "ar_payment_allocations_amount_positive"
+  end
+
+  create_table "ar_payments", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "hotel_corporate_account_id", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "currency", null: false
+    t.string "reference_number", null: false
+    t.date "received_at", null: false
+    t.string "payment_method", default: "bank_transfer", null: false
+    t.text "notes"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_corporate_account_id", "received_at"], name: "idx_ar_payments_on_account_received_at"
+    t.index ["hotel_corporate_account_id"], name: "index_ar_payments_on_hotel_corporate_account_id"
+    t.index ["hotel_id", "received_at"], name: "index_ar_payments_on_hotel_id_and_received_at"
+    t.index ["hotel_id", "reference_number"], name: "index_ar_payments_on_hotel_id_and_reference_number"
+    t.index ["hotel_id"], name: "index_ar_payments_on_hotel_id"
+    t.check_constraint "amount > 0::numeric", name: "ar_payments_amount_positive"
   end
 
   create_table "banking_details", force: :cascade do |t|
@@ -1486,6 +1547,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_24_000005) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "ar_invoices", "booking_folios"
+  add_foreign_key "ar_invoices", "hotel_corporate_accounts"
+  add_foreign_key "ar_invoices", "hotels"
+  add_foreign_key "ar_payment_allocations", "ar_invoices"
+  add_foreign_key "ar_payment_allocations", "ar_payments"
+  add_foreign_key "ar_payments", "hotel_corporate_accounts"
+  add_foreign_key "ar_payments", "hotels"
   add_foreign_key "banking_details", "accounts"
   add_foreign_key "booking_audit_logs", "hotels"
   add_foreign_key "booking_audit_logs", "users"

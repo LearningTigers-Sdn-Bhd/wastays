@@ -5,6 +5,7 @@ class FinancialAuditEvent < ApplicationRecord
     folio_transaction_created
     folio_transaction_reversed
     folio_closed_for_checkout
+    direct_bill_folio_closed
     folio_reopened_for_correction
     closed_date_override_posted
     audit_blocker_resolution_posted
@@ -20,6 +21,9 @@ class FinancialAuditEvent < ApplicationRecord
     business_date_opened
     folio_forecasts_refreshed
     missing_folio_recovered
+    ar_payment_recorded
+    no_show_folio_closed
+    no_show_tourism_tax_repaired
   ].freeze
 
   belongs_to :hotel
