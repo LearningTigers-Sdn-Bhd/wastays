@@ -110,7 +110,7 @@
                   <tr>
                     <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">AR Invoice</th>
                     <td colspan="3" class="px-4 py-2 font-semibold tabular-nums text-slate-950">
-                      <%= link_to "AR-#{active_folio.ar_invoice.invoice_number}", hotel_ar_invoice_path(hotel, active_folio.ar_invoice), class: "underline decoration-slate-300 underline-offset-2 hover:text-slate-600" %>
+                      <%= link_to active_folio.ar_invoice.formatted_invoice_number, hotel_ar_invoice_path(hotel, active_folio.ar_invoice), class: "underline decoration-slate-300 underline-offset-2 hover:text-slate-600" %>
                     </td>
                   </tr>
                 <% end %>

@@ -205,7 +205,7 @@ module HotelPortal
         delegate :booking, :booking_folio, to: :invoice
 
         def invoice_label
-          "AR-#{invoice.invoice_number}"
+          invoice.formatted_invoice_number
         end
 
         def corporate_account_name

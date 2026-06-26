@@ -14,7 +14,7 @@ module HotelPortal
       end
 
       def invoice_label
-        "AR-#{invoice.invoice_number}"
+        invoice.formatted_invoice_number
       end
 
       def company_name

@@ -11,7 +11,7 @@
           <tbody class="divide-y divide-slate-100">
             <% open_invoices.each do |invoice| %>
               <tr>
-                <td class="px-6 py-4 font-bold text-slate-950">AR-<%= invoice.invoice_number %></td>
+                <td class="px-6 py-4 font-bold text-slate-950"><%= invoice.formatted_invoice_number %></td>
                 <td class="px-6 py-4 text-slate-600"><%= invoice.booking.confirmation_token %> · <%= invoice.booking_folio.folio_reference_display %></td>
                 <td class="px-6 py-4 text-slate-600"><%= invoice.due_on.strftime("%d %b %Y") %></td>
                 <td class="px-6 py-4 text-right font-bold tabular-nums text-slate-950"><%= invoice.currency %> <%= number_with_precision(invoice.outstanding_amount, precision: 2) %></td>

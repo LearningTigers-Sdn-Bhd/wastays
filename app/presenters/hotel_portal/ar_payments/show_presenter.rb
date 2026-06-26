@@ -65,6 +65,22 @@ module HotelPortal
         payment.notes.presence || "—"
       end
 
+      def corporate_gateway_payment?
+        payment.metadata.to_h["source"] == "corporate_portal_gateway"
+      end
+
+      def gateway_reference
+        payment.metadata.to_h["external_reference"].presence || payment.metadata.to_h["gateway_order_id"].presence || "—"
+      end
+
+      def gateway_name
+        payment.metadata.to_h["gateway"].to_s.presence&.titleize || "—"
+      end
+
+      def remittance_suggestions
+        Array(payment.metadata.to_h["remittance_suggestions"])
+      end
+
       def can_manage?
         @can_manage
       end
@@ -85,7 +101,7 @@ module HotelPortal
             reversal = allocation.reversal
             AllocationRow.new(
               allocation: allocation,
-              invoice_label: "AR-#{allocation.ar_invoice.invoice_number}",
+              invoice_label: allocation.ar_invoice.formatted_invoice_number,
               invoice_path: Rails.application.routes.url_helpers.hotel_ar_invoice_path(hotel, allocation.ar_invoice),
               allocated_amount: money(allocation.amount),
               allocated_at: allocation.created_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %I:%M %p"),
