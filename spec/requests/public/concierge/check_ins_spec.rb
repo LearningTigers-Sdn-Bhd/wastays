@@ -36,11 +36,11 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         hotel.create_property_policy!(check_in_time: "14:00", check_out_time: "12:00")
       end
 
-      it "redirects to pre-checkin form" do
+      it "redirects to check-in now page" do
         travel_to kl_zone.parse("#{Date.today} 09:00") do
           post concierge_check_in_lookup_path(hotel.slug),
                params: { confirmation_token: booking.confirmation_token }
-          expect(response).to redirect_to(pre_checkin_path(booking.reload.pre_checkin.token))
+          expect(response).to redirect_to(concierge_check_in_now_path(hotel.slug))
         end
       end
     end
@@ -104,6 +104,56 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         expect(response.body).to include(Date.tomorrow.strftime("%d %b %Y"))
       end
     end
+
+    context "updated check-in policy after booking creation with default" do
+      let(:kl_zone) { Time.find_zone("Kuala Lumpur") }
+
+      around do |example|
+        travel_to kl_zone.parse("#{Date.today} 14:25").utc do
+          example.run
+        end
+      end
+
+      before do
+        hotel.create_property_policy!(check_in_time: "14:00", check_out_time: "12:00", currency: "MYR") unless hotel.property_policy
+        hotel.property_policy.update!(check_in_time: "14:00")
+        booking.update_columns(check_in: kl_zone.parse("#{Date.today} 15:00").utc)
+        create(:room_inventory, room_type: room_type, date: Date.today,
+               quantity: 1, status: "open", available_room_numbers: [ "101" ])
+      end
+
+      it "checks in the booking at 14:25 successfully because of the 14:00 policy" do
+        post concierge_submit_check_in_path(hotel.slug)
+        expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
+        expect(booking.reload.status).to eq("checked_in")
+      end
+    end
+
+    context "with geolocation check enabled" do
+      before do
+        hotel.update!(google_map_link: "https://www.google.com/maps/place/Sample+Hotel/@5.9771228,116.0622732,15z")
+        create(:room_inventory, room_type: room_type, date: Date.today,
+               quantity: 1, status: "open", available_room_numbers: [ "101" ])
+      end
+
+      it "fails with :missing_location when no coordinates are submitted" do
+        post concierge_submit_check_in_path(hotel.slug)
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Location access is required")
+      end
+
+      it "fails with :too_far_away when coordinates are outside radius" do
+        post concierge_submit_check_in_path(hotel.slug), params: { latitude: 3.1390, longitude: 101.6869 }
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("too far from the hotel")
+      end
+
+      it "succeeds when coordinates are within the radius" do
+        post concierge_submit_check_in_path(hotel.slug), params: { latitude: 5.9772, longitude: 116.0623 }
+        expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
+        expect(booking.reload.status).to eq("checked_in")
+      end
+    end
   end
 
   describe "late flow — past check-in time, pre-checkin not done" do
@@ -111,7 +161,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     let(:policy) { hotel.build_property_policy(check_in_time: "15:00", check_out_time: "12:00", currency: "MYR", usd_rate: 4.5) }
 
     around do |example|
-      travel_to kl_zone.parse("#{Date.today} 16:00") do
+      travel_to kl_zone.parse("#{Date.today} 16:00").utc do
         example.run
       end
     end
@@ -132,10 +182,11 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       expect(response.body).to include("guest_home_address")
     end
 
-    it "submit_check_in saves guest fields and checks in" do
+    it "submit_check_in saves guest fields and redirects to confirmation, then checks in" do
       create(:room_inventory, room_type: room_type, date: Date.today,
              quantity: 1, status: "open", available_room_numbers: [ "101" ])
 
+      # Step 1: Submit registration details
       post concierge_submit_check_in_path(hotel.slug), params: {
         booking: {
           guest_name: "Ahmad Zulkifli",
@@ -148,6 +199,11 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         }
       }
 
+      expect(response).to redirect_to(concierge_check_in_now_path(hotel.slug))
+      expect(booking.reload.pre_checkin_status).to eq("completed")
+
+      # Step 2: Confirm check-in
+      post concierge_submit_check_in_path(hotel.slug)
       expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.reload.guest_home_address).to eq("No. 12, Jalan Ampang, 50450 KL")
@@ -155,6 +211,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     end
 
     it "submit_check_in re-renders with error when guest fields missing" do
+      allow_any_instance_of(Booking).to receive(:guest_email).and_return(nil)
       post concierge_submit_check_in_path(hotel.slug), params: {
         booking: {
           guest_name: "Ahmad Zulkifli",

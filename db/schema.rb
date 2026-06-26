@@ -927,6 +927,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_26_000002) do
     t.string "pre_suspension_status"
     t.bigint "plan_id"
     t.string "google_map_link"
+    t.boolean "geolocation_enabled", default: true, null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true

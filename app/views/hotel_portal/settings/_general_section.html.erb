@@ -7,12 +7,11 @@
         <div class="px-6 py-5 sm:px-8">
           <%= form_with model: @hotel, url: hotel_settings_path(@hotel, tab: "general"), method: :patch, local: true, class: "space-y-6" do |f| %>
             <%= hidden_field_tag :form_id, "hotel_settings" %>
-            <% settings_errors = @hotel.errors.full_messages + @presenter.property_policy.errors.full_messages %>
-            <% if settings_errors.any? && params[:form_id] == "hotel_settings" %>
+            <% if @presenter.settings_errors.any? && params[:form_id] == "hotel_settings" %>
               <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                <p class="font-semibold"><%= pluralize(settings_errors.count, "error") %> prohibited these settings from being saved:</p>
+                <p class="font-semibold"><%= pluralize(@presenter.settings_errors.count, "error") %> prohibited these settings from being saved:</p>
                 <ul class="mt-2 list-disc space-y-1 ps-5">
-                  <% settings_errors.each do |message| %>
+                  <% @presenter.settings_errors.each do |message| %>
                     <li><%= message %></li>
                   <% end %>
                 </ul>
@@ -48,9 +47,9 @@
                          class="absolute z-[100] hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 mt-1">
                       <div class="flex h-[200px]">
                         <div class="flex-1 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1">
-                          <% (0..23).each do |h| %>
-                            <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= h %>" class="w-full rounded-lg px-3 py-1.5 text-left text-xs font-bold transition-colors">
-                              <%= Time.current.change(hour: h).strftime("%I %p") %>
+                          <% @presenter.time_picker_hours.each do |hour| %>
+                            <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= hour[:value] %>" class="w-full rounded-lg px-3 py-1.5 text-left text-xs font-bold transition-colors">
+                              <%= hour[:label] %>
                             </button>
                           <% end %>
                         </div>
@@ -81,9 +80,9 @@
                          class="absolute z-[100] hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 mt-1">
                       <div class="flex h-[200px]">
                         <div class="flex-1 overflow-y-auto custom-scrollbar border-r border-slate-50 p-1">
-                          <% (0..23).each do |h| %>
-                            <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= h %>" class="w-full rounded-lg px-3 py-1.5 text-left text-xs font-bold transition-colors">
-                              <%= Time.current.change(hour: h).strftime("%I %p") %>
+                          <% @presenter.time_picker_hours.each do |hour| %>
+                            <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= hour[:value] %>" class="w-full rounded-lg px-3 py-1.5 text-left text-xs font-bold transition-colors">
+                              <%= hour[:label] %>
                             </button>
                           <% end %>
                         </div>
@@ -126,22 +125,21 @@
               </div>
 
               <div>
-                <% can_edit_currency = current_user.has_permission?("manage_hotel_profile") %>
                 <%= f.label :default_currency, "Default Currency", class: "mb-2 block text-sm font-medium text-slate-900" %>
                 <%= f.select :default_currency,
                              options_for_select(CurrencyCatalog.options, @presenter.settings_summary[:default_currency] || "MYR"),
                              {},
-                             class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-900 #{can_edit_currency ? 'bg-white focus:border-slate-300 focus:outline-none focus:ring-0' : 'bg-slate-50 cursor-not-allowed'}",
-                             disabled: !can_edit_currency %>
-                <% if can_edit_currency %>
-                  <p class="mt-1 text-[10px] font-medium text-slate-400 italic">Changing this will affect how rates are stored and synced.</p>
+                             class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-900 #{@presenter.can_edit_currency? ? 'bg-white focus:border-slate-300 focus:outline-none focus:ring-0' : 'bg-slate-50 cursor-not-allowed'}",
+                             disabled: !@presenter.can_edit_currency? %>
+                <% if @presenter.can_edit_currency? %>
+                  <p class="mt-1 text-[10px] font-medium text-slate-400 italic">Changing this will affect rates and syncing.</p>
                 <% else %>
-                  <p class="mt-1 text-[10px] font-medium text-rose-500 italic">Contact admin to change base accounting currency.</p>
+                  <p class="mt-1 text-[10px] font-medium text-rose-500 italic">Contact admin to change base currency.</p>
                 <% end %>
               </div>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-3 mt-6">
+            <div class="grid gap-4 md:grid-cols-2 mt-6">
               <div data-controller="time-picker" class="relative">
                 <%= f.label :business_starts_at, "Business Day Starts At", class: "mb-2 block text-sm font-medium text-slate-900" %>
                 <div class="relative">
@@ -225,6 +223,18 @@
                 <%= f.number_field :arrival_grace_period_hours, min: 0, step: 1, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
                 <p class="mt-1 text-[10px] font-medium text-slate-400 italic">Grace period after business hours before marking as No-Show.</p>
               </div>
+
+              <div>
+                <span class="mb-2 block text-sm font-medium text-slate-900">Geolocation Check</span>
+                <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 cursor-pointer">
+                  <span class="text-sm text-slate-600 font-medium">Enforce Geolocation</span>
+                  <span class="relative inline-flex items-center">
+                    <%= f.check_box :geolocation_enabled, class: "sr-only peer" %>
+                    <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
+                  </span>
+                </label>
+                <p class="mt-1 text-[10px] font-medium text-slate-400 italic">If disabled, guests can self-check-in remotely from anywhere.</p>
+              </div>
             </div>
 
             <div class="flex justify-end border-t border-slate-200 pt-4">
@@ -243,7 +253,7 @@
           <div class="px-6 py-5 sm:px-8 flex items-center justify-between gap-4">
             <p class="text-sm text-slate-600">Generate a printable QR code that links guests to your hotel's concierge page.</p>
             <%= link_to hotel_concierge_qr_path(current_hotel), class: "inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700 transition flex-none" do %>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 lucide lucide-qr-code-icon lucide-qr-code"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+              <%= cached_icon "qr-code", class: "h-4 w-4" %>
               View QR Code
             <% end %>
           </div>

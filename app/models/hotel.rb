@@ -594,6 +594,14 @@ class Hotel < ApplicationRecord
     ])
   end
 
+  def latitude
+    extract_coordinate("3d", /@(-?\d+\.\d+)/)
+  end
+
+  def longitude
+    extract_coordinate("4d", /@(?:-?\d+\.\d+),(-?\d+\.\d+)/)
+  end
+
   def should_generate_new_friendly_id?
     name_changed? || slug.blank?
   end
@@ -683,6 +691,15 @@ class Hotel < ApplicationRecord
   end
 
   private
+
+  def extract_coordinate(prefix, fallback_regex)
+    return nil if google_map_link.blank?
+
+    matches = google_map_link.scan(/!#{prefix}(-?\d+\.\d+)/).flatten
+    return matches.last.to_f if matches.any?
+
+    google_map_link[fallback_regex, 1]&.to_f
+  end
 
   def ensure_current_business_date
     HotelBusinessDate.initialize_for_hotel!(hotel: self, date: business_date_for(Time.current))

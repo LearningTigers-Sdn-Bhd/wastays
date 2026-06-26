@@ -358,6 +358,25 @@ class Booking < ApplicationRecord
     where("regexp_replace(guest_phone, '\D', '', 'g') LIKE ?", "%#{suffix}")
   end
 
+  def past_check_in_time?
+    policy = hotel.property_policy
+    return true if policy&.check_in_time.blank?
+
+    hotel_tz = hotel.hotel_time_zone
+    hotel_now = Time.current.in_time_zone(hotel_tz)
+    hotel_today = hotel_now.to_date
+
+    return false if hotel_today < check_in.to_date
+    return true if hotel_today > check_in.to_date
+
+    check_in_dt = hotel_tz.parse("#{check_in.to_date} #{policy.check_in_time}")
+    return false unless check_in_dt
+
+    hotel_now >= check_in_dt
+  rescue ArgumentError, TypeError
+    false
+  end
+
   private
 
   def status_changed_on_persisted_record?

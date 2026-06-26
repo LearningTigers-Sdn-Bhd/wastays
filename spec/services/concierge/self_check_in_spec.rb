@@ -18,8 +18,8 @@ RSpec.describe Concierge::SelfCheckIn do
     room_number
   end
 
-  def call
-    described_class.new(booking: booking).call
+  def call(latitude: nil, longitude: nil)
+    described_class.new(booking: booking, latitude: latitude, longitude: longitude).call
   end
 
   context "when everything is ready" do
@@ -67,6 +67,27 @@ RSpec.describe Concierge::SelfCheckIn do
       result = call
       expect(result.success?).to be false
       expect(result.error_code).to eq(:too_early)
+    end
+  end
+
+  context "updated check-in policy (e.g. 14:00) after booking creation with default (e.g. 15:00)" do
+    before do
+      travel 11.hours + 25.minutes
+      hotel.create_property_policy!(check_in_time: "14:00", check_out_time: "12:00",
+                                    currency: "MYR") unless hotel.property_policy
+      hotel.property_policy.update!(check_in_time: "14:00")
+      booking.update_columns(check_in: Time.zone.local(2026, 6, 10, 15, 0, 0))
+      with_available_room
+    end
+
+    after do
+      travel_back
+    end
+
+    it "allows check-in at 14:25 because it is past the 14:00 policy check-in time" do
+      result = call
+      expect(result.success?).to be true
+      expect(booking.reload.status).to eq("checked_in")
     end
   end
 
@@ -148,6 +169,59 @@ RSpec.describe Concierge::SelfCheckIn do
       result = call
       expect(result.success?).to be true
       expect(result.room_number).to eq("101")
+    end
+  end
+
+  context "when geolocation check is required" do
+    before do
+      hotel.update!(google_map_link: "https://www.google.com/maps/place/Sample+Hotel/@5.9771228,116.0622732,15z")
+      with_available_room
+    end
+
+    it "returns :missing_location if no coordinates are passed" do
+      result = call
+      expect(result.success?).to be false
+      expect(result.error_code).to eq(:missing_location)
+    end
+
+    it "returns :too_far_away if coordinates are far from the hotel" do
+      # Coordinates for Kuala Lumpur (approx 1600km from KK)
+      result = call(latitude: 3.1390, longitude: 101.6869)
+      expect(result.success?).to be false
+      expect(result.error_code).to eq(:too_far_away)
+    end
+
+    it "allows check-in if coordinates are close to the hotel" do
+      # Coordinates very close (within 50m of 5.9771228, 116.0622732)
+      result = call(latitude: 5.9772, longitude: 116.0623)
+      expect(result.success?).to be true
+      expect(booking.reload.status).to eq("checked_in")
+    end
+  end
+
+  context "when geolocation check is skipped (no coordinates configured on hotel)" do
+    before do
+      hotel.update!(google_map_link: nil)
+      with_available_room
+    end
+
+    it "allows check-in without coordinates" do
+      result = call
+      expect(result.success?).to be true
+      expect(booking.reload.status).to eq("checked_in")
+    end
+  end
+
+  context "when geolocation check is disabled in hotel settings" do
+    before do
+      hotel.update!(geolocation_enabled: false, google_map_link: "https://www.google.com/maps/place/Sample+Hotel/@5.9771228,116.0622732,15z")
+      with_available_room
+    end
+
+    it "skips location check and allows check-in even without coordinates" do
+      result = call
+      expect(result.success?).to be true
+      expect(booking.reload.status).to eq("checked_in")
     end
   end
 end

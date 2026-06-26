@@ -1,14 +1,21 @@
 module Concierge
   class SelfCheckIn
-    def initialize(booking:)
+    def initialize(booking:, latitude: nil, longitude: nil)
       @booking = booking
       @hotel = booking.hotel
       @policy = @hotel.property_policy
+      @latitude = latitude.to_f if latitude.present?
+      @longitude = longitude.to_f if longitude.present?
     end
 
     def call
       return build_failure(:wrong_date) unless on_check_in_date?
       return build_failure(:too_early)  if too_early?
+
+      if location_check_enabled?
+        return build_failure(:missing_location) if location_missing?
+        return build_failure(:too_far_away) if too_far?
+      end
 
       room_type = @booking.booking_rooms.first&.room_type
       return build_failure(:no_room_available) unless room_type
@@ -57,7 +64,11 @@ module Concierge
       return false if @policy&.check_in_time.blank?
       return false if hotel_now.to_date > @booking.check_in.to_date
 
-      hotel_now < @booking.check_in.in_time_zone(@hotel.hotel_time_zone)
+      check_in_date = @booking.check_in.to_date
+      check_in_opening_time = @hotel.hotel_time_zone.parse("#{check_in_date} #{@policy.check_in_time}")
+      return false unless check_in_opening_time
+
+      hotel_now < check_in_opening_time
     end
 
     def hotel_now
@@ -81,6 +92,35 @@ module Concierge
 
     def build_failure(code, message: nil)
       Result.failure(error_code: code, message: message)
+    end
+
+    def location_check_enabled?
+      @hotel.geolocation_enabled? && @hotel.latitude.present? && @hotel.longitude.present?
+    end
+
+    def location_missing?
+      @latitude.nil? || @longitude.nil?
+    end
+
+    def too_far?
+      distance = calculate_distance(@latitude, @longitude, @hotel.latitude, @hotel.longitude)
+      distance > 50.0
+    end
+
+    def calculate_distance(lat1, lon1, lat2, lon2)
+      rad_per_deg = Math::PI / 180
+      r_meters = 6_371_000 # Earth's radius in meters
+
+      dlat_rad = (lat2 - lat1) * rad_per_deg
+      dlon_rad = (lon2 - lon1) * rad_per_deg
+
+      lat1_rad = lat1 * rad_per_deg
+      lat2_rad = lat2 * rad_per_deg
+
+      a = Math.sin(dlat_rad / 2)**2 + Math.cos(lat1_rad) * Math.cos(lat2_rad) * Math.sin(dlon_rad / 2)**2
+      c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+      r_meters * c
     end
   end
 end
