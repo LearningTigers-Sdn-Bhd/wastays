@@ -43,6 +43,19 @@ module Concierge
         old_value = booking.attributes.slice(*registration_keys)
         booking.update!(registration_attributes)
         attach_signature
+
+        # Transition pre-checkin status to completed
+        pre_checkin = booking.pre_checkin || booking.create_pre_checkin!(
+          status: "pending", document_status: "pending", signature_status: "pending"
+        )
+        pre_checkin.update!(
+          status: "completed",
+          completed_at: Time.current,
+          document_status: "verified",
+          signature_status: "signed"
+        )
+        booking.update!(pre_checkin_status: "completed")
+
         record_audit_log(old_value)
       end
       true

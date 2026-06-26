@@ -36,11 +36,11 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         hotel.create_property_policy!(check_in_time: "14:00", check_out_time: "12:00")
       end
 
-      it "redirects to pre-checkin form" do
+      it "redirects to check-in now page" do
         travel_to kl_zone.parse("#{Date.today} 09:00") do
           post concierge_check_in_lookup_path(hotel.slug),
                params: { confirmation_token: booking.confirmation_token }
-          expect(response).to redirect_to(pre_checkin_path(booking.reload.pre_checkin.token))
+          expect(response).to redirect_to(concierge_check_in_now_path(hotel.slug))
         end
       end
     end
@@ -182,10 +182,11 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       expect(response.body).to include("guest_home_address")
     end
 
-    it "submit_check_in saves guest fields and checks in" do
+    it "submit_check_in saves guest fields and redirects to confirmation, then checks in" do
       create(:room_inventory, room_type: room_type, date: Date.today,
              quantity: 1, status: "open", available_room_numbers: [ "101" ])
 
+      # Step 1: Submit registration details
       post concierge_submit_check_in_path(hotel.slug), params: {
         booking: {
           guest_name: "Ahmad Zulkifli",
@@ -198,6 +199,11 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         }
       }
 
+      expect(response).to redirect_to(concierge_check_in_now_path(hotel.slug))
+      expect(booking.reload.pre_checkin_status).to eq("completed")
+
+      # Step 2: Confirm check-in
+      post concierge_submit_check_in_path(hotel.slug)
       expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.reload.guest_home_address).to eq("No. 12, Jalan Ampang, 50450 KL")
@@ -205,6 +211,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     end
 
     it "submit_check_in re-renders with error when guest fields missing" do
+      allow_any_instance_of(Booking).to receive(:guest_email).and_return(nil)
       post concierge_submit_check_in_path(hotel.slug), params: {
         booking: {
           guest_name: "Ahmad Zulkifli",

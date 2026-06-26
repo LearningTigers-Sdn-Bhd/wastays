@@ -76,17 +76,24 @@
       </div>
     </div>
 
-    <%# Guest registration form %>
-    <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: {
-          controller: "scanner#{@hotel.geolocation_enabled? ? ' geolocation-check-in' : ''}",
+    <%
+      geolocation_active = @hotel.geolocation_enabled? && !@presenter.registration_required?
+      form_controllers = ["scanner"]
+      form_controllers << "geolocation-check-in" if geolocation_active
+      form_data = { controller: form_controllers.join(" ") }
+      if geolocation_active
+        form_data.merge!(
           geolocation_check_in_hotel_latitude_value: @hotel.latitude,
           geolocation_check_in_hotel_longitude_value: @hotel.longitude,
           geolocation_check_in_allowed_radius_value: 50,
           geolocation_check_in_refresh_icon_value: cached_icon("refresh-cw", class: "w-4 h-4 mr-1.5 inline-block align-middle animate-spin-slow"),
           geolocation_check_in_is_mobile_value: true
-        } do |f| %>
-      <%= hidden_field_tag :latitude, nil, data: { geolocation_check_in_target: "latitude" } %>
-      <%= hidden_field_tag :longitude, nil, data: { geolocation_check_in_target: "longitude" } %>
+        )
+      end
+    %>
+    <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: form_data do |f| %>
+      <%= hidden_field_tag :latitude, nil, data: geolocation_active ? { geolocation_check_in_target: "latitude" } : {} %>
+      <%= hidden_field_tag :longitude, nil, data: geolocation_active ? { geolocation_check_in_target: "longitude" } : {} %>
       <% if @presenter.registration_required? %>
         <div class="rounded-2xl border border-neutral-border/50 bg-white p-6 shadow-sm space-y-8">
           <div>
@@ -222,10 +229,12 @@
 
       <%# Submit button positioned at the bottom %>
       <div class="fixed bottom-0 left-0 right-0 p-6 bg-landing-bg/95 backdrop-blur-md z-30">
-        <div data-geolocation-check-in-target="status"></div>
-        <%= submit_tag "CONFIRM CHECK IN",
+        <% if geolocation_active %>
+          <div data-geolocation-check-in-target="status"></div>
+        <% end %>
+        <%= submit_tag @presenter.registration_required? ? "CONFIRM PRE-CHECK-IN" : "CONFIRM CHECK IN",
               class: "w-full bg-brand-primary text-white font-black py-5 rounded-xl shadow-xl shadow-brand-primary/30 active:scale-[0.98] transition-all cursor-pointer tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed mt-2",
-              data: { geolocation_check_in_target: "submitButton" } %>
+              data: geolocation_active ? { geolocation_check_in_target: "submitButton" } : {} %>
       </div>
     <% end %>
 

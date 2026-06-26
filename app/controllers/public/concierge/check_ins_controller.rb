@@ -26,15 +26,11 @@ module Public
           @error = "This booking has been cancelled."
           render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
         when "confirmed"
-          if booking.pre_checkin&.completed? || booking.past_check_in_time?
-            set_concierge_booking_cookie(booking)
-            redirect_to concierge_check_in_now_path(@hotel.slug)
-          else
-            booking.create_pre_checkin!(
-              status: "pending", document_status: "pending", signature_status: "pending"
-            ) unless booking.pre_checkin.present?
-            redirect_to pre_checkin_path(booking.pre_checkin.token)
-          end
+          booking.create_pre_checkin!(
+            status: "pending", document_status: "pending", signature_status: "pending"
+          ) unless booking.pre_checkin.present?
+          set_concierge_booking_cookie(booking)
+          redirect_to concierge_check_in_now_path(@hotel.slug)
         else
           @error = "This booking is not ready for check-in. Please see the front desk."
           render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
@@ -55,7 +51,10 @@ module Public
         @presenter = ::Public::Concierge::CheckInPresenter.new(booking: @booking, hotel: @hotel)
 
         if @form.needs_registration?
-          unless @form.save
+          if @form.save
+            redirect_to concierge_check_in_now_path(@hotel.slug), notice: "Registration completed successfully. Please confirm your check-in."
+            return
+          else
             @error_code = :registration_error
             @error = @presenter.error_message_for(:registration_error)
             render(mobile_request? ? "check_in_now_mobile" : :check_in_now, status: :unprocessable_content)
