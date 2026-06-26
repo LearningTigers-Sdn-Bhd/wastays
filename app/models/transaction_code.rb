@@ -24,6 +24,7 @@ class TransactionCode < ApplicationRecord
 
   belongs_to :hotel
   has_many :folio_transactions, dependent: :nullify
+  has_many :folio_routing_rules, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :nullify
   has_many :transaction_code_taxes, dependent: :destroy
   has_many :taxes, through: :transaction_code_taxes, source: :hotel_tax

@@ -20,31 +20,166 @@ module HotelPortal
       :action_kind,
       :modal_title,
       :transaction_id,
+      :forecast_id,
+      :movement_allowed,
       :row_kind,
       :reversed,
       keyword_init: true
     )
 
-    def initialize(booking:, hotel:, user: nil, projected_lines: nil)
+    BillingInstructionRow = Struct.new(
+      :rule,
+      :code,
+      :charge_label,
+      :target_label,
+      :target_reference,
+      :status,
+      :source,
+      :editable,
+      :children,
+      :expanded,
+      keyword_init: true
+    )
+
+    BillingInstructionChildRow = Struct.new(
+      :rule,
+      :code,
+      :charge_label,
+      :target_label,
+      :target_reference,
+      :status,
+      :source,
+      :enabled,
+      keyword_init: true
+    )
+
+    RoutePreviewRow = Struct.new(
+      :date_label,
+      :code,
+      :description,
+      :amount,
+      :source,
+      :warning,
+      keyword_init: true
+    )
+
+    RoutePreviewGroup = Struct.new(
+      :folio,
+      :target_label,
+      :target_reference,
+      :total,
+      :rows,
+      keyword_init: true
+    )
+
+    ActivityLogRow = Struct.new(
+      :time_label,
+      :action_label,
+      :actor_label,
+      :details,
+      keyword_init: true
+    )
+
+    VALID_TABS = %w[ledger billing_instructions route_preview activity_log].freeze
+    TAB_LABELS = {
+      "ledger" => "Ledger",
+      "billing_instructions" => "Billing Instructions",
+      "route_preview" => "Route Preview",
+      "activity_log" => "Activity Log"
+    }.freeze
+
+    def initialize(booking:, hotel:, user: nil, projected_lines: nil, active_folio_id: nil, active_tab: nil)
       @booking = booking
       @hotel = hotel
       @user = user
       @projected_lines_override = projected_lines
+      @active_folio_id = active_folio_id.presence
+      @active_tab = active_tab.presence
       @booking_presenter = HotelPortal::BookingPresenter.new(booking, hotel)
     end
 
     attr_reader :booking, :hotel, :user
 
     def folio
-      booking.booking_folio
+      @folio ||= begin
+        selected = folios.detect { |candidate| candidate.id.to_s == @active_folio_id.to_s } if @active_folio_id.present?
+        selected || booking.booking_folio || folios.first
+      end
+    end
+
+    def folios
+      @folios ||= booking.booking_folios.to_a.sort_by { |candidate| [ candidate.is_primary? ? 0 : 1, candidate.open? ? 0 : 1, candidate.folio_sequence.to_i, candidate.folio_number.to_i, candidate.id ] }
+    end
+
+    def active_folio_id
+      folio&.id
+    end
+
+    def active_tab
+      VALID_TABS.include?(@active_tab.to_s) ? @active_tab.to_s : "ledger"
+    end
+
+    def active_tab_label
+      TAB_LABELS.fetch(active_tab)
+    end
+
+    def page_tabs
+      TAB_LABELS.map do |name, label|
+        {
+          name: name,
+          label: label,
+          icon: tab_icon(name),
+          active: name == active_tab
+        }
+      end
+    end
+
+    def other_open_folios
+      folios.select { |candidate| candidate.open? && candidate.id != active_folio_id }
+    end
+
+    def can_manage_folio_windows?
+      permitted?("manage_folio_windows")
+    end
+
+    def can_manage_folio_movements?
+      can_show_normal_folio_actions? && permitted?("manage_folio_movements") && other_open_folios.any?
+    end
+
+    def can_manage_billing_instructions?
+      permitted?("manage_folio_movements") && folios.any?(&:open?)
+    end
+
+    def folio_window_rows
+      folios.map do |candidate|
+        {
+          id: candidate.id,
+          name: candidate.display_name,
+          payer: candidate.payer_display_label,
+          type: candidate.folio_type.to_s.humanize,
+          status: candidate.status.to_s.humanize,
+          reference: candidate.folio_reference_display,
+          balance: money(candidate.projected_outstanding_balance),
+          active: candidate.id == active_folio_id,
+          primary: candidate.is_primary?
+        }
+      end
+    end
+
+    def active_folio_window_row
+      folio_window_rows.find { |row| row[:active] } || folio_window_rows.first
     end
 
     def currency
-      booking.currency.presence || "MYR"
+      folio&.currency.presence || booking.currency.presence || "MYR"
     end
 
     def folio_reference
-      booking.formatted_folio_number.presence || folio&.folio_number.presence || booking.confirmation_token
+      folio&.folio_reference_display.presence || booking.confirmation_token
+    end
+
+    def folio_account_reference
+      booking.folio_account_reference_display.presence || booking.confirmation_token
     end
 
     def booking_reference
@@ -52,7 +187,7 @@ module HotelPortal
     end
 
     def header_subtitle
-      "Booking #{booking_reference} · #{guest_name} · #{stay_summary}"
+      "Manage folio windows, posting actions, and ledger activity for this booking."
     end
 
     def guest_name
@@ -210,11 +345,12 @@ module HotelPortal
     def folio_detail_rows
       [
         [ "Booking Reference", booking_reference ],
+        [ "Folio Account Reference", folio_account_reference ],
         [ "Folio Reference", folio_reference ],
         [ "Guest", guest_name ],
         [ "Room", room_summary ],
         [ "Stay / Nights", formatted_stay_nights ],
-        [ "Folio Type", "Booking folio" ]
+        [ "Currency", currency ]
       ]
     end
 
@@ -245,15 +381,9 @@ module HotelPortal
 
     def checkout_blockers
       @checkout_blockers ||= begin
-        blockers = []
-        blockers << "Guest owes #{money(current_balance)}" if current_balance.positive?
-        blockers << "Hotel owes guest #{money(current_balance.abs)}" if current_balance.negative?
-        blockers << "#{forecasted_rows.size} upcoming #{'charge'.pluralize(forecasted_rows.size)} pending" if forecasted_rows.any?
-        blockers << "Audit is running" if hotel.current_business_date_record&.audit_running?
-        blockers << "Audit is blocked" if hotel.current_business_date_record&.audit_blocked?
+        blockers = booking_checkout_readiness.blockers.dup
         blockers << "Captured payment is not synced" if unsynced_captured_payment?
         blockers << "Completed refund is not synced" if unsynced_completed_refund?
-        blockers << "Folio is closed" if folio&.status == "closed"
         blockers.presence || [ "Review booking checkout status" ]
       end
     end
@@ -377,7 +507,76 @@ module HotelPortal
     end
 
     def charge_transaction_codes
-      hotel.transaction_codes.active.charge.order(:code)
+      @charge_transaction_codes ||= begin
+        codes = hotel.transaction_codes.active.charge.includes(:transaction_code_taxes).order(:code).to_a
+        hotel_tax_code_ids = hotel.hotel_taxes.where(transaction_code_id: codes.map(&:id)).pluck(:transaction_code_id)
+
+        codes.reject { |code| hotel_tax_code_ids.include?(code.id) && !code.system_required? }
+      end
+    end
+
+    def billing_instruction_rows
+      parent_code_ids = charge_transaction_codes.map(&:id)
+      folio_routing_rules.select { |rule| parent_code_ids.include?(rule.transaction_code_id) }.map do |rule|
+        BillingInstructionRow.new(
+          rule: rule,
+          code: rule.transaction_code&.code || "—",
+          charge_label: rule.transaction_code&.name || "Unknown charge",
+          target_label: rule.target_folio&.display_name || "Missing folio",
+          target_reference: rule.target_folio&.folio_reference_display,
+          status: rule.active? ? "Active" : "Inactive",
+          source: "Rule",
+          editable: can_manage_billing_instructions?,
+          children: billing_instruction_child_rows(rule.transaction_code, rule),
+          expanded: billing_instruction_child_rows(rule.transaction_code, rule).any?
+        )
+      end
+    end
+
+    def default_billing_instruction_rows
+      routed_code_ids = folio_routing_rules.select(&:active?).map(&:transaction_code_id)
+      charge_transaction_codes.reject { |code| routed_code_ids.include?(code.id) }.map do |code|
+        BillingInstructionRow.new(
+          rule: nil,
+          code: code.code,
+          charge_label: code.name,
+          target_label: folio&.display_name || "Primary folio",
+          target_reference: folio&.folio_reference_display,
+          status: "System",
+          source: "Default",
+          editable: false,
+          children: billing_instruction_child_rows(code),
+          expanded: billing_instruction_child_rows(code).any?
+        )
+      end
+    end
+
+    def route_preview_groups
+      route_preview.grouped_by_folio.map do |target_folio, rows|
+        preview_rows = rows.map { |row| route_preview_row(row) }
+        RoutePreviewGroup.new(
+          folio: target_folio,
+          target_label: target_folio&.display_name || "Unresolved",
+          target_reference: target_folio&.folio_reference_display,
+          total: rows.sum { |row| row[:amount].to_d },
+          rows: preview_rows
+        )
+      end.sort_by { |group| [ group.folio.nil? ? 1 : 0, group.target_label.to_s ] }
+    end
+
+    def route_preview_line_count
+      route_preview.rows.size
+    end
+
+    def activity_log_rows
+      folio_operation_logs.map do |log|
+        ActivityLogRow.new(
+          time_label: log.created_at.strftime("%d %b %H:%M"),
+          action_label: log.operation_type.to_s.tr("_", " ").titleize,
+          actor_label: log.actor&.name.presence || "System",
+          details: operation_log_details(log)
+        )
+      end
     end
 
     def mobile_summary_items
@@ -449,6 +648,7 @@ module HotelPortal
 
       @projected_lines ||= Array(folio&.projected_forecasts).map do |forecast|
         {
+          forecast_id: forecast.id,
           date: forecast.stay_date,
           description: forecast.description,
           amount: forecast.amount,
@@ -468,18 +668,112 @@ module HotelPortal
 
     private
 
+    def tab_icon(name)
+      {
+        "ledger" => "receipt-text",
+        "billing_instructions" => "route",
+        "route_preview" => "map",
+        "activity_log" => "history"
+      }.fetch(name)
+    end
+
+    def folio_routing_rules
+      @folio_routing_rules ||= booking.folio_routing_rules.includes(:transaction_code, :target_folio, :created_by, :updated_by).order(active: :desc, created_at: :asc, id: :asc).to_a
+    end
+
+    def active_folio_routing_rules_by_transaction_code_id
+      @active_folio_routing_rules_by_transaction_code_id ||= folio_routing_rules.select(&:active?).index_by(&:transaction_code_id)
+    end
+
+    def billing_instruction_child_rows(transaction_code, parent_rule = nil)
+      return [] if transaction_code.blank?
+
+      transaction_code.transaction_code_taxes.includes(:hotel_tax).map do |tax_rule|
+        child_code = tax_rule.posting_transaction_code
+        child_rule = active_folio_routing_rules_by_transaction_code_id[child_code&.id]
+        target_folio = child_rule&.target_folio || parent_rule&.target_folio || folio
+
+        BillingInstructionChildRow.new(
+          rule: child_rule,
+          code: composite_tax_code(transaction_code, child_code, tax_rule),
+          charge_label: tax_rule.display_name,
+          target_label: target_folio&.display_name || "Primary folio",
+          target_reference: target_folio&.folio_reference_display,
+          status: tax_rule.enabled_for_posting? ? (child_rule.present? ? "Active" : "Follows parent") : "Disabled",
+          source: child_rule.present? ? "Rule" : "Attached tax/fee",
+          enabled: tax_rule.enabled_for_posting?
+        )
+      end
+    end
+
+    def composite_tax_code(parent_code, child_code, tax_rule)
+      child_label = child_code&.code.presence || tax_rule.tax_line_type.to_s.upcase.presence || "TAX"
+      "#{parent_code.code}_#{child_label}"
+    end
+
+    def route_preview
+      @route_preview ||= ::Folios::RoutePreview.call(booking: booking, actor: user)
+    end
+
+    def route_preview_row(row)
+      RoutePreviewRow.new(
+        date_label: row[:date].strftime("%d %b"),
+        code: row[:display_code_label],
+        description: row[:description],
+        amount: money(row[:amount]),
+        source: route_source_label(row[:route_source]),
+        warning: row[:warning]
+      )
+    end
+
+    def route_source_label(source)
+      case source
+      when "routing_rule" then "Rule"
+      when "follows_parent" then "Follows"
+      when "manual_override" then "Override"
+      when "primary_folio" then "Default"
+      else "Preview"
+      end
+    end
+
+    def folio_operation_logs
+      @folio_operation_logs ||= booking.folio_operation_logs
+        .includes(:actor, :source_folio, :target_folio, :source_transaction, :target_transaction)
+        .order(created_at: :desc, id: :desc)
+        .limit(50)
+        .to_a
+    end
+
+    def operation_log_details(log)
+      metadata = log.metadata.to_h
+      case log.operation_type
+      when "create_routing_rule", "update_routing_rule", "deactivate_routing_rule"
+        [
+          metadata["transaction_code_code"],
+          log.target_folio&.display_name || metadata["target_folio_reference"],
+          log.reason.presence
+        ].compact_blank.join(" -> ")
+      when "move_transaction", "split_transaction", "move_forecast"
+        [ log.source_folio&.display_name, log.target_folio&.display_name, log.reason.presence ].compact_blank.join(" -> ")
+      when "create_folio", "rename_folio", "set_default_folio", "close_folio", "reopen_folio"
+        [ log.target_folio&.display_name || log.source_folio&.display_name, log.reason.presence ].compact_blank.join(" · ")
+      else
+        log.reason.presence || metadata.except("previous").compact.to_a.map { |key, value| "#{key.to_s.humanize}: #{value}" }.join(" · ").presence || "—"
+      end.presence || "—"
+    end
+
     def checkout_ready?
       if @checkout_ready.nil?
-        @checkout_ready = current_balance.zero? &&
-          forecasted_rows.empty? &&
-          folio&.status == "open" &&
-          !hotel.current_business_date_record&.audit_running? &&
-          !hotel.current_business_date_record&.audit_blocked? &&
+        @checkout_ready = booking_checkout_readiness.ready? &&
           !unsynced_captured_payment? &&
           !unsynced_completed_refund?
       end
 
       @checkout_ready
+    end
+
+    def booking_checkout_readiness
+      @booking_checkout_readiness ||= ::Folios::BookingCheckoutReadiness.call(booking: booking, hotel: hotel)
     end
 
     def unsynced_captured_payment?
@@ -570,6 +864,8 @@ module HotelPortal
         action_kind: action_kind,
         modal_title: action_kind == :reverse ? policy.modal_title : nil,
         transaction_id: transaction.id,
+        forecast_id: nil,
+        movement_allowed: transaction.charge? && !tax_transaction?(transaction) && !transaction.reversed? && transaction.reversal_of_transaction_id.blank?,
         row_kind: :posted,
         reversed: transaction.reversed?
       )
@@ -596,6 +892,8 @@ module HotelPortal
         action_kind: :none,
         modal_title: nil,
         transaction_id: nil,
+        forecast_id: line[:forecast_id],
+        movement_allowed: line[:forecast_id].present?,
         row_kind: :forecasted,
         reversed: false
       )

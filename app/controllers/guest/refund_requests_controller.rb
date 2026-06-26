@@ -3,6 +3,8 @@ class Guest::RefundRequestsController < Guest::BaseController
   before_action :set_booking, only: [ :new, :create ]
   before_action :set_refund_preview, only: [ :new, :create ]
   before_action :set_booking_for_show, only: [ :show ]
+  before_action :set_form_breadcrumbs, only: [ :new, :create ]
+  before_action :set_show_breadcrumbs, only: [ :show ]
   RETURN_TO_LIST = "list".freeze
   RETURN_TO_DETAILS = "details".freeze
   RETURN_TO_REFUND = "refund".freeze
@@ -98,6 +100,16 @@ class Guest::RefundRequestsController < Guest::BaseController
 
     @refund_percentage = @refund_policy.refund_percentage
     @estimated_refund_amount = (@booking.total_amount * (@refund_percentage / 100.0)).round(2)
+  end
+
+  def set_form_breadcrumbs
+    append_breadcrumb @booking.confirmation_token.upcase, guest_booking_path(@booking)
+    append_breadcrumb "Request Refund"
+  end
+
+  def set_show_breadcrumbs
+    append_breadcrumb @booking.confirmation_token.upcase, guest_booking_path(@booking)
+    append_breadcrumb "Refund Details"
   end
 
   def refund_request_params

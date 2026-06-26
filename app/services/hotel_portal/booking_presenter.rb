@@ -101,7 +101,7 @@ module HotelPortal
       [
         [ "Confirmation", confirmation_token ],
         [ "Reservation", booking.formatted_reservation_number ],
-        [ "Folio", booking.formatted_folio_number ],
+        [ "Folio Account", booking.folio_account_reference_display ],
         [ "Guest Registration", booking.formatted_guest_registration_number ],
         [ "External", booking.external_reference ],
         [ "Channel Manager", booking.channel_manager_reference ]

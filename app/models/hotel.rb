@@ -31,7 +31,11 @@ class Hotel < ApplicationRecord
   has_many_attached :photos
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :users, through: :user_hotel_accesses
-  has_many :staff_invitations, dependent: :destroy
+  has_many :invitations, dependent: :destroy
+  has_many :staff_invitations, -> { staff }, class_name: "StaffInvitation"
+  has_many :corporate_invitations, -> { corporate }, class_name: "CorporateInvitation"
+  has_many :hotel_corporate_accounts, dependent: :destroy
+  has_many :corporate_accounts, through: :hotel_corporate_accounts
   has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
   belongs_to :plan, optional: true
@@ -46,6 +50,9 @@ class Hotel < ApplicationRecord
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
   has_many :booking_folios, dependent: :restrict_with_error
+  has_many :ar_invoices, dependent: :restrict_with_error
+  has_many :ar_payments, dependent: :restrict_with_error
+  has_many :folio_routing_rules, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :destroy
   has_many :transaction_codes, dependent: :destroy
@@ -57,6 +64,7 @@ class Hotel < ApplicationRecord
   has_many :hotel_general_ledger_maps, dependent: :destroy
   has_many :journal_batches, dependent: :destroy
   has_many :financial_audit_events, dependent: :restrict_with_error
+  has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
@@ -92,6 +100,7 @@ class Hotel < ApplicationRecord
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
+  validate :account_must_be_hotel_kind
 
   def self.const_missing(const_name)
     case const_name
@@ -112,6 +121,12 @@ class Hotel < ApplicationRecord
     else
       super
     end
+  end
+
+  def account_must_be_hotel_kind
+    return if account.blank? || account.hotel?
+
+    errors.add(:account, "must be a hotel account")
   end
 
   def normalize_default_currency

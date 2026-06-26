@@ -42,7 +42,19 @@ module Folios
 
     def create_folio!
       folio_number = HotelCounter.increment!(hotel: @booking.hotel, type: "folio")
-      @booking.create_booking_folio!(hotel: @booking.hotel, folio_number: folio_number)
+      @booking.assign_folio_account_reference_from!(folio_number)
+      @booking.create_booking_folio!(
+        hotel: @booking.hotel,
+        folio_number: folio_number,
+        folio_sequence: 1,
+        name: "Guest Folio",
+        folio_type: "guest",
+        payer_type: "guest",
+        is_primary: true,
+        currency: @booking.currency.presence || @booking.hotel.default_currency,
+        opened_at: Time.current,
+        created_by: @user
+      )
     end
 
     def guard_folio_creation!

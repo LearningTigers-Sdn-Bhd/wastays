@@ -1,0 +1,33 @@
+<div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
+  <button
+    type="button"
+    class="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-900 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+    data-dropdown-target="button"
+    data-action="click->dropdown#toggle keydown->dropdown#handleKeydown"
+    data-testid="ar-invoice-actions-<%= row.invoice.id %>"
+    aria-expanded="false"
+    aria-haspopup="true"
+    aria-label="More actions for <%= row.invoice_label %>">
+    <%= cached_icon "ellipsis", stroke_width: 2.5, class: "size-4" %>
+  </button>
+
+  <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[100] mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-950/10" role="menu" aria-orientation="vertical" tabindex="-1">
+    <%= link_to hotel_booking_path(current_hotel, row.booking), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:bg-slate-50 focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
+      <%= cached_icon "calendar-days", class: "size-4 text-slate-400" %>
+      View Booking
+    <% end %>
+
+    <%= link_to hotel_folio_path(current_hotel, row.booking, active_folio_id: row.booking_folio.id), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:bg-slate-50 focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
+      <%= cached_icon "book-open", class: "size-4 text-slate-400" %>
+      View Folio
+    <% end %>
+
+    <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
+      <div class="my-1 border-t border-slate-100"></div>
+      <%= link_to new_hotel_ar_payment_path(current_hotel, ar_invoice_id: row.invoice.id, hotel_corporate_account_id: row.invoice.hotel_corporate_account_id), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:bg-slate-50 focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
+        <%= cached_icon "hand-coins", class: "size-4 text-emerald-600" %>
+        Record Received Payment
+      <% end %>
+    <% end %>
+  </div>
+</div>

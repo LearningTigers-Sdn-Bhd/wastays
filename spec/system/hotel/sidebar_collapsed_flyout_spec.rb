@@ -118,4 +118,32 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
       expect(page).to have_css("details.sidebar-group-active[open]")
     end
   end
+
+  it "keeps active and user-opened groups expanded through Turbo navigation" do
+    within("#hotel-sidebar") do
+      expect(page).to have_css("details.sidebar-group-active[open] > summary[aria-label='Financial']")
+      find("summary.sidebar-group-parent", text: "Accounting", visible: :all).click
+      expect(page).to have_css("details.sidebar-group[open] > summary[aria-label='Accounting']")
+    end
+
+    page.execute_script(<<~JS)
+      document.addEventListener("turbo:before-visit", () => {
+        window.sidebarActiveGroupOpenBeforeVisit =
+          document.querySelector("#hotel-sidebar details.sidebar-group-active")?.open
+      }, { once: true })
+    JS
+
+    within("#hotel-sidebar") do
+      click_link "Refund Report"
+    end
+
+    expect(page).to have_current_path(refund_report_hotel_reports_path(hotel))
+    expect(page.evaluate_script("window.sidebarActiveGroupOpenBeforeVisit")).to be(true)
+
+    within("#hotel-sidebar") do
+      expect(page).to have_css("a.sidebar-child-link.sidebar-nav-link-active", text: "Refund Report")
+      expect(page).to have_css("details.sidebar-group-active[open] > summary[aria-label='Financial']")
+      expect(page).to have_css("details.sidebar-group[open] > summary[aria-label='Accounting']")
+    end
+  end
 end

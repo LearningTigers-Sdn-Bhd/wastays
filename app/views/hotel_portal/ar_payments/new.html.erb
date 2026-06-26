@@ -1,0 +1,26 @@
+<div class="mx-auto max-w-5xl space-y-6 pb-20" data-controller="ar-payment-form" data-ar-payment-form-invoices-url-value="<%= eligible_invoices_hotel_ar_payments_path(current_hotel) %>">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Accounts Receivable</p>
+      <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Record Corporate Payment</h1>
+      <p class="mt-1 text-sm text-slate-600">Record funds now and allocate all, some, or none to open invoices.</p>
+    </div>
+    <%= link_to "Back to AR Payments", hotel_ar_payments_path(current_hotel), class: "rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm" %>
+  </div>
+
+  <% if @ar_payment_error.present? %>
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800"><%= @ar_payment_error %></div>
+  <% end %>
+
+  <%= form_with url: hotel_ar_payments_path(current_hotel), method: :post, local: true, class: "space-y-6" do %>
+    <%= hidden_field_tag "ar_payment[ar_invoice_id]", @source_invoice&.id if @source_invoice.present? %>
+    <%= render "payment_fields" %>
+    <%= render "allocation_summary", currency: params.dig(:ar_payment, :currency).presence || current_hotel.default_currency %>
+    <%= render "invoice_allocations", open_invoices: @open_invoices, source_invoice: @source_invoice %>
+
+    <div class="flex justify-end gap-2">
+      <%= link_to "Cancel", hotel_ar_payments_path(current_hotel), class: "rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100" %>
+      <%= submit_tag "Record Received Payment", class: "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700" %>
+    </div>
+  <% end %>
+</div>

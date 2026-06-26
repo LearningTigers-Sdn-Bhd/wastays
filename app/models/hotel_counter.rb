@@ -3,7 +3,7 @@
 class HotelCounter < ApplicationRecord
   belongs_to :hotel
 
-  TYPES = %w[reservation folio receipt guest_registration invoice].freeze
+  TYPES = %w[reservation folio receipt guest_registration invoice ar_invoice].freeze
 
   validates :counter_type, inclusion: { in: TYPES }
 

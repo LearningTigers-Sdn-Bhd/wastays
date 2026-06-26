@@ -38,6 +38,28 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
       )
     end
 
+    it "reopens folios closed by no-show finalization before catch-up charges are processed" do
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "closed", closed_at: Time.current)
+      create(
+        :folio_operation_log,
+        hotel: hotel,
+        booking: booking,
+        actor: user,
+        operation_type: "close_folio",
+        source_folio: folio,
+        target_folio: folio,
+        metadata: { source: "no_show_finalization" }
+      )
+      allow(Folios::ProcessCatchUpCharges).to receive(:call) do
+        expect(folio.reload).to be_open
+      end
+
+      result = subject.call
+
+      expect(result).to be_success
+      expect(folio.reload).to be_open
+    end
+
     it "updates room numbers if params are provided" do
       params[:booking_rooms_attributes][0][:room_number] = "102"
       subject.call

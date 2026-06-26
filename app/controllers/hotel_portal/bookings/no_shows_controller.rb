@@ -12,7 +12,7 @@ class HotelPortal::Bookings::NoShowsController < HotelPortal::BaseController
     if result.success?
       offcanvas_transaction_response(
         destination: offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking)),
-        notice: "Booking marked as no-show."
+        notice: no_show_notice(result)
       )
     else
       render_failure(result.error)
@@ -20,6 +20,17 @@ class HotelPortal::Bookings::NoShowsController < HotelPortal::BaseController
   end
 
   private
+
+  def no_show_notice(result)
+    notice = "Booking marked as no-show. Tourism tax was not charged."
+    return "#{notice} Settled folio closed." if result.closed_folios.any?
+    return notice if result.skipped_folios.empty?
+
+    balances = result.skipped_folios.map do |entry|
+      "#{entry.folio.display_name}: #{entry.folio.currency} #{format('%.2f', entry.balance)}"
+    end
+    "#{notice} Folio remains open (#{balances.to_sentence})."
+  end
 
   def render_failure(error)
     @booking.errors.add(:base, error)

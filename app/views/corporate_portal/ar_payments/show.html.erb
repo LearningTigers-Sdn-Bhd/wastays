@@ -1,0 +1,203 @@
+<div class="mx-auto max-w-5xl space-y-6 pb-20">
+  <%
+    # Setup unified display variables
+    if @intent.present?
+      title = "Payment Attempt"
+      subtitle = "#{@intent.hotel.name} · #{@intent.status.humanize}"
+      
+      reference = @intent.external_reference.presence || @intent.gateway_order_id.presence || "Attempt ##{@intent.id}"
+      currency = @intent.currency
+      
+      amount_val = @intent.amount.to_d
+      allocated_val = @intent.ar_payment ? @intent.ar_payment.allocated_amount.to_d : 0.to_d
+      unapplied_val = @intent.ar_payment ? @intent.ar_payment.unallocated_amount.to_d : @intent.amount.to_d
+      
+      received_on = @intent.captured_at ? @intent.captured_at.strftime("%d %b %Y") : "—"
+      payment_method = @intent.ar_payment ? @intent.ar_payment.payment_method.humanize : @intent.gateway.titleize
+      company_name = current_user.account.name
+      recorded_at = @intent.created_at.strftime("%d %b %Y, %I:%M %p")
+      notes = @intent.ar_payment&.notes.presence || "—"
+      
+      is_gateway = true
+      gateway_name = @intent.gateway.to_s.titleize
+      gateway_ref = @intent.external_reference.presence || @intent.gateway_order_id.presence || "—"
+      remittance_suggestions = @intent.remittance_suggestions
+      status_label = @intent.ar_payment&.allocation_status&.humanize || @intent.status.humanize
+    else
+      title = "Payment Record"
+      subtitle = "#{@payment.hotel.name} · Legacy Payment"
+      
+      reference = @payment.reference_number
+      currency = @payment.currency
+      
+      amount_val = @payment.amount.to_d
+      allocated_val = @payment.allocated_amount.to_d
+      unapplied_val = @payment.unallocated_amount.to_d
+      
+      received_on = @payment.received_at.strftime("%d %b %Y")
+      payment_method = @payment.payment_method.humanize
+      company_name = current_user.account.name
+      recorded_at = @payment.created_at.strftime("%d %b %Y, %I:%M %p")
+      notes = @payment.notes.presence || "—"
+      
+      is_gateway = false
+      gateway_name = "—"
+      gateway_ref = "—"
+      remittance_suggestions = []
+      status_label = @payment.allocation_status.humanize
+    end
+
+    money = ->(val) { "#{currency} #{format('%.2f', val)}" }
+  %>
+
+  <div>
+    <h1 class="text-3xl font-bold tracking-tight text-slate-950"><%= title %></h1>
+    <p class="mt-1 text-sm text-slate-600"><%= subtitle %></p>
+  </div>
+
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-testid="payment-record-card">
+    <header class="border-b border-slate-200 bg-slate-50/60 px-4 py-3 sm:px-5">
+      <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+        <span class="inline-flex size-6 items-center justify-center rounded bg-slate-900 text-white">
+          <%= cached_icon "landmark", class: "size-3.5", aria: { hidden: true } %>
+        </span>
+        Payment information
+      </h2>
+    </header>
+
+    <section class="grid divide-y divide-slate-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0" aria-label="Payment allocation summary">
+      <% [
+        [ "Received amount", money.call(amount_val), "text-slate-950", "Total funds recorded" ],
+        [ "Allocated", money.call(allocated_val), "text-emerald-700", "Assigned to AR invoices" ],
+        [ "Unapplied", money.call(unapplied_val), "text-amber-700", "Available for allocation" ]
+      ].each do |label, amount, amount_class, desc| %>
+        <div class="relative px-4 py-4 sm:px-5">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500"><%= label %></p>
+          <p class="mt-1.5 text-xl font-black tabular-nums <%= amount_class %>"><%= amount %></p>
+          <p class="mt-1 text-[11px] font-medium text-slate-500"><%= desc %></p>
+        </div>
+      <% end %>
+    </section>
+
+    <dl class="border-t border-slate-200">
+      <% [
+        [ "Received date", received_on, "Payment method", payment_method ],
+        [ "Corporate account", company_name, "Recorded at", recorded_at ],
+        [ "Allocation status", status_label, "Reference", reference ]
+      ].each do |left_label, left_value, right_label, right_value| %>
+        <div class="grid border-b border-slate-100 sm:grid-cols-2">
+          <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] px-4 py-3.5 sm:px-5">
+            <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= left_label %></dt>
+            <dd class="text-sm font-bold text-slate-950"><%= left_value %></dd>
+          </div>
+          <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] border-t border-slate-100 px-4 py-3.5 sm:border-l sm:border-t-0 sm:px-5">
+            <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= right_label %></dt>
+            <dd class="text-sm font-bold text-slate-950"><%= right_value %></dd>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="grid border-b border-slate-100 sm:grid-cols-1">
+        <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] px-4 py-3.5 sm:px-5">
+          <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Notes</dt>
+          <dd class="whitespace-pre-wrap text-sm font-medium leading-6 text-slate-800"><%= notes %></dd>
+        </div>
+      </div>
+
+      <% if is_gateway %>
+        <div class="grid border-b border-slate-100 sm:grid-cols-2">
+          <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] px-4 py-3.5 sm:px-5">
+            <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Origin</dt>
+            <dd class="text-sm font-bold text-slate-950">Corporate portal gateway payment</dd>
+          </div>
+          <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] border-t border-slate-100 px-4 py-3.5 sm:border-l sm:border-t-0 sm:px-5">
+            <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Gateway ref</dt>
+            <dd class="text-sm font-bold text-slate-950"><%= gateway_name %> · <%= gateway_ref %></dd>
+          </div>
+        </div>
+        
+        <% if remittance_suggestions.any? %>
+          <div class="px-4 py-3.5 sm:px-5">
+            <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Corporate remittance suggestions</dt>
+            <dd class="mt-2 overflow-x-auto">
+              <table class="min-w-[560px] text-left text-xs">
+                <thead class="text-[9px] font-bold uppercase tracking-wider text-slate-500"><tr><th class="py-2 pr-4">Invoice</th><th class="py-2 pr-4">Due</th><th class="py-2 pr-4 text-right">Outstanding snapshot</th><th class="py-2 text-right">Suggested</th></tr></thead>
+                <tbody class="divide-y divide-slate-100">
+                  <% remittance_suggestions.each do |suggestion| %>
+                    <% due_on = suggestion["due_on"] || suggestion[:due_on] %>
+                    <tr>
+                      <td class="py-2 pr-4 font-bold"><%= suggestion["invoice_label"] || suggestion[:invoice_label] || suggestion["invoice_number"] || suggestion[:invoice_number] %></td>
+                      <td class="py-2 pr-4 text-slate-600"><%= due_on.present? ? Date.iso8601(due_on).strftime("%d %b %Y") : "—" %></td>
+                      <td class="py-2 pr-4 text-right"><%= currency %> <%= number_with_precision(suggestion["outstanding_amount"] || suggestion[:outstanding_amount], precision: 2) %></td>
+                      <td class="py-2 text-right font-bold"><%= currency %> <%= number_with_precision(suggestion["suggested_amount"] || suggestion[:suggested_amount], precision: 2) %></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </dd>
+          </div>
+        <% end %>
+      <% end %>
+    </dl>
+  </section>
+
+  <% if is_gateway && @intent.error_message.present? %>
+    <p class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800"><%= @intent.error_message %></p>
+  <% end %>
+
+  <% if @payment.present? %>
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-testid="allocation-history">
+      <header class="flex items-center justify-between border-b border-slate-200 bg-slate-50/60 px-4 py-3 sm:px-5">
+        <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+          <span class="inline-flex size-6 items-center justify-center rounded bg-emerald-50 text-emerald-700">
+            <%= cached_icon "rows-3", class: "size-3.5", aria: { hidden: true } %>
+          </span>
+          Allocation ledger
+        </h2>
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400"><%= pluralize(@payment.ar_payment_allocations.size, "entry") %></span>
+      </header>
+      <% allocations = @payment.ar_payment_allocations.includes(:ar_invoice, reversal: :reversed_by).order(created_at: :desc) %>
+      <% if allocations.any? %>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[720px] text-left text-sm">
+            <thead class="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <tr>
+                <th class="px-6 py-3">Invoice</th>
+                <th class="px-6 py-3 text-right">Allocated</th>
+                <th class="px-6 py-3">Recorded</th>
+                <th class="px-6 py-3">Status / Reversal</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% allocations.each do |alloc| %>
+                <tr class="<%= "bg-slate-50/50 text-slate-500" if alloc.reversed? %>">
+                  <td class="px-6 py-4 font-bold">
+                    <%= link_to alloc.ar_invoice.formatted_invoice_number, corporate_ar_invoice_path(alloc.ar_invoice), class: "underline decoration-slate-300 underline-offset-2 hover:text-slate-600" %>
+                  </td>
+                  <td class="px-6 py-4 text-right font-semibold <%= "line-through" if alloc.reversed? %>">
+                    <%= money.call(alloc.amount) %>
+                  </td>
+                  <td class="px-6 py-4 text-slate-600">
+                    <%= alloc.created_at.in_time_zone(@payment.hotel.hotel_time_zone).strftime("%d %b %Y, %I:%M %p") %>
+                  </td>
+                  <td class="px-6 py-4">
+                    <% if alloc.reversed? %>
+                      <div>
+                        <span class="rounded bg-red-50 border border-red-200 px-2 py-0.5 text-xs font-bold text-red-700">Reversed</span>
+                        <p class="mt-1 text-xs text-slate-500"><%= alloc.reversal.reason %> · <%= alloc.reversal.reversed_by.name %> · <%= alloc.reversal.reversed_at.in_time_zone(@payment.hotel.hotel_time_zone).strftime("%d %b %Y, %I:%M %p") %></p>
+                      </div>
+                    <% else %>
+                      <span class="rounded bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700">Active</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="px-6 py-12 text-center"><p class="text-sm font-semibold text-slate-700">No allocations yet</p><p class="mt-1 text-xs text-slate-500">This payment is currently fully unapplied.</p></div>
+      <% end %>
+    </section>
+  <% end %>
+</div>

@@ -2,6 +2,8 @@
 
 module HotelPortal
   class FoliosController < BaseController
+    include OffcanvasTransactionCompletion
+
     before_action :authorize_view_bookings!
 
     def index
@@ -13,12 +15,129 @@ module HotelPortal
     end
 
     def show
-      @booking = current_hotel.bookings.includes({ booking_rooms: :room_type }, booking_folio: [ { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges ]).find(params[:booking_id])
+      @booking = current_hotel.bookings
+        .includes(
+          { booking_rooms: :room_type },
+          :payment_transactions,
+          :refund_request,
+          booking_folios: [ :ar_invoice, { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges, { hotel_corporate_account: :corporate_account } ],
+          folio_routing_rules: [ :transaction_code, :target_folio, :created_by, :updated_by ],
+          folio_operation_logs: [ :actor, :source_folio, :target_folio, :source_transaction, :target_transaction ]
+        )
+        .find(params[:booking_id])
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-      @folio_show = HotelPortal::Folios::ShowPresenter.new(booking: @booking, hotel: current_hotel, user: current_user)
+      @folio_show = HotelPortal::Folios::ShowPresenter.new(booking: @booking, hotel: current_hotel, user: current_user, active_folio_id: params[:active_folio_id], active_tab: params[:tab])
       set_navigation_context
       set_breadcrumbs
       render "hotel_portal/folios/show/index"
+    end
+
+    def new_window
+      authorize_manage_folio_windows!
+      @booking = current_hotel.bookings.find(params[:booking_id])
+      set_company_government_accounts
+      @folio = @booking.booking_folios.build(
+        name: "External Folio",
+        folio_type: "external",
+        payer_type: "company",
+        currency: @booking.currency.presence || current_hotel.default_currency
+      )
+      @sheet_title = "Add Folio Window"
+      @sheet_description = "Create a separate billing window for this booking."
+      @form_url = windows_hotel_folio_path(current_hotel, @booking)
+      @form_method = :post
+      @submit_label = "Create Folio"
+      @folio_origin = params[:origin].presence
+      render "hotel_portal/folios/manage_windows/offcanvas"
+    end
+
+    def edit_window
+      authorize_manage_folio_windows!
+      @booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
+      @folio = @booking.booking_folios.find(params[:folio_id])
+      set_company_government_accounts
+      @sheet_title = "Edit Folio Window"
+      @sheet_description = "Update folio details or make this the primary folio for the booking."
+      @form_url = window_hotel_folio_path(current_hotel, @booking, @folio)
+      @form_method = :patch
+      @submit_label = "Save Changes"
+      @folio_origin = params[:origin].presence
+      render "hotel_portal/folios/manage_windows/offcanvas"
+    end
+
+    def create_window
+      authorize_manage_folio_windows!
+      booking = current_hotel.bookings.find(params[:booking_id])
+      result = ::Folios::CreateFolio.call(booking: booking, user: current_user, attributes: folio_window_params)
+
+      if result.success?
+        respond_with_offcanvas_completion(
+          hotel_folio_path(current_hotel, booking, active_folio_id: result.folio.id, **folio_redirect_state(tab: "ledger")),
+          notice: "Folio window created."
+        )
+      else
+        respond_with_offcanvas_completion(
+          hotel_folio_path(current_hotel, booking, **folio_redirect_state(tab: "ledger")),
+          alert: result.error
+        )
+      end
+    end
+
+    def update_window
+      authorize_manage_folio_windows!
+      booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
+      folio = booking.booking_folios.find(params[:folio_id])
+      result = ::Folios::UpdateFolio.call(
+        folio: folio,
+        user: current_user,
+        attributes: folio_window_params
+      )
+
+      respond_with_offcanvas_completion(
+        hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
+        **(result.success? ? { notice: "Folio window updated." } : { alert: result.error })
+      )
+    end
+
+    def close_window
+      authorize_manage_folio_windows!
+      booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
+      folio = booking.booking_folios.find(params[:folio_id])
+      result = ::Folios::CloseFolio.call(
+        folio: folio,
+        user: current_user,
+        reason: folio_window_params[:reason],
+        settlement_method: folio_window_params[:settlement_method]
+      )
+
+      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
+        result.success? ? { notice: "Folio window closed." } : { alert: result.error }
+    end
+
+    def reopen_window
+      authorize_manage_folio_windows!
+      booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
+      folio = booking.booking_folios.find(params[:folio_id])
+      result = ::Folios::ReopenFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
+
+      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
+        result.success? ? { notice: "Folio window reopened." } : { alert: result.error }
+    end
+
+    def move_forecast
+      authorize_manage_folio_movements!
+      booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
+      forecast = FolioForecastedCharge.joins(:booking_folio).where(booking_folios: { booking_id: booking.id, hotel_id: current_hotel.id }).find(params[:forecast_id])
+      target_folio = booking.booking_folios.find(folio_operation_params[:target_folio_id])
+      result = ::Folios::MoveForecast.call(
+        forecast: forecast,
+        target_folio: target_folio,
+        user: current_user,
+        reason: folio_operation_params[:reason]
+      )
+
+      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: (result.success? ? target_folio.id : forecast.booking_folio_id), **folio_redirect_state(tab: "ledger")),
+        result.success? ? { notice: "Upcoming charge moved." } : { alert: result.error }
     end
 
     def invoice
@@ -34,11 +153,11 @@ module HotelPortal
     end
 
     def ledger
-      @booking = current_hotel.bookings.includes(:booking_rooms, booking_folio: { folio_transactions: :transaction_code }).find(params[:booking_id])
+      @booking = current_hotel.bookings.includes(:booking_rooms, booking_folios: [ { folio_transactions: :transaction_code }, { hotel_corporate_account: :corporate_account } ]).find(params[:booking_id])
       return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio." unless @booking.booking_folio
 
       ledger_report = ::Reports::Bookings::GenerateFolioLedger.new(booking: @booking, printed_by: current_user&.name)
-      filename = "folio-ledger-#{@booking.formatted_folio_number.presence || @booking.confirmation_token}"
+      filename = "folio-ledger-#{@booking.folio_account_reference_display.presence || @booking.confirmation_token}"
 
       respond_to do |format|
         format.csv do
@@ -75,21 +194,68 @@ module HotelPortal
         override_breadcrumbs(
           { label: "Finance" },
           { label: "Folios", path: hotel_folios_path(current_hotel) },
-          { label: @booking.formatted_folio_number.presence || @booking.confirmation_token, path: hotel_folio_path(current_hotel, @booking, origin: "folios") },
-          { label: "Folio Ledger" }
+          { label: @booking.folio_account_reference_display.presence || @booking.confirmation_token, path: hotel_folio_path(current_hotel, @booking, origin: "folios") },
+          { label: @folio_show.active_tab_label, tab_label: true }
         )
       else
         override_breadcrumbs(
           { label: "Operations" },
           { label: "Bookings", path: hotel_bookings_path(current_hotel) },
           { label: @booking.confirmation_token, path: hotel_booking_path(current_hotel, @booking) },
-          { label: "Folio Ledger" }
+          { label: "Folio Ledger", path: hotel_folio_path(current_hotel, @booking) },
+          { label: @folio_show.active_tab_label, tab_label: true }
         )
       end
     end
 
     def authorize_view_bookings!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
+    end
+
+    def authorize_manage_folio_windows!
+      allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
+        current_user.has_permission?("manage_folio_windows", hotel: current_hotel)
+      raise Pundit::NotAuthorizedError unless allowed
+    end
+
+    def authorize_manage_folio_movements!
+      allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
+        current_user.has_permission?("manage_folio_movements", hotel: current_hotel)
+      raise Pundit::NotAuthorizedError unless allowed
+    end
+
+    def folio_window_params
+      params.fetch(:booking_folio, {}).permit(:name, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency, :reason, :settlement_method, :is_primary, :set_folio_as_primary_reason)
+    end
+
+    def set_company_government_accounts
+      @company_government_accounts = current_hotel.hotel_corporate_accounts
+        .active
+        .includes(corporate_account: :users)
+        .order(created_at: :desc)
+    end
+
+    def folio_operation_params
+      params.fetch(:folio_operation, {}).permit(:target_folio_id, :reason)
+    end
+
+    def folio_origin_params
+      params[:origin] == "folios" || params[:folio_origin] == "folios" ? { origin: "folios" } : {}
+    end
+
+    def folio_redirect_state(tab:)
+      folio_origin_params.merge(tab: tab).compact
+    end
+
+    def respond_with_offcanvas_completion(destination, notice: nil, alert: nil)
+      respond_to do |format|
+        format.turbo_stream do
+          flash[:notice] = notice if notice.present?
+          flash[:alert] = alert if alert.present?
+          render_offcanvas_completion(destination)
+        end
+        format.html { redirect_to destination, { notice: notice, alert: alert }.compact }
+      end
     end
   end
 end

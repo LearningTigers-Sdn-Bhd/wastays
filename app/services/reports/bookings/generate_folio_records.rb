@@ -116,7 +116,8 @@ module Reports
       def booking_stay_detail_rows
         [
           [ "Confirm No", guest_value(booking.confirmation_token) ],
-          [ "Folio No", folio_number ],
+          [ "Folio Account Reference", folio_account_reference ],
+          [ "Folio Reference", folio_reference ],
           [ "Room No / Type", room_summary ],
           [ "Arrival", format_datetime(booking.check_in) ],
           [ "Departure", format_datetime(booking.check_out) ]
@@ -540,8 +541,12 @@ module Reports
         booking.formatted_invoice_number.presence || booking.confirmation_token.presence || "-"
       end
 
-      def folio_number
-        booking.formatted_folio_number.presence || folio&.folio_number.presence || "-"
+      def folio_account_reference
+        booking.folio_account_reference_display.presence || booking.formatted_folio_number.presence || "-"
+      end
+
+      def folio_reference
+        folio&.folio_reference_display.presence || folio_account_reference
       end
 
       def format_date(value)

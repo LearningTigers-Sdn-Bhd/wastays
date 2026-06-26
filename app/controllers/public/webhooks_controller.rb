@@ -18,6 +18,10 @@ class Public::WebhooksController < ApplicationController
     event.assign_attributes(payload: temp_payload, status: "pending")
     event.save!
 
+    if corporate_ar_webhook?(temp_payload)
+      return handle_corporate_ar_webhook(gateway, raw_payload, temp_payload, event)
+    end
+
     unless quote_token
       event.update!(status: "failed", error_message: "Missing quote_token in metadata")
       return head :bad_request
@@ -104,6 +108,45 @@ class Public::WebhooksController < ApplicationController
   end
 
   private
+
+  def corporate_ar_webhook?(payload)
+    notes = payload.dig(:payload, :payment, :entity, :notes) || {}
+    notes[:payment_context].to_s == "corporate_ar" && notes[:corporate_ar_payment_intent_id].present?
+  end
+
+  def handle_corporate_ar_webhook(gateway, raw_payload, temp_payload, event)
+    notes = temp_payload.dig(:payload, :payment, :entity, :notes) || {}
+    intent = CorporateArPaymentIntent.find(notes[:corporate_ar_payment_intent_id])
+    setting = intent.hotel.effective_payment_setting(gateway)
+
+    unless setting
+      event.update!(status: "failed", error_message: "No active payment setting for gateway #{gateway}")
+      return head :forbidden
+    end
+
+    adapter = Payments::GatewayRegistry.fetch(gateway:, setting:)
+    signature = request.headers["X-Gateway-Signature"] || request.headers["X-Razorpay-Signature"]
+    unless adapter.verify_webhook(payload: raw_payload, signature: signature)
+      event.update!(status: "failed", error_message: "Invalid signature")
+      return head :unauthorized
+    end
+
+    processed_payload = adapter.handle_webhook(payload: temp_payload)
+    result = CorporateArPayments::ProcessWebhook.call(
+      intent: intent,
+      gateway: gateway,
+      processed_payload: processed_payload,
+      webhook_payload: temp_payload
+    )
+
+    if result.success?
+      event.update!(status: "processed", processed_at: Time.current)
+      head :ok
+    else
+      event.update!(status: "failed", error_message: result.error)
+      render json: { error: result.error }, status: :unprocessable_content
+    end
+  end
 
   def safely_record_transaction
     yield

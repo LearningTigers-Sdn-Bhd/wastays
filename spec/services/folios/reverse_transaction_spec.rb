@@ -166,6 +166,31 @@ RSpec.describe Folios::ReverseTransaction, type: :service do
     expect(@result.transactions).to match_array([ parent_reversal, tax_reversal ])
   end
 
+  it "reverses generated tax children posted on another folio" do
+    tax_folio = create(:booking_folio, :secondary, booking: folio.booking, hotel: folio.hotel)
+    parent = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "fb", amount: 100, description: "Restaurant charge")
+    tax = create(
+      :folio_transaction,
+      booking_folio: tax_folio,
+      transaction_type: "charge",
+      category: "tax",
+      amount: 8,
+      description: "Tourism Tax",
+      metadata: { "parent_folio_transaction_id" => parent.id, "tax_line" => { "type" => "tourism_tax" } }
+    )
+
+    result = described_class.call(
+      transaction: parent,
+      user: user,
+      correction_reason: "Posting error",
+      correction_note: "Wrong amount"
+    )
+
+    expect(result).to be_success
+    expect(parent.reload.voided_by_transaction.booking_folio).to eq(folio)
+    expect(tax.reload.voided_by_transaction.booking_folio).to eq(tax_folio)
+  end
+
   it "rejects direct reversal of generated tax children" do
     parent = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "fb", amount: 100)
     tax = create(

@@ -143,6 +143,7 @@ export default class extends Controller {
   }
 
   closeTemporaryGroup(details) {
+    if (!this.collapsed) return
     if (details.dataset.sidebarPinned === "true") return
     if (details.contains(document.activeElement)) return
     if (details.matches(":hover")) return
@@ -228,7 +229,7 @@ export default class extends Controller {
   }
 
   persistScroll() {
-    this.closeFlyouts()
+    if (this.collapsed) this.closeFlyouts()
     this.hideTooltip()
 
     const desktop = this.scrollable(this.element)

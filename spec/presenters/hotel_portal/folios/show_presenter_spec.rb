@@ -26,20 +26,125 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
   end
 
   it "uses the folio reference instead of the booking confirmation as the title reference" do
-    expect(presenter.folio_reference).to eq(booking.formatted_folio_number)
+    expect(presenter.folio_account_reference).to eq(booking.reload.folio_account_reference_display)
+    expect(presenter.folio_reference).to eq("#{booking.folio_account_reference_display}/1")
     expect(presenter.booking_reference).to eq("8XXCF4")
-    expect(presenter.header_subtitle).to eq("Booking 8XXCF4 · Hanami Saki · 18 Jun - 19 Jun 2026")
+    expect(presenter.header_subtitle).to eq("Manage folio windows, posting actions, and ledger activity for this booking.")
   end
 
   it "builds split folio details and financial metric items" do
     create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "booking_payment", amount: 100)
     create(:folio_forecasted_charge, booking_folio: folio, amount: 100, stay_date: Date.new(2026, 6, 18), charge_kind: "accommodation")
 
-    expect(presenter.folio_detail_rows.map(&:first)).to eq([ "Booking Reference", "Folio Reference", "Guest", "Room", "Stay / Nights", "Folio Type" ])
+    expect(presenter.folio_detail_rows.map(&:first)).to eq([ "Booking Reference", "Folio Account Reference", "Folio Reference", "Guest", "Room", "Stay / Nights", "Currency" ])
     expect(presenter.folio_detail_rows).to include([ "Stay / Nights", "18 Jun 2026 - 19 Jun 2026 / 1 Night" ])
+    expect(presenter.folio_detail_rows).not_to include([ "Folio Type", "Booking folio" ])
     expect(presenter.financial_metric_rows.map(&:first)).to eq([ "Current Balance", "Balance State", "Posted Charges", "Payments / Refunds", "Upcoming Charges", "Checkout Readiness" ])
     expect(presenter.financial_metric_rows).to include([ "Payments / Refunds", "MYR 100.00" ])
     expect(presenter.financial_metric_rows).to include([ "Checkout Readiness", "Not ready" ])
+  end
+
+  it "validates active tabs and exposes tab labels for breadcrumbs" do
+    tabs = described_class.new(booking: booking, hotel: hotel, active_tab: "route_preview")
+    fallback = described_class.new(booking: booking, hotel: hotel, active_tab: "unknown")
+
+    expect(tabs.active_tab).to eq("route_preview")
+    expect(tabs.active_tab_label).to eq("Route Preview")
+    expect(tabs.page_tabs.map { |tab| tab[:name] }).to eq(%w[ledger billing_instructions route_preview activity_log])
+    expect(fallback.active_tab).to eq("ledger")
+    expect(fallback.active_tab_label).to eq("Ledger")
+  end
+
+  it "builds booking-level billing instruction and default rows" do
+    room_code = create(:transaction_code, hotel: hotel, code: "ROOM2", name: "Room Charge", category: "accommodation")
+    fnb_code = create(:transaction_code, hotel: hotel, code: "FNB2", name: "Food and Beverage", category: "fb")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+
+    rows = presenter.billing_instruction_rows
+    defaults = presenter.default_billing_instruction_rows
+
+    expect(rows.first.code).to eq("ROOM2")
+    expect(rows.first.charge_label).to eq("Room Charge")
+    expect(rows.first.target_label).to eq("Company Folio")
+    expect(rows.first.status).to eq("Active")
+    expect(defaults.map(&:code)).to include("FNB2")
+  end
+
+  it "shows additional service charge codes as parents and attached taxes as expandable children" do
+    hotel.update!(sst_enabled: true)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    spa_code = create(:transaction_code, hotel: hotel, code: "SPA", name: "Spa Package", category: "other", system_required: false, is_taxable: true)
+    service_charge = create(:hotel_tax, hotel: hotel, name: "Service Charge", code: "SC", charge_type: "charge", rate_type: "percentage", amount: 10, enabled: true)
+    spa_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+    spa_code.transaction_code_taxes.create!(hotel_tax: service_charge)
+    service_charge_code = service_charge.ensure_transaction_code
+
+    defaults = presenter.default_billing_instruction_rows
+    spa_row = defaults.find { |row| row.code == "SPA" }
+
+    expect(defaults.map(&:code)).to include("SPA")
+    expect(defaults.map(&:code)).not_to include(service_charge_code.code)
+    expect(spa_row.expanded).to be(true)
+    expect(spa_row.children.map(&:code)).to include("SPA_TAX_SST", "SPA_SC")
+    expect(spa_row.children.map(&:status)).to all(eq("Follows parent"))
+  end
+
+  it "shows explicit attached tax routing under its parent row" do
+    hotel.update!(sst_enabled: true)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+    room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: sst_code, target_folio: company_folio)
+
+    row = presenter.default_billing_instruction_rows.find { |default_row| default_row.code == "ROOM" }
+
+    expect(row.children.first.code).to eq("ROOM_TAX_SST")
+    expect(row.children.first.status).to eq("Active")
+    expect(row.children.first.target_label).to eq("Company Folio")
+  end
+
+  it "builds route preview groups from booking-level routing" do
+    business_date = booking.check_in.to_date
+    hotel.update!(sst_enabled: true)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+    booking.booking_rooms.first.update!(subtotal: 100.0)
+    booking.update!(tax_posting_snapshot: { business_date.iso8601 => [] })
+
+    group = presenter.route_preview_groups.find { |preview_group| preview_group.folio == company_folio }
+
+    expect(group).to be_present
+    expect(group.target_label).to eq("Company Folio")
+    expect(group.rows.first.code).to eq("ROOM")
+    expect(group.rows.first.source).to eq("Rule")
+    expect(presenter.route_preview_line_count).to be >= 1
+  end
+
+  it "formats folio operation logs for the activity tab" do
+    create(
+      :folio_operation_log,
+      hotel: hotel,
+      booking: booking,
+      actor: create(:user, name: "Staff A"),
+      operation_type: "create_routing_rule",
+      target_folio: folio,
+      metadata: {
+        "transaction_code_code" => "ROOM",
+        "target_folio_reference" => folio.folio_reference_display
+      }
+    )
+
+    row = presenter.activity_log_rows.first
+
+    expect(row.action_label).to eq("Create Routing Rule")
+    expect(row.actor_label).to eq("Staff A")
+    expect(row.details).to include("ROOM")
+    expect(row.details).to include(folio.display_name)
   end
 
   it "formats multi-night stays with full dates and pluralized nights" do

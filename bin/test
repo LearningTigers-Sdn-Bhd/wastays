@@ -1,0 +1,877 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ -t 1 ]]; then
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  GREEN=$'\033[32m'
+  YELLOW=$'\033[33m'
+  BLUE=$'\033[34m'
+  MAGENTA=$'\033[35m'
+  CYAN=$'\033[36m'
+  RESET=$'\033[0m'
+else
+  BOLD=''
+  DIM=''
+  GREEN=''
+  YELLOW=''
+  BLUE=''
+  MAGENTA=''
+  CYAN=''
+  RESET=''
+fi
+
+DOMAINS=(
+  fast
+  bookings
+  hotel_management
+  hotel_operations
+  financials
+  payments
+  reports
+  hotel_concierge
+  ai_concierge
+  channels
+  guest_portal
+  admin_platform
+  system
+  all
+)
+
+domain_description() {
+  case "$1" in
+    fast) printf "Common non-system suite" ;;
+    bookings) printf "Public/manual booking + lifecycle" ;;
+    hotel_management) printf "Profile, rooms, staff, roles, corporate, plans, knowledge" ;;
+    hotel_operations) printf "Business date, night audit, inventory, room status, requests" ;;
+    financials) printf "Folios, taxes, transaction codes, GL, journal batches" ;;
+    payments) printf "Gateways, refunds, deposits, payouts" ;;
+    reports) printf "Hotel reports and exports" ;;
+    hotel_concierge) printf "QR concierge, pre-checkin, guest requests" ;;
+    ai_concierge) printf "AI agents, tools, knowledge search" ;;
+    channels) printf "Channex and channel manager sync" ;;
+    guest_portal) printf "Guest login, dashboard, refunds, search" ;;
+    admin_platform) printf "Superadmin and platform controls" ;;
+    system) printf "Browser/system specs" ;;
+    all) printf "Full suite" ;;
+  esac
+}
+
+domain_icon() {
+  case "$1" in
+    fast) printf "⚡" ;;
+    bookings) printf "🛎️" ;;
+    hotel_management) printf "🏨" ;;
+    hotel_operations) printf "🗓️" ;;
+    financials) printf "🧾" ;;
+    payments) printf "💳" ;;
+    reports) printf "📊" ;;
+    hotel_concierge) printf "🛎️" ;;
+    ai_concierge) printf "🤖" ;;
+    channels) printf "🔌" ;;
+    guest_portal) printf "🧳" ;;
+    admin_platform) printf "👑" ;;
+    system) printf "🖥️" ;;
+    all) printf "🌐" ;;
+  esac
+}
+
+print_banner() {
+  printf "\n${BOLD}${MAGENTA}█╗    ██╗ █████╗ ███████╗████████╗ █████╗ ██╗   ██╗███████╗${RESET}\n"
+  printf "${BOLD}${MAGENTA}██║    ██║██╔══██╗██╔════╝╚══██╔══╝██╔══██╗╚██╗ ██╔╝██╔════╝${RESET}\n"
+  printf "${BOLD}${MAGENTA}██║ █╗ ██║███████║███████╗   ██║   ███████║ ╚████╔╝ ███████╗${RESET}\n"
+  printf "${BOLD}${MAGENTA}██║███╗██║██╔══██║╚════██║   ██║   ██╔══██║  ╚██╔╝  ╚════██║${RESET}\n"
+  printf "${BOLD}${MAGENTA}╚███╔███╔╝██║  ██║███████║   ██║   ██║  ██║   ██║   ███████║${RESET}\n"
+  printf "${BOLD}${MAGENTA} ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚══════╝${RESET}\n"
+  printf "${BOLD}${YELLOW}         DOMAIN TEST MODE${RESET} ${DIM}Choose your stage...${RESET}\n\n"
+}
+
+print_domain_card() {
+  local index="$1"
+  local domain="$2"
+  local icon
+  icon=$(domain_icon "$domain")
+
+  printf "${BOLD}${BLUE}│${RESET} ${YELLOW}%2d${RESET} ${icon} ${BOLD}%-17s${RESET} ${DIM}%s${RESET}\n" \
+    "$index" \
+    "$domain" \
+    "$(domain_description "$domain")"
+}
+
+domain_paths() {
+  case "$1" in
+    fast)
+      printf "%s\n" \
+        spec/models \
+        spec/services \
+        spec/requests \
+        spec/jobs \
+        spec/helpers \
+        spec/mailers \
+        spec/presenters \
+        spec/views \
+        spec/tasks \
+        spec/seeds \
+        spec/migrations \
+        spec/integration
+      ;;
+    bookings)
+      printf "%s\n" \
+        spec/services/booking_engine \
+        spec/services/bookings \
+        spec/jobs/booking_engine \
+        spec/requests/public/bookings_invoice_spec.rb \
+        spec/requests/public/bookings_show_spec.rb \
+        spec/requests/public/hotels_rate_calendar_spec.rb \
+        spec/requests/public/hotels_spec.rb \
+        spec/requests/public/quotes_spec.rb \
+        spec/requests/hotel_portal/bookings_spec.rb \
+        spec/requests/hotel_portal/bookings \
+        spec/requests/hotel_portal/manual_bookings_spec.rb \
+        spec/requests/hotel_portal/professional_bookings_spec.rb \
+        spec/system/hotel/booking_show_tabs_spec.rb \
+        spec/system/hotel/booking_timeline_board_lifecycle_spec.rb \
+        spec/models/booking_spec.rb \
+        spec/models/booking_guest_spec.rb \
+        spec/models/booking_room_spec.rb \
+        spec/models/booking_note_spec.rb \
+        spec/models/booking_audit_log_spec.rb
+      ;;
+    hotel_management)
+      printf "%s\n" \
+        spec/services/hotel_knowledges \
+        spec/services/hotel_portal/room_types \
+        spec/services/corporate_invitations \
+        spec/services/staff_invitations \
+        spec/requests/hotel_portal/profiles_spec.rb \
+        spec/requests/hotel_portal/profile_photo_queue_spec.rb \
+        spec/requests/hotel_portal/settings_spec.rb \
+        spec/requests/hotel_portal/room_types_spec.rb \
+        spec/requests/hotel_portal/hotel_knowledge_documents_spec.rb \
+        spec/requests/hotel_portal/knowledge_diagnostics_spec.rb \
+        spec/requests/hotel_portal/users_spec.rb \
+        spec/requests/hotel_portal/staff_invitations_spec.rb \
+        spec/requests/hotel_portal/roles_spec.rb \
+        spec/requests/hotel_portal/permission_gates_spec.rb \
+        spec/requests/hotel_portal/corporate_accounts_spec.rb \
+        spec/requests/hotel_portal/nearby_attractions_spec.rb \
+        spec/system/hotel/room_setup_spec.rb \
+        spec/system/hotel/profile_update_spec.rb \
+        spec/system/hotel/settings_tabs_spec.rb \
+        spec/system/hotel/settings_card_spec.rb \
+        spec/system/hotel/settings_banking_details_spec.rb \
+        spec/system/hotel/policies_update_spec.rb \
+        spec/system/hotel/corporate_management_spec.rb
+      ;;
+    hotel_operations)
+      printf "%s\n" \
+        spec/services/business_dates \
+        spec/services/night_audits \
+        spec/services/rooms \
+        spec/services/hotel_ops \
+        spec/services/housekeeping \
+        spec/services/complaints \
+        spec/services/notifications \
+        spec/jobs/night_audits \
+        spec/jobs/notifications \
+        spec/requests/hotel_portal/night_audits_spec.rb \
+        spec/requests/hotel_portal/night_audits_force_roll_spec.rb \
+        spec/requests/hotel_portal/arrivals_spec.rb \
+        spec/requests/hotel_portal/in_house_guests_spec.rb \
+        spec/requests/hotel_portal/checked_out_guests_spec.rb \
+        spec/requests/hotel_portal/inventory_dashboards_spec.rb \
+        spec/requests/hotel_portal/inventory_audit_logs_spec.rb \
+        spec/requests/hotel_portal/room_status_board_spec.rb \
+        spec/requests/hotel_portal/room_statuses_spec.rb \
+        spec/requests/hotel_portal/room_blocks_spec.rb \
+        spec/requests/hotel_portal/room_block_inventory_sync_spec.rb \
+        spec/requests/hotel_portal/room_locks_spec.rb \
+        spec/requests/hotel_portal/requests_pages_spec.rb \
+        spec/requests/hotel_portal/notification_logs_spec.rb \
+        spec/system/hotel/night_audits_spec.rb \
+        spec/system/hotel/inventory_tabs_spec.rb \
+        spec/system/hotel/inventory_workspace_spec.rb \
+        spec/system/hotel/room_status_sidebar_spec.rb \
+        spec/system/hotel/operational_exceptions_spec.rb \
+        spec/system/hotel/hotel_room_assignment_locks_spec.rb \
+        spec/system/hotel/in_house_guests_page_spec.rb \
+        spec/system/hotel/checked_out_guests_page_spec.rb
+      ;;
+    financials)
+      printf "%s\n" \
+        spec/services/folios \
+        spec/services/financials \
+        spec/services/financial_controls \
+        spec/services/deposits \
+        spec/services/folio_ledger_export_service_spec.rb \
+        spec/requests/hotel_portal/folios_spec.rb \
+        spec/requests/hotel_portal/folio_transactions_spec.rb \
+        spec/requests/hotel_portal/taxes_fees_spec.rb \
+        spec/requests/hotel_portal/transaction_codes_spec.rb \
+        spec/requests/hotel_portal/general_ledger_maps_spec.rb \
+        spec/system/hotel/taxes_fees_spec.rb \
+        spec/models/booking_folio_spec.rb \
+        spec/models/folio_transaction_spec.rb \
+        spec/models/folio_forecasted_charge_spec.rb \
+        spec/models/folio_routing_rule_spec.rb \
+        spec/models/transaction_code_spec.rb \
+        spec/models/transaction_code_tax_spec.rb \
+        spec/models/hotel_tax_spec.rb \
+        spec/models/hotel_general_ledger_map_spec.rb \
+        spec/models/journal_batch_spec.rb \
+        spec/models/journal_batch_entry_spec.rb \
+        spec/models/financial_audit_event_spec.rb \
+        spec/models/deposit_spec.rb
+      ;;
+    payments)
+      printf "%s\n" \
+        spec/services/payments \
+        spec/services/refunds \
+        spec/services/payout_engine \
+        spec/services/payout_export_service_spec.rb \
+        spec/requests/public/payments_spec.rb \
+        spec/requests/public/payment_mocks_spec.rb \
+        spec/requests/public/webhooks_spec.rb \
+        spec/requests/hotel_portal/refund_requests_spec.rb \
+        spec/requests/admin/refund_requests_spec.rb \
+        spec/requests/admin/refund_policies_spec.rb \
+        spec/requests/admin/payouts_spec.rb \
+        spec/requests/admin/payout_batches_spec.rb \
+        spec/system/hotel/payout_tabs_spec.rb \
+        spec/models/payment_setting_spec.rb \
+        spec/models/payment_transaction_spec.rb \
+        spec/models/refund_request_spec.rb \
+        spec/models/payout_batch_spec.rb \
+        spec/models/banking_detail_spec.rb
+      ;;
+    reports)
+      printf "%s\n" \
+        spec/services/hotel_portal/reports \
+        spec/services/reports \
+        spec/services/booking_export_service_spec.rb \
+        spec/services/receipt_pdf_service_spec.rb \
+        spec/services/voucher_pdf_service_spec.rb \
+        spec/requests/hotel_portal/reports_spec.rb
+      ;;
+    hotel_concierge)
+      printf "%s\n" \
+        spec/services/concierge \
+        spec/services/guest_arrival \
+        spec/requests/public/concierge \
+        spec/requests/public/pre_checkins_spec.rb \
+        spec/requests/hotel_portal/checkout_deposit_display_spec.rb \
+        spec/system/guest/navigation_shell_spec.rb
+      ;;
+    ai_concierge)
+      printf "%s\n" \
+        spec/services/ai_concierge \
+        spec/services/hotel_knowledges \
+        spec/jobs/hotel_knowledges \
+        spec/requests/api/v1/ai_concierge_spec.rb \
+        spec/requests/api/v1/ai_concierge
+      ;;
+    channels)
+      printf "%s\n" \
+        spec/services/channel_managers \
+        spec/services/channex \
+        spec/jobs/channel_managers \
+        spec/requests/public/channel_manager_webhooks_spec.rb
+      ;;
+    guest_portal)
+      printf "%s\n" \
+        spec/services/guest \
+        spec/services/guests \
+        spec/requests/guest \
+        spec/system/guest \
+        spec/models/guest_spec.rb
+      ;;
+    admin_platform)
+      printf "%s\n" \
+        spec/services/admin \
+        spec/services/platform_control \
+        spec/requests/admin \
+        spec/system/admin \
+        spec/models/plan_spec.rb \
+        spec/models/feature_spec.rb \
+        spec/models/feature_group_spec.rb \
+        spec/models/plan_feature_spec.rb \
+        spec/models/margin_rule_spec.rb \
+        spec/models/setup_fee_rule_spec.rb \
+        spec/models/exchange_rate_spec.rb \
+        spec/models/api_key_spec.rb \
+        spec/models/app_config_spec.rb
+      ;;
+    system)
+      printf "%s\n" spec/system
+      ;;
+    all)
+      printf "%s\n" spec
+      ;;
+  esac
+}
+
+domain_group_labels() {
+  case "$1" in
+    fast)
+      printf "%s\n" models services requests jobs helpers mailers presenters views tasks seeds migrations integration
+      ;;
+    bookings)
+      printf "%s\n" booking_engine lifecycle public_requests hotel_requests transactions system models
+      ;;
+    hotel_management)
+      printf "%s\n" profile settings room_types knowledge staff roles corporate policies system
+      ;;
+    hotel_operations)
+      printf "%s\n" business_dates night_audits rooms inventory requests notifications arrivals system
+      ;;
+    financials)
+      printf "%s\n" folios transactions taxes_fees codes gl_maps journals controls deposits models
+      ;;
+    payments)
+      printf "%s\n" gateways verification webhooks refunds payouts deposits settings models
+      ;;
+    reports)
+      printf "%s\n" hotel_reports exports booking_exports folio_ledger pdfs requests
+      ;;
+    hotel_concierge)
+      printf "%s\n" qr_concierge pre_checkin check_in check_out guest_requests lookup
+      ;;
+    ai_concierge)
+      printf "%s\n" agents orchestration tools matching knowledge api jobs
+      ;;
+    channels)
+      printf "%s\n" channel_managers channex webhooks ari_sync jobs
+      ;;
+    guest_portal)
+      printf "%s\n" sessions dashboard bookings refunds search guest_models system
+      ;;
+    admin_platform)
+      printf "%s\n" dashboard hotels plans margins payouts refunds integrations api_keys system
+      ;;
+    system)
+      printf "%s\n" admin guest hotel public
+      ;;
+    all)
+      printf "%s\n" full_suite
+      ;;
+  esac
+}
+
+parallel_process_count() {
+  if [[ -n "${PARALLEL_TEST_PROCESSORS:-}" ]]; then
+    printf "%s" "$PARALLEL_TEST_PROCESSORS"
+  else
+    ruby -retc -e 'print Etc.nprocessors' 2>/dev/null || printf "auto"
+  fi
+}
+
+runtime_log_path() {
+  printf "tmp/parallel_runtime_rspec_%s.log" "$1"
+}
+
+runtime_group_by() {
+  local domain="$1"
+
+  if [[ -s "$(runtime_log_path "$domain")" ]]; then
+    printf "runtime"
+  else
+    printf "filesize"
+  fi
+}
+
+balance_label() {
+  local group_by="$1"
+
+  if [[ "$group_by" == "runtime" ]]; then
+    printf "runtime log"
+  else
+    printf "filesize fallback"
+  fi
+}
+
+print_kv() {
+  local key="$1"
+  local value="$2"
+
+  printf "${BOLD}${BLUE}│${RESET} ${DIM}%-11s${RESET} %s\n" "$key" "$value"
+}
+
+print_run_card() {
+  local icon="$1"
+  local domain="$2"
+  local mode="$3"
+  local group_by="${4:-}"
+  local target="${5:-}"
+
+  printf "\n${BOLD}${CYAN}╭─ %s WASTAYS TEST RUN ─────────────────────────────${RESET}\n" "$icon"
+  if [[ -n "$domain" ]]; then
+    print_kv "Domain" "${BOLD}${domain}${RESET}"
+    print_kv "Suite" "$(domain_description "$domain")"
+  fi
+  print_kv "Mode" "$mode"
+  if [[ "$mode" == "parallel" ]]; then
+    print_kv "Processes" "$(parallel_process_count)"
+    print_kv "Balance" "$(balance_label "$group_by")"
+  fi
+  if [[ -n "$target" ]]; then
+    print_kv "Target" "$target"
+  fi
+  printf "${BOLD}${CYAN}╰───────────────────────────────────────────────────${RESET}\n"
+}
+
+print_groups_card() {
+  local domain="$1"
+  local labels=()
+  local label
+  local count=0
+
+  while IFS= read -r label; do
+    labels+=("$label")
+  done < <(domain_group_labels "$domain")
+
+  printf "\n${BOLD}${CYAN}╭─ 📦 Spec Groups ──────────────────────────────────${RESET}\n"
+  for label in "${labels[@]}"; do
+    if (( count % 3 == 0 )); then
+      printf "${BOLD}${BLUE}│${RESET} "
+    fi
+
+    printf "%-17s" "$label"
+    count=$((count + 1))
+
+    if (( count % 3 == 0 )); then
+      printf "\n"
+    fi
+  done
+
+  if (( count % 3 != 0 )); then
+    printf "\n"
+  fi
+  printf "${BOLD}${CYAN}╰───────────────────────────────────────────────────${RESET}\n\n"
+}
+
+now_seconds() {
+  date +%s
+}
+
+format_duration() {
+  local seconds="$1"
+  local minutes
+
+  if (( seconds < 60 )); then
+    printf "%ss" "$seconds"
+  else
+    minutes=$((seconds / 60))
+    seconds=$((seconds % 60))
+    printf "%sm %ss" "$minutes" "$seconds"
+  fi
+}
+
+failure_count() {
+  local output_file="$1"
+
+  BOLD="$BOLD" BLUE="$BLUE" CYAN="$CYAN" RESET="$RESET" ruby -e '
+    text = File.read(ARGV.fetch(0))
+    matches = text.scan(/(\d+)\s+failures?/)
+    errors = text.scan(/(\d+)\s+errors? occurred outside of examples/)
+    if !errors.empty? && errors.last.first.to_i > 0
+      print("#{matches.empty? ? 0 : matches.last.first} failure(s), #{errors.last.first} error(s)")
+    else
+      print(matches.empty? ? "unknown" : matches.last.first)
+    end
+  ' "$output_file"
+}
+
+print_result_card() {
+  local status="$1"
+  local started_at="$2"
+  local finished_at="$3"
+  local domain="$4"
+  local mode="$5"
+  local group_by="$6"
+  local runtime_log="$7"
+  local target="$8"
+  local output_file="$9"
+  local icon="🏁"
+  local status_label="${BOLD}${GREEN}PASSED${RESET}"
+  local duration
+  local failures
+
+  duration=$(format_duration $((finished_at - started_at)))
+
+  if (( status != 0 )); then
+    icon="💥"
+    status_label="${BOLD}${YELLOW}FAILED${RESET}"
+  fi
+
+  printf "\n${BOLD}${CYAN}╭─ %s TEST RESULT ──────────────────────────────────${RESET}\n" "$icon"
+  if [[ -n "$domain" ]]; then
+    print_kv "Domain" "${BOLD}${domain}${RESET}"
+  fi
+  print_kv "Mode" "$mode"
+  print_kv "Status" "$status_label"
+  if (( status != 0 )); then
+    print_kv "Exit Code" "$status"
+    failures=$(failure_count "$output_file")
+    print_kv "Failed" "$failures"
+  fi
+  print_kv "Duration" "$duration"
+  if [[ "$mode" == "parallel" ]]; then
+    print_kv "Balance" "$(balance_label "$group_by")"
+    print_kv "Runtime Log" "$runtime_log"
+  fi
+  if [[ -n "$target" ]]; then
+    print_kv "Target" "$target"
+  fi
+  printf "${BOLD}${CYAN}╰───────────────────────────────────────────────────${RESET}\n"
+}
+
+print_failure_digest() {
+  local output_file="$1"
+
+  BOLD="$BOLD" BLUE="$BLUE" CYAN="$CYAN" RESET="$RESET" ruby -e '
+    text = File.read(ARGV.fetch(0))
+    blocks = text.split(/^\s*(?=\d+\)\s)/).select { |block| block.match?(/^\s*\d+\)\s/) }
+    failures = blocks.map do |block|
+      number, title = block.match(/^\s*(\d+)\)\s+(.+)$/)&.captures
+      next unless number
+
+      location = block[/# \.\/(spec\/[^:\n]+_spec\.rb:\d+)/, 1] ||
+        block[/\.\/(spec\/[^:\n]+_spec\.rb:\d+)/, 1] ||
+        block[/(spec\/[^:\n]+_spec\.rb:\d+)/, 1]
+
+      error = nil
+      lines = block.lines.map(&:rstrip)
+      lines.each_with_index do |line, index|
+        if line =~ /^\s*Failure\/Error:\s*(.*)$/
+          error = Regexp.last_match(1).strip
+          ((index + 1)...lines.length).each do |next_index|
+            candidate = lines[next_index].strip
+            next if candidate.empty? || candidate.start_with?("#")
+            error = candidate
+            break
+          end
+          break
+        end
+      end
+
+      error ||= lines.find do |line|
+        stripped = line.strip
+        !stripped.empty? &&
+          stripped !~ /^\d+\)/ &&
+          !stripped.start_with?("#") &&
+          stripped !~ /^Finished in / &&
+          stripped !~ /^Failed examples:/
+      end&.strip
+
+      {
+        number: number,
+        title: title.strip,
+        location: location,
+        error: error
+      }
+    end.compact
+
+    if failures.empty?
+      location = text[/An error occurred while loading \.\/(spec\/[^\n]+_spec\.rb)/, 1]
+      error_type, error_message = text.match(/\n([A-Za-z:]+Error):\n\s+([^\n]+)/)&.captures
+      if location || error_message
+        failures << {
+          number: "1",
+          title: location || "Error outside examples",
+          location: location,
+          error: [error_type, error_message].compact.join(": ")
+        }
+      end
+    end
+
+    if failures.empty?
+      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("CYAN")}╭─ 🔎 Failures ─────────────────────────────────────#{ENV.fetch("RESET")}"
+      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("BLUE")}│#{ENV.fetch("RESET")} Failure details could not be summarized."
+      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("BLUE")}│#{ENV.fetch("RESET")} See RSpec output above."
+      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("CYAN")}╰───────────────────────────────────────────────────#{ENV.fetch("RESET")}"
+      exit
+    end
+
+    puts "#{ENV.fetch("BOLD")}#{ENV.fetch("CYAN")}╭─ 🔎 Failures ─────────────────────────────────────#{ENV.fetch("RESET")}"
+    failures.first(5).each_with_index do |failure, index|
+      location = failure[:location] || failure[:title]
+      error = failure[:error] || "See RSpec output above."
+      location = location.length > 47 ? "#{location[0, 44]}..." : location
+      error = error.length > 47 ? "#{error[0, 44]}..." : error
+      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("BLUE")}│#{ENV.fetch("RESET")} #{index + 1}. #{location}"
+      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("BLUE")}│#{ENV.fetch("RESET")}    #{error}"
+    end
+    if failures.length > 5
+      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("BLUE")}│#{ENV.fetch("RESET")} ... #{failures.length - 5} more failure(s) in RSpec output above"
+    end
+    puts "#{ENV.fetch("BOLD")}#{ENV.fetch("CYAN")}╰───────────────────────────────────────────────────#{ENV.fetch("RESET")}"
+  ' "$output_file"
+}
+
+run_and_report() {
+  local domain="$1"
+  local mode="$2"
+  local group_by="$3"
+  local runtime_log="$4"
+  local target="$5"
+  shift 5
+
+  local output_file
+  local started_at
+  local finished_at
+  local status
+
+  output_file=$(mktemp)
+  started_at=$(now_seconds)
+
+  set +e
+  BOLD="$BOLD" BLUE="$BLUE" CYAN="$CYAN" RESET="$RESET" "$@" 2>&1 | tee "$output_file"
+  status=${PIPESTATUS[0]}
+  set -e
+
+  finished_at=$(now_seconds)
+  print_result_card "$status" "$started_at" "$finished_at" "$domain" "$mode" "$group_by" "$runtime_log" "$target" "$output_file"
+
+  if (( status != 0 )); then
+    print_failure_digest "$output_file"
+  fi
+
+  rm -f "$output_file"
+  return "$status"
+}
+
+usage() {
+  cat <<USAGE
+Usage: bin/test [domain] [--serial] [rspec options]
+       bin/test --menu
+       bin/test --list
+       bin/test spec/path/to/example_spec.rb[:line] [rspec options]
+
+Default domain: fast
+
+Domains:
+USAGE
+  list_domains
+}
+
+list_domains() {
+  local index=1
+  local domain
+
+  for domain in "${DOMAINS[@]}"; do
+    printf "  %2d. %s ${BOLD}%-17s${RESET} %s\n" "$index" "$(domain_icon "$domain")" "$domain" "$(domain_description "$domain")"
+    index=$((index + 1))
+  done
+}
+
+print_domain_grid() {
+  local index=1
+  local domain
+
+  printf "${BOLD}${CYAN}╭─ 🕹️  Test Domains${RESET}\n"
+  for domain in "${DOMAINS[@]}"; do
+    print_domain_card "$index" "$domain"
+    index=$((index + 1))
+  done
+  printf "${BOLD}${CYAN}└────────────────────────────────────────────────────────────────────${RESET}\n"
+}
+
+print_domain_paths() {
+  local domain="$1"
+  local path
+
+  printf "${BOLD}%s${RESET} ${DIM}%s${RESET}\n" "$domain" "$(domain_description "$domain")"
+  while IFS= read -r path; do
+    [[ -e "$path" ]] && printf "  %s\n" "$path"
+  done < <(domain_paths "$domain")
+}
+
+known_domain() {
+  local domain
+
+  for domain in "${DOMAINS[@]}"; do
+    [[ "$domain" == "$1" ]] && return 0
+  done
+
+  return 1
+}
+
+select_domain() {
+  local choice
+  local count="${#DOMAINS[@]}"
+
+  print_banner >&2
+  print_domain_grid >&2
+  printf "\n${BOLD}${CYAN}▶${RESET} Domain ${DIM}[1-%d, name, default fast]${RESET}: " "$count" >&2
+  read -r choice
+
+  if [[ -z "$choice" ]]; then
+    printf "fast\n"
+    return
+  fi
+
+  if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= count )); then
+    printf "%s\n" "${DOMAINS[choice - 1]}"
+    return
+  fi
+
+  if known_domain "$choice"; then
+    printf "%s\n" "$choice"
+    return
+  fi
+
+  printf "Unknown selection: %s\n" "$choice" >&2
+  exit 1
+}
+
+existing_domain_paths() {
+  local domain="$1"
+  local path
+  local found=0
+
+  while IFS= read -r path; do
+    if [[ -e "$path" ]]; then
+      printf "%s\n" "$path"
+      found=1
+    fi
+  done < <(domain_paths "$domain")
+
+  if (( found == 0 )); then
+    printf "No spec paths found for domain: %s\n" "$domain" >&2
+    exit 1
+  fi
+}
+
+looks_like_spec_target() {
+  [[ "$1" == spec/* || "$1" == ./*spec/* || "$1" == /*spec/* || "$1" == *_spec.rb* ]]
+}
+
+run_serial() {
+  local target="${1:-selected specs}"
+
+  print_run_card "🎯" "" "serial" "" "$target"
+  run_and_report "" "serial" "" "" "$target" bundle exec rspec "$@"
+}
+
+run_parallel() {
+  local domain="$1"
+  shift
+  local group_by
+  local runtime_log
+
+  local paths=()
+  local path
+
+  while IFS= read -r path; do
+    paths+=("$path")
+  done < <(existing_domain_paths "$domain")
+
+  runtime_log=$(runtime_log_path "$domain")
+  group_by=$(runtime_group_by "$domain")
+
+  mkdir -p tmp
+
+  print_run_card "$(domain_icon "$domain")" "$domain" "parallel" "$group_by"
+  print_groups_card "$domain"
+
+  if (( $# > 0 )); then
+    run_and_report "$domain" "parallel" "$group_by" "$runtime_log" "" \
+      bundle exec parallel_rspec \
+      --runtime-log "$runtime_log" \
+      --group-by "$group_by" \
+      --allowed-missing 100 \
+      -- \
+      --format progress \
+      --format ParallelTests::RSpec::RuntimeLogger \
+      --out "$runtime_log" \
+      "$@" \
+      -- \
+      "${paths[@]}"
+  else
+    run_and_report "$domain" "parallel" "$group_by" "$runtime_log" "" \
+      bundle exec parallel_rspec \
+      --runtime-log "$runtime_log" \
+      --group-by "$group_by" \
+      --allowed-missing 100 \
+      -- \
+      --format progress \
+      --format ParallelTests::RSpec::RuntimeLogger \
+      --out "$runtime_log" \
+      -- \
+      "${paths[@]}"
+  fi
+}
+
+domain=fast
+serial=0
+menu=0
+print_list=0
+print_paths=0
+rspec_args=()
+
+while (( $# > 0 )); do
+  case "$1" in
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    --list)
+      print_list=1
+      shift
+      ;;
+    --paths)
+      print_paths=1
+      shift
+      ;;
+    --menu)
+      menu=1
+      shift
+      ;;
+    --serial)
+      serial=1
+      shift
+      ;;
+    --)
+      shift
+      while (( $# > 0 )); do
+        rspec_args+=("$1")
+        shift
+      done
+      ;;
+    *)
+      if known_domain "$1"; then
+        domain="$1"
+      else
+        rspec_args+=("$1")
+      fi
+      shift
+      ;;
+  esac
+done
+
+if (( print_list )); then
+  list_domains
+  exit 0
+fi
+
+if (( menu )); then
+  domain=$(select_domain)
+fi
+
+if (( print_paths )); then
+  print_domain_paths "$domain"
+  exit 0
+fi
+
+if (( ${#rspec_args[@]} > 0 )) && looks_like_spec_target "${rspec_args[0]}"; then
+  run_serial "${rspec_args[@]}"
+elif (( serial )); then
+  paths=()
+  while IFS= read -r path; do
+    paths+=("$path")
+  done < <(existing_domain_paths "$domain")
+  run_serial "${paths[@]}" "${rspec_args[@]}"
+else
+  run_parallel "$domain" "${rspec_args[@]}"
+fi

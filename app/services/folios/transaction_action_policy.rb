@@ -80,7 +80,7 @@ module Folios
     end
 
     def taxable_parent?
-      generated_tax_children.exists?
+      generated_tax_children.any?
     end
 
     def generated_tax_child?
@@ -88,9 +88,7 @@ module Folios
     end
 
     def generated_tax_children
-      transaction.booking_folio.folio_transactions
-        .where("metadata->>'parent_folio_transaction_id' = ?", transaction.id.to_s)
-        .order(:posting_date, :created_at, :id)
+      Folios::AttachedTaxTransactions.call(transaction)
     end
 
     def posting_source
