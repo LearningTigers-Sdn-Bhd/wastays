@@ -32,7 +32,7 @@ RSpec.describe Reports::AccountsReceivable::GenerateStatement do
     allow(hotel).to receive(:current_business_date).and_return(Date.new(2026, 6, 30))
     booking = create(:booking, hotel: hotel, confirmation_token: "BK-PDF", currency: "MYR")
     folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: relationship, currency: "MYR")
-    create(
+    invoice = create(
       :ar_invoice,
       hotel: hotel,
       booking_folio: folio,
@@ -73,7 +73,7 @@ RSpec.describe Reports::AccountsReceivable::GenerateStatement do
       expect(text).to include("billing@atlas.test")
       expect(text).to include("STATEMENT DETAILS")
       expect(text).to include("01 Jun 2026 - 30 Jun 2026")
-      expect(text).to include("AR-9001")
+      expect(text).to include(invoice.formatted_invoice_number)
       expect(text).to include("BANK-PDF-1")
       expect(text).to include("STATEMENT SUMMARY (MYR)")
       expect(text).to include("INVOICE AGING AS OF 30 JUN 2026")

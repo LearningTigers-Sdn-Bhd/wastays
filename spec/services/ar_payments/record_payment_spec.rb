@@ -74,7 +74,7 @@ RSpec.describe ArPayments::RecordPayment do
     result = call_service(amount: 120, allocations: { invoice.id => "120.00" })
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Allocation for AR-#{invoice.invoice_number} exceeds outstanding amount.")
+    expect(result.error).to eq("Allocation for #{invoice.formatted_invoice_number} exceeds outstanding amount.")
   end
 
   def call_service(amount:, allocations:)

@@ -62,7 +62,7 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(response.body).to include("Allocation ledger")
     expect(response.body).to include("Wrong invoice")
     expect(response.body).to include("Open invoices")
-    expect(response.body).to include("AR-#{invoice.invoice_number}")
+    expect(response.body).to include(invoice.formatted_invoice_number)
   end
 
   it "records a fully unapplied payment" do
@@ -93,8 +93,8 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     get eligible_invoices_hotel_ar_payments_path(hotel), params: { hotel_corporate_account_id: relationship.id }
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("AR-#{invoice.invoice_number}")
-    expect(response.body).not_to include("AR-#{hidden_invoice.invoice_number}")
+    expect(response.body).to include(invoice.formatted_invoice_number)
+    expect(response.body).not_to include(hidden_invoice.formatted_invoice_number)
     expect(response.body).to include("ar_payment_invoice_allocations")
   end
 

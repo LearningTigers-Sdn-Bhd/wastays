@@ -25,12 +25,12 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("AR Invoices")
-      expect(response.body).to include("AR-#{invoice.invoice_number}")
+      expect(response.body).to include(invoice.formatted_invoice_number)
       expect(response.body).to include("BK-AR-1")
       expect(response.body).to include(invoice.corporate_account.name)
       expect(response.body).to include("MYR 300.00")
       expect(response.body).not_to include("BK-HIDDEN")
-      expect(response.body).not_to include("AR-#{hidden.invoice_number}")
+      expect(response.body).not_to include(hidden.formatted_invoice_number)
     end
 
     it "renders the redesigned header, metrics, single-line columns, and row actions" do
@@ -223,7 +223,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       get hotel_ar_invoice_path(hotel, invoice)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("AR-#{invoice.invoice_number}")
+      expect(response.body).to include(invoice.formatted_invoice_number)
       expect(response.body).to include("BK-AR-SHOW")
       expect(response.body).to include(invoice.booking_folio.folio_reference_display)
       expect(response.body).to include(invoice.corporate_account.name)
@@ -313,7 +313,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Record Corporate Payment")
       expect(response.body).to include(invoice.corporate_account.name)
-      expect(response.body).to include("AR-#{invoice.invoice_number}")
+      expect(response.body).to include(invoice.formatted_invoice_number)
       expect(response.body).to include("allocations[#{invoice.id}]")
       expect(response.body).to include("Reference Number")
       expect(response.body).to include("Received At")

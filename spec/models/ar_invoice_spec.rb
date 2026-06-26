@@ -22,6 +22,15 @@ RSpec.describe ArInvoice, type: :model do
     expect(invoice.corporate_account).to eq(invoice.hotel_corporate_account.corporate_account)
   end
 
+  it "formats the AR invoice number with hotel prefix and type code 4" do
+    hotel = create(:hotel, hotel_prefix: "ABC")
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    folio = create(:booking_folio, :secondary, hotel: hotel, booking: create(:booking, hotel: hotel), hotel_corporate_account: relationship)
+    invoice = create(:ar_invoice, hotel: hotel, booking_folio: folio, hotel_corporate_account: relationship, invoice_number: 42)
+
+    expect(invoice.formatted_invoice_number).to eq("ABC-40000042")
+  end
+
   it "requires the invoice company account to match the folio company account" do
     hotel = create(:hotel)
     relationship = create(:hotel_corporate_account, hotel: hotel)

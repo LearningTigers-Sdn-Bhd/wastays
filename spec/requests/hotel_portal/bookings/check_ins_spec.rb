@@ -26,6 +26,8 @@ RSpec.describe "HotelPortal::Bookings::CheckIns", type: :request do
     it "posts a cash folio payment when tourism tax is collected and ignores submitted amount" do
       expect {
         post check_in_hotel_booking_path(hotel, booking, format: :html), params: {
+          override_night_audit: "1",
+          retroactive_reason: "Test reason",
           booking: {
             tourism_tax_collected: "1",
             tourism_tax_amount: "50.00",
@@ -48,6 +50,8 @@ RSpec.describe "HotelPortal::Bookings::CheckIns", type: :request do
 
     it "does not duplicate tourism tax folio payment on repeated check-in save" do
       post check_in_hotel_booking_path(hotel, booking, format: :html), params: {
+        override_night_audit: "1",
+        retroactive_reason: "Test reason",
         booking: {
           tourism_tax_collected: "1",
           booking_rooms_attributes: [
@@ -58,6 +62,8 @@ RSpec.describe "HotelPortal::Bookings::CheckIns", type: :request do
 
       expect {
         post check_in_hotel_booking_path(hotel, booking, format: :html), params: {
+          override_night_audit: "1",
+          retroactive_reason: "Test reason",
           booking: {
             tourism_tax_collected: "1",
             booking_rooms_attributes: [
@@ -75,6 +81,8 @@ RSpec.describe "HotelPortal::Bookings::CheckIns", type: :request do
 
       expect {
         post check_in_hotel_booking_path(hotel, booking, format: :html), params: {
+          override_night_audit: "1",
+          retroactive_reason: "Test reason",
           booking: {
             tourism_tax_collected: "0",
             booking_rooms_attributes: [

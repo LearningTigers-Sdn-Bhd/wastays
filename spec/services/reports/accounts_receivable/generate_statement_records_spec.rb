@@ -37,7 +37,7 @@ RSpec.describe Reports::AccountsReceivable::GenerateStatementRecords do
       period_payments: 50.to_d,
       closing_balance: 230.to_d
     )
-    expect(report.ledger_rows.map(&:reference)).to eq([ "AR-#{period_invoice.invoice_number}", "PAY-PERIOD" ])
+    expect(report.ledger_rows.map(&:reference)).to eq([ period_invoice.formatted_invoice_number, "PAY-PERIOD" ])
     expect(report.ledger_rows.map(&:balance)).to eq([ 280.to_d, 230.to_d ])
     expect(report.contact_email).to eq("billing@atlas.test")
   end
@@ -70,7 +70,7 @@ RSpec.describe Reports::AccountsReceivable::GenerateStatementRecords do
 
     expect(june_report.unapplied_credit).to eq(40.to_d)
     expect(june_report.aging.days_1_30).to eq(40.to_d)
-    expect(june_report.ledger_rows.last.description).to include("Applied: AR-#{invoice.invoice_number} 60.00", "Unapplied: MYR 40.00")
+    expect(june_report.ledger_rows.last.description).to include("Applied: #{invoice.formatted_invoice_number} 60.00", "Unapplied: MYR 40.00")
 
     expect(july_report.unapplied_credit).to eq(100.to_d)
     expect(july_report.aging.days_1_30).to eq(100.to_d)

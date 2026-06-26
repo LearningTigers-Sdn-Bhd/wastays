@@ -141,7 +141,7 @@ RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
 
       row = described_class::Row.new(invoice)
 
-      expect(row.invoice_label).to eq("AR-#{invoice.invoice_number}")
+      expect(row.invoice_label).to eq(invoice.formatted_invoice_number)
       expect(row.corporate_account_name).to eq("Northstar Travel")
       expect(row.booking_reference).to eq("BK-NORTH")
       expect(row.folio_reference).to include("744")

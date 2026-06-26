@@ -53,7 +53,7 @@ RSpec.describe HotelPortal::AccountsReceivable::ShowPresenter do
   end
 
   it "formats invoice identity, status, money, dates, terms, and source references" do
-    expect(presenter.invoice_label).to eq("AR-84")
+    expect(presenter.invoice_label).to eq(invoice.formatted_invoice_number)
     expect(presenter.company_name).to eq("Northstar Travel")
     expect(presenter.status_label).to eq("Partially paid")
     expect(presenter.status_class).to include("bg-amber-50")
