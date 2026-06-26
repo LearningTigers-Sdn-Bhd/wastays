@@ -105,7 +105,7 @@ module CorporatePortal
           ),
           Metric.new(
             label: "Needs Allocation",
-            amounts: [needs_allocation_count.to_s],
+            amounts: [ needs_allocation_count.to_s ],
             description: "Payments with an unapplied balance",
             icon: "triangle-alert",
             class_name: "bg-red-50 text-red-700"

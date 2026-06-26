@@ -17,14 +17,17 @@ RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
       create(:hotel_corporate_account, hotel: hotel, corporate_account: create(:account, :corporate, name: "Beacon Group"))
     end
 
-    before do
+    let!(:atlas_invoice) do
       create_invoice(
         relationship: first_relationship,
         confirmation_token: "BK-ATLAS",
         folio_number: 411,
         status: "open",
         due_on: business_date + 3.days
-      )
+      ).tap { |inv| inv.update_column(:invoice_number, 411_001) }
+    end
+
+    let!(:beacon_invoice) do
       create_invoice(
         relationship: second_relationship,
         confirmation_token: "BK-BEACON",
@@ -34,12 +37,10 @@ RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
         amount: 75,
         paid_amount: 75,
         outstanding_amount: 0
-      )
+      ).tap { |inv| inv.update_column(:invoice_number, 822_001) }
     end
 
     it "filters by searchable invoice data" do
-      atlas_invoice = hotel.ar_invoices.find_by!(hotel_corporate_account: first_relationship)
-
       expect(presenter_for(query: atlas_invoice.invoice_number.to_s).paginated_rows.map(&:booking_reference)).to eq([ "BK-ATLAS" ])
       expect(presenter_for(query: "Atlas").paginated_rows.map(&:booking_reference)).to eq([ "BK-ATLAS" ])
       expect(presenter_for(query: "BK-BEACON").paginated_rows.map(&:booking_reference)).to eq([ "BK-BEACON" ])

@@ -77,7 +77,7 @@ module Folios
       return "Company & Government Account must be active for Direct Bill settlement." unless hotel_corporate_account.active?
       return "Direct Bill is not enabled for this Company & Government Account." unless hotel_corporate_account.direct_bill_enabled?
       return "Direct Bill settlement requires a positive folio balance." unless balance.positive?
-      return "AR invoice already exists for this folio." if @folio.ar_invoice.present?
+      "AR invoice already exists for this folio." if @folio.ar_invoice.present?
     end
 
     def create_ar_invoice!(balance)

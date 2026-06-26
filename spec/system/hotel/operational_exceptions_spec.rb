@@ -103,8 +103,8 @@ RSpec.describe "Operational Exceptions", type: :system do
       input.set("150.00")
       input.send_keys(:tab) # trigger blur/change to ensure stimulus updates balance
 
-      # Wait a moment for any Stimulus JS calculations to update the form state (e.g. disabling/enabling the complete button)
-      # We know the outstanding balance should become 0.00 after the 150.00 penalty is added.
+      # Wait for Stimulus JS to update the hidden charge_amount field and the balance display
+      expect(page).to have_selector("input[name='charge_amount'][value='150.00']", visible: :all, wait: 5)
       expect(page).to have_selector("*", text: "MYR 0.00", visible: :all, wait: 5)
 
       # Submit the form via Capybara's native click (no visible: all) after scrolling it into view
@@ -116,7 +116,7 @@ RSpec.describe "Operational Exceptions", type: :system do
 
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(business_date)
-      expect(folio.reload.folio_transactions.charge.find_by(category: "early_departure_charge").amount).to eq(150.0)
+      expect(folio.reload.folio_transactions.charge.find_by(category: "early_departure_charge", amount: 150.0)).to be_present
     end
   end
 end

@@ -116,7 +116,6 @@ module HotelPortal
 
       def base_scope
         hotel.ar_invoices
-          .includes(booking_folio: :booking, hotel_corporate_account: :corporate_account)
           .order(due_on: :asc, issued_on: :desc, invoice_number: :desc)
       end
 
@@ -140,7 +139,7 @@ module HotelPortal
         pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
 
         scope
-          .left_joins(booking_folio: :booking, hotel_corporate_account: :corporate_account)
+          .eager_load(booking_folio: :booking, hotel_corporate_account: :corporate_account)
           .where(
             <<~SQL.squish,
               CAST(ar_invoices.invoice_number AS TEXT) ILIKE :query

@@ -22,7 +22,7 @@ module HotelPortal
     private
 
     def allocation_params
-      params.fetch(:allocations, {}).permit!.to_h
+      params.fetch(:allocations, {})
     end
 
     def authorize_manage_ar_payments!
