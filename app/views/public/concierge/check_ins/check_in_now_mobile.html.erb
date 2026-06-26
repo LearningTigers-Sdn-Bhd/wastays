@@ -81,7 +81,9 @@
           controller: "scanner#{@hotel.geolocation_enabled? ? ' geolocation-check-in' : ''}",
           geolocation_check_in_hotel_latitude_value: @hotel.latitude,
           geolocation_check_in_hotel_longitude_value: @hotel.longitude,
-          geolocation_check_in_allowed_radius_value: 50
+          geolocation_check_in_allowed_radius_value: 50,
+          geolocation_check_in_refresh_icon_value: cached_icon("refresh-cw", class: "w-4 h-4 mr-1.5 inline-block align-middle animate-spin-slow"),
+          geolocation_check_in_is_mobile_value: true
         } do |f| %>
       <%= hidden_field_tag :latitude, nil, data: { geolocation_check_in_target: "latitude" } %>
       <%= hidden_field_tag :longitude, nil, data: { geolocation_check_in_target: "longitude" } %>
