@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_25_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_26_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -432,6 +432,39 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_25_000001) do
     t.index ["booking_id", "requested_at"], name: "index_complaint_requests_on_booking_id_and_requested_at"
     t.index ["booking_id"], name: "index_complaint_requests_on_booking_id"
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
+  end
+
+  create_table "corporate_ar_payment_intents", force: :cascade do |t|
+    t.bigint "corporate_account_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "hotel_id", null: false
+    t.bigint "hotel_corporate_account_id", null: false
+    t.bigint "ar_payment_id"
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "currency", null: false
+    t.string "gateway", null: false
+    t.string "gateway_order_id"
+    t.string "external_reference"
+    t.string "status", default: "pending", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "verified_at"
+    t.datetime "captured_at"
+    t.text "error_message"
+    t.jsonb "invoice_snapshots", default: [], null: false
+    t.jsonb "remittance_suggestions", default: [], null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ar_payment_id"], name: "index_corporate_ar_payment_intents_on_ar_payment_id"
+    t.index ["corporate_account_id", "created_at"], name: "idx_corp_ar_intents_on_account_created_at"
+    t.index ["corporate_account_id"], name: "index_corporate_ar_payment_intents_on_corporate_account_id"
+    t.index ["gateway", "external_reference"], name: "idx_corp_ar_intents_on_gateway_external_ref", unique: true, where: "(external_reference IS NOT NULL)"
+    t.index ["gateway", "gateway_order_id"], name: "idx_corp_ar_intents_on_gateway_order", unique: true, where: "(gateway_order_id IS NOT NULL)"
+    t.index ["hotel_corporate_account_id", "status"], name: "idx_corp_ar_intents_on_relationship_status"
+    t.index ["hotel_corporate_account_id"], name: "idx_on_hotel_corporate_account_id_95207673f7"
+    t.index ["hotel_id"], name: "index_corporate_ar_payment_intents_on_hotel_id"
+    t.index ["user_id"], name: "index_corporate_ar_payment_intents_on_user_id"
+    t.check_constraint "amount > 0::numeric", name: "corporate_ar_payment_intents_amount_positive"
   end
 
   create_table "deposits", force: :cascade do |t|
@@ -1154,8 +1187,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_25_000001) do
     t.jsonb "gateway_payload", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "corporate_ar_payment_intent_id"
+    t.bigint "ar_payment_id"
+    t.index ["ar_payment_id"], name: "index_payment_transactions_on_ar_payment_id"
     t.index ["booking_id"], name: "index_payment_transactions_on_booking_id"
     t.index ["booking_quote_id"], name: "index_payment_transactions_on_booking_quote_id"
+    t.index ["corporate_ar_payment_intent_id"], name: "idx_payment_transactions_on_corp_ar_intent_id"
     t.index ["gateway", "external_reference"], name: "idx_payment_transactions_on_gateway_and_external_reference", unique: true, where: "(external_reference IS NOT NULL)"
     t.index ["gateway", "gateway_order_id"], name: "idx_payment_transactions_on_gateway_and_order_id", unique: true, where: "(gateway_order_id IS NOT NULL)"
     t.index ["status"], name: "index_payment_transactions_on_status"
@@ -1592,6 +1629,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_25_000001) do
   add_foreign_key "check_out_requests", "bookings"
   add_foreign_key "check_out_requests", "users", column: "acknowledged_by_user_id"
   add_foreign_key "complaint_requests", "bookings"
+  add_foreign_key "corporate_ar_payment_intents", "accounts", column: "corporate_account_id"
+  add_foreign_key "corporate_ar_payment_intents", "ar_payments"
+  add_foreign_key "corporate_ar_payment_intents", "hotel_corporate_accounts"
+  add_foreign_key "corporate_ar_payment_intents", "hotels"
+  add_foreign_key "corporate_ar_payment_intents", "users"
   add_foreign_key "deposits", "booking_folios"
   add_foreign_key "deposits", "bookings"
   add_foreign_key "deposits", "hotels"
@@ -1670,8 +1712,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_25_000001) do
   add_foreign_key "notification_deliveries", "bookings"
   add_foreign_key "notification_deliveries", "hotels"
   add_foreign_key "onboarding_sessions", "hotels"
+  add_foreign_key "payment_transactions", "ar_payments"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
+  add_foreign_key "payment_transactions", "corporate_ar_payment_intents"
   add_foreign_key "payout_batches", "hotels"
   add_foreign_key "plan_features", "features"
   add_foreign_key "plan_features", "plans"

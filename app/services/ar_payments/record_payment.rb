@@ -81,8 +81,8 @@ module ArPayments
         invoice = invoices_by_id[row[:invoice_id]]
         return "Invoice #{row[:invoice_id]} is not available for this corporate account." if invoice.blank?
         return "Allocation amount must be greater than zero." unless row[:amount].positive?
-        return "Allocation for AR-#{invoice.invoice_number} exceeds outstanding amount." if row[:amount] > invoice.outstanding_amount.to_d
-        return "Cannot allocate payment to void invoice AR-#{invoice.invoice_number}." if invoice.void?
+        return "Allocation for #{invoice.formatted_invoice_number} exceeds outstanding amount." if row[:amount] > invoice.outstanding_amount.to_d
+        return "Cannot allocate payment to void invoice #{invoice.formatted_invoice_number}." if invoice.void?
       end
 
       nil

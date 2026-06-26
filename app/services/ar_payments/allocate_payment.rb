@@ -56,8 +56,8 @@ module ArPayments
       allocation_rows.each do |row|
         invoice = invoices_by_id[row[:invoice_id]]
         return "Invoice #{row[:invoice_id]} is not available for this payment." if invoice.blank?
-        return "Allocation for AR-#{invoice.invoice_number} exceeds outstanding amount." if row[:amount] > invoice.outstanding_amount.to_d
-        return "Cannot allocate payment to closed invoice AR-#{invoice.invoice_number}." unless invoice.outstanding_amount.to_d.positive? && !invoice.void?
+        return "Allocation for #{invoice.formatted_invoice_number} exceeds outstanding amount." if row[:amount] > invoice.outstanding_amount.to_d
+        return "Cannot allocate payment to closed invoice #{invoice.formatted_invoice_number}." unless invoice.outstanding_amount.to_d.positive? && !invoice.void?
       end
 
       nil

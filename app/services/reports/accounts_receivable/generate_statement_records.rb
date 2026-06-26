@@ -222,7 +222,7 @@ module Reports
         {
           effective_date: invoice.issued_on,
           record_type: "Invoice",
-          reference: "AR-#{invoice.invoice_number}",
+          reference: invoice.formatted_invoice_number,
           description: invoice_description(invoice),
           due_on: invoice.due_on,
           debit: invoice.amount.to_d,
@@ -256,7 +256,7 @@ module Reports
         allocations = active_allocations_as_of(payment.ar_payment_allocations, @end_date)
         allocated_total = allocations.sum { |allocation| allocation.amount.to_d }
         allocation_text = allocations.sort_by { |allocation| [ allocation.ar_invoice.invoice_number, allocation.id ] }.map do |allocation|
-          "AR-#{allocation.ar_invoice.invoice_number} #{format_amount(allocation.amount)}"
+          "#{allocation.ar_invoice.formatted_invoice_number} #{format_amount(allocation.amount)}"
         end
 
         parts = [ payment.payment_method.to_s.humanize ]

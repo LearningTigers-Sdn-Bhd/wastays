@@ -3,6 +3,8 @@
 class ArInvoice < ApplicationRecord
   STATUSES = %w[open partially_paid paid overdue void].freeze
   MUTABLE_FIELDS = %w[paid_amount outstanding_amount status metadata updated_at].freeze
+  DOCUMENT_NUMBER_PAD_LENGTH = 7
+  DOCUMENT_TYPE_CODE = 4
 
   belongs_to :hotel
   belongs_to :booking_folio
@@ -31,6 +33,14 @@ class ArInvoice < ApplicationRecord
 
   def overdue_as_of?(date = Date.current)
     outstanding_amount.to_d.positive? && due_on.present? && due_on < date.to_date && !paid? && !void?
+  end
+
+  def formatted_invoice_number
+    return nil unless invoice_number
+
+    prefix = hotel&.hotel_prefix.presence || "WS"
+    padded = invoice_number.to_s.rjust(DOCUMENT_NUMBER_PAD_LENGTH, "0")
+    "#{prefix}-#{DOCUMENT_TYPE_CODE}#{padded}"
   end
 
   private
