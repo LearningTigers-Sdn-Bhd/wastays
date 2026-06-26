@@ -112,6 +112,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("Operations")
       expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
       expect(response.body).to include(booking.confirmation_token)
+      expect(response.body).to include(%(href="#{hotel_folio_path(hotel, booking)}"))
+      expect(response.body).not_to include(%(href="#{hotel_folio_path(hotel, booking)}?origin=folios"))
     end
 
     it "renders URL-addressable booking show tab panels" do
@@ -198,10 +200,10 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_folio_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Add Payment")
-      expect(response.body).to include("Add Charge")
+      expect(response.body).to include("Post Payment")
+      expect(response.body).to include("Post Charge")
       expect(response.body).not_to include("Issue Refund")
-      expect(response.body).not_to include("Add Adjustment")
+      expect(response.body).not_to include("Post Adjustment")
     end
 
     it "filters folio adjustment categories by granular permission" do
@@ -211,7 +213,12 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_folio_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Add Adjustment")
+      expect(response.body).to include("Post Adjustment")
+
+      get new_hotel_folio_transaction_path(hotel, booking, transaction_type: "adjustment", active_folio_id: booking.booking_folio.id),
+        headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
       expect(response.body).to include('value="write_off"')
       expect(response.body).not_to include('value="correction"')
       expect(response.body).not_to include('value="discount"')
@@ -220,35 +227,34 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "renders the compact folio summary and grouped ledger" do
       booking.update!(currency: "SGD", check_out: Date.current + 2.days)
       folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-      charge = create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 125, description: "Room charge")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 125, description: "Room charge")
       create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 50, description: "Booking payment")
       create(:folio_forecasted_charge, booking_folio: folio, stay_date: Date.current + 1.day, amount: 75, description: "Future room charge")
 
       get hotel_folio_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Folio #{booking.confirmation_token}")
+      expect(response.body).to include("Account Reference")
+      expect(response.body).to include("#{booking.reload.folio_account_reference_display}/1")
       expect(response.body).to include("Guest")
       expect(response.body).to include("Stay")
-      expect(response.body).to include("Back to Booking")
-      expect(response.body).to include("Operations")
+      expect(response.body).to include("Ledger Actions")
       expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
       expect(response.body).to include(%(href="#{hotel_booking_path(hotel, booking)}"))
       expect(response.body).to include("Folio Ledger")
-      expect(response.body).to include("Outstanding")
+      expect(response.body).to include("Current Balance")
       expect(response.body).to include("Posted Charges")
-      expect(response.body).to include("Forecasted")
-      expect(response.body).to include("Stay Total")
+      expect(response.body).to include("Payments / Refunds")
+      expect(response.body).to include("Upcoming Charges")
       expect(response.body).to include("SGD 150.00")
-      expect(response.body).to include("SGD 200.00")
+      expect(response.body).to include("SGD 125.00")
       expect(response.body).to include("Posted Transactions")
-      expect(response.body).to include("Upcoming / Forecasted Charges")
-      expect(response.body).to include("##{charge.id}")
+      expect(response.body).to include("Upcoming Charges")
+      expect(response.body).to include("Room charge")
       expect(response.body).to include('data-section="posted"')
       expect(response.body).to include('aria-expanded="true"')
       expect(response.body).to include('data-section="forecasted"')
       expect(response.body).to include('data-folio-ledger-section-param="forecasted"')
-      expect(response.body).not_to include('aria-expanded="false"')
       expect(response.body).to include("Future room charge")
     end
   end
@@ -284,18 +290,22 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
       expect(response.body).to include("Step 1 of 2")
       expect(response.body).to include("Complete Checkout")
-      expect(response.body).to include("Record Refund")
+      expect(response.body).to include("Refund / Credit Handling")
       expect(response.body).not_to include("Post Charges")
       expect(response.body).not_to include("Post Payment")
       expect(response.body).not_to include("Post Adjustment")
-      expect(response.body).to include("Pending")
-      expect(response.body).to include("Forecast charges to post")
-      expect(response.body).to include("Existing transactions")
-      expect(response.body).to include("Early checkout charge - Night 1")
-      expect(response.body).to include("Outstanding balance")
+      expect(response.body).to include("Folio List")
+      expect(response.body).to include("Settlement Details")
+      expect(response.body).to include("Booking Balance")
+      expect(response.body).to include("Deposit Status")
+      expect(response.body).to include("Total charges")
+      expect(response.body).to include("Total payments")
       expect(response.body).to include('data-checkout-summary="true"')
       expect(response.body).to include('data-checkout-card="details"')
       expect(response.body).to include('data-checkout-card="early-departure"')
+      expect(response.body).to include("active_folio_id=#{folio.id}")
+      expect(response.body).not_to include("Transaction Ledger")
+      expect(response.body).not_to include("Existing transactions")
       expect(response.body).to include("border-t border-slate-200 bg-white")
       expect(response.body).not_to include("Checkout Time")
       expect(response.body).not_to include("Resolve Balance")
@@ -304,14 +314,58 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "renders only the checkout details card for a scheduled checkout" do
       booking.update!(check_out: Date.current)
       booking.transition_status_to!("checked_in", event: "check_in")
-      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
 
       get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-checkout-card="details"')
       expect(response.body).not_to include('data-checkout-card="early-departure"')
-      expect(response.body.scan("Ready for checkout").size).to eq(1)
+      expect(response.body).to include('data-controller="checkout-settlement"')
+      expect(response.body).to include('data-checkout-settlement-required-amount-value="100.00"')
+      expect(response.body).to include("Folio List")
+      expect(response.body).to include("Settlement Details")
+      expect(response.body).to include("checkout_folios[#{folio.id}][action]")
+      expect(response.body).to include(%(type="hidden" name="checkout_folios[#{folio.id}][action]" id="checkout_folios_#{folio.id}_action" value="pay_now"))
+      expect(response.body).to include("disabled=\"disabled\"")
+      expect(response.body).to include('data-checkout-settlement-target="submitButton"')
+      expect(response.body).to include('<option selected="selected" value="cash">Cash</option>')
+      expect(response.body).to include('<option value="card">Card</option>')
+    end
+
+    it "renders every booking folio with ledger links and folio counts" do
+      booking.update!(check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "closed", name: "ABC Sdn Bhd - Room")
+
+      get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("1 Open / 1 Closed")
+      expect(response.body).to include("Guest Folio")
+      expect(response.body).to include("ABC Sdn Bhd - Room")
+      expect(response.body).to include("active_folio_id=#{guest_folio.id}")
+      expect(response.body).to include("active_folio_id=#{company_folio.id}")
+    end
+
+    it "shows Direct Bill for eligible positive-balance company folios" do
+      booking.update!(check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: relationship)
+      create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 604.80)
+
+      get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Direct Bill")
+      expect(response.body).to include(%(value="direct_bill"))
+      expect(response.body).to include("AR invoice will be issued to #{relationship.corporate_account.name}")
+      expect(response.body).to include("checkout_folios[#{guest_folio.id}][action]")
+      expect(response.body).to include("checkout_folios[#{company_folio.id}][action]")
     end
 
     it "prefills the actual checkout time from scheduled checkout when checkout is required" do
@@ -455,9 +509,14 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         params: {
           checkout_sheet: "1",
           checked_out_at: Time.current.to_s,
-          checkout_payment_method: "cash",
-          checkout_payment_amount: "100.00",
-          checkout_payment_reference: "RCPT-1"
+          checkout_folios: {
+            folio.id.to_s => {
+              action: "pay_now",
+              amount: "100.00",
+              payment_method: "cash",
+              payment_reference: "RCPT-1"
+            }
+          }
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
@@ -466,18 +525,90 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include(CGI.escapeHTML(hotel_booking_path(hotel, booking, checkout_success: true)))
       expect(booking.reload.status).to eq("completed")
       expect(folio.reload.status).to eq("closed")
-      expect(folio.folio_transactions.payment.last.description).to include("RCPT-1")
+      payment = folio.folio_transactions.payment.last
+      expect(payment.description).to include("Receipt RCPT-1")
+      expect(payment.metadata["payment_source"]).to eq("cash")
+      expect(payment.metadata["source_references"]).to eq("receipt_reference" => "RCPT-1")
+    end
+
+    it "posts checkout card settlement with card payment source metadata" do
+      grant_permission("post_folio_payments")
+      booking.transition_status_to!("checked_in", event: "check_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_folios: {
+            folio.id.to_s => {
+              action: "pay_now",
+              amount: "100.00",
+              payment_method: "card",
+              payment_reference: "AUTH-1"
+            }
+          }
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(booking.reload.status).to eq("completed")
+      expect(folio.reload.status).to eq("closed")
+      payment = folio.folio_transactions.payment.last
+      expect(payment.transaction_code.code).to eq("CARD")
+      expect(payment.category).to eq("gateway_payment")
+      expect(payment.description).to include("Checkout payment for Guest Folio via Card Terminal - Card Ref AUTH-1")
+      expect(payment.metadata["payment_source"]).to eq("card")
+      expect(payment.metadata["source_references"]).to eq("card_reference" => "AUTH-1")
+    end
+
+    it "checks out with Direct Bill for an eligible company folio and creates an AR invoice" do
+      booking.update!(check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true, payment_terms_days: 21)
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: relationship)
+      create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 604.80)
+
+      expect {
+        post check_out_hotel_booking_path(hotel, booking),
+          params: {
+            checkout_sheet: "1",
+            checked_out_at: Time.current.to_s,
+            checkout_folios: {
+              guest_folio.id.to_s => { action: "close" },
+              company_folio.id.to_s => { action: "direct_bill", amount: "604.80" }
+            }
+          },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      }.to change(ArInvoice, :count).by(1)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(booking.reload.status).to eq("completed")
+      expect(guest_folio.reload).to be_closed
+      expect(company_folio.reload).to be_closed
+      expect(company_folio.ar_invoice).to have_attributes(
+        amount: 604.80.to_d,
+        hotel_corporate_account: relationship,
+        due_on: hotel.current_business_date + 21.days
+      )
     end
 
     it "returns timeline-board checkout-sheet submissions to the Booking Timeline Board" do
       booking.transition_status_to!("checked_in", event: "check_in")
-      create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
 
       post check_out_hotel_booking_path(hotel, booking),
         params: {
           checkout_sheet: "1",
           source: "booking_timeline_board",
-          checked_out_at: Time.current.to_s
+          checked_out_at: Time.current.to_s,
+          checkout_folios: {
+            folio.id.to_s => { action: "close" }
+          }
         }
 
       expect(response).to redirect_to(board_hotel_bookings_path(hotel))
@@ -497,9 +628,14 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
           checked_out_at: Time.current.to_s,
           apply_charge: "1",
           charge_amount: "50.00",
-          checkout_payment_method: "cash",
-          checkout_payment_amount: "150.00",
-          checkout_payment_reference: "RCPT-ED"
+          checkout_folios: {
+            folio.id.to_s => {
+              action: "pay_now",
+              amount: "150.00",
+              payment_method: "cash",
+              payment_reference: "RCPT-ED"
+            }
+          }
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
@@ -524,9 +660,14 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         params: {
           checkout_sheet: "1",
           checked_out_at: Time.current.to_s,
-          checkout_payment_method: "cash",
-          checkout_payment_amount: "100.00",
-          checkout_payment_reference: "RCPT-NO-PENALTY"
+          checkout_folios: {
+            folio.id.to_s => {
+              action: "pay_now",
+              amount: "100.00",
+              payment_method: "cash",
+              payment_reference: "RCPT-NO-PENALTY"
+            }
+          }
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
@@ -550,7 +691,10 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       post check_out_hotel_booking_path(hotel, booking),
         params: {
           checkout_sheet: "1",
-          checked_out_at: Time.current.to_s
+          checked_out_at: Time.current.to_s,
+          checkout_folios: {
+            folio.id.to_s => { action: "close" }
+          }
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
@@ -578,14 +722,19 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
           checked_out_at: Time.current.to_s,
           apply_charge: "1",
           charge_amount: "50.00",
-          checkout_payment_method: "cash",
-          checkout_payment_amount: "50.00",
-          checkout_payment_reference: "RCPT-ROLLBACK"
+          checkout_folios: {
+            folio.id.to_s => {
+              action: "pay_now",
+              amount: "50.00",
+              payment_method: "cash",
+              payment_reference: "RCPT-ROLLBACK"
+            }
+          }
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Missing nightly charges for")
+      expect(response.body).to include("Upcoming charges must be posted before checkout")
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.check_out).to eq(original_check_out)
       expect(folio.reload.status).to eq("open")
@@ -604,9 +753,14 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         params: {
           checkout_sheet: "1",
           checked_out_at: Time.current.to_s,
-          checkout_payment_method: "cash",
-          checkout_payment_amount: "100.00",
-          checkout_payment_reference: "RCPT-FAIL"
+          checkout_folios: {
+            folio.id.to_s => {
+              action: "pay_now",
+              amount: "100.00",
+              payment_method: "cash",
+              payment_reference: "RCPT-FAIL"
+            }
+          }
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
@@ -615,6 +769,121 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(booking.reload.status).to eq("checked_in")
       expect(folio.reload.status).to eq("open")
       expect(folio.folio_transactions.payment).to be_empty
+    end
+
+    it "keeps a positive company folio open with reason while resolving the guest folio" do
+      grant_permission("post_folio_payments")
+      booking.transition_status_to!("checked_in", event: "check_in")
+      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      company_relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", name: "ABC Sdn Bhd - Room", hotel_corporate_account: company_relationship)
+      create(:folio_transaction, booking_folio: guest_folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+      create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 270.0)
+
+      expect {
+        post check_out_hotel_booking_path(hotel, booking),
+          params: {
+            checkout_sheet: "1",
+            checked_out_at: Time.current.to_s,
+            checkout_folios: {
+              guest_folio.id.to_s => {
+                action: "pay_now",
+                amount: "100.00",
+                payment_method: "cash",
+                payment_reference: "RCPT-GUEST"
+              },
+              company_folio.id.to_s => {
+                action: "keep_open",
+                reason: "Company direct settlement approved by front desk."
+              }
+            }
+          },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      }.to change(FolioOperationLog, :count).by(1)
+
+      expect(response).to have_http_status(:success)
+      expect(booking.reload.status).to eq("completed")
+      expect(guest_folio.reload.status).to eq("closed")
+      expect(company_folio.reload.status).to eq("open")
+      expect(guest_folio.folio_transactions.payment.last.amount).to eq(100.0)
+
+      log = FolioOperationLog.last
+      expect(log.operation_type).to eq("checkout_exception")
+      expect(log.source_folio).to eq(company_folio)
+      expect(log.reason).to eq("Company direct settlement approved by front desk.")
+      expect(log.metadata["checkout_action"]).to eq("keep_open")
+    end
+
+    it "allows custom non-zero folios to remain open with manager review reason" do
+      booking.transition_status_to!("checked_in", event: "check_in")
+      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      custom_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", name: "House Folio", folio_type: "house", payer_type: "hotel")
+      create(:folio_transaction, booking_folio: custom_folio, transaction_type: :charge, category: "accommodation", amount: 25.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_folios: {
+            guest_folio.id.to_s => { action: "close" },
+            custom_folio.id.to_s => {
+              action: "manager_review",
+              reason: "Manager accepted post-checkout review."
+            }
+          }
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:success)
+      expect(booking.reload.status).to eq("completed")
+      expect(guest_folio.reload.status).to eq("closed")
+      expect(custom_folio.reload.status).to eq("open")
+      expect(FolioOperationLog.last.metadata["checkout_action"]).to eq("manager_review")
+    end
+
+    it "requires a reason before keeping a company folio open" do
+      booking.transition_status_to!("checked_in", event: "check_in")
+      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      company_relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: company_relationship)
+      create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 270.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_folios: {
+            guest_folio.id.to_s => { action: "close" },
+            company_folio.id.to_s => { action: "keep_open" }
+          }
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Company Folio: reason is required for keep open")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(company_folio.reload.status).to eq("open")
+    end
+
+    it "blocks checkout when the guest folio has a credit balance" do
+      booking.transition_status_to!("checked_in", event: "check_in")
+      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: guest_folio, transaction_type: :payment, category: "cash", amount: 50.0)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          checkout_folios: {
+            guest_folio.id.to_s => { action: "refund_credit_handling" }
+          }
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Guest Folio: refund / credit handling must be completed before checkout")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(guest_folio.reload.status).to eq("open")
     end
 
     it "rejects unsupported checkout payment methods" do
@@ -627,13 +896,18 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         params: {
           checkout_sheet: "1",
           checked_out_at: Time.current.to_s,
-          checkout_payment_method: "credit_card",
-          checkout_payment_amount: "100.00"
+          checkout_folios: {
+            folio.id.to_s => {
+              action: "pay_now",
+              amount: "100.00",
+              payment_method: "credit_card"
+            }
+          }
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Checkout payment method is not supported")
+      expect(response.body).to include("Guest Folio: payment method is not supported")
       expect(booking.reload.status).to eq("checked_in")
       expect(folio.folio_transactions.payment).to be_empty
     end
@@ -672,8 +946,13 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         params: {
           checkout_sheet: "1",
           checked_out_at: booking.check_out.strftime("%Y-%m-%dT%H:%M"),
-          checkout_payment_method: "cash",
-          checkout_payment_amount: "100.00"
+          checkout_folios: {
+            folio.id.to_s => {
+              action: "pay_now",
+              amount: "100.00",
+              payment_method: "cash"
+            }
+          }
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
@@ -788,6 +1067,29 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         "tax_total" => 0,
         "tax_lines" => []
       )
+    end
+
+    it "separates tourism tax from payable taxes for foreign guests" do
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.update!(is_taxable: true)
+      room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+      room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+
+      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+        room_type_id: room_type.id,
+        check_in: Date.current.to_s,
+        check_out: (Date.current + 2.days).to_s,
+        guest_country: "Singapore"
+      }
+
+      body = JSON.parse(response.body)
+      expect(response).to have_http_status(:success)
+      expect(body["total_amount"].to_d).to eq(216.to_d)
+      expect(body["room_total"].to_d).to eq(200.to_d)
+      expect(body["tax_total"].to_d).to eq(16.to_d)
+      expect(body["tourism_tax_total"].to_d).to eq(20.to_d)
+      expect(body["tax_lines"].map { |line| line["type"] }).to include("sst", "tourism_tax")
     end
 
     it "returns 0 if params are missing" do

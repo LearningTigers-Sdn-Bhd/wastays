@@ -4,7 +4,7 @@ require "ostruct"
 
 module Folios
   class InsertTransaction
-    def initialize(booking_folio:, amount:, transaction_type:, category:, user:, description: nil, posting_date: nil, options: {})
+    def initialize(booking_folio:, amount:, transaction_type:, category:, user:, description: nil, posting_date: nil, catch_up_key: nil, options: {})
       @booking_folio = booking_folio
       @amount = amount.to_d
       @transaction_type = transaction_type.to_s
@@ -13,6 +13,8 @@ module Folios
       @description = description
       @posting_date = posting_date || @booking_folio.hotel.current_business_date
       @options = options
+      @transaction_code = options[:transaction_code]
+      @catch_up_key = catch_up_key.presence || @options[:catch_up_key].presence
     end
 
     def call
@@ -42,9 +44,16 @@ module Folios
           posted_at: @options[:posted_at] || Time.current,
           currency: @options[:currency] || @booking_folio.booking.currency,
           reversal_of_transaction: @options[:reversal_of_transaction],
+          parent_transaction: @options[:parent_transaction],
+          split_from_transaction: @options[:split_from_transaction],
+          moved_from_transaction: @options[:moved_from_transaction],
           correction_reason: @options[:correction_reason],
           correction_note: @options[:correction_note],
           night_audit: @options[:night_audit],
+          catch_up_key: @catch_up_key,
+          transfer_group_id: @options[:transfer_group_id],
+          operation_key: @options[:operation_key],
+          transaction_code: @transaction_code,
           metadata: transaction_metadata
         )
 
@@ -110,6 +119,7 @@ module Folios
 
     def transaction_metadata
       metadata = (@options[:metadata] || {}).merge(posted_by_user_id: @user&.id)
+      metadata[:catch_up_key] ||= @catch_up_key if @catch_up_key.present?
       metadata[:night_audit_id] = @options[:night_audit].id if @options[:night_audit].present?
       metadata[:posting_source] ||= @options[:posting_source] if @options[:posting_source].present?
       metadata[:blocker_resolution] ||= @options[:blocker_resolution] if @options[:blocker_resolution].present?

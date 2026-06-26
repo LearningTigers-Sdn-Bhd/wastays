@@ -1,0 +1,18 @@
+<section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-6 py-5"><h2 class="text-lg font-bold text-slate-950">Payment Details</h2></div>
+  <div class="grid gap-4 p-6 sm:grid-cols-2">
+    <div>
+      <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Corporate Account</label>
+      <%= select_tag "ar_payment[hotel_corporate_account_id]",
+        options_from_collection_for_select(current_hotel.hotel_corporate_accounts.includes(:corporate_account).order(created_at: :desc), :id, ->(relationship) { relationship.corporate_account.name }, @hotel_corporate_account&.id),
+        class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700",
+        data: { ar_payment_form_target: "account", action: "change->ar-payment-form#accountChanged" } %>
+    </div>
+    <div><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Reference Number</label><%= text_field_tag "ar_payment[reference_number]", params.dig(:ar_payment, :reference_number), required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700" %></div>
+    <div><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Amount</label><%= number_field_tag "ar_payment[amount]", params.dig(:ar_payment, :amount), step: "0.01", min: "0.01", required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700", data: { ar_payment_form_target: "amount", action: "input->ar-payment-form#recalculate" } %></div>
+    <div><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Currency</label><%= text_field_tag "ar_payment[currency]", params.dig(:ar_payment, :currency).presence || current_hotel.default_currency, required: true, readonly: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700" %></div>
+    <div><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Received At</label><%= date_field_tag "ar_payment[received_at]", params.dig(:ar_payment, :received_at).presence || current_hotel.current_business_date, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700" %></div>
+    <div><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Payment Method</label><%= select_tag "ar_payment[payment_method]", options_for_select(ArPayment::PAYMENT_METHODS.map { |method| [ method.humanize, method ] }, params.dig(:ar_payment, :payment_method).presence || "bank_transfer"), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700" %></div>
+    <div class="sm:col-span-2"><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Notes</label><%= text_area_tag "ar_payment[notes]", params.dig(:ar_payment, :notes), rows: 3, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700" %></div>
+  </div>
+</section>

@@ -144,6 +144,18 @@ module HotelDemoManagement
       booking_ids = @hotel.bookings.pluck(:id)
       folio_ids = BookingFolio.where(booking_id: booking_ids).pluck(:id)
 
+      operation_log_count = FolioOperationLog.where(booking_id: booking_ids).count
+      if operation_log_count > 0
+        @logger.puts "Force deleting #{operation_log_count} immutable folio operation logs..."
+        FolioOperationLog.where(booking_id: booking_ids).delete_all
+      end
+
+      routing_rule_count = FolioRoutingRule.where(booking_id: booking_ids).count
+      if routing_rule_count > 0
+        @logger.puts "Deleting #{routing_rule_count} folio routing rules..."
+        FolioRoutingRule.where(booking_id: booking_ids).delete_all
+      end
+
       forecasted_count = FolioForecastedCharge.where(booking_folio_id: folio_ids).count
       if forecasted_count > 0
         @logger.puts "Destroying #{forecasted_count} forecasted charges..."
@@ -161,6 +173,10 @@ module HotelDemoManagement
         @logger.puts "Deleting #{deposit_count} deposits..."
         Deposit.where(booking_id: booking_ids).delete_all
       end
+
+      folio_count = BookingFolio.where(id: folio_ids).count
+      @logger.puts "Force deleting #{folio_count} booking folios..."
+      BookingFolio.where(id: folio_ids).delete_all
 
       booking_count = @hotel.bookings.count
       @logger.puts "Destroying #{booking_count} bookings..."

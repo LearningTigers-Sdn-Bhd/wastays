@@ -54,6 +54,7 @@ module HotelPortal
           booking_id: booking.id,
           guest_name: booking.guest_name,
           confirmation_token: booking.confirmation_token,
+          check_in: booking.check_in,
           payment_status: booking.payment_status.to_s.humanize,
           stay_dates: "#{booking.check_in.strftime('%d %b %Y')} - #{booking.check_out.strftime('%d %b %Y')}",
           room_details: room_details(booking),

@@ -191,7 +191,7 @@ module HotelPortal
         # Expand the counts per date
         result = Hash.new { |h, k| h[k] = Hash.new(0) }
         counts.each do |(room_type_id, b_start, b_end), count|
-          (b_start...b_end).each do |date|
+          (b_start.to_date...b_end.to_date).each do |date|
             next unless date >= start_date && date <= end_date
             result[room_type_id][date] += count
           end

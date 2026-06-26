@@ -28,6 +28,7 @@ class Guest::BookingsController < Guest::BaseController
   def show
     @refund_policy = RefundPolicy.first
     @booking = current_guest.bookings.find(params[:id])
+    append_breadcrumb @booking.confirmation_token.upcase, guest_booking_path(@booking)
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."
   end
@@ -45,11 +46,13 @@ class Guest::BookingsController < Guest::BaseController
 
   def invoice
     @booking = current_guest.bookings.find(params[:id])
-    pdf_bytes = InvoicePdfService.new(@booking).generate
+    pdf_bytes = ::Reports::Bookings::GenerateInvoice.new(booking: @booking).generate
     send_data pdf_bytes,
       filename: "wastays-invoice-#{@booking.confirmation_token}.pdf",
       type: "application/pdf",
       disposition: "attachment"
+  rescue ::Reports::Bookings::GenerateFolioRecords::UnavailableError
+    redirect_to guest_bookings_path, alert: "Invoice is only available after checkout."
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."
   end

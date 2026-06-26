@@ -1,0 +1,39 @@
+<%= form_with url: hotel_ar_payments_path(current_hotel), method: :get, class: "space-y-2 px-4 md:px-0", data: { controller: "auto-submit", turbo_frame: "ar_payments_results", turbo_action: "advance" } do |form| %>
+  <div class="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_18rem_12rem_12rem]">
+    <div class="relative">
+      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <%= cached_icon "search", stroke_width: 2, class: "size-4 text-slate-400" %>
+      </div>
+      <%= form.text_field :query, value: presenter.query, placeholder: "Search reference or corporate account...",
+        class: "block w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm shadow-sm",
+        data: { action: "input->auto-submit#submit" } %>
+    </div>
+
+    <%= form.select :hotel_corporate_account_id,
+      options_for_select(presenter.corporate_account_options.map { |option| [ option.name, option.id ] }, presenter.selected_corporate_account_id),
+      { include_blank: "All corporate accounts" },
+      class: "block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm",
+      data: { action: "change->auto-submit#submitNow" } %>
+
+    <%= form.date_field :received_from, value: presenter.received_from, aria: { label: "Received from" },
+      class: "block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm",
+      data: { action: "change->auto-submit#submitNow" } %>
+
+    <%= form.date_field :received_to, value: presenter.received_to, aria: { label: "Received to" },
+      class: "block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm",
+      data: { action: "change->auto-submit#submitNow" } %>
+  </div>
+
+  <div class="-mx-0.5 flex items-center gap-2 overflow-x-auto px-0.5 py-2 no-scrollbar">
+    <div class="shrink-0">
+      <input type="radio" name="status" value="" id="ar_payment_status_all" class="peer sr-only" <%= "checked" if presenter.selected_status.blank? %> data-action="change->auto-submit#submitNow">
+      <label for="ar_payment_status_all" class="inline-flex cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white">All</label>
+    </div>
+    <% presenter.status_options.each do |label, value| %>
+      <div class="shrink-0">
+        <input type="radio" name="status" value="<%= value %>" id="ar_payment_status_<%= value %>" class="peer sr-only" <%= "checked" if presenter.selected_status == value %> data-action="change->auto-submit#submitNow">
+        <label for="ar_payment_status_<%= value %>" class="inline-flex cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white"><%= label %></label>
+      </div>
+    <% end %>
+  </div>
+<% end %>

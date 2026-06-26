@@ -128,6 +128,23 @@ Rails.application.routes.draw do
 
     get "staff-invitations/:token", to: "staff_invitations#show", as: :staff_invitation
     patch "staff-invitations/:token", to: "staff_invitations#update"
+    get "corporate-invitations/:token", to: "corporate_invitations#show", as: :corporate_invitation
+    patch "corporate-invitations/:token", to: "corporate_invitations#update"
+  end
+
+  scope "/corporate", module: :corporate_portal, as: :corporate do
+    get "dashboard", to: "dashboard#index", as: :dashboard
+    resource :profile, only: [ :show ]
+    resources :ar_invoices, only: [ :index, :show ], path: "invoices"
+    resources :ar_payments, only: [ :index, :show ], path: "payments" do
+      collection do
+        get :pay_invoices, path: "pay-invoices"
+        post :review
+        post :checkout_session
+        get :verify
+        post :verify
+      end
+    end
   end
 
   # Superadmin dashboard
@@ -269,6 +286,27 @@ Rails.application.routes.draw do
     resources :staff_invitations, only: [ :update, :destroy ] do
       post :resend, on: :member
     end
+    scope "accounts-receivable" do
+      resources :corporate_accounts, only: [ :index, :new, :create ], path: "corporate-accounts" do
+        member do
+          patch :suspend
+          patch :reactivate
+        end
+      end
+      get "aging", to: "ar_invoices#aging", as: :ar_aging
+      resources :ar_invoices, only: [ :index, :show ], path: "invoices"
+      resources :ar_statements, only: [ :index, :show ], path: "statements"
+      resources :ar_payments, only: [ :index, :show, :new, :create ], path: "payments" do
+        get :eligible_invoices, on: :collection
+        resources :allocations, only: [ :create ], controller: "ar_payment_allocations" do
+          resource :reversal, only: [ :create ], controller: "ar_payment_allocation_reversals"
+        end
+      end
+    end
+
+    resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
+      post :resend, on: :member
+    end
     resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions" do
       patch :bulk_update, on: :collection
     end
@@ -282,6 +320,13 @@ Rails.application.routes.draw do
     end
 
     resources :nearby_attractions, except: [ :show ]
+    resource :taxes_fees, only: [ :show, :update ], path: "taxes-fees"
+    get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes
+    get "transaction-codes/new", to: "transaction_codes#new", as: :new_transaction_code
+    post "transaction-codes", to: "transaction_codes#create"
+    patch "transaction-codes/configuration", to: "transaction_codes#update_configuration", as: :transaction_code_configuration
+    get "transaction-codes/:id/edit", to: "transaction_codes#edit", as: :edit_transaction_code
+    patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
 
     resources :bookings, only: [ :index, :show, :update ] do
       collection do
@@ -298,6 +343,7 @@ Rails.application.routes.draw do
         post :check_out, to: "bookings/checkouts#create"
         post :reinstate, to: "bookings/reinstatements#create"
         post :mark_no_show, to: "bookings/no_shows#create"
+        post :repair_no_show_folio, to: "bookings/no_show_folio_repairs#create"
         post :cancel, to: "bookings/cancellations#create"
         post :add_guest, to: "bookings/guests#create"
         post :process_late_checkout, to: "bookings/checkouts#process_late_checkout"
@@ -327,13 +373,30 @@ Rails.application.routes.draw do
       get "late-checkout/:booking_id", to: "late_checkouts#show", as: :late_checkout
       get "reinstate-no-show/:booking_id", to: "reinstate_no_shows#show", as: :reinstate_no_show
       get "mark-no-show/:booking_id", to: "mark_no_shows#show", as: :mark_no_show
+      get "repair-no-show-folio/:booking_id", to: "repair_no_show_folios#show", as: :repair_no_show_folio
       get "cancel-booking/:booking_id", to: "cancel_bookings#show", as: :cancel_booking
     end
 
-    resources :folios, only: [ :show ], param: :booking_id do
+    resources :folios, only: [ :index, :show ], param: :booking_id do
       get :invoice, on: :member
-      resources :transactions, only: [ :create ], controller: "folios/transactions" do
+      get :ledger, on: :member
+      get "windows/new", action: :new_window, on: :member, as: :new_window
+      post :windows, action: :create_window, on: :member
+      get "windows/:folio_id/edit", action: :edit_window, on: :member, as: :edit_window
+      patch "windows/:folio_id", action: :update_window, on: :member, as: :window
+      post "windows/:folio_id/close", action: :close_window, on: :member, as: :close_window
+      post "windows/:folio_id/reopen", action: :reopen_window, on: :member, as: :reopen_window
+      post "forecasts/:forecast_id/move", action: :move_forecast, on: :member, as: :move_forecast
+      get "routing_rules/new", to: "folios/routing_rules#new", on: :member, as: :new_routing_rule
+      post "routing_rules", to: "folios/routing_rules#create", on: :member, as: :routing_rules
+      get "routing_rules/:routing_rule_id/edit", to: "folios/routing_rules#edit", on: :member, as: :edit_routing_rule
+      patch "routing_rules/:routing_rule_id", to: "folios/routing_rules#update", on: :member, as: :routing_rule
+      patch "routing_rules/:routing_rule_id/deactivate", to: "folios/routing_rules#deactivate", on: :member, as: :deactivate_routing_rule
+      resources :transactions, only: [ :new, :create ], controller: "folios/transactions" do
+        get :move, on: :member, action: :move_form
         post :reverse, on: :member
+        post :move, on: :member
+        post :split, on: :member
       end
     end
 
@@ -369,12 +432,17 @@ Rails.application.routes.draw do
         get :outstanding_balance
         get :deposit_liability
         get :folio_ledger
-        get :journal_batches      end
+        get :journal_batches
+        get :sst
+        get :refund_report
+      end
     end
     resources :night_audits, only: [ :index, :show, :create ] do
       member do
         get :resolve
         get :blockers
+        post :resolve_missing_folio
+        post :resolve_missing_nightly_charges
       end
     end
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
@@ -389,14 +457,17 @@ Rails.application.routes.draw do
     end
     get "inventory", to: "inventory_dashboards#index", as: :inventory_index
     resources :guests, only: [ :index, :show, :new, :create, :edit, :update, :destroy ] do
-      get :search, on: :collection
+      collection do
+        get :search
+        delete :bulk_destroy
+      end
     end
     resources :in_house_guests, only: [ :index ]
     get "settings", to: "settings#index", as: :settings
     get "settings/edit", to: "settings#edit", as: :edit_settings
     patch "settings", to: "settings#update"
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
-    resources :hotel_taxes, only: %i[index create update destroy]
+    resources :hotel_taxes, only: %i[index new create edit update destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board

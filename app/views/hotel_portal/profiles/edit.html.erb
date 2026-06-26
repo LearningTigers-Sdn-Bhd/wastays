@@ -69,6 +69,14 @@
           </div>
         </section>
 
+        <section>
+          <h3 class="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Google Map</h3>
+          <div>
+            <%= f.label :google_map_link, "Google Map URL", class: "mb-2 block text-sm font-medium text-slate-900" %>
+            <%= f.text_field :google_map_link, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 focus:border-slate-400 focus:ring-slate-300", placeholder: "e.g., https://www.google.com/maps/place/..." %>
+          </div>
+        </section>
+
         <section data-controller="multi-select-dropdown"
                  data-multi-select-dropdown-selected-value="<%= (@hotel.amenities || []).to_json %>"
                  data-multi-select-dropdown-all-value="<%= Hotel::HOTEL_AMENITIES.to_json %>"

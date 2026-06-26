@@ -34,6 +34,8 @@
 
 <div data-controller="blocker-wizard"
      data-blocker-wizard-poll-url-value="<%= blockers_hotel_night_audit_path(current_hotel, @night_audit) %>"
+     data-blocker-wizard-recover-missing-folio-url-value="<%= resolve_missing_folio_hotel_night_audit_path(current_hotel, @night_audit) %>"
+     data-blocker-wizard-repair-nightly-charges-url-value="<%= resolve_missing_nightly_charges_hotel_night_audit_path(current_hotel, @night_audit) %>"
      data-blocker-wizard-hotel-id-value="<%= current_hotel.id %>"
      data-blocker-wizard-steps-value="<%= steps.to_json %>"
      data-blocker-wizard-warning-steps-value="<%= warning_steps.to_json %>"

@@ -14,15 +14,22 @@
       </div>
 
       <div class="print:hidden">
-        <%= form_with url: arrivals_departures_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "arrivals-date-range-form" do |f| %>
+        <%= form_with url: arrivals_departures_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "arrivals-date-range-form", data: { controller: "date-preset" } do |f| %>
           <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Start Date</label>
-            <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-start-date" %>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Time Period</label>
+            <%= select_tag :date_preset, options_for_select(date_preset_options, params[:date_preset] || "this_month"), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->date-preset#toggleCustom" } %>
           </div>
 
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">End Date</label>
-            <%= f.date_field :end_date, value: @report.end_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-end-date" %>
+          <div id="custom-date-range" class="<%= params[:date_preset] == 'custom' ? 'flex' : 'hidden' %> gap-3">
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Start Date</label>
+              <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-start-date" %>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">End Date</label>
+              <%= f.date_field :end_date, value: @report.end_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-end-date" %>
+            </div>
           </div>
 
           <% if feature_enabled_for_hotel?("excel_pdf_export") %>
@@ -75,45 +82,37 @@
     </div>
   </div>
 
-  <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
-    title: "Expected Arrivals",
-    empty_message: "No arrivals scheduled for this selected period.",
-    rows: @report.arrivals,
-    type: :arrival
-  } %>
+  <% if params[:date_preset] == "this_year" %>
+    <% @report.arrivals.group_by { |row| row[:check_in].to_date.beginning_of_month }.each do |month, rows| %>
+      <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
+        title: "Expected Arrivals · #{month.strftime('%B %Y')}",
+        empty_message: "No arrivals scheduled for this selected period.",
+        rows: rows,
+        type: :arrival
+      } %>
+    <% end %>
 
-  <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
-    title: "Expected Departures",
-    empty_message: "No departures scheduled for this selected period.",
-    rows: @report.departures,
-    type: :departure
-  } %>
+    <% @report.departures.group_by { |row| row[:check_out].to_date.beginning_of_month }.each do |month, rows| %>
+      <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
+        title: "Expected Departures · #{month.strftime('%B %Y')}",
+        empty_message: "No departures scheduled for this selected period.",
+        rows: rows,
+        type: :departure
+      } %>
+    <% end %>
+  <% else %>
+    <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
+      title: "Expected Arrivals",
+      empty_message: "No arrivals scheduled for this selected period.",
+      rows: @report.arrivals,
+      type: :arrival
+    } %>
+
+    <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
+      title: "Expected Departures",
+      empty_message: "No departures scheduled for this selected period.",
+      rows: @report.departures,
+      type: :departure
+    } %>
+  <% end %>
 </div>
-
-<script>
-  (() => {
-    const initialize = () => {
-      const form = document.getElementById("arrivals-date-range-form");
-      if (!form) return;
-      if (form.dataset.bound === "true") return;
-      form.dataset.bound = "true";
-
-      const startDateInput = document.getElementById("arrivals-start-date");
-      const endDateInput = document.getElementById("arrivals-end-date");
-      if (!startDateInput || !endDateInput) return;
-
-      const syncAndSubmit = () => {
-        if (startDateInput.value && endDateInput.value && endDateInput.value < startDateInput.value) {
-          endDateInput.value = startDateInput.value;
-        }
-        form.requestSubmit();
-      };
-
-      startDateInput.addEventListener("change", syncAndSubmit);
-      endDateInput.addEventListener("change", syncAndSubmit);
-    };
-
-    document.addEventListener("turbo:load", initialize);
-    document.addEventListener("DOMContentLoaded", initialize);
-  })();
-</script>

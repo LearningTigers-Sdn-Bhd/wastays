@@ -15,7 +15,7 @@
     <%= form_with url: concierge_check_in_lookup_path(@hotel.slug), method: :post, class: "space-y-4" do %>
       <div>
         <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Confirmation Code</label>
-        <%= text_field_tag :confirmation_token, params[:confirmation_token], class: "form-input py-3 uppercase", placeholder: "e.g. AKWS4A", autocapitalize: "characters" %>
+        <%= text_field_tag :confirmation_token, params[:confirmation_token], class: "form-input px-4 py-3 uppercase", placeholder: "e.g. AKWS4A", autocapitalize: "characters" %>
       </div>
 
       <%= submit_tag "Continue →", class: "btn btn-primary w-full cursor-pointer py-3 text-sm font-black uppercase tracking-widest" %>

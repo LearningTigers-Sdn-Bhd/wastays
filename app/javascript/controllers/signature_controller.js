@@ -39,6 +39,7 @@ export default class extends Controller {
       this.inputTarget.value = ""
     } else {
       this.inputTarget.value = this.signaturePad.toDataURL()
+      this.inputTarget.setCustomValidity("")
     }
   }
 }

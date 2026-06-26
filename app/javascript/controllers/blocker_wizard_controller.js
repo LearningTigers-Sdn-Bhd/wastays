@@ -67,6 +67,8 @@ export default class extends Controller {
 
   static values = {
     pollUrl: String,
+    recoverMissingFolioUrl: String,
+    repairNightlyChargesUrl: String,
     hotelId: Number,
     steps: Array,
     warningSteps: Array
@@ -386,6 +388,47 @@ export default class extends Controller {
           <td class="px-6 py-4 text-sm ${balClass}">${formattedBalance}</td>
           <td class="px-6 py-4 text-sm text-slate-600">${item.reason}</td>
         `
+      } else if (stepKey === "missing_folio") {
+        const dates = `${item.check_in} &ndash; ${item.check_out}`
+        const rooms = item.room_numbers ? ` · Room ${this.escapeHTML(item.room_numbers)}` : ""
+        actionBtn = `
+          <div class="flex items-center justify-end gap-2">
+            <form action="${this.recoverMissingFolioUrlValue}" method="post" class="inline-flex">
+              <input type="hidden" name="authenticity_token" value="${this.escapeHTML(this.csrfToken)}">
+              <input type="hidden" name="booking_id" value="${this.escapeHTML(item.booking_id)}">
+              <input type="hidden" name="reason" value="Recover missing folio from Night Audit blocker resolution">
+              <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-700 transition" data-turbo-confirm="Recover the missing folio for ${this.escapeHTML(item.confirmation_token)}?">Recover Folio</button>
+            </form>
+            <a href="/hotel/${hotelId}/bookings/${item.booking_id}" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition">View Booking &rarr;</a>
+          </div>
+        `
+        cols = `
+          <td class="px-6 py-4 text-sm font-semibold text-slate-900">${this.escapeHTML(item.guest_name)}<span class="font-medium text-slate-500">${rooms}</span></td>
+          <td class="px-6 py-4 text-sm text-slate-600 font-mono">${this.escapeHTML(item.confirmation_token)}</td>
+          <td class="px-6 py-4 text-sm text-slate-600">${dates}</td>
+          <td class="px-6 py-4 text-sm text-red-600 font-medium">${this.escapeHTML(item.reason)}</td>
+        `
+      } else if (stepKey === "missing_nightly_charges") {
+        const dates = `${item.check_in} &ndash; ${item.check_out}`
+        const issueCount = (item.line_issues || []).length
+        const issueLabel = issueCount === 1 ? "1 nightly line requires repair" : `${issueCount} nightly lines require repair`
+        actionBtn = `
+          <div class="flex items-center justify-end gap-2">
+            <form action="${this.repairNightlyChargesUrlValue}" method="post" class="inline-flex">
+              <input type="hidden" name="authenticity_token" value="${this.escapeHTML(this.csrfToken)}">
+              <input type="hidden" name="booking_id" value="${this.escapeHTML(item.booking_id)}">
+              <input type="hidden" name="reason" value="Repair nightly charges from Night Audit blocker resolution">
+              <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-amber-700 transition" data-turbo-confirm="Repair ${this.escapeHTML(issueLabel)} for ${this.escapeHTML(item.confirmation_token)}? Incorrect ledger rows will be reversed and reposted to the resolved folio.">Repair Charges</button>
+            </form>
+            <a href="/hotel/${hotelId}/folios/${item.booking_id}" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition">Inspect Folio &rarr;</a>
+          </div>
+        `
+        cols = `
+          <td class="px-6 py-4 text-sm font-semibold text-slate-900">${this.escapeHTML(item.guest_name)}</td>
+          <td class="px-6 py-4 text-sm text-slate-600 font-mono">${this.escapeHTML(item.confirmation_token)}</td>
+          <td class="px-6 py-4 text-sm text-slate-600">${dates}</td>
+          <td class="px-6 py-4 text-sm text-red-600 font-medium">${this.escapeHTML(issueLabel)}</td>
+        `
       } else {
         // default bookings
         const dates = `${item.check_in} &ndash; ${item.check_out}`
@@ -407,5 +450,15 @@ export default class extends Controller {
       `
       this.stepTableBodyTarget.appendChild(row)
     })
+  }
+
+  get csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || ""
+  }
+
+  escapeHTML(value) {
+    const div = document.createElement("div")
+    div.textContent = value == null ? "" : value.toString()
+    return div.innerHTML
   }
 }

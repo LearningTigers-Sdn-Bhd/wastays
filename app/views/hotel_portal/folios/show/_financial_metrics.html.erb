@@ -1,0 +1,30 @@
+<% folio_show = local_assigns.fetch(:folio_show) %>
+
+<section class="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+  <div class="flex items-center gap-2 border-b border-slate-200 px-4 py-3">
+    <span class="inline-flex size-7 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+      <%= cached_icon "credit-card", class: "size-3.5" %>
+    </span>
+    <h2 class="text-sm font-black uppercase tracking-[0.18em] text-slate-700">Financial Metrics</h2>
+  </div>
+
+  <table class="w-full table-fixed text-sm">
+    <tbody class="divide-y divide-slate-200">
+      <% folio_show.financial_metric_rows.each_slice(2) do |left, right| %>
+        <% left_label, left_value = left %>
+        <% right_label, right_value = right if right %>
+        <tr>
+          <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48"><%= left_label %></th>
+          <td class="px-4 py-2 font-semibold tabular-nums <%= left_label == "Checkout Readiness" && folio_show.checkout_readiness_label == "Ready" ? "text-emerald-700" : "text-slate-950" %>"><%= left_value %></td>
+          <% if right %>
+            <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48"><%= right_label %></th>
+            <td class="px-4 py-2 font-semibold tabular-nums <%= right_label == "Checkout Readiness" && folio_show.checkout_readiness_label == "Ready" ? "text-emerald-700" : "text-slate-950" %>"><%= right_value %></td>
+          <% else %>
+            <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48"></th>
+            <td class="px-4 py-2"></td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

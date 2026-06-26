@@ -109,7 +109,7 @@ class FolioLedgerExportService
       row = [
         txn.posting_date.iso8601,
         booking.formatted_invoice_number.to_s,
-        booking.formatted_folio_number.to_s,
+        folio.folio_reference_display.to_s,
         booking.confirmation_token,
         booking.guest_name,
         room_number,

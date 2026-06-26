@@ -12,7 +12,7 @@
                   icon: cached_icon("log-in", stroke_width: 2.5, class: "size-5") %>
 
       <%# Modal Content %>
-      <div class="flex-1 p-6 space-y-6">
+      <div class="flex-1 p-6 space-y-6 overflow-y-auto custom-scrollbar">
         <%= render "hotel_portal/bookings/guarantee_status_badge", booking: @booking %>
 
         <div>
@@ -46,6 +46,40 @@
               <%= text_field_tag :security_deposit_reference, nil, placeholder: "Optional receipt/reference", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm" %>
             </div>
           </div>
+
+          <% tourism_tax_total = @booking.tourism_tax_total %>
+          <% if tourism_tax_total.positive? %>
+            <div class="space-y-4 border-y border-slate-100 py-4">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Tourism Tax</h3>
+                <p class="mt-1 text-xs font-medium text-slate-500">Record collection of mandatory tourism tax.</p>
+              </div>
+
+              <div class="flex items-center justify-between gap-4">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Tourism Tax</span>
+                <div class="flex w-36 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-sm font-black text-slate-900 shadow-sm">
+                  <span class="flex items-center border-r border-slate-200 px-3 text-xs font-bold text-slate-500">RM</span>
+                  <%= text_field_tag :tourism_tax_amount,
+                                     number_with_precision(tourism_tax_total, precision: 2),
+                                     disabled: true,
+                                     class: "min-w-0 flex-1 border-0 bg-slate-50 px-3 py-2 text-right font-black text-slate-900 focus:outline-none focus:ring-0 disabled:cursor-not-allowed" %>
+                </div>
+              </div>
+
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-sm font-bold text-slate-900">I have collected the guest's total tourism tax</p>
+                  <p class="mt-1 text-xs font-medium leading-5 text-slate-500">If this is off, tourism tax will remain unpaid on the guest folio and may appear as an outstanding balance after tax charges are posted.</p>
+                </div>
+                <label class="relative mt-0.5 inline-flex shrink-0 cursor-pointer items-center">
+                  <%= f.check_box :tourism_tax_collected,
+                                  class: "peer sr-only",
+                                  aria: { label: "I have collected the guest's total tourism tax" } %>
+                  <span class="block h-6 w-11 rounded-full bg-slate-200 transition peer-checked:bg-slate-900 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></span>
+                </label>
+              </div>
+            </div>
+          <% end %>
         <% end %>
 
         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">

@@ -56,6 +56,29 @@ RSpec.describe Hotel, type: :model do
     end
   end
 
+  describe 'primary tax transaction codes' do
+    it 'creates SST and tourism tax codes using the hotel tax enabled settings' do
+      hotel = create(:hotel, sst_enabled: false, tourism_tax_enabled: false)
+
+      expect(hotel.transaction_codes.find_by!(system_key: 'sst_tax')).not_to be_active
+      expect(hotel.transaction_codes.find_by!(system_key: 'tourism_tax')).not_to be_active
+    end
+
+    it 'syncs SST and tourism tax code active state when settings change' do
+      hotel = create(:hotel, sst_enabled: true, tourism_tax_enabled: true)
+
+      hotel.update!(sst_enabled: false, tourism_tax_enabled: false)
+
+      expect(hotel.transaction_codes.find_by!(system_key: 'sst_tax')).not_to be_active
+      expect(hotel.transaction_codes.find_by!(system_key: 'tourism_tax')).not_to be_active
+
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true)
+
+      expect(hotel.transaction_codes.find_by!(system_key: 'sst_tax')).to be_active
+      expect(hotel.transaction_codes.find_by!(system_key: 'tourism_tax')).to be_active
+    end
+  end
+
   describe 'business dates' do
     let(:hotel) do
       build(:hotel,
@@ -134,6 +157,26 @@ RSpec.describe Hotel, type: :model do
       allow(Payments::CredentialSetting).to receive(:default).and_return(credential_setting)
 
       expect(hotel.checkout_payment_gateway).to eq('razorpay')
+    end
+  end
+
+  describe 'google map link parsing' do
+    it 'returns nil when google_map_link is blank' do
+      hotel = build(:hotel, google_map_link: nil)
+      expect(hotel.latitude).to be_nil
+      expect(hotel.longitude).to be_nil
+    end
+
+    it 'extracts coordinates from standard web url with !3d/!4d parameters' do
+      hotel = build(:hotel, google_map_link: 'https://www.google.com/maps/place/Sample+Hotel/@5.9771228,116.0622732,15z/data=!4m6!3m5!1s0x323b699a6cf71ecf:0x5e95df94691456a0!8m2!3d5.9771228!4d116.0622732!16s%2Fg%2F11b6zg5y5s?entry=ttu')
+      expect(hotel.latitude).to eq(5.9771228)
+      expect(hotel.longitude).to eq(116.0622732)
+    end
+
+    it 'extracts coordinates from fallback @url format' do
+      hotel = build(:hotel, google_map_link: 'https://www.google.com/maps/place/Sample+Hotel/@5.9771228,116.0622732,15z')
+      expect(hotel.latitude).to eq(5.9771228)
+      expect(hotel.longitude).to eq(116.0622732)
     end
   end
 end

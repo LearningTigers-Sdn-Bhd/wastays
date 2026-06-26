@@ -39,15 +39,6 @@
             <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
           </a>
 
-          <% if guest_logged_in? %>
-            <div class="hidden sm:block w-px h-5 bg-layer-line mx-2"></div>
-            <div class="hidden sm:flex items-center gap-x-2 text-sm">
-              <span class="font-medium text-slate-600">Guest</span>
-              <span class="text-slate-400">/</span>
-              <span class="font-semibold text-slate-900"><%= content_for?(:breadcrumb_current) ? yield(:breadcrumb_current) : "Dashboard" %></span>
-            </div>
-          <% end %>
-
           <div class="flex-1"></div>
 
           <div class="flex items-center gap-x-1">
@@ -65,6 +56,14 @@
           </div>
         </div>
       </header>
+
+      <% if guest_logged_in? && guest_breadcrumb_parts.present? %>
+        <div class="relative border-b border-layer-line bg-layer py-2 overflow-visible">
+          <div class="px-4 sm:px-6 overflow-x-auto overscroll-x-contain whitespace-nowrap custom-scrollbar">
+            <%= render_guest_breadcrumbs %>
+          </div>
+        </div>
+      <% end %>
 
       <!-- Body: Sidebar + Content -->
       <div class="flex flex-1 overflow-hidden">

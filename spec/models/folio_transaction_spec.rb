@@ -13,6 +13,7 @@ RSpec.describe FolioTransaction, type: :model do
     it { should validate_presence_of(:transaction_type) }
     it { should validate_presence_of(:category) }
     it { should validate_presence_of(:description) }
+    it { should validate_presence_of(:currency) }
     it { should validate_presence_of(:posting_date) }
 
     it "requires charges to be positive" do
@@ -121,6 +122,27 @@ RSpec.describe FolioTransaction, type: :model do
       expect(transaction.errors[:base]).to include("Folio transactions are immutable and cannot be deleted.")
       expect(described_class.exists?(transaction.id)).to be(true)
     end
+
+    it "prevents changing catch_up_key after creation" do
+      transaction = create(:folio_transaction, catch_up_key: "catch_up:1:2026-06-10:accommodation:1")
+
+      expect(transaction.update(catch_up_key: "catch_up:1:2026-06-10:accommodation:2")).to be(false)
+      expect(transaction.errors[:base]).to include("Folio transactions are immutable. Post a reversing transaction instead.")
+    end
+  end
+
+  describe "database constraints" do
+    it "rejects null descriptions" do
+      transaction = create(:folio_transaction)
+
+      expect { transaction.update_column(:description, nil) }.to raise_error(ActiveRecord::NotNullViolation)
+    end
+
+    it "rejects null currencies" do
+      transaction = create(:folio_transaction)
+
+      expect { transaction.update_column(:currency, nil) }.to raise_error(ActiveRecord::NotNullViolation)
+    end
   end
 
   describe "GL code assignment" do
@@ -137,15 +159,49 @@ RSpec.describe FolioTransaction, type: :model do
       expect(transaction.gl_code).to eq("4010")
     end
 
+    it "automatically assigns transaction_code from category on creation" do
+      transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation")
+
+      expect(transaction.transaction_code.system_key).to eq("room_revenue")
+    end
+
+    it "uses tax line type to assign SST transaction code" do
+      transaction = create(
+        :folio_transaction,
+        booking_folio: folio,
+        category: "tax",
+        metadata: { tax_line: { type: "sst" } }
+      )
+
+      expect(transaction.transaction_code.system_key).to eq("sst_tax")
+      expect(transaction.transaction_code.code).to eq("TAX_SST")
+    end
+
+    it "uses hotel tax id to assign custom tax transaction code" do
+      tax = create(:hotel_tax, hotel: hotel, name: "Dewan Bandaraya Kota Kinabalu", amount: 5)
+
+      transaction = create(
+        :folio_transaction,
+        booking_folio: folio,
+        category: "tax",
+        metadata: { tax_line: { tax_id: tax.id, type: "custom" } }
+      )
+
+      expect(transaction.transaction_code).to eq(tax.transaction_code)
+      expect(transaction.gl_code).to eq(tax.transaction_code.gl_account_code)
+    end
+
     it "does not overwrite gl_code if manually provided" do
       transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation", gl_code: "MANUAL-GL")
       expect(transaction.gl_code).to eq("MANUAL-GL")
     end
 
-    it "leaves gl_code as nil if no mapping exists" do
+    it "uses transaction code GL account when a legacy mapping is missing" do
       hotel.hotel_general_ledger_maps.where(transaction_category: "other").delete_all
       transaction = create(:folio_transaction, booking_folio: folio, category: "other")
-      expect(transaction.gl_code).to be_nil
+
+      expect(transaction.gl_code).to eq("4090")
+      expect(transaction.transaction_code.system_key).to eq("misc_revenue")
     end
   end
 end

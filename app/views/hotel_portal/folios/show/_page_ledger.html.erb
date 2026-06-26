@@ -1,28 +1,29 @@
-<% folio = booking.booking_folio %>
-<% currency = booking.currency.presence || "MYR" %>
-<% projected_lines = Array(local_assigns[:projected_lines]) %>
-<% posted_transactions = folio&.folio_transactions&.order(posting_date: :asc, created_at: :asc) || [] %>
-<% posted_charges = (folio&.total_charges || 0).to_d %>
-<% posted_payments = (folio&.total_payments || 0).to_d %>
-<% forecasted_total = projected_lines.sum { |line| line[:amount].to_d } %>
-<% transaction_count = posted_transactions.size + projected_lines.size %>
+<% folio_show = local_assigns.fetch(:folio_show) %>
+<% booking = local_assigns.fetch(:booking) %>
+<% hotel = local_assigns.fetch(:hotel) %>
+<% folio_origin = local_assigns[:folio_origin] %>
 
-<section class="overflow-hidden rounded-md border border-slate-200 bg-white" data-controller="folio-ledger">
-  <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-    <h2 class="text-sm font-bold text-slate-950">Transaction Ledger</h2>
-    <span class="text-xs font-medium tabular-nums text-slate-500"><%= pluralize(transaction_count, "entry") %></span>
+<section class="overflow-hidden" data-controller="folio-ledger">
+  <div class="flex items-center justify-between py-3">
+    <div class="flex items-center gap-2">
+      <span class="inline-flex size-7 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+        <%= cached_icon "receipt-text", class: "size-3.5" %>
+      </span>
+      <h2 class="text-sm font-black uppercase tracking-[0.18em] text-slate-700">Ledger</h2>
+    </div>
+    <span class="text-xs font-medium tabular-nums text-slate-500"><%= pluralize(folio_show.ledger_entry_count, "entry") %></span>
   </div>
 
-  <div class="overflow-x-auto">
-    <table class="w-full min-w-[860px] table-fixed text-left text-xs">
+  <div class="overflow-x-auto rounded-md border border-slate-200">
+    <table class="w-full min-w-[760px] table-fixed text-left text-xs">
       <thead class="sticky top-0 z-[1] bg-slate-50 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
         <tr class="border-b border-slate-200">
-          <th class="w-24 px-4 py-2">ID</th>
-          <th class="w-32 px-4 py-2">Date</th>
-          <th class="px-4 py-2">Description</th>
-          <th class="w-28 px-4 py-2">GL Code</th>
-          <th class="w-36 px-4 py-2">Source</th>
-          <th class="w-36 px-4 py-2 text-right">Amount</th>
+          <th class="w-24 px-4 py-2">Date</th>
+          <th class="w-20 px-4 py-2">Code</th>
+          <th class="px-4 py-2">Description / Reference</th>
+          <th class="w-24 px-4 py-2 text-right">Debit</th>
+          <th class="w-24 px-4 py-2 text-right">Credit</th>
+          <th class="w-28 px-4 py-2 text-right">Action</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100">
@@ -35,39 +36,31 @@
                     data-folio-ledger-section-param="posted">
               <span class="flex min-w-0 items-center gap-2">
                 <span class="w-3 text-slate-500" data-folio-ledger-target="chevron" data-section="posted">▾</span>
+                <span class="inline-flex size-5 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+                  <%= cached_icon "credit-card", class: "size-3" %>
+                </span>
                 <span class="font-semibold text-slate-800">Posted Transactions</span>
               </span>
-              <span class="truncate text-[11px] font-medium tabular-nums text-slate-500">
-                <%= posted_transactions.size %> posted · <%= currency %> <%= number_with_precision(posted_charges, precision: 2) %> charges · <%= currency %> <%= number_with_precision(posted_payments, precision: 2) %> payments
-              </span>
+              <span class="truncate text-[11px] font-medium tabular-nums text-slate-500"><%= folio_show.posted_section_summary %></span>
             </button>
           </td>
         </tr>
 
-        <% posted_transactions.each do |transaction| %>
-          <tr class="transition hover:bg-slate-50/70 <%= "text-slate-400" if transaction.reversed? %>"
-              data-folio-ledger-target="row"
-              data-section="posted">
-            <td class="px-4 py-2 font-mono text-[11px] tabular-nums text-slate-500">#<%= transaction.id %></td>
-            <td class="px-4 py-2 whitespace-nowrap text-slate-600"><%= transaction.posting_date.strftime("%d %b %Y") %></td>
-            <td class="px-4 py-2">
-              <p class="font-medium text-slate-900 <%= "line-through text-slate-400" if transaction.reversed? %>"><%= transaction.description %></p>
-              <p class="mt-0.5 text-[10px] font-medium text-slate-500"><%= transaction.transaction_type.humanize %> · <%= transaction.category.humanize %></p>
-            </td>
-            <td class="px-4 py-2 font-mono text-[11px] text-slate-600"><%= transaction.gl_code.presence || "—" %></td>
-            <td class="px-4 py-2">
-              <p class="font-medium text-slate-700"><%= transaction.user&.name || "System" %></p>
-              <p class="mt-0.5 text-[10px] text-slate-500"><%= transaction.user ? "Manual" : "Night Audit" %></p>
-            </td>
-            <td class="px-4 py-2 text-right font-semibold tabular-nums <%= folio_transaction_amount_class(transaction) %>">
-              <%= folio_transaction_amount_label(transaction, currency: currency) %>
-            </td>
+        <% folio_show.posted_rows.each do |row| %>
+          <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "posted", currency: folio_show.currency, booking: booking, hotel: hotel, folio_origin: folio_origin, folio_show: folio_show %>
+        <% end %>
+
+        <% if folio_show.posted_rows.empty? %>
+          <tr data-folio-ledger-target="row" data-section="posted">
+            <td colspan="6" class="px-4 py-6 text-center text-xs text-slate-500">No posted transactions.</td>
           </tr>
         <% end %>
 
-        <% if posted_transactions.empty? %>
-          <tr data-folio-ledger-target="row" data-section="posted">
-            <td colspan="6" class="px-4 py-6 text-center text-xs text-slate-500">No posted transactions.</td>
+        <% if folio_show.posted_rows.any? %>
+          <tr data-folio-ledger-target="row" data-section="posted" class="bg-slate-50/70">
+            <td colspan="4" class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-500">Posted balance</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-black tabular-nums text-slate-950"><%= folio_show.money(folio_show.posted_balance) %></td>
+            <td class="px-4 py-3"></td>
           </tr>
         <% end %>
 
@@ -80,39 +73,23 @@
                     data-folio-ledger-section-param="forecasted">
               <span class="flex min-w-0 items-center gap-2">
                 <span class="w-3 text-slate-500" data-folio-ledger-target="chevron" data-section="forecasted">▾</span>
-                <span class="font-semibold text-slate-800">Upcoming / Forecasted Charges</span>
+                <span class="inline-flex size-5 items-center justify-center rounded-md bg-amber-50 text-amber-700">
+                  <%= cached_icon "calendar-clock", class: "size-3" %>
+                </span>
+                <span class="font-semibold text-slate-800">Upcoming Charges</span>
               </span>
-              <span class="truncate text-[11px] font-medium tabular-nums text-slate-500">
-                <%= projected_lines.size %> pending · <%= currency %> <%= number_with_precision(forecasted_total, precision: 2) %> · Posted by night audit
-              </span>
+              <span class="truncate text-[11px] font-medium tabular-nums text-slate-500"><%= folio_show.forecasted_section_summary %></span>
             </button>
           </td>
         </tr>
 
-        <% projected_lines.each do |line| %>
-          <tr class="transition hover:bg-slate-50/70"
-              data-folio-ledger-target="row"
-              data-section="forecasted">
-            <td class="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Pending</td>
-            <td class="px-4 py-2 whitespace-nowrap text-slate-600"><%= line[:date].strftime("%d %b %Y") %></td>
-            <td class="px-4 py-2">
-              <p class="font-medium text-slate-900"><%= line[:description] %></p>
-              <p class="mt-0.5 text-[10px] font-medium text-slate-500">Charge · <%= line[:category].to_s.humanize %></p>
-            </td>
-            <td class="px-4 py-2 font-mono text-[11px] text-slate-500">—</td>
-            <td class="px-4 py-2">
-              <p class="font-medium text-slate-700">Forecast</p>
-              <p class="mt-0.5 text-[10px] text-slate-500">Pending</p>
-            </td>
-            <td class="px-4 py-2 text-right font-semibold tabular-nums text-slate-800">
-              +<%= currency %> <%= number_with_precision(line[:amount].to_d, precision: 2) %>
-            </td>
-          </tr>
+        <% folio_show.forecasted_rows.each do |row| %>
+          <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "forecasted", currency: folio_show.currency, booking: booking, hotel: hotel, folio_origin: folio_origin, folio_show: folio_show %>
         <% end %>
 
-        <% if projected_lines.empty? %>
+        <% if folio_show.forecasted_rows.empty? %>
           <tr data-folio-ledger-target="row" data-section="forecasted">
-            <td colspan="6" class="px-4 py-6 text-center text-xs text-slate-500">No upcoming forecasted charges.</td>
+            <td colspan="6" class="px-4 py-6 text-center text-xs text-slate-500">No upcoming charges.</td>
           </tr>
         <% end %>
       </tbody>

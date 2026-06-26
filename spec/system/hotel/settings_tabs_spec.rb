@@ -34,19 +34,19 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_css("[data-testid='settings-general-panel']", visible: :hidden)
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Notifications")
 
-    click_button "Tax"
+    click_button "AI Concierge"
 
-    expect(page).to have_current_path(hotel_settings_path(hotel, tab: "tax"))
-    expect(page).to have_css("[data-testid='settings-tax-panel']")
+    expect(page).to have_current_path(hotel_settings_path(hotel, tab: "ai"))
+    expect(page).to have_css("[data-testid='settings-ai-panel']")
     expect(page).to have_css("[data-testid='settings-notifications-panel']", visible: :hidden)
-    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Tax")
+    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "AI Concierge")
   end
 
   it "falls back to General for an unknown tab parameter" do
     visit hotel_settings_path(hotel, tab: "unknown")
 
     expect(page).to have_css("[data-testid='settings-general-panel']")
-    expect(page).to have_css("[data-testid='settings-tax-panel']", visible: :hidden)
+    expect(page).to have_no_css("[data-testid='settings-tax-panel']", visible: :all)
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "General")
   end
 

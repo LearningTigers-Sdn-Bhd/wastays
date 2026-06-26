@@ -20,6 +20,7 @@ RSpec.describe Folios::PostCategoryCharge do
     expect(result.transaction.category).to eq("late_checkout_charge")
     expect(result.transaction.amount).to eq(50.0)
     expect(result.transaction.description).to eq("Late Checkout Charge")
+    expect(result.transaction.transaction_code.system_key).to eq("late_checkout_revenue")
     expect(folio.outstanding_balance).to eq(50.0)
   end
 
@@ -36,6 +37,7 @@ RSpec.describe Folios::PostCategoryCharge do
     expect(result.transaction.category).to eq("early_departure_charge")
     expect(result.transaction.amount).to eq(100.0)
     expect(result.transaction.description).to eq("Custom Charge")
+    expect(result.transaction.transaction_code.system_key).to eq("early_departure_revenue")
   end
 
   it "fails for invalid category" do

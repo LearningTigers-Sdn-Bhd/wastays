@@ -27,7 +27,6 @@ RSpec.describe BookingEngine::CreateQuote do
       expect(result.quote).to be_persisted
       expect(result.quote.booking_quote_items.count).to eq(1)
 
-      # Check inventory held (5 - 1 = 4)
       stay_dates.each do |date|
         expect(room_type.room_inventories.find_by(date: date).quantity).to eq(4)
       end
@@ -70,6 +69,58 @@ RSpec.describe BookingEngine::CreateQuote do
 
       expect(result.success?).to be false
       expect(result.message).to eq("Please select check-in and check-out dates.")
+    end
+
+    context "when a selected rate plan has stay-length restrictions" do
+      let(:rate_plan) { create(:rate_plan, room_type: room_type, name: "2-4 Night Rate", currency: "MYR") }
+
+      before do
+        stay_dates.each do |date|
+          RoomRate.create!(
+            room_type: room_type,
+            rate_plan: rate_plan,
+            date: date,
+            price: 120,
+            currency: "MYR",
+            min_stay: 2,
+            max_stay: 4
+          )
+        end
+      end
+
+      context "when the stay is shorter than the minimum" do
+        let(:check_out) { check_in + 1.day }
+
+        it "rejects quote creation" do
+          result = described_class.new(params.merge(rate_plan_id: rate_plan.id)).call
+
+          expect(result.success?).to be false
+          expect(result.message).to eq("No valid rate is available for these dates.")
+        end
+      end
+
+      context "when the stay is longer than the maximum" do
+        let(:check_out) { check_in + 5.days }
+
+        it "rejects quote creation" do
+          result = described_class.new(params.merge(rate_plan_id: rate_plan.id)).call
+
+          expect(result.success?).to be false
+          expect(result.message).to eq("No valid rate is available for these dates.")
+        end
+      end
+
+      context "when the stay length is within the allowed range" do
+        let(:check_out) { check_in + 3.days }
+
+        it "allows quote creation" do
+          result = described_class.new(params.merge(rate_plan_id: rate_plan.id)).call
+
+          expect(result.success?).to be true
+          expect(result.quote).to be_persisted
+          expect(result.quote.total_amount).to eq(360)
+        end
+      end
     end
   end
 end

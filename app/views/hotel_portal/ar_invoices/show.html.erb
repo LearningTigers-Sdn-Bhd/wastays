@@ -1,0 +1,27 @@
+<div class="mx-auto max-w-[1600px] px-4 pb-12 md:px-0">
+  <div class="space-y-4">
+    <%= render "hotel_portal/ar_invoices/show/header", presenter: @presenter, ar_invoice: @ar_invoice %>
+    <%= render "hotel_portal/ar_invoices/show/details", presenter: @presenter, ar_invoice: @ar_invoice %>
+
+    <div data-controller="tabs" data-tabs-default-tab-value="payment-allocations" class="space-y-4">
+      <%= render "hotel_portal/ar_invoices/show/tabs", presenter: @presenter %>
+
+      <div id="payment-allocations-panel"
+           data-tabs-target="panel"
+           data-tab-panel="payment-allocations"
+           role="tabpanel"
+           data-testid="payment-allocations-panel">
+        <%= render "hotel_portal/ar_invoices/show/payment_allocations", presenter: @presenter %>
+      </div>
+
+      <div id="technical-snapshots-panel"
+           data-tabs-target="panel"
+           data-tab-panel="technical-snapshots"
+           class="hidden"
+           role="tabpanel"
+           data-testid="technical-snapshots-panel">
+        <%= render "hotel_portal/ar_invoices/show/technical_snapshots", presenter: @presenter %>
+      </div>
+    </div>
+  </div>
+</div>

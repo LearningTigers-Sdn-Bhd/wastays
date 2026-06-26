@@ -8,7 +8,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   before_action :authorize_manage_bookings!, only: [ :create, :process_late_checkout ]
 
   def show
-    @booking = current_hotel.bookings.includes(booking_folio: { folio_transactions: :user }).find(params[:id])
+    @booking = checkout_booking_scope.find(params[:id])
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
     render "hotel_portal/bookings/transactions/check_out/offcanvas"
   end
@@ -22,11 +22,6 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
     if early_departure_checkout?(timestamp)
       options = { timestamp: timestamp }
-      if params[:override_night_audit] == "1"
-        options[:override_night_audit] = true
-        options[:correction_reason] = params[:retroactive_reason]
-        options[:correction_note] = "Early departure override"
-      end
 
       result = Bookings::ProcessEarlyDeparture.call(
         booking: @booking,
@@ -109,18 +104,12 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   end
 
   def transition_status(status, timestamp, success_notice)
-    options = {}
-    if params[:override_night_audit] == "1"
-      options[:override_night_audit] = true
-      options[:reason] = params[:retroactive_reason]
-    end
-
     result = Bookings::TransitionStatus.new(
       booking: @booking,
       status: status,
       timestamp: timestamp,
       user: current_user,
-      options: options
+      options: {}
     ).call
 
     if result.success?
@@ -157,7 +146,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   end
 
   def check_out_from_sheet(timestamp)
-    @booking = current_hotel.bookings.includes(booking_folio: { folio_transactions: :user }).find(params[:id])
+    @booking = checkout_booking_scope.find(params[:id])
     error = nil
     if @booking.checkout_required? && timestamp.blank?
       return render_checkout_sheet_error("Check-out date and time can't be blank.")
@@ -166,11 +155,6 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     ActiveRecord::Base.transaction do
       if early_departure_checkout?(timestamp)
         options = { timestamp: timestamp }
-        if params[:override_night_audit] == "1"
-          options[:override_night_audit] = true
-          options[:correction_reason] = params[:retroactive_reason]
-          options[:correction_note] = "Early departure override"
-        end
 
         res = Bookings::ProcessEarlyDeparture.call(
           booking: @booking,
@@ -189,7 +173,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
         @booking.association(:booking_folio).reset
       end
 
-      settlement_result = post_checkout_settlement_payment
+      settlement_result = process_checkout_folio_actions
       if settlement_result&.success? == false
         error = settlement_result.error
         raise ActiveRecord::Rollback
@@ -200,7 +184,11 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
         status: "completed",
         timestamp: timestamp,
         user: current_user,
-        options: { defer_side_effects: true }.merge(checkout_blocker_resolution_options)
+          options: {
+            defer_side_effects: true,
+            exception_folio_ids: settlement_result&.exception_folio_ids.to_a,
+            direct_bill_folio_ids: settlement_result&.direct_bill_folio_ids.to_a
+          }.merge(checkout_blocker_resolution_options)
       ).call
 
       unless result.success?
@@ -217,25 +205,12 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     offcanvas_transaction_response(destination: checkout_success_path, notice: "Guest has been checked out.")
   end
 
-  def post_checkout_settlement_payment
-    return if checkout_payment_amount.blank?
-    return OpenStruct.new(success?: true) if checkout_payment_amount.zero?
-
-    return OpenStruct.new(success?: false, error: "Booking has no folio.") unless @booking.booking_folio
-    raise Pundit::NotAuthorizedError unless current_user.has_permission?("post_folio_payments", hotel: current_hotel)
-    return OpenStruct.new(success?: false, error: "Checkout payment method is not supported.") unless checkout_payment_method == "cash"
-
-    balance = @booking.booking_folio.outstanding_balance.to_d
-    return OpenStruct.new(success?: true) unless balance.positive?
-    return OpenStruct.new(success?: false, error: "Checkout payment cannot exceed the outstanding balance.") if checkout_payment_amount > balance
-
-    Folios::PostStaffTransaction.call(
-      folio: @booking.booking_folio,
+  def process_checkout_folio_actions
+    Folios::ProcessCheckoutActions.call(
+      booking: @booking,
+      hotel: current_hotel,
       user: current_user,
-      transaction_type: "payment",
-      category: "cash",
-      amount: checkout_payment_amount,
-      description: checkout_payment_description,
+      action_params: checkout_folio_action_params,
       posting_date: current_hotel.current_business_date,
       options: checkout_blocker_resolution_options
     )
@@ -259,17 +234,20 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     }
   end
 
-  def checkout_payment_amount
-    @checkout_payment_amount ||= params[:checkout_payment_amount].to_d
+  def checkout_folio_action_params
+    raw_params = params[:checkout_folios]
+    return {} if raw_params.blank?
+
+    raw_params.to_unsafe_h.transform_values do |value|
+      value.to_h.slice("action", "amount", "payment_method", "payment_reference", "reason")
+    end
   end
 
-  def checkout_payment_description
-    reference = params[:checkout_payment_reference].presence
-    [ "Checkout payment via Cash", reference && "Receipt #{reference}" ].compact.join(" - ")
-  end
-
-  def checkout_payment_method
-    params[:checkout_payment_method].presence || "cash"
+  def checkout_booking_scope
+    current_hotel.bookings.includes(
+      :deposits,
+        booking_folios: [ :folio_forecasted_charges, { folio_transactions: :user }, { hotel_corporate_account: :corporate_account } ]
+    )
   end
 
   def render_checkout_sheet_error(error)

@@ -1,0 +1,23 @@
+<div class="flex h-full flex-col bg-white">
+  <%= render "hotel_portal/bookings/board/partials/content_header",
+    title: "Mark as No-show",
+    subtitle: @booking.guest_name,
+    icon: cached_icon("user-x", class: "size-5 text-rose-600") %>
+  <%= form_with url: mark_no_show_hotel_booking_path(current_hotel, @booking), method: :post, class: "flex min-h-0 flex-1 flex-col" do |f| %>
+    <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
+    <div class="flex-1 overflow-y-auto p-8">
+      <% if @booking.errors.any? %>
+        <div class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+          <p class="font-bold">No-show could not be confirmed.</p>
+          <p class="mt-1"><%= @booking.errors.full_messages.to_sentence %></p>
+        </div>
+      <% end %>
+      <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+        This will finalize the no-show, post the standard first-night no-show charges, exclude tourism tax, and release the assigned room and remaining inventory. Any settled folio will close automatically.
+      </div>
+    </div>
+    <%= render "hotel_portal/bookings/board/partials/content_footer",
+      show_full_page_link: false,
+      submit_button: f.submit("Confirm No-show", class: "rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-white") %>
+  <% end %>
+</div>

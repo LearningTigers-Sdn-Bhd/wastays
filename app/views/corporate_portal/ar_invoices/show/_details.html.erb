@@ -1,0 +1,75 @@
+<div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+  <%# Invoice Summary card (left) %>
+  <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" data-testid="invoice-summary-card">
+    <header class="border-b border-slate-200 bg-slate-50/60 px-4 py-2.5">
+      <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+        <span class="inline-flex size-6 items-center justify-center rounded bg-emerald-50 text-emerald-700">
+          <%= cached_icon "receipt-text", class: "size-3.5", aria: { hidden: true } %>
+        </span>
+        Invoice Summary
+      </h2>
+    </header>
+
+    <div class="grid grid-cols-1 gap-px bg-slate-200">
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</p>
+        <span class="mt-1 inline-flex rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= presenter.status_class %>"><%= presenter.status_label %></span>
+      </div>
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Original Amount</p>
+        <p class="mt-0.5 text-sm font-semibold tabular-nums text-slate-900"><%= presenter.original_amount_label %></p>
+      </div>
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Paid Amount</p>
+        <p class="mt-0.5 text-sm font-semibold tabular-nums text-emerald-700"><%= presenter.paid_amount_label %></p>
+      </div>
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Outstanding</p>
+        <p class="mt-0.5 text-sm font-bold tabular-nums text-amber-700"><%= presenter.outstanding_amount_label %></p>
+      </div>
+    </div>
+  </section>
+
+  <%# Invoice Details card (right, 2-col grid) %>
+  <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:col-span-2" data-testid="invoice-details-card">
+    <header class="border-b border-slate-200 bg-slate-50/60 px-4 py-2.5">
+      <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+        <span class="inline-flex size-6 items-center justify-center rounded bg-blue-50 text-blue-700">
+          <%= cached_icon "file-text", class: "size-3.5", aria: { hidden: true } %>
+        </span>
+        Invoice Details
+      </h2>
+    </header>
+
+    <div class="grid grid-cols-1 gap-px bg-slate-200 sm:grid-cols-2">
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Hotel</p>
+        <p class="mt-0.5 text-sm font-semibold text-slate-900"><%= presenter.hotel_name %></p>
+      </div>
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Booking Reference</p>
+        <p class="mt-0.5 text-sm font-semibold text-slate-900"><%= presenter.booking_reference %></p>
+      </div>
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Payment Terms</p>
+        <p class="mt-0.5 text-sm font-semibold text-slate-900"><%= presenter.payment_terms_label %></p>
+      </div>
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Issued On</p>
+        <p class="mt-0.5 text-sm font-semibold text-slate-900"><%= presenter.issued_on_label %></p>
+      </div>
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Due On</p>
+        <p class="mt-0.5 text-sm font-semibold text-slate-900"><%= presenter.due_on_label %></p>
+      </div>
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Direct Bill Source</p>
+        <p class="mt-0.5 text-sm font-semibold text-slate-900"><%= presenter.direct_bill_source_label %></p>
+      </div>
+      <div class="bg-white px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Invoice Created</p>
+        <p class="mt-0.5 text-sm font-semibold text-slate-900"><%= presenter.created_at_label %></p>
+      </div>
+    </div>
+  </section>
+</div>

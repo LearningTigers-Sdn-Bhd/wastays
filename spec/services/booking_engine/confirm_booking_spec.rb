@@ -35,21 +35,28 @@ RSpec.describe BookingEngine::ConfirmBooking do
   end
 
   describe '#call' do
+    before do
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.update!(is_taxable: true)
+      room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+    end
+
     it 'creates booking, rooms, guest link, pre-checkin, and converts quote' do
       dispatcher = instance_double(Notifications::Dispatcher, call: [])
       allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
 
+      result = nil
       expect {
-        described_class.new(quote_token: quote.token, payment_details: payment_details).call
+        result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
+        expect(result.success?).to be(true), result.message
       }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything)
 
-      result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
-      expect(result.success?).to be(true)
+      expect(result.success?).to be(true), result.message
       booking = result.booking
       expect(booking).to be_persisted
       expect(booking.status).to eq('confirmed')
       expect(booking.payment_status).to eq('captured')
-      expect(booking.total_amount).to eq(210.to_d)
+      expect(booking.total_amount).to eq(200.to_d)
       expect(booking.guest_gender).to eq('female')
       expect(booking.guest_document_type).to eq('passport')
       expect(booking.guest_country).to eq('Singapore')
@@ -58,6 +65,8 @@ RSpec.describe BookingEngine::ConfirmBooking do
 
       expect(booking.booking_rooms.count).to eq(1)
       expect(booking.booking_rooms.first.room_type).to eq(room_type)
+      expect(booking.booking_folio).to be_present
+      expect(booking.booking_folio).to be_open
 
       expect(booking.pre_checkin).to be_present
       expect(booking.pre_checkin.status).to eq('pending')
@@ -70,14 +79,34 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: booking)
     end
 
+    it 'saves special requests to both booking and quote' do
+      details = payment_details.merge(special_requests: 'Late arrival at 10 PM')
+
+      result = described_class.new(quote_token: quote.token, payment_details: details).call
+
+      expect(result.success?).to be(true)
+      expect(result.booking.special_requests).to eq('Late arrival at 10 PM')
+      expect(quote.reload.special_requests).to eq('Late arrival at 10 PM')
+    end
+
     it 'returns existing booking when quote is already converted' do
       existing = create(:booking, booking_quote: quote, hotel: hotel)
 
       result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
 
-      expect(result.success?).to be(true)
+      expect(result.success?).to be(true), result.message
       expect(result.booking).to eq(existing)
       expect(Booking.where(booking_quote_id: quote.id).count).to eq(1)
+      expect(existing.reload.booking_folio).to be_present
+    end
+
+    it "creates a folio while Night Audit is running without bypassing payment posting guards" do
+      hotel.current_business_date_record.update!(status: "audit_running")
+
+      result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
+
+      expect(result.success?).to be(true), result.message
+      expect(result.booking.booking_folio).to be_present
     end
 
     it 'fails for expired quote' do

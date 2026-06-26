@@ -55,6 +55,57 @@ RSpec.describe Folios::GenerateForecastedCharges do
       expect(tax_forecasts.map(&:amount)).to all(eq(10.0))
     end
 
+    it "creates new forecasts from ROOM transaction code tax rule snapshots" do
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.update!(is_taxable: true)
+      room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+      room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+      snapshot = Bookings::BuildFinancialSnapshot.new(
+        hotel: hotel,
+        check_in: booking.check_in,
+        check_out: booking.check_out,
+        guest_country: "Singapore",
+        room_items: [
+          {
+            quantity: 1,
+            nightly_rate_snapshot: booking_room.nightly_rate_snapshot.presence || {
+              Date.current.iso8601 => { "price" => "100.00" },
+              (Date.current + 1.day).iso8601 => { "price" => "100.00" }
+            }
+          }
+        ]
+      ).call
+      booking.update!(guest_country: "Singapore", tax_lines: snapshot.tax_lines, tax_posting_snapshot: snapshot.tax_posting_snapshot)
+
+      described_class.call(booking_folio: folio)
+
+      tax_forecasts = folio.folio_forecasted_charges.forecast.where(charge_kind: "tax").order(:stay_date, :identity)
+      expect(tax_forecasts.count).to eq(4)
+      expect(tax_forecasts.map(&:description)).to include("Tax: SST 8% - #{Date.current}", "Tax: Tourism Tax - #{Date.current}")
+      expect(tax_forecasts.map(&:amount)).to include(8.0, 10.0)
+    end
+
+    it "does not recalculate existing unposted forecasts when rules change under new-bookings-only policy" do
+      booking.update!(
+        tax_posting_snapshot: {
+          Date.current.iso8601 => [ { "name" => "Original Tax", "amount" => "5.00", "type" => "original", "source" => "legacy" } ]
+        }
+      )
+      described_class.call(booking_folio: folio)
+      original_tax_forecast = folio.folio_forecasted_charges.forecast.find_by!(charge_kind: "tax")
+      original_snapshot = booking.reload.tax_posting_snapshot
+
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.update!(is_taxable: true)
+      room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+
+      expect(booking.reload.tax_posting_snapshot).to eq(original_snapshot)
+      expect(folio.folio_forecasted_charges.forecast.count).to eq(3)
+      expect(original_tax_forecast.reload.description).to eq("Tax: Original Tax - #{Date.current}")
+      expect(original_tax_forecast.amount).to eq(5.0)
+    end
+
     it "does not create forecasts for the checkout day" do
       booking.update!(check_out: Date.current + 1.day)
 
@@ -88,8 +139,9 @@ RSpec.describe Folios::GenerateForecastedCharges do
     end
 
     it "allocates rounding remainder to the final night" do
-      booking.update!(check_in: Date.current, check_out: Date.current + 3.days)
       booking_room.update!(subtotal: 100.0)
+      booking.update!(check_in: Date.current, check_out: Date.current + 3.days)
+      booking.booking_rooms.reload
 
       described_class.call(booking_folio: folio)
 

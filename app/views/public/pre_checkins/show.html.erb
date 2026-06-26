@@ -154,7 +154,7 @@
                 <p class="mt-1 text-xs text-neutral-text-secondary">Please provide your signature below to confirm your check-in details.</p>
               </div>
 
-              <div data-controller="signature" class="space-y-2">
+              <div data-controller="signature" class="relative space-y-2">
                 <div class="rounded-xl border border-neutral-border bg-white p-2">
                   <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
                 </div>
@@ -163,7 +163,14 @@
                     Clear Signature
                   </button>
                 </div>
-                <%= f.hidden_field :signature, data: { signature_target: "input" }, required: true %>
+                <%= f.text_field :signature, 
+                                  data: { signature_target: "input" }, 
+                                  required: true, 
+                                  oninvalid: "this.setCustomValidity('Please provide your signature')",
+                                  oninput: "this.setCustomValidity('')",
+                                  class: "absolute bottom-0 left-1/2 -z-10 h-px w-px opacity-0 pointer-events-none", 
+                                  tabindex: "-1", 
+                                  aria: { hidden: true } %>
               </div>
             </section>
 

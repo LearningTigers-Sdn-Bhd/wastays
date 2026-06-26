@@ -205,7 +205,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
 
     within "#offcanvas_drawer" do
       expect(page).to have_content(/Step 1 of 2/i)
-      expect(page).to have_content(/Transaction Ledger/i)
+      expect(page).to have_content(/Folio List/i)
       click_button "Complete Checkout"
     end
 

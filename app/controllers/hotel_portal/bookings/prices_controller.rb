@@ -21,12 +21,15 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
       guest_country: params[:guest_country].presence || current_hotel.country,
       corporate_rate: params[:corporate_rate] == "true"
     ).call
-    total = snapshot.room_total + snapshot.tax_total
+    tourism_tax_total = Booking.tourism_tax_total_for(snapshot.tax_lines)
+    payable_tax_total = Booking.non_tourism_tax_total_for(snapshot.tax_lines)
+    total = snapshot.room_total + payable_tax_total
 
     render json: {
       total_amount: total,
       room_total: snapshot.room_total,
-      tax_total: snapshot.tax_total,
+      tax_total: payable_tax_total,
+      tourism_tax_total: tourism_tax_total,
       tax_lines: snapshot.tax_lines,
       nightly_rate_snapshot: snapshot.nightly_rate_snapshot
     }

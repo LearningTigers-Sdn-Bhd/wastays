@@ -13,14 +13,20 @@
         </p>
       </div>
 
-      <%= form_with url: daily_occupancy_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "daily-occupancy-range-form" do |f| %>
+      <%= form_with url: daily_occupancy_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "daily-occupancy-range-form", data: { controller: "date-preset" } do |f| %>
         <div>
-          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Start Date</label>
-          <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
+          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Time Period</label>
+          <%= select_tag :date_preset, options_for_select(date_preset_options, params[:date_preset] || "this_month"), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
         </div>
-        <div>
-          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">End Date</label>
-          <%= f.date_field :end_date, value: @report.end_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
+        <div id="custom-date-range" class="<%= params[:date_preset] == 'custom' ? 'flex' : 'hidden' %> gap-3">
+          <div>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Start Date</label>
+            <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
+          </div>
+          <div>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">End Date</label>
+            <%= f.date_field :end_date, value: @report.end_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
+          </div>
         </div>
         <details class="relative min-w-[170px]">
           <summary class="list-none inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
@@ -65,7 +71,7 @@
       <table class="min-w-full">
         <thead class="bg-slate-100">
           <tr>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Date</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600"><%= params[:date_preset] == "this_year" ? "Month" : "Date" %></th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Rooms Sold</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Rooms Available</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Occupancy</th>
@@ -78,7 +84,7 @@
           <% if @report.rows.any? %>
             <% @report.rows.each do |row| %>
               <tr>
-                <td class="px-6 py-4 text-sm font-semibold text-slate-900"><%= row[:date].strftime("%d %b %Y") %></td>
+                <td class="px-6 py-4 text-sm font-semibold text-slate-900"><%= params[:date_preset] == "this_year" ? row[:date].strftime("%B %Y") : row[:date].strftime("%d %b %Y") %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= row[:rooms_sold] %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= row[:rooms_available] %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= number_to_percentage(row[:occupancy_rate] * 100, precision: 2) %></td>
@@ -95,30 +101,3 @@
     </div>
   </div>
 </div>
-
-<script>
-  (() => {
-    const init = () => {
-      const form = document.getElementById("daily-occupancy-range-form");
-      if (!form || form.dataset.bound === "true") return;
-      form.dataset.bound = "true";
-
-      const startInput = form.querySelector('input[name="start_date"]');
-      const endInput = form.querySelector('input[name="end_date"]');
-      if (!startInput || !endInput) return;
-
-      const submit = () => {
-        if (startInput.value && endInput.value && endInput.value < startInput.value) {
-          endInput.value = startInput.value;
-        }
-        form.requestSubmit();
-      };
-
-      startInput.addEventListener("change", submit);
-      endInput.addEventListener("change", submit);
-    };
-
-    document.addEventListener("turbo:load", init);
-    document.addEventListener("DOMContentLoaded", init);
-  })();
-</script>

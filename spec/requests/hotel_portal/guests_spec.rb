@@ -257,4 +257,40 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include(cancelled_booking.confirmation_token)
     end
   end
+
+  describe "DELETE /bulk_destroy" do
+    let(:role_with_delete) do
+      role = create(:role, account: hotel.account)
+      role.permissions << (Permission.find_by(slug: 'view_guest_records') || create(:permission, slug: 'view_guest_records'))
+      role.permissions << (Permission.find_by(slug: 'delete_guest_record') || create(:permission, slug: 'delete_guest_record'))
+      role
+    end
+
+    let(:guest1) { Guest.create!(name: "Guest One", email: "one@example.com", phone: "+60123456781", government_id: "A1234561", country: "Malaysia", gender: "male", document_type: "passport", created_by_hotel: hotel) }
+    let(:guest2) { Guest.create!(name: "Guest Two", email: "two@example.com", phone: "+60123456782", government_id: "A1234562", country: "Malaysia", gender: "female", document_type: "passport", created_by_hotel: hotel) }
+
+    context "when user has delete permission" do
+      before do
+        UserHotelAccess.find_by(user: user, hotel: hotel).update!(role: role_with_delete)
+      end
+
+      it "soft deletes selected guests" do
+        delete bulk_destroy_hotel_guests_path(hotel), params: { guest_ids: [ guest1.id, guest2.id ].to_json }
+
+        expect(response).to redirect_to(hotel_guests_path(hotel))
+        expect(flash[:notice]).to eq("Selected guest records removed successfully.")
+        expect(guest1.reload.discarded?).to be true
+        expect(guest2.reload.discarded?).to be true
+      end
+    end
+
+    context "when user does not have delete permission" do
+      it "redirects to root path with not authorized alert" do
+        delete bulk_destroy_hotel_guests_path(hotel), params: { guest_ids: [ guest1.id, guest2.id ].to_json }
+
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to include("not authorized")
+      end
+    end
+  end
 end

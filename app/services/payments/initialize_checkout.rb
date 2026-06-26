@@ -20,7 +20,15 @@ module Payments
     def call
       return failure("Invalid parameters") unless valid?
 
+      if (restriction_msg = quote.stay_restriction_error_message).present?
+        return failure(restriction_msg)
+      end
+
       setting = quote.hotel.effective_payment_setting(gateway)
+      if setting.blank? && gateway == "cute_mock"
+        setting = OpenStruct.new(gateway: "cute_mock", api_key: "mock", secret_key: "mock")
+      end
+
       return failure("Payment gateway is not configured.") unless setting
 
       adapter = Payments::GatewayRegistry.fetch(gateway: gateway, setting: setting)
@@ -60,7 +68,7 @@ module Payments
             end
           ).call
 
-          snapshot.room_total + snapshot.tax_total
+          snapshot.room_total + Booking.non_tourism_tax_total_for(snapshot.tax_lines)
         end
       end
     end
@@ -75,7 +83,8 @@ module Payments
         gender: guest_details[:gender],
         country: guest_details[:country],
         document_type: guest_details[:document_type],
-        marketing_consent: guest_details[:marketing_consent]
+        marketing_consent: guest_details[:marketing_consent],
+        special_requests: guest_details[:special_requests]
       }
     end
 

@@ -50,7 +50,7 @@ module HotelPortal
 
     def hotel_params
       params.require(:hotel).permit(
-        :default_currency, :time_zone, :tourism_tax_enabled, :tourism_tax_amount, :sst_enabled,
+        :default_currency, :time_zone, :geolocation_enabled,
         :ai_provider_enabled, :ai_concierge_tone, :ai_provider_name, :ai_provider_key,
         :business_starts_at, :business_ends_at, :arrival_grace_period_hours,
         property_policy_attributes: [ :id, :check_in_time, :check_out_time ]

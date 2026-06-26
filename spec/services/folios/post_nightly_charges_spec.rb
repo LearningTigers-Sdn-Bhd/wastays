@@ -64,6 +64,43 @@ RSpec.describe Folios::PostNightlyCharges do
     expect(tax.metadata["tax_line"]["source"]).to eq("hotel_sst")
   end
 
+  it "posts tax transactions with tax transaction codes from ROOM rule snapshots" do
+    hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    room_code.update!(is_taxable: true)
+    room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+    room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      guest_country: "Singapore",
+      check_in: business_date,
+      check_out: business_date + 1.day)
+    booking_room = create(:booking_room,
+      booking: booking,
+      subtotal: 100.0,
+      nightly_rate_snapshot: {
+        business_date.iso8601 => { "price" => "100.00", "source" => "room_rate" }
+      })
+    snapshot = Bookings::BuildFinancialSnapshot.new(
+      hotel: hotel,
+      check_in: booking.check_in,
+      check_out: booking.check_out,
+      guest_country: booking.guest_country,
+      room_items: [ { quantity: booking_room.quantity, nightly_rate_snapshot: booking_room.nightly_rate_snapshot } ]
+    ).call
+    booking.update!(tax_lines: snapshot.tax_lines, tax_posting_snapshot: snapshot.tax_posting_snapshot)
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+
+    described_class.call(night_audit: night_audit, user: user)
+
+    tax_charges = folio.folio_transactions.charge.where(category: "tax").order(:amount)
+    expect(tax_charges.map { |transaction| transaction.transaction_code.system_key }).to contain_exactly("sst_tax", "tourism_tax")
+    expect(tax_charges.map { |transaction| transaction.metadata.dig("tax_line", "source") }.uniq).to eq([ "transaction_code_tax_rule" ])
+    expect(folio.folio_forecasted_charges.actualized.where(charge_kind: "tax").count).to eq(2)
+  end
+
   it "does not post a checkout-day charge" do
     booking = create(:booking,
       hotel: hotel,
@@ -97,6 +134,105 @@ RSpec.describe Folios::PostNightlyCharges do
     expect(result.skipped.count).to eq(2)
     expect(result.skipped.map { |item| item["reason"] }.uniq).to eq([ "Nightly charge already posted" ])
     expect(night_audit.night_audit_logs.where(action_type: "item_skipped").count).to eq(2)
+  end
+
+  it "does not duplicate nightly charges posted on another folio for the same booking" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day)
+    booking_room = create(:booking_room, booking: booking, subtotal: 100.0)
+    guest_folio = create(:booking_folio, hotel: hotel, booking: booking)
+    company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+    key = Folios::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: booking_room.id)
+    create(:folio_transaction, booking_folio: company_folio, transaction_type: "charge", category: "accommodation", amount: 100.0, metadata: { nightly_charge_key: key })
+
+    result = nil
+    expect { result = described_class.call(night_audit: night_audit, user: user) }
+      .not_to change { guest_folio.folio_transactions.charge.count }
+
+    expect(result.skipped.sole["reason"]).to eq("Nightly charge already posted")
+  end
+
+  it "routes ROOM nightly charges by ROOM transaction code" do
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day)
+    create(:booking_room, booking: booking, subtotal: 100.0)
+    create(:booking_folio, hotel: hotel, booking: booking)
+    company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+
+    described_class.call(night_audit: night_audit, user: user)
+
+    charge = company_folio.folio_transactions.charge.sole
+    expect(charge.category).to eq("accommodation")
+    expect(charge.transaction_code).to eq(room_code)
+    expect(charge.metadata["route_source"]).to eq("routing_rule")
+  end
+
+  it "routes scheduled SST and TTX nightly taxes by their own transaction codes" do
+    hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+    ttx_code = hotel.transaction_codes.find_by!(system_key: "tourism_tax")
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day,
+      tax_posting_snapshot: {
+        business_date.iso8601 => [
+          { "name" => "SST", "amount" => "8.00", "type" => "sst", "transaction_code_id" => sst_code.id },
+          { "name" => "Tourism Tax", "amount" => "10.00", "type" => "tourism_tax", "transaction_code_id" => ttx_code.id }
+        ]
+      })
+    create(:booking_room, booking: booking, subtotal: 100.0)
+    guest_folio = create(:booking_folio, hotel: hotel, booking: booking)
+    company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: sst_code, target_folio: company_folio)
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: ttx_code, target_folio: guest_folio)
+
+    described_class.call(night_audit: night_audit, user: user)
+
+    expect(company_folio.folio_transactions.charge.find_by(transaction_code: sst_code).amount).to eq(8.0)
+    expect(guest_folio.folio_transactions.charge.find_by(transaction_code: ttx_code).amount).to eq(10.0)
+  end
+
+  it "routes attached nightly taxes with ROOM unless a child rule overrides them" do
+    hotel.update!(sst_enabled: true)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 1.day,
+      tax_posting_snapshot: {
+        business_date.iso8601 => [
+          {
+            "name" => "SST",
+            "amount" => "8.00",
+            "type" => "sst",
+            "transaction_code_id" => sst_code.id,
+            "source_transaction_code_id" => room_code.id
+          }
+        ]
+      })
+    create(:booking_room, booking: booking, subtotal: 100.0)
+    create(:booking_folio, hotel: hotel, booking: booking)
+    company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+
+    described_class.call(night_audit: night_audit, user: user)
+
+    expect(company_folio.folio_transactions.charge.pluck(:category)).to contain_exactly("accommodation", "tax")
+    expect(company_folio.folio_transactions.charge.find_by(category: "tax").metadata["route_source"]).to eq("follows_parent")
   end
 
   it "records a missing folio as a skipped item" do

@@ -36,7 +36,7 @@ module NightAudits
         "checked_in_missing_timestamp" => serialize_bookings(checked_in_missing_timestamp, "Checked-in booking is missing check-in timestamp"),
         "completed_missing_timestamp" => serialize_bookings(completed_missing_timestamp, "Completed booking is missing check-out timestamp"),
         "missing_folio" => serialize_bookings(missing_folio_bookings, "Booking requires a folio before night audit can close"),
-        "missing_nightly_charges" => serialize_bookings(missing_nightly_charge_bookings, "Booking folio is missing required nightly charges"),
+        "missing_nightly_charges" => missing_nightly_charge_details,
         "outstanding_folio_balance" => serialize_bookings(outstanding_balance_bookings, "Booking has outstanding folio balance at checkout"),
         "captured_payment_not_synced" => serialize_payment_transactions(unsynced_captured_payment_transactions, "Captured payment is not synced to the booking folio"),
         "refund_not_synced" => serialize_refund_requests(unsynced_completed_refund_requests, "Completed refund is not synced to the booking folio")
@@ -48,6 +48,7 @@ module NightAudits
         "due_out_not_checked_out",
         "checked_in_missing_timestamp",
         "completed_missing_timestamp",
+        "missing_folio",
         "captured_payment_not_synced",
         "refund_not_synced",
         "outstanding_folio_balance"
@@ -122,18 +123,25 @@ module NightAudits
 
     def nightly_charge_bookings
       @nightly_charge_bookings ||= hotel_bookings
-        .includes(:booking_rooms, booking_folio: :folio_transactions)
+        .includes(:booking_rooms, booking_folios: [ :folio_transactions ])
         .checked_in
         .where("check_in::date <= ? AND check_out::date > ?", @business_date, @business_date)
         .to_a
     end
 
-    def missing_nightly_charge_bookings
-      @missing_nightly_charge_bookings ||= nightly_charge_bookings.select do |booking|
-        folio = booking.booking_folio
-        next false unless folio
+    def missing_nightly_charge_details
+      @missing_nightly_charge_details ||= nightly_charge_bookings.filter_map do |booking|
+        next if booking.booking_folio.blank?
 
-        missing_nightly_accommodation_charge?(booking, folio) || missing_nightly_tax_charge?(booking, folio)
+        reconciliation = Folios::NightlyChargeReconciliation.call(
+          booking: booking,
+          business_date: @business_date
+        )
+        next if reconciliation.valid?
+
+        serialize_booking(booking, "Booking folios have missing or incorrect nightly charges").merge(
+          "line_issues" => reconciliation.issues
+        )
       end
     end
 
@@ -207,36 +215,6 @@ module NightAudits
       hotel_bookings.group(:payment_status).count.transform_keys(&:to_s)
     end
 
-    def missing_nightly_accommodation_charge?(booking, folio)
-      expected_total = booking.booking_rooms.to_a.sum { |room| nightly_room_amount(room, @business_date) }
-      return false if expected_total.zero?
-
-      nightly_charge_total(folio, "accommodation") != expected_total
-    end
-
-    def missing_nightly_tax_charge?(booking, folio)
-      expected_tax_total = tax_postings_for(booking, @business_date).sum { |tax_line| tax_line_amount(tax_line) }
-      return false unless expected_tax_total.positive?
-
-      nightly_charge_total(folio, "tax") != expected_tax_total
-    end
-
-    def expected_booking_tax_total(booking)
-      tax_total = booking.tax_total.to_d
-      return tax_total if tax_total.positive?
-
-      booking.tourism_tax_amount.to_d
-    end
-
-    def nightly_charge_total(folio, category)
-      folio.folio_transactions.to_a.sum do |transaction|
-        transaction.transaction_type == "charge" &&
-          transaction.category == category &&
-          transaction.metadata["posting_source"] == "night_audit" &&
-          transaction.metadata["stay_date"] == @business_date.iso8601 ? transaction.amount.to_d : 0.to_d
-      end
-    end
-
     def folio_outstanding_balance(folio)
       folio.folio_transactions.to_a.sum do |transaction|
         case transaction.transaction_type
@@ -271,17 +249,20 @@ module NightAudits
     def serialize_bookings(scope, reason)
       bookings = scope.respond_to?(:order) ? scope.order(:check_out, :id) : scope.sort_by { |booking| [ booking.check_out, booking.id ] }
 
-      bookings.map do |booking|
-        {
-          "booking_id" => booking.id,
-          "confirmation_token" => booking.confirmation_token,
-          "guest_name" => booking.guest_name,
-          "status" => booking.status,
-          "check_in" => booking.check_in,
-          "check_out" => booking.check_out,
-          "reason" => reason
-        }
-      end
+      bookings.map { |booking| serialize_booking(booking, reason) }
+    end
+
+    def serialize_booking(booking, reason)
+      {
+        "booking_id" => booking.id,
+        "confirmation_token" => booking.confirmation_token,
+        "guest_name" => booking.guest_name,
+        "status" => booking.status,
+        "check_in" => booking.check_in,
+        "check_out" => booking.check_out,
+        "room_numbers" => booking.room_numbers.presence,
+        "reason" => reason
+      }
     end
 
     def serialize_payment_transactions(payment_transactions, reason)

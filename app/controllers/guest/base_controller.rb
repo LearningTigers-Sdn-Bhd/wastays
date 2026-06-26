@@ -1,8 +1,11 @@
 class Guest::BaseController < ApplicationController
+  include Breadcrumbable
+
   layout "guest"
 
   skip_before_action :redirect_legacy_hotel_portal_path
 
+  helper Guest::NavigationHelper
   helper_method :current_guest, :guest_logged_in?
 
   private

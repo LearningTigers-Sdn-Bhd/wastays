@@ -43,8 +43,7 @@ module HotelPortal
               override_night_audit: true,
               reason: params[:retroactive_reason].presence || params[:backdate_reason],
               backdate_reason_category: params[:backdate_reason],
-              backdate_reason_details: params[:retroactive_reason],
-              posting_date: params[:posting_date]
+              backdate_reason_details: params[:retroactive_reason]
             }
           ).call
 

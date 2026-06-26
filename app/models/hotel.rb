@@ -31,7 +31,11 @@ class Hotel < ApplicationRecord
   has_many_attached :photos
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :users, through: :user_hotel_accesses
-  has_many :staff_invitations, dependent: :destroy
+  has_many :invitations, dependent: :destroy
+  has_many :staff_invitations, -> { staff }, class_name: "StaffInvitation"
+  has_many :corporate_invitations, -> { corporate }, class_name: "CorporateInvitation"
+  has_many :hotel_corporate_accounts, dependent: :destroy
+  has_many :corporate_accounts, through: :hotel_corporate_accounts
   has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
   belongs_to :plan, optional: true
@@ -45,8 +49,14 @@ class Hotel < ApplicationRecord
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
+  has_many :booking_folios, dependent: :restrict_with_error
+  has_many :ar_invoices, dependent: :restrict_with_error
+  has_many :ar_payments, dependent: :restrict_with_error
+  has_many :folio_routing_rules, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :destroy
+  has_many :transaction_codes, dependent: :destroy
+  has_one :hotel_transaction_configuration, dependent: :destroy
   has_many :hotel_counters, dependent: :destroy
   has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy
@@ -54,6 +64,7 @@ class Hotel < ApplicationRecord
   has_many :hotel_general_ledger_maps, dependent: :destroy
   has_many :journal_batches, dependent: :destroy
   has_many :financial_audit_events, dependent: :restrict_with_error
+  has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
@@ -67,7 +78,9 @@ class Hotel < ApplicationRecord
   has_many :notification_deliveries, dependent: :destroy
 
   after_create :ensure_default_gl_maps
+  after_create :ensure_default_transaction_codes
   after_create :ensure_current_business_date
+  after_update :sync_primary_tax_transaction_codes, if: :saved_change_to_primary_tax_settings?
 
   validates :name, presence: true
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
@@ -87,6 +100,7 @@ class Hotel < ApplicationRecord
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
+  validate :account_must_be_hotel_kind
 
   def self.const_missing(const_name)
     case const_name
@@ -107,6 +121,12 @@ class Hotel < ApplicationRecord
     else
       super
     end
+  end
+
+  def account_must_be_hotel_kind
+    return if account.blank? || account.hotel?
+
+    errors.add(:account, "must be a hotel account")
   end
 
   def normalize_default_currency
@@ -445,6 +465,10 @@ class Hotel < ApplicationRecord
     tourism_tax_applicable_for?(country) ? tourism_tax_amount : 0
   end
 
+  def transaction_configuration
+    hotel_transaction_configuration || build_hotel_transaction_configuration
+  end
+
   def featured_photo_attachment
     return nil if featured_photo_attachment_id.blank?
 
@@ -570,6 +594,14 @@ class Hotel < ApplicationRecord
     ])
   end
 
+  def latitude
+    extract_coordinate("3d", /@(-?\d+\.\d+)/)
+  end
+
+  def longitude
+    extract_coordinate("4d", /@(?:-?\d+\.\d+),(-?\d+\.\d+)/)
+  end
+
   def should_generate_new_friendly_id?
     name_changed? || slug.blank?
   end
@@ -660,11 +692,32 @@ class Hotel < ApplicationRecord
 
   private
 
+  def extract_coordinate(prefix, fallback_regex)
+    return nil if google_map_link.blank?
+
+    matches = google_map_link.scan(/!#{prefix}(-?\d+\.\d+)/).flatten
+    return matches.last.to_f if matches.any?
+
+    google_map_link[fallback_regex, 1]&.to_f
+  end
+
   def ensure_current_business_date
     HotelBusinessDate.initialize_for_hotel!(hotel: self, date: business_date_for(Time.current))
   end
 
   def ensure_default_gl_maps
     Financials::EnsureDefaultGlMaps.call(self)
+  end
+
+  def ensure_default_transaction_codes
+    Financials::EnsureDefaultTransactionCodes.call(self)
+  end
+
+  def saved_change_to_primary_tax_settings?
+    saved_change_to_sst_enabled? || saved_change_to_tourism_tax_enabled?
+  end
+
+  def sync_primary_tax_transaction_codes
+    Financials::EnsureDefaultTransactionCodes.call(self)
   end
 end

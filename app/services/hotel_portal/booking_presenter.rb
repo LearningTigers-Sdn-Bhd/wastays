@@ -101,7 +101,7 @@ module HotelPortal
       [
         [ "Confirmation", confirmation_token ],
         [ "Reservation", booking.formatted_reservation_number ],
-        [ "Folio", booking.formatted_folio_number ],
+        [ "Folio Account", booking.folio_account_reference_display ],
         [ "Guest Registration", booking.formatted_guest_registration_number ],
         [ "External", booking.external_reference ],
         [ "Channel Manager", booking.channel_manager_reference ]
@@ -328,6 +328,62 @@ module HotelPortal
 
     def refund_eligibility
       @refund_eligibility ||= Refunds::Eligibility.new(booking).call
+    end
+
+    def occupancy_text(variant: :desktop)
+      if variant == :desktop
+        "#{booking.adults} #{'adult'.pluralize(booking.adults)} · #{booking.children.to_i} ch."
+      else
+        "#{booking.adults}A · #{booking.children.to_i}C"
+      end
+    end
+
+    def room_display_text(variant: :desktop)
+      primary_room = booking.booking_rooms.first
+      return "—" unless primary_room
+
+      room_no = room_number_for(primary_room)
+      room_type = primary_room.room_type_snapshot["name"].presence || primary_room.room_type&.name
+
+      if variant == :desktop
+        room_no.present? ? "Room #{room_no} · #{room_type}" : room_type
+      else
+        room_no.present? ? "#{room_type} · #{room_no}" : room_type
+      end
+    end
+
+    def formatted_projected_balance
+      format_currency(projected_outstanding_balance)
+    end
+
+    def payment_status_label
+      payment_status_display.to_s.tr("_", " ").titleize.presence || "—"
+    end
+
+    def guarantee_method_label
+      booking.guarantee_method.to_s.presence&.tr("_", " ")&.titleize || "No guarantee"
+    end
+
+    def formatted_room_total
+      format_currency(room_total)
+    end
+
+    def formatted_taxes_total
+      format_currency(taxes_total)
+    end
+
+    def formatted_total_amount
+      format_currency(booking.total_amount)
+    end
+
+    private
+
+    def format_currency(amount)
+      "#{currency} #{view_context.number_with_precision(amount, precision: 2)}"
+    end
+
+    def view_context
+      ActionController::Base.helpers
     end
   end
 end

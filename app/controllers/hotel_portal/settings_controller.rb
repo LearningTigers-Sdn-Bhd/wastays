@@ -2,7 +2,7 @@
 
 module HotelPortal
   class SettingsController < HotelPortal::BaseController
-    SETTINGS_TABS = %w[general tax ai notifications banking].freeze
+    SETTINGS_TABS = %w[general ai notifications banking].freeze
 
     before_action :set_account
     before_action :set_hotel
@@ -133,7 +133,6 @@ module HotelPortal
     def settings_tab_label(tab)
       {
         "general" => "General",
-        "tax" => "Tax",
         "ai" => "AI Concierge",
         "notifications" => "Notifications",
         "banking" => "Banking"
@@ -143,7 +142,6 @@ module HotelPortal
     def settings_tab_for_form
       case params[:form_id].to_s
       when "hotel_settings" then "general"
-      when "tax_settings" then "tax"
       when "ai_configuration" then "ai"
       when "notification_settings" then "notifications"
       else "general"

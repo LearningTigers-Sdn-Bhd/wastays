@@ -47,7 +47,7 @@ RSpec.describe NightAudits::Evaluate do
       expect(result[:blocked_details]["due_out_not_checked_out"].sole["booking_id"]).to eq(booking.id)
     end
 
-    it 'omits posting-generated blockers during pre-close evaluation' do
+    it 'includes missing folios but omits missing nightly charges during pre-close evaluation' do
       booking = create(:booking,
         status: 'checked_in',
         hotel: hotel,
@@ -58,7 +58,7 @@ RSpec.describe NightAudits::Evaluate do
 
       result = described_class.new(hotel: hotel, business_date: business_date, phase: :pre_close).call
 
-      expect(result[:blocked_details]).not_to have_key("missing_folio")
+      expect(result[:blocked_details]["missing_folio"].sole["booking_id"]).to eq(booking.id)
       expect(result[:blocked_details]).not_to have_key("missing_nightly_charges")
     end
 
@@ -129,6 +129,61 @@ RSpec.describe NightAudits::Evaluate do
       result = service.call
       expect(result[:exceptions]["folio_balance_exceptions"]).not_to be_empty
       expect(result[:exceptions]["folio_balance_exceptions"].first["reason"]).to eq("Large outstanding balance")
+    end
+
+    it "accepts exact nightly lines distributed across their resolved folios" do
+      booking = create(:booking,
+        status: "checked_in",
+        hotel: hotel,
+        check_in: business_date,
+        check_out: business_date + 1.day,
+        checked_in_at: business_date.beginning_of_day)
+      room = create(:booking_room, booking: booking, subtotal: 100.0)
+      guest_folio = create(:booking_folio, hotel: hotel, booking: booking)
+      company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+      key = Folios::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id)
+      create(:folio_transaction,
+        booking_folio: company_folio,
+        transaction_type: "charge",
+        category: "accommodation",
+        transaction_code: room_code,
+        amount: 100.0,
+        metadata: { nightly_charge_key: key, stay_date: business_date.iso8601, posting_source: "night_audit" })
+
+      result = service.call
+
+      expect(result[:blocked_details]["missing_nightly_charges"]).to be_empty
+      expect(guest_folio.folio_transactions).to be_empty
+    end
+
+    it "reports per-line metadata when a nightly line is on the wrong folio" do
+      booking = create(:booking,
+        status: "checked_in",
+        hotel: hotel,
+        check_in: business_date,
+        check_out: business_date + 1.day,
+        checked_in_at: business_date.beginning_of_day)
+      room = create(:booking_room, booking: booking, subtotal: 100.0)
+      guest_folio = create(:booking_folio, hotel: hotel, booking: booking)
+      company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
+      key = Folios::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id)
+      transaction = create(:folio_transaction,
+        booking_folio: guest_folio,
+        transaction_type: "charge",
+        category: "accommodation",
+        transaction_code: room_code,
+        amount: 100.0,
+        metadata: { nightly_charge_key: key, stay_date: business_date.iso8601, posting_source: "night_audit" })
+
+      issue = service.call[:blocked_details]["missing_nightly_charges"].sole["line_issues"].sole
+
+      expect(issue["issue_types"]).to include("misrouted")
+      expect(issue["expected_folio_id"]).to eq(company_folio.id)
+      expect(issue.dig("actual_transactions", 0, "folio_transaction_id")).to eq(transaction.id)
     end
   end
 end

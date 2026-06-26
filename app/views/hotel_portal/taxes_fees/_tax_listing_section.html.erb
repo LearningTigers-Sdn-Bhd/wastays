@@ -1,0 +1,370 @@
+<% presenter ||= @presenter %>
+<% hotel = presenter.hotel %>
+<% editing_tourism_tax = presenter.editing_tourism_tax? %>
+<% tourism_active = hotel.tourism_tax_enabled? %>
+<% sst_active = hotel.sst_enabled? %>
+<% tourism_status_class = tourism_active ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-red-50 text-red-700 ring-red-200" %>
+<% sst_status_class = sst_active ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-red-50 text-red-700 ring-red-200" %>
+
+<section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-testid="primary-tax-settings">
+  <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
+    <div class="flex items-center gap-2">
+      <span class="inline-flex size-6 items-center justify-center rounded bg-blue-50 text-blue-700">
+        <%= cached_icon "receipt-text", class: "size-3.5", aria: { hidden: true } %>
+      </span>
+      <h2 class="text-lg font-bold tracking-tight text-slate-950">Primary Tax Settings</h2>
+    </div>
+    <p class="mt-1 text-sm font-medium text-slate-600">Enable or disable default taxes used by bookings, folios, and invoices.</p>
+  </div>
+
+  <div class="hidden overflow-x-auto md:block">
+    <table class="w-full min-w-[760px] text-left text-sm">
+      <thead class="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
+        <tr>
+          <th class="px-5 py-3">Name</th>
+          <th class="px-5 py-3">Amount</th>
+          <th class="px-5 py-3 text-right">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <tr>
+          <td class="px-5 py-4 align-top">
+            <p class="font-semibold text-slate-950">Tourism Tax</p>
+            <p class="mt-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500">TTx</p>
+            <p class="mt-2 text-xs text-slate-500">Foreign guests only</p>
+          </td>
+          <td class="px-5 py-4 align-top">
+            <% if editing_tourism_tax %>
+              <%= form_with model: hotel, url: hotel_taxes_fees_path(hotel), method: :patch, local: true, class: "flex flex-wrap items-center gap-2" do |f| %>
+                <%= hidden_field_tag :form_id, "tax_settings" %>
+                <%= f.number_field :tourism_tax_amount,
+                    step: 0.01,
+                    min: 0,
+                    class: "w-36 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                <%= f.submit "Save", class: "cursor-pointer rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-700" %>
+                <%= link_to "Cancel", hotel_taxes_fees_path(hotel), class: "rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50" %>
+              <% end %>
+            <% else %>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-semibold text-slate-950">RM <%= number_with_precision(hotel.tourism_tax_amount || 0, precision: 2) %></span>
+                <%= link_to hotel_taxes_fees_path(hotel, primary_edit: "tourism_tax"),
+                    class: "inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-50",
+                    aria: { label: "Edit tourism tax amount" } do %>
+                  <%= cached_icon "pencil", class: "size-3.5" %>
+                  Edit
+                <% end %>
+              </div>
+            <% end %>
+            <p class="mt-1 text-xs text-slate-500">Per room / night</p>
+          </td>
+          <td class="px-5 py-4 text-right align-top">
+            <div class="inline-flex items-center gap-3">
+              <%= form_with model: hotel, url: hotel_taxes_fees_path(hotel), method: :patch, local: true, class: "inline-flex" do |f| %>
+                <%= hidden_field_tag :form_id, "tax_settings" %>
+                <%= render "hotel_portal/taxes_fees/bare_status_switch",
+                           form: f,
+                           field: :tourism_tax_enabled,
+                           checked: tourism_active,
+                           aria_label: "Toggle tourism tax status",
+                           onchange: "this.form.requestSubmit()" %>
+              <% end %>
+              <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset <%= tourism_status_class %>"><%= tourism_active ? "Active" : "Inactive" %></span>
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="px-5 py-4 align-top">
+            <p class="font-semibold text-slate-950">Service Tax</p>
+            <p class="mt-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500">SST</p>
+            <p class="mt-2 text-xs text-slate-500">Applies to room subtotal</p>
+          </td>
+          <td class="px-5 py-4 align-top">
+            <p class="font-semibold text-slate-950">8.00%</p>
+            <p class="mt-1 text-xs text-slate-500">Fixed system rate</p>
+          </td>
+          <td class="px-5 py-4 text-right align-top">
+            <div class="inline-flex items-center gap-3">
+              <%= form_with model: hotel, url: hotel_taxes_fees_path(hotel), method: :patch, local: true, class: "inline-flex" do |f| %>
+                <%= hidden_field_tag :form_id, "tax_settings" %>
+                <%= render "hotel_portal/taxes_fees/bare_status_switch",
+                           form: f,
+                           field: :sst_enabled,
+                           checked: sst_active,
+                           aria_label: "Toggle service tax status",
+                           onchange: "this.form.requestSubmit()" %>
+              <% end %>
+              <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset <%= sst_status_class %>"><%= sst_active ? "Active" : "Inactive" %></span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divide-y divide-slate-100 md:hidden">
+    <article class="p-5">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="font-semibold text-slate-950">Tourism Tax</p>
+          <p class="mt-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500">TTx</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <%= form_with model: hotel, url: hotel_taxes_fees_path(hotel), method: :patch, local: true, class: "inline-flex" do |f| %>
+            <%= hidden_field_tag :form_id, "tax_settings" %>
+            <%= render "hotel_portal/taxes_fees/bare_status_switch",
+                       form: f,
+                       field: :tourism_tax_enabled,
+                       checked: tourism_active,
+                       aria_label: "Toggle tourism tax status",
+                       onchange: "this.form.requestSubmit()" %>
+          <% end %>
+          <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset <%= tourism_status_class %>"><%= tourism_active ? "Active" : "Inactive" %></span>
+        </div>
+      </div>
+
+      <div class="mt-5 space-y-2">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Amount</p>
+        <% if editing_tourism_tax %>
+          <%= form_with model: hotel, url: hotel_taxes_fees_path(hotel), method: :patch, local: true, class: "space-y-3" do |f| %>
+            <%= hidden_field_tag :form_id, "tax_settings" %>
+            <%= f.number_field :tourism_tax_amount,
+                step: 0.01,
+                min: 0,
+                class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+            <p class="text-sm font-medium text-slate-500">/ room / night</p>
+            <div class="flex justify-end gap-2">
+              <%= link_to "Cancel", hotel_taxes_fees_path(hotel), class: "rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50" %>
+              <%= f.submit "Save", class: "cursor-pointer rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-700" %>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="flex items-center justify-between gap-4">
+            <p class="font-semibold text-slate-950">RM <%= number_with_precision(hotel.tourism_tax_amount || 0, precision: 2) %> <span class="font-medium text-slate-500">/ room / night</span></p>
+            <%= link_to hotel_taxes_fees_path(hotel, primary_edit: "tourism_tax"),
+                class: "inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-50",
+                aria: { label: "Edit tourism tax amount" } do %>
+              Edit <%= cached_icon "pencil", class: "size-3.5" %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="mt-5 space-y-1">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Rule</p>
+        <p class="text-sm font-medium text-slate-600">Foreign guests only</p>
+      </div>
+    </article>
+
+    <article class="p-5">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="font-semibold text-slate-950">Service Tax</p>
+          <p class="mt-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500">SST</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <%= form_with model: hotel, url: hotel_taxes_fees_path(hotel), method: :patch, local: true, class: "inline-flex" do |f| %>
+            <%= hidden_field_tag :form_id, "tax_settings" %>
+            <%= render "hotel_portal/taxes_fees/bare_status_switch",
+                       form: f,
+                       field: :sst_enabled,
+                       checked: sst_active,
+                       aria_label: "Toggle service tax status",
+                       onchange: "this.form.requestSubmit()" %>
+          <% end %>
+          <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset <%= sst_status_class %>"><%= sst_active ? "Active" : "Inactive" %></span>
+        </div>
+      </div>
+      <div class="mt-5 space-y-1">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Amount</p>
+        <p class="font-semibold text-slate-950">8.00%</p>
+      </div>
+      <div class="mt-5 space-y-1">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Rule</p>
+        <p class="text-sm font-medium text-slate-600">Fixed system rate</p>
+        <p class="text-sm font-medium text-slate-600">Room subtotal</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-testid="additional-taxes-fees">
+  <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex size-6 items-center justify-center rounded bg-emerald-50 text-emerald-700">
+          <%= cached_icon "badge-percent", class: "size-3.5", aria: { hidden: true } %>
+        </span>
+        <h2 class="text-lg font-bold tracking-tight text-slate-950">Additional Taxes &amp; Fees</h2>
+      </div>
+      <p class="mt-1 text-sm font-medium text-slate-600">Custom levies and service fees that appear as invoice line items.</p>
+    </div>
+    <%= link_to new_hotel_hotel_tax_path(current_hotel),
+        data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" },
+        class: "inline-flex shrink-0 items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white transition hover:bg-slate-700",
+        aria: { label: "Add fee" } do %>
+      <%= cached_icon "plus", class: "size-4" %>
+      <span class="hidden sm:inline">Add Fee</span>
+    <% end %>
+  </div>
+
+  <% hotel_taxes = presenter.hotel_taxes %>
+  <div class="hidden overflow-x-auto md:block">
+    <table class="w-full min-w-[820px] text-left text-sm">
+      <thead class="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
+        <tr>
+          <th class="px-5 py-3">Name</th>
+          <th class="px-5 py-3">Charge Type</th>
+          <th class="px-5 py-3">Amount Type</th>
+          <th class="px-5 py-3">Amount</th>
+          <th class="px-5 py-3">Status</th>
+          <th class="px-5 py-3 text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% if hotel_taxes.empty? %>
+          <tr>
+            <td colspan="6" class="px-5 py-8 text-center text-sm font-medium text-slate-400">No additional taxes or fees configured yet.</td>
+          </tr>
+        <% else %>
+          <% hotel_taxes.each do |tax| %>
+            <% tax_status_class = tax.enabled? ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-red-50 text-red-700 ring-red-200" %>
+            <tr>
+              <td class="px-5 py-4">
+                <p class="font-semibold text-slate-950"><%= tax.name %></p>
+                <p class="mt-1 font-mono text-xs font-semibold text-slate-500"><%= tax.transaction_code_value %></p>
+              </td>
+              <td class="px-5 py-4 text-slate-600"><%= tax.charge_type.to_s.titleize %></td>
+              <td class="px-5 py-4 text-slate-600"><%= tax.rate_type == "flat" ? "Fixed RM" : "Percentage" %></td>
+              <td class="px-5 py-4 font-semibold text-slate-950">
+                <% if tax.rate_type == "flat" %>
+                  RM <%= number_with_precision(tax.amount, precision: 2) %>
+                <% else %>
+                  <%= number_with_precision(tax.amount, precision: 2) %>%
+                <% end %>
+              </td>
+              <td class="px-5 py-4">
+                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset <%= tax_status_class %>"><%= tax.enabled? ? "Active" : "Inactive" %></span>
+              </td>
+              <td class="px-5 py-4 text-right">
+                <%= link_to edit_hotel_hotel_tax_path(current_hotel, tax),
+                    data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" },
+                    class: "inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50" do %>
+                  <%= cached_icon "pencil", class: "size-3.5", aria: { hidden: true } %>
+                  Edit
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divide-y divide-slate-100 md:hidden">
+    <% if hotel_taxes.empty? %>
+      <div class="px-5 py-8 text-center text-sm font-medium text-slate-400">No additional taxes or fees configured yet.</div>
+    <% else %>
+      <% hotel_taxes.each do |tax| %>
+        <% tax_status_class = tax.enabled? ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-red-50 text-red-700 ring-red-200" %>
+        <article class="p-5">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="font-semibold text-slate-950"><%= tax.name %></p>
+              <p class="mt-1 font-mono text-xs font-semibold text-slate-500"><%= tax.transaction_code_value %></p>
+              <p class="mt-1 text-sm font-medium text-slate-500"><%= tax.charge_type.to_s.titleize %> · <%= tax.rate_type == "flat" ? "Fixed RM" : "Percentage" %></p>
+            </div>
+            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset <%= tax_status_class %>"><%= tax.enabled? ? "Active" : "Inactive" %></span>
+          </div>
+          <div class="mt-5 space-y-1">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Amount</p>
+            <p class="font-semibold text-slate-950">
+              <% if tax.rate_type == "flat" %>
+                RM <%= number_with_precision(tax.amount, precision: 2) %>
+              <% else %>
+                <%= number_with_precision(tax.amount, precision: 2) %>%
+              <% end %>
+            </p>
+          </div>
+          <div class="mt-5 flex justify-end">
+            <%= link_to edit_hotel_hotel_tax_path(current_hotel, tax),
+                data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" },
+                class: "inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50" do %>
+              <%= cached_icon "pencil", class: "size-3.5", aria: { hidden: true } %>
+              Edit
+            <% end %>
+          </div>
+        </article>
+      <% end %>
+    <% end %>
+  </div>
+</section>
+
+<section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-testid="malaysia-tax-reference">
+  <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
+    <div class="flex items-center gap-2">
+      <span class="inline-flex size-6 items-center justify-center rounded bg-amber-50 text-amber-700">
+        <%= cached_icon "book-open", class: "size-3.5", aria: { hidden: true } %>
+      </span>
+      <h2 class="text-lg font-bold tracking-tight text-slate-950">Malaysia Hotel Tax Reference Table</h2>
+    </div>
+    <p class="mt-1 text-xs text-slate-500">WAStays endeavours to keep this reference up to date, however the information provided is for guidance purposes only. Tax rates and applicability may change without notice. Always verify current rates with the relevant state authority or a qualified tax consultant before configuring and remitting taxes.</p>
+  </div>
+
+  <div class="overflow-x-auto">
+    <div class="min-w-[760px]">
+      <div class="border-b border-slate-100 px-5 py-4 sm:px-6">
+        <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Federal - applies nationwide</p>
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 text-xs text-slate-500">
+              <th class="w-1/4 pb-2 font-medium">Scope</th>
+              <th class="w-1/4 pb-2 font-medium">Tax Name</th>
+              <th class="w-1/4 pb-2 font-medium">Rate</th>
+              <th class="w-1/4 pb-2 font-medium">Who Pays</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            <tr>
+              <td class="py-2.5 text-slate-700">All states</td>
+              <td class="py-2.5 font-medium text-slate-900">Tourism Tax (TTx)</td>
+              <td class="py-2.5 text-slate-700">RM 10 / room / night</td>
+              <td class="py-2.5 text-xs text-slate-500">Foreign tourists only. Malaysians &amp; PR exempt.</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 text-slate-700">All states (turnover &gt; RM 500k)</td>
+              <td class="py-2.5 font-medium text-slate-900">Service Tax (SST)</td>
+              <td class="py-2.5 text-slate-700">8% of taxable service amount</td>
+              <td class="py-2.5 text-xs text-slate-500">All guests</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="px-5 py-4 sm:px-6">
+        <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">State &amp; Local Government Levies</p>
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 text-xs text-slate-500">
+              <th class="w-1/5 pb-2 font-medium">State</th>
+              <th class="w-1/5 pb-2 font-medium">Levy Name</th>
+              <th class="w-2/5 pb-2 font-medium">Rate (per room/night)</th>
+              <th class="w-1/5 pb-2 font-medium">Notes</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50 text-xs">
+            <tr><td class="py-2.5 font-medium text-slate-900">Melaka</td><td class="py-2.5 text-slate-700">Heritage Fee</td><td class="py-2.5 text-slate-700">Below 3 star - RM 3; 3 and 4 star - RM 4; 5 star - RM 5</td><td class="py-2.5 text-slate-500">All licensed hotels</td></tr>
+            <tr><td class="py-2.5 font-medium text-slate-900">Penang</td><td class="py-2.5 text-slate-700">Heritage Fee</td><td class="py-2.5 text-slate-700">3 star and below - RM 2; 4 star - RM 3</td><td class="py-2.5 text-slate-500">George Town &amp; heritage zones</td></tr>
+            <tr><td class="py-2.5 font-medium text-slate-900">Pahang</td><td class="py-2.5 text-slate-700">Pahang Lestari Fee</td><td class="py-2.5 text-slate-700">RM 3 flat</td><td class="py-2.5 text-slate-500">All hotels incl. Cameron Highlands, Genting</td></tr>
+            <tr><td class="py-2.5 font-medium text-slate-900">Perak</td><td class="py-2.5 text-slate-700">Perak Local Service Charge</td><td class="py-2.5 text-slate-700">RM 3 flat</td><td class="py-2.5 text-slate-500">Hotels, homestays &amp; STR</td></tr>
+            <tr><td class="py-2.5 font-medium text-slate-900">Langkawi (Kedah)</td><td class="py-2.5 text-slate-700">Langkawi Tourism Promotion Fee</td><td class="py-2.5 text-slate-700">1-2 star - RM 1; 3-4 star - RM 3; 5 star - RM 5-9</td><td class="py-2.5 text-slate-500">Langkawi island only</td></tr>
+            <tr><td class="py-2.5 font-medium text-slate-900">Selangor</td><td class="py-2.5 text-slate-700">Selangor Sustainability (Lestari) Fee</td><td class="py-2.5 text-slate-700">Budget - RM 2; 1-3 star - RM 5; 4-5 star - RM 7</td><td class="py-2.5 text-slate-500">New Jan 2026. All licensed accommodation.</td></tr>
+            <tr><td class="py-2.5 font-medium text-slate-900">Johor</td><td class="py-2.5 text-slate-700">Johor Hotel Tax</td><td class="py-2.5 text-slate-700">RM 3 flat</td><td class="py-2.5 text-slate-500">New Jan 2026. All accommodation.</td></tr>
+            <tr><td class="py-2.5 text-slate-400">Sabah</td><td class="py-2.5 text-slate-400">Local Tourist Levy (Informal)</td><td class="py-2.5 text-slate-400">~RM 10 (not gazetted)</td><td class="py-2.5 text-slate-400">Operator-collected, not standardised</td></tr>
+            <tr><td class="py-2.5 text-slate-400">Sarawak, Kelantan, Terengganu, KL, Perlis, N. Sembilan</td><td class="py-2.5 text-slate-400">-</td><td class="py-2.5 text-slate-400">No state levy confirmed</td><td class="py-2.5 text-slate-400">Federal TTx only</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>

@@ -56,10 +56,31 @@ WAStays is a modern hotel platform for small and budget hotels across Malaysia a
 
 ## Testing
 
-Run the full test suite with:
+Use the domain-aware test runner:
+
 ```bash
-bundle exec rspec
+bin/test
 ```
+
+By default this runs the fast non-system suite in parallel. Common commands:
+
+```bash
+bin/test --menu
+bin/test --list
+bin/test bookings
+bin/test hotel_management
+bin/test hotel_operations
+bin/test financials
+bin/test reports
+bin/test system
+bin/test all
+bin/test spec/models/app_config_spec.rb
+bin/test spec/models/app_config_spec.rb:12
+```
+
+Use `bin/test <domain> --serial` for serial execution and `bin/test <domain> --paths` to inspect a domain's spec mapping. Raw RSpec remains available with `bundle exec rspec` when needed.
+
+`bin/test` stores per-domain timing data in `tmp/parallel_runtime_rspec_<domain>.log` to improve parallel distribution after the first run.
 
 ## Documentation
 

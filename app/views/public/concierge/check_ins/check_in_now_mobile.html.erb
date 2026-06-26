@@ -1,5 +1,5 @@
 <% content_for :title, "Check In Now | #{@hotel.name}" %>
-<% subtitle = @booking&.pre_checkin&.completed? ? "Your pre-check-in is complete. Confirm below to check in and get your room assigned." : "Complete your guest registration below to check in and get your room assigned." %>
+<% subtitle = @presenter.subtitle %>
 
 <div data-mobile-view class="min-h-screen bg-landing-bg flex flex-col font-sans">
 
@@ -7,9 +7,7 @@
   <div class="px-6 pt-8 pb-6">
     <%= link_to concierge_check_in_path(@hotel.slug),
           class: "w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center flex-shrink-0 shadow-lg shadow-brand-primary/20 active:scale-90 transition-transform" do %>
-      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/>
-      </svg>
+      <%= cached_icon "chevron-left", stroke_width: 3, class: "w-5 h-5 text-white" %>
     <% end %>
   </div>
 
@@ -29,9 +27,9 @@
     <%# Booking summary card - Redesigned as a premium "Ticket" %>
     <div class="rounded-2xl border border-neutral-border/50 bg-white p-6 shadow-sm overflow-hidden relative">
       <div class="flex items-center gap-4 mb-5 pb-5 border-b border-dashed border-neutral-border/80">
-        <% if @booking&.pre_checkin&.completed? %>
+        <% if @presenter.pre_checkin_completed? %>
           <div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <%= cached_icon "circle-check", stroke_width: 2.5, class: "w-6 h-6" %>
           </div>
           <div>
             <p class="text-[10px] font-black uppercase tracking-[0.15em] text-green-600">Verified</p>
@@ -39,7 +37,7 @@
           </div>
         <% else %>
           <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            <%= cached_icon "clipboard", stroke_width: 2.2, class: "w-6 h-6" %>
           </div>
           <div>
             <p class="text-[10px] font-black uppercase tracking-[0.15em] text-amber-600">Action Required</p>
@@ -78,9 +76,25 @@
       </div>
     </div>
 
-    <%# Guest registration form %>
-    <%= form_with model: @booking, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: { controller: "scanner" } do |f| %>
-      <% unless @booking&.pre_checkin&.completed? %>
+    <%
+      geolocation_active = @hotel.geolocation_enabled? && !@presenter.registration_required?
+      form_controllers = ["scanner"]
+      form_controllers << "geolocation-check-in" if geolocation_active
+      form_data = { controller: form_controllers.join(" ") }
+      if geolocation_active
+        form_data.merge!(
+          geolocation_check_in_hotel_latitude_value: @hotel.latitude,
+          geolocation_check_in_hotel_longitude_value: @hotel.longitude,
+          geolocation_check_in_allowed_radius_value: 50,
+          geolocation_check_in_refresh_icon_value: cached_icon("refresh-cw", class: "w-4 h-4 mr-1.5 inline-block align-middle animate-spin-slow"),
+          geolocation_check_in_is_mobile_value: true
+        )
+      end
+    %>
+    <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: form_data do |f| %>
+      <%= hidden_field_tag :latitude, nil, data: geolocation_active ? { geolocation_check_in_target: "latitude" } : {} %>
+      <%= hidden_field_tag :longitude, nil, data: geolocation_active ? { geolocation_check_in_target: "longitude" } : {} %>
+      <% if @presenter.registration_required? %>
         <div class="rounded-2xl border border-neutral-border/50 bg-white p-6 shadow-sm space-y-8">
           <div>
             <h2 class="text-sm font-black uppercase tracking-[0.2em] text-neutral-text-primary">Guest Registration</h2>
@@ -104,12 +118,12 @@
                          placeholder="Select document type"
                          class="w-full bg-neutral-bg border-neutral-border/40 rounded-xl py-3.5 px-4 pr-10 text-sm font-medium focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all cursor-pointer">
                   <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <svg class="h-4 w-4 text-neutral-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    <%= cached_icon "chevron-down", stroke_width: 2.5, class: "h-4 w-4 text-neutral-text-secondary" %>
                   </div>
                 </div>
                 
                 <div data-searchable-select-target="options" class="hidden absolute z-50 mt-2 w-full bg-white border border-neutral-border/60 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-                  <% [["MyKad (IC)", "ic"], ["Passport", "passport"]].each do |label, value| %>
+                  <% @presenter.document_types.each do |label, value| %>
                     <div class="px-4 py-3 text-sm font-medium text-neutral-text-primary hover:bg-neutral-bg cursor-pointer transition-colors border-b border-neutral-border/20 last:border-0"
                          data-action="click->searchable-select#select"
                          data-searchable-select-target="option"
@@ -144,7 +158,7 @@
             <div class="space-y-2">
               <%= f.label :guest_country, "Nationality", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-neutral-text-secondary ml-1" %>
               <div class="relative" data-controller="searchable-select">
-                <%= f.hidden_field :guest_country, value: @booking.guest_country.presence || "Malaysia", data: { searchable_select_target: "hiddenInput" } %>
+                <%= f.hidden_field :guest_country, value: @presenter.default_country, data: { searchable_select_target: "hiddenInput" } %>
                 <div class="relative">
                   <input type="text" 
                          data-searchable-select-target="input"
@@ -153,7 +167,7 @@
                          autocomplete="off"
                          class="w-full bg-neutral-bg border-neutral-border/40 rounded-xl py-3.5 px-4 pr-10 text-sm font-medium focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all">
                   <div class="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer" data-action="click->searchable-select#toggle">
-                    <svg class="h-4 w-4 text-neutral-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    <%= cached_icon "chevron-down", stroke_width: 2.5, class: "h-4 w-4 text-neutral-text-secondary" %>
                   </div>
                 </div>
                 
@@ -215,8 +229,12 @@
 
       <%# Submit button positioned at the bottom %>
       <div class="fixed bottom-0 left-0 right-0 p-6 bg-landing-bg/95 backdrop-blur-md z-30">
-        <%= submit_tag "CONFIRM CHECK IN",
-              class: "w-full bg-brand-primary text-white font-black py-5 rounded-xl shadow-xl shadow-brand-primary/30 active:scale-[0.98] transition-all cursor-pointer tracking-widest text-sm" %>
+        <% if geolocation_active %>
+          <div data-geolocation-check-in-target="status"></div>
+        <% end %>
+        <%= submit_tag @presenter.registration_required? ? "CONFIRM PRE-CHECK-IN" : "CONFIRM CHECK IN",
+              class: "w-full bg-brand-primary text-white font-black py-5 rounded-xl shadow-xl shadow-brand-primary/30 active:scale-[0.98] transition-all cursor-pointer tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed mt-2",
+              data: geolocation_active ? { geolocation_check_in_target: "submitButton" } : {} %>
       </div>
     <% end %>
 

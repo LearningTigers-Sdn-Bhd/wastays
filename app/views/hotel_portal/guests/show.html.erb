@@ -14,34 +14,34 @@
   <div class="card">
     <div class="p-4 border-b border-neutral-border">
       <div>
-        <h1 class="text-xl font-bold text-neutral-text-primary"><%= safe_guest_attr(@guest, :name) %></h1>
+        <h1 class="text-xl font-bold text-neutral-text-primary"><%= @presenter.name %></h1>
         <p class="text-xs uppercase tracking-widest text-neutral-text-secondary">Guest Profile</p>
       </div>
     </div>
     <div class="p-4 space-y-3 grid gap-3 md:grid-cols-2">
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Email</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :email) %></p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @presenter.email %></p>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Phone</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :phone) %></p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @presenter.phone %></p>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Gender</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :gender)&.capitalize || "—" %></p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @presenter.gender %></p>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Passport Country</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :country) %></p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @presenter.country %></p>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Document Type</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :document_type)&.upcase %></p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @presenter.document_type %></p>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">ID / Passport</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :government_id) %></p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @presenter.government_id %></p>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Last Stay</p>

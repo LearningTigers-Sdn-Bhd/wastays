@@ -34,6 +34,34 @@ module Guests
     safe_attr(:document_type)&.upcase || "—"
   end
 
+  def formatted_name
+    name&.titleize
+  end
+
+  def formatted_gender
+    safe_attr(:gender)&.capitalize || "Unspecified"
+  end
+
+  def formatted_document_type
+    safe_attr(:document_type)&.upcase || "ID"
+  end
+
+  def formatted_country
+    safe_attr(:country) || "Unknown country"
+  end
+
+  def last_stay_time
+    @guest.try(:last_stay_at)&.strftime("%I:%M %p")
+  end
+
+  def last_stay_date
+    @guest.try(:last_stay_at)&.strftime("%d %b %Y")
+  end
+
+  def last_stay_present?
+    @guest.try(:last_stay_at).present?
+  end
+
   private
 
   def safe_attr(attribute)

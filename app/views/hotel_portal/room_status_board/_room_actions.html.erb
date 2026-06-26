@@ -1,16 +1,16 @@
 <div class="flex flex-wrap gap-1.5">
   <div data-controller="floating" data-floating-placement-value="bottom-end" class="relative z-[1000] isolate inline-flex overflow-visible">
-    <button data-floating-target="reference" data-action="click->floating#toggle" id="room-actions-<%= room_status_id %>" type="button" 
-      title="<%= (status == 'inspection_failed' && failure_note.present?) ? "Failure Reason: #{failure_note}" : '' %>"
+    <button data-floating-target="reference" data-action="click->floating#toggle" id="room-actions-<%= room_row.room_status_id %>" type="button" 
+      title="<%= (room_row.status == 'inspection_failed' && room_row.failure_note.present?) ? "Failure Reason: #{room_row.failure_note}" : '' %>"
       class="inline-flex items-center gap-x-1 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 shadow-sm hover:bg-slate-50 focus:outline-none focus:bg-slate-50 transition-[background-color,border-color,color,box-shadow]">
       Actions
       <svg class="size-3 text-slate-400 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
     </button>
 
-    <div data-controller="room-status-action" data-floating-target="floating" class="hidden z-[5000] min-w-48 overflow-visible bg-white shadow-xl rounded-xl p-1 border border-slate-100" aria-labelledby="room-actions-<%= room_status_id %>">
-      <% if ["dirty", "inspection_failed", "awaiting_inspection"].include?(status) %>
+    <div data-controller="room-status-action" data-floating-target="floating" class="hidden z-[5000] min-w-48 overflow-visible bg-white shadow-xl rounded-xl p-1 border border-slate-100" aria-labelledby="room-actions-<%= room_row.room_status_id %>">
+      <% if room_row.can_mark_cleaning? %>
         <div class="p-1 border-b border-slate-50 mb-1">
-          <%= form_with url: hotel_room_status_path(current_hotel, room_status_id), method: :patch, local: true do |f| %>
+          <%= form_with url: hotel_room_status_path(current_hotel, room_row.room_status_id), method: :patch, local: true do |f| %>
             <%= hidden_field_tag "room_status[status]", "cleaning" %>
             <%= hidden_field_tag "start_date", presenter.start_date.to_s %>
             <%= hidden_field_tag "days", presenter.board_days %>
@@ -25,9 +25,9 @@
               <div class="text-left">
                 <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 group-hover:text-blue-700 transition-colors">Cleaning</p>
                 <p class="text-[9px] font-medium text-slate-500 group-hover:text-blue-600 transition-colors leading-tight">
-                  <% if status == "inspection_failed" %>
+                  <% if room_row.status == "inspection_failed" %>
                     Reclean the room before reinspection
-                  <% elsif status == "awaiting_inspection" %>
+                  <% elsif room_row.status == "awaiting_inspection" %>
                     Send back to cleaning
                   <% else %>
                     Mark as currently being cleaned
@@ -39,9 +39,9 @@
         </div>
       <% end %>
 
-      <% if ["ready", "late_checkout_detected"].include?(status) %>
+      <% if room_row.can_mark_dirty? %>
         <div class="p-1 border-b border-slate-50 mb-1">
-          <%= form_with url: hotel_room_status_path(current_hotel, room_status_id), method: :patch, local: true do |f| %>
+          <%= form_with url: hotel_room_status_path(current_hotel, room_row.room_status_id), method: :patch, local: true do |f| %>
             <%= hidden_field_tag "room_status[status]", "dirty" %>
             <%= hidden_field_tag "start_date", presenter.start_date.to_s %>
             <%= hidden_field_tag "days", presenter.board_days %>
@@ -61,9 +61,9 @@
         </div>
       <% end %>
 
-      <% if ["ready", "dirty"].include?(status) %>
+      <% if room_row.can_mark_late_checkout? %>
         <div class="p-1 border-b border-slate-50 mb-1">
-          <%= form_with url: hotel_room_status_path(current_hotel, room_status_id), method: :patch, local: true do |f| %>
+          <%= form_with url: hotel_room_status_path(current_hotel, room_row.room_status_id), method: :patch, local: true do |f| %>
             <%= hidden_field_tag "room_status[status]", "late_checkout_detected" %>
             <%= hidden_field_tag "room_status[notes]", "Guest still in room" %>
             <%= hidden_field_tag "start_date", presenter.start_date.to_s %>
@@ -85,9 +85,9 @@
         </div>
       <% end %>
 
-      <% if status == "cleaning" %>
+      <% if room_row.can_mark_awaiting_inspection? %>
         <div class="p-1 border-b border-slate-50 mb-1">
-          <%= form_with url: hotel_room_status_path(current_hotel, room_status_id), method: :patch, local: true do |f| %>
+          <%= form_with url: hotel_room_status_path(current_hotel, room_row.room_status_id), method: :patch, local: true do |f| %>
             <%= hidden_field_tag "room_status[status]", "awaiting_inspection" %>
             <%= hidden_field_tag "start_date", presenter.start_date.to_s %>
             <%= hidden_field_tag "days", presenter.board_days %>
@@ -108,7 +108,7 @@
         </div>
       <% end %>
 
-      <% if ["dirty", "cleaning", "inspection_failed", "awaiting_inspection", "late_checkout_detected"].include?(status) %>
+      <% if room_row.can_mark_ready? %>
         <div class="p-1 border-b border-slate-50 mb-1">
           <button type="button"
                   data-action="click->room-status-action#openReady"
@@ -126,7 +126,7 @@
         </div>
       <% end %>
 
-      <% if status == "awaiting_inspection" %>
+      <% if room_row.can_fail_inspection? %>
         <div class="p-1">
           <button type="button"
                   data-action="click->room-status-action#openFail"
@@ -150,7 +150,7 @@
           <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Mark as Ready</p>
           <p class="mt-1 text-[9px] font-medium leading-tight text-emerald-600">Enter cleaning/inspection notes.</p>
         </div>
-        <%= form_with url: hotel_room_status_path(current_hotel, room_status_id), method: :patch, local: true do %>
+        <%= form_with url: hotel_room_status_path(current_hotel, room_row.room_status_id), method: :patch, local: true do %>
           <%= hidden_field_tag "room_status[status]", "ready" %>
           <%= hidden_field_tag "start_date", presenter.start_date.to_s %>
           <%= hidden_field_tag "days", presenter.board_days %>
@@ -173,13 +173,13 @@
       </div>
 
       <%# Fail Inspection Panel %>
-      <% if status == "awaiting_inspection" %>
+      <% if room_row.can_fail_inspection? %>
         <div data-room-status-action-target="failPanel" hidden class="mt-2 rounded-xl border border-rose-200 bg-rose-50/40 p-3">
           <div class="mb-3">
             <p class="text-[10px] font-bold uppercase tracking-wide text-rose-700">Fail Inspection</p>
             <p class="mt-1 text-[9px] font-medium leading-tight text-rose-600">Tell us why this inspection failed.</p>
           </div>
-          <%= form_with url: hotel_room_status_path(current_hotel, room_status_id), method: :patch, local: true do %>
+          <%= form_with url: hotel_room_status_path(current_hotel, room_row.room_status_id), method: :patch, local: true do %>
             <%= hidden_field_tag "room_status[status]", "inspection_failed" %>
             <%= hidden_field_tag "start_date", presenter.start_date.to_s %>
             <%= hidden_field_tag "days", presenter.board_days %>

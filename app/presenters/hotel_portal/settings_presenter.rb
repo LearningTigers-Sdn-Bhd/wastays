@@ -89,14 +89,6 @@ module HotelPortal
       end
     end
 
-    def hotel_taxes
-      @hotel_taxes ||= hotel.hotel_taxes.order(:name)
-    end
-
-    def new_hotel_tax
-      hotel.hotel_taxes.build
-    end
-
     def settings_summary
       return {} unless hotel
 
@@ -105,11 +97,25 @@ module HotelPortal
         onboarding_stage: onboarding_stage,
         check_in: property_policy&.check_in_time,
         check_out: property_policy&.check_out_time,
-        default_currency: hotel.default_currency,
-        tourism_tax_enabled: hotel.tourism_tax_enabled?,
-        tourism_tax_amount: hotel.tourism_tax_amount,
-        sst_enabled: hotel.sst_enabled?
+        default_currency: hotel.default_currency
       }
+    end
+
+    def can_edit_currency?
+      current_user.has_permission?("manage_hotel_profile")
+    end
+
+    def settings_errors
+      hotel.errors.full_messages + property_policy.errors.full_messages
+    end
+
+    def time_picker_hours
+      @time_picker_hours ||= (0..23).map do |h|
+        {
+          value: h,
+          label: Time.current.change(hour: h).strftime("%I %p")
+        }
+      end
     end
 
     private

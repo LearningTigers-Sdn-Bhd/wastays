@@ -15,6 +15,10 @@ module Payments
 
     def call
       setting = quote.hotel.effective_payment_setting(gateway)
+      if setting.blank? && gateway == "cute_mock"
+        setting = OpenStruct.new(gateway: "cute_mock", api_key: "mock", secret_key: "mock")
+      end
+
       return failure("Payment gateway is not configured.") unless setting
 
       adapter = Payments::GatewayRegistry.fetch(gateway: gateway, setting: setting)
@@ -62,7 +66,8 @@ module Payments
         country: metadata[:country],
         document_type: metadata[:document_type],
         marketing_consent: metadata[:marketing_consent],
-        privacy_consent: metadata[:privacy_consent]
+        privacy_consent: metadata[:privacy_consent],
+        special_requests: metadata[:special_requests]
       }.compact
     end
 
@@ -79,6 +84,7 @@ module Payments
           document_type: guest_details[:document_type],
           marketing_consent: guest_details[:marketing_consent],
           privacy_consent: guest_details[:privacy_consent],
+          special_requests: guest_details[:special_requests],
           external_reference: external_reference
         }
       ).call

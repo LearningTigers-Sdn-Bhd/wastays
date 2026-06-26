@@ -3,6 +3,8 @@
 class Booking < ApplicationRecord
   include Bookings::StatusLifecycle
 
+  TOURISM_TAX_KEYS = %w[tourism_tax ttx].freeze
+
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
   belongs_to :payout_batch, optional: true
@@ -13,7 +15,9 @@ class Booking < ApplicationRecord
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
   has_one :refund_request, dependent: :destroy
-  has_one :booking_folio, dependent: :destroy
+  has_many :booking_folios, dependent: :destroy
+  has_one :booking_folio, -> { where(is_primary: true) }, dependent: :destroy
+  has_many :folio_routing_rules, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_one_attached :id_front
   has_one_attached :id_back
@@ -22,6 +26,7 @@ class Booking < ApplicationRecord
   has_many :check_out_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
+  has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :status_transition_event
 
@@ -67,6 +72,7 @@ class Booking < ApplicationRecord
 
   validates :status, presence: true, inclusion: { in: STATUSES }
   validate :status_transition_must_be_allowed, if: :status_changed_on_persisted_record?
+  validate :check_cta_ctd_restrictions
   validates :no_show_review_business_date, presence: true, if: -> { status == "review_no_show" }
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
@@ -80,6 +86,7 @@ class Booking < ApplicationRecord
   validates :guest_name, :guest_email, :guest_phone, presence: true
   validates :check_in, :check_out, :adults, :total_amount, :confirmation_token, presence: true
   validates :confirmation_token, uniqueness: true
+  validates :folio_account_reference, uniqueness: { scope: :hotel_id, allow_blank: true }
 
   before_validation :generate_confirmation_token, on: :create
   before_validation :normalize_guest_data
@@ -247,11 +254,33 @@ class Booking < ApplicationRecord
   end
 
   def tourism_tax?
-    tourism_tax_applied && tourism_tax_amount.positive?
+    tourism_tax_total.positive?
+  end
+
+  def tourism_tax_total
+    snapshot_total = self.class.tourism_tax_total_from_posting_snapshot(tax_posting_snapshot)
+    return snapshot_total if snapshot_total.positive?
+
+    tax_line_total = self.class.tourism_tax_total_for(tax_lines)
+    return tax_line_total if tax_line_total.positive?
+
+    tourism_tax_amount.to_d.round(2)
   end
 
   def folio_outstanding_balance
-    booking_folio&.outstanding_balance || 0.0
+    booking_folios.to_a.sum { |folio| folio.outstanding_balance.to_d }
+  end
+
+  def folio_account_reference_display
+    folio_account_reference.presence || formatted_folio_number
+  end
+
+  def assign_folio_account_reference_from!(folio_number)
+    return folio_account_reference if folio_account_reference.present?
+    return if folio_number.blank?
+
+    update!(folio_account_reference: format_number(folio_number, type_code: 3))
+    folio_account_reference
   end
 
   def transition_status_to!(new_status, event:, attributes: {})
@@ -265,8 +294,37 @@ class Booking < ApplicationRecord
     Array(tax_lines).sum { |t| t["amount"].to_f }.round(2)
   end
 
+  def non_tourism_tax_total
+    self.class.non_tourism_tax_total_for(tax_lines)
+  end
+
   def tax_lines_for(type)
     Array(tax_lines).select { |t| t["type"] == type.to_s }
+  end
+
+  def self.tourism_tax_total_for(lines)
+    Array(lines).select { |line| tourism_tax_line?(line) }.sum { |line| tax_line_amount(line) }.round(2)
+  end
+
+  def self.non_tourism_tax_total_for(lines)
+    Array(lines).reject { |line| tourism_tax_line?(line) }.sum { |line| tax_line_amount(line) }.round(2)
+  end
+
+  def self.tourism_tax_total_from_posting_snapshot(snapshot)
+    snapshot.to_h.values.flatten.select { |line| tourism_tax_line?(line) }.sum { |line| tax_line_amount(line) }.round(2)
+  end
+
+  def self.tourism_tax_line?(line)
+    line = line.to_h
+    type = line["type"].presence || line[:type]
+    primary_key = line["primary_tax_key"].presence || line[:primary_tax_key]
+
+    type.to_s.in?(TOURISM_TAX_KEYS) || primary_key.to_s.in?(TOURISM_TAX_KEYS)
+  end
+
+  def self.tax_line_amount(line)
+    line = line.to_h
+    (line["amount"].presence || line[:amount]).to_d
   end
 
   def formatted_reservation_number
@@ -298,6 +356,25 @@ class Booking < ApplicationRecord
     return none if suffix.blank?
 
     where("regexp_replace(guest_phone, '\D', '', 'g') LIKE ?", "%#{suffix}")
+  end
+
+  def past_check_in_time?
+    policy = hotel.property_policy
+    return true if policy&.check_in_time.blank?
+
+    hotel_tz = hotel.hotel_time_zone
+    hotel_now = Time.current.in_time_zone(hotel_tz)
+    hotel_today = hotel_now.to_date
+
+    return false if hotel_today < check_in.to_date
+    return true if hotel_today > check_in.to_date
+
+    check_in_dt = hotel_tz.parse("#{check_in.to_date} #{policy.check_in_time}")
+    return false unless check_in_dt
+
+    hotel_now >= check_in_dt
+  rescue ArgumentError, TypeError
+    false
   end
 
   private
@@ -359,5 +436,52 @@ class Booking < ApplicationRecord
   def normalize_guest_data
     self.guest_email = guest_email&.downcase&.strip
     self.guest_country = guest_country&.split&.map(&:capitalize)&.join(" ") if guest_country.present?
+  end
+
+  def check_cta_ctd_restrictions
+    return unless %w[pending confirmed review_no_show checked_in review_due_out checkout_required].include?(status)
+    return unless new_record? || check_in_changed? || check_out_changed?
+    return if new_record? && booking_rooms.target.empty?
+
+    room_types = booking_rooms.map(&:room_type).compact
+    return if room_types.empty?
+
+    room_types.each do |room_type|
+      rate_plan_ids = [ nil ]
+      if booking_rooms.present?
+        rate_plan_ids += booking_rooms.map(&:rate_plan_id).compact
+      end
+      if rate_plan_ids.include?(nil)
+        standard_plan = room_type.rate_plans.first
+        rate_plan_ids << standard_plan.id if standard_plan
+      end
+      rate_plan_ids.uniq!
+
+      # CTA Check on check-in date
+      if check_in.present?
+        room_rates_at_check_in = RoomRate.where(
+          room_type_id: room_type.id,
+          date: check_in.to_date,
+          rate_plan_id: rate_plan_ids
+        )
+
+        if room_rates_at_check_in.any?(&:closed_to_arrival?)
+          errors.add(:check_in, "date (#{check_in.to_date}) is closed to arrival (CTA) for this rate plan.")
+        end
+      end
+
+      # CTD Check on check_out date
+      if check_out.present?
+        room_rates_at_check_out = RoomRate.where(
+          room_type_id: room_type.id,
+          date: check_out.to_date,
+          rate_plan_id: rate_plan_ids
+        )
+
+        if room_rates_at_check_out.any?(&:closed_to_departure?)
+          errors.add(:check_out, "date (#{check_out.to_date}) is closed to departure (CTD) for this rate plan.")
+        end
+      end
+    end
   end
 end
