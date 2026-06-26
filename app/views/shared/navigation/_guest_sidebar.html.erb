@@ -1,33 +1,29 @@
-<% dashboard_active = controller_name == 'dashboard' %>
-<% bookings_active  = controller_name == 'bookings' %>
-<% refunds_active   = controller_name == 'refund_requests' %>
+<% sections = guest_sidebar_sections %>
+<% footer_items = guest_sidebar_footer_items %>
 
-<% guest_sidebar_sections = [
-  {
-    label: 'My Account',
-    items: [
-      { label: 'Dashboard', path: guest_dashboard_path, search_text: 'Dashboard Home Overview', active: dashboard_active, icon: 'layout-dashboard' },
-      { label: 'My Bookings', path: guest_bookings_path, search_text: 'My Bookings Stays Reservations History', active: bookings_active, icon: 'calendar-days' },
-      { label: 'Refunds', path: guest_refund_requests_path, search_text: 'Refund Requests Cancellations', active: refunds_active, icon: 'file-text' }
-    ]
-  }
-] %>
-
-<% guest_sidebar_footer_items = [
-  { label: 'Homepage', path: root_path, search_text: 'Homepage Website', icon: 'house' },
-  { label: 'Help & support', path: help_center_path, search_text: 'Help Support FAQ', icon: 'circle-question-mark' }
-] %>
+<% guest_sidebar_header = capture do %>
+  <div class="flex items-center gap-x-2.5 px-4 py-3 sidebar-header sidebar-header-container" title="<%= current_guest.name %>" aria-label="Guest: <%= current_guest.name %>">
+    <span class="inline-flex justify-center items-center size-7 rounded-lg bg-brand-primary/10 text-brand-primary shadow-xs ring-1 ring-brand-primary/20 shrink-0">
+      <%= cached_icon "user", class: "size-4 shrink-0" %>
+    </span>
+    <span class="text-sm font-semibold text-neutral-text-primary truncate sidebar-label"><%= current_guest.name.truncate(24) %></span>
+  </div>
+<% end %>
 
 <% render_sidebar_nav = lambda do %>
   <nav class="flex-1 px-4 py-3 space-y-6">
-    <% guest_sidebar_sections.each do |section| %>
-      <div class="sidebar-nav-group">
-        <span class="sidebar-section-label"><%= section[:label] %></span>
+    <% sections.each do |section| %>
+      <div class="sidebar-nav-group" aria-label="<%= section.label %>" data-section-label="<%= section.label %>">
+        <span class="sidebar-section-label"><%= section.label %></span>
         <div class="space-y-0.5">
-          <% section[:items].each do |item| %>
-            <a class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= item[:path] %>">
-              <%= cached_icon item[:icon], class: "size-4 shrink-0" %>
-              <span><%= item[:label] %></span>
+          <% section.items.each do |item| %>
+            <a class="sidebar-nav-link <%= item.active ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>"
+               href="<%= item.path %>"
+               data-sidebar-route
+               data-sidebar-tooltip="<%= item.label %>"
+               aria-label="<%= item.label %>">
+              <%= cached_icon item.icon, class: "size-4 shrink-0" %>
+              <span><%= item.label %></span>
             </a>
           <% end %>
         </div>
@@ -38,10 +34,10 @@
 
 <% guest_nav_html = capture(&render_sidebar_nav) %>
 <% guest_footer_html = capture do %>
-  <% guest_sidebar_footer_items.each do |item| %>
-    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
-      <%= cached_icon item[:icon], class: "size-4 shrink-0" %>
-      <span><%= item[:label] %></span>
+  <% footer_items.each do |item| %>
+    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item.path %>" data-sidebar-tooltip="<%= item.label %>" aria-label="<%= item.label %>">
+      <%= cached_icon item.icon, class: "size-4 shrink-0" %>
+      <span><%= item.label %></span>
     </a>
   <% end %>
 <% end %>
@@ -49,6 +45,8 @@
 <%= render "shared/navigation/sidebar_shell",
            sidebar_key: "guest",
            home_path: guest_dashboard_path,
+           header_html: guest_sidebar_header,
            nav_html: guest_nav_html,
            footer_html: guest_footer_html,
-           search_enabled: false %>
+           search_enabled: false,
+           permanent_sidebar: true %>

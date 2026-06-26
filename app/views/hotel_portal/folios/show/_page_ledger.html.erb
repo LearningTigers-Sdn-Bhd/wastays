@@ -3,8 +3,8 @@
 <% hotel = local_assigns.fetch(:hotel) %>
 <% folio_origin = local_assigns[:folio_origin] %>
 
-<section class="overflow-hidden rounded-md border border-slate-200 bg-white" data-controller="folio-ledger">
-  <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+<section class="overflow-hidden" data-controller="folio-ledger">
+  <div class="flex items-center justify-between py-3">
     <div class="flex items-center gap-2">
       <span class="inline-flex size-7 items-center justify-center rounded-md bg-slate-100 text-slate-700">
         <%= cached_icon "receipt-text", class: "size-3.5" %>
@@ -14,7 +14,7 @@
     <span class="text-xs font-medium tabular-nums text-slate-500"><%= pluralize(folio_show.ledger_entry_count, "entry") %></span>
   </div>
 
-  <div class="overflow-x-auto">
+  <div class="overflow-x-auto rounded-md border border-slate-200">
     <table class="w-full min-w-[760px] table-fixed text-left text-xs">
       <thead class="sticky top-0 z-[1] bg-slate-50 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
         <tr class="border-b border-slate-200">
@@ -47,7 +47,7 @@
         </tr>
 
         <% folio_show.posted_rows.each do |row| %>
-          <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "posted", currency: folio_show.currency, booking: booking, hotel: hotel, folio_origin: folio_origin %>
+          <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "posted", currency: folio_show.currency, booking: booking, hotel: hotel, folio_origin: folio_origin, folio_show: folio_show %>
         <% end %>
 
         <% if folio_show.posted_rows.empty? %>
@@ -84,7 +84,7 @@
         </tr>
 
         <% folio_show.forecasted_rows.each do |row| %>
-          <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "forecasted", currency: folio_show.currency, booking: booking, hotel: hotel, folio_origin: folio_origin %>
+          <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "forecasted", currency: folio_show.currency, booking: booking, hotel: hotel, folio_origin: folio_origin, folio_show: folio_show %>
         <% end %>
 
         <% if folio_show.forecasted_rows.empty? %>

@@ -28,6 +28,7 @@ class Guest::BookingsController < Guest::BaseController
   def show
     @refund_policy = RefundPolicy.first
     @booking = current_guest.bookings.find(params[:id])
+    append_breadcrumb @booking.confirmation_token.upcase, guest_booking_path(@booking)
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."
   end

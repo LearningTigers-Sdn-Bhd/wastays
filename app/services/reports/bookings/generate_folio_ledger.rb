@@ -41,7 +41,8 @@ module Reports
       ].freeze
 
       CSV_HEADERS = [
-        "Folio No",
+        "Folio Account Reference",
+        "Folio Reference",
         "Booking Ref",
         "Guest Name",
         "Room No / Type",
@@ -126,13 +127,14 @@ module Reports
 
       def csv_row_for(row)
         [
-          folio_number,
+          folio_account_reference,
+          folio_reference,
           booking.confirmation_token,
           booking.guest_name,
           room_summary,
           stay_dates,
           folio.status.to_s.titleize,
-          "1",
+          folio.display_name,
           currency,
           row[:code],
           row[:posting_date]&.iso8601,
@@ -148,10 +150,11 @@ module Reports
       def draw_metadata(pdf)
         rows = [
           [ { content: "FOLIO", colspan: 4, font_style: :bold, text_color: TEXT_PRIMARY } ],
-          [ label_cell("Folio No"), value_cell(folio_number), label_cell("Booking Ref"), value_cell(booking.confirmation_token) ],
+          [ label_cell("Folio Account Reference"), value_cell(folio_account_reference), label_cell("Folio Reference"), value_cell(folio_reference) ],
+          [ label_cell("Booking Ref"), value_cell(booking.confirmation_token), label_cell("Window"), value_cell(folio.display_name) ],
           [ label_cell("Guest Name"), value_cell(booking.guest_name), label_cell("Room No / Type"), value_cell(room_summary) ],
           [ label_cell("Stay Dates"), value_cell(stay_dates), label_cell("Folio Status"), value_cell(folio.status.to_s.titleize) ],
-          [ label_cell("Window"), value_cell("1"), label_cell("Currency"), value_cell(currency) ]
+          [ label_cell("Currency"), value_cell(currency), label_cell(""), value_cell("") ]
         ]
 
         label_width = 95
@@ -401,7 +404,7 @@ module Reports
       end
 
       def pdf_title
-        "Folio Ledger - #{booking.formatted_folio_number.presence || booking.confirmation_token}"
+        "Folio Ledger - #{folio_reference.presence || booking.confirmation_token}"
       end
 
       def room_number
@@ -426,8 +429,12 @@ module Reports
         @currency ||= transactions.first&.currency.presence || booking.currency.presence || "MYR"
       end
 
-      def folio_number
-        booking.formatted_folio_number.presence || folio&.folio_number.presence || "-"
+      def folio_account_reference
+        booking.folio_account_reference_display.presence || booking.formatted_folio_number.presence || "-"
+      end
+
+      def folio_reference
+        folio&.folio_reference_display.presence || folio_account_reference
       end
 
       def tax_type_for(transaction)

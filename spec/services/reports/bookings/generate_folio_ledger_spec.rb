@@ -39,16 +39,17 @@ RSpec.describe Reports::Bookings::GenerateFolioLedger do
 
     expect(rows.size).to eq(2)
     expect(rows.headers).to eq([
-      "Folio No", "Booking Ref", "Guest Name", "Room No / Type", "Stay Dates", "Folio Status", "Window", "Currency",
+      "Folio Account Reference", "Folio Reference", "Booking Ref", "Guest Name", "Room No / Type", "Stay Dates", "Folio Status", "Window", "Currency",
       "Code", "Posting Date", "Description", "Reference", "Source", "Debit", "Credit", "Balance"
     ])
     expect(rows.first.to_h).to include(
-      "Folio No" => "LED-30000123",
+      "Folio Account Reference" => "LED-30000123",
+      "Folio Reference" => "LED-30000123/1",
       "Booking Ref" => "BK-LEDGER",
       "Guest Name" => "Ledger Guest",
       "Room No / Type" => a_string_starting_with("204 / Deluxe"),
       "Folio Status" => "Open",
-      "Window" => "1",
+      "Window" => "Guest Folio",
       "Currency" => "MYR",
       "Code" => "RM-ACC",
       "Posting Date" => "2026-06-18",
@@ -105,7 +106,7 @@ RSpec.describe Reports::Bookings::GenerateFolioLedger do
     end
 
     expect(pdf.dup.force_encoding("BINARY")[0, 5]).to eq("%PDF-")
-    expect(reader.info[:Title]).to eq("Folio Ledger - LED-30000123")
+    expect(reader.info[:Title]).to eq("Folio Ledger - LED-30000123/1")
     expect(text).to include("Folio Ledger")
     expect(text).to include("LED-30000123")
     expect(text).to include("BK-LEDGER")

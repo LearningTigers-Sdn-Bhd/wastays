@@ -106,39 +106,39 @@ RSpec.describe BookingEngine::AvailabilityService do
 
     it "returns empty when allow_restricted is false for min stay" do
       RoomRate.update_all(min_stay: 3)
-      service = described_class.new(params: { check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2 })
+      service = described_class.new(check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2)
       expect(service.available_rooms_for_hotel(hotel, allow_restricted: false)).to be_empty
     end
 
     it "returns room type when allow_restricted is true for min stay" do
       RoomRate.update_all(min_stay: 3)
-      service = described_class.new(params: { check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2 })
+      service = described_class.new(check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2)
       expect(service.available_rooms_for_hotel(hotel, allow_restricted: true)).to include(room_type)
       expect(service.stay_restriction_error_message(room_type)).to include("Minimum stay is 3 night(s)")
     end
 
     it "returns empty when allow_restricted is false for CTA" do
       RoomRate.update_all(min_stay: nil, closed_to_arrival: true)
-      service = described_class.new(params: { check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2 })
+      service = described_class.new(check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2)
       expect(service.available_rooms_for_hotel(hotel, allow_restricted: false)).to be_empty
     end
 
     it "returns room type when allow_restricted is true for CTA" do
       RoomRate.update_all(min_stay: nil, closed_to_arrival: true)
-      service = described_class.new(params: { check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2 })
+      service = described_class.new(check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2)
       expect(service.available_rooms_for_hotel(hotel, allow_restricted: true)).to include(room_type)
       expect(service.stay_restriction_error_message(room_type)).to include("Check-in is not allowed")
     end
 
     it "returns empty when allow_restricted is false for CTD" do
       RoomRate.update_all(min_stay: nil, closed_to_departure: true)
-      service = described_class.new(params: { check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2 })
+      service = described_class.new(check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2)
       expect(service.available_rooms_for_hotel(hotel, allow_restricted: false)).to be_empty
     end
 
     it "returns room type when allow_restricted is true for CTD" do
       RoomRate.update_all(min_stay: nil, closed_to_departure: true)
-      service = described_class.new(params: { check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2 })
+      service = described_class.new(check_in: tomorrow.to_s, check_out: check_out_date.to_s, adults: 2)
       expect(service.available_rooms_for_hotel(hotel, allow_restricted: true)).to include(room_type)
       expect(service.stay_restriction_error_message(room_type)).to include("Check-out is not allowed")
     end

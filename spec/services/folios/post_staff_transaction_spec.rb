@@ -8,6 +8,14 @@ RSpec.describe Folios::PostStaffTransaction do
   let(:folio) { create(:booking_folio) }
   let(:user) { create(:user, :superadmin) }
 
+  def grant_permission(user, slug, hotel)
+    permission = Permission.find_by(slug: slug) || create(:permission, slug: slug, name: slug.tr("_", " ").titleize)
+    access = user.user_hotel_accesses.find_by(hotel: hotel)
+    role = access&.role || create(:role, account: hotel.account)
+    create(:role_permission, role: role, permission: permission)
+    create(:user_hotel_access, user: user, hotel: hotel, role: role) if access.blank?
+  end
+
   it "posts a cash payment" do
     result = described_class.call(
       folio: folio,
@@ -151,6 +159,176 @@ RSpec.describe Folios::PostStaffTransaction do
     expect(result.tax_transactions.map(&:amount)).to match_array([ 4.to_d, 10.to_d ])
     expect(result.tax_transactions.map { |transaction| transaction.metadata.dig("tax_line", "type") }).to match_array(%w[sst tourism_tax])
     expect(result.tax_transactions.map { |transaction| transaction.transaction_code.system_key }).to match_array(%w[sst_tax tourism_tax])
+  end
+
+  it "routes a manual charge by the selected transaction code rule" do
+    hotel = folio.hotel
+    booking = folio.booking
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: code, target_folio: company_folio)
+
+    result = described_class.call(
+      folio: company_folio,
+      user: user,
+      transaction_type: "charge",
+      category: nil,
+      transaction_code_id: code.id,
+      amount: "50.00",
+      description: "Restaurant charge",
+      options: { require_transaction_code: true }
+    )
+
+    expect(result.success?).to be(true)
+    expect(result.transaction.booking_folio).to eq(company_folio)
+    expect(result.transaction.metadata["route_source"]).to eq("routing_rule")
+  end
+
+  it "posts a manual charge to the selected secondary folio when no routing rule exists" do
+    hotel = folio.hotel
+    booking = folio.booking
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+
+    result = described_class.call(
+      folio: company_folio,
+      user: user,
+      transaction_type: "charge",
+      category: nil,
+      transaction_code_id: code.id,
+      amount: "50.00",
+      description: "Restaurant charge",
+      options: { require_transaction_code: true }
+    )
+
+    expect(result.success?).to be(true)
+    expect(result.transaction.booking_folio).to eq(company_folio)
+    expect(result.transaction.metadata["route_source"]).to eq("selected_folio")
+    expect(result.transaction.metadata.dig("route_metadata", "selected_folio_id")).to eq(company_folio.id)
+  end
+
+  it "requires permission and reason when selected folio overrides routing" do
+    hotel = folio.hotel
+    booking = folio.booking
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+    staff_user = create(:user, account: hotel.account)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: code, target_folio: company_folio)
+
+    no_reason = described_class.call(
+      folio: folio,
+      user: staff_user,
+      transaction_type: "charge",
+      category: nil,
+      transaction_code_id: code.id,
+      amount: "50.00",
+      description: "Restaurant charge",
+      options: { require_transaction_code: true }
+    )
+    expect(no_reason.success?).to be(false)
+    expect(no_reason.error).to eq("Override reason can't be blank.")
+
+    no_permission = described_class.call(
+      folio: folio,
+      user: staff_user,
+      transaction_type: "charge",
+      category: nil,
+      transaction_code_id: code.id,
+      amount: "50.00",
+      description: "Restaurant charge",
+      options: { require_transaction_code: true, routing_override_reason: "Guest pays this one" }
+    )
+    expect(no_permission.success?).to be(false)
+    expect(no_permission.error).to eq("You do not have permission to override folio routing.")
+
+    grant_permission(staff_user, "manage_folio_movements", hotel)
+    grant_permission(staff_user, "post_folio_charges", hotel)
+    override = described_class.call(
+      folio: folio,
+      user: staff_user,
+      transaction_type: "charge",
+      category: nil,
+      transaction_code_id: code.id,
+      amount: "50.00",
+      description: "Restaurant charge",
+      options: { require_transaction_code: true, routing_override_reason: "Guest pays this one" }
+    )
+
+    expect(override.success?).to be(true)
+    expect(override.transaction.booking_folio).to eq(folio)
+    expect(override.transaction.metadata["route_source"]).to eq("manual_override")
+  end
+
+  it "posts generated tax children to the parent folio with real and legacy parent linkage" do
+    hotel = folio.hotel
+    booking = folio.booking
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+    hotel.update!(sst_enabled: true)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+    code.update!(is_taxable: true)
+    code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: code, target_folio: company_folio)
+
+    result = described_class.call(
+      folio: company_folio,
+      user: user,
+      transaction_type: "charge",
+      category: nil,
+      transaction_code_id: code.id,
+      amount: "50.00",
+      description: "Restaurant charge",
+      options: { require_transaction_code: true }
+    )
+
+    expect(result.success?).to be(true)
+    tax = result.tax_transactions.sole
+    expect(tax.booking_folio).to eq(company_folio)
+    expect(tax.parent_transaction).to eq(result.transaction)
+    expect(tax.metadata["parent_folio_transaction_id"]).to eq(result.transaction.id)
+    expect(tax.metadata["parent_transaction_id"]).to eq(result.transaction.id)
+    expect(tax.metadata["route_source"]).to eq("follows_parent")
+    expect(tax.metadata["parent_transaction_code_code"]).to eq("FNB")
+  end
+
+  it "routes generated tax children by explicit child tax rules when present" do
+    hotel = folio.hotel
+    booking = folio.booking
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+    tax_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Tax Folio")
+    hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+    sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+    ttx_code = hotel.transaction_codes.find_by!(system_key: "tourism_tax")
+    code.update!(is_taxable: true)
+    code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+    code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: code, target_folio: company_folio)
+    create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: ttx_code, target_folio: tax_folio)
+
+    result = described_class.call(
+      folio: company_folio,
+      user: user,
+      transaction_type: "charge",
+      category: nil,
+      transaction_code_id: code.id,
+      amount: "50.00",
+      description: "Restaurant charge",
+      options: { require_transaction_code: true }
+    )
+
+    expect(result.success?).to be(true)
+    sst = result.tax_transactions.find { |transaction| transaction.transaction_code == sst_code }
+    ttx = result.tax_transactions.find { |transaction| transaction.transaction_code == ttx_code }
+
+    expect(sst.booking_folio).to eq(company_folio)
+    expect(sst.metadata["route_source"]).to eq("follows_parent")
+    expect(ttx.booking_folio).to eq(tax_folio)
+    expect(ttx.metadata["route_source"]).to eq("routing_rule")
   end
 
   it "skips selected inactive primary taxes" do

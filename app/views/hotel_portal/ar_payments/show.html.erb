@@ -1,0 +1,11 @@
+<div class="mx-auto max-w-[1400px] px-4 pb-12 md:px-0">
+  <div class="space-y-5">
+    <%= render "hotel_portal/ar_payments/show/header", presenter: @presenter %>
+    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" data-testid="payment-record-card">
+      <%= render "hotel_portal/ar_payments/show/summary", presenter: @presenter %>
+      <%= render "hotel_portal/ar_payments/show/details", presenter: @presenter %>
+    </section>
+    <%= render "hotel_portal/ar_payments/show/allocation_history", presenter: @presenter %>
+    <%= render "hotel_portal/ar_payments/show/allocate_remaining", presenter: @presenter if @presenter.can_allocate? %>
+  </div>
+</div>

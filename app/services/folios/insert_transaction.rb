@@ -44,10 +44,15 @@ module Folios
           posted_at: @options[:posted_at] || Time.current,
           currency: @options[:currency] || @booking_folio.booking.currency,
           reversal_of_transaction: @options[:reversal_of_transaction],
+          parent_transaction: @options[:parent_transaction],
+          split_from_transaction: @options[:split_from_transaction],
+          moved_from_transaction: @options[:moved_from_transaction],
           correction_reason: @options[:correction_reason],
           correction_note: @options[:correction_note],
           night_audit: @options[:night_audit],
           catch_up_key: @catch_up_key,
+          transfer_group_id: @options[:transfer_group_id],
+          operation_key: @options[:operation_key],
           transaction_code: @transaction_code,
           metadata: transaction_metadata
         )

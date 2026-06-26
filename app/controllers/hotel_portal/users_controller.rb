@@ -33,6 +33,11 @@ module HotelPortal
       end
 
       user = User.find_by(email: email)
+      if user&.corporate?
+        redirect_to hotel_users_path(current_hotel), alert: "This email belongs to a corporate account. Use a separate staff email."
+        return
+      end
+
       if user && current_hotel.user_hotel_accesses.active.exists?(user: user)
         redirect_to hotel_users_path(current_hotel), alert: "This user already has active access to this property."
         return

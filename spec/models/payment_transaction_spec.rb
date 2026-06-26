@@ -6,6 +6,8 @@ RSpec.describe PaymentTransaction, type: :model do
   describe "associations" do
     it { should belong_to(:booking_quote).optional }
     it { should belong_to(:booking).optional }
+    it { should belong_to(:corporate_ar_payment_intent).optional }
+    it { should belong_to(:ar_payment).optional }
   end
 
   describe "validations" do

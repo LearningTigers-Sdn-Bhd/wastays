@@ -78,14 +78,14 @@ module Folios
 
     def reversal_group
       children = policy_for_transaction.generated_tax_children
-      return FolioTransaction.where(id: @transaction.id) unless children.exists?
+      return FolioTransaction.where(id: @transaction.id) unless children.any?
 
-      FolioTransaction.where(id: [ @transaction.id ] + children.pluck(:id)).order(:posting_date, :created_at, :id)
+      FolioTransaction.where(id: [ @transaction.id ] + children.map(&:id)).order(:posting_date, :created_at, :id)
     end
 
     def reverse_one(original, policy)
       Folios::InsertTransaction.new(
-        booking_folio: @folio,
+        booking_folio: original.booking_folio,
         amount: reversal_amount(original),
         transaction_type: reversal_transaction_type(original),
         category: reversal_category(original),
@@ -141,7 +141,7 @@ module Folios
     def reconcile_forecast_after_reversal!(original)
       return unless nightly_charge_transaction?(original)
 
-      forecast = @folio.folio_forecasted_charges.actualized.find_by(
+      forecast = original.booking_folio.folio_forecasted_charges.actualized.find_by(
         stay_date: nightly_metadata(original).fetch("stay_date").to_date,
         charge_kind: nightly_metadata(original).fetch("charge_kind"),
         identity: nightly_metadata(original).fetch("forecast_identity"),
@@ -150,7 +150,7 @@ module Folios
       return unless forecast
 
       forecast.supersede!
-      Folios::SyncForecastedCharges.call(booking_folio: @folio)
+      Folios::SyncForecastedCharges.call(booking_folio: original.booking_folio)
     end
 
     def nightly_charge_transaction?(original)

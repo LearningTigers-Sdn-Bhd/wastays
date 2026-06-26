@@ -15,7 +15,9 @@ class Booking < ApplicationRecord
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
   has_one :refund_request, dependent: :destroy
-  has_one :booking_folio, dependent: :destroy
+  has_many :booking_folios, dependent: :destroy
+  has_one :booking_folio, -> { where(is_primary: true) }, dependent: :destroy
+  has_many :folio_routing_rules, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_one_attached :id_front
   has_one_attached :id_back
@@ -24,6 +26,7 @@ class Booking < ApplicationRecord
   has_many :check_out_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
+  has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :status_transition_event
 
@@ -83,6 +86,7 @@ class Booking < ApplicationRecord
   validates :guest_name, :guest_email, :guest_phone, presence: true
   validates :check_in, :check_out, :adults, :total_amount, :confirmation_token, presence: true
   validates :confirmation_token, uniqueness: true
+  validates :folio_account_reference, uniqueness: { scope: :hotel_id, allow_blank: true }
 
   before_validation :generate_confirmation_token, on: :create
   before_validation :normalize_guest_data
@@ -264,7 +268,19 @@ class Booking < ApplicationRecord
   end
 
   def folio_outstanding_balance
-    booking_folio&.outstanding_balance || 0.0
+    booking_folios.to_a.sum { |folio| folio.outstanding_balance.to_d }
+  end
+
+  def folio_account_reference_display
+    folio_account_reference.presence || formatted_folio_number
+  end
+
+  def assign_folio_account_reference_from!(folio_number)
+    return folio_account_reference if folio_account_reference.present?
+    return if folio_number.blank?
+
+    update!(folio_account_reference: format_number(folio_number, type_code: 3))
+    folio_account_reference
   end
 
   def transition_status_to!(new_status, event:, attributes: {})

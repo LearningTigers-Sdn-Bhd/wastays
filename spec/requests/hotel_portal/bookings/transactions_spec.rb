@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe "HotelPortal booking transactions", type: :request do
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101" ]) }
+  let(:user) { create(:user) }
+  let(:role) { create(:role, account: hotel.account) }
 
   def grant_permission(role, slug)
     permission = Permission.find_by(slug: slug) || create(:permission, slug: slug, name: slug.tr("_", " ").titleize)
@@ -13,8 +15,6 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
 
   before do
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
-    user = create(:user)
-    role = create(:role, account: hotel.account)
     grant_permission(role, "manage_bookings")
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
     sign_in_as(user)
@@ -310,6 +310,58 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(response.body).to include('action="complete_offcanvas"')
     expect(response.body).to include(CGI.escapeHTML(hotel_booking_path(hotel, booking)))
     expect(booking.reload.status).to eq("no_show")
+    expect(flash[:notice]).to include("Tourism tax was not charged")
+  end
+
+  it "renders and completes an audited no-show tourism-tax repair" do
+    grant_permission(role, "post_folio_corrections")
+    booking = create(:booking, hotel: hotel, status: "no_show", currency: "MYR")
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: :charge,
+      category: "tax",
+      amount: 10,
+      metadata: {
+        posting_source: "no_show",
+        tax_line: { type: "tourism_tax", name: "Tourism Tax", amount: "10.00" }
+      }
+    )
+
+    get hotel_booking_transaction_repair_no_show_folio_path(hotel, booking),
+      headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Repair No-show Folio", "MYR 10.00", "This folio will close")
+
+    post repair_no_show_folio_hotel_booking_path(hotel, booking),
+      headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response).to have_http_status(:success)
+    expect(flash[:notice]).to include("Tourism tax of MYR 10.00 was removed")
+    expect(folio.reload).to be_closed
+  end
+
+  it "does not expose no-show folio repair without folio-correction permission" do
+    booking = create(:booking, hotel: hotel, status: "no_show")
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: :charge,
+      category: "tax",
+      amount: 10,
+      metadata: {
+        posting_source: "no_show",
+        tax_line: { type: "tourism_tax", amount: "10.00" }
+      }
+    )
+
+    get hotel_booking_transaction_repair_no_show_folio_path(hotel, booking),
+      headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response).to have_http_status(:redirect)
   end
 
   it "re-renders no-show finalization errors in the offcanvas" do
