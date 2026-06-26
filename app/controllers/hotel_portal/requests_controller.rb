@@ -13,6 +13,12 @@ class HotelPortal::RequestsController < HotelPortal::BaseController
       completed: Kaminari.paginate_array(@board_columns[:completed]).page(params[:completed_page]).per(25),
       checkout: Kaminari.paginate_array(@board_columns[:checkout]).page(params[:checkout_page]).per(25)
     }
+    @presenter = ::HotelPortal::RequestsBoardPresenter.new(
+      board_columns: @board_columns,
+      board_counts: @board_counts,
+      current_hotel: current_hotel,
+      view_context: view_context
+    )
   end
 
   def archive

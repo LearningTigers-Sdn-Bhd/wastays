@@ -1,6 +1,6 @@
 <% content_for :title, "Check In Now | #{@hotel.name}" %>
 <%= render layout: "public/concierge/shared/page_shell" do %>
-  <% subtitle = @booking&.pre_checkin&.completed? ? "Your pre-check-in is complete. Confirm below to check in and get your room assigned." : "Complete your guest registration below to check in and get your room assigned." %>
+  <% subtitle = @presenter.subtitle %>
   <%= render "public/concierge/shared/page_header",
              back_path: concierge_check_in_path(@hotel.slug),
              back_label: "Back to Check In",
@@ -14,9 +14,9 @@
 
   <div class="mb-5 rounded-2xl border border-neutral-border bg-white p-5 shadow-sm">
     <div class="mb-4 flex items-center gap-3">
-      <% if @booking&.pre_checkin&.completed? %>
+      <% if @presenter.pre_checkin_completed? %>
         <div class="flex-none rounded-xl bg-green-50 text-green-600">
-          <svg class="h-10 w-10 p-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <%= cached_icon "circle-check", stroke_width: 2, class: "h-10 w-10 p-2.5" %>
         </div>
         <div>
           <p class="text-xs font-bold uppercase tracking-widest text-green-600">Pre-check-in Complete</p>
@@ -24,7 +24,7 @@
         </div>
       <% else %>
         <div class="flex-none rounded-xl bg-amber-50 text-amber-600">
-          <svg class="h-10 w-10 p-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <%= cached_icon "clipboard", stroke_width: 2, class: "h-10 w-10 p-2.5" %>
         </div>
         <div>
           <p class="text-xs font-bold uppercase tracking-widest text-amber-600">Registration Required</p>
@@ -46,46 +46,17 @@
     </div>
   </div>
 
-  <% if @error_code == :wrong_date %>
-    <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-700">
-      Your check-in date is <%= @booking.check_in.strftime("%d %b %Y") %>.
-      You can check in on that day<%= @hotel.property_policy&.check_in_time.present? ? " from #{@hotel.property_policy.check_in_time}" : "" %>.
-    </div>
-  <% elsif @error_code == :too_early %>
-    <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-700">
-      Check-in opens at <%= @hotel.property_policy.check_in_time %>. Please come back later or see the front desk.
-    </div>
-  <% elsif @error_code == :no_room_available %>
-    <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-700">
-      No rooms are ready right now. Please proceed to the front desk and our staff will check you in shortly.
-    </div>
-  <% elsif @error_code == :registration_error %>
-    <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
-      Please check the details below and try again.
-    </div>
-  <% elsif @error_code == :too_far_away %>
-    <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
-      You are too far from the hotel. Self-check-in is only available when you are physically at the property.
-    </div>
-  <% elsif @error_code == :missing_location %>
-    <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
-      Location access is required for verification. Please enable GPS and allow location permissions.
-    </div>
-  <% elsif @error_code.present? %>
-    <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
-      Something went wrong. Please try again or see the front desk.
-    </div>
-  <% end %>
 
-  <%= form_with model: @booking, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, data: {
-        controller: "scanner geolocation-check-in",
+
+  <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, data: {
+        controller: "scanner#{@hotel.geolocation_enabled? ? ' geolocation-check-in' : ''}",
         geolocation_check_in_hotel_latitude_value: @hotel.latitude,
         geolocation_check_in_hotel_longitude_value: @hotel.longitude,
-        geolocation_check_in_allowed_radius_value: 100
+        geolocation_check_in_allowed_radius_value: 50
       } do |f| %>
     <%= hidden_field_tag :latitude, nil, data: { geolocation_check_in_target: "latitude" } %>
     <%= hidden_field_tag :longitude, nil, data: { geolocation_check_in_target: "longitude" } %>
-    <% unless @booking&.pre_checkin&.completed? %>
+    <% if @presenter.registration_required? %>
       <div class="card p-6 mb-5">
         <div class="mb-4">
           <h2 class="text-sm font-black uppercase tracking-widest text-neutral-text-primary">Guest Registration</h2>
@@ -102,7 +73,7 @@
             <div>
               <%= f.label :guest_document_type, "Document Type", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
               <%= f.select :guest_document_type,
-                    [["MyKad (IC)", "ic"], ["Passport", "passport"]],
+                    @presenter.document_types,
                     { selected: @booking.guest_document_type, prompt: "Select document type" },
                     class: "form-input py-3 px-5 border border-neutral-border", required: true %>
             </div>
@@ -129,7 +100,7 @@
             <%= f.label :guest_country, "Nationality", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
             <%= f.select :guest_country,
                   country_options,
-                  { selected: @booking.guest_country.presence || "Malaysia", prompt: "Select nationality" },
+                  { selected: @presenter.default_country, prompt: "Select nationality" },
                   class: "form-input py-3 px-5 border border-neutral-border", required: true %>
           </div>
 

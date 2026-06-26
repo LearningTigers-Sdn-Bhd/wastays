@@ -105,6 +105,30 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
     end
 
+    context "updated check-in policy after booking creation with default" do
+      let(:kl_zone) { Time.find_zone("Kuala Lumpur") }
+
+      around do |example|
+        travel_to kl_zone.parse("#{Date.today} 14:25").utc do
+          example.run
+        end
+      end
+
+      before do
+        hotel.create_property_policy!(check_in_time: "14:00", check_out_time: "12:00", currency: "MYR") unless hotel.property_policy
+        hotel.property_policy.update!(check_in_time: "14:00")
+        booking.update_columns(check_in: kl_zone.parse("#{Date.today} 15:00").utc)
+        create(:room_inventory, room_type: room_type, date: Date.today,
+               quantity: 1, status: "open", available_room_numbers: [ "101" ])
+      end
+
+      it "checks in the booking at 14:25 successfully because of the 14:00 policy" do
+        post concierge_submit_check_in_path(hotel.slug)
+        expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
+        expect(booking.reload.status).to eq("checked_in")
+      end
+    end
+
     context "with geolocation check enabled" do
       before do
         hotel.update!(google_map_link: "https://www.google.com/maps/place/Sample+Hotel/@5.9771228,116.0622732,15z")
@@ -137,7 +161,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     let(:policy) { hotel.build_property_policy(check_in_time: "15:00", check_out_time: "12:00", currency: "MYR", usd_rate: 4.5) }
 
     around do |example|
-      travel_to kl_zone.parse("#{Date.today} 16:00") do
+      travel_to kl_zone.parse("#{Date.today} 16:00").utc do
         example.run
       end
     end

@@ -64,7 +64,11 @@ module Concierge
       return false if @policy&.check_in_time.blank?
       return false if hotel_now.to_date > @booking.check_in.to_date
 
-      hotel_now < @booking.check_in.in_time_zone(@hotel.hotel_time_zone)
+      check_in_date = @booking.check_in.to_date
+      check_in_opening_time = @hotel.hotel_time_zone.parse("#{check_in_date} #{@policy.check_in_time}")
+      return false unless check_in_opening_time
+
+      hotel_now < check_in_opening_time
     end
 
     def hotel_now
@@ -91,7 +95,7 @@ module Concierge
     end
 
     def location_check_enabled?
-      @hotel.latitude.present? && @hotel.longitude.present?
+      @hotel.geolocation_enabled? && @hotel.latitude.present? && @hotel.longitude.present?
     end
 
     def location_missing?
@@ -100,7 +104,7 @@ module Concierge
 
     def too_far?
       distance = calculate_distance(@latitude, @longitude, @hotel.latitude, @hotel.longitude)
-      distance > 100.0
+      distance > 50.0
     end
 
     def calculate_distance(lat1, lon1, lat2, lon2)

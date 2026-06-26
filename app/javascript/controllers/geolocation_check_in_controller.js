@@ -5,7 +5,7 @@ export default class extends Controller {
   static values = {
     hotelLatitude: Number,
     hotelLongitude: Number,
-    allowedRadius: { type: Number, default: 100 }
+    allowedRadius: { type: Number, default: 50 }
   }
 
   connect() {
@@ -44,8 +44,7 @@ export default class extends Controller {
         this.setStatus(`You are ${distStr} away. Self-check-in is only allowed at the hotel (within ${this.allowedRadiusValue}m).`, "error")
         if (this.hasSubmitButtonTarget) this.submitButtonTarget.disabled = true
       } else {
-        const distStr = distance >= 1000 ? `${(distance / 1000).toFixed(1)} km` : `${Math.round(distance)}m`
-        this.setStatus(`✓ Location verified (${distStr} from property). Ready to check in.`, "success")
+        this.setStatus("✓ Location verified. Ready to check in.", "success")
         if (this.hasSubmitButtonTarget) this.submitButtonTarget.disabled = false
       }
     } else {
@@ -64,7 +63,9 @@ export default class extends Controller {
       msg = "Location request timed out. Please try again."
     }
     this.setStatus(msg, "error")
-    if (this.hasSubmitButtonTarget) this.submitButtonTarget.disabled = true
+    if (this.hasSubmitButtonTarget) {
+      this.submitButtonTarget.disabled = true
+    }
   }
 
   setStatus(message, type) {

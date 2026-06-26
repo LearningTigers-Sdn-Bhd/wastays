@@ -101,6 +101,23 @@ module HotelPortal
       }
     end
 
+    def can_edit_currency?
+      current_user.has_permission?("manage_hotel_profile")
+    end
+
+    def settings_errors
+      hotel.errors.full_messages + property_policy.errors.full_messages
+    end
+
+    def time_picker_hours
+      @time_picker_hours ||= (0..23).map do |h|
+        {
+          value: h,
+          label: Time.current.change(hour: h).strftime("%I %p")
+        }
+      end
+    end
+
     private
 
     def onboarding_stage
