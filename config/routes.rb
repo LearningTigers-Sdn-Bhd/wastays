@@ -136,7 +136,15 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index", as: :dashboard
     resource :profile, only: [ :show ]
     resources :ar_invoices, only: [ :index, :show ], path: "invoices"
-    resources :ar_payments, only: [ :index ], path: "payments"
+    resources :ar_payments, only: [ :index, :show ], path: "payments" do
+      collection do
+        get :pay_invoices, path: "pay-invoices"
+        post :review
+        post :checkout_session
+        get :verify
+        post :verify
+      end
+    end
   end
 
   # Superadmin dashboard

@@ -3,7 +3,7 @@
 module CorporatePortal
   module NavigationHelper
     NavSection = Struct.new(:label, :items, keyword_init: true)
-    NavItem = Struct.new(:label, :path, :search_text, :icon, :active, keyword_init: true)
+    NavItem = Struct.new(:label, :path, :search_text, :icon, :active, :children, keyword_init: true)
 
     def corporate_sidebar_sections
       return @_corporate_sidebar_sections if defined?(@_corporate_sidebar_sections)
@@ -21,7 +21,11 @@ module CorporatePortal
           path: corporate_ar_payments_path,
           search_text: "Payments Payment History Accounts Receivable",
           active: controller_name == "ar_payments",
-          icon: "landmark"
+          icon: "landmark",
+          children: [
+            NavItem.new(label: "Payment History", path: corporate_ar_payments_path, search_text: "Payment History Accounts Receivable", active: controller_name == "ar_payments" && action_name.in?(%w[index show]), icon: "history"),
+            NavItem.new(label: "Pay Invoices", path: pay_invoices_corporate_ar_payments_path, search_text: "Pay Invoices Accounts Receivable", active: controller_name == "ar_payments" && action_name.in?(%w[pay_invoices review checkout_session verify]), icon: "credit-card")
+          ]
         )
       ]
 

@@ -25,6 +25,20 @@
               <%= cached_icon item.icon, class: "size-4 shrink-0" %>
               <span><%= item.label %></span>
             </a>
+            <% if item.children.present? %>
+              <div class="ml-5 mt-0.5 space-y-0.5 border-l border-layer-line pl-2">
+                <% item.children.each do |child| %>
+                  <a class="sidebar-nav-link <%= child.active ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>"
+                     href="<%= child.path %>"
+                     data-sidebar-route
+                     data-sidebar-tooltip="<%= child.label %>"
+                     aria-label="<%= child.label %>">
+                    <%= cached_icon child.icon, class: "size-3.5 shrink-0" %>
+                    <span><%= child.label %></span>
+                  </a>
+                <% end %>
+              </div>
+            <% end %>
           <% end %>
         </div>
       </div>

@@ -1,50 +1,17 @@
-<div class="mx-auto max-w-7xl space-y-6 pb-20">
-  <div>
-    <h1 class="text-3xl font-bold tracking-tight text-slate-950">AR Payments</h1>
-    <p class="mt-1 text-sm text-slate-600">Payments received from your corporate account.</p>
+<div class="mx-auto max-w-[1600px] space-y-4 pb-10">
+  <div class="flex flex-col gap-3 px-4 md:px-0 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight text-slate-950">Payment History</h1>
+      <p class="mt-1 text-sm text-slate-600">Gateway attempts and payments received from your corporate account.</p>
+    </div>
+    <%= link_to pay_invoices_corporate_ar_payments_path,
+                class: "inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2" do %>
+      <%= cached_icon "circle-dollar-sign", class: "size-4", aria: { hidden: true } %>
+      Pay Invoices
+    <% end %>
   </div>
 
-  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-6 py-5">
-      <h2 class="text-lg font-bold text-slate-950">Payment Ledger</h2>
-    </div>
-    <% if @ar_payments.any? %>
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-[900px] text-left text-sm">
-          <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-            <tr>
-              <th class="px-6 py-3">Reference</th>
-              <th class="px-6 py-3">Hotel</th>
-              <th class="px-6 py-3">Received</th>
-              <th class="px-6 py-3">Method</th>
-              <th class="px-6 py-3 text-right">Amount</th>
-              <th class="px-6 py-3 text-right">Allocated</th>
-              <th class="px-6 py-3 text-right">Unapplied</th>
-              <th class="px-6 py-3">Status</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            <% @ar_payments.each do |payment| %>
-              <tr>
-                <td class="px-6 py-4 font-bold text-slate-950"><%= payment.reference_number %></td>
-                <td class="px-6 py-4 text-slate-700"><%= payment.hotel.name %></td>
-                <td class="px-6 py-4 text-slate-600"><%= payment.received_at.strftime("%d %b %Y") %></td>
-                <td class="px-6 py-4 text-slate-600"><%= payment.payment_method.humanize %></td>
-                <td class="px-6 py-4 text-right font-semibold tabular-nums text-slate-900"><%= payment.currency %> <%= number_with_precision(payment.amount, precision: 2) %></td>
-                <td class="px-6 py-4 text-right tabular-nums text-slate-600"><%= payment.currency %> <%= number_with_precision(payment.allocated_amount, precision: 2) %></td>
-                <td class="px-6 py-4 text-right font-bold tabular-nums text-slate-950"><%= payment.currency %> <%= number_with_precision(payment.unallocated_amount, precision: 2) %></td>
-                <td class="px-6 py-4">
-                  <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold uppercase tracking-wide text-slate-700">
-                    <%= payment.allocation_status.humanize %>
-                  </span>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <p class="px-6 py-10 text-center text-sm text-slate-500">No payments have been received yet.</p>
-    <% end %>
-  </section>
+  <%= render "metrics", presenter: @presenter %>
+  <%= render "filters", presenter: @presenter %>
+  <%= render "table", presenter: @presenter %>
 </div>
