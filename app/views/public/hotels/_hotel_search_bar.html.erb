@@ -12,7 +12,7 @@
       <div data-controller="rate-calendar"
            data-rate-calendar-url-value="<%= rate_calendar_hotel_path(hotel) %>"
            data-rate-calendar-currency-value="<%= hotel.property_policy&.currency || 'MYR' %>"
-           data-rate-calendar-room-count-value="<%= room_count %>"
+           data-rate-calendar-room-count-value="1"
            class="flex-1 flex items-center gap-x-0 rounded-full border border-neutral-border bg-white shadow-sm hover:shadow-md transition-shadow min-w-0 sm:max-w-2xl sm:mx-auto">
 
         <%# Date pill segment %>
@@ -42,7 +42,7 @@
             <div class="hidden sm:block">
               <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary leading-none mb-0.5">Guests</p>
               <p class="text-sm font-semibold text-neutral-text-primary whitespace-nowrap" data-hotel-search-bar-target="display">
-                <%= adults %> Adults · <%= children %> Children<%= " · #{infants} Infant#{"s" if infants > 1}" if infants > 0 %> · <%= room_count %> Room<%= room_count > 1 ? "s" : "" %>
+                <%= adults %> Adults · <%= children %> Children<%= " · #{infants} Infant#{"s" if infants > 1}" if infants > 0 %>
               </p>
             </div>
             <%# Mobile compact display %>
@@ -129,35 +129,12 @@
               </div>
             </div>
 
-            <%# Rooms row %>
-            <div class="flex items-center justify-between py-2 border-t border-neutral-border">
-              <div>
-                <p class="text-sm font-semibold text-neutral-text-primary">Rooms</p>
-              </div>
-              <div class="flex items-center gap-x-3">
-                <button type="button"
-                        data-action="click->hotel-search-bar#step"
-                        data-hotel-search-bar-field-param="room-count"
-                        data-hotel-search-bar-delta-param="-1"
-                        data-hotel-search-bar-min-param="1"
-                        data-hotel-search-bar-max-param="5"
-                        class="w-8 h-8 rounded-full border border-neutral-border flex items-center justify-center text-neutral-text-secondary hover:border-brand-primary hover:text-brand-primary transition-colors text-lg font-light">−</button>
-                <span data-hotel-search-bar-target="roomCountCount" class="w-4 text-center text-sm font-bold text-neutral-text-primary"><%= room_count %></span>
-                <button type="button"
-                        data-action="click->hotel-search-bar#step"
-                        data-hotel-search-bar-field-param="room-count"
-                        data-hotel-search-bar-delta-param="1"
-                        data-hotel-search-bar-min-param="1"
-                        data-hotel-search-bar-max-param="5"
-                        class="w-8 h-8 rounded-full border border-neutral-border flex items-center justify-center text-neutral-text-secondary hover:border-brand-primary hover:text-brand-primary transition-colors text-lg font-light">+</button>
-              </div>
-            </div>
           </div>
 
           <%= f.hidden_field :adults, value: adults, data: { hotel_search_bar_target: "adultsInput" } %>
           <%= f.hidden_field :children, value: children, data: { hotel_search_bar_target: "childrenInput" } %>
           <%= f.hidden_field :infants, value: infants, data: { hotel_search_bar_target: "infantsInput" } %>
-          <%= f.hidden_field :room_count, value: room_count, data: { hotel_search_bar_target: "roomCountInput" } %>
+          <%= f.hidden_field :room_count, value: 1 %>
         </div>
 
         <%# Agent Code segment %>

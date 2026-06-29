@@ -5,7 +5,12 @@ module BookingEngine
     def initialize(params)
       hotel_key = params[:hotel_id].to_s
       @hotel = Hotel.where(slug: hotel_key).first || Hotel.find(hotel_key)
-      @allocations = Array(params[:allocations]) # Array of { room_type_id: X, quantity: Y }
+      raw_allocations = params[:allocations]
+      if raw_allocations.is_a?(Hash) || (defined?(ActionController::Parameters) && raw_allocations.is_a?(ActionController::Parameters))
+        @allocations = raw_allocations.values
+      else
+        @allocations = Array(raw_allocations)
+      end
       # Backward compatibility for single room selection
       if @allocations.empty? && params[:room_type_id].present?
         @allocations << { room_type_id: params[:room_type_id], quantity: params[:room_count] || 1 }
@@ -73,7 +78,11 @@ module BookingEngine
         quote_currency = nil
 
         grouped_allocations.each do |(room_type, r_adults, r_children, r_infants), quantity|
-          rate_plan = @rate_plan_id.present? ? room_type.rate_plans.find_by(id: @rate_plan_id) : nil
+          rate_plan = if @hotel.pax_pricing_only?
+            @rate_plan_id.present? ? room_type.rate_plans.where(sell_mode: "per_person").find_by(id: @rate_plan_id) : nil
+          else
+            @rate_plan_id.present? ? room_type.rate_plans.find_by(id: @rate_plan_id) : nil
+          end
           pricing_summary = availability_service.pricing_summary_for(
             room_type,
             rate_plan: rate_plan,

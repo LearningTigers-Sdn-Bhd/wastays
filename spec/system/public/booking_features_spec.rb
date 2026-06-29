@@ -45,8 +45,13 @@ RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
     # Standard price is 150, corporate is 120.
     within ".group", text: @room_type.name do
       expect(page).to have_content(/120/)
-      click_button "Reserve Now"
+      click_button "Add to Stay"
     end
+
+    # Wait for Stimulus to update the sticky bar and form inputs
+    expect(page).to have_content("MYR 120.00")
+
+    click_button "Book Selected"
 
     # Now on the quote page. Wait for it to load.
     expect(page).to have_content("Complete Your Booking")
@@ -91,6 +96,24 @@ RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
     visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2)
     within ".group", text: @room_type.name do
       expect(page).to have_content(/150/)
+    end
+  end
+
+  it "forces per-pax pricing only when pax_pricing_only is enabled on the hotel", js: true do
+    hotel.update!(pax_pricing_only: true)
+
+    # 1 adult -> should pick Pax (80)
+    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 1)
+    within ".group", text: @room_type.name do
+      expect(page).to have_content(/80/)
+      expect(page).to have_content("PER-PAX BOOKING RULES")
+    end
+
+    # 2 adults -> should pick Pax (160) even though Standard (150) is cheaper
+    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2)
+    within ".group", text: @room_type.name do
+      expect(page).to have_content(/160/)
+      expect(page).to have_content("PER-PAX BOOKING RULES")
     end
   end
 end

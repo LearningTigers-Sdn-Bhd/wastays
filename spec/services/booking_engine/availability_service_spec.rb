@@ -225,4 +225,35 @@ RSpec.describe BookingEngine::AvailabilityService do
       expect(service.stay_restriction_error_message(room_type)).to include("Check-out is not allowed")
     end
   end
+
+  describe "#candidate_rate_plans_for" do
+    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", sell_mode: "per_person", single_supplement: 20.0, currency: "MYR") }
+
+    before do
+      RoomTypeRatePlan.create!(room_type: room_type, rate_plan: pax_rate_plan)
+    end
+
+    context "when pax_pricing_only is disabled" do
+      it "returns nil and all associated rate plans" do
+        service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
+        plans = service.send(:candidate_rate_plans_for, room_type)
+        expect(plans).to include(nil)
+        expect(plans).to include(pax_rate_plan)
+        expect(plans).to include(room_type.rate_plans.first)
+      end
+    end
+
+    context "when pax_pricing_only is enabled" do
+      before do
+        hotel.update!(pax_pricing_only: true)
+      end
+
+      it "returns only per_person rate plans and excludes nil" do
+        service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
+        plans = service.send(:candidate_rate_plans_for, room_type)
+        expect(plans).not_to include(nil)
+        expect(plans).to eq([pax_rate_plan])
+      end
+    end
+  end
 end

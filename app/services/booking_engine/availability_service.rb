@@ -322,6 +322,22 @@ module BookingEngine
           room_type = occupancies[i][:room_type]
           current_total = occupancies[i][:adults] + occupancies[i][:children] + occupancies[i][:infants]
           space_left = room_type.max_capacity - current_total
+
+          # Enforce specific guest type limit for adults or children
+          if pool[:key] == :adults
+            specific_limit = room_type.max_adults.to_i
+            current_specific = occupancies[i][:adults]
+          elsif pool[:key] == :children
+            specific_limit = room_type.max_children.to_i
+            current_specific = occupancies[i][:children]
+          else
+            # For infants, fallback to max_children or max_capacity
+            specific_limit = room_type.max_children.to_i
+            current_specific = occupancies[i][:infants]
+          end
+
+          specific_space = [ specific_limit - current_specific, 0 ].max
+          space_left = [ space_left, specific_space ].min
           next if space_left <= 0
 
           to_add = [ space_left, temp_count ].min
@@ -349,7 +365,11 @@ module BookingEngine
     end
 
     def candidate_rate_plans_for(room_type)
-      [ nil ] + room_type.rate_plans.to_a
+      if room_type.hotel.pax_pricing_only?
+        room_type.rate_plans.where(sell_mode: "per_person").to_a
+      else
+        [ nil ] + room_type.rate_plans.to_a
+      end
     end
 
     def greedy_allocate(total_pax, room_type_data)

@@ -12,6 +12,7 @@ class Public::QuotesController < ApplicationController
     if result.success?
       redirect_to quote_path(result.quote.token)
     else
+      Rails.logger.error "QUOTE CREATION FAILED: #{result.message}"
       redirect_back fallback_location: root_path, alert: result.message
     end
   end

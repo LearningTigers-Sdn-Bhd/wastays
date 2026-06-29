@@ -16,6 +16,10 @@ export default class extends Controller {
     this.updateUI()
   }
 
+  disconnect() {
+    document.documentElement.classList.remove("sticky-bar-active")
+  }
+
   initializeRoomData() {
     this.roomCardTargets.forEach(card => {
       const id = card.dataset.roomTypeId
@@ -116,6 +120,7 @@ export default class extends Controller {
     if (totalRooms > 0) {
       this.stickyBarTarget.classList.remove("translate-y-full", "opacity-0")
       this.stickyBarTarget.classList.add("translate-y-0", "opacity-100")
+      document.documentElement.classList.add("sticky-bar-active")
       this.summaryTextTarget.textContent = summaryItems.join(", ")
 
       // Format Price
@@ -151,25 +156,29 @@ export default class extends Controller {
     } else {
       this.stickyBarTarget.classList.add("translate-y-full", "opacity-0")
       this.stickyBarTarget.classList.remove("translate-y-0", "opacity-100")
+      document.documentElement.classList.remove("sticky-bar-active")
     }
   }
 
   updateHiddenInputs() {
     this.formInputsTarget.innerHTML = ""
+    let index = 0
 
     Object.entries(this.selections).forEach(([id, qty]) => {
       if (qty > 0) {
         const typeInput = document.createElement("input")
         typeInput.type = "hidden"
-        typeInput.name = "allocations[][room_type_id]"
+        typeInput.name = `allocations[${index}][room_type_id]`
         typeInput.value = id
         this.formInputsTarget.appendChild(typeInput)
 
         const qtyInput = document.createElement("input")
         qtyInput.type = "hidden"
-        qtyInput.name = "allocations[][quantity]"
+        qtyInput.name = `allocations[${index}][quantity]`
         qtyInput.value = qty
         this.formInputsTarget.appendChild(qtyInput)
+
+        index++
       }
     })
   }

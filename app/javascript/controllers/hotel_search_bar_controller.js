@@ -7,11 +7,9 @@ export default class extends Controller {
     "adultsCount",
     "childrenCount",
     "infantsCount",
-    "roomCountCount",
     "adultsInput",
     "childrenInput",
-    "infantsInput",
-    "roomCountInput"
+    "infantsInput"
   ]
 
   step(event) {
@@ -51,14 +49,11 @@ export default class extends Controller {
     const adults = Number(this.adultsCountTarget.textContent.trim())
     const children = Number(this.childrenCountTarget.textContent.trim())
     const infants = this.hasInfantsCountTarget ? Number(this.infantsCountTarget.textContent.trim()) : 0
-    const roomCount = Number(this.roomCountCountTarget.textContent.trim())
-    const roomLabel = roomCount === 1 ? " Room" : " Rooms"
 
     let displayVal = `${adults} Adults · ${children} Children`
     if (infants > 0) {
       displayVal += ` · ${infants} Infant${infants > 1 ? 's' : ''}`
     }
-    displayVal += ` · ${roomCount}${roomLabel}`
 
     this.displayTarget.textContent = displayVal
     if (this.hasCompactDisplayTarget) {
@@ -70,7 +65,6 @@ export default class extends Controller {
     if (field === "adults") return this.adultsCountTarget
     if (field === "children") return this.childrenCountTarget
     if (field === "infants") return this.infantsCountTarget
-    if (field === "roomCount") return this.roomCountCountTarget
     return null
   }
 
@@ -78,7 +72,6 @@ export default class extends Controller {
     if (field === "adults") return this.adultsInputTarget
     if (field === "children") return this.childrenInputTarget
     if (field === "infants") return this.infantsInputTarget
-    if (field === "roomCount") return this.roomCountInputTarget
     return null
   }
 }

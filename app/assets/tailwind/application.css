@@ -13,6 +13,8 @@
   --color-brand-gold: #d9c5a0;     /* Champagne gold accent */
   --color-landing-bg: #fdfbf7;      /* Off-white background */
   --background-image-brand-gradient: linear-gradient(135deg, #0f4a43 0%, #0d3d37 100%);
+  --color-brand-navy: #1e2e60;
+  --color-brand-navy-hover: #152043;
 
   /* Layer System (Preline-style) */
   --color-layer: #FFFFFF;
@@ -84,6 +86,40 @@
   @media (max-width: 767px) {
     html.scanner-active #abw-btn-cont {
       display: none !important;
+    }
+  }
+
+  /* Dynamically adjust WhatsApp widget bottom offset to prevent overlap with sticky actions */
+  #abw-btn-cont .abw-btn {
+    transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  /* Lift widget on mobile screens to clear the default sticky Choose Room button */
+  @media (max-width: 1023px) {
+    #abw-btn-cont .abw-btn {
+      bottom: calc(90px + env(safe-area-inset-bottom)) !important;
+    }
+  }
+
+  /* Lift widget further when the custom selection cart bar is active */
+  html.sticky-bar-active #abw-btn-cont .abw-btn {
+    bottom: 110px !important;
+  }
+
+  /* On mobile screens, when the custom selection cart bar is active, lift widget to clear the stacked cart bar */
+  @media (max-width: 639px) {
+    html.sticky-bar-active #abw-btn-cont .abw-btn {
+      bottom: calc(220px + env(safe-area-inset-bottom)) !important;
+    }
+  }
+
+  /* Position sticky cart bar above mobile bottom nav on mobile screens */
+  @media (max-width: 639px) {
+    [data-room-selector-target="stickyBar"] {
+      bottom: calc(58px + env(safe-area-inset-bottom)) !important;
+    }
+    [data-role="mobile-sticky-cta"] {
+      bottom: calc(58px + env(safe-area-inset-bottom)) !important;
     }
   }
 
@@ -277,6 +313,10 @@
 
   .btn-secondary {
     @apply bg-white border-neutral-border text-neutral-text-secondary hover:bg-neutral-bg focus:ring-neutral-border;
+  }
+
+  .btn-navy {
+    @apply bg-brand-navy text-white hover:bg-brand-navy-hover focus:ring-brand-navy;
   }
 
   /* ─── Sidebar Nav Items (Preline CMS Style) ─── */
