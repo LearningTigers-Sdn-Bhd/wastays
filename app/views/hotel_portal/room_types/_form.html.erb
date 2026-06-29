@@ -88,14 +88,13 @@
                 <span><%= cat[:category] %></span>
                 <%= cached_icon "chevron-down", class: "size-3 text-slate-400 transition-transform duration-200", data: { category_chevron: true } %>
               </button>
-              
               <div class="hidden bg-white" data-category-content>
                 <% cat[:items].each do |amenity| %>
                   <label class="w-full flex items-center px-5 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer"
                          data-multi-select-dropdown-target="option"
                          data-name="<%= amenity[:name] %>"
                          data-id="<%= amenity[:id] %>">
-                    <input type="checkbox" 
+                    <input type="checkbox"
                            class="rounded border-slate-300 text-slate-900 focus:ring-slate-400 mr-3"
                            data-id="<%= amenity[:id] %>"
                            data-action="change->multi-select-dropdown#toggle"
@@ -192,11 +191,14 @@
     </div>
 
     <!-- Photos -->
-    <div class="space-y-6">
+    <div class="space-y-6"
+         data-controller="drag-drop-upload"
+         data-drag-drop-upload-existing-count-value="<%= room_type.photos.count %>"
+         data-drag-drop-upload-max-count-value="<%= RoomType::MAX_PHOTOS %>">
       <div>
         <%= f.label :photos, "Room Photos", class: "block text-sm mb-3 font-semibold text-slate-800" %>
         <div class="relative group">
-          <div class="flex justify-center px-8 pt-10 pb-12 border-2 border-slate-300 border-dashed rounded-[2.5rem] bg-white group-hover:bg-slate-50 transition-all group-hover:border-blue-400">
+          <div data-drag-drop-upload-target="dropzone" class="flex justify-center px-8 pt-10 pb-12 border-2 border-slate-300 border-dashed rounded-[2.5rem] bg-white group-hover:bg-slate-50 transition-all group-hover:border-blue-400">
             <div class="space-y-4 text-center">
               <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto text-blue-500 mb-4 group-hover:scale-110 transition-transform">
                 <%= cached_icon "image", class: "size-8 text-blue-500" %>
@@ -204,7 +206,7 @@
               <div class="flex text-sm text-slate-600 justify-center">
                 <label for="<%= f.field_id(:photos) %>" class="relative cursor-pointer bg-white rounded-md font-bold text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 px-2">
                   <span>Click to upload photos</span>
-                  <%= f.file_field :photos, multiple: true, accept: 'image/*', class: "sr-only" %>
+                  <%= f.file_field :photos, multiple: true, accept: 'image/*', class: "sr-only", data: { drag_drop_upload_target: "input", action: "change->drag-drop-upload#onFileSelect" } %>
                 </label>
                 <p class="pl-1">or drag and drop them here</p>
               </div>
@@ -213,6 +215,12 @@
           </div>
         </div>
       </div>
+
+      <!-- Error Notification -->
+      <p data-drag-drop-upload-target="error" class="hidden rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-xs text-rose-700 font-medium"></p>
+
+      <!-- Previews Container -->
+      <div data-drag-drop-upload-target="previewContainer" class="hidden grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 p-6 border border-slate-200 rounded-3xl bg-slate-50/50 shadow-inner"></div>
 
       <% if room_type.photos.attached? %>
         <div class="mt-8 p-8 border border-slate-200 rounded-[2.5rem] bg-white shadow-sm">
