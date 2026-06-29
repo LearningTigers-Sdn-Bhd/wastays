@@ -163,4 +163,24 @@ RSpec.describe "HotelPortal::RoomBlocks", type: :request do
       expect(room_status.reload.status).to eq("dirty")
     end
   end
+
+  describe "GET /new" do
+    it "responds successfully and renders the new form layout" do
+      get new_hotel_room_block_path(hotel), params: { room_number: "101", room_type_id: room_type.id }
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Block Room")
+      expect(response.body).to include("Block #{room_type.name} Room 101 for maintenance")
+    end
+  end
+
+  describe "GET /edit" do
+    let!(:room_block) { create(:room_block, hotel: hotel, room_type: room_type, room_number: "101", start_date: Date.current, end_date: Date.current + 2.days) }
+
+    it "responds successfully and renders the edit form layout" do
+      get edit_hotel_room_block_path(hotel, room_block)
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Edit Room Block")
+      expect(response.body).to include("Block #{room_type.name} Room 101 for maintenance")
+    end
+  end
 end

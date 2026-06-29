@@ -24,6 +24,19 @@ module HotelPortal
       )
     end
 
+    def housekeeping_requests
+      @room_number = params[:room_number]
+      @housekeeping_requests = HousekeepingRequest.joins(:booking)
+        .joins(booking: :booking_rooms)
+        .where(bookings: { hotel_id: current_hotel.id })
+        .where(booking_rooms: { room_number: @room_number })
+        .where(archived_at: nil)
+        .where(status: "in_progress")
+        .order(created_at: :desc)
+
+      render "hotel_portal/room_status_board/housekeeping_requests", layout: false
+    end
+
     private
 
     def parse_start_date

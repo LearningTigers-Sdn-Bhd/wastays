@@ -471,8 +471,9 @@ Rails.application.routes.draw do
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board
+    get "room-status/housekeeping-requests/:room_number", to: "room_status_board#housekeeping_requests", as: :room_status_housekeeping_requests
     resources :room_statuses, only: [ :update ]
-    resources :room_blocks, only: [ :create, :update, :destroy ] do
+    resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
       post :finish, on: :member
     end
   end

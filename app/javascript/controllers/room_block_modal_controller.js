@@ -1,65 +1,36 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["dialog", "roomDisplay", "roomNumber", "roomTypeId", "startDate", "endDate", "blockType", "reason", "form", "submit", "title"]
-
   open(event) {
-    const { date, roomNumber, roomTypeId, roomTypeName } = event.params
+    const { date, roomNumber, roomTypeId } = event.params
+    const hotelId = window.location.pathname.split('/')[2]
     
-    // Reset form to create mode
-    this.titleTarget.textContent = "Block Room"
-    this.submitTarget.value = "Block Room"
-    this.formTarget.action = this.formTarget.dataset.createUrl
-    this.formTarget.querySelector('input[name="_method"]')?.remove()
+    const params = new URLSearchParams(window.location.search)
+    params.set("room_number", roomNumber)
+    params.set("room_type_id", roomTypeId)
+    params.set("start_date", date)
     
-    // Set field values
-    this.roomNumberTarget.value = roomNumber
-    this.roomTypeIdTarget.value = roomTypeId
-    this.startDateTarget.value = date
-    this.endDateTarget.value = date // Default to single day
-    this.blockTypeTarget.value = ""
-    this.reasonTarget.value = ""
-    
-    // Update display
-    this.roomDisplayTarget.textContent = `${roomTypeName} Room ${roomNumber}`
-    
-    // Open dialog
-    this.dialogTarget.showModal()
+    const url = `/hotel/${hotelId}/room_blocks/new?${params.toString()}`
+    this.triggerOffcanvas(url, "compact-right")
   }
 
   edit(event) {
-    const { id, roomNumber, roomTypeId, roomTypeName, startDate, endDate, blockType, reason, updateUrl } = event.params
+    const { id } = event.params
+    const hotelId = window.location.pathname.split('/')[2]
     
-    // Set form to edit mode
-    this.titleTarget.textContent = "Edit Room Block"
-    this.submitTarget.value = "Update Block"
-    this.formTarget.action = updateUrl
-    
-    // Add _method hidden field for PATCH
-    if (!this.formTarget.querySelector('input[name="_method"]')) {
-      const methodField = document.createElement("input")
-      methodField.type = "hidden"
-      methodField.name = "_method"
-      methodField.value = "patch"
-      this.formTarget.appendChild(methodField)
-    }
-    
-    // Set field values
-    this.roomNumberTarget.value = roomNumber
-    this.roomTypeIdTarget.value = roomTypeId
-    this.startDateTarget.value = startDate
-    this.endDateTarget.value = endDate
-    this.blockTypeTarget.value = blockType
-    this.reasonTarget.value = reason
-    
-    // Update display
-    this.roomDisplayTarget.textContent = `${roomTypeName} Room ${roomNumber}`
-    
-    // Open dialog
-    this.dialogTarget.showModal()
+    const params = new URLSearchParams(window.location.search)
+    const url = `/hotel/${hotelId}/room_blocks/${id}/edit?${params.toString()}`
+    this.triggerOffcanvas(url, "compact-right")
   }
 
-  close() {
-    this.dialogTarget.close()
+  triggerOffcanvas(url, variant = "right") {
+    const link = document.createElement("a")
+    link.href = url
+    link.setAttribute("data-turbo-frame", "offcanvas_drawer")
+    link.setAttribute("data-offcanvas-variant", variant)
+    link.style.display = "none"
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
   }
 }
