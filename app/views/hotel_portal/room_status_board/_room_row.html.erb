@@ -1,5 +1,5 @@
 <% room_row = presenter.room_row(room) %>
-<div class="grid border-b border-slate-100" style="grid-template-columns: <%= presenter.grid_template_columns %>; min-height: <%= presenter.row_min_height(room) %>px;">
+<div class="grid border-b border-slate-100 <%= 'bg-slate-50/40 opacity-75' if room_row.active_dnd? %>" style="grid-template-columns: <%= presenter.grid_template_columns %>; min-height: <%= presenter.row_min_height(room) %>px;">
   <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= presenter.card_padding %> flex flex-col justify-center">
     <div class="flex items-center justify-between gap-1.5">
       <div class="flex items-center gap-1.5">
@@ -14,7 +14,18 @@
           <% end %>
         <% end %>
 
-        <% if room_row.priority? %>
+        <% if room_row.active_dnd? %>
+          <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+            <span data-floating-target="reference" class="text-orange-500 cursor-help">
+              <%= cached_icon "hand-palm", library: "phosphor", variant: "fill", class: "size-4 text-orange-500" %>
+            </span>
+            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap">
+              <span class="text-[8px] font-bold uppercase tracking-wider">Do Not Disturb</span>
+            </div>
+          </div>
+        <% end %>
+
+        <% if room_row.priority? && room_row.status != "ready" %>
           <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
             <span data-floating-target="reference" class="text-rose-500 cursor-help">
               <%= cached_icon "flag", library: "phosphor", variant: "fill", class: "size-4 text-rose-500" %>

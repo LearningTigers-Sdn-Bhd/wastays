@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_29_013229) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_29_023053) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1523,6 +1523,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_29_013229) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "priority", default: false, null: false
+    t.boolean "dnd", default: false, null: false
+    t.date "dnd_date"
+    t.index ["hotel_id", "dnd", "dnd_date"], name: "index_room_statuses_on_hotel_id_and_dnd_and_dnd_date"
     t.index ["hotel_id", "priority"], name: "index_room_statuses_on_hotel_id_and_priority"
     t.index ["hotel_id", "room_type_id", "room_number"], name: "idx_room_statuses_on_hotel_room_type_number", unique: true
     t.index ["hotel_id", "status"], name: "index_room_statuses_on_hotel_id_and_status"

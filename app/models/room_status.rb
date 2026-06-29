@@ -5,8 +5,13 @@ class RoomStatus < ApplicationRecord
   ASSIGNABLE_STATUSES = %w[ready].freeze
 
   scope :priority, -> { where(priority: true) }
+  scope :dnd, -> { where(dnd: true) }
 
   belongs_to :hotel
+
+  def active_dnd?
+    dnd && dnd_date == hotel.current_business_date
+  end
   belongs_to :room_type
   belongs_to :last_changed_by, class_name: "User", optional: true
 

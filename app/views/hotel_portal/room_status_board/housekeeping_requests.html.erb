@@ -6,6 +6,18 @@
       icon: cached_icon("clipboard-text", library: "phosphor", variant: "light", class: "size-5") %>
       
     <div class="flex-1 overflow-y-auto p-8 space-y-6">
+      <% if @room_status&.active_dnd? %>
+        <div class="rounded-2xl border border-orange-200 bg-orange-50/50 p-4 flex items-start gap-3">
+          <div class="p-1 rounded-lg bg-orange-100 text-orange-600">
+            <%= cached_icon "hand-palm", library: "phosphor", variant: "fill", class: "size-5" %>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-orange-800">Do Not Disturb Active</h4>
+            <p class="mt-1 text-xs font-medium text-orange-600 leading-normal">This room has been flagged as Do Not Disturb for today. Please do not enter or perform cleaning tasks unless explicitly requested by the guest.</p>
+          </div>
+        </div>
+      <% end %>
+
       <% if @housekeeping_requests.any? %>
         <% @housekeeping_requests.each do |req| %>
           <div class="border-b border-slate-100 pb-6 last:border-0 last:pb-0 space-y-4">

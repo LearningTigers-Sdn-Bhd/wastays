@@ -99,7 +99,8 @@ module Rooms
         notes: resolved.room_status&.notes,
         booking_state: resolved.booking_state,
         booking_details: resolved.booking_details,
-        priority: resolved.room_status&.priority
+        priority: resolved.room_status&.priority,
+        active_dnd: resolved.room_status&.dnd && resolved.room_status&.dnd_date == @hotel.current_business_date
       }
     end
 

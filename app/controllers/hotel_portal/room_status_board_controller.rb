@@ -26,6 +26,7 @@ module HotelPortal
 
     def housekeeping_requests
       @room_number = params[:room_number]
+      @room_status = current_hotel.room_statuses.find_by(room_number: @room_number)
       @housekeeping_requests = HousekeepingRequest.joins(:booking)
         .joins(booking: :booking_rooms)
         .where(bookings: { hotel_id: current_hotel.id })

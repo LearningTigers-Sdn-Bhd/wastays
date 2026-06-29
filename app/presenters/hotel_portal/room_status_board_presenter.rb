@@ -45,6 +45,10 @@ module HotelPortal
         room.dig(:status, :priority) == true
       end
 
+      def active_dnd?
+        room.dig(:status, :active_dnd) == true
+      end
+
       def can_manage?
         @can_manage ||= user&.has_permission?("manage_room_status", hotel: hotel)
       end
