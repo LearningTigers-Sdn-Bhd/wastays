@@ -20,6 +20,10 @@ module HotelPortal
       RoomRow.new(room, user, hotel)
     end
 
+    def helpers
+      ApplicationController.helpers
+    end
+
     class RoomRow
       attr_reader :room, :user, :hotel
 
@@ -27,6 +31,10 @@ module HotelPortal
         @room = room
         @user = user
         @hotel = hotel
+      end
+
+      def helpers
+        ApplicationController.helpers
       end
 
       def status
@@ -107,18 +115,52 @@ module HotelPortal
 
       def smoking_icon
         if room_type.smoking_allowed
-          '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><rect x="24" y="136" width="208" height="48" rx="8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><line x1="88" y1="184" x2="88" y2="136" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path d="M208,104s-18-8,0-40,0-40,0-40" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path d="M168,104s-18-8,0-40,0-40,0-40" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
+          helpers.cached_icon("smoking", library: "phosphor", variant: "light", class: "size-3")
         else
-          '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><path d="M121,136H32a8,8,0,0,0-8,8v32a8,8,0,0,0,8,8h97" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><line x1="88" y1="184" x2="88" y2="136" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path d="M208,104s-18-8,0-40,0-40,0-40" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path d="M168,104s-18-8,0-40,0-40,0-40" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><line x1="40" y1="40" x2="216" y2="216" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path d="M232,156.4V144a8,8,0,0,0-8-8H167.3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
+          helpers.cached_icon("smoking-ban", library: "phosphor", variant: "light", class: "size-3")
         end
       end
 
       def pets_icon
         if room_type.pets_allowed
-          '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><circle cx="212" cy="108" r="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><circle cx="44" cy="108" r="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><circle cx="92" cy="60" r="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><circle cx="164" cy="60" r="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path d="M128,104A36,36,0,0,0,93.43,130a43.49,43.49,0,0,1-20.67,25.9,32,32,0,0,0,27.73,57.62,72.49,72.49,0,0,1,55,0,32,32,0,0,0,27.73-57.62A43.46,43.46,0,0,1,162.57,130,36,36,0,0,0,128,104Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
+          helpers.cached_icon("paw-print", library: "phosphor", variant: "light", class: "size-3")
         else
-          '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><circle cx="212" cy="108" r="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><circle cx="44" cy="108" r="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><circle cx="92" cy="60" r="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><circle cx="164" cy="60" r="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path d="M128,104A36,36,0,0,0,93.43,130a43.49,43.49,0,0,1-20.67,25.9,32,32,0,0,0,27.73,57.62,72.49,72.49,0,0,1,55,0,32,32,0,0,0,27.73-57.62A43.46,43.46,0,0,1,162.57,130,36,36,0,0,0,128,104Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><line x1="40" y1="40" x2="216" y2="216" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
+          helpers.cached_icon("paw-print", library: "phosphor", variant: "light", class: "size-3 opacity-50")
         end
+      end
+
+      def row_bg_class
+        active_dnd? ? "bg-slate-50/40 opacity-75" : ""
+      end
+
+      def tooltip_header_class
+        (status == "inspection_failed" && failure_note.present?) ? "mb-2" : ""
+      end
+
+      def actions_tooltip_title
+        (status == "inspection_failed" && failure_note.present?) ? "Failure Reason: #{failure_note}" : ""
+      end
+
+      def cleaning_subheading_text
+        if status == "inspection_failed"
+          "Reclean the room before reinspection"
+        elsif status == "awaiting_inspection"
+          "Send back to cleaning"
+        else
+          "Mark as currently being cleaned"
+        end
+      end
+
+      def dnd_action_icon_class
+        active_dnd? ? "bg-slate-100 text-slate-500" : "bg-orange-50 text-orange-500"
+      end
+
+      def dnd_action_label
+        active_dnd? ? "Remove DND" : "Do Not Disturb"
+      end
+
+      def dnd_action_subheading
+        active_dnd? ? "Resume cleaning schedules" : "Flag guest requested DND today"
       end
     end
 
@@ -151,7 +193,7 @@ module HotelPortal
     end
 
     def grid_room_width
-      comfortable_mode? ? 160 : 130
+      comfortable_mode? ? 180 : 145
     end
 
     def grid_day_width
@@ -198,6 +240,30 @@ module HotelPortal
       comfortable_mode? ? "text-lg" : "text-sm"
     end
 
+    def formatted_date_range
+      "Showing #{start_date.strftime('%b %-d, %Y')} → #{board_range_end.strftime('%b %-d, %Y')} (#{board_days} days)"
+    end
+
+    def prev_start_date
+      (start_date - nav_step_days.days).to_s
+    end
+
+    def next_start_date
+      (start_date + nav_step_days.days).to_s
+    end
+
+    def compact_toggle_bg_class
+      comfortable_mode? ? "bg-slate-200" : "bg-slate-900"
+    end
+
+    def compact_toggle_dot_class
+      comfortable_mode? ? "translate-x-1" : "translate-x-3"
+    end
+
+    def filterable_statuses
+      [ "all", "occupied" ] + RoomStatus::STATUSES
+    end
+
     def row_min_base
       comfortable_mode? ? 44 : 40
     end
@@ -226,6 +292,44 @@ module HotelPortal
 
     def maintenance_blocks_for(room, date)
       room[:maintenance_blocks].select { |block| [ block[:start_date], visible_start_date ].max == date }
+    end
+
+    def block_padding_class
+      comfortable_mode? ? "px-3 py-1.5" : "px-1.5 py-1"
+    end
+
+    def format_block_date_range(start, finish)
+      "#{start.strftime('%b %-d')} — #{finish.strftime('%b %-d, %Y')}"
+    end
+
+    def maintenance_block_update_url(block)
+      Rails.application.routes.url_helpers.hotel_room_block_path(
+        hotel,
+        block[:id],
+        start_date: start_date,
+        days: board_days,
+        layout: board_layout
+      )
+    end
+
+    def finish_maintenance_block_path(block)
+      Rails.application.routes.url_helpers.finish_hotel_room_block_path(
+        hotel,
+        block[:id],
+        start_date: start_date,
+        days: board_days,
+        layout: board_layout
+      )
+    end
+
+    def delete_maintenance_block_path(block)
+      Rails.application.routes.url_helpers.hotel_room_block_path(
+        hotel,
+        block[:id],
+        start_date: start_date,
+        days: board_days,
+        layout: board_layout
+      )
     end
 
     def booking_count_at(room, date)
@@ -317,26 +421,21 @@ module HotelPortal
     end
 
     def status_icon(status)
-      case status.to_s
-      when "ready"
-        '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><polyline points="40 144 96 200 224 72" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
-      when "occupied"
-        '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><circle cx="128" cy="96" r="64" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path d="M32,216c19.37-33.47,54.55-56,96-56s76.63,22.53,96,56" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
-      when "dirty"
-        '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><polyline points="128 72 128 128 184 128" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
-      when "cleaning"
-        '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><path d="M72,39.88V216.12a8,8,0,0,0,12.15,6.69l144.08-88.12a7.82,7.82,0,0,0,0-13.38L84.15,33.19A8,8,0,0,0,72,39.88Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
-      when "late_checkout_detected"
-        '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><polyline points="128 72 128 128 184 128" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
-      when "awaiting_inspection"
-        '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><circle cx="112" cy="112" r="80" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><line x1="168.57" y1="168.57" x2="224" y2="224" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
-      when "inspection_failed"
-        '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><line x1="200" y1="56" x2="56" y2="200" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><line x1="200" y1="200" x2="56" y2="56" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
-      when "out_of_service"
-        '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><line x1="195.88" y1="195.88" x2="60.12" y2="60.12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="16"/></svg>'.html_safe
-      when "all"
-        '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><rect x="48" y="48" width="64" height="64" rx="8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><rect x="144" y="48" width="64" height="64" rx="8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><rect x="48" y="144" width="64" height="64" rx="8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><rect x="144" y="144" width="64" height="64" rx="8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>'.html_safe
+      icon_name = case status.to_s
+      when "ready" then "check"
+      when "occupied" then "user"
+      when "dirty" then "clock"
+      when "cleaning" then "play"
+      when "late_checkout_detected" then "clock"
+      when "awaiting_inspection" then "magnifying-glass"
+      when "inspection_failed" then "x"
+      when "out_of_service" then "prohibited"
+      when "all" then "squares-four"
       end
+
+      return "" unless icon_name
+
+      helpers.cached_icon(icon_name, library: "phosphor", variant: "light", class: "size-3")
     end
 
     def booking_style(status)

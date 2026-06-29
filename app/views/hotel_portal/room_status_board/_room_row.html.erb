@@ -1,48 +1,52 @@
 <% room_row = presenter.room_row(room) %>
-<div class="grid border-b border-slate-100 <%= 'bg-slate-50/40 opacity-75' if room_row.active_dnd? %>" style="grid-template-columns: <%= presenter.grid_template_columns %>; min-height: <%= presenter.row_min_height(room) %>px;">
+<div class="grid border-b border-slate-100 <%= room_row.row_bg_class %>" style="grid-template-columns: <%= presenter.grid_template_columns %>; min-height: <%= presenter.row_min_height(room) %>px;">
   <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= presenter.card_padding %> flex flex-col justify-center">
-    <div class="flex items-center justify-between gap-1.5">
-      <div class="flex items-center gap-1.5">
+    <div class="flex items-center justify-between gap-1.5 w-full min-w-0">
+      <div class="flex items-center gap-1.5 shrink-0">
         <p class="font-medium leading-none text-slate-800 <%= presenter.room_number_class %>"><%= room[:room_number] %></p>
-        
-        <%# Housekeeping Badge %>
-        <% if room[:housekeeping_requests].any? %>
-          <%= link_to hotel_room_status_housekeeping_requests_path(current_hotel, room[:room_number]), 
-                      data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" },
-                      class: "cursor-pointer flex items-center justify-center transition-transform active:scale-90 text-slate-800 focus:outline-none" do %>
-            <%= cached_icon "clipboard-text", library: "phosphor", variant: "light", class: "size-4" %>
-          <% end %>
-        <% end %>
-
-        <% if room_row.active_dnd? %>
-          <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-            <span data-floating-target="reference" class="text-orange-500 cursor-help">
-              <%= cached_icon "hand-palm", library: "phosphor", variant: "fill", class: "size-4 text-orange-500" %>
-            </span>
-            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap">
-              <span class="text-[8px] font-bold uppercase tracking-wider">Do Not Disturb</span>
-            </div>
-          </div>
-        <% end %>
-
-        <% if room_row.priority? %>
-          <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-            <span data-floating-target="reference" class="text-rose-500 cursor-help">
-              <%= cached_icon "flag", library: "phosphor", variant: "fill", class: "size-4 text-rose-500" %>
-            </span>
-            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white text-left max-w-[200px] whitespace-normal leading-tight">
-              <p class="text-[8px] font-bold uppercase tracking-wider">Priority Room</p>
-              <% if room_row.notes.present? %>
-                <p class="mt-0.5 text-[9px] font-medium text-slate-300"><%= room_row.notes %></p>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
       </div>
       
-      <div class="flex items-center gap-1">
-        <%# Smoking/Pets Icons %>
-        <div class="flex items-center gap-1 mr-0.5">
+      <div class="flex flex-wrap items-center justify-end gap-1 min-w-0 flex-1">
+        <%# Room Badges (Priority, Housekeeping, DND, Smoking, Pets) %>
+        <div class="flex flex-wrap items-center justify-end gap-1 mr-0.5">
+          <% if room_row.priority? %>
+            <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+              <div data-floating-target="reference" class="flex items-center justify-center rounded-full bg-blue-50 border border-blue-100 text-rose-500 size-5 cursor-help">
+                <%= cached_icon "warning", library: "phosphor", variant: "light", class: "size-3 text-rose-500" %>
+              </div>
+              <div data-floating-target="floating" class="hidden z-[100] px-2 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white text-left max-w-[200px] whitespace-normal leading-tight">
+                <p class="text-[8px] font-bold uppercase tracking-wider">Priority Room</p>
+                <% if room_row.notes.present? %>
+                  <p class="mt-0.5 text-[9px] font-medium text-slate-300"><%= room_row.notes %></p>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+
+          <% if room[:housekeeping_requests].any? %>
+            <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+              <%= link_to hotel_room_status_housekeeping_requests_path(current_hotel, room[:room_number]), 
+                          data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right", floating_target: "reference" },
+                          class: "cursor-pointer flex items-center justify-center transition-transform active:scale-90 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-full size-5 focus:outline-none" do %>
+                <%= cached_icon "clipboard-text", library: "phosphor", variant: "light", class: "size-3" %>
+              <% end %>
+              <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap">
+                <span class="text-[8px] font-bold uppercase tracking-wider">Housekeeping Requests (<%= room[:housekeeping_requests].count %>)</span>
+              </div>
+            </div>
+          <% end %>
+
+          <% if room_row.active_dnd? %>
+            <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+              <div data-floating-target="reference" class="flex items-center justify-center rounded-full bg-blue-50 border border-blue-100 text-rose-500 size-5 cursor-help">
+                <%= cached_icon "hand-palm", library: "phosphor", variant: "fill", class: "size-3 text-rose-500" %>
+              </div>
+              <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap">
+                <span class="text-[8px] font-bold uppercase tracking-wider">Do Not Disturb</span>
+              </div>
+            </div>
+          <% end %>
+
           <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
             <div data-floating-target="reference" class="<%= room_row.smoking_color %> cursor-help">
               <%= room_row.smoking_icon %>
@@ -70,7 +74,7 @@
           </span>
           
           <div data-floating-target="floating" class="<%= badge_meta[:tooltip_wrapper_class] %>">
-            <div class="flex items-center gap-2 <%= 'mb-2' if room_row.status == "inspection_failed" && room_row.failure_note.present? %>">
+            <div class="flex items-center gap-2 <%= room_row.tooltip_header_class %>">
               <div class="<%= badge_meta[:icon_bg_class] %>">
                 <div class="scale-90"><%= presenter.status_icon(room_row.status) %></div>
               </div>
@@ -113,7 +117,7 @@
           data-controller="floating"
           data-floating-trigger-value="hover"
           data-floating-placement-value="bottom"
-          class="absolute z-10 overflow-hidden rounded-xl border <%= presenter.comfortable_mode? ? 'px-3 py-1.5' : 'px-1.5 py-1' %> shadow-sm <%= block_meta[:style_class] %> <%= block_meta[:clip_corner_class] %>"
+          class="absolute z-10 overflow-hidden rounded-xl border <%= presenter.block_padding_class %> shadow-sm <%= block_meta[:style_class] %> <%= block_meta[:clip_corner_class] %>"
           style="top: <%= presenter.block_top + (block_index * presenter.block_step) %>px; left: <%= block_meta[:left_offset] %>px; width: <%= block_meta[:width_calc] %>; <%= 'min-width: 88px;' if presenter.comfortable_mode? %>"
           data-floating-target="reference"
         >
@@ -128,8 +132,8 @@
             <p class="text-sm font-bold text-slate-900"><%= block[:guest_name] %></p>
             <div class="mt-2 space-y-1">
               <div class="flex items-center gap-2 text-[11px] text-slate-600">
-                <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <span><%= block[:check_in].strftime("%b %-d") %> — <%= block[:check_out].strftime("%b %-d, %Y") %></span>
+                <%= cached_icon "calendar", library: "phosphor", variant: "light", class: "size-3" %>
+                <span><%= presenter.format_block_date_range(block[:check_in], block[:check_out]) %></span>
               </div>
             </div>
           </div>
@@ -147,13 +151,13 @@
           data-floating-trigger-value="click"
           data-floating-placement-value="bottom"
           data-action="click->floating#toggle:stop"
-          class="absolute z-10 overflow-hidden rounded-xl border border-slate-300 bg-slate-100 text-slate-600 <%= presenter.comfortable_mode? ? 'px-3 py-1.5' : 'px-1.5 py-1' %> shadow-sm <%= block_meta[:clip_corner_class] %>"
+          class="absolute z-10 overflow-hidden rounded-xl border border-slate-300 bg-slate-100 text-slate-600 <%= presenter.block_padding_class %> shadow-sm <%= block_meta[:clip_corner_class] %>"
           style="top: <%= presenter.block_top + ((block_index + booking_count_at_this_start) * presenter.block_step) %>px; left: <%= block_meta[:left_offset] %>px; width: <%= block_meta[:width_calc] %>; <%= 'min-width: 88px;' if presenter.comfortable_mode? %>"
           data-floating-target="reference"
           title="<%= block[:reason] %>"
         >
           <div class="flex items-center gap-1.5 overflow-hidden">
-            <svg class="size-3 shrink-0 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.423 3.007a.75.75 0 0 1 .577 0l8.5 3.333a.75.75 0 0 1 0 1.411l-8.5 3.333a.75.75 0 0 1-.577 0l-8.5-3.333a.75.75 0 0 1 0-1.411l8.5-3.333Z" /><path d="M4.318 10.387 11.423 13.173a.75.75 0 0 0 .577 0l7.105-2.786a.75.75 0 0 1 .536 1.398l-7.382 2.895a2.25 2.25 0 0 1-1.722 0l-7.382-2.895a.75.75 0 0 1 .536-1.398Z" /><path d="M4.318 14.887 11.423 17.673a.75.75 0 0 0 .577 0l7.105-2.786a.75.75 0 0 1 .536 1.398l-7.382 2.895a2.25 2.25 0 0 1-1.722 0l-7.382-2.895a.75.75 0 0 1 .536-1.398Z" /></svg>
+            <%= cached_icon "stack", library: "phosphor", variant: "light", class: "size-3 shrink-0 opacity-60" %>
             <p class="truncate <%= presenter.comfortable_mode? ? 'text-[11px]' : 'text-[9px]' %> font-black uppercase tracking-wider"><%= block[:block_type].humanize %></p>
           </div>
 
@@ -166,8 +170,8 @@
             <p class="mt-1 text-xs text-slate-600 leading-relaxed italic">"<%= block[:reason] %>"</p>
             <div class="mt-3 space-y-1">
               <div class="flex items-center gap-2 text-[11px] text-slate-600">
-                <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <span><%= block[:start_date].strftime("%b %-d") %> — <%= block[:end_date].strftime("%b %-d, %Y") %></span>
+                <%= cached_icon "calendar", library: "phosphor", variant: "light", class: "size-3" %>
+                <span><%= presenter.format_block_date_range(block[:start_date], block[:end_date]) %></span>
               </div>
             </div>
 
@@ -183,11 +187,11 @@
                     data-room-block-modal-end-date-param="<%= block[:end_date].to_s %>"
                     data-room-block-modal-block-type-param="<%= block[:block_type] %>"
                     data-room-block-modal-reason-param="<%= block[:reason] %>"
-                    data-room-block-modal-update-url-param="<%= hotel_room_block_path(current_hotel, block[:id], start_date: presenter.start_date, days: presenter.board_days, layout: presenter.board_layout) %>"
+                    data-room-block-modal-update-url-param="<%= presenter.maintenance_block_update_url(block) %>"
                     class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-colors">
                   Edit Room Block
                 </button>
-                <%= button_to finish_hotel_room_block_path(current_hotel, block[:id], start_date: presenter.start_date, days: presenter.board_days, layout: presenter.board_layout), 
+                <%= button_to presenter.finish_maintenance_block_path(block), 
                     method: :post,
                     data: { 
                       turbo_confirm: "Mark this maintenance block as finished?",
@@ -196,7 +200,7 @@
                     class: "flex-1 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 transition-colors pointer-events-auto" do %>
                   Finish
                 <% end %>
-                <%= button_to hotel_room_block_path(current_hotel, block[:id], start_date: presenter.start_date, days: presenter.board_days, layout: presenter.board_layout), 
+                <%= button_to presenter.delete_maintenance_block_path(block), 
                     method: :delete,
                     data: { 
                       turbo_confirm: "Are you sure you want to remove this maintenance block?",

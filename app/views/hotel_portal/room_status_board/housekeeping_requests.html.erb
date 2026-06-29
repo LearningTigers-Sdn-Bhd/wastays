@@ -9,11 +9,11 @@
       <% if @room_status&.active_dnd? %>
         <div class="rounded-2xl border border-orange-200 bg-orange-50/50 p-4 flex items-start gap-3">
           <div class="p-1 rounded-lg bg-orange-100 text-orange-600">
-            <%= cached_icon "hand-palm", library: "phosphor", variant: "fill", class: "size-5" %>
+            <%= cached_icon "hand", library: "phosphor", variant: "fill", class: "size-5" %>
           </div>
           <div>
             <h4 class="text-xs font-bold uppercase tracking-wider text-orange-800">Do Not Disturb Active</h4>
-            <p class="mt-1 text-xs font-medium text-orange-600 leading-normal">This room has been flagged as Do Not Disturb for today. Please do not enter or perform cleaning tasks unless explicitly requested by the guest.</p>
+            <p class="mt-1 text-xs font-medium text-orange-600 leading-normal">This room has been flagged as Do Not Disturb for today. Please do not enter or perform cleaning tasks.</p>
           </div>
         </div>
       <% end %>
@@ -46,7 +46,7 @@
               <div>
                 <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Requested At</label>
                 <input type="text" 
-                       value="<%= req.display_requested_at.strftime("%B %-d, %H:%M") %>" 
+                       value="<%= display_housekeeping_datetime(req.display_requested_at) %>" 
                        readonly 
                        class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-500 cursor-not-allowed shadow-sm focus:outline-none" />
               </div>

@@ -8,33 +8,11 @@ module HotelPortal
       room_status = current_hotel.room_statuses.find(params[:id])
       board_params = params.permit(:start_date, :days, :layout).to_h
 
-      if room_status_params.key?(:priority)
-        room_status.priority = room_status_params[:priority]
-      end
-
-      if room_status_params.key?(:notes)
-        room_status.notes = room_status_params[:notes]
-      end
-
-      if room_status_params.key?(:dnd)
-        room_status.dnd = ActiveRecord::Type::Boolean.new.cast(room_status_params[:dnd])
-        room_status.dnd_date = room_status.dnd ? current_hotel.current_business_date : nil
-      end
-
-      if room_status_params[:status].present? && room_status_params[:status] != room_status.status_was
-        result = Rooms::SetStatus.new(
-          room_status: room_status,
-          status: room_status_params[:status],
-          user: current_user,
-          reason: room_status_params[:notes]
-        ).call
-      else
-        if room_status.save
-          result = OpenStruct.new(success?: true)
-        else
-          result = OpenStruct.new(success?: false, error: room_status.errors.full_messages.to_sentence)
-        end
-      end
+      result = Rooms::UpdateStatus.new(
+        room_status: room_status,
+        params: room_status_params,
+        user: current_user
+      ).call
 
       if result.success?
         redirect_to hotel_room_status_board_path(current_hotel, board_params), notice: "Room status updated."

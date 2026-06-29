@@ -1,13 +1,14 @@
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "compact-right" } do %>
+  <% config = room_block_form_config(@room_block, current_hotel) %>
   <div class="flex h-full flex-col bg-white">
     <%= render "hotel_portal/bookings/board/partials/content_header",
-      title: @room_block.new_record? ? "Block Room" : "Edit Room Block",
+      title: config[:title],
       subtitle: "Block #{@room_type.name} Room #{@room_block.room_number} for maintenance",
       icon: cached_icon("wrench", library: "phosphor", variant: "light", class: "size-5") %>
 
     <%= form_with model: @room_block, 
-        url: @room_block.new_record? ? hotel_room_blocks_path(current_hotel) : hotel_room_block_path(current_hotel, @room_block),
-        method: @room_block.new_record? ? :post : :patch,
+        url: config[:url],
+        method: config[:method],
         class: "flex flex-1 flex-col p-8" do |f| %>
 
       <%= f.hidden_field :room_type_id %>
@@ -48,7 +49,7 @@
 
       <div class="mt-auto flex items-center justify-between gap-3 pt-6">
         <button type="button" data-action="click->offcanvas#close" class="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Cancel</button>
-        <%= f.submit @room_block.new_record? ? "Block Room" : "Update Block", 
+        <%= f.submit config[:submit_text], 
             class: "rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 hover:bg-slate-800 transition-all active:scale-95" %>
       </div>
     <% end %>

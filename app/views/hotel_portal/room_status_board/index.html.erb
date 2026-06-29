@@ -13,7 +13,7 @@
 
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
           <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm">
-            Showing <%= @presenter.start_date.strftime("%b %-d, %Y") %> → <%= @presenter.board_range_end.strftime("%b %-d, %Y") %> (<%= @presenter.board_days %> days)
+            <%= @presenter.formatted_date_range %>
           </span>
         </div>
       </div>
@@ -43,13 +43,13 @@
           <div class="h-6 w-px bg-slate-200"></div>
 
           <div class="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
-            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: (@presenter.start_date - @presenter.nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Previous #{@presenter.nav_step_days} days" do %>
+            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.prev_start_date)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Previous #{@presenter.nav_step_days} days" do %>
               &larr; Prev
             <% end %>
             <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: Date.current.to_s)), class: "rounded bg-white px-2.5 py-1 text-xs font-black text-slate-900 shadow-sm transition hover:bg-slate-50" do %>
               Today
             <% end %>
-            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: (@presenter.start_date + @presenter.nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Next #{@presenter.nav_step_days} days" do %>
+            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.next_start_date)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Next #{@presenter.nav_step_days} days" do %>
               Next &rarr;
             <% end %>
           </div>
@@ -57,8 +57,8 @@
 
         <div class="px-2">
           <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.start_date.to_s, layout: @presenter.comfortable_mode? ? "compact" : "comfortable")), class: "flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors" do %>
-            <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= @presenter.comfortable_mode? ? 'bg-slate-200' : 'bg-slate-900' %> transition-colors">
-              <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= @presenter.comfortable_mode? ? 'translate-x-1' : 'translate-x-3' %>"></span>
+            <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= @presenter.compact_toggle_bg_class %> transition-colors">
+              <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= @presenter.compact_toggle_dot_class %>"></span>
             </div>
             Compact Mode
           <% end %>
@@ -71,7 +71,7 @@
           <div class="flex items-center gap-3">
             <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[80px]">Inventory Status</span>
             <div class="flex items-center gap-1.5">
-              <% (["all", "occupied"] + RoomStatus::STATUSES).each do |status| %>
+              <% @presenter.filterable_statuses.each do |status| %>
                 <% count = @presenter.status_counts[status] %>
                 <span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide <%= @presenter.status_style(status) %> transition-all hover:shadow-sm">
                   <%= @presenter.status_icon(status) %>
