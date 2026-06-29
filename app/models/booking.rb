@@ -51,8 +51,34 @@ class Booking < ApplicationRecord
     e_invoice_submissions.guest_facing.where(document_type: "01").recent_first.first
   end
 
-  def ready_guest_e_invoice_submission
+  def original_ready_guest_e_invoice_submission
     e_invoice_submissions.guest_facing.valid.where(document_type: "01").recent_first.first
+  end
+
+  def latest_ready_adjustment_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.valid.where(document_type: %w[02 03]).recent_first.first
+  end
+
+  def latest_ready_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.valid.recent_first.first
+  end
+
+  def ready_guest_e_invoice_submission
+    latest_ready_guest_e_invoice_submission
+  end
+
+  def latest_pending_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing
+      .where(status: %w[pending submitted])
+      .recent_first
+      .first
+  end
+
+  def latest_failed_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing
+      .where(status: "invalid")
+      .recent_first
+      .first
   end
 
   def pending_guest_e_invoice_submission
@@ -63,10 +89,7 @@ class Booking < ApplicationRecord
   end
 
   def failed_guest_e_invoice_submission
-    e_invoice_submissions.guest_facing
-      .where(document_type: "01", status: "invalid", consolidated: false)
-      .recent_first
-      .first
+    latest_failed_guest_e_invoice_submission
   end
 
   def pending_consolidated_guest_e_invoice_submission

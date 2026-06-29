@@ -48,6 +48,17 @@ RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
     sign_in_as(user)
   end
 
+  describe "GET /hotel/:hotel_id/e_invoice_submissions" do
+    it "shows dedicated workspace content and settings CTA" do
+      get hotel_e_invoice_submissions_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("E-Invoice Workspace")
+      expect(response.body).to include("Open E-Invoice Settings")
+      expect(response.body).to include("Configuration health")
+    end
+  end
+
   describe "POST /create" do
     context "when e-invoice setting is disabled" do
       before do
@@ -365,6 +376,28 @@ RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/pdf")
       expect(response.body[0, 5]).to eq("%PDF-")
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/e_invoice_submissions/:id" do
+    it "highlights retry help for failed guest-requested submissions" do
+      submission = create(:e_invoice_submission,
+        hotel: hotel,
+        booking: booking,
+        document_scenario: "guest_invoice",
+        document_type: "01",
+        submission_mode: "taxpayer",
+        fund_collector: "wastays",
+        status: "invalid",
+        requested_by_guest: true,
+        error_details: { message: "Guest TIN is invalid" })
+
+      get hotel_e_invoice_submission_path(hotel, submission)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Guest requested this e-invoice")
+      expect(response.body).to include("Retry submission")
+      expect(response.body).to include("Once the guest details are corrected")
     end
   end
 

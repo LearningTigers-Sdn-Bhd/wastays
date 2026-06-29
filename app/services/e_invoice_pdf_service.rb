@@ -14,6 +14,9 @@ class EInvoicePdfService
   TEXT_PRIMARY = "111827"
   TEXT_MUTED   = "6b7280"
   SUCCESS      = "059669"
+  INFO_BG      = "f3f7ff"
+  INFO_BORDER  = "d6e4ff"
+  INFO_TEXT    = "1d4ed8"
 
   def initialize(booking, submission: nil)
     @booking = booking
@@ -39,7 +42,7 @@ class EInvoicePdfService
     draw_header(pdf)
     pdf.move_down 18
     draw_status_band(pdf)
-    pdf.move_down 18
+    pdf.move_down 2
     draw_meta(pdf)
     pdf.move_down 26
     draw_parties(pdf)
@@ -78,12 +81,19 @@ class EInvoicePdfService
   end
 
   def draw_status_band(pdf)
+    top = pdf.cursor
+    badge_width = 124
+    badge_height = 24
     pdf.fill_color SUCCESS
-    pdf.rounded_rectangle [ 0, pdf.cursor ], 118, 22, 8
+    pdf.rounded_rectangle [ 0, top ], badge_width, badge_height, 10
     pdf.fill
     pdf.fill_color WHITE
-    pdf.text_box "LHDN VALIDATED", at: [ 0, pdf.cursor - 4 ], width: 118, height: 22, align: :center, valign: :center, size: 9, style: :bold
+    pdf.bounding_box([ 0, top - 2 ], width: badge_width, height: badge_height) do
+      pdf.move_down 6
+      pdf.text "LHDN VALIDATED", align: :center, size: 9, style: :bold
+    end
     pdf.fill_color TEXT_PRIMARY
+    pdf.move_down badge_height
   end
 
   def draw_meta(pdf)
@@ -109,8 +119,13 @@ class EInvoicePdfService
         ]
       ],
       width: pdf.bounds.width,
-      column_widths: [ pdf.bounds.width * 0.4, pdf.bounds.width * 0.28, pdf.bounds.width * 0.32 ]
-    )
+      column_widths: [ pdf.bounds.width * 0.42, pdf.bounds.width * 0.26, pdf.bounds.width * 0.32 ],
+      cell_style: { borders: [], padding: [ 2, 0, 4, 0 ], valign: :top }
+    ) do |table|
+      table.row(0).padding = [ 0, 0, 6, 0 ]
+      table.row(1).padding = [ 0, 0, 10, 0 ]
+      table.row(2).padding = [ 0, 0, 0, 0 ]
+    end
   end
 
   def draw_parties(pdf)
@@ -201,7 +216,7 @@ class EInvoicePdfService
 
   def draw_validation_panel(pdf)
     panel_top = pdf.cursor
-    panel_height = 124
+    panel_height = 176
 
     pdf.stroke_color BORDER_GRAY
     pdf.fill_color LIGHT_GRAY
@@ -209,32 +224,64 @@ class EInvoicePdfService
     pdf.fill_and_stroke
     pdf.fill_color TEXT_PRIMARY
 
-    pdf.bounding_box([ 18, panel_top - 16 ], width: pdf.bounds.width - 150, height: panel_height - 24) do
+    qr_block_width = 132
+    left_width = pdf.bounds.width - qr_block_width - 42
+
+    pdf.bounding_box([ 18, panel_top - 16 ], width: left_width, height: panel_height - 24) do
       pdf.text "LHDN Validation Details", size: 11, style: :bold
-      pdf.move_down 8
-      pdf.fill_color TEXT_MUTED
-      pdf.text "LHDN UUID", size: 8, style: :bold
-      pdf.fill_color TEXT_PRIMARY
-      pdf.text @submission.uuid.to_s, size: 9
-      pdf.move_down 6
-      pdf.fill_color TEXT_MUTED
-      pdf.text "Submission UID", size: 8, style: :bold
-      pdf.fill_color TEXT_PRIMARY
-      pdf.text @submission.submission_uid.to_s, size: 9
+      pdf.move_down 10
+
+      pdf.table(
+        [
+          [ "LHDN UUID", @submission.uuid.to_s ],
+          [ "Submission UID", @submission.submission_uid.to_s ],
+          [ "Issued status", "Validated by LHDN MyInvois" ]
+        ],
+        width: left_width,
+        cell_style: {
+          borders: [],
+          padding: [ 4, 0, 4, 0 ],
+          size: 9,
+          text_color: TEXT_PRIMARY
+        },
+        column_widths: [ 104, left_width - 104 ]
+      ) do |table|
+        table.column(0).font_style = :bold
+        table.column(0).text_color = TEXT_MUTED
+      end
+
       if @submission.validation_url.present?
-        pdf.move_down 6
-        pdf.fill_color TEXT_MUTED
-        pdf.text "Verification Link", size: 8, style: :bold
-        pdf.fill_color TEXT_PRIMARY
-        pdf.text @submission.validation_url.to_s, size: 8
+        pdf.move_down 12
+        info_top = pdf.cursor
+        pdf.fill_color INFO_BG
+        pdf.stroke_color INFO_BORDER
+        pdf.rounded_rectangle [ 0, info_top ], left_width, 58, 10
+        pdf.fill_and_stroke
+
+        pdf.bounding_box([ 12, info_top - 11 ], width: left_width - 24, height: 42) do
+          pdf.fill_color INFO_TEXT
+          pdf.text "Verification Link", size: 8, style: :bold
+          pdf.move_down 5
+          pdf.fill_color TEXT_PRIMARY
+          pdf.formatted_text_box [
+            { text: @submission.validation_url.to_s, color: TEXT_PRIMARY, size: 7.5 }
+          ], at: [ 0, pdf.cursor ], width: left_width - 24, height: 32, overflow: :shrink_to_fit
+        end
       end
     end
 
     if @submission.validation_url.present?
       qr_png = validation_qr_png
-      pdf.image StringIO.new(qr_png), at: [ pdf.bounds.width - 104, panel_top - 16 ], width: 84, height: 84
+      qr_box_left = pdf.bounds.width - qr_block_width + 2
+      qr_box_width = 112
+      qr_box_height = 122
+      pdf.fill_color WHITE
+      pdf.stroke_color BORDER_GRAY
+      pdf.rounded_rectangle [ qr_box_left, panel_top - 16 ], qr_box_width, qr_box_height, 14
+      pdf.fill_and_stroke
+      pdf.image StringIO.new(qr_png), at: [ qr_box_left + 16, panel_top - 26 ], width: 80, height: 80
       pdf.fill_color TEXT_MUTED
-      pdf.text_box "Scan to verify on MyInvois", at: [ pdf.bounds.width - 124, panel_top - 106 ], width: 110, height: 20, align: :center, size: 8
+      pdf.text_box "Scan to verify on\nMyInvois", at: [ qr_box_left + 10, panel_top - 104 ], width: qr_box_width - 20, height: 26, align: :center, valign: :center, size: 8
     end
 
     pdf.move_down panel_height + 4

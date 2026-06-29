@@ -78,6 +78,15 @@
   <% end %>
 
   <%# Error details %>
+  <% if @submission.invalid? && @submission.requested_by_guest? %>
+    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5">
+      <p class="text-sm font-semibold text-amber-900">Guest requested this e-invoice</p>
+      <p class="mt-1 text-sm text-amber-800">
+        Guest is waiting for this document. Once the guest details are corrected, use <span class="font-semibold">Retry submission</span> to send it back to LHDN.
+      </p>
+    </div>
+  <% end %>
+
   <% if @submission.invalid? && @submission.error_details.present? %>
     <div class="rounded-2xl border border-red-200 bg-red-50 px-6 py-5">
       <p class="text-sm font-semibold text-red-900">Why this was rejected</p>

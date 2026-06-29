@@ -10,7 +10,13 @@ module EInvoice
       submission = EInvoiceSubmission.find_by(id: submission_id)
       return unless submission
 
-      EInvoice::Submit.call(submission)
+      result = EInvoice::Submit.call(submission)
+      return unless result[:success]
+
+      refreshed_submission = result[:submission]
+      return unless refreshed_submission&.refreshable?
+
+      EInvoice::RefreshStatusJob.set(wait: 10.seconds).perform_later(refreshed_submission.id)
     end
   end
 end

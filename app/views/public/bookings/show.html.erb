@@ -1,5 +1,10 @@
 
-<div class="bg-landing-bg min-h-screen pb-20 sm:pb-24 font-sans text-neutral-text-primary">
+<div class="bg-landing-bg min-h-screen pb-20 sm:pb-24 font-sans text-neutral-text-primary"
+  <% if @booking.e_invoice_guest_request_possible? %>
+    data-controller="e-invoice-request-modal"
+    data-e-invoice-request-modal-request-url-value="<%= request_e_invoice_booking_path(@booking.confirmation_token) %>"
+    data-e-invoice-request-modal-status-url-value="<%= status_e_invoice_booking_path(@booking.confirmation_token) %>"
+  <% end %>>
   <!-- Status Banner (Dark & Elegant) -->
   <div class="relative bg-[#0a2e29] py-14 sm:py-16 lg:py-28 text-center text-white overflow-hidden print:hidden">
     <!-- Sophisticated Background Elements -->
@@ -250,6 +255,8 @@
           </div>
 
           <% guest_e_invoice_submission = @booking.ready_guest_e_invoice_submission %>
+          <% original_guest_e_invoice_submission = @booking.original_ready_guest_e_invoice_submission %>
+          <% adjustment_guest_e_invoice_submission = @booking.latest_ready_adjustment_guest_e_invoice_submission %>
           <% pending_individual_e_invoice = @booking.pending_guest_e_invoice_submission %>
           <% failed_individual_e_invoice = @booking.failed_guest_e_invoice_submission %>
           <% pending_consolidated = @booking.pending_consolidated_guest_e_invoice_submission %>
@@ -262,10 +269,20 @@
             <% end %>
             <div class="flex items-center gap-3">
               <% if guest_e_invoice_submission %>
-                <%= link_to e_invoice_booking_path(@booking.confirmation_token), class: "group inline-flex items-center gap-x-2 px-6 py-3 bg-[#0a2e29] hover:bg-[#0d3d35] text-[11px] font-bold text-[#d9c5a0] rounded-xl transition-all border border-[#d9c5a0]/20 uppercase tracking-widest shadow-sm", data: { turbo: false } do %>
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-                  Download E-Invoice
-                <% end %>
+                <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+                  <% if original_guest_e_invoice_submission %>
+                    <%= link_to e_invoice_booking_path(@booking.confirmation_token, submission_id: original_guest_e_invoice_submission.id), class: "group inline-flex items-center gap-x-2 px-6 py-3 bg-[#0a2e29] hover:bg-[#0d3d35] text-[11px] font-bold text-[#d9c5a0] rounded-xl transition-all border border-[#d9c5a0]/20 uppercase tracking-widest shadow-sm", data: { turbo: false }, target: "_blank", rel: "noopener" do %>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                      Download Original E-Invoice
+                    <% end %>
+                  <% end %>
+                  <% if adjustment_guest_e_invoice_submission %>
+                    <%= link_to e_invoice_booking_path(@booking.confirmation_token, submission_id: adjustment_guest_e_invoice_submission.id), class: "group inline-flex items-center gap-x-2 px-6 py-3 bg-amber-50 hover:bg-amber-100 text-[11px] font-bold text-amber-900 rounded-xl transition-all border border-amber-200 uppercase tracking-widest shadow-sm", data: { turbo: false }, target: "_blank", rel: "noopener" do %>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                      Download <%= adjustment_guest_e_invoice_submission.document_type_label %>
+                    <% end %>
+                  <% end %>
+                </div>
               <% elsif pending_individual_e_invoice %>
                 <span class="inline-flex items-center gap-x-2 px-6 py-3 bg-blue-50 text-[11px] font-bold text-blue-700 rounded-xl border border-blue-100 uppercase tracking-widest shadow-sm">
                   <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -277,10 +294,10 @@
                   <p class="mt-1 text-sm text-red-700"><%= failed_individual_e_invoice.error_message || "The submission to LHDN failed." %></p>
                 </div>
               <% elsif @booking.e_invoice_guest_request_possible? %>
-                <%= button_to request_e_invoice_booking_path(@booking.confirmation_token), method: :post, class: "group inline-flex items-center gap-x-2 px-6 py-3 bg-[#0a2e29] hover:bg-[#0d3d35] text-[11px] font-bold text-[#d9c5a0] rounded-xl transition-all border border-[#d9c5a0]/20 uppercase tracking-widest shadow-sm", data: { turbo: false, confirm: "Request your e-invoice? This will be submitted to LHDN on your behalf." } do %>
+                <button type="button" class="group cursor-pointer inline-flex items-center gap-x-2 px-6 py-3 bg-[#0a2e29] hover:bg-[#0d3d35] text-[11px] font-bold text-[#d9c5a0] rounded-xl transition-all border border-[#d9c5a0]/20 uppercase tracking-widest shadow-sm" data-action="e-invoice-request-modal#open">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                   Request E-Invoice
-                <% end %>
+                </button>
               <% elsif pending_consolidated %>
                 <span class="inline-flex items-center gap-x-2 px-6 py-3 bg-blue-50 text-[11px] font-bold text-blue-700 rounded-xl border border-blue-100 uppercase tracking-widest shadow-sm">
                   <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -303,4 +320,8 @@
       <p class="mt-1 font-bold">WAStays Support: hello@wastays.com | Booking Ref: <%= @booking.confirmation_token %></p>
     </div>
   </div>
+
+  <% if @booking.e_invoice_guest_request_possible? %>
+    <%= render "shared/e_invoice_request_modal", booking: @booking %>
+  <% end %>
 </div>

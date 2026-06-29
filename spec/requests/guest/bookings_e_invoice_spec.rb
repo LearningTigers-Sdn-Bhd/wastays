@@ -84,6 +84,27 @@ RSpec.describe "Guest::Bookings e-invoice", type: :request do
       expect(response.headers["Content-Disposition"]).to include("attachment")
     end
 
+    it "returns a specific original e-invoice when submission_id is given" do
+      original = booking.e_invoice_submissions.find_by!(internal_id: "SAH-300000001")
+      create(:e_invoice_submission,
+        hotel: hotel,
+        booking: booking,
+        document_scenario: "guest_invoice",
+        document_type: "03",
+        status: "valid",
+        internal_id: "SAH-300000001-DN",
+        uuid: "DN26ZBY0Y5YVQX868FNJRC",
+        submission_uid: "DN4MCJS3QHYW358H8CNJRC",
+        long_id: "DNT19FQ4RT6FJDCBSENJRCRPVK10IW8KKW1782101467",
+        submitted_at: 1.minute.from_now,
+        validated_at: 1.minute.from_now)
+
+      get e_invoice_guest_booking_path(booking, submission_id: original.id)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["Content-Disposition"]).to include("wastays-e-invoice-SAH-300000001.pdf")
+    end
+
     it "redirects when booking belongs to another guest" do
       other_booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: other_booking, room_type: room_type, subtotal: 100.0)
@@ -102,7 +123,7 @@ RSpec.describe "Guest::Bookings e-invoice", type: :request do
       expect(response).to redirect_to(guest_login_path)
     end
 
-    it "downloads the original invoice even when a newer adjustment note exists" do
+    it "downloads the latest adjustment note when one exists" do
       create(:e_invoice_submission,
         hotel: hotel,
         booking: booking,
@@ -119,7 +140,7 @@ RSpec.describe "Guest::Bookings e-invoice", type: :request do
       get e_invoice_guest_booking_path(booking)
 
       expect(response).to have_http_status(:ok)
-      expect(response.headers["Content-Disposition"]).to include("wastays-e-invoice-SAH-300000001.pdf")
+      expect(response.headers["Content-Disposition"]).to include("wastays-e-invoice-SAH-300000001-DN.pdf")
     end
   end
 

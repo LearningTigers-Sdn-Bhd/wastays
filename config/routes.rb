@@ -39,6 +39,7 @@ Rails.application.routes.draw do
         get :receipt
         get :invoice
         get :e_invoice
+        get :status_e_invoice
         post :request_e_invoice
       end
       resources :refund_requests, only: [ :new, :create ]
@@ -105,6 +106,7 @@ Rails.application.routes.draw do
         get :receipt
         get :invoice
         get :e_invoice
+        get :status_e_invoice
         get :voucher
         post :request_e_invoice
       end

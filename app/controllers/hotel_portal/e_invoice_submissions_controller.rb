@@ -11,6 +11,15 @@ module HotelPortal
                                   .includes(:booking)
                                   .order(created_at: :desc)
                                   .page(params[:page]).per(20)
+      @setting = current_hotel.e_invoice_setting || current_hotel.build_e_invoice_setting
+      all_submissions = current_hotel.e_invoice_submissions
+      @summary_counts = {
+        pending: all_submissions.where(status: %w[pending submitted]).count,
+        rejected: all_submissions.where(status: "invalid").count,
+        valid: all_submissions.where(status: "valid").count,
+        guest_requested_attention: all_submissions.where(status: "invalid", requested_by_guest: true).count
+      }
+      @missing_config = missing_e_invoice_config(@setting)
     end
 
     def show
@@ -245,6 +254,25 @@ module HotelPortal
         ),
         true
       ]
+    end
+
+    def missing_e_invoice_config(setting)
+      return [] unless setting.enabled? && setting.intermediary_enabled?
+
+      checks = [
+        [ "Hotel tax number (TIN)", setting.hotel_tin.present? ],
+        [ "Business registration number (BRN / SSM)", setting.hotel_brn.present? ],
+        [ "MSIC code", setting.supplier_msic_code.present? ],
+        [ "Business description", setting.supplier_business_description.present? ],
+        [ "Hotel contact phone", setting.supplier_contact_phone.present? ],
+        [ "Hotel contact email", setting.supplier_contact_email.present? ],
+        [ "Address line 1", setting.supplier_address_line1.present? ],
+        [ "City", setting.supplier_city.present? ],
+        [ "Postal code", setting.supplier_postal_code.present? ],
+        [ "State code", setting.supplier_state_code.present? ]
+      ]
+
+      checks.reject { |_, ready| ready }.map(&:first)
     end
   end
 end

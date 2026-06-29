@@ -10,6 +10,7 @@ module HotelPortal
 
       financial_nav_items = [
         NavItem.new(label: "Summary", path: hotel_reports_path(current_hotel), icon: "file-spreadsheet", active: controller_name == "reports" && action_name == "index"),
+        NavItem.new(label: "E-Invoice", path: hotel_e_invoice_submissions_path(current_hotel), icon: "receipt", active: controller_name == "e_invoice_submissions"),
         NavItem.new(label: "Manager's Flash Report", path: managers_flash_hotel_reports_path(current_hotel), icon: "trending-up", active: controller_name == "reports" && action_name == "managers_flash", plan_feature: "housekeeper_productivity"),
         NavItem.new(label: "Daily Revenue", path: daily_revenue_hotel_reports_path(current_hotel), icon: "coins", active: controller_name == "reports" && action_name == "daily_revenue", plan_feature: "revenue_allocation_per_night"),
         NavItem.new(label: "Refund Report", path: refund_report_hotel_reports_path(current_hotel), icon: "credit-card", active: controller_name == "reports" && action_name == "refund_report"),
@@ -89,7 +90,7 @@ module HotelPortal
         NavSection.new(
           label: "Reports",
           items: [
-            NavItem.new(label: "Financial", path: hotel_reports_path(current_hotel), search_text: "Reports Financial Summary Manager Flash Daily Revenue Arrivals Departures Daily Occupancy Outstanding Balance Deposit Liability", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
+            NavItem.new(label: "Financial", path: hotel_reports_path(current_hotel), search_text: "Reports Financial E-Invoice Summary Manager Flash Daily Revenue Arrivals Departures Daily Occupancy Outstanding Balance Deposit Liability", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
             NavItem.new(label: "Audit", path: hotel_night_audits_path(current_hotel), search_text: "Audit Night Audit Business Date Close Reports", active: audit_nav_active, icon: "clipboard-check", children: audit_nav_items, permission: "manage_night_audit")
           ]
         ),
