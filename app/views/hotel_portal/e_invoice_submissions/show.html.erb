@@ -8,10 +8,19 @@
       </div>
       <div class="flex items-center gap-2">
         <%= render "status_badge", submission: @submission %>
+        <% if @submission.validated? %>
+          <%= link_to "PDF", pdf_hotel_e_invoice_submission_path(current_hotel, @submission),
+              class: "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" %>
+        <% end %>
         <% if @submission.refreshable? %>
           <%= button_to "Refresh status", refresh_status_hotel_e_invoice_submission_path(current_hotel, @submission),
               method: :post,
               class: "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer" %>
+        <% end %>
+        <% if @submission.retryable? %>
+          <%= button_to "Retry submission", retry_hotel_e_invoice_submission_path(current_hotel, @submission),
+              method: :post,
+              class: "rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 cursor-pointer" %>
         <% end %>
       </div>
     </div>
@@ -72,7 +81,15 @@
   <% if @submission.invalid? && @submission.error_details.present? %>
     <div class="rounded-2xl border border-red-200 bg-red-50 px-6 py-5">
       <p class="text-sm font-semibold text-red-900">Why this was rejected</p>
+      <% if @submission.error_message.present? %>
+        <p class="mt-2 text-sm text-red-800"><%= @submission.error_message %></p>
+      <% end %>
       <pre class="mt-2 overflow-x-auto text-xs text-red-700"><%= JSON.pretty_generate(@submission.error_details) %></pre>
+    </div>
+  <% elsif @submission.stale_pending? %>
+    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5">
+      <p class="text-sm font-semibold text-amber-900">This submission looks stuck</p>
+      <p class="mt-2 text-sm text-amber-800">No LHDN tracking ID was recorded for this pending submission. You can retry it now.</p>
     </div>
   <% end %>
 

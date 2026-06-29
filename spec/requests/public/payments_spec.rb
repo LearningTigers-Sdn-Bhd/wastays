@@ -9,6 +9,7 @@ RSpec.describe "Public::Payments", type: :request do
       name: "Guest",
       email: "guest@example.com",
       phone: "+60123456789",
+      city: "Kuala Lumpur",
       government_id: "A1234567",
       gender: "male",
       country: "Malaysia",
@@ -48,6 +49,47 @@ RSpec.describe "Public::Payments", type: :request do
       expect(body["order_id"]).to eq("order_123")
       expect(body["key_id"]).to eq("rzp_test_key")
       expect(body["amount"]).to eq(32155)
+    end
+
+    it "includes guest city in checkout metadata" do
+      create(:payment_setting,
+             settable: hotel,
+             gateway: "razorpay",
+             api_key: "rzp_test_key",
+             secret_key: "rzp_test_secret",
+             status: "active")
+
+      adapter = instance_double("Payments::GatewayAdapters::Razorpay")
+      allow(Payments::GatewayRegistry).to receive(:fetch).and_return(adapter)
+
+      expect(adapter).to receive(:create_checkout_session).with(hash_including(
+        metadata: hash_including(city: "Kuala Lumpur")
+      )).and_return(
+        {
+          key_id: "rzp_test_key",
+          order_id: "order_city",
+          amount: 32155,
+          currency: "MYR"
+        }
+      )
+
+      post "/payments/checkout_session", params: {
+        quote_token: quote.token,
+        gateway: "razorpay",
+        guest_details: guest_details
+      }
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "includes guest city in guest lookup payload for repeat guests" do
+      create(:guest, email: "guest@example.com", city: "Kota Kinabalu")
+
+      get guest_lookup_quote_path(quote.token), params: { email: "guest@example.com" }
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body.dig("guest_details", "city")).to eq("Kota Kinabalu")
     end
 
     it "uses credential default gateway when db settings are not present" do
@@ -106,7 +148,10 @@ RSpec.describe "Public::Payments", type: :request do
 
       booking = create(:booking, booking_quote: quote, hotel: hotel)
       result = OpenStruct.new(success?: true, booking: booking)
-      allow(BookingEngine::ConfirmBooking).to receive(:new).and_return(double(call: result))
+      expect(BookingEngine::ConfirmBooking).to receive(:new).with(
+        quote_token: quote.token,
+        payment_details: hash_including(guest_city: "Kuala Lumpur")
+      ).and_return(double(call: result))
 
       expect do
         post "/payments/verify", params: {
@@ -185,6 +230,7 @@ RSpec.describe "Public::Payments", type: :request do
             guest_name: "Guest",
             guest_email: "guest@example.com",
             guest_phone: "+60123456789",
+            city: "Kuala Lumpur",
             government_id: "A1234567",
             gender: "male",
             country: "Malaysia",
@@ -195,7 +241,10 @@ RSpec.describe "Public::Payments", type: :request do
 
       booking = create(:booking, booking_quote: quote, hotel: hotel)
       result = OpenStruct.new(success?: true, booking: booking)
-      allow(BookingEngine::ConfirmBooking).to receive(:new).and_return(double(call: result))
+      expect(BookingEngine::ConfirmBooking).to receive(:new).with(
+        quote_token: quote.token,
+        payment_details: hash_including(guest_city: "Kuala Lumpur")
+      ).and_return(double(call: result))
 
       get "/payments/verify", params: {
         quote_token: quote.token,

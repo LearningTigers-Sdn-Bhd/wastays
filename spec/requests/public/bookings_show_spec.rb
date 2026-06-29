@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Public::Bookings", type: :request do
   let(:hotel) { create(:hotel, name: "Luxury Resort", city: "Malacca", country: "Malaysia") }
+  let!(:e_invoice_setting) { create(:e_invoice_setting, hotel: hotel, enabled: true) }
   let(:booking) do
     create(:booking,
            hotel: hotel,
@@ -45,6 +46,31 @@ RSpec.describe "Public::Bookings", type: :request do
       get booking_path(booking.confirmation_token)
 
       expect(response.body).to include("Download E-Invoice")
+    end
+
+    it "shows e-invoice request button when payment concluded and still within request window" do
+      booking.update!(payment_status: "captured")
+      create(:payment_transaction, booking: booking, status: "captured",
+        gateway: "stripe", captured_at: Time.current, amount_subunits: 50_000, currency: "MYR")
+
+      get booking_path(booking.confirmation_token)
+
+      expect(response.body).to include("Request E-Invoice")
+    end
+
+    it "shows e-invoice failure message when submission is rejected" do
+      create(:e_invoice_submission,
+        hotel: hotel,
+        booking: booking,
+        status: "invalid",
+        document_scenario: "guest_invoice",
+        document_type: "01",
+        error_details: { message: "Booking guest city must map to a valid Malaysia state code" })
+
+      get booking_path(booking.confirmation_token)
+
+      expect(response.body).to include("E-Invoice Submission Failed")
+      expect(response.body).to include("Booking guest city must map to a valid Malaysia state code")
     end
   end
 end

@@ -65,5 +65,57 @@ RSpec.describe "Public::Bookings e-invoice", type: :request do
 
       expect(response).to have_http_status(:not_found)
     end
+
+    it "downloads the original invoice even when a newer adjustment note exists" do
+      create(:e_invoice_submission,
+        hotel: hotel,
+        booking: booking,
+        document_scenario: "guest_invoice",
+        document_type: "03",
+        status: "valid",
+        internal_id: "SAH-300000001-DN",
+        uuid: "DN26ZBY0Y5YVQX868FNJRC",
+        submission_uid: "DN4MCJS3QHYW358H8CNJRC",
+        long_id: "DNT19FQ4RT6FJDCBSENJRCRPVK10IW8KKW1782101467",
+        submitted_at: 1.minute.from_now,
+        validated_at: 1.minute.from_now
+      )
+
+      get e_invoice_booking_path(booking.confirmation_token)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["Content-Disposition"]).to include("wastays-e-invoice-SAH-300000001.pdf")
+    end
+  end
+
+  describe "POST /bookings/:id/request_e_invoice" do
+    before do
+      create(:payment_transaction, booking: booking, status: "captured",
+        gateway: "stripe", captured_at: Time.current, amount_subunits: 20_000, currency: "MYR")
+      ActiveJob::Base.queue_adapter = :test
+    end
+
+    it "enqueues a guest-requested e-invoice from the public booking page" do
+      expect {
+        post request_e_invoice_booking_path(booking.confirmation_token)
+      }.to have_enqueued_job(EInvoice::AutoIssueJob).with(booking.id, requested_by_guest: true)
+
+      expect(response).to redirect_to(booking_path(booking.confirmation_token))
+    end
+
+    it "blocks duplicate pending individual requests" do
+      create(:e_invoice_submission,
+        hotel: hotel, booking: booking,
+        document_scenario: "guest_invoice",
+        status: "pending", consolidated: false, requested_by_guest: true)
+
+      expect {
+        post request_e_invoice_booking_path(booking.confirmation_token)
+      }.not_to have_enqueued_job(EInvoice::AutoIssueJob)
+
+      expect(response).to redirect_to(booking_path(booking.confirmation_token))
+      follow_redirect!
+      expect(response.body).to include("already being prepared")
+    end
   end
 end

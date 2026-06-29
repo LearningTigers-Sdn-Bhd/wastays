@@ -63,6 +63,7 @@ class Public::QuotesController < ApplicationController
       name: guest.name,
       email: guest.email,
       phone: guest.phone,
+      city: guest.city,
       government_id: guest.government_id,
       gender: guest.gender,
       country: guest.country,

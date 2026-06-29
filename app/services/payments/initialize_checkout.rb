@@ -81,9 +81,11 @@ module Payments
         guest_phone: guest_details[:phone],
         government_id: guest_details[:government_id],
         gender: guest_details[:gender],
+        city: guest_details[:city],
         country: guest_details[:country],
         document_type: guest_details[:document_type],
         marketing_consent: guest_details[:marketing_consent],
+        privacy_consent: guest_details[:privacy_consent],
         special_requests: guest_details[:special_requests]
       }
     end

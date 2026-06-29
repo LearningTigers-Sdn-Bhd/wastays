@@ -6,6 +6,7 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
       name: "Jane Doe",
       email: "JANE@EXAMPLE.COM",
       phone: "+60111111111",
+      city: "kota kinabalu",
       government_id: "A123456",
       gender: "FEMALE",
       country: "Singapore",
@@ -19,6 +20,7 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
     expect(result.success?).to be(true)
     expect(result.guest).to be_persisted
     expect(result.guest.email).to eq("jane@example.com")
+    expect(result.guest.city).to eq("Kota Kinabalu")
     expect(result.is_repeat?).to be(false)
   end
 
@@ -57,5 +59,14 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
     expect(result.guest.metadata["privacy_consent"]).to be(true)
     expect(result.guest.metadata["marketing_consent_updated_at"]).to be_present
     expect(result.guest.metadata["privacy_consent_updated_at"]).to be_present
+  end
+
+  it "fills blank city for an existing guest" do
+    existing = create(:guest, email: "jane@example.com", city: nil)
+
+    result = described_class.new(params).call
+
+    expect(result.guest.id).to eq(existing.id)
+    expect(existing.reload.city).to eq("Kota Kinabalu")
   end
 end

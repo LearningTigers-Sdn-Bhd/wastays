@@ -45,7 +45,11 @@
         </div>
       </div>
 
-      <div class="grid sm:grid-cols-2 gap-6">
+      <div class="grid sm:grid-cols-3 gap-6">
+        <div>
+          <%= f.label :city, "City", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.text_field :city, placeholder: "e.g. Kota Kinabalu", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
         <div>
           <%= f.label :country, "Country", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
           <%= f.text_field :country, required: true, placeholder: "e.g. Malaysia", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>

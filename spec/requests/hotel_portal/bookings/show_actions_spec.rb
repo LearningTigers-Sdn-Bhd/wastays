@@ -32,27 +32,28 @@ RSpec.describe "HotelPortal booking show actions", type: :request do
 
   it "adds and edits additional guests" do
     post hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "add"), params: {
-      guest: { name: "Added Guest", email: "added@example.com", phone: "123", country: "Malaysia", document_type: "ic" }
+      guest: { name: "Added Guest", email: "added@example.com", phone: "123", city: "Kota Kinabalu", country: "Malaysia", document_type: "ic" }
     }
     added = booking.reload.booking_guests.find_by!(is_primary: false)
     expect(added.guest.name).to eq("Added Guest")
+    expect(added.guest.city).to eq("Kota Kinabalu")
 
     patch hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "edit_additional", booking_guest_id: added.id), params: {
-      guest: { name: "Updated Guest", email: "updated@example.com", phone: "456", country: "Singapore", document_type: "passport" }
+      guest: { name: "Updated Guest", email: "updated@example.com", phone: "456", city: "Singapore City", country: "Singapore", document_type: "passport" }
     }
-    expect(added.guest.reload).to have_attributes(name: "Updated Guest", country: "Singapore")
+    expect(added.guest.reload).to have_attributes(name: "Updated Guest", city: "Singapore City", country: "Singapore")
   end
 
   it "edits the primary guest through booking synchronization" do
     patch hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "edit_primary"), params: {
       guest: {
         name: "Updated Primary", email: "primary@example.com", phone: "123456",
-        country: "Malaysia", document_type: "passport", government_id: "P123"
+        city: "Kuala Lumpur", country: "Malaysia", document_type: "passport", government_id: "P123"
       }
     }
 
-    expect(booking.reload).to have_attributes(guest_name: "Updated Primary", guest_email: "primary@example.com")
-    expect(booking.primary_guest).to have_attributes(name: "Updated Primary", document_type: "passport", government_id: "p123")
+    expect(booking.reload).to have_attributes(guest_name: "Updated Primary", guest_email: "primary@example.com", guest_city: "Kuala Lumpur")
+    expect(booking.primary_guest).to have_attributes(name: "Updated Primary", city: "Kuala Lumpur", document_type: "passport", government_id: "p123")
   end
 
   it "renders validation failures inside the guest sheet" do

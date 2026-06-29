@@ -38,12 +38,104 @@ class Booking < ApplicationRecord
     resolved_fund_collector == "hotel"
   end
 
+  def payment_concluded?
+    payment_status == "captured"
+  end
+
+  def payment_concluded_at
+    latest_captured = payment_transactions.captured.maximum(:captured_at)
+    latest_captured || checked_out_at || check_out
+  end
+
   def guest_invoice_submission
-    e_invoice_submissions.guest_facing.recent_first.first
+    e_invoice_submissions.guest_facing.where(document_type: "01").recent_first.first
+  end
+
+  def ready_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.valid.where(document_type: "01").recent_first.first
+  end
+
+  def pending_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing
+      .where(document_type: "01", status: %w[pending submitted], consolidated: false)
+      .recent_first
+      .first
+  end
+
+  def failed_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing
+      .where(document_type: "01", status: "invalid", consolidated: false)
+      .recent_first
+      .first
+  end
+
+  def pending_consolidated_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing
+      .where(document_type: "01", status: "pending", consolidated: true)
+      .recent_first
+      .first
   end
 
   def payout_self_billed_submission
     e_invoice_submissions.for_scenario("payout_self_billed_invoice").recent_first.first
+  end
+
+  def e_invoice_already_issued?
+    e_invoice_submissions.guest_facing.where(status: %w[submitted valid]).exists?
+  end
+
+  def e_invoice_already_requested_or_issued?
+    e_invoice_submissions.guest_facing.where(status: %w[submitted valid]).exists?
+  end
+
+  # Check if there's a pending consolidated submission that was NOT requested by guest.
+  # These should not block guest from requesting an individual e-invoice.
+  def e_invoice_pending_consolidated_unrequested?
+    e_invoice_submissions.guest_facing
+      .where(status: "pending", consolidated: true, requested_by_guest: false)
+      .exists?
+  end
+
+  # Check if a guest request is possible (within same month and not already issued)
+  def e_invoice_guest_request_possible?
+    return false unless payment_concluded?
+    return false unless hotel.e_invoice_setting&.enabled?
+
+    payment_month_start = payment_concluded_at.beginning_of_month
+    payment_month_end = payment_concluded_at.end_of_month
+    return false unless Time.current.between?(payment_month_start, payment_month_end)
+    return false if e_invoice_submissions.guest_facing.where(status: %w[submitted valid]).exists?
+
+    true
+  end
+
+  def e_invoice_requestable?
+    return false unless payment_concluded?
+
+    payment_month_start = payment_concluded_at.beginning_of_month
+    payment_month_end = payment_concluded_at.end_of_month
+    Time.current.between?(payment_month_start, payment_month_end)
+  end
+
+  def create_pending_consolidated_submission!
+    scenario = direct_hotel_payment? ? "hotel_intermediary_guest_invoice" : "guest_invoice"
+    existing = e_invoice_submissions.where.not(status: "cancelled").find_by(
+      booking_id: id, document_scenario: scenario
+    )
+    return existing if existing
+
+    e_invoice_submissions.create!(
+      hotel: hotel,
+      document_type: "01",
+      document_scenario: scenario,
+      submission_mode: resolved_fund_collector == "hotel" ? "intermediary" : "taxpayer",
+      fund_collector: resolved_fund_collector,
+      status: "pending",
+      consolidated: true,
+      payment_concluded_at: payment_concluded_at,
+      raw_response: {},
+      error_details: {}
+    )
   end
 
   def resolved_fund_collector
@@ -274,6 +366,8 @@ class Booking < ApplicationRecord
   before_save :set_payout_status, if: :status_changed?
   after_create_commit :enqueue_receipt_email, if: -> { status == "confirmed" }
   after_create_commit :enqueue_whatsapp_receipt, if: -> { status == "confirmed" }
+  after_create_commit :enqueue_auto_e_invoice, if: -> { payment_concluded? }
+  after_update_commit :enqueue_auto_e_invoice, if: -> { saved_change_to_payment_status? && payment_concluded? }
 
   delegate :folio_number, to: :booking_folio, allow_nil: true
   delegate :invoice_number, to: :booking_folio, allow_nil: true
@@ -434,6 +528,10 @@ class Booking < ApplicationRecord
 
   def enqueue_whatsapp_receipt
     SendWhatsappReceiptJob.perform_later(id)
+  end
+
+  def enqueue_auto_e_invoice
+    EInvoice::AutoIssueJob.perform_later(id)
   end
 
   def enqueue_invoice_email

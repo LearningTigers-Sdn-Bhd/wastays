@@ -15,7 +15,7 @@ module EInvoice
     end
 
     def call
-      return error("Booking does not have a closed folio.") unless folio_closed?
+      return error("Booking payment has not concluded.") unless payment_concluded?
 
       existing = submission_record
       return error("E-invoice already submitted with UUID: #{existing.uuid}") if existing&.validated?
@@ -70,14 +70,22 @@ module EInvoice
         error(e.message, submission: submission)
       rescue => e
         Rails.logger.error("[EInvoice::Submit] #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
+        submission.assign_attributes(
+          status: "invalid",
+          error_details: {
+            message: e.message,
+            exception_class: e.class.name
+          }
+        )
+        submission.save!
         error(e.message, submission: submission)
       end
     end
 
     private
 
-    def folio_closed?
-      @booking.booking_folio&.status == "closed"
+    def payment_concluded?
+      @booking.payment_concluded?
     end
 
     def submission_record
@@ -150,6 +158,12 @@ module EInvoice
           submission: submission
         )
       else
+        submission.assign_attributes(
+          status: "invalid",
+          raw_response: response,
+          error_details: { message: "Unexpected response from MyInvois", response: response }
+        )
+        submission.save!
         error("Unexpected response from MyInvois: #{response.inspect}", submission: submission)
       end
     end

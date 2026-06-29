@@ -377,6 +377,40 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
     end
 
+    it "shows folio adjustment note action when original e-invoice is valid" do
+      booking = create_booking_with_folio(guest_name: "Adjustment Guest", confirmation_token: "BK-ADJNOTE", folio_number: 615, charges: 100, status: "closed")
+      create(:e_invoice_setting, hotel: hotel, enabled: true)
+      create(:e_invoice_submission,
+        hotel: hotel,
+        booking: booking,
+        document_scenario: "guest_invoice",
+        document_type: "01",
+        status: "valid")
+
+      get hotel_folio_path(hotel, booking)
+
+      expect(response.body).to include("Folio Adjustment Note")
+      expect(response.body).to include("Send adjustment note to LHDN")
+    end
+
+    it "shows a no-adjustment-needed message and hides the button when folio still matches the original invoice" do
+      booking = create_booking_with_folio(guest_name: "Matched Guest", confirmation_token: "BK-MATCH", folio_number: 616, charges: 100, status: "closed")
+      create(:e_invoice_setting, hotel: hotel, enabled: true)
+      create(:e_invoice_submission,
+        hotel: hotel,
+        booking: booking,
+        document_scenario: "guest_invoice",
+        document_type: "01",
+        status: "valid",
+        raw_response: { "acceptedDocuments" => [ { "totalIncludingTax" => 100 } ] })
+
+      get hotel_folio_path(hotel, booking)
+
+      expect(response.body).to include("Folio Adjustment Note")
+      expect(response.body).to include("No adjustment note is needed")
+      expect(response.body).not_to include("Send adjustment note to LHDN")
+    end
+
     it "enables booking invoice report only for completed bookings with closed folios" do
       open_booking = create_booking_with_folio(guest_name: "Open Invoice Guest", confirmation_token: "BK-OPEN-INV", folio_number: 613, charges: 100)
       completed_booking = create_booking_with_folio(guest_name: "Completed Invoice Guest", confirmation_token: "BK-DONE-INV", folio_number: 614, charges: 100, status: "closed", booking_status: "completed")
@@ -412,6 +446,34 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(ledger.text.squish).not_to include("Projected balance")
       expect(response.body).not_to include("posted-mobile")
       expect(response.body).not_to include("forecasted-mobile")
+    end
+  end
+
+  describe "POST /hotel/:hotel_id/folios/:booking_id/issue_adjustment" do
+    let(:booking) { create_booking_with_folio(guest_name: "Adjustment Guest", confirmation_token: "BK-ADJPOST", folio_number: 701, charges: 100, status: "closed") }
+
+    before do
+      create(:e_invoice_setting, hotel: hotel, enabled: true)
+    end
+
+    it "redirects to the created adjustment submission when successful" do
+      submission = create(:e_invoice_submission, hotel: hotel, booking: booking, document_type: "03", document_scenario: "guest_invoice")
+      allow(EInvoice::IssueAdjustment).to receive(:call).with(booking).and_return(success: true, submission: submission)
+
+      post issue_adjustment_hotel_folio_path(hotel, booking)
+
+      expect(response).to redirect_to(hotel_e_invoice_submission_path(hotel, submission))
+      expect(flash[:notice]).to include("Adjustment note is being prepared")
+    end
+
+    it "redirects back to folio with alert when skipped" do
+      allow(EInvoice::IssueAdjustment).to receive(:call).with(booking)
+        .and_return(success: false, skipped: true, message: "No adjustment needed")
+
+      post issue_adjustment_hotel_folio_path(hotel, booking, origin: "folios")
+
+      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios"))
+      expect(flash[:alert]).to include("No adjustment needed")
     end
   end
 

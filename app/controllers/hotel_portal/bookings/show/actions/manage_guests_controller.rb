@@ -94,6 +94,7 @@ module HotelPortal
               name: @presenter.primary_guest_name,
               email: @presenter.primary_guest_email,
               phone: @presenter.primary_guest_phone,
+              city: @booking.guest_city,
               country: @presenter.primary_guest_country == "—" ? nil : @presenter.primary_guest_country,
               gender: @booking.guest_gender,
               document_type: @presenter.primary_guest_document_type.to_s.downcase,
@@ -106,6 +107,7 @@ module HotelPortal
               guest_name: guest_params[:name],
               guest_email: guest_params[:email],
               guest_phone: guest_params[:phone],
+              guest_city: guest_params[:city],
               guest_country: guest_params[:country],
               guest_gender: guest_params[:gender],
               guest_document_type: guest_params[:document_type],
@@ -114,11 +116,11 @@ module HotelPortal
           end
 
           def guest_params
-            params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id)
+            params.require(:guest).permit(:name, :email, :phone, :city, :country, :gender, :document_type, :government_id)
           end
 
           def guest_audit_values(guest)
-            guest.attributes.slice("name", "email", "phone", "country", "gender", "document_type")
+            guest.attributes.slice("name", "email", "phone", "city", "country", "gender", "document_type")
           end
 
           def record_guest_audit(action_type, old_value:, new_value:)

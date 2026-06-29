@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_22_115000) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_25_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -253,10 +253,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_22_115000) do
     t.datetime "payout_at"
     t.string "payout_reference"
     t.string "payout_batch_id"
-    t.string "source", default: "internal"
-    t.string "external_reference"
-    t.string "channel_manager_reference"
-    t.integer "revision_number", default: 0
     t.jsonb "tax_lines", default: [], null: false
     t.integer "reservation_number"
     t.integer "receipt_number"
@@ -270,9 +266,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_22_115000) do
     t.datetime "check_out", null: false
     t.date "no_show_review_business_date"
     t.text "special_requests"
-    t.string "fund_collector", default: "unknown", null: false
     t.string "guest_city"
     t.boolean "tourism_tax_collected", default: false, null: false
+    t.string "source", default: "internal"
+    t.string "fund_collector", default: "unknown", null: false
+    t.string "external_reference"
+    t.string "channel_manager_reference"
+    t.integer "revision_number", default: 0
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id_unique", unique: true, where: "(booking_quote_id IS NOT NULL)"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["check_in"], name: "index_bookings_on_check_in"
@@ -437,11 +437,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_22_115000) do
     t.jsonb "error_details", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["booking_id", "document_scenario"], name: "index_e_invoice_submissions_on_active_booking_and_scenario", unique: true, where: "((status)::text <> 'cancelled'::text)"
+    t.boolean "requested_by_guest", default: false, null: false
+    t.datetime "requested_at"
+    t.boolean "consolidated", default: false, null: false
+    t.uuid "consolidation_batch_id"
+    t.datetime "payment_concluded_at"
+    t.string "original_invoice_internal_id"
+    t.index ["booking_id", "document_scenario", "document_type"], name: "index_e_invoice_submissions_on_booking_scenario_type", unique: true, where: "((status)::text <> 'cancelled'::text)"
+    t.index ["booking_id", "document_scenario", "document_type"], name: "index_e_invoice_submissions_on_booking_scenario_type_unique", unique: true, where: "((status)::text <> 'cancelled'::text)"
     t.index ["booking_id"], name: "index_e_invoice_submissions_on_booking_id"
+    t.index ["consolidation_batch_id"], name: "index_e_invoice_submissions_on_consolidation_batch_id"
     t.index ["fund_collector"], name: "index_e_invoice_submissions_on_fund_collector"
     t.index ["hotel_id"], name: "index_e_invoice_submissions_on_hotel_id"
     t.index ["payout_batch_id"], name: "index_e_invoice_submissions_on_payout_batch_id"
+    t.index ["status", "consolidated", "payment_concluded_at"], name: "index_e_invoice_submissions_on_status_consolidated_payment"
     t.index ["status"], name: "index_e_invoice_submissions_on_status"
     t.index ["uuid"], name: "index_e_invoice_submissions_on_uuid", unique: true, where: "(uuid IS NOT NULL)"
   end
@@ -597,6 +606,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_22_115000) do
     t.datetime "last_signed_in_at"
     t.bigint "created_by_hotel_id"
     t.datetime "discarded_at"
+    t.string "city"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["discarded_at"], name: "index_guests_on_discarded_at"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"

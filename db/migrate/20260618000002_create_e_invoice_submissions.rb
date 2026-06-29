@@ -1,5 +1,5 @@
 class CreateEInvoiceSubmissions < ActiveRecord::Migration[8.0]
-  def change
+  def up
     create_table :e_invoice_submissions do |t|
       t.references :hotel, null: false, foreign_key: true
       t.references :booking, null: false, foreign_key: true
@@ -26,5 +26,12 @@ class CreateEInvoiceSubmissions < ActiveRecord::Migration[8.0]
     add_index :e_invoice_submissions, [ :booking_id, :document_scenario ], name: "index_e_invoice_submissions_on_booking_and_scenario"
     add_index :e_invoice_submissions, :uuid, unique: true, where: "uuid IS NOT NULL"
     add_index :e_invoice_submissions, :status
+  end
+
+  def down
+    remove_index :e_invoice_submissions, :status if index_exists?(:e_invoice_submissions, :status)
+    remove_index :e_invoice_submissions, :uuid if index_exists?(:e_invoice_submissions, :uuid)
+    remove_index :e_invoice_submissions, name: "index_e_invoice_submissions_on_booking_and_scenario" if index_name_exists?(:e_invoice_submissions, "index_e_invoice_submissions_on_booking_and_scenario")
+    drop_table :e_invoice_submissions, if_exists: true
   end
 end

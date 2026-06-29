@@ -3,6 +3,7 @@
 module HotelPortal
   class FoliosController < BaseController
     before_action :authorize_view_bookings!
+    before_action :set_booking, only: [ :show, :invoice, :ledger, :issue_adjustment ]
 
     def index
       @folio_index = HotelPortal::Folios::IndexPresenter.new(
@@ -13,20 +14,15 @@ module HotelPortal
     end
 
     def show
-      @booking = current_hotel.bookings.includes(
-        :e_invoice_submissions,
-        { booking_rooms: :room_type },
-        booking_folio: [ { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges ]
-      ).find(params[:booking_id])
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
       @folio_show = HotelPortal::Folios::ShowPresenter.new(booking: @booking, hotel: current_hotel, user: current_user)
+      @adjustment_preview = EInvoice::IssueAdjustment.preview(@booking)
       set_navigation_context
       set_breadcrumbs
       render "hotel_portal/folios/show/index"
     end
 
     def invoice
-      @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions, booking_rooms: :room_type).find(params[:booking_id])
       unless @booking.booking_folio&.status == "closed"
         return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Folio invoice is only available for checked-out bookings with a closed folio."
       end
@@ -38,7 +34,6 @@ module HotelPortal
     end
 
     def ledger
-      @booking = current_hotel.bookings.includes(:booking_rooms, booking_folio: { folio_transactions: :transaction_code }).find(params[:booking_id])
       return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio." unless @booking.booking_folio
 
       ledger_report = ::Reports::Bookings::GenerateFolioLedger.new(booking: @booking, printed_by: current_user&.name)
@@ -61,7 +56,34 @@ module HotelPortal
       end
     end
 
+    def issue_adjustment
+      result = EInvoice::IssueAdjustment.call(@booking)
+
+      if result[:success]
+        redirect_to hotel_e_invoice_submission_path(current_hotel, result[:submission]),
+          notice: "Adjustment note is being prepared and sent to LHDN."
+      elsif result[:skipped]
+        redirect_to hotel_folio_path(current_hotel, @booking, origin: params[:origin]),
+          alert: result[:message]
+      else
+        redirect_to hotel_folio_path(current_hotel, @booking, origin: params[:origin]),
+          alert: result[:error] || "Unable to issue adjustment note right now."
+      end
+    end
+
     private
+
+    def set_booking
+      @booking = booking_scope.find(params[:booking_id])
+    end
+
+    def booking_scope
+      current_hotel.bookings.includes(
+        :e_invoice_submissions,
+        { booking_rooms: :room_type },
+        booking_folio: [ { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges ]
+      )
+    end
 
     def set_navigation_context
       if params[:origin] == "folios"

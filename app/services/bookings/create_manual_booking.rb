@@ -232,6 +232,7 @@ module Bookings
         guest_name: booking.guest_name.presence || guest.name,
         guest_email: booking.guest_email.presence || guest.email,
         guest_phone: booking.guest_phone.presence || guest.phone,
+        guest_city: booking.guest_city.presence || guest.city,
         guest_country: booking.guest_country.presence || guest.country,
         guest_gender: booking.guest_gender.presence || guest.gender,
         guest_document_type: booking.guest_document_type.presence || guest.document_type,
@@ -247,6 +248,7 @@ module Bookings
           name: booking.guest_name,
           email: booking.guest_email,
           phone: booking.guest_phone,
+          city: booking.guest_city,
           country: booking.guest_country.presence || @hotel.country,
           gender: booking.guest_gender,
           document_type: booking.guest_document_type,
@@ -304,6 +306,7 @@ module Bookings
         name: booking.guest_name,
         email: booking.guest_email,
         phone: booking.guest_phone,
+        city: booking.guest_city,
         country: booking.guest_country.presence || @hotel.country,
         gender: booking.guest_gender,
         document_type: booking.guest_document_type,
@@ -317,6 +320,7 @@ module Bookings
       updates[:name] = booking.guest_name if booking.guest_name.present? && guest.name != booking.guest_name
       updates[:email] = booking.guest_email if booking.guest_email.present? && guest.email != booking.guest_email
       updates[:phone] = booking.guest_phone if booking.guest_phone.present? && guest.phone != booking.guest_phone
+      updates[:city] = booking.guest_city if booking.guest_city.present? && guest.city != booking.guest_city
       updates[:country] = booking.guest_country if booking.guest_country.present? && guest.country != booking.guest_country
       updates[:gender] = booking.guest_gender if booking.guest_gender.present? && guest.gender != booking.guest_gender
       if booking.guest_document_type.present? && guest.document_type != booking.guest_document_type

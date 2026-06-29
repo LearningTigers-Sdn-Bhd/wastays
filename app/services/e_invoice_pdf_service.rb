@@ -18,7 +18,7 @@ class EInvoicePdfService
   def initialize(booking, submission: nil)
     @booking = booking
     @hotel = booking.hotel
-    @submission = submission || booking.e_invoice_submissions.guest_facing.valid.recent_first.first
+    @submission = submission || booking.ready_guest_e_invoice_submission
     @booking_rooms = booking.booking_rooms.includes(:room_type)
   end
 
@@ -155,16 +155,12 @@ class EInvoicePdfService
   end
 
   def draw_stay_summary(pdf)
-    nights = [ (@booking.check_out.to_date - @booking.check_in.to_date).to_i, 1 ].max
-    nights_label = nights == 1 ? "1 Night" : "#{nights} Nights"
-
     pdf.fill_color LIGHT_GRAY
     pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, 26
     pdf.fill_color TEXT_PRIMARY
     pdf.move_down 8
     pdf.indent(12) do
-      pdf.text "STAY DETAILS: #{@booking.check_in.strftime('%d %b %Y')} — #{@booking.check_out.strftime('%d %b %Y')}  (#{nights_label})",
-               size: 9, style: :bold
+      pdf.text stay_summary_text, size: 9, style: :bold
     end
     pdf.move_down 18
   end
@@ -175,24 +171,8 @@ class EInvoicePdfService
     nights_w = 60
     amt_w = pdf.bounds.width - desc_w - qty_w - nights_w
 
-    rows = @booking_rooms.map do |room|
-      room_name = room.room_type_snapshot["name"].presence || room.room_type&.name || "Room"
-      nights = [ ((@booking.check_out.to_date - @booking.check_in.to_date).to_i), 1 ].max
-
-      [
-        { content: room_name, size: 10, text_color: TEXT_PRIMARY },
-        { content: room.quantity.to_s, size: 10, text_color: TEXT_PRIMARY, align: :center },
-        { content: nights.to_s, size: 10, text_color: TEXT_PRIMARY, align: :center },
-        { content: "MYR #{fmt(room.subtotal)}", size: 10, text_color: TEXT_PRIMARY, align: :right }
-      ]
-    end
-
-    tax_rows = Array(@booking.tax_lines).map do |tax|
-      [
-        { content: tax["name"].to_s, size: 10, text_color: TEXT_MUTED, colspan: 3 },
-        { content: "MYR #{fmt(tax["amount"])}", size: 10, text_color: TEXT_MUTED, align: :right }
-      ]
-    end
+    rows = line_item_rows
+    tax_rows = adjustment_submission? ? [] : tax_line_rows
 
     pdf.table(
       [
@@ -213,8 +193,8 @@ class EInvoicePdfService
     pdf.fill_color DARK_GREEN
     pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, band_h
     pdf.fill_color WHITE
-    pdf.draw_text "VALIDATED TOTAL", at: [ 18, pdf.cursor - 32 ], size: 10, style: :bold
-    pdf.text_box "MYR #{fmt(@booking.total_amount)}", at: [ 0, pdf.cursor ], width: pdf.bounds.width - 18, height: band_h, align: :right, valign: :center, size: 20, style: :bold
+    pdf.draw_text total_label, at: [ 18, pdf.cursor - 32 ], size: 10, style: :bold
+    pdf.text_box "MYR #{fmt(pdf_total_amount)}", at: [ 0, pdf.cursor ], width: pdf.bounds.width - 18, height: band_h, align: :right, valign: :center, size: 20, style: :bold
     pdf.move_down band_h + 12
     pdf.fill_color TEXT_PRIMARY
   end
@@ -284,5 +264,84 @@ class EInvoicePdfService
 
   def fmt(amount)
     format("%.2f", amount.to_f)
+  end
+
+  def adjustment_submission?
+    @submission.adjustment?
+  end
+
+  def stay_summary_text
+    if adjustment_submission?
+      "ADJUSTMENT FOR STAY: #{@booking.check_in.strftime('%d %b %Y')} — #{@booking.check_out.strftime('%d %b %Y')}"
+    else
+      nights = [(@booking.check_out.to_date - @booking.check_in.to_date).to_i, 1].max
+      nights_label = nights == 1 ? "1 Night" : "#{nights} Nights"
+      "STAY DETAILS: #{@booking.check_in.strftime('%d %b %Y')} — #{@booking.check_out.strftime('%d %b %Y')}  (#{nights_label})"
+    end
+  end
+
+  def line_item_rows
+    return adjustment_line_item_rows if adjustment_submission?
+
+    @booking_rooms.map do |room|
+      room_name = room.room_type_snapshot["name"].presence || room.room_type&.name || "Room"
+      nights = [((@booking.check_out.to_date - @booking.check_in.to_date).to_i), 1].max
+
+      [
+        { content: room_name, size: 10, text_color: TEXT_PRIMARY },
+        { content: room.quantity.to_s, size: 10, text_color: TEXT_PRIMARY, align: :center },
+        { content: nights.to_s, size: 10, text_color: TEXT_PRIMARY, align: :center },
+        { content: "MYR #{fmt(room.subtotal)}", size: 10, text_color: TEXT_PRIMARY, align: :right }
+      ]
+    end
+  end
+
+  def adjustment_line_item_rows
+    [
+      [
+        { content: adjustment_description, size: 10, text_color: TEXT_PRIMARY },
+        { content: "1", size: 10, text_color: TEXT_PRIMARY, align: :center },
+        { content: "-", size: 10, text_color: TEXT_PRIMARY, align: :center },
+        { content: "MYR #{fmt(adjustment_amount)}", size: 10, text_color: TEXT_PRIMARY, align: :right }
+      ]
+    ]
+  end
+
+  def tax_line_rows
+    Array(@booking.tax_lines).map do |tax|
+      [
+        { content: tax["name"].to_s, size: 10, text_color: TEXT_MUTED, colspan: 3 },
+        { content: "MYR #{fmt(tax["amount"])}", size: 10, text_color: TEXT_MUTED, align: :right }
+      ]
+    end
+  end
+
+  def total_label
+    adjustment_submission? ? "ADJUSTMENT TOTAL" : "VALIDATED TOTAL"
+  end
+
+  def pdf_total_amount
+    adjustment_submission? ? adjustment_amount : @booking.total_amount
+  end
+
+  def adjustment_amount
+    @adjustment_amount ||= begin
+      original = @booking.e_invoice_submissions
+                         .guest_facing
+                         .valid
+                         .where(document_type: "01")
+                         .find_by(internal_id: @submission.original_invoice_internal_id)
+
+      original_total = original&.raw_response&.dig("acceptedDocuments", 0, "totalExcludingTax") ||
+                       original&.raw_response&.dig("acceptedDocuments", 0, "totalIncludingTax") ||
+                       @booking.total_amount
+      folio_total = @booking.booking_folio&.total_charges.to_d.to_f + @booking.booking_folio&.total_adjustments.to_d.to_f
+
+      (folio_total - original_total.to_d).abs
+    end
+  end
+
+  def adjustment_description
+    @submission.document_type == "03" ? "Additional charges adjustment" : "Refund/credit adjustment"
   end
 end

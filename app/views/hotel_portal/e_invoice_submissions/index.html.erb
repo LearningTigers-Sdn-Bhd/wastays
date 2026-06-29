@@ -48,6 +48,9 @@
                 <p class="font-semibold text-slate-900"><%= sub.internal_id || "—" %></p>
                 <p class="text-xs text-slate-500"><%= sub.booking&.confirmation_token %></p>
                 <p class="text-[11px] text-slate-400"><%= sub.document_scenario_label %></p>
+                <% if sub.invalid? && sub.error_message.present? %>
+                  <p class="mt-1 text-xs text-red-600"><%= sub.error_message %></p>
+                <% end %>
               </td>
               <td class="px-6 py-3 text-slate-700"><%= sub.booking&.guest_name %></td>
               <td class="px-6 py-3 text-slate-500"><%= sub.submitted_at&.strftime("%d %b %Y %H:%M") || "—" %></td>

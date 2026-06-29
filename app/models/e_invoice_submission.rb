@@ -28,9 +28,9 @@ class EInvoiceSubmission < ApplicationRecord
   validates :submission_mode, inclusion: { in: SUBMISSION_MODES }
   validates :fund_collector, inclusion: { in: FUND_COLLECTORS }
   validates :booking_id, uniqueness: {
-    scope: :document_scenario,
+    scope: [ :document_scenario, :document_type ],
     conditions: -> { where.not(status: "cancelled") },
-    message: "already has an active submission for this document scenario"
+    message: "already has an active submission for this document scenario and type"
   }
 
   scope :recent_first, -> { order(created_at: :desc) }
@@ -40,6 +40,12 @@ class EInvoiceSubmission < ApplicationRecord
   scope :guest_invoice, -> { for_scenario("guest_invoice") }
   scope :guest_facing, -> { where(document_scenario: %w[guest_invoice hotel_intermediary_guest_invoice]) }
   scope :payout_self_billed, -> { for_scenario("payout_self_billed_invoice") }
+  scope :consolidated, -> { where(consolidated: true) }
+  scope :guest_requested, -> { where(requested_by_guest: true) }
+  scope :unrequested, -> { where(requested_by_guest: false) }
+  scope :with_payment_concluded_in_month, ->(month_start, month_end) {
+    where(payment_concluded_at: month_start..month_end)
+  }
 
   def document_type_label
     DOCUMENT_TYPES.fetch(document_type, document_type)
@@ -79,6 +85,14 @@ class EInvoiceSubmission < ApplicationRecord
     status == "pending"
   end
 
+  def stale_pending?
+    pending? && uuid.blank? && submission_uid.blank? && created_at < 2.minutes.ago
+  end
+
+  def retryable?
+    invalid? || stale_pending?
+  end
+
   def cancellable?
     validated? && cancelled_at.nil?
   end
@@ -87,10 +101,32 @@ class EInvoiceSubmission < ApplicationRecord
     %w[submitted pending].include?(status) && uuid.present?
   end
 
+  def adjustment?
+    %w[02 03].include?(document_type)
+  end
+
+  def guest_requested?
+    requested_by_guest
+  end
+
   def validation_url
     return nil unless uuid.present? && long_id.present?
     base = MyInvois::ClientFactory.sandbox? ? "https://preprod.myinvois.hasil.gov.my" : "https://myinvois.hasil.gov.my"
     "#{base}/#{uuid}/share/#{long_id}"
+  end
+
+  def error_message
+    return if error_details.blank?
+
+    direct_message = error_details["message"].presence || error_details[:message].presence
+    return direct_message if direct_message.present?
+
+    messages = Array(error_details.dig("rejected", "error", "details")).filter_map do |detail|
+      detail["message"].presence || detail[:message].presence
+    end
+    return messages.join(", ") if messages.any?
+
+    nil
   end
 
   def intermediary_submission?

@@ -41,6 +41,7 @@ module Folios
         invoice_num = HotelCounter.increment!(hotel: folio.hotel, type: "invoice")
         folio.update!(status: "closed", invoice_number: invoice_num)
         record_financial_audit_event!(folio, balance)
+        trigger_e_invoice_adjustment!
         success(folio: folio, balance: balance)
       end
     rescue ActiveRecord::RecordInvalid => e
@@ -161,6 +162,13 @@ module Folios
       return @checked_out_at.iso8601 if @checked_out_at.respond_to?(:iso8601)
 
       @checked_out_at.to_s
+    end
+
+    def trigger_e_invoice_adjustment!
+      return unless @booking.hotel.e_invoice_setting&.enabled?
+      return unless @booking.e_invoice_submissions.guest_facing.valid.exists?
+
+      EInvoice::IssueAdjustmentJob.perform_later(@booking.id)
     end
 
     def success(folio:, balance: 0.to_d)

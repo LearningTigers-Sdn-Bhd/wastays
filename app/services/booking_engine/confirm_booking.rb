@@ -55,6 +55,7 @@ module BookingEngine
           guest_name: @payment_details[:guest_name], # From checkout form
           guest_email: @payment_details[:guest_email],
           guest_phone: @payment_details[:guest_phone],
+          guest_city: @payment_details[:guest_city],
           special_requests: @payment_details[:special_requests],
           total_amount: payable_total,
           currency: @quote.currency,
@@ -100,6 +101,7 @@ module BookingEngine
             email: @payment_details[:guest_email],
             phone: @payment_details[:guest_phone],
             government_id: @payment_details[:guest_government_id],
+            city: @payment_details[:guest_city],
             gender: gender,
             country: guest_country,
             document_type: document_type,

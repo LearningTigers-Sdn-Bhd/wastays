@@ -31,6 +31,9 @@ production:
   financial_observability:
     class: FinancialObservabilityJob
     schedule: every hour
+  monthly_e_invoice_consolidation:
+    class: EInvoice::MonthlyConsolidationJob
+    schedule: "cron 5 0 1 * *"
 
 demo:
   release_expired_holds:
@@ -48,3 +51,6 @@ demo:
   financial_observability:
     class: FinancialObservabilityJob
     schedule: every hour
+  monthly_e_invoice_consolidation:
+    class: EInvoice::MonthlyConsolidationJob
+    schedule: "cron 5 0 1 * *"

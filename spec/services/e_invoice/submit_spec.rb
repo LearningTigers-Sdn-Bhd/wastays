@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe EInvoice::Submit, type: :service do
   describe ".call" do
     let(:hotel) { create(:hotel) }
-    let(:booking) { create(:booking, hotel: hotel, booking_quote: nil) }
+    let(:booking) { create(:booking, hotel: hotel, booking_quote: nil, payment_status: "captured") }
     let!(:folio) { create(:booking_folio, booking: booking, status: "closed") }
     let!(:booking_room) { create(:booking_room, booking: booking, subtotal: 200.0, quantity: 1) }
 
@@ -38,13 +38,14 @@ RSpec.describe EInvoice::Submit, type: :service do
       allow(MyInvois::ClientFactory).to receive(:build).and_return(@mock_client)
     end
 
-    context "when booking has no closed folio" do
+    context "when booking payment has not concluded" do
+      let(:booking) { create(:booking, hotel: hotel, booking_quote: nil, payment_status: "pending") }
       let!(:folio) { create(:booking_folio, booking: booking, status: "open") }
 
       it "returns failure" do
         result = described_class.call(booking)
         expect(result[:success]).to be false
-        expect(result[:error]).to include("does not have a closed folio")
+        expect(result[:error]).to include("payment has not concluded")
       end
     end
 
@@ -137,7 +138,7 @@ RSpec.describe EInvoice::Submit, type: :service do
     end
 
     context "when the hotel collected payment directly" do
-      let(:booking) { create(:booking, :direct_hotel_payment, hotel: hotel, booking_quote: nil) }
+      let(:booking) { create(:booking, :direct_hotel_payment, hotel: hotel, booking_quote: nil, payment_status: "captured") }
 
       before do
         create(:e_invoice_setting, :intermediary_ready, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
@@ -178,7 +179,7 @@ RSpec.describe EInvoice::Submit, type: :service do
     end
 
     context "when submitting payout self-billed invoice" do
-      let(:booking) { create(:booking, hotel: hotel, booking_quote: nil, status: "completed", fund_collector: "wastays", net_amount: 320.0) }
+      let(:booking) { create(:booking, hotel: hotel, booking_quote: nil, status: "completed", fund_collector: "wastays", net_amount: 320.0, payment_status: "captured") }
       let!(:submission) do
         create(:e_invoice_submission,
           hotel: hotel,
@@ -234,6 +235,24 @@ RSpec.describe EInvoice::Submit, type: :service do
         expect(result[:success]).to be false
         expect(result[:submission].status).to eq("invalid")
         expect(result[:submission].error_details["body"].length).to be <= 500
+      end
+    end
+
+    context "when document building raises a runtime error" do
+      before do
+        allow_any_instance_of(EInvoice::DocumentBuilder).to receive(:build)
+          .and_raise(ArgumentError, "Booking guest city must map to a valid Malaysia state code")
+      end
+
+      it "marks the submission invalid instead of leaving it pending" do
+        result = described_class.call(booking)
+
+        expect(result[:success]).to be false
+        expect(result[:submission].status).to eq("invalid")
+        expect(result[:submission].error_details).to include(
+          "message" => "Booking guest city must map to a valid Malaysia state code",
+          "exception_class" => "ArgumentError"
+        )
       end
     end
   end

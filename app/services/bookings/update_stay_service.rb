@@ -247,6 +247,7 @@ module Bookings
         name: booking.guest_name,
         email: booking.guest_email,
         phone: booking.guest_phone,
+        city: booking.guest_city,
         country: booking.guest_country.presence || @hotel.country,
         created_by_hotel_id: @hotel.id
       ).call

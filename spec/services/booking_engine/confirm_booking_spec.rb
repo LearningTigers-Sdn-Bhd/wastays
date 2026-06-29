@@ -27,6 +27,7 @@ RSpec.describe BookingEngine::ConfirmBooking do
       guest_name: 'Jane Doe',
       guest_email: 'jane@example.com',
       guest_phone: '+60123456789',
+      guest_city: 'Kuala Lumpur',
       government_id: 'A1234567',
       gender: 'FEMALE',
       country: 'Singapore',
@@ -59,6 +60,7 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(booking.total_amount).to eq(200.to_d)
       expect(booking.guest_gender).to eq('female')
       expect(booking.guest_document_type).to eq('passport')
+      expect(booking.guest_city).to eq('Kuala Lumpur')
       expect(booking.guest_country).to eq('Singapore')
       expect(booking.tourism_tax_applied).to be(true)
       expect(booking.tourism_tax_amount.to_f).to eq(10.0)
@@ -74,6 +76,7 @@ RSpec.describe BookingEngine::ConfirmBooking do
 
       expect(booking.booking_guests.count).to eq(1)
       expect(booking.booking_guests.first.is_primary).to be(true)
+      expect(booking.booking_guests.first.guest.city).to eq("Kuala Lumpur")
 
       expect(quote.reload.status).to eq('converted')
       expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: booking)

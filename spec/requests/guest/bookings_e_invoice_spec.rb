@@ -101,5 +101,47 @@ RSpec.describe "Guest::Bookings e-invoice", type: :request do
 
       expect(response).to redirect_to(guest_login_path)
     end
+
+    it "downloads the original invoice even when a newer adjustment note exists" do
+      create(:e_invoice_submission,
+        hotel: hotel,
+        booking: booking,
+        document_scenario: "guest_invoice",
+        document_type: "03",
+        status: "valid",
+        internal_id: "SAH-300000001-DN",
+        uuid: "DN26ZBY0Y5YVQX868FNJRC",
+        submission_uid: "DN4MCJS3QHYW358H8CNJRC",
+        long_id: "DNT19FQ4RT6FJDCBSENJRCRPVK10IW8KKW1782101467",
+        submitted_at: 1.minute.from_now,
+        validated_at: 1.minute.from_now)
+
+      get e_invoice_guest_booking_path(booking)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["Content-Disposition"]).to include("wastays-e-invoice-SAH-300000001.pdf")
+    end
+  end
+
+  describe "GET /guest/bookings/:id" do
+    before do
+      booking.e_invoice_submissions.delete_all
+    end
+
+    it "shows e-invoice failure message when submission is rejected" do
+      create(:e_invoice_submission,
+        hotel: hotel,
+        booking: booking,
+        status: "invalid",
+        document_scenario: "guest_invoice",
+        document_type: "01",
+        error_details: { message: "Booking guest city must map to a valid Malaysia state code" })
+
+      get guest_booking_path(booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("E-Invoice submission failed")
+      expect(response.body).to include("Booking guest city must map to a valid Malaysia state code")
+    end
   end
 end

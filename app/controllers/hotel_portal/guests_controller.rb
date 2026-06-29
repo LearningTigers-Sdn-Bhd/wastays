@@ -32,7 +32,7 @@ module HotelPortal
 
     def search
       @guests = Guests::GuestQuery.new(hotel: current_hotel, params: { query: params[:q] }).call.limit(10)
-      render json: @guests.as_json(only: [ :id, :name, :email, :phone, :country, :gender, :document_type, :government_id ])
+      render json: @guests.as_json(only: [ :id, :name, :email, :phone, :city, :country, :gender, :document_type, :government_id ])
     end
 
     def show
@@ -43,7 +43,7 @@ module HotelPortal
     end
 
     def new
-      @guest = Guest.new(country: current_hotel.country)
+      @guest = Guest.new(city: current_hotel.city, country: current_hotel.country)
     end
 
     def create
@@ -111,7 +111,7 @@ module HotelPortal
     end
 
     def guest_params
-      params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id)
+      params.require(:guest).permit(:name, :email, :phone, :city, :country, :gender, :document_type, :government_id)
     end
 
     private

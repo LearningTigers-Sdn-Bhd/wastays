@@ -25,6 +25,10 @@
         <%= f.telephone_field :phone, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
       </div>
       <div>
+        <%= f.label :city, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+        <%= f.text_field :city, class: "w-full rounded-xl border border-slate-200 px-4 py-3", placeholder: "Kota Kinabalu" %>
+      </div>
+      <div>
         <%= f.label :country, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
         <%= f.select :country, options_for_select(COUNTRY_OPTIONS, guest.country.presence || current_hotel.country), {}, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
       </div>

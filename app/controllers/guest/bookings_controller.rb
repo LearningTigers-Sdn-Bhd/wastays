@@ -58,7 +58,7 @@ class Guest::BookingsController < Guest::BaseController
 
   def e_invoice
     @booking = current_guest.bookings.find(params[:id])
-    submission = @booking.e_invoice_submissions.guest_facing.valid.recent_first.first
+    submission = @booking.ready_guest_e_invoice_submission
     raise ActiveRecord::RecordNotFound unless submission
 
     pdf_bytes = EInvoicePdfService.new(@booking, submission: submission).generate
@@ -66,6 +66,37 @@ class Guest::BookingsController < Guest::BaseController
       filename: "wastays-e-invoice-#{submission.internal_id || @booking.confirmation_token}.pdf",
       type: "application/pdf",
       disposition: "attachment"
+  rescue ActiveRecord::RecordNotFound
+    redirect_to guest_bookings_path, alert: "Booking not found."
+  end
+
+  def request_e_invoice
+    @booking = current_guest.bookings.find(params[:id])
+
+    unless @booking.payment_concluded?
+      return redirect_to guest_booking_path(@booking), alert: "This booking's payment has not concluded yet."
+    end
+
+    unless @booking.e_invoice_requestable?
+      return redirect_to guest_booking_path(@booking), alert: "E-invoice requests are only available within the same calendar month as the payment."
+    end
+
+    if @booking.e_invoice_already_issued?
+      return redirect_to guest_booking_path(@booking), alert: "An e-invoice has already been issued for this booking."
+    end
+
+    # Check for existing pending individual submission (duplicate request)
+    existing_pending = @booking.pending_guest_e_invoice_submission
+
+    if existing_pending
+      return redirect_to guest_booking_path(@booking),
+        alert: "Your e-invoice is already being prepared. You will receive it shortly."
+    end
+
+    EInvoice::AutoIssueJob.perform_later(@booking.id, requested_by_guest: true)
+
+    redirect_to guest_booking_path(@booking),
+      notice: "Your e-invoice request has been submitted. You will receive it shortly."
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."
   end

@@ -102,6 +102,10 @@ class Guest < ApplicationRecord
     country&.split&.map(&:capitalize)&.join(" ")
   end
 
+  def normalized_city
+    city&.split&.map(&:capitalize)&.join(" ")
+  end
+
   private
 
   def normalize_guest_data
@@ -109,6 +113,7 @@ class Guest < ApplicationRecord
     self.government_id = government_id&.downcase&.strip
     self.gender = gender&.downcase
     self.document_type = document_type&.downcase
+    self.city = normalized_city
     self.country = normalized_country
   end
 end

@@ -39,6 +39,7 @@ Rails.application.routes.draw do
         get :receipt
         get :invoice
         get :e_invoice
+        post :request_e_invoice
       end
       resources :refund_requests, only: [ :new, :create ]
     end
@@ -105,6 +106,7 @@ Rails.application.routes.draw do
         get :invoice
         get :e_invoice
         get :voucher
+        post :request_e_invoice
       end
     end
     resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
@@ -343,6 +345,7 @@ Rails.application.routes.draw do
     resources :folios, only: [ :index, :show ], param: :booking_id do
       get :invoice, on: :member
       get :ledger, on: :member
+      post :issue_adjustment, on: :member
       resources :transactions, only: [ :create ], controller: "folios/transactions" do
         post :reverse, on: :member
       end
@@ -422,6 +425,10 @@ Rails.application.routes.draw do
 
     resource :e_invoice_setting, only: [ :show, :update ], controller: "e_invoice_settings"
     resources :e_invoice_submissions, only: [ :index, :show, :create ] do
+      member do
+        get :pdf
+        post :retry
+      end
       collection do
         patch :update_payment_receiver
       end

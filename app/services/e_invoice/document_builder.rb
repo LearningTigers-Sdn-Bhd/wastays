@@ -95,13 +95,11 @@ module EInvoice
     end
 
     def issue_date
-      issued_at = @booking.checked_out_at || @booking.check_out
-      issued_at.to_date.iso8601
+      @booking.payment_concluded_at.to_date.iso8601
     end
 
     def issue_time
-      issued_at = @booking.checked_out_at || @booking.check_out
-      issued_at.utc.strftime("%H:%M:%SZ")
+      @booking.payment_concluded_at.utc.strftime("%H:%M:%SZ")
     end
 
     def currency

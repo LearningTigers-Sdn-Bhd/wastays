@@ -1,6 +1,9 @@
 <% content_for :title, "Booking Details | WAStays" %>
 <% content_for :breadcrumb_current, "Details" %>
-<% guest_e_invoice_submission = @booking.e_invoice_submissions.guest_facing.valid.recent_first.first %>
+<% guest_e_invoice_submission = @booking.ready_guest_e_invoice_submission %>
+<% pending_individual_e_invoice = @booking.pending_guest_e_invoice_submission %>
+<% failed_individual_e_invoice = @booking.failed_guest_e_invoice_submission %>
+<% pending_consolidated = @booking.pending_consolidated_guest_e_invoice_submission %>
 
 <div class="space-y-6">
   <!-- Header -->
@@ -95,6 +98,50 @@
                 <%= link_to invoice_guest_booking_path(@booking), class: "w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-layer-line text-neutral-text-primary hover:bg-surface-hover transition-colors", data: { turbo: false } do %>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                   Download Invoice
+                <% end %>
+              </div>
+            <% elsif pending_individual_e_invoice %>
+              <div class="space-y-2">
+                <div class="flex items-center gap-x-2 p-3 rounded-xl bg-blue-50 border border-blue-100">
+                  <svg class="w-4 h-4 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  <p class="text-sm font-semibold text-blue-700">E-Invoice is being prepared...</p>
+                </div>
+                <%= link_to invoice_guest_booking_path(@booking), class: "w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-layer-line text-neutral-text-primary hover:bg-surface-hover transition-colors", data: { turbo: false } do %>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                  Download Invoice
+                <% end %>
+              </div>
+            <% elsif failed_individual_e_invoice %>
+              <div class="space-y-2">
+                <div class="p-3 rounded-xl bg-red-50 border border-red-100">
+                  <p class="text-sm font-semibold text-red-700">E-Invoice submission failed.</p>
+                  <p class="mt-1 text-sm text-red-600"><%= failed_individual_e_invoice.error_message || "The submission to LHDN failed." %></p>
+                </div>
+                <%= link_to invoice_guest_booking_path(@booking), class: "w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-layer-line text-neutral-text-primary hover:bg-surface-hover transition-colors", data: { turbo: false } do %>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                  Download Invoice
+                <% end %>
+              </div>
+            <% elsif pending_consolidated && @booking.e_invoice_guest_request_possible? %>
+              <div class="space-y-2">
+                <%= button_to request_e_invoice_guest_booking_path(@booking), method: :post, class: "w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-[#0a2e29] hover:bg-[#0d3d35] text-[#d9c5a0] transition-colors", data: { confirm: "Request your e-invoice? This will be submitted to LHDN on your behalf." } do %>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  Request E-Invoice
+                <% end %>
+                <%= link_to receipt_guest_booking_path(@booking), class: "w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-layer-line text-neutral-text-primary hover:bg-surface-hover transition-colors", data: { turbo: false } do %>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                  Download Receipt
+                <% end %>
+              </div>
+            <% elsif pending_consolidated && !@booking.e_invoice_guest_request_possible? %>
+              <div class="space-y-2">
+                <div class="flex items-center gap-x-2 p-3 rounded-xl bg-blue-50 border border-blue-100">
+                  <svg class="w-4 h-4 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  <p class="text-sm font-semibold text-blue-700">E-Invoice is being prepared...</p>
+                </div>
+                <%= link_to receipt_guest_booking_path(@booking), class: "w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-layer-line text-neutral-text-primary hover:bg-surface-hover transition-colors", data: { turbo: false } do %>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                  Download Receipt
                 <% end %>
               </div>
             <% elsif @booking.status == "completed" %>

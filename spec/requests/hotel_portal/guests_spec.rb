@@ -129,6 +129,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         name: "Nur Aina",
         email: "aina@example.com",
         phone: "+60121112222",
+        city: "Kota Kinabalu",
         government_id: "P123456",
         country: "Malaysia",
         gender: "female",
@@ -145,11 +146,34 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         "name" => "Nur Aina",
         "email" => "aina@example.com",
         "phone" => "+60121112222",
+        "city" => "Kota Kinabalu",
         "country" => "Malaysia",
         "gender" => "female",
         "document_type" => "passport",
         "government_id" => "p123456"
       )
+    end
+  end
+
+  describe "PATCH /update" do
+    it "updates guest city and country" do
+      guest = create(:guest, created_by_hotel: hotel, city: "Kuching", country: "Malaysia")
+
+      patch hotel_guest_path(hotel, guest), params: {
+        guest: {
+          name: guest.name,
+          email: guest.email,
+          phone: guest.phone,
+          city: "Kota Kinabalu",
+          country: "Singapore",
+          gender: guest.gender,
+          document_type: guest.document_type,
+          government_id: guest.government_id
+        }
+      }
+
+      expect(response).to redirect_to(hotel_guest_path(hotel, guest))
+      expect(guest.reload).to have_attributes(city: "Kota Kinabalu", country: "Singapore")
     end
   end
 

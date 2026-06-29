@@ -1,4 +1,5 @@
 require "rails_helper"
+require "pdf/reader"
 
 RSpec.describe EInvoicePdfService do
   let(:hotel) { create(:hotel, name: "Seaview Hotel", city: "Kuala Lumpur", country: "Malaysia") }
@@ -62,5 +63,35 @@ RSpec.describe EInvoicePdfService do
 
     expect { described_class.new(booking, submission: submission).generate }
       .to raise_error(ArgumentError, "Booking must have a valid guest e-invoice submission")
+  end
+
+  it "renders adjustment note totals and line item for validated debit notes" do
+    create(:booking_folio, booking: booking, status: "closed")
+    create(:folio_transaction, booking_folio: booking.booking_folio, transaction_type: "charge", category: "other", amount: 310.0)
+    submission.update!(raw_response: { "acceptedDocuments" => [ { "totalIncludingTax" => 300.0 } ] })
+
+    adjustment_submission = create(:e_invoice_submission,
+      hotel: hotel,
+      booking: booking,
+      status: "valid",
+      document_type: "03",
+      internal_id: "SAH-300000001-DN",
+      original_invoice_internal_id: "SAH-300000001",
+      supplier_name: "Jesselton Pixel Sdn Bhd",
+      supplier_tin: "C26537918000",
+      uuid: "DN26ZBY0Y5YVQX868FNJRC",
+      submission_uid: "DN4MCJS3QHYW358H8CNJRC",
+      long_id: "DNT19FQ4RT6FJDCBSENJRCRPVK10IW8KKW1782101467",
+      submitted_at: Time.zone.parse("2026-06-25 10:05:00"),
+      validated_at: Time.zone.parse("2026-06-25 10:06:00"))
+
+    pdf = described_class.new(booking, submission: adjustment_submission).generate
+    text = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
+
+    expect(text).to include("Debit Note")
+    expect(text).to include("Additional charges adjustment")
+    expect(text).to include("ADJUSTMENT TOTAL")
+    expect(text).to include("MYR 10.00")
+    expect(text).not_to include("MYR 300.00")
   end
 end
