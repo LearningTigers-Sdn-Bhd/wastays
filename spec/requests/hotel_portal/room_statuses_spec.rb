@@ -122,7 +122,7 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
       expect(room_status.reload.priority).to be false
     end
 
-    it "automatically resets the priority flag to false when marked as ready" do
+    it "retains the priority flag when marked as ready" do
       grant_manage_room_status
       room_status = room_status_for
       room_status.update!(priority: true)
@@ -133,7 +133,21 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
       }
       expect(response).to redirect_to(hotel_room_status_board_path(hotel))
       expect(room_status.reload.status).to eq("ready")
+      expect(room_status.priority).to be true
+    end
+
+    it "allows toggling the priority flag and adding optional notes" do
+      grant_manage_room_status
+      room_status = room_status_for
       expect(room_status.priority).to be false
+
+      # Mark priority with notes
+      patch hotel_room_status_path(hotel, room_status), params: {
+        room_status: { priority: "true", notes: "Need early prep for VIP." }
+      }
+      expect(response).to redirect_to(hotel_room_status_board_path(hotel))
+      expect(room_status.reload.priority).to be true
+      expect(room_status.notes).to eq("Need early prep for VIP.")
     end
 
     it "allows toggling the DND flag and sets the dnd_date" do

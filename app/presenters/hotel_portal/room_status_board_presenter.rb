@@ -41,6 +41,10 @@ module HotelPortal
         @failure_note ||= room.dig(:status, :notes).to_s.strip
       end
 
+      def notes
+        room.dig(:status, :notes).to_s.strip
+      end
+
       def priority?
         room.dig(:status, :priority) == true
       end
@@ -279,7 +283,7 @@ module HotelPortal
       {
         container_class: "inline-flex items-center justify-center rounded-full border size-5 #{status_style(status)} cursor-help shadow-sm",
         tooltip_wrapper_class: "hidden z-[100] #{(status == 'inspection_failed' && failure_note.present?) ? 'px-4 py-3 rounded-2xl w-64' : 'px-3 py-1.5 rounded-full'} bg-white border border-slate-200 shadow-xl pointer-events-none",
-        icon_bg_class: "p-1 rounded-full #{status_style(status, fallback: 'border-slate-400').split(' ').first.gsub('border-', 'bg-')} text-white",
+        icon_bg_class: "inline-flex items-center justify-center rounded-full border size-5 #{status_style(status, fallback: 'border-slate-400 bg-slate-400 text-slate-700')}",
         label: room_status_label(status)
       }
     end

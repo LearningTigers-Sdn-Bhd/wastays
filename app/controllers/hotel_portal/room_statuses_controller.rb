@@ -12,6 +12,10 @@ module HotelPortal
         room_status.priority = room_status_params[:priority]
       end
 
+      if room_status_params.key?(:notes)
+        room_status.notes = room_status_params[:notes]
+      end
+
       if room_status_params.key?(:dnd)
         room_status.dnd = ActiveRecord::Type::Boolean.new.cast(room_status_params[:dnd])
         room_status.dnd_date = room_status.dnd ? current_hotel.current_business_date : nil

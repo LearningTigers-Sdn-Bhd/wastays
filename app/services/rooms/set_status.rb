@@ -39,7 +39,6 @@ module Rooms
           last_changed_at: Time.current,
           notes: @reason.presence || @room_status.notes
         }
-        updates[:priority] = false if @status == "ready"
 
         @room_status.update!(updates)
 

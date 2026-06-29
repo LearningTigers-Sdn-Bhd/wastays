@@ -25,13 +25,16 @@
           </div>
         <% end %>
 
-        <% if room_row.priority? && room_row.status != "ready" %>
+        <% if room_row.priority? %>
           <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
             <span data-floating-target="reference" class="text-rose-500 cursor-help">
               <%= cached_icon "flag", library: "phosphor", variant: "fill", class: "size-4 text-rose-500" %>
             </span>
-            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap">
-              <span class="text-[8px] font-bold uppercase tracking-wider">Priority Room</span>
+            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white text-left max-w-[200px] whitespace-normal leading-tight">
+              <p class="text-[8px] font-bold uppercase tracking-wider">Priority Room</p>
+              <% if room_row.notes.present? %>
+                <p class="mt-0.5 text-[9px] font-medium text-slate-300"><%= room_row.notes %></p>
+              <% end %>
             </div>
           </div>
         <% end %>
@@ -69,7 +72,7 @@
           <div data-floating-target="floating" class="<%= badge_meta[:tooltip_wrapper_class] %>">
             <div class="flex items-center gap-2 <%= 'mb-2' if room_row.status == "inspection_failed" && room_row.failure_note.present? %>">
               <div class="<%= badge_meta[:icon_bg_class] %>">
-                <%= presenter.status_icon(room_row.status) %>
+                <div class="scale-90"><%= presenter.status_icon(room_row.status) %></div>
               </div>
               <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700"><%= badge_meta[:label] %></span>
             </div>
