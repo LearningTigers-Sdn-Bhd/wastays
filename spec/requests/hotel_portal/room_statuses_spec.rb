@@ -101,5 +101,25 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
       expect(flash[:alert]).to include("not authorized")
       expect(room_status.reload.status).to eq("dirty")
     end
+
+    it "allows toggling the priority flag" do
+      grant_manage_room_status
+      room_status = room_status_for
+      expect(room_status.priority).to be false
+
+      # Mark priority
+      patch hotel_room_status_path(hotel, room_status), params: {
+        room_status: { priority: "true" }
+      }
+      expect(response).to redirect_to(hotel_room_status_board_path(hotel))
+      expect(room_status.reload.priority).to be true
+
+      # Remove priority
+      patch hotel_room_status_path(hotel, room_status), params: {
+        room_status: { priority: "false" }
+      }
+      expect(response).to redirect_to(hotel_room_status_board_path(hotel))
+      expect(room_status.reload.priority).to be false
+    end
   end
 end

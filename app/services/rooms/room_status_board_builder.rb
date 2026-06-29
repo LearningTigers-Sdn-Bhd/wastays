@@ -98,7 +98,8 @@ module Rooms
         room_status_id: resolved.room_status&.id,
         notes: resolved.room_status&.notes,
         booking_state: resolved.booking_state,
-        booking_details: resolved.booking_details
+        booking_details: resolved.booking_details,
+        priority: resolved.room_status&.priority
       }
     end
 

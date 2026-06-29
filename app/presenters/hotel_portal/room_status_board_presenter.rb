@@ -41,6 +41,10 @@ module HotelPortal
         @failure_note ||= room.dig(:status, :notes).to_s.strip
       end
 
+      def priority?
+        room.dig(:status, :priority) == true
+      end
+
       def can_manage?
         @can_manage ||= user&.has_permission?("manage_room_status", hotel: hotel)
       end

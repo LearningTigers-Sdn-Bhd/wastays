@@ -4,6 +4,8 @@ class RoomStatus < ApplicationRecord
   STATUSES = %w[ready dirty cleaning awaiting_inspection inspection_failed out_of_service late_checkout_detected].freeze
   ASSIGNABLE_STATUSES = %w[ready].freeze
 
+  scope :priority, -> { where(priority: true) }
+
   belongs_to :hotel
   belongs_to :room_type
   belongs_to :last_changed_by, class_name: "User", optional: true

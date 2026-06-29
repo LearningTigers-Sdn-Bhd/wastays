@@ -13,6 +13,17 @@
             <%= cached_icon "clipboard-text", library: "phosphor", variant: "light", class: "size-4" %>
           <% end %>
         <% end %>
+
+        <% if room_row.priority? %>
+          <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+            <span data-floating-target="reference" class="text-rose-500 cursor-help">
+              <%= cached_icon "flag", library: "phosphor", variant: "fill", class: "size-4 text-rose-500" %>
+            </span>
+            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap">
+              <span class="text-[8px] font-bold uppercase tracking-wider">Priority Room</span>
+            </div>
+          </div>
+        <% end %>
       </div>
       
       <div class="flex items-center gap-1">
