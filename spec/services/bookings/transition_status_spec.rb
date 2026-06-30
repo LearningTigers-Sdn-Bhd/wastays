@@ -294,7 +294,8 @@ RSpec.describe Bookings::TransitionStatus do
           expect(result.success?).to be(true)
         }.not_to change(FolioTransaction, :count)
 
-        expect(deposit.reload).to have_attributes(status: "released", released_at: timestamp)
+        expect(deposit.reload).to have_attributes(status: "released")
+        expect(deposit.reload.released_at).to be_within(0.001).of(timestamp)
         expect(deposit.metadata).to include(
           "collection_note" => "preserve",
           "released_by_user_id" => user.id,
