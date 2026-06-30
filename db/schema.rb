@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_26_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_30_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -486,11 +486,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_26_000002) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "transaction_code_id", null: false
     t.index ["booking_folio_id"], name: "index_deposits_on_booking_folio_id"
     t.index ["booking_id"], name: "index_deposits_on_booking_id"
     t.index ["gl_code"], name: "index_deposits_on_gl_code"
     t.index ["hotel_id", "hold_type", "status"], name: "index_deposits_on_hotel_id_and_hold_type_and_status"
     t.index ["hotel_id"], name: "index_deposits_on_hotel_id"
+    t.index ["transaction_code_id"], name: "index_deposits_on_transaction_code_id"
     t.index ["user_id"], name: "index_deposits_on_user_id"
   end
 
@@ -1638,6 +1640,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_26_000002) do
   add_foreign_key "deposits", "booking_folios"
   add_foreign_key "deposits", "bookings"
   add_foreign_key "deposits", "hotels"
+  add_foreign_key "deposits", "transaction_codes"
   add_foreign_key "deposits", "users"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
   add_foreign_key "features", "feature_groups"
