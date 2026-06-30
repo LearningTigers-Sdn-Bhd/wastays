@@ -8,6 +8,7 @@ module Financials
       { system_key: "cancel_revenue", code: "CANCEL", name: "Cancellation Revenue", kind: "charge", category: "cancellation_charge", gl_account_code: "4033" },
       { system_key: "late_checkout_revenue", code: "LATE_CO", name: "Late Checkout Revenue", kind: "charge", category: "late_checkout_charge", gl_account_code: "4031" },
       { system_key: "early_departure_revenue", code: "EARLY_DEP", name: "Early Departure Revenue", kind: "charge", category: "early_departure_charge", gl_account_code: "4032" },
+      { system_key: "security_deposit", code: "SECDEP", name: "Security Deposit", kind: "payment", category: "security_deposit", gl_account_code: "2030" },
       { system_key: "sst_tax", code: "TAX_SST", name: "SST", kind: "tax", category: "tax", gl_account_code: "2010" },
       { system_key: "tourism_tax", code: "TAX_TTX", name: "Tourism Tax", kind: "tax", category: "tax", gl_account_code: "2010" },
       { system_key: "fnb_revenue", code: "FNB", name: "Food & Beverage", kind: "charge", category: "fb", gl_account_code: "4020" },
@@ -32,6 +33,7 @@ module Financials
       "cash" => "cash_payment",
       "gateway_payment" => "card_payment",
       "booking_payment" => "bank_payment",
+      "security_deposit" => "security_deposit",
       "refund" => "refund",
       "adjustment" => "adjustment",
       "correction" => "adjustment",
@@ -61,9 +63,21 @@ module Financials
 
     def ensure_code!(attributes)
       @hotel.transaction_codes.find_by(system_key: attributes[:system_key]) ||
-        @hotel.transaction_codes.create!(attributes.merge(system_required: true, active: true))
+        @hotel.transaction_codes.create!(attributes.merge(code: available_code(attributes[:code]), system_required: true, active: true))
     rescue ActiveRecord::RecordNotUnique
       @hotel.transaction_codes.find_by!(system_key: attributes[:system_key])
+    end
+
+    def available_code(code)
+      return code unless @hotel.transaction_codes.exists?(code: code)
+
+      suffix = 2
+      candidate = "#{code}_#{suffix}"
+      while @hotel.transaction_codes.exists?(code: candidate)
+        suffix += 1
+        candidate = "#{code}_#{suffix}"
+      end
+      candidate
     end
 
     def sync_primary_tax_codes!
