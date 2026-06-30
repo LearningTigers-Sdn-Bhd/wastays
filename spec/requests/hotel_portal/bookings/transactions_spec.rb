@@ -435,7 +435,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
 
     get hotel_booking_transaction_check_in_reservation_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
-    expect(response.body).to include("Collect security deposit")
+    expect(response.body).to include("Security Deposit")
     expect(response.body).to include("security_deposit_amount")
   end
 

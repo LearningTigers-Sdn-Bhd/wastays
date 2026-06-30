@@ -8,56 +8,69 @@
     <h3 class="text-lg font-bold text-slate-900"><%= booking.checked_in? ? "Edit Check-In" : "Confirm Check-In" %></h3>
     <p class="text-sm text-slate-500 mt-1">Set check-in time and assign rooms for <%= booking.guest_name %>.</p>
 
-    <div class="mt-6">
-      <%= render "hotel_portal/bookings/guarantee_status_badge", booking: booking %>
-    </div>
+    <% if booking.guarantee_method.present? && booking.guarantee_method != "none" %>
+      <div class="mt-6">
+        <%= render "hotel_portal/bookings/guarantee_status_badge", booking: booking %>
+      </div>
+    <% end %>
 
     <%= form_with model: booking, url: check_in_hotel_booking_path(hotel, booking), method: :post,
         class: "mt-4 space-y-4" do |f| %>
+      <% currency = hotel.default_currency.presence || booking.currency.presence || "MYR" %>
       <div>
-        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Check-in Date & Time</label>
+        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Check-in Date & Time</label>
         <%= f.datetime_local_field :checked_in_at,
             value: presenter.checked_in_at_form_value,
             class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
       </div>
 
       <% unless booking.checked_in? %>
-        <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-          <label class="flex items-start justify-between gap-4">
-            <span>
-              <span class="block text-sm font-bold text-slate-900">Collect security deposit</span>
-              <span class="mt-1 block text-xs font-medium text-slate-500">Record a manual security deposit (e.g., cash, card authorization). This is tracked independently from the guest folio.</span>
-            </span>
-            <%= check_box_tag :collect_security_deposit, "1", false, class: "mt-1 rounded border-slate-300 text-slate-900 focus:ring-slate-900" %>
-          </label>
-
-          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+        <div class="space-y-4 border-t border-slate-100 py-4" data-controller="payment-toggle">
+          <div class="flex items-start justify-between gap-4">
             <div>
-              <%= label_tag :security_deposit_amount, "Amount", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-              <%= number_field_tag :security_deposit_amount, nil, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+              <h3 class="text-sm font-bold text-slate-900">Security Deposit</h3>
+              <p class="mt-1 text-xs font-medium text-slate-500">Record a refundable deposit separately from the guest folio.</p>
             </div>
-            <div>
-              <%= label_tag :security_deposit_payment_method, "Method", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-              <%= select_tag :security_deposit_payment_method, options_for_select([["Cash", "cash"], ["Credit Card", "credit_card"], ["Bank Transfer", "bank_transfer"], ["Manual", "manual"]], "cash"), class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+            <label class="relative mt-0.5 inline-flex shrink-0 cursor-pointer items-center">
+              <%= check_box_tag :collect_security_deposit,
+                                "1",
+                                false,
+                                class: "peer sr-only",
+                                aria: { label: "I have collected the guest's security deposit" },
+                                data: { payment_toggle_target: "checkbox", action: "change->payment-toggle#toggle" } %>
+              <span class="block h-6 w-11 rounded-full bg-slate-200 transition peer-checked:bg-slate-900 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></span>
+            </label>
+          </div>
+
+          <div class="flex items-center justify-between gap-4" data-payment-toggle-target="container">
+            <%= label_tag :security_deposit_amount, "Security Deposit Amount", class: "text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+            <div class="flex w-44 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-sm font-black text-slate-900 shadow-sm">
+              <span class="flex items-center border-r border-slate-200 px-3 text-xs font-bold text-slate-500"><%= currency %></span>
+              <%= number_field_tag :security_deposit_amount,
+                                   "0.00",
+                                   step: 0.01,
+                                   min: 0,
+                                   disabled: true,
+                                   class: "min-w-0 flex-1 border-0 bg-slate-50 px-3 py-2 text-right font-black text-slate-900 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:text-slate-400",
+                                   data: { payment_toggle_target: "field" } %>
             </div>
           </div>
-          <div class="mt-3">
-            <%= label_tag :security_deposit_reference, "Reference", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-            <%= text_field_tag :security_deposit_reference, nil, placeholder: "Optional receipt/reference", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+
+          <div class="grid gap-3 sm:grid-cols-2" data-payment-toggle-target="container">
+            <div>
+              <%= label_tag :security_deposit_payment_method, "Method", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+              <%= select_tag :security_deposit_payment_method, options_for_select([["Cash", "cash"], ["Credit Card", "credit_card"], ["Bank Transfer", "bank_transfer"], ["Manual", "manual"]], "cash"), disabled: true, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400", data: { payment_toggle_target: "field" } %>
+            </div>
+            <div>
+              <%= label_tag :security_deposit_reference, "Reference", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+              <%= text_field_tag :security_deposit_reference, nil, placeholder: "Optional receipt/reference", disabled: true, class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400", data: { payment_toggle_target: "field" } %>
+            </div>
           </div>
         </div>
       <% end %>
 
-      <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Guarantee Method</label>
-        <%= f.select :guarantee_method,
-            presenter.guarantee_method_options,
-            { prompt: "Select Method" },
-            class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
-      </div>
-
       <div class="space-y-3">
-        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Room Assignments</label>
+        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Room Assignments</label>
         <%= f.fields_for :booking_rooms do |rf| %>
           <div class="flex items-center gap-3"
                data-controller="room-lock room-selection"

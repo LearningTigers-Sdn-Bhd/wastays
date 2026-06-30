@@ -97,4 +97,22 @@ RSpec.describe HotelPortal::BookingPresenter do
       )
     end
   end
+
+  describe "security deposit helpers" do
+    it "summarizes held security deposits separately from booking totals" do
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:deposit, booking: booking, hotel: hotel, booking_folio: folio, amount: 200, status: "held")
+      create(:deposit, booking: booking, hotel: hotel, booking_folio: folio, amount: 50, status: "released")
+      booking.update!(deposit_status: "held")
+
+      expect(subject.security_deposit_status_label).to eq("Held")
+      expect(subject.held_security_deposit_total).to eq(200.to_d)
+      expect(subject.formatted_held_security_deposit_total).to eq("MYR 200.00")
+    end
+
+    it "defaults the security deposit status when not set" do
+      expect(subject.security_deposit_status_label).to eq("Not Required")
+      expect(subject.formatted_held_security_deposit_total).to eq("MYR 0.00")
+    end
+  end
 end

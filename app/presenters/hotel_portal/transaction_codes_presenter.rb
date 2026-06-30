@@ -18,8 +18,8 @@ module HotelPortal
       },
       {
         title: "Booking Operations",
-        description: "Booking lifecycle codes used for no-shows, cancellations, late checkouts, and early departures.",
-        system_keys: %w[no_show_revenue cancel_revenue late_checkout_revenue early_departure_revenue],
+        description: "Booking lifecycle codes used for no-shows, cancellations, deposits, late checkouts, and early departures.",
+        system_keys: %w[no_show_revenue cancel_revenue late_checkout_revenue early_departure_revenue security_deposit],
         test_id: "transaction-codes-booking-operations-list",
         empty_message: "No booking operations transaction codes found."
       },

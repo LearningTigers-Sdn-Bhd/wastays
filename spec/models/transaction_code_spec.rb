@@ -7,6 +7,7 @@ RSpec.describe TransactionCode, type: :model do
 
   it { is_expected.to belong_to(:hotel) }
   it { is_expected.to have_many(:folio_transactions).dependent(:nullify) }
+  it { is_expected.to have_many(:deposits).dependent(:restrict_with_error) }
   it { is_expected.to have_many(:hotel_taxes).dependent(:nullify) }
   it { is_expected.to have_many(:transaction_code_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:taxes).through(:transaction_code_taxes).source(:hotel_tax) }
