@@ -499,6 +499,83 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(folio.reload.status).to eq("open")
     end
 
+    it "releases held deposits from an opted-in checkout-sheet submission" do
+      booking.update!(check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      booking.update!(deposit_status: "held")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100)
+      deposit = create(:deposit, booking: booking, hotel: hotel, booking_folio: folio, amount: 200)
+
+      expect {
+        post check_out_hotel_booking_path(hotel, booking),
+          params: {
+            checkout_sheet: "1",
+            checked_out_at: Time.current.to_s,
+            release_security_deposit: "1",
+            security_deposit_release_method: "cash",
+            security_deposit_release_reference: "RETURN-1",
+            checkout_folios: { folio.id.to_s => { action: "close" } }
+          },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      }.not_to change(FolioTransaction, :count)
+
+      expect(response).to have_http_status(:success)
+      expect(booking.reload).to have_attributes(status: "completed", deposit_status: "released")
+      expect(deposit.reload.status).to eq("released")
+      expect(deposit.metadata).to include("release_method" => "cash", "release_reference" => "RETURN-1")
+    end
+
+    it "keeps held deposits when checkout-sheet release is explicitly OFF" do
+      booking.update!(check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      booking.update!(deposit_status: "held")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100)
+      deposit = create(:deposit, booking: booking, hotel: hotel, booking_folio: folio)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          release_security_deposit: "0",
+          checkout_folios: { folio.id.to_s => { action: "close" } }
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:success)
+      expect(booking.reload).to have_attributes(status: "completed", deposit_status: "held")
+      expect(deposit.reload.status).to eq("held")
+    end
+
+    it "rejects an unsupported checkout-sheet release method atomically" do
+      booking.update!(check_out: Date.current)
+      booking.transition_status_to!("checked_in", event: "check_in")
+      booking.update!(deposit_status: "held")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100)
+      deposit = create(:deposit, booking: booking, hotel: hotel, booking_folio: folio)
+
+      post check_out_hotel_booking_path(hotel, booking),
+        params: {
+          checkout_sheet: "1",
+          checked_out_at: Time.current.to_s,
+          release_security_deposit: "1",
+          security_deposit_release_method: "crypto",
+          checkout_folios: { folio.id.to_s => { action: "close" } }
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Security deposit release method is not supported")
+      expect(booking.reload.status).to eq("checked_in")
+      expect(folio.reload.status).to eq("open")
+      expect(deposit.reload.status).to eq("held")
+    end
+
     it "posts checkout settlement and redirects to the booking page with checkout_success" do
       grant_permission("post_folio_payments")
       booking.transition_status_to!("checked_in", event: "check_in")
