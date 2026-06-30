@@ -9,7 +9,6 @@ module Folios
     CLOSE_ACTION = "close"
     BLOCKING_ACTIONS = %w[refund_credit_handling voided].freeze
     EXCEPTION_ACTIONS = %w[keep_open manager_review write_off_approval].freeze
-    PAYMENT_METHODS = %w[cash card].freeze
 
     def self.call(booking:, hotel:, user:, action_params:, posting_date:, options: {})
       new(
@@ -78,7 +77,7 @@ module Folios
 
         if action == PAYMENT_ACTION
           return "#{folio.display_name}: payment amount must equal #{money(balance)}." unless payment_amount_for(folio) == balance
-          return "#{folio.display_name}: payment method is not supported." unless payment_method_for(folio).in?(PAYMENT_METHODS)
+          return "#{folio.display_name}: payment method is not supported." unless Checkouts::PaymentMethods.valid?(payment_method_for(folio))
           return "You do not have permission to post checkout payments." unless can_post_payments?
         end
 
@@ -107,7 +106,7 @@ module Folios
     end
 
     def post_payment(folio)
-      source = Folios::PaymentSource.fetch(payment_method_for(folio))
+      source = Folios::PaymentSource.fetch(Checkouts::PaymentMethods.payment_source_for(payment_method_for(folio)))
       return failure("Checkout payment method is not supported.") if source.blank?
 
       Folios::PostStaffTransaction.call(
