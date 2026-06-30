@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Deposits::RecordSecurityDeposit do
-  it "creates a collected security deposit outside folio transactions" do
+  it "creates a held security deposit outside folio transactions" do
     booking = create(:booking)
     folio = create(:booking_folio, booking: booking)
     user = create(:user)
@@ -19,9 +19,9 @@ RSpec.describe Deposits::RecordSecurityDeposit do
       )
 
       expect(result.success?).to be(true)
-      expect(result.deposit.status).to eq("collected")
+      expect(result.deposit.status).to eq("held")
       expect(result.deposit.hold_type).to eq("security")
-      expect(result.deposit.gl_code).to eq("2030")
+      expect(result.deposit.transaction_code).to have_attributes(system_key: "security_deposit", code: "SECDEP", gl_account_code: "2030")
     }.to change(Deposit, :count).by(1)
       .and change(FolioTransaction, :count).by(0)
   end

@@ -133,7 +133,7 @@ module Bookings
           @security_deposit = deposit_result.deposit
 
           if @security_deposit.present?
-            @booking.update!(deposit_status: "collected")
+            @booking.update!(deposit_status: "held")
           end
 
           if is_retroactive || was_review_no_show
@@ -227,6 +227,13 @@ module Bookings
             next
           end
 
+          deposit_release_result = release_security_deposit_if_requested
+          unless deposit_release_result.success?
+            error = deposit_release_result.error
+            next
+          end
+          @security_deposit_release = deposit_release_result
+
           @booking.transition_status_to!(
             "completed",
             event: "check_out",
@@ -239,15 +246,12 @@ module Bookings
             source: @options[:source],
             old_value: { "status" => @booking.status_before_last_save },
             new_value: { "status" => "completed", "checked_out_at" => @booking.checked_out_at },
-            metadata: {
-              folio_id: close_result.folio.id,
-              folio_number: close_result.folio.folio_number,
-              folio_status: close_result.folio.status,
-              outstanding_balance: close_result.balance.to_s
-            }
+            metadata: checkout_audit_metadata(close_result)
           )
           mark_assigned_rooms_dirty
         end
+
+        raise ActiveRecord::Rollback if error.present?
       end
 
       return failure(error) if error.present?
@@ -261,6 +265,40 @@ module Bookings
       success
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
+    end
+
+    def release_security_deposit_if_requested
+      release_options = @options[:security_deposit_release]
+      return OpenStruct.new(success?: true, deposit_ids: [], total: 0.to_d) if release_options.blank?
+
+      Deposits::ReleaseHeldDeposits.call(
+        booking: @booking,
+        user: @user,
+        released_at: @timestamp,
+        method: release_options[:method],
+        reference: release_options[:reference]
+      )
+    end
+
+    def checkout_audit_metadata(close_result)
+      metadata = {
+        folio_id: close_result.folio.id,
+        folio_number: close_result.folio.folio_number,
+        folio_status: close_result.folio.status,
+        outstanding_balance: close_result.balance.to_s
+      }
+
+      if @security_deposit_release&.deposit_ids&.any?
+        metadata[:security_deposit_release] = {
+          deposit_ids: @security_deposit_release.deposit_ids,
+          total: @security_deposit_release.total.to_d.to_s("F"),
+          method: @security_deposit_release.method,
+          reference: @security_deposit_release.reference,
+          released_at: @security_deposit_release.released_at.iso8601
+        }
+      end
+
+      metadata
     end
 
     def cancel

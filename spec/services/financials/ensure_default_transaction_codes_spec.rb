@@ -11,13 +11,14 @@ RSpec.describe Financials::EnsureDefaultTransactionCodes, type: :service do
 
       expect {
         described_class.call(hotel)
-      }.to change { hotel.transaction_codes.count }.from(0).to(18)
+      }.to change { hotel.transaction_codes.count }.from(0).to(19)
 
       expect(hotel.transaction_codes.system_required.pluck(:code)).to contain_exactly(
-        "ROOM", "NO_SHOW", "CANCEL", "LATE_CO", "EARLY_DEP", "TAX_SST", "TAX_TTX", "FNB", "PARK", "MISC", "CASH", "CARD", "BANK", "GATEWAY", "OTA", "REFUND", "ADJUSTMENT", "REBATE"
+        "ROOM", "NO_SHOW", "CANCEL", "LATE_CO", "EARLY_DEP", "SECDEP", "TAX_SST", "TAX_TTX", "FNB", "PARK", "MISC", "CASH", "CARD", "BANK", "GATEWAY", "OTA", "REFUND", "ADJUSTMENT", "REBATE"
       )
       expect(hotel.transaction_codes.find_by!(system_key: "gateway_manual_recovery_payment")).to have_attributes(code: "GATEWAY", category: "gateway_payment", gl_account_code: "1010")
       expect(hotel.transaction_codes.find_by!(system_key: "ota_collected_payment")).to have_attributes(code: "OTA", category: "booking_payment", gl_account_code: "2020")
+      expect(hotel.transaction_codes.find_by!(system_key: "security_deposit")).to have_attributes(code: "SECDEP", category: "security_deposit", gl_account_code: "2030")
     end
 
     it "is idempotent" do
@@ -33,6 +34,17 @@ RSpec.describe Financials::EnsureDefaultTransactionCodes, type: :service do
       described_class.call(hotel)
 
       expect(room_code.reload.code).to eq("ROOM-01")
+    end
+
+    it "uses an available hotel-facing code when a new default code is already taken" do
+      hotel.transaction_codes.destroy_all
+      create(:transaction_code, hotel: hotel, code: "SECDEP", system_key: "custom_secdep")
+
+      described_class.call(hotel)
+
+      security_deposit_code = hotel.transaction_codes.find_by!(system_key: "security_deposit")
+      expect(security_deposit_code.code).to eq("SECDEP_2")
+      expect(security_deposit_code.category).to eq("security_deposit")
     end
   end
 end

@@ -148,6 +148,11 @@
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Guarantee</div>
           <div class="mt-0.5 truncate text-sm font-semibold text-slate-900" title="<%= presenter.guarantee_method_label %>"><%= presenter.guarantee_method_label %></div>
         </div>
+        <!-- Security Deposit -->
+        <div class="bg-white px-4 py-2.5 min-w-0">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Security Deposit</div>
+          <div class="mt-0.5 truncate text-sm font-semibold text-slate-900" title="<%= presenter.security_deposit_status_label %>"><%= presenter.security_deposit_status_label %></div>
+        </div>
         <!-- Folio -->
         <div class="bg-white px-4 py-2.5 min-w-0 flex items-center justify-between">
           <div>
@@ -170,8 +175,8 @@
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Taxes / Charges</div>
           <div class="mt-0.5 truncate text-sm font-semibold text-slate-900"><%= presenter.formatted_taxes_total %></div>
         </div>
-        <!-- Total Paid (spans 2 columns) -->
-        <div class="col-span-2 bg-white px-4 py-2.5 min-w-0">
+        <!-- Total Paid -->
+        <div class="bg-white px-4 py-2.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Paid</div>
           <div class="mt-0.5 truncate text-sm font-semibold text-slate-900"><%= presenter.formatted_total_amount %></div>
         </div>

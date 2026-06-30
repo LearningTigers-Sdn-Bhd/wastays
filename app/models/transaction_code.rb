@@ -15,6 +15,7 @@ class TransactionCode < ApplicationRecord
     cash
     gateway_payment
     booking_payment
+    security_deposit
     refund
     adjustment
     correction
@@ -24,6 +25,7 @@ class TransactionCode < ApplicationRecord
 
   belongs_to :hotel
   has_many :folio_transactions, dependent: :nullify
+  has_many :deposits, dependent: :restrict_with_error
   has_many :folio_routing_rules, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :nullify
   has_many :transaction_code_taxes, dependent: :destroy

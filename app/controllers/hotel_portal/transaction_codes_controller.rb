@@ -172,7 +172,7 @@ module HotelPortal
 
     def prevent_new_tax_code_params(permitted)
       permitted[:kind] = "charge" if permitted[:kind] == "tax"
-      permitted[:category] = "other" if permitted[:category] == "tax"
+      permitted[:category] = "other" if permitted[:category].in?(%w[tax security_deposit])
     end
 
     def preserve_locked_kind_category_params(permitted)
