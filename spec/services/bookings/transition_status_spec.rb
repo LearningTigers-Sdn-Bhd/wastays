@@ -98,7 +98,7 @@ RSpec.describe Bookings::TransitionStatus do
         expect(other_booking.reload.booking_folio.folio_number).to eq(1)
       end
 
-      it "optionally records a collected security deposit during check-in" do
+      it "optionally records a held security deposit during check-in" do
         result = described_class.new(
           booking: booking,
           status: "checked_in",
@@ -116,10 +116,11 @@ RSpec.describe Bookings::TransitionStatus do
         expect(result.success?).to be(true)
         deposit = booking.reload.deposits.sole
         expect(deposit.amount).to eq(300.0)
-        expect(deposit.status).to eq("collected")
+        expect(deposit.status).to eq("held")
         expect(deposit.hold_type).to eq("security")
         expect(deposit.booking_folio).to eq(booking.booking_folio)
-        expect(deposit.gl_code).to eq("2030")
+        expect(deposit.transaction_code).to have_attributes(system_key: "security_deposit", code: "SECDEP", gl_account_code: "2030")
+        expect(booking.deposit_status).to eq("held")
         expect(BookingAuditLog.last.metadata).to include(
           "security_deposit_id" => deposit.id,
           "security_deposit_amount" => "300.0"
@@ -268,6 +269,79 @@ RSpec.describe Bookings::TransitionStatus do
         log = BookingAuditLog.last
         expect(log.action_type).to eq("check_out")
         expect(log.metadata["folio_id"]).to eq(folio.id)
+      end
+
+      it "releases held security deposits and records the release in the checkout audit" do
+        folio = create_settled_folio
+        deposit = create(
+          :deposit,
+          booking: booking,
+          hotel: booking.hotel,
+          booking_folio: folio,
+          amount: 150,
+          metadata: { "collection_note" => "preserve" }
+        )
+        booking.update!(deposit_status: "held")
+
+        expect {
+          result = described_class.new(
+            booking: booking,
+            status: "completed",
+            timestamp: timestamp,
+            user: user,
+            options: { security_deposit_release: { method: "card", reference: "AUTH-9" } }
+          ).call
+          expect(result.success?).to be(true)
+        }.not_to change(FolioTransaction, :count)
+
+        expect(deposit.reload).to have_attributes(status: "released", released_at: timestamp)
+        expect(deposit.metadata).to include(
+          "collection_note" => "preserve",
+          "released_by_user_id" => user.id,
+          "release_method" => "card",
+          "release_reference" => "AUTH-9",
+          "source" => "checkout"
+        )
+        expect(booking.reload.deposit_status).to eq("released")
+        expect(BookingAuditLog.last.metadata["security_deposit_release"]).to eq(
+          "deposit_ids" => [ deposit.id ],
+          "total" => "150.0",
+          "method" => "card",
+          "reference" => "AUTH-9",
+          "released_at" => timestamp.iso8601
+        )
+      end
+
+      it "leaves held deposits unchanged when release options are absent" do
+        folio = create_settled_folio
+        deposit = create(:deposit, booking: booking, hotel: booking.hotel, booking_folio: folio)
+        booking.update!(deposit_status: "held")
+
+        result = subject.call
+
+        expect(result.success?).to be(true)
+        expect(deposit.reload.status).to eq("held")
+        expect(booking.reload.deposit_status).to eq("held")
+        expect(BookingAuditLog.last.metadata).not_to have_key("security_deposit_release")
+      end
+
+      it "rolls back folio closing and checkout when deposit release fails" do
+        folio = create_settled_folio
+        failure = OpenStruct.new(success?: false, error: "Deposit release failed")
+        allow(Deposits::ReleaseHeldDeposits).to receive(:call).and_return(failure)
+
+        result = described_class.new(
+          booking: booking,
+          status: "completed",
+          timestamp: timestamp,
+          user: user,
+          options: { security_deposit_release: { method: "cash" } }
+        ).call
+
+        expect(result.success?).to be(false)
+        expect(result.error).to eq("Deposit release failed")
+        expect(booking.reload.status).to eq("checked_in")
+        expect(folio.reload.status).to eq("open")
       end
 
       it "checks out a checkout-required booking" do
