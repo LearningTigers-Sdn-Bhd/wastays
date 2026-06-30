@@ -223,6 +223,25 @@ RSpec.describe Bookings::TransitionStatus do
         expect(result.error).to include("Reason required for backdated check-in on closed date 2026-05-18")
         expect(booking.reload.status).to eq("confirmed")
       end
+
+      it "clears any lingering DND flag on assigned rooms on check-in" do
+        room_type = create(:room_type, hotel: booking.hotel)
+        booking_room = create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+        room_status = RoomStatus.find_or_create_by!(
+          hotel: booking.hotel,
+          room_type: room_type,
+          room_number: "101"
+        )
+        room_status.update!(dnd: true, dnd_date: booking.hotel.current_business_date)
+
+        expect(room_status.active_dnd?).to be true
+
+        result = subject.call
+        expect(result.success?).to be true
+        expect(room_status.reload.active_dnd?).to be false
+        expect(room_status.dnd).to be false
+        expect(room_status.dnd_date).to be_nil
+      end
     end
 
     context "when status is completed" do
@@ -330,6 +349,28 @@ RSpec.describe Bookings::TransitionStatus do
         expect(result.success?).to be(false)
         expect(result.error).to eq("Booking has no folio.")
         expect(booking.reload.status).to eq("checked_in")
+      end
+
+      it "clears DND flags on check-out" do
+        room_type = create(:room_type, hotel: booking.hotel)
+        booking_room = create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+        room_status = RoomStatus.find_or_create_by!(
+          hotel: booking.hotel,
+          room_type: room_type,
+          room_number: "101"
+        )
+        room_status.update!(dnd: true, dnd_date: booking.hotel.current_business_date)
+        create_settled_folio
+        allow_any_instance_of(Folios::CloseForCheckout).to receive(:validate_all_nights_posted).and_return(nil)
+
+        expect(room_status.active_dnd?).to be true
+
+        result = subject.call
+        puts "CHECKOUT RESULT ERROR: #{result.error}" unless result.success?
+        expect(result.success?).to be true
+        expect(room_status.reload.active_dnd?).to be false
+        expect(room_status.dnd).to be false
+        expect(room_status.dnd_date).to be_nil
       end
     end
 

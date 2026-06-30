@@ -38,6 +38,7 @@ Rails.application.routes.draw do
       member do
         get :receipt
         get :invoice
+        patch :toggle_dnd
       end
       resources :refund_requests, only: [ :new, :create ]
     end

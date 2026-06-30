@@ -115,9 +115,9 @@ module HotelPortal
 
       def smoking_icon
         if room_type.smoking_allowed
-          helpers.cached_icon("smoking", library: "phosphor", variant: "light", class: "size-3")
+          helpers.cached_icon("cigarette", library: "phosphor", variant: "light", class: "size-3")
         else
-          helpers.cached_icon("smoking-ban", library: "phosphor", variant: "light", class: "size-3")
+          helpers.cached_icon("cigarette-slash", library: "phosphor", variant: "light", class: "size-3")
         end
       end
 
@@ -130,7 +130,7 @@ module HotelPortal
       end
 
       def row_bg_class
-        active_dnd? ? "bg-slate-50/40 opacity-75" : ""
+        ""
       end
 
       def tooltip_header_class
@@ -193,7 +193,17 @@ module HotelPortal
     end
 
     def grid_room_width
-      comfortable_mode? ? 180 : 145
+      max_extra_icons = room_groups.flat_map { |g| g[:rooms] }.map do |room|
+        row = room_row(room)
+        extra = 0
+        extra += 1 if row.priority?
+        extra += 1 if room[:housekeeping_requests]&.any?
+        extra += 1 if row.active_dnd?
+        extra
+      end.max || 0
+
+      base_width = comfortable_mode? ? 160 : 130
+      base_width + (max_extra_icons * 18)
     end
 
     def grid_day_width

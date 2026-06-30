@@ -80,7 +80,7 @@
             <%= hidden_field_tag "layout", presenter.board_layout %>
             <%= f.button class: "w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-amber-50 focus:outline-none transition-colors cursor-pointer group" do %>
               <div class="p-1.5 rounded-md bg-amber-50 text-amber-500 group-hover:bg-amber-100 transition-colors">
-                <%= cached_icon "checks", library: "phosphor", variant: "light", class: "size-3.5" %>
+                <%= cached_icon "magnifying-glass", library: "phosphor", variant: "light", class: "size-3.5" %>
               </div>
               <div class="text-left">
                 <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 group-hover:text-amber-700 transition-colors">Awaiting Inspection</p>
@@ -132,7 +132,7 @@
             <%= hidden_field_tag "layout", presenter.board_layout %>
             <%= f.button class: "w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-slate-50 focus:outline-none transition-colors cursor-pointer group" do %>
               <div class="p-1.5 rounded-md bg-slate-100 text-slate-500 transition-colors">
-                <%= cached_icon "flag", library: "phosphor", variant: "light", class: "size-3.5" %>
+                <%= cached_icon "warning", library: "phosphor", variant: "light", class: "size-3.5" %>
               </div>
               <div class="text-left">
                 <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 transition-colors">Remove Priority</p>
@@ -147,33 +147,13 @@
                   data-action="click->room-status-action#openPriority"
                   class="w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-slate-50 focus:outline-none transition-colors cursor-pointer group">
             <div class="p-1.5 rounded-md bg-rose-50 text-rose-500 group-hover:bg-rose-100 transition-colors">
-              <%= cached_icon "flag", library: "phosphor", variant: "fill", class: "size-3.5" %>
+              <%= cached_icon "warning", library: "phosphor", variant: "fill", class: "size-3.5" %>
             </div>
             <div class="text-left">
               <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 transition-colors">Mark Priority</p>
               <p class="text-[9px] font-medium text-slate-500 transition-colors leading-tight">Expedite cleaning/prep for this room</p>
             </div>
           </button>
-        </div>
-      <% end %>
-
-      <% if room_row.status != "ready" %>
-        <div class="p-1 border-t border-slate-50 mt-1">
-          <%= form_with url: hotel_room_status_path(current_hotel, room_row.room_status_id), method: :patch, local: true do |f| %>
-            <%= hidden_field_tag "room_status[dnd]", room_row.active_dnd? ? "false" : "true" %>
-            <%= hidden_field_tag "start_date", presenter.start_date.to_s %>
-            <%= hidden_field_tag "days", presenter.board_days %>
-            <%= hidden_field_tag "layout", presenter.board_layout %>
-            <%= f.button class: "w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-slate-50 focus:outline-none transition-colors cursor-pointer group" do %>
-              <div class="p-1.5 rounded-md <%= room_row.dnd_action_icon_class %> transition-colors">
-                <%= cached_icon "hand-palm", library: "phosphor", variant: room_row.active_dnd? ? "light" : "fill", class: "size-3.5" %>
-              </div>
-              <div class="text-left">
-                <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 transition-colors"><%= room_row.dnd_action_label %></p>
-                <p class="text-[9px] font-medium text-slate-500 transition-colors leading-tight"><%= room_row.dnd_action_subheading %></p>
-              </div>
-            <% end %>
-          <% end %>
         </div>
       <% end %>
 

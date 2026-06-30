@@ -377,6 +377,17 @@ class Booking < ApplicationRecord
     false
   end
 
+  def duration_in_nights
+    (check_out.to_date - check_in.to_date).to_i
+  end
+
+  def eligible_for_refund?(refund_policy)
+    return false unless status == "confirmed" && refund_request.nil? && refund_policy.present?
+
+    days_until_checkin = (check_in.to_date - Date.current).to_i
+    days_until_checkin >= refund_policy.min_days_before_checkin
+  end
+
   private
 
   def status_changed_on_persisted_record?
