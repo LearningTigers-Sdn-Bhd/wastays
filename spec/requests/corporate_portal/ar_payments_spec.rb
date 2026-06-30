@@ -10,7 +10,11 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
   it "lists only payments belonging to the current corporate account" do
     relationship = create(:hotel_corporate_account, corporate_account: user.account)
     visible = create(:ar_payment, hotel_corporate_account: relationship, hotel: relationship.hotel, amount: 250, currency: "MYR", reference_number: "PAY-CORP-1")
-    hidden = create(:ar_payment, reference_number: "PAY-HIDDEN-1")
+    
+    # Avoid factory sequence collisions with Faker names on the page
+    hidden_hotel = create(:hotel, name: "Hidden Payment Corporate Hotel")
+    hidden_relationship = create(:hotel_corporate_account, hotel: hidden_hotel)
+    hidden = create(:ar_payment, hotel_corporate_account: hidden_relationship, hotel: hidden_hotel, reference_number: "PAY-HIDDEN-1")
 
     get corporate_ar_payments_path
 
@@ -20,7 +24,7 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
     expect(response.body).to include(visible.hotel.name)
     expect(response.body).to include("MYR 250.00")
     expect(response.body).not_to include("PAY-HIDDEN-1")
-    expect(response.body).not_to include(hidden.hotel.name)
+    expect(response.body).not_to include(hidden_hotel.name)
   end
 
   it "filters payments by keyword" do
@@ -136,8 +140,10 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
 
   it "shows only active relationships on pay invoices" do
     user.account.hotel_corporate_accounts.reload
-    active_relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
-    suspended_relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
+    active_hotel = create(:hotel, name: "Active Billing Corporate Hotel")
+    suspended_hotel = create(:hotel, name: "Suspended Billing Corporate Hotel")
+    active_relationship = create(:hotel_corporate_account, hotel: active_hotel, corporate_account: user.account, status: "active")
+    suspended_relationship = create(:hotel_corporate_account, hotel: suspended_hotel, corporate_account: user.account, status: "active")
     create_invoice(active_relationship)
     create_invoice(suspended_relationship)
     suspended_relationship.update!(status: "suspended", suspended_at: Time.current)
@@ -145,8 +151,8 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
     get pay_invoices_corporate_ar_payments_path
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include(active_relationship.hotel.name)
-    expect(response.body).not_to include(suspended_relationship.hotel.name)
+    expect(response.body).to include("Active Billing Corporate Hotel")
+    expect(response.body).not_to include("Suspended Billing Corporate Hotel")
   end
 
   it "rejects review for a suspended relationship" do
