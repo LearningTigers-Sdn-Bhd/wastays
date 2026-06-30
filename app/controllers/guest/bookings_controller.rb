@@ -70,39 +70,12 @@ class Guest::BookingsController < Guest::BaseController
 
   def toggle_dnd
     @booking = current_guest.bookings.find(params[:id])
+    result = Guest::ToggleDndService.new(booking: @booking).call
 
-    unless @booking.status == "checked_in"
-      return redirect_to guest_booking_path(@booking), alert: "Cannot toggle Do Not Disturb if you are not currently checked in."
-    end
-
-    booking_rooms = @booking.booking_rooms.where.not(room_number: [ nil, "" ])
-    if booking_rooms.empty?
-      return redirect_to guest_booking_path(@booking), alert: "No room assigned to this booking."
-    end
-
-    any_toggled = false
-    booking_rooms.each do |br|
-      room_status = RoomStatus.find_or_create_by!(
-        hotel: @booking.hotel,
-        room_type: br.room_type,
-        room_number: br.room_number
-      )
-
-      new_dnd_state = !room_status.active_dnd?
-
-      result = Rooms::UpdateStatus.new(
-        room_status: room_status,
-        params: { dnd: new_dnd_state.to_s },
-        user: nil
-      ).call
-
-      any_toggled ||= result.success?
-    end
-
-    if any_toggled
-      redirect_to guest_booking_path(@booking), notice: "Do Not Disturb preference updated successfully."
+    if result.success?
+      redirect_to guest_booking_path(@booking), notice: result.message
     else
-      redirect_to guest_booking_path(@booking), alert: "Unable to update Do Not Disturb preferences."
+      redirect_to guest_booking_path(@booking), alert: result.error
     end
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."

@@ -88,13 +88,13 @@
                   <div>
                     <p class="text-sm font-semibold text-neutral-text-primary">Room <%= br.room_number %></p>
                     <p class="text-xs text-neutral-text-secondary">
-                      <%= is_dnd ? "Do Not Disturb is active." : "Toggle DND for privacy." %>
+                      <%= is_dnd ? "Do Not Disturb is active." : "Toggle Do Not Disturb for privacy." %>
                     </p>
                   </div>
                 </div>
                 
                 <%= button_to toggle_dnd_guest_booking_path(@booking), method: :patch, class: "w-full inline-flex items-center justify-center gap-x-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold shadow-sm #{is_dnd ? 'bg-orange-600 border-orange-600 text-white hover:bg-orange-700' : 'bg-white border-layer-line text-neutral-text-primary hover:bg-layer-alt'}" do %>
-                  <%= is_dnd ? "Remove DND" : "Activate DND" %>
+                  <%= is_dnd ? "Remove Do Not Disturb" : "Activate Do Not Disturb" %>
                 <% end %>
               </div>
             <% end %>

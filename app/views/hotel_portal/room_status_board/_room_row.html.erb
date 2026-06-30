@@ -88,7 +88,7 @@
       </div>
     </div>
 
-    <% if room_row.can_manage? && room_row.room_status_id.present? && room_row.has_actions? %>
+    <% if room_row.can_manage? && room_row.has_actions? %>
       <div class="mt-0.5">
         <%= render "hotel_portal/room_status_board/room_actions", room_row: room_row, presenter: presenter %>
       </div>

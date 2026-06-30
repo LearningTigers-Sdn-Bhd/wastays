@@ -313,33 +313,15 @@ module HotelPortal
     end
 
     def maintenance_block_update_url(block)
-      Rails.application.routes.url_helpers.hotel_room_block_path(
-        hotel,
-        block[:id],
-        start_date: start_date,
-        days: board_days,
-        layout: board_layout
-      )
+      maintenance_block_path(block)
     end
 
     def finish_maintenance_block_path(block)
-      Rails.application.routes.url_helpers.finish_hotel_room_block_path(
-        hotel,
-        block[:id],
-        start_date: start_date,
-        days: board_days,
-        layout: board_layout
-      )
+      maintenance_block_path(block, finish: true)
     end
 
     def delete_maintenance_block_path(block)
-      Rails.application.routes.url_helpers.hotel_room_block_path(
-        hotel,
-        block[:id],
-        start_date: start_date,
-        days: board_days,
-        layout: board_layout
-      )
+      maintenance_block_path(block)
     end
 
     def booking_count_at(room, date)
@@ -460,6 +442,20 @@ module HotelPortal
 
     def status_counts
       room_status_board[:status_counts]
+    end
+
+    private
+
+    def maintenance_block_path(block, finish: false)
+      route_helper = finish ? :finish_hotel_room_block_path : :hotel_room_block_path
+      Rails.application.routes.url_helpers.send(
+        route_helper,
+        hotel,
+        block[:id],
+        start_date: start_date,
+        days: board_days,
+        layout: board_layout
+      )
     end
   end
 end

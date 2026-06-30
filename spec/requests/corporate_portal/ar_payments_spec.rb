@@ -5,7 +5,10 @@ require "rails_helper"
 RSpec.describe "CorporatePortal::ArPayments", type: :request do
   let(:user) { create(:user, :corporate) }
 
-  before { sign_in_as(user) }
+  before do
+    sign_in_as(user)
+    user.account.hotel_corporate_accounts.reload
+  end
 
   it "lists only payments belonging to the current corporate account" do
     relationship = create(:hotel_corporate_account, corporate_account: user.account)
@@ -139,7 +142,6 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
   end
 
   it "shows only active relationships on pay invoices" do
-    user.account.hotel_corporate_accounts.reload
     active_hotel = create(:hotel, name: "Active Billing Corporate Hotel")
     suspended_hotel = create(:hotel, name: "Suspended Billing Corporate Hotel")
     active_relationship = create(:hotel_corporate_account, hotel: active_hotel, corporate_account: user.account, status: "active")
@@ -156,7 +158,6 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
   end
 
   it "rejects review for a suspended relationship" do
-    user.account.hotel_corporate_accounts.reload
     relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
     invoice = create_invoice(relationship)
     relationship.update!(status: "suspended", suspended_at: Time.current)
@@ -177,7 +178,6 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
   end
 
   it "creates an intent and renders review for active relationships" do
-    user.account.hotel_corporate_accounts.reload
     relationship = create(:hotel_corporate_account, corporate_account: user.account)
     create(:payment_setting, settable: relationship.hotel, gateway: "razorpay", api_key: "key", secret_key: "secret", status: "active")
     invoice = create_invoice(relationship)
@@ -200,7 +200,6 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
   end
 
   it "rejects checkout when relationship is suspended after review" do
-    user.account.hotel_corporate_accounts.reload
     relationship = create(:hotel_corporate_account, corporate_account: user.account)
     create(:payment_setting, settable: relationship.hotel, gateway: "razorpay", api_key: "key", secret_key: "secret", status: "active")
     intent = create(:corporate_ar_payment_intent, hotel_corporate_account: relationship, hotel: relationship.hotel, corporate_account: user.account, user: user)
