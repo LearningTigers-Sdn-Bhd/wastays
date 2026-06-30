@@ -1047,6 +1047,8 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       status: booking_status,
       guest_name: guest_name,
       confirmation_token: confirmation_token,
+      guest_email: "#{guest_name.parameterize}@example.com",
+      guest_phone: "9999999999",
       check_in: Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: check_in, kind: :check_in),
       check_out: Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: check_out, kind: :check_out)
     )
