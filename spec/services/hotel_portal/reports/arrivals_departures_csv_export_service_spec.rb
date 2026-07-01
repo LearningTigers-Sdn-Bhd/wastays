@@ -5,7 +5,7 @@ require "csv"
 
 RSpec.describe HotelPortal::Reports::ArrivalsDeparturesCsvExportService do
   describe "#generate" do
-    it "exports arrivals and departures rows with expanded status columns" do
+    it "exports arrivals rows with expanded status columns by default" do
       report = double(
         "report",
         arrivals: [
@@ -37,7 +37,7 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesCsvExportService do
       csv = described_class.new(report: report).generate
       rows = CSV.parse(csv, headers: true)
 
-      expect(rows.count).to eq(2)
+      expect(rows.count).to eq(1)
       expect(rows.headers).to eq([
         "Section",
         "Guest Name",
@@ -57,10 +57,31 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesCsvExportService do
       expect(rows[0]["Guarantee Method"]).to eq("None")
       expect(rows[0]["Deposit Status"]).to eq("Not required")
       expect(rows[0]["Departure Status"]).to be_nil
+    end
 
-      expect(rows[1]["Section"]).to eq("Departure")
-      expect(rows[1]["Pre-checkin Status"]).to be_nil
-      expect(rows[1]["Departure Status"]).to eq("Checked out 11:58 AM")
+    it "exports only checkout rows for checkout tab" do
+      report = double(
+        "report",
+        arrivals: [],
+        in_house: [],
+        departures: [],
+        checkout: [
+          {
+            guest_name: "Checked Out Guest",
+            confirmation_token: "CHK-123",
+            room_details: "1x Deluxe",
+            room_numbers: "101",
+            stay_dates: "06 May 2026 - 07 May 2026",
+            departure_status: "Checked out 11:58 AM",
+            latest_note: nil
+          }
+        ]
+      )
+
+      csv = described_class.new(report: report, tab: "checkout").generate
+
+      expect(csv).to include("Checked Out Guest")
+      expect(csv).not_to include("Arrival")
     end
   end
 end

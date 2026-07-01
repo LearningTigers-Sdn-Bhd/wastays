@@ -1,6 +1,7 @@
 module FilteringHelper
   def date_preset_options
     options = [
+      [ "Today", "today" ],
       [ "This Month", "this_month" ],
       [ "Last Month", "last_month" ],
       [ "This Year", "this_year" ],

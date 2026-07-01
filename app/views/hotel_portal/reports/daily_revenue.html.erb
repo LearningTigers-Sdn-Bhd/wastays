@@ -16,9 +16,9 @@
       <%= form_with url: daily_revenue_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "daily-revenue-range-form", data: { controller: "date-preset" } do |f| %>
         <div data-controller="date-preset">
           <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Time Period</label>
-          <%= select_tag :date_preset, options_for_select(date_preset_options, params[:date_preset] || "this_month"), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
+          <%= select_tag :date_preset, options_for_select(date_preset_options, @date_preset), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
         </div>
-        <div id="custom-date-range" class="<%= params[:date_preset] == 'custom' ? 'flex' : 'hidden' %> gap-3">
+        <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> gap-3">
         <div>
           <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Start Date</label>
           <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
@@ -76,13 +76,13 @@
   <!-- Daily Breakdown -->
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="px-6 py-5 border-b border-slate-100">
-      <h2 class="text-lg font-bold tracking-tight text-slate-950"><%= params[:date_preset] == "this_year" ? "Monthly Breakdown" : "Daily Breakdown" %></h2>
+      <h2 class="text-lg font-bold tracking-tight text-slate-950"><%= @date_preset == "this_year" ? "Monthly Breakdown" : "Daily Breakdown" %></h2>
     </div>
     <div class="overflow-x-auto">
       <table class="min-w-full">
         <thead class="bg-slate-100">
           <tr>
-            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600"><%= params[:date_preset] == "this_year" ? "Month" : "Date" %></th>
+            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600"><%= @date_preset == "this_year" ? "Month" : "Date" %></th>
             <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Bookings</th>
             <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Accommodation</th>
             <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Other Charges</th>
@@ -100,7 +100,7 @@
           <% if @report.rows.any? %>
             <% @report.rows.each do |row| %>
               <tr class="hover:bg-slate-50/50">
-                <td class="px-4 py-3 text-sm font-semibold text-slate-900 whitespace-nowrap"><%= params[:date_preset] == "this_year" ? row[:date].strftime("%b %Y") : row[:date].strftime("%d %b") %></td>
+                <td class="px-4 py-3 text-sm font-semibold text-slate-900 whitespace-nowrap"><%= @date_preset == "this_year" ? row[:date].strftime("%b %Y") : row[:date].strftime("%d %b") %></td>
                 <td class="px-4 py-3 text-sm text-slate-700"><%= row[:booking_count] %></td>
                 <td class="px-4 py-3 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:accommodation], precision: 2) %></td>
                 <td class="px-4 py-3 text-sm text-slate-700 text-right">MYR <%= number_with_precision(row[:other_charges], precision: 2) %></td>

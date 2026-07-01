@@ -7,8 +7,9 @@ module HotelPortal
     class ArrivalsDeparturesExcelExportService
       XML_HEADER = %(<?xml version="1.0"?>).freeze
 
-      def initialize(report:)
+      def initialize(report:, tab: "arrivals")
         @report = report
+        @tab = tab.to_s
       end
 
       def generate
@@ -19,14 +20,9 @@ module HotelPortal
             xmlns:o="urn:schemas-microsoft-com:office:office"
             xmlns:x="urn:schemas-microsoft-com:office:excel"
             xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-            <Worksheet ss:Name="Arrivals">
+            <Worksheet ss:Name="#{worksheet_name}">
               <Table>
-                #{build_arrivals_rows}
-              </Table>
-            </Worksheet>
-            <Worksheet ss:Name="Departures">
-              <Table>
-                #{build_departures_rows}
+                #{build_rows_for_active_tab}
               </Table>
             </Worksheet>
           </Workbook>
@@ -35,40 +31,55 @@ module HotelPortal
 
       private
 
-      def build_arrivals_rows
+      def build_rows_for_active_tab
         rows = []
-        rows << spreadsheet_row([ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Notes" ])
-        @report.arrivals.each do |row|
+        rows << spreadsheet_row(headers_for_active_tab)
+        rows_for_active_tab.each do |row|
           rows << spreadsheet_row([
             row[:guest_name],
             row[:confirmation_token],
             row[:room_details],
             row[:room_numbers],
             row[:stay_dates],
-            row[:pre_checkin_status],
-            row[:guarantee_method_status],
-            row[:deposit_status],
+            *status_columns_for_active_tab(row),
             row[:latest_note]
           ])
         end
         rows.join("\n")
       end
 
-      def build_departures_rows
-        rows = []
-        rows << spreadsheet_row([ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ])
-        @report.departures.each do |row|
-          rows << spreadsheet_row([
-            row[:guest_name],
-            row[:confirmation_token],
-            row[:room_details],
-            row[:room_numbers],
-            row[:stay_dates],
-            row[:departure_status],
-            row[:latest_note]
-          ])
+      def worksheet_name
+        {
+          "arrivals" => "Arrivals",
+          "in_house" => "In-House",
+          "departures" => "Departures",
+          "checkout" => "Checkout"
+        }.fetch(@tab, "Arrivals")
+      end
+
+      def rows_for_active_tab
+        case @tab
+        when "in_house" then @report.in_house
+        when "departures" then @report.departures
+        when "checkout" then @report.checkout
+        else @report.arrivals
         end
-        rows.join("\n")
+      end
+
+      def headers_for_active_tab
+        return [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Notes" ] if @tab == "arrivals"
+
+        [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]
+      end
+
+      def status_columns_for_active_tab(row)
+        return [
+          row[:pre_checkin_status],
+          row[:guarantee_method_status],
+          row[:deposit_status]
+        ] if @tab == "arrivals"
+
+        [ row[:departure_status] ]
       end
 
       def spreadsheet_row(values)

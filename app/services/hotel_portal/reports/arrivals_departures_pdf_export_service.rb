@@ -6,9 +6,10 @@ require "prawn/table"
 module HotelPortal
   module Reports
     class ArrivalsDeparturesPdfExportService
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, tab: "arrivals")
         @hotel = hotel
         @report = report
+        @tab = tab.to_s
       end
 
       def generate
@@ -16,8 +17,7 @@ module HotelPortal
 
         draw_header(pdf)
         draw_summary(pdf)
-        draw_section(pdf, "Expected Arrivals", @report.arrivals, :arrival)
-        draw_section(pdf, "Expected Departures", @report.departures, :departure)
+        draw_section(pdf, active_section_title, rows_for_active_tab, active_section_type, active_empty_message)
 
         pdf.render
       end
@@ -32,7 +32,7 @@ module HotelPortal
           pdf.text_box "WAStays", at: [ pdf.bounds.right - 140, pdf.cursor + 8 ], width: 140, align: :right, size: 12, style: :bold
         end
 
-        pdf.text "Arrivals & Departures Report", size: 18, style: :bold
+        pdf.text "Guest Reports - #{active_tab_heading}", size: 18, style: :bold
         pdf.move_down 4
         pdf.text @hotel.name.to_s, size: 11, style: :bold
 
@@ -53,12 +53,16 @@ module HotelPortal
 
         cards = [
           [ "Arrivals", @report.arrival_count.to_s ],
-          [ "Departures", @report.departure_count.to_s ]
+          [ "In-House", @report.in_house_count.to_s ],
+          [ "Departures", @report.departure_count.to_s ],
+          [ "Checkout", @report.checkout_count.to_s ]
         ]
 
         cards.each_with_index do |(label, value), index|
-          x = index * (card_width + card_gap)
-          y = top
+          row = index / 2
+          column = index % 2
+          x = column * (card_width + card_gap)
+          y = top - (row * (card_height + card_gap))
 
           pdf.bounding_box([ x, y ], width: card_width, height: card_height) do
             pdf.stroke_color "D1D5DB"
@@ -75,15 +79,15 @@ module HotelPortal
           end
         end
 
-        pdf.move_cursor_to(top - (card_height + 10))
+        pdf.move_cursor_to(top - ((card_height * 2) + card_gap + 10))
       end
 
-      def draw_section(pdf, title, rows, type)
+      def draw_section(pdf, title, rows, type, empty_message)
         pdf.text title, size: 12, style: :bold
         pdf.move_down 6
 
         if rows.empty?
-          pdf.text(type == :arrival ? "No arrivals scheduled for this selected period." : "No departures scheduled for this selected period.", size: 10, style: :italic)
+          pdf.text(empty_message, size: 10, style: :italic)
           pdf.move_down 14
           return
         end
@@ -105,6 +109,46 @@ module HotelPortal
         end
 
         pdf.move_down 14
+      end
+
+      def rows_for_active_tab
+        case @tab
+        when "in_house" then @report.in_house
+        when "departures" then @report.departures
+        when "checkout" then @report.checkout
+        else @report.arrivals
+        end
+      end
+
+      def active_section_title
+        {
+          "arrivals" => "Expected Arrivals",
+          "in_house" => "In-House Guests",
+          "departures" => "Expected Departures",
+          "checkout" => "Checkout Guests"
+        }.fetch(@tab, "Expected Arrivals")
+      end
+
+      def active_tab_heading
+        {
+          "arrivals" => "Arrivals",
+          "in_house" => "In-House",
+          "departures" => "Departures",
+          "checkout" => "Checkout"
+        }.fetch(@tab, "Arrivals")
+      end
+
+      def active_section_type
+        @tab == "arrivals" ? :arrival : :departure
+      end
+
+      def active_empty_message
+        {
+          "arrivals" => "No arrivals scheduled for this selected period.",
+          "in_house" => "No in-house guests for this selected period.",
+          "departures" => "No departures scheduled for this selected period.",
+          "checkout" => "No completed checkouts for this selected period."
+        }.fetch(@tab, "No arrivals scheduled for this selected period.")
       end
     end
   end

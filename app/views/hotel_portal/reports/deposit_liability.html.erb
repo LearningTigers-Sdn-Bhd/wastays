@@ -12,9 +12,9 @@
       <%= form_with url: deposit_liability_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "deposit-liability-date-form", data: { controller: "date-preset" } do |f| %>
         <div>
           <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Time Period</label>
-          <%= select_tag :date_preset, options_for_select(date_preset_options, params[:date_preset] || "this_month"), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
+          <%= select_tag :date_preset, options_for_select(date_preset_options, @date_preset), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
         </div>
-        <div id="custom-date-range" class="<%= params[:date_preset] == 'custom' ? 'flex' : 'hidden' %> gap-3">
+        <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> gap-3">
           <div>
             <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">As Of Date</label>
             <%= f.date_field :as_of_date, value: @report.as_of_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
@@ -66,7 +66,7 @@
 
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="overflow-x-auto">
-      <% grouped_rows = params[:date_preset] == "this_year" ? @report.rows.group_by { |row| row[:latest_deposit_posting_date].to_date.beginning_of_month } : { nil => @report.rows } %>
+      <% grouped_rows = @date_preset == "this_year" ? @report.rows.group_by { |row| row[:latest_deposit_posting_date].to_date.beginning_of_month } : { nil => @report.rows } %>
       <% grouped_rows.each do |month, rows| %>
         <% if month.present? %>
           <div class="border-b border-slate-200 bg-amber-50 px-6 py-3 text-sm font-bold text-amber-800"><%= month.strftime("%B %Y") %></div>
