@@ -1,6 +1,6 @@
 <%# locals: (block:, can_manage_bookings:, clipped_left:, clipped_right:, view_type:) %>
 <% if can_manage_bookings %>
-  <div class="absolute inset-y-0 left-0 w-4 cursor-grab bg-black/5 hover:bg-black/10 transition-colors flex items-center justify-center"
+  <div class="absolute inset-y-0 left-0 w-3 cursor-grab bg-black/5 hover:bg-black/10 transition-colors flex items-center justify-center"
        data-action="mousedown->booking-timeline#onDragHandleMouseDown click->booking-timeline#onHandleClick"
        data-booking-timeline-target="dragHandle"
        aria-hidden="true">
@@ -12,7 +12,7 @@
   </div>
 <% end %>
 
-<div class="flex flex-col items-center justify-center h-full py-1 overflow-hidden select-none <%= can_manage_bookings ? 'pl-5 pr-4' : 'px-2' %>">
+<div class="flex flex-col items-center justify-center h-full py-1 overflow-hidden select-none <%= can_manage_bookings ? 'pl-4 pr-3' : 'px-2' %>">
   <span class="<%= booking_icon_class(block[:status]) %> shrink-0 mb-0.5">
     <%= cached_icon booking_status_icon(block[:status]), stroke_width: 3, class: "size-3" %>
   </span>
@@ -20,7 +20,7 @@
 </div>
 
 <% if can_manage_bookings %>
-  <div class="absolute inset-y-0 right-0 w-4 cursor-ew-resize bg-black/5 hover:bg-black/10 transition-colors"
+  <div class="absolute inset-y-0 right-0 w-2 cursor-ew-resize bg-black/5 hover:bg-black/10 transition-colors"
        data-action="mousedown->booking-timeline#onResizeStart click->booking-timeline#onHandleClick"
        data-booking-timeline-target="resizeHandle"
        aria-hidden="true"></div>
