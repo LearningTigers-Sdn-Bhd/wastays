@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["select", "uploadSection", "frontContainer", "backContainer"]
+  static values = { isConcierge: { type: Boolean, default: false } }
 
   connect() {
     this.toggleUploads(true)
@@ -19,15 +20,17 @@ export default class extends Controller {
       this.updateLabel(this.backContainerTarget, "Back ID Card")
       this.toggleInput(this.frontContainerTarget, false)
       this.toggleInput(this.backContainerTarget, false)
+      this.setICLayout()
 
     } else if (docType === "passport") {
       this.showSection(this.uploadSectionTarget, immediate)
       this.showElement(this.frontContainerTarget, immediate)
       this.hideElement(this.backContainerTarget, immediate)
 
-      this.updateLabel(this.frontContainerTarget, "Passport")
+      this.updateLabel(this.frontContainerTarget, "Passport Photo Page")
       this.toggleInput(this.frontContainerTarget, false)
       this.toggleInput(this.backContainerTarget, true)
+      this.setPassportLayout()
 
     } else {
       // Empty or select prompt
@@ -35,6 +38,40 @@ export default class extends Controller {
       this.toggleInput(this.frontContainerTarget, true)
       this.toggleInput(this.backContainerTarget, true)
     }
+  }
+
+  setICLayout() {
+    if (this.isMobile) return
+
+    const container = this.frontContainerTarget
+    container.classList.remove("md:col-span-2", "w-full")
+
+    const heightWrapper = container.querySelector(".group")
+    if (heightWrapper) {
+      heightWrapper.classList.remove("md:h-64", "md:max-w-[600px]", "md:max-w-[480px]")
+      heightWrapper.classList.add("h-44")
+    }
+  }
+
+  setPassportLayout() {
+    if (this.isMobile) return
+
+    const container = this.frontContainerTarget
+    container.classList.add("md:col-span-2", "w-full")
+
+    const heightWrapper = container.querySelector(".group")
+    if (heightWrapper) {
+      heightWrapper.classList.remove("h-44")
+      if (this.isConciergeValue) {
+        heightWrapper.classList.add("md:h-64", "md:max-w-[600px]")
+      } else {
+        heightWrapper.classList.add("md:h-64", "md:max-w-[480px]")
+      }
+    }
+  }
+
+  get isMobile() {
+    return window.innerWidth < 768
   }
 
   showSection(el, immediate) {

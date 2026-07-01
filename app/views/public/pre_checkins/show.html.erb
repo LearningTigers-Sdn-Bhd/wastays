@@ -97,7 +97,7 @@
 
               <div class="grid gap-6 md:grid-cols-2 mt-4 transition-all duration-300 transform <%= @presenter.upload_section_class %>" data-pre-checkin-document-target="uploadSection">
                 <div data-pre-checkin-document-target="frontContainer" class="transition-all duration-300 transform <%= @presenter.front_container_class %>">
-                  <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: @presenter.front_scanner_label %>
+                  <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: @presenter.front_scanner_label, height_class: @presenter.front_scanner_height_class %>
                 </div>
                 <div data-pre-checkin-document-target="backContainer" class="transition-all duration-300 transform <%= @presenter.back_container_class %>">
                   <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID Card" %>
