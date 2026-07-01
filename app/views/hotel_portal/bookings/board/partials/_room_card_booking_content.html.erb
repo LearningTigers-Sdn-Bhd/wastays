@@ -1,0 +1,20 @@
+<%# app/views/hotel_portal/bookings/board/partials/_room_card_booking_content.html.erb %>
+<div class="flex flex-col min-w-0">
+  <div class="flex items-start justify-between gap-1.5">
+    <p class="truncate font-black text-xs text-slate-800 leading-tight">
+      <%= block[:guest_name] %>
+    </p>
+    <div class="flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-white/60 border border-current">
+      <span><%= block[:status].to_s.humanize %></span>
+    </div>
+  </div>
+
+  <div class="mt-1 flex items-center justify-between text-[10px] font-semibold text-slate-500">
+    <div class="flex items-center gap-1">
+      <span><%= block[:check_in].strftime("%b %-d") %> → <%= block[:check_out].strftime("%b %-d") %></span>
+    </div>
+    <div class="text-[11px] font-black text-slate-900">
+      <%= block[:currency] == "MYR" ? "RM" : block[:currency] %> <%= number_with_precision(block[:total_amount], precision: 0) %>
+    </div>
+  </div>
+</div>

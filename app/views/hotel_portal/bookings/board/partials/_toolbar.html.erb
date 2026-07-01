@@ -1,4 +1,6 @@
 <% view_type = local_assigns[:board_view_type] || @board_view_type || "stay" %>
+<% room_types = local_assigns[:room_types] || @room_types || [] %>
+<% selected_room_type_id = local_assigns[:selected_room_type_id] || @selected_room_type_id %>
 <% common_params = board_query_params.merge(filters: params[:filters]&.to_unsafe_h) %>
 
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
@@ -6,6 +8,7 @@
     <%= form_with url: board_hotel_bookings_path(current_hotel), method: :get, data: { turbo_frame: "booking_timeline_board", controller: "auto-submit", action: "change->auto-submit#submit" }, class: "flex items-center gap-3" do %>
       <%= hidden_field_tag :days, board_days %>
       <%= hidden_field_tag :layout, board_layout %>
+      <%= hidden_field_tag :room_type_id, selected_room_type_id %>
       
       <div class="flex items-center gap-2">
         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Start</span>

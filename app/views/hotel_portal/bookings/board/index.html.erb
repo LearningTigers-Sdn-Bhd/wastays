@@ -32,7 +32,8 @@
   "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
   "cancelled" => "border-slate-300 bg-slate-100 text-slate-600",
   "no_show" => "border-rose-200 bg-rose-50 text-rose-700",
-  "not_ready" => "border-red-200 bg-red-50 text-red-700"
+  "not_ready" => "border-red-200 bg-red-50 text-red-700",
+  "available" => "border-emerald-200 bg-emerald-50 text-emerald-700"
 } %>
 
 <div class="max-w-[1600px] mx-auto pb-20">
@@ -65,7 +66,9 @@
                    nav_step_days: nav_step_days,
                    rate_plan_names: @rate_plan_names,
                    selected_rate_plan_name: @selected_rate_plan_name,
-                   board_view_type: @board_view_type %>
+                   board_view_type: @board_view_type,
+                   room_types: @room_types,
+                   selected_room_type_id: @selected_room_type_id %>
 
         <%= render "hotel_portal/bookings/board/partials/legend",
                    booking_styles: booking_styles,
@@ -73,13 +76,39 @@
       </div>
     </div>
 
-    <div class="overflow-auto max-h-[calc(100vh-18rem)] rounded-2xl border border-slate-200 bg-white bg-[repeating-linear-gradient(-45deg,transparent,transparent_10px,#f8fafc_10px,#f8fafc_20px)] shadow-sm">
+    <div class="overflow-auto max-h-[calc(100vh-18rem)] rounded-2xl border border-slate-200 bg-white shadow-sm">
       <% if board_groups.blank? %>
         <div class="px-8 py-20 text-center bg-white">
           <p class="text-sm font-medium text-slate-500">No rooms found for this property.</p>
         </div>
+      <% elsif @board_view_type == "room" %>
+        <!-- Category Tab Bar (Sticky at the top of the room board) -->
+        <div class="sticky top-0 z-30 bg-slate-100 border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-2">
+          <% @room_types.each do |rt| %>
+            <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(room_type_id: rt.id)),
+                        class: "rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-150 #{ @selected_room_type_id.to_s == rt.id.to_s ? 'bg-slate-900 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' }",
+                        data: { turbo_frame: "booking_timeline_board" } do %>
+              <%= rt.name %>
+            <% end %>
+          <% end %>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4 bg-slate-50">
+          <% board_groups.each do |group| %>
+            <% group[:rooms].each do |room| %>
+              <%= render "hotel_portal/bookings/board/partials/room_card",
+                         room: room,
+                         room_type: group[:room_type],
+                         booking_styles: booking_styles,
+                         can_manage_bookings: can_manage_bookings,
+                         current_hotel: current_hotel,
+                         visible_start_date: visible_start_date,
+                         visible_end_exclusive: visible_end_exclusive %>
+            <% end %>
+          <% end %>
+        </div>
       <% else %>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto bg-[repeating-linear-gradient(-45deg,transparent,transparent_10px,#f8fafc_10px,#f8fafc_20px)]">
           <div class="min-w-[1200px] w-fit" data-controller="booking-timeline">
             <%= render "hotel_portal/bookings/board/partials/timeline_header",
                        grid_template_columns: grid_template_columns,

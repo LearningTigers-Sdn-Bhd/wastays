@@ -13,7 +13,8 @@ module HotelPortal
       "review_due_out" => "triangle-alert",
       "checkout_required" => "log-out",
       "overbooked" => "octagon-alert",
-      "not_ready" => "ban"
+      "not_ready" => "ban",
+      "available" => "circle-check"
     }.freeze
 
     STATUS_ICON_CLASSES = {
@@ -27,7 +28,8 @@ module HotelPortal
       "review_due_out" => "text-orange-600",
       "checkout_required" => "text-rose-600",
       "overbooked" => "text-red-700",
-      "not_ready" => "text-red-500"
+      "not_ready" => "text-red-500",
+      "available" => "text-emerald-600"
     }.freeze
 
     def booking_status_icon(status)
@@ -70,7 +72,13 @@ module HotelPortal
     end
 
     def legend_count_for(booking_timeline_board, status)
-      booking_timeline_board[:status_counts][status] || 0
+      if status == "available"
+        booking_timeline_board[:room_groups].sum do |group|
+          group[:rooms].count { |room| room[:blocks].empty? }
+        end
+      else
+        booking_timeline_board[:status_counts][status] || 0
+      end
     end
   end
 end

@@ -48,7 +48,7 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       expect(booking_block).to be_present
       expect(booking_block.text).to include(booking.guest_name)
       expect(booking_block.text).to include(booking.status.humanize)
-      expect(booking_block.classes).to include("rounded-xl")
+      expect(booking_block.classes).to include("rounded-lg")
     end
 
     it "renders accessible move and resize controls for booking managers" do
@@ -111,6 +111,27 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       expect(today_cell.text).to include("Walk-in Check-in", "Add Booking")
       expect(future_cell.text).to include("Add Booking")
       expect(future_cell.text).not_to include("Walk-in Check-in")
+    end
+
+    it "filters the board rooms by selected room category" do
+      sign_in_with_permissions("manage_bookings")
+
+      # Create another room type for comparison
+      other_room_type = create(:room_type, hotel: hotel, name: "Luxury Suite", room_number_mode: "custom", room_numbers: [ "201" ])
+
+      # Get board filtered by original room_type
+      get board_hotel_bookings_path(hotel, room_type_id: room_type.id)
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.css("[data-room-number='101']")).to be_present
+      expect(response.parsed_body.css("[data-room-number='201']")).to be_empty
+
+      # Get board filtered by other_room_type
+      get board_hotel_bookings_path(hotel, room_type_id: other_room_type.id)
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.css("[data-room-number='201']")).to be_present
+      expect(response.parsed_body.css("[data-room-number='101']")).to be_empty
     end
   end
 end
