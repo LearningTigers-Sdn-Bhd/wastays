@@ -55,6 +55,64 @@ module Public
           nil
         end
       end
+
+      def geolocation_active?
+        hotel.geolocation_enabled? && !registration_required?
+      end
+
+      def form_data(view_context, is_mobile: false)
+        controllers = [ "scanner", "pre-checkin-document" ]
+        controllers << "geolocation-check-in" if geolocation_active?
+
+        data = {
+          controller: controllers.join(" "),
+          pre_checkin_document_is_concierge_value: true
+        }
+
+        if geolocation_active?
+          data.merge!(
+            geolocation_check_in_hotel_latitude_value: hotel.latitude,
+            geolocation_check_in_hotel_longitude_value: hotel.longitude,
+            geolocation_check_in_allowed_radius_value: 50,
+            geolocation_check_in_refresh_icon_value: view_context.cached_icon("refresh-cw", class: "w-4 h-4 mr-1.5 inline-block align-middle animate-spin-slow"),
+            geolocation_check_in_is_mobile_value: is_mobile
+          )
+        end
+
+        data
+      end
+
+      HIDDEN_CLASSES = "hidden opacity-0 scale-95 -translate-y-2"
+
+      def guest_document_type
+        booking.guest_document_type
+      end
+
+      def upload_section_class
+        guest_document_type.blank? ? HIDDEN_CLASSES : ""
+      end
+
+      def front_container_class
+        if guest_document_type.blank?
+          HIDDEN_CLASSES
+        elsif guest_document_type == "passport"
+          "md:col-span-2 w-full"
+        else
+          ""
+        end
+      end
+
+      def back_container_class
+        guest_document_type == "ic" ? "" : HIDDEN_CLASSES
+      end
+
+      def front_scanner_label
+        guest_document_type == "passport" ? "Passport Photo Page" : "Front ID Card"
+      end
+
+      def front_scanner_height_class
+        guest_document_type == "passport" ? "h-44 md:h-64 md:max-w-[700px]" : "h-44"
+      end
     end
   end
 end

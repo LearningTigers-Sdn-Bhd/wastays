@@ -129,6 +129,26 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
       expect(response.body).to include("Ready")
     end
 
+    it "renders correctly with DND active or inactive and shows the toggle button" do
+      sign_in_with_permissions("view_room_readiness", "manage_room_status")
+      room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty", dnd: false)
+
+      get hotel_room_status_board_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Do Not Disturb")
+      expect(response.body).to include("Flag guest requested DND today")
+
+      # Now make DND active
+      room_status.update!(dnd: true, dnd_date: hotel.current_business_date)
+
+      get hotel_room_status_board_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Remove DND")
+      expect(response.body).to include("Resume cleaning schedules")
+    end
+
     it "renders the late checkout detected action for manageable ready rooms" do
       sign_in_with_permissions("view_room_readiness", "manage_room_status")
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
