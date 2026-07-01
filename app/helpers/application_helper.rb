@@ -125,4 +125,21 @@ module ApplicationHelper
     return url if url.start_with?("http://", "https://")
     "#"
   end
+
+  def id_scanner_attached?(form, field)
+    form.object.send(field).attached?
+  end
+
+  def id_scanner_preview_url(form, field)
+    url_for(form.object.send(field))
+  end
+
+  def id_scanner_placeholder_icon(side)
+    icon_name = side == :front ? "user" : "credit-card"
+    cached_icon(icon_name, stroke_width: 1.5, class: "w-12 h-12")
+  end
+
+  def id_scanner_side_label(side)
+    side == :front ? "Front Side" : "Back Side"
+  end
 end

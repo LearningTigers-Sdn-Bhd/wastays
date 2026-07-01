@@ -50,6 +50,28 @@ module Public
       booking.guest_country.presence || "Malaysia"
     end
 
+    HIDDEN_CLASSES = "hidden opacity-0 scale-95 -translate-y-2"
+
+    def guest_document_type
+      booking.guest_document_type
+    end
+
+    def upload_section_class
+      guest_document_type.blank? ? HIDDEN_CLASSES : ""
+    end
+
+    def front_container_class
+      upload_section_class
+    end
+
+    def back_container_class
+      guest_document_type == "ic" ? "" : HIDDEN_CLASSES
+    end
+
+    def front_scanner_label
+      guest_document_type == "passport" ? "Passport Photo Page" : "Front ID Card"
+    end
+
     def hours_options
       (1..12).to_a
     end

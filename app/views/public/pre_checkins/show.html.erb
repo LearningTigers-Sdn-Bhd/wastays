@@ -72,7 +72,7 @@
               </div>
             <% end %>
 
-            <section class="space-y-4">
+            <section class="space-y-4" data-controller="pre-checkin-document">
               <div>
                 <h2 class="text-sm font-black uppercase tracking-widest text-neutral-text-primary">Guest Identification</h2>
                 <p class="mt-1 text-xs text-neutral-text-secondary">Use the same details as shown on your identification document.</p>
@@ -86,7 +86,7 @@
 
                 <div>
                   <%= f.label :guest_document_type, "Document Type", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
-                  <%= f.select :guest_document_type, @presenter.document_type_options, {}, class: "form-input py-3 px-5 border border-neutral-border", required: true %>
+                  <%= f.select :guest_document_type, @presenter.document_type_options, {}, class: "form-input py-3 px-5 border border-neutral-border", required: true, data: { pre_checkin_document_target: "select", action: "change->pre-checkin-document#toggleUploads" } %>
                 </div>
 
                 <div>
@@ -95,9 +95,13 @@
                 </div>
               </div>
 
-              <div class="grid gap-6 md:grid-cols-2 mt-4">
-                <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: "Front ID / Passport" %>
-                <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID / Passport" %>
+              <div class="grid gap-6 md:grid-cols-2 mt-4 transition-all duration-300 transform <%= @presenter.upload_section_class %>" data-pre-checkin-document-target="uploadSection">
+                <div data-pre-checkin-document-target="frontContainer" class="transition-all duration-300 transform <%= @presenter.front_container_class %>">
+                  <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: @presenter.front_scanner_label %>
+                </div>
+                <div data-pre-checkin-document-target="backContainer" class="transition-all duration-300 transform <%= @presenter.back_container_class %>">
+                  <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID Card" %>
+                </div>
               </div>
             </section>
 
@@ -130,9 +134,7 @@
                   <div class="relative">
                     <button type="button" data-action="click->time-picker#toggle" class="form-input py-3 px-5 border border-neutral-border w-full flex items-center justify-between bg-white cursor-pointer transition sm:text-sm">
                       <span data-time-picker-target="display" class="text-neutral-text-secondary">Select Time</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-neutral-text-secondary">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                      </svg>
+                      <%= cached_icon "chevron-down", stroke_width: 2.5, class: "w-4 h-4 text-black" %>
                     </button>
                     
                     <%= render "time_picker", presenter: @presenter %>
