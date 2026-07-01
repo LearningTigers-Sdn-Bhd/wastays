@@ -58,7 +58,8 @@ export default class extends Controller {
     defaultStart: String,
     defaultEnd: String,
     defaultCurrency: String,
-    baseCurrency: String
+    baseCurrency: String,
+    allowPaxPricing: Boolean
   }
 
   initialize() {
@@ -219,7 +220,7 @@ export default class extends Controller {
       this.syncCurrencySelect(currency)
 
       if (this.hasPriceLabelTarget) {
-        const suffix = data.sellMode === "per_person" ? " - Per Person" : " - Per Room"
+        const suffix = this.allowPaxPricingValue ? (data.sellMode === "per_person" ? " - Per Person" : " - Per Room") : ""
         this.priceLabelTarget.textContent = `Price (${currency})${suffix}`
       }
 

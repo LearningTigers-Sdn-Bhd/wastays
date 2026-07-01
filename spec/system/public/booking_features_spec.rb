@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "approved", time_zone: "UTC") }
+  let(:hotel) { create(:hotel, account: account, status: "approved", time_zone: "UTC", allow_pax_pricing: true) }
 
   before do
     # Driven by cuprite
@@ -100,7 +100,7 @@ RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
   end
 
   it "forces per-pax pricing only when pax_pricing_only is enabled on the hotel", js: true do
-    hotel.update!(pax_pricing_only: true)
+    hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
 
     # 1 adult -> should pick Pax (80)
     visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 1)

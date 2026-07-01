@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe BookingEngine::AvailabilityService do
   let!(:account) { Account.create!(name: "Test Account", slug: "test-account", status: "active") }
-  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved") }
+  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved", allow_pax_pricing: true) }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
 
   let(:check_in) { Date.today }
@@ -245,7 +245,7 @@ RSpec.describe BookingEngine::AvailabilityService do
 
     context "when pax_pricing_only is enabled" do
       before do
-        hotel.update!(pax_pricing_only: true)
+        hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
       end
 
       it "returns only per_person rate plans and excludes nil" do

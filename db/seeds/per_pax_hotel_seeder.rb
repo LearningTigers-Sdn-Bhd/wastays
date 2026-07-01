@@ -15,12 +15,16 @@ hotel.default_currency = "MYR"
 hotel.usd_conversion_rate = 4.65
 hotel.tourism_tax_enabled = true
 hotel.tourism_tax_amount = 10.0
+hotel.allow_pax_pricing = true
+hotel.pax_pricing_only = false
 hotel.save!
 puts "Hotel 'Grand Pax Resort' ready."
 
 # Clean up previous bookings of this hotel to allow clean re-runs
 booking_ids = hotel.bookings.pluck(:id)
 folio_ids = BookingFolio.where(booking_id: booking_ids).pluck(:id)
+BookingAuditLog.where(hotel_id: hotel.id).delete_all
+FinancialAuditEvent.where(hotel_id: hotel.id).delete_all
 FolioForecastedCharge.where(booking_folio_id: folio_ids).delete_all
 FolioTransaction.where(booking_folio_id: folio_ids).delete_all
 PaymentTransaction.where(booking_id: booking_ids).destroy_all
@@ -106,33 +110,22 @@ room_types_data.each do |rt_data|
   puts "Room Type '#{rt_data[:name]}' created."
 end
 
-# 3. Per-Pax Rate Plans
-flexible_plan = RatePlan.find_or_initialize_by(hotel: hotel, name: "Per Pax Flexible Rate")
-flexible_plan.sell_mode = "per_person"
-flexible_plan.currency = "MYR"
-flexible_plan.single_supplement = 35.0
-flexible_plan.child_price_multiplier = 0.6
-flexible_plan.infant_price_multiplier = 0.1
-flexible_plan.base_occupancy = 2
-flexible_plan.extra_pax_charge = 0.0
-flexible_plan.save!
+# 3. Standard Rate Plan
+standard_plan = RatePlan.find_or_initialize_by(hotel: hotel, name: "Standard Rate")
+standard_plan.sell_mode = "per_room"
+standard_plan.currency = "MYR"
+standard_plan.base_occupancy = 2
+standard_plan.extra_pax_charge = 30.0
+standard_plan.save!
 
-non_ref_plan = RatePlan.find_or_initialize_by(hotel: hotel, name: "Per Pax Non-Refundable")
-non_ref_plan.sell_mode = "per_person"
-non_ref_plan.currency = "MYR"
-non_ref_plan.single_supplement = 25.0
-non_ref_plan.child_price_multiplier = 0.5
-non_ref_plan.infant_price_multiplier = 0.0
-non_ref_plan.base_occupancy = 2
-non_ref_plan.extra_pax_charge = 0.0
-non_ref_plan.save!
+# Delete any existing per pax rate plans
+hotel.rate_plans.where(name: ["Per Pax Flexible Rate", "Per Pax Non-Refundable"]).destroy_all
 
-puts "Per Pax Rate Plans ready."
+puts "Standard Rate Plan ready."
 
-# Link all room types to both rate plans
+# Link all room types to the standard rate plan
 room_types.values.each do |rt|
-  RoomTypeRatePlan.find_or_create_by!(room_type: rt, rate_plan: flexible_plan)
-  RoomTypeRatePlan.find_or_create_by!(room_type: rt, rate_plan: non_ref_plan)
+  RoomTypeRatePlan.find_or_create_by!(room_type: rt, rate_plan: standard_plan)
 end
 
 # 4. Inventory, Rates & Room Statuses
@@ -158,23 +151,12 @@ room_types.values.each do |rt|
     now = Time.current
     weekend_surcharge = (date.saturday? || date.sunday?) ? 20.0 : 0.0
 
-    # 1. Flexible rate
+    # 1. Standard rate
     rates_to_insert << {
       room_type_id: rt.id,
-      rate_plan_id: flexible_plan.id,
+      rate_plan_id: standard_plan.id,
       date: date,
       price: rt.base_price + weekend_surcharge,
-      currency: "MYR",
-      created_at: now,
-      updated_at: now
-    }
-
-    # 2. Non-Refundable rate
-    rates_to_insert << {
-      room_type_id: rt.id,
-      rate_plan_id: non_ref_plan.id,
-      date: date,
-      price: (rt.base_price * 0.90 + weekend_surcharge * 0.90).round(2),
       currency: "MYR",
       created_at: now,
       updated_at: now
@@ -520,7 +502,7 @@ end
 seed_pax_booking(
   hotel: hotel,
   room_type: room_types["Pax Single Studio"],
-  rate_plan: flexible_plan,
+  rate_plan: standard_plan,
   guest: guests["sarah.smith@example.com"],
   check_in: Date.current - 12.days,
   check_out: Date.current - 9.days,
@@ -536,11 +518,11 @@ seed_pax_booking(
 # Room: Pax Family Suite
 # Pax: 2 adults, 1 child, 1 infant
 # Nights: 2
-# Rate Plan: Per Pax Standard Rate
+# Rate Plan: Standard Rate
 seed_pax_booking(
   hotel: hotel,
   room_type: room_types["Pax Family Suite"],
-  rate_plan: flexible_plan,
+  rate_plan: standard_plan,
   guest: guests["john.doe@example.com"],
   check_in: Date.current - 6.days,
   check_out: Date.current - 4.days,
@@ -558,11 +540,11 @@ seed_pax_booking(
 # Room: Pax Deluxe Twin
 # Pax: 2 adults
 # Nights: 2
-# Rate Plan: Per Pax Non-Refundable
+# Rate Plan: Standard Rate
 seed_pax_booking(
   hotel: hotel,
   room_type: room_types["Pax Deluxe Twin"],
-  rate_plan: non_ref_plan,
+  rate_plan: standard_plan,
   guest: guests["alex.chen@example.com"],
   check_in: Date.current - 1.day,
   check_out: Date.current + 1.day,
@@ -578,11 +560,11 @@ seed_pax_booking(
 # Room: Pax Deluxe Twin
 # Pax: 1 adult
 # Nights: 3
-# Rate Plan: Per Pax Standard Rate
+# Rate Plan: Standard Rate
 seed_pax_booking(
   hotel: hotel,
   room_type: room_types["Pax Deluxe Twin"],
-  rate_plan: flexible_plan,
+  rate_plan: standard_plan,
   guest: guests["maria.garcia@example.com"],
   check_in: Date.current,
   check_out: Date.current + 3.days,
@@ -598,11 +580,11 @@ seed_pax_booking(
 # Room: Pax Family Suite
 # Pax: 3 adults, 2 children
 # Nights: 3
-# Rate Plan: Per Pax Standard Rate
+# Rate Plan: Standard Rate
 seed_pax_booking(
   hotel: hotel,
   room_type: room_types["Pax Family Suite"],
-  rate_plan: flexible_plan,
+  rate_plan: standard_plan,
   guest: guests["john.doe@example.com"],
   check_in: Date.current + 7.days,
   check_out: Date.current + 10.days,
@@ -618,11 +600,11 @@ seed_pax_booking(
 # Room: Pax Single Studio
 # Pax: 1 adult
 # Nights: 1
-# Rate Plan: Per Pax Non-Refundable
+# Rate Plan: Standard Rate
 seed_pax_booking(
   hotel: hotel,
   room_type: room_types["Pax Single Studio"],
-  rate_plan: non_ref_plan,
+  rate_plan: standard_plan,
   guest: guests["sarah.smith@example.com"],
   check_in: Date.current + 14.days,
   check_out: Date.current + 15.days,

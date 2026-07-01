@@ -80,7 +80,9 @@
                       <div class="grid gap-6 md:grid-cols-3">
                         <div>
                           <%= label_tag "rate_plans[#{rate_plan.id}][sell_mode]", "Sell Mode", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                          <%= select_tag "rate_plans[#{rate_plan.id}][sell_mode]", options_for_select([["Per Room (Extra guest charges)", "per_room"], ["Per Person (Pax rates + single supplement)", "per_person"]], rate_plan.sell_mode), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "sellModeInput" } %>
+                          <% sell_mode_options = [["Per Room (Extra guest charges)", "per_room"]] %>
+                          <% sell_mode_options << ["Per Person (Pax rates + single supplement)", "per_person"] if @hotel.allow_pax_pricing? %>
+                          <%= select_tag "rate_plans[#{rate_plan.id}][sell_mode]", options_for_select(sell_mode_options, rate_plan.sell_mode), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "sellModeInput" } %>
                         </div>
 
                         <div>
@@ -170,10 +172,12 @@
                               <span data-rate-simulator-target="roomModeLabel">Per-Room Mode Cost:</span>
                               <span class="font-bold text-slate-800" data-rate-simulator-target="roomModeResult">-</span>
                             </div>
-                            <div class="flex items-center justify-between text-xs text-slate-600 font-semibold">
-                              <span data-rate-simulator-target="paxModeLabel">Per-Pax Mode Cost:</span>
-                              <span class="font-bold text-indigo-700" data-rate-simulator-target="paxModeResult">-</span>
-                            </div>
+                            <% if @hotel.allow_pax_pricing? %>
+                              <div class="flex items-center justify-between text-xs text-slate-600 font-semibold">
+                                <span data-rate-simulator-target="paxModeLabel">Per-Pax Mode Cost:</span>
+                                <span class="font-bold text-indigo-700" data-rate-simulator-target="paxModeResult">-</span>
+                              </div>
+                            <% end %>
                           </div>
                         </div>
                       </div>
@@ -218,7 +222,9 @@
 
                   <div>
                     <%= f.label :sell_mode, "Sell Mode", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                    <%= f.select :sell_mode, [["Per Room (Extra guest charges)", "per_room"], ["Per Person (Pax rates + single supplement)", "per_person"]], {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "sellModeInput" } %>
+                    <% sell_mode_options = [["Per Room (Extra guest charges)", "per_room"]] %>
+                    <% sell_mode_options << ["Per Person (Pax rates + single supplement)", "per_person"] if @hotel.allow_pax_pricing? %>
+                    <%= f.select :sell_mode, sell_mode_options, {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "sellModeInput" } %>
                   </div>
                 </div>
 
@@ -310,10 +316,12 @@
                         <span data-rate-simulator-target="roomModeLabel">Per-Room Mode Cost:</span>
                         <span class="font-bold text-slate-800" data-rate-simulator-target="roomModeResult">-</span>
                       </div>
-                      <div class="flex items-center justify-between text-xs text-slate-600 font-semibold">
-                        <span data-rate-simulator-target="paxModeLabel">Per-Pax Mode Cost:</span>
-                        <span class="font-bold text-indigo-700" data-rate-simulator-target="paxModeResult">-</span>
-                      </div>
+                      <% if @hotel.allow_pax_pricing? %>
+                        <div class="flex items-center justify-between text-xs text-slate-600 font-semibold">
+                          <span data-rate-simulator-target="paxModeLabel">Per-Pax Mode Cost:</span>
+                          <span class="font-bold text-indigo-700" data-rate-simulator-target="paxModeResult">-</span>
+                        </div>
+                      <% end %>
                     </div>
                   </div>
                 </div>

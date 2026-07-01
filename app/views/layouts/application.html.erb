@@ -50,7 +50,7 @@
     <% end %>
 
 
-    <% unless content_for?(:hide_chrome) %>
+    <% unless content_for?(:hide_header) || content_for?(:hide_chrome) %>
     <!-- Desktop/Mobile Top Nav -->
     <header class="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-lg border-b border-neutral-border/60 shadow-sm shadow-black/[0.04]">
       <nav class="max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16" aria-label="Global">

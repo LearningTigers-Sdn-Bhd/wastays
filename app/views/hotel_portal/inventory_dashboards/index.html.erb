@@ -6,7 +6,8 @@
      data-inventory-calendar-default-start-value="<%= @start_date %>" 
      data-inventory-calendar-default-end-value="<%= @end_date %>" 
      data-inventory-calendar-default-currency-value="<%= @display_currency %>"
-     data-inventory-calendar-base-currency-value="<%= @hotel_base_currency %>">
+     data-inventory-calendar-base-currency-value="<%= @hotel_base_currency %>"
+     data-inventory-calendar-allow-pax-pricing-value="<%= current_hotel.allow_pax_pricing? %>">
 
   <% if current_hotel.status == 'inventory_incomplete' %>
     <div class="px-4 md:px-0 mb-6">
@@ -138,7 +139,7 @@
               <%= f.number_field :price, step: 0.01, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "priceField", action: "input->inventory-calendar#markTouched" } %>
               <%= f.hidden_field :currency, value: @hotel_base_currency, data: { inventory_calendar_target: "currencyField" } %>
             </div>
-            <div class="grid gap-4 sm:grid-cols-3">
+             <div class="grid gap-4 <%= current_hotel.allow_pax_pricing? ? 'sm:grid-cols-3' : 'sm:grid-cols-2' %>">
               <div>
                 <div class="mb-1.5 flex items-center justify-between">
                   <div class="relative flex items-center gap-1.5">
@@ -179,26 +180,28 @@
                 </div>
                 <%= f.number_field :extra_pax_charge, step: 0.01, min: 0, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "extraPaxChargeField", action: "input->inventory-calendar#markTouched" } %>
               </div>
-              <div>
-                <div class="mb-1.5 flex items-center justify-between">
-                  <div class="relative flex items-center gap-1.5">
-                    <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Single Supplement</label>
-                    <button type="button" 
-                            data-action="click->inventory-calendar#toggleTooltip mouseenter->inventory-calendar#showTooltip mouseleave->inventory-calendar#hideTooltip"
-                            data-tooltip-id="single-supp-tip"
-                            class="text-slate-400 hover:text-slate-600 transition-colors focus:outline-none">
-                      <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
-                    </button>
-                    <!-- Tooltip Box -->
-                    <div id="single-supp-tip" 
-                         class="absolute bottom-full right-0 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] font-semibold leading-relaxed rounded-xl shadow-xl z-50 transition-all duration-200 hidden opacity-0 scale-95 origin-bottom-right">
-                      <div class="absolute top-full right-3 border-[6px] border-transparent border-t-slate-900"></div>
-                      The supplement charge added (or discount applied if negative) for single occupancy bookings.
+              <% if current_hotel.allow_pax_pricing? %>
+                <div>
+                  <div class="mb-1.5 flex items-center justify-between">
+                    <div class="relative flex items-center gap-1.5">
+                      <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Single Supplement</label>
+                      <button type="button" 
+                              data-action="click->inventory-calendar#toggleTooltip mouseenter->inventory-calendar#showTooltip mouseleave->inventory-calendar#hideTooltip"
+                              data-tooltip-id="single-supp-tip"
+                              class="text-slate-400 hover:text-slate-600 transition-colors focus:outline-none">
+                        <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                      </button>
+                      <!-- Tooltip Box -->
+                      <div id="single-supp-tip" 
+                           class="absolute bottom-full right-0 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] font-semibold leading-relaxed rounded-xl shadow-xl z-50 transition-all duration-200 hidden opacity-0 scale-95 origin-bottom-right">
+                        <div class="absolute top-full right-3 border-[6px] border-transparent border-t-slate-900"></div>
+                        The supplement charge added (or discount applied if negative) for single occupancy bookings.
+                      </div>
                     </div>
                   </div>
+                  <%= f.number_field :single_supplement, step: 0.01, min: 0, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "singleSupplementField", action: "input->inventory-calendar#markTouched" } %>
                 </div>
-                <%= f.number_field :single_supplement, step: 0.01, min: 0, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "singleSupplementField", action: "input->inventory-calendar#markTouched" } %>
-              </div>
+              <% end %>
             </div>
           </div>
 

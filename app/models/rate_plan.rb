@@ -8,6 +8,7 @@ class RatePlan < ApplicationRecord
 
   validates :name, presence: true
   validates :sell_mode, presence: true, inclusion: { in: %w[per_room per_person] }
+  validate :pax_pricing_allowed_for_person_mode
   validates :currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validates :single_supplement, numericality: { greater_than_or_equal_to: 0 }
   validates :child_price_multiplier, numericality: { greater_than_or_equal_to: 0 }
@@ -43,6 +44,12 @@ class RatePlan < ApplicationRecord
 
   def normalize_currency
     self.currency = CurrencyCatalog.normalize(currency)
+  end
+
+  def pax_pricing_allowed_for_person_mode
+    if sell_mode == "per_person" && !hotel&.allow_pax_pricing?
+      errors.add(:sell_mode, "cannot be set to Per Person unless allowed by admin")
+    end
   end
 
   def sync_with_channel_manager
