@@ -1,3 +1,7 @@
+<%
+  view_type = local_assigns[:board_view_type] || @board_view_type || "stay"
+%>
+
 <% if can_manage_bookings %>
   <div class="absolute inset-y-0 left-0 w-4 cursor-grab bg-black/5 hover:bg-black/10 transition-colors flex items-center justify-center"
        data-action="mousedown->booking-timeline#onDragHandleMouseDown click->booking-timeline#onHandleClick"
@@ -11,11 +15,27 @@
   </div>
 <% end %>
 
-<div class="flex items-center justify-center h-full <%= 'ml-4' if can_manage_bookings || !clipped_left %> <%= 'mr-4' if can_manage_bookings || !clipped_right %>">
-  <span class="<%= booking_icon_class(block[:status]) %>">
-    <%= cached_icon booking_status_icon(block[:status]), stroke_width: 3, class: "size-4" %>
-  </span>
-</div>
+<% if view_type == "room" %>
+  <div class="flex flex-col justify-center h-full pl-2 pr-2 <%= 'ml-4' if can_manage_bookings || !clipped_left %> <%= 'mr-4' if can_manage_bookings || !clipped_right %> min-w-0 text-left">
+    <p class="truncate text-[11px] font-bold leading-tight">
+      <%= block[:guest_name] %>
+    </p>
+    <div class="flex items-center gap-1 min-w-0 mt-0.5">
+      <span class="<%= booking_icon_class(block[:status]) %> shrink-0">
+        <%= cached_icon booking_status_icon(block[:status]), stroke_width: 3, class: "size-3" %>
+      </span>
+      <span class="truncate text-[9px] font-semibold uppercase tracking-wider opacity-75 leading-none">
+        <%= block[:status].to_s.humanize %>
+      </span>
+    </div>
+  </div>
+<% else %>
+  <div class="flex items-center justify-center h-full <%= 'ml-4' if can_manage_bookings || !clipped_left %> <%= 'mr-4' if can_manage_bookings || !clipped_right %>">
+    <span class="<%= booking_icon_class(block[:status]) %>">
+      <%= cached_icon booking_status_icon(block[:status]), stroke_width: 3, class: "size-4" %>
+    </span>
+  </div>
+<% end %>
 
 <% if can_manage_bookings %>
   <div class="absolute inset-y-0 right-0 w-4 cursor-ew-resize bg-black/5 hover:bg-black/10 transition-colors"

@@ -1,7 +1,7 @@
-<%# app/views/hotel_portal/bookings/board/partials/_room_row.html.erb %>
 <%
   row_min_height = booking_timeline_board_row_height(room, row_min_base, block_step, visible_start_date)
   room_type = room[:room_type]
+  board_view_type = local_assigns[:board_view_type] || @board_view_type || "stay"
 %>
 
 <div class="grid border-b border-slate-100" style="grid-template-columns: <%= grid_template_columns %>; min-height: <%= row_min_height %>px;">
@@ -135,7 +135,8 @@
                 block_step: block_step,
                 booking_styles: booking_styles,
                 current_hotel: current_hotel,
-                can_manage_bookings: can_manage_bookings %>
+                can_manage_bookings: can_manage_bookings,
+                board_view_type: board_view_type %>
         <% end %>
       <% end %>
     </div>

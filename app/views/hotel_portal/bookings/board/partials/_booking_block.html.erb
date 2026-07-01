@@ -7,7 +7,11 @@
   width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)"
   top_offset = block_top + (block_index * block_step)
   block_height = 40
-  block_classes = "absolute z-10 overflow-hidden rounded-sm border cursor-pointer #{booking_block_status_classes(block, booking_styles)} #{booking_block_clip_corner_class(block, visible_start_date, visible_end_exclusive)} transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1"
+
+  view_type = local_assigns[:board_view_type] || @board_view_type || "stay"
+  rounded_class = (view_type == "room") ? "rounded-xl shadow-sm" : "rounded-sm"
+
+  block_classes = "absolute z-10 overflow-hidden #{rounded_class} border cursor-pointer #{booking_block_status_classes(block, booking_styles)} #{booking_block_clip_corner_class(block, visible_start_date, visible_end_exclusive)} transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1"
   block_style = "top: #{top_offset}px; left: #{left_offset}px; width: #{width_calc}; min-width: 40px; height: #{block_height}px;"
   block_label = "#{block[:guest_name]}, #{block[:status].humanize}, room #{block[:room_number]}, #{block[:check_in].strftime('%B %-d')} to #{block[:check_out].strftime('%B %-d, %Y')}"
 %>
@@ -40,7 +44,8 @@
       block: block,
       can_manage_bookings: can_manage_bookings,
       clipped_left: clipped_left,
-      clipped_right: clipped_right %>
+      clipped_right: clipped_right,
+      board_view_type: view_type %>
   </div>
 <% else %>
   <%= link_to hotel_booking_path(current_hotel, block[:booking]),
@@ -52,6 +57,7 @@
       block: block,
       can_manage_bookings: can_manage_bookings,
       clipped_left: clipped_left,
-      clipped_right: clipped_right %>
+      clipped_right: clipped_right,
+      board_view_type: view_type %>
   <% end %>
 <% end %>

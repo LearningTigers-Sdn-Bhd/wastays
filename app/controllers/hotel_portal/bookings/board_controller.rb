@@ -9,7 +9,8 @@ module HotelPortal
         @start_date = parse_start_date
         @board_days = parse_board_days
         @board_layout = parse_board_layout
-        @board_query_params = { days: @board_days, layout: @board_layout }
+        @board_view_type = parse_board_view_type
+        @board_query_params = { days: @board_days, layout: @board_layout, view_type: @board_view_type }
 
         @rate_plan_names = RatePlan.joins(:room_type).where(room_types: { hotel_id: current_hotel.id }).distinct.pluck(:name)
         @selected_rate_plan_name = params.dig(:filters, :rate_plan_name) || @rate_plan_names.first
@@ -39,6 +40,10 @@ module HotelPortal
 
       def parse_board_layout
         %w[comfortable compact].include?(params[:layout]) ? params[:layout] : "comfortable"
+      end
+
+      def parse_board_view_type
+        %w[stay room].include?(params[:view_type]) ? params[:view_type] : "stay"
       end
 
       def authorize_booking_timeline_board!

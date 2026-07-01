@@ -64,7 +64,8 @@
                    board_query_params: @board_query_params,
                    nav_step_days: nav_step_days,
                    rate_plan_names: @rate_plan_names,
-                   selected_rate_plan_name: @selected_rate_plan_name %>
+                   selected_rate_plan_name: @selected_rate_plan_name,
+                   board_view_type: @board_view_type %>
 
         <%= render "hotel_portal/bookings/board/partials/legend",
                    booking_styles: booking_styles,
@@ -124,7 +125,8 @@
                              can_manage_bookings: can_manage_bookings,
                              hotel_today: hotel_today,
                              rate_text_class: rate_text_class,
-                             currency_text_class: currency_text_class %>
+                             currency_text_class: currency_text_class,
+                             board_view_type: @board_view_type %>
                 <% end %>
               </details>
             <% end %>

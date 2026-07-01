@@ -38,6 +38,19 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       expect(response.body).not_to include("booking-timeline-board-extend-duration-overlay")
     end
 
+    it "renders the booking block in room view with guest name and status directly inside the block as a rounded card" do
+      sign_in_with_permissions("manage_bookings")
+
+      get board_hotel_bookings_path(hotel, view_type: "room")
+
+      expect(response).to have_http_status(:success)
+      booking_block = response.parsed_body.at_css("[data-id='#{booking.id}']")
+      expect(booking_block).to be_present
+      expect(booking_block.text).to include(booking.guest_name)
+      expect(booking_block.text).to include(booking.status.humanize)
+      expect(booking_block.classes).to include("rounded-xl")
+    end
+
     it "renders accessible move and resize controls for booking managers" do
       sign_in_with_permissions("manage_bookings")
 
