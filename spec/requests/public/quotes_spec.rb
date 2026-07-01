@@ -34,7 +34,7 @@ RSpec.describe "Public::Quotes", type: :request do
       }
 
       expect(response).to redirect_to(root_path)
-      expect(flash[:alert]).to eq("No valid rate is available for these dates.")
+      expect(flash[:alert]).to eq("No valid rate for room #{room_type.name} with selected occupancy.")
       expect(BookingQuote.count).to eq(0)
     end
   end

@@ -1,5 +1,4 @@
 module Public::QuotesHelper
-
   def converted_amount(amount, from:, to:)
     CurrencyConverter.convert(amount, from: from, to: to)&.amount || amount
   end

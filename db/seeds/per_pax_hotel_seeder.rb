@@ -46,7 +46,7 @@ policy.save!
 
 # Link Owner Access
 owner_role = Role.find_by!(account: account, slug: "hotel_owner")
-owner_users = User.where(email: ["owner@sample.com", "owner@example.com"])
+owner_users = User.where(email: [ "owner@sample.com", "owner@example.com" ])
 owner_users.each do |user|
   UserHotelAccess.find_or_create_by!(user: user, hotel: hotel, role: owner_role)
 end
@@ -73,7 +73,7 @@ room_types_data = [
     max_children: 0,
     quantity: 5,
     base_price: 100.0,
-    room_numbers: ["101", "102", "103", "104", "105"]
+    room_numbers: [ "101", "102", "103", "104", "105" ]
   },
   {
     name: "Pax Deluxe Twin",
@@ -82,7 +82,7 @@ room_types_data = [
     max_children: 1,
     quantity: 8,
     base_price: 150.0,
-    room_numbers: ["201", "202", "203", "204", "205", "206", "207", "208"]
+    room_numbers: [ "201", "202", "203", "204", "205", "206", "207", "208" ]
   },
   {
     name: "Pax Family Suite",
@@ -91,7 +91,7 @@ room_types_data = [
     max_children: 2,
     quantity: 4,
     base_price: 250.0,
-    room_numbers: ["301", "302", "303", "304"]
+    room_numbers: [ "301", "302", "303", "304" ]
   }
 ]
 
@@ -120,7 +120,7 @@ standard_plan.infant_price_multiplier = 0.0
 standard_plan.save!
 
 # Delete any existing per pax rate plans
-hotel.rate_plans.where(name: ["Per Pax Flexible Rate", "Per Pax Non-Refundable"]).destroy_all
+hotel.rate_plans.where(name: [ "Per Pax Flexible Rate", "Per Pax Non-Refundable" ]).destroy_all
 
 puts "Standard Rate Plan ready."
 
@@ -274,7 +274,7 @@ def shift_booking_dates(booking, days)
     # Consume inventory for shifted dates
     new_stay_dates.each do |date|
       inventory = room_type.room_inventories.find_by(date: date)
-      inventory.update_columns(quantity: [0, inventory.quantity - 1].max) if inventory
+      inventory.update_columns(quantity: [ 0, inventory.quantity - 1 ].max) if inventory
     end
   end
 
@@ -372,7 +372,7 @@ def seed_pax_booking(hotel:, room_type:, rate_plan:, guest:, check_in:, check_ou
   # Create Quote
   quote_service = BookingEngine::CreateQuote.new(
     hotel_id: hotel.id,
-    allocations: [{ room_type_id: room_type.id, quantity: 1 }],
+    allocations: [ { room_type_id: room_type.id, quantity: 1 } ],
     check_in: effective_check_in,
     check_out: effective_check_out,
     adults: adults,

@@ -86,7 +86,7 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
 
       # Re-initialize presenter to capture the new room type and booking
       presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
-      
+
       sold_counts = presenter.send(:sold_counts_by_room_type)
 
       expect(sold_counts[room_type.id][start_date]).to eq(1)

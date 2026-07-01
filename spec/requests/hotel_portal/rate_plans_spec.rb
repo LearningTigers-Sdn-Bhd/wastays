@@ -28,7 +28,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
             child_price_multiplier: 0.5,
             infant_price_multiplier: 0.0
           },
-          room_type_ids: [room_type.id]
+          room_type_ids: [ room_type.id ]
         }
       }.to change(RatePlan, :count).by(1)
 

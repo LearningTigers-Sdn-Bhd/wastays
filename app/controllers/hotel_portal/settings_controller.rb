@@ -74,7 +74,7 @@ module HotelPortal
       ActiveRecord::Base.transaction do
         rate_plans_params.each do |rp_id, rp_attrs|
           rate_plan = @hotel.rate_plans.find(rp_id)
-          
+
           if rp_attrs.key?(:room_type_ids)
             rt_ids = Array(rp_attrs.delete(:room_type_ids)).reject(&:blank?).map(&:to_i)
             rate_plan.room_type_ids = rt_ids

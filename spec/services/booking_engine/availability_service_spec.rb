@@ -253,7 +253,7 @@ RSpec.describe BookingEngine::AvailabilityService do
         service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
         plans = service.send(:candidate_rate_plans_for, room_type)
         expect(plans).not_to include(nil)
-        expect(plans).to eq([pax_rate_plan])
+        expect(plans).to eq([ pax_rate_plan ])
       end
     end
   end
