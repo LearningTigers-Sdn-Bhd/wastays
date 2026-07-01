@@ -152,7 +152,7 @@ module HotelPortal
       end
 
       def dnd_action_icon_class
-        active_dnd? ? "bg-slate-100 text-slate-500" : "bg-orange-50 text-orange-500"
+        active_dnd? ? "bg-slate-100 text-slate-500" : "bg-rose-50 text-rose-500"
       end
 
       def dnd_action_label
