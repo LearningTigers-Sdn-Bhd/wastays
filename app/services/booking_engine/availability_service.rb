@@ -228,8 +228,9 @@ module BookingEngine
       # 3. Simple Greedy Mixed-Type Allocation
       sorted_data = room_type_data.map do |d|
         pricing = lowest_pricing_option_for(d[:room_type], adults: d[:max_capacity], children: 0, infants: 0, room_count: 1)
+        next nil if pricing.blank?
         d.merge(pricing: pricing)
-      end.compact.sort_by { |d| [ -d[:max_capacity], d[:pricing]&.total_price || 0 ] }
+      end.compact.sort_by { |d| [ -d[:max_capacity], d[:pricing].total_price ] }
 
       greedy_option = greedy_allocate(total_pax, sorted_data)
       options << greedy_option if greedy_option
@@ -373,6 +374,7 @@ module BookingEngine
     end
 
     def greedy_allocate(total_pax, room_type_data)
+      return nil if room_type_data.blank?
       remaining_pax = total_pax
       allocated_rooms = []
       total_price = 0.to_d

@@ -816,7 +816,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       booking = create(:booking, hotel: hotel, guest_name: "Refund Guest", confirmation_token: "WS-RFD")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
       room_type = create(:room_type, hotel: hotel, name: "Deluxe King")
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type)
       refund_request = create(:refund_request, booking: booking, status: "completed", refund_amount: 80.0, reason: "Guest cancelled")
       create(
         :folio_transaction,
