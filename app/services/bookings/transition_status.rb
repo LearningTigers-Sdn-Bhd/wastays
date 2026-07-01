@@ -106,6 +106,15 @@ module Bookings
 
           sync_room_number_to_snapshot
 
+          @booking.booking_rooms.includes(:room_type).where.not(room_number: [ nil, "" ]).find_each do |booking_room|
+            room_status = RoomStatus.find_by(
+              hotel: @booking.hotel,
+              room_type: booking_room.room_type,
+              room_number: booking_room.room_number
+            )
+            room_status&.update!(dnd: false, dnd_date: nil)
+          end
+
           attributes = (@options[:attributes] || {}).merge(
             checked_in_at: @timestamp,
             guest_registration_number: guest_reg
@@ -361,6 +370,8 @@ module Bookings
           room_type: booking_room.room_type,
           room_number: booking_room.room_number
         )
+
+        room_status.update!(dnd: false, dnd_date: nil)
 
         Rooms::SetStatus.new(
           room_status: room_status,

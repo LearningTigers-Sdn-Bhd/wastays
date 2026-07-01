@@ -1,10 +1,10 @@
 <div class="flex flex-wrap gap-1.5">
   <div data-controller="floating" data-floating-placement-value="bottom-end" class="relative z-[1000] isolate inline-flex overflow-visible">
     <button data-floating-target="reference" data-action="click->floating#toggle" id="room-actions-<%= room_row.room_status_id %>" type="button" 
-      title="<%= (room_row.status == 'inspection_failed' && room_row.failure_note.present?) ? "Failure Reason: #{room_row.failure_note}" : '' %>"
+      title="<%= room_row.actions_tooltip_title %>"
       class="inline-flex items-center gap-x-1 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 shadow-sm hover:bg-slate-50 focus:outline-none focus:bg-slate-50 transition-[background-color,border-color,color,box-shadow]">
       Actions
-      <svg class="size-3 text-slate-400 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      <%= cached_icon "caret-down", library: "phosphor", variant: "light", class: "size-3 text-slate-400 transition-transform" %>
     </button>
 
     <div data-controller="room-status-action" data-floating-target="floating" class="hidden z-[5000] min-w-48 overflow-visible bg-white shadow-xl rounded-xl p-1 border border-slate-100" aria-labelledby="room-actions-<%= room_row.room_status_id %>">
@@ -17,21 +17,12 @@
             <%= hidden_field_tag "layout", presenter.board_layout %>
             <%= f.button class: "w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-blue-50 focus:outline-none transition-colors cursor-pointer group" do %>
               <div class="p-1.5 rounded-md bg-blue-50 text-blue-500 group-hover:bg-blue-100 transition-colors">
-                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <%= cached_icon "play-circle", library: "phosphor", variant: "light", class: "size-3.5" %>
               </div>
               <div class="text-left">
                 <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 group-hover:text-blue-700 transition-colors">Cleaning</p>
                 <p class="text-[9px] font-medium text-slate-500 group-hover:text-blue-600 transition-colors leading-tight">
-                  <% if room_row.status == "inspection_failed" %>
-                    Reclean the room before reinspection
-                  <% elsif room_row.status == "awaiting_inspection" %>
-                    Send back to cleaning
-                  <% else %>
-                    Mark as currently being cleaned
-                  <% end %>
+                  <%= room_row.cleaning_subheading_text %>
                 </p>
               </div>
             <% end %>
@@ -48,9 +39,7 @@
             <%= hidden_field_tag "layout", presenter.board_layout %>
             <%= f.button class: "w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-orange-50 focus:outline-none transition-colors cursor-pointer group" do %>
               <div class="p-1.5 rounded-md bg-orange-50 text-orange-500 group-hover:bg-orange-100 transition-colors">
-                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <%= cached_icon "clock", library: "phosphor", variant: "light", class: "size-3.5" %>
               </div>
               <div class="text-left">
                 <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 group-hover:text-orange-700 transition-colors">Mark as Dirty</p>
@@ -71,10 +60,7 @@
             <%= hidden_field_tag "layout", presenter.board_layout %>
             <%= f.button class: "w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-amber-50 focus:outline-none transition-colors cursor-pointer group" do %>
               <div class="p-1.5 rounded-md bg-amber-50 text-amber-500 group-hover:bg-amber-100 transition-colors">
-                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 22a10 10 0 1 0-10-10" />
-                </svg>
+                <%= cached_icon "clock", library: "phosphor", variant: "light", class: "size-3.5" %>
               </div>
               <div class="text-left">
                 <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 group-hover:text-amber-700 transition-colors">Late Checkout Detected</p>
@@ -94,10 +80,7 @@
             <%= hidden_field_tag "layout", presenter.board_layout %>
             <%= f.button class: "w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-amber-50 focus:outline-none transition-colors cursor-pointer group" do %>
               <div class="p-1.5 rounded-md bg-amber-50 text-amber-500 group-hover:bg-amber-100 transition-colors">
-                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12.5 10.5 15.5 16.5 9.5" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 22a10 10 0 1 0-10-10" />
-                </svg>
+                <%= cached_icon "magnifying-glass", library: "phosphor", variant: "light", class: "size-3.5" %>
               </div>
               <div class="text-left">
                 <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 group-hover:text-amber-700 transition-colors">Awaiting Inspection</p>
@@ -114,9 +97,7 @@
                   data-action="click->room-status-action#openReady"
                   class="w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-emerald-50 focus:outline-none transition-colors cursor-pointer group">
             <div class="p-1.5 rounded-md bg-emerald-50 text-emerald-500 group-hover:bg-emerald-100 transition-colors">
-              <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+              <%= cached_icon "check", library: "phosphor", variant: "light", class: "size-3.5" %>
             </div>
             <div class="text-left">
               <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 group-hover:text-emerald-700 transition-colors">Ready</p>
@@ -132,13 +113,45 @@
                   data-action="click->room-status-action#openFail"
                   class="w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-rose-50 focus:outline-none transition-colors cursor-pointer group">
             <div class="p-1.5 rounded-md bg-rose-50 text-rose-500 group-hover:bg-rose-100 transition-colors">
-              <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6 6 18" />
-              </svg>
+              <%= cached_icon "x", library: "phosphor", variant: "light", class: "size-3.5" %>
             </div>
             <div class="text-left">
               <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 group-hover:text-rose-700 transition-colors">Fail Inspection</p>
               <p class="text-[9px] font-medium text-slate-500 group-hover:text-rose-600 transition-colors leading-tight">Capture the reason before marking failure</p>
+            </div>
+          </button>
+        </div>
+      <% end %>
+
+      <% if room_row.priority? %>
+        <div class="p-1 border-t border-slate-50 mt-1">
+          <%= form_with url: hotel_room_status_path(current_hotel, room_row.room_status_id), method: :patch, local: true do |f| %>
+            <%= hidden_field_tag "room_status[priority]", "false" %>
+            <%= hidden_field_tag "start_date", presenter.start_date.to_s %>
+            <%= hidden_field_tag "days", presenter.board_days %>
+            <%= hidden_field_tag "layout", presenter.board_layout %>
+            <%= f.button class: "w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-slate-50 focus:outline-none transition-colors cursor-pointer group" do %>
+              <div class="p-1.5 rounded-md bg-slate-100 text-slate-500 transition-colors">
+                <%= cached_icon "warning", library: "phosphor", variant: "light", class: "size-3.5" %>
+              </div>
+              <div class="text-left">
+                <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 transition-colors">Remove Priority</p>
+                <p class="text-[9px] font-medium text-slate-500 transition-colors leading-tight">Demote this room to standard speed</p>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="p-1 border-t border-slate-50 mt-1">
+          <button type="button"
+                  data-action="click->room-status-action#openPriority"
+                  class="w-full flex items-center gap-x-3 py-1.5 px-2 rounded-lg text-slate-700 hover:bg-slate-50 focus:outline-none transition-colors cursor-pointer group">
+            <div class="p-1.5 rounded-md bg-rose-50 text-rose-500 group-hover:bg-rose-100 transition-colors">
+              <%= cached_icon "warning", library: "phosphor", variant: "light", class: "size-3.5" %>
+            </div>
+            <div class="text-left">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-slate-700 transition-colors">Mark Priority</p>
+              <p class="text-[9px] font-medium text-slate-500 transition-colors leading-tight">Expedite cleaning/prep for this room</p>
             </div>
           </button>
         </div>
@@ -201,6 +214,33 @@
           <% end %>
         </div>
       <% end %>
+
+      <%# Priority Notes Panel %>
+      <div data-room-status-action-target="priorityPanel" hidden class="mt-2 rounded-xl border border-rose-200 bg-rose-50/40 p-3">
+        <div class="mb-3">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-rose-700">Mark as Priority</p>
+          <p class="mt-1 text-[9px] font-medium leading-tight text-rose-600">Enter priority notes (optional).</p>
+        </div>
+        <%= form_with url: hotel_room_status_path(current_hotel, room_row.room_status_id), method: :patch, local: true do %>
+          <%= hidden_field_tag "room_status[priority]", "true" %>
+          <%= hidden_field_tag "start_date", presenter.start_date.to_s %>
+          <%= hidden_field_tag "days", presenter.board_days %>
+          <%= hidden_field_tag "layout", presenter.board_layout %>
+          <div>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Notes / Reason (Optional)</label>
+            <%= text_area_tag "room_status[notes]",
+                nil,
+                rows: 3,
+                placeholder: "Add instructions or reasons (e.g. Early check-in)...",
+                data: { room_status_action_target: "priorityInput" },
+                class: "w-full rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-rose-300 focus:outline-none" %>
+          </div>
+          <div class="mt-3 flex items-center justify-end gap-2">
+            <button type="button" data-action="click->room-status-action#close" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button>
+            <%= submit_tag "Confirm Priority", class: "rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-rose-700" %>
+          </div>
+        <% end %>
+      </div>
 
     </div>
   </div>

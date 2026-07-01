@@ -39,6 +39,22 @@ module Rooms
       @all_bookings = bookings_scope.to_a
       @all_blocks = blocks_scope.to_a
 
+      # Eager-initialize RoomStatus records for any newly configured rooms
+      existing_statuses = @hotel.room_statuses.select(:room_type_id, :room_number).to_a
+      existing_map = existing_statuses.map { |rs| [ rs.room_type_id, rs.room_number.to_s ] }.to_set
+
+      @hotel.room_types.each do |room_type|
+        room_type.room_numbers.each do |room_number|
+          next if existing_map.include?([ room_type.id, room_number.to_s ])
+
+          RoomStatus.find_or_create_by!(
+            hotel: @hotel,
+            room_type: room_type,
+            room_number: room_number
+          )
+        end
+      end
+
       @hotel.room_types.order(:name).map do |room_type|
         {
           room_type: room_type,
@@ -98,7 +114,9 @@ module Rooms
         room_status_id: resolved.room_status&.id,
         notes: resolved.room_status&.notes,
         booking_state: resolved.booking_state,
-        booking_details: resolved.booking_details
+        booking_details: resolved.booking_details,
+        priority: resolved.room_status&.priority,
+        active_dnd: resolved.room_status&.dnd && resolved.room_status&.dnd_date == @hotel.current_business_date
       }
     end
 

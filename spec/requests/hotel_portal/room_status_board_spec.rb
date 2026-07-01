@@ -185,4 +185,19 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
       expect(response.body).to include("bg-slate-400")
     end
   end
+
+  describe "GET /hotel/:hotel_id/room-status/housekeeping-requests/:room_number" do
+    it "responds successfully for users with view_room_readiness permission" do
+      sign_in_with_permissions("view_room_readiness")
+      booking = create(:booking, hotel: hotel, status: "checked_in")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      create(:housekeeping_request, booking: booking, status: "in_progress", request_details: "Extra towels")
+
+      get hotel_room_status_housekeeping_requests_path(hotel, "101")
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Extra towels")
+      expect(response.body).to include("In progress")
+    end
+  end
 end

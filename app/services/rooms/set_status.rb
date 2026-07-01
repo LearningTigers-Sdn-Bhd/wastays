@@ -33,12 +33,14 @@ module Rooms
       old_status = @room_status.status
 
       RoomStatus.transaction do
-        @room_status.update!(
+        updates = {
           status: @status,
           last_changed_by: @user,
           last_changed_at: Time.current,
           notes: @reason.presence || @room_status.notes
-        )
+        }
+
+        @room_status.update!(updates)
 
         RoomOperationalAuditLog.create!(
           hotel: @room_status.hotel,

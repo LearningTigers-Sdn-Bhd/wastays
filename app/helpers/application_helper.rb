@@ -30,6 +30,21 @@ module ApplicationHelper
     booking.status == "review_no_show" ? "confirmed" : booking.status
   end
 
+  def refund_status_class(status)
+    case status
+    when "pending" then "bg-yellow-100 text-yellow-700"
+    when "approved" then "bg-blue-100 text-blue-700"
+    when "completed" then "bg-green-100 text-green-700"
+    when "rejected" then "bg-red-100 text-red-700"
+    else "bg-gray-100 text-gray-700"
+    end
+  end
+
+  def guest_booking_badge_class(booking)
+    status = guest_booking_status(booking)
+    status == "confirmed" ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"
+  end
+
   def payment_status_class(status)
     case status
     when "captured" then "bg-green-100 text-green-800"
