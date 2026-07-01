@@ -2,6 +2,10 @@
 <%
   bookings = room[:blocks].select { |b| b[:type] == "booking" }
   status_blocks = room[:blocks].select { |b| b[:type] == "room_status" }
+  
+  checking_out_booking = bookings.find do |b|
+    b[:status].in?(%w[checked_in review_due_out checkout_required])
+  end
 
   top_bar_color = if status_blocks.any?
     "bg-rose-500" # Not Ready / Blocked
@@ -21,7 +25,7 @@
   end
 %>
 
-<div class="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-room-number="<%= room[:room_number] %>">
+<div class="flex flex-col border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-room-number="<%= room[:room_number] %>">
   <div class="h-1.5 w-full <%= top_bar_color %>"></div>
   <div class="p-3.5 flex-1 flex flex-col justify-between">
     <!-- Room Header -->
@@ -83,10 +87,53 @@
     <!-- Bookings List -->
     <div class="mt-2.5 flex-1 flex flex-col justify-between">
       <div class="space-y-2">
-        <h4 class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Scheduled</h4>
+        <div class="flex items-center justify-between">
+          <h4 class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Scheduled</h4>
+          <% if checking_out_booking %>
+            <%
+              days_left = (checking_out_booking[:check_out].to_date - visible_start_date).to_i
+              
+              countdown_class, countdown_text = if days_left < 0
+                [ "text-rose-600 bg-rose-50 border-rose-100", "Overdue" ]
+              elsif days_left == 0
+                [ "text-rose-600 bg-rose-50 border-rose-100", "Checkout today" ]
+              elsif days_left == 1
+                [ "text-amber-700 bg-amber-50 border-amber-100", "1 day left" ]
+              else
+                [ "text-amber-700 bg-amber-50 border-amber-100", "#{days_left} days left" ]
+              end
+            %>
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider <%= countdown_class %>">
+              <%= cached_icon "clock", stroke_width: 2.5, class: "size-2.5 shrink-0" %>
+              <span><%= countdown_text %></span>
+            </span>
+          <% end %>
+        </div>
         <% if bookings.blank? %>
-          <div class="flex flex-col items-center justify-center py-4 px-2 rounded-lg border border-dashed border-slate-200 text-center">
-            <p class="text-[10px] font-semibold text-slate-400">No bookings</p>
+          <div class="flex flex-col items-center justify-center py-4 px-2 rounded-lg border border-dashed border-slate-200 text-center gap-1.5">
+            <p class="text-[10px] font-bold text-slate-400">No bookings</p>
+            <% if can_manage_bookings %>
+              <% slot_params = {
+                room_type_id: room_type.id,
+                room_number: room[:room_number],
+                check_in: visible_start_date,
+                check_out: visible_start_date + 1.day
+              } %>
+              <div class="flex flex-col gap-1 w-full max-w-[120px]">
+                <%= link_to hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
+                            class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
+                            data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+                  <%= cached_icon "plus", stroke_width: 2.5, class: "size-3 text-slate-500" %>
+                  <span>Book</span>
+                <% end %>
+                <%= link_to hotel_booking_transaction_walk_in_check_in_path(current_hotel, slot_params),
+                            class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
+                            data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+                  <%= cached_icon "user-check", stroke_width: 2.5, class: "size-3 text-slate-500" %>
+                  <span>Walk-in</span>
+                <% end %>
+              </div>
+            <% end %>
           </div>
         <% else %>
           <div class="space-y-2">
