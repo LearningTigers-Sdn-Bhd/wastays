@@ -1,7 +1,4 @@
-<%
-  view_type = local_assigns[:board_view_type] || @board_view_type || "stay"
-%>
-
+<%# locals: (block:, can_manage_bookings:, clipped_left:, clipped_right:, view_type:) %>
 <% if can_manage_bookings %>
   <div class="absolute inset-y-0 left-0 w-4 cursor-grab bg-black/5 hover:bg-black/10 transition-colors flex items-center justify-center"
        data-action="mousedown->booking-timeline#onDragHandleMouseDown click->booking-timeline#onHandleClick"
@@ -48,7 +45,7 @@
   <p class="text-sm font-bold text-white truncate"><%= block[:guest_name] %></p>
   <p class="text-[10px] text-slate-400 mt-1"><%= block[:check_in].strftime("%b %-d") %> → <%= block[:check_out].strftime("%b %-d, %Y") %></p>
   <div class="flex items-center gap-2 mt-1.5">
-    <span class="text-[9px] font-bold text-slate-500 uppercase"><%= block[:source].presence || "Direct" %></span>
-    <span class="text-[9px] font-bold uppercase <%= block[:payment_status] == "captured" ? "text-emerald-400" : "text-amber-400" %>"><%= block[:payment_status].humanize %></span>
+    <span class="text-[9px] font-bold text-slate-500 uppercase"><%= booking_source_name(block) %></span>
+    <span class="text-[9px] font-bold uppercase <%= booking_payment_status_class(block[:payment_status]) %>"><%= block[:payment_status].humanize %></span>
   </div>
 </div>

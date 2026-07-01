@@ -1,31 +1,12 @@
-<%# app/views/hotel_portal/bookings/board/partials/_room_card.html.erb %>
+<%# locals: (room:, room_type:, can_manage_bookings:, current_hotel:, visible_start_date:, visible_end_exclusive:) %>
 <%
   bookings = room[:blocks].select { |b| b[:type] == "booking" }
   status_blocks = room[:blocks].select { |b| b[:type] == "room_status" }
-  
-  checking_out_booking = bookings.find do |b|
-    b[:status].in?(%w[checked_in review_due_out checkout_required])
-  end
-
-  top_bar_color = if status_blocks.any?
-    "bg-rose-500" # Not Ready / Blocked
-  elsif bookings.any?
-    first_booking = bookings.first
-    case first_booking[:status].to_s
-    when "pending" then "bg-amber-500"
-    when "confirmed" then "bg-blue-500"
-    when "checked_in" then "bg-violet-500"
-    when "checkout_required" then "bg-rose-500"
-    when "completed" then "bg-emerald-500"
-    when "no_show" then "bg-rose-500"
-    else "bg-sky-500"
-    end
-  else
-    "bg-emerald-500" # Available (Green)
-  end
+  checking_out_booking = bookings.find { |b| b[:status].in?(%w[checked_in review_due_out checkout_required]) }
+  top_bar_color = room_card_top_bar_class(room)
 %>
 
-<div class="flex flex-col border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-room-number="<%= room[:room_number] %>">
+<div class="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-room-number="<%= room[:room_number] %>">
   <div class="h-1.5 w-full <%= top_bar_color %>"></div>
   <div class="p-3.5 flex-1 flex flex-col justify-between">
     <!-- Room Header -->
@@ -36,8 +17,8 @@
       
       <div class="flex items-center gap-1.5">
         <!-- Smoking Icon -->
-        <% smoking_label = room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking" %>
-        <% smoking_color = room_type.smoking_allowed ? "text-emerald-500 bg-emerald-50 border-emerald-100" : "text-slate-400 bg-slate-50 border-slate-100" %>
+        <% smoking_label = room_smoking_label(room_type) %>
+        <% smoking_color = room_card_smoking_badge_color_class(room_type) %>
         <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
           <div data-floating-target="reference" class="p-1 rounded border <%= smoking_color %> cursor-help">
             <% if room_type.smoking_allowed %>
@@ -52,8 +33,8 @@
         </div>
 
         <!-- Pets Icon -->
-        <% pets_label = room_type.pets_allowed ? "Pets Allowed" : "No Pets" %>
-        <% pets_color = room_type.pets_allowed ? "text-emerald-500 bg-emerald-50 border-emerald-100" : "text-slate-400 bg-slate-50 border-slate-100" %>
+        <% pets_label = room_pets_label(room_type) %>
+        <% pets_color = room_card_pets_badge_color_class(room_type) %>
         <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
           <div data-floating-target="reference" class="p-1 rounded border <%= pets_color %> cursor-help">
             <% if room_type.pets_allowed %>
@@ -90,19 +71,7 @@
         <div class="flex items-center justify-between">
           <h4 class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Scheduled</h4>
           <% if checking_out_booking %>
-            <%
-              days_left = (checking_out_booking[:check_out].to_date - visible_start_date).to_i
-              
-              countdown_class, countdown_text = if days_left < 0
-                [ "text-rose-600 bg-rose-50 border-rose-100", "Overdue" ]
-              elsif days_left == 0
-                [ "text-rose-600 bg-rose-50 border-rose-100", "Checkout today" ]
-              elsif days_left == 1
-                [ "text-amber-700 bg-amber-50 border-amber-100", "1 day left" ]
-              else
-                [ "text-amber-700 bg-amber-50 border-amber-100", "#{days_left} days left" ]
-              end
-            %>
+            <% countdown_class, countdown_text = room_card_checkout_badge(checking_out_booking, visible_start_date) %>
             <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider <%= countdown_class %>">
               <%= cached_icon "clock", stroke_width: 2.5, class: "size-2.5 shrink-0" %>
               <span><%= countdown_text %></span>
@@ -158,14 +127,14 @@
                   data-booking-actions-payment-status-value="<%= block[:payment_status] %>"
                   data-booking-actions-notes-value="<%= block[:notes] %>"
                   data-action="click->booking-actions#openBookingSheet keydown.enter->booking-actions#openBookingSheet keydown.space->booking-actions#openBookingSheet"
-                  class="block w-full text-left rounded-lg border p-2 hover:shadow-sm transition <%= booking_block_status_classes(block, booking_styles) %> cursor-pointer focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1"
+                  class="block w-full text-left rounded-lg border p-2 hover:shadow-sm transition <%= booking_block_status_classes(block) %> cursor-pointer focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1"
                 >
                   <%= render "hotel_portal/bookings/board/partials/room_card_booking_content", block: block %>
                 </div>
               <% else %>
                 <%= link_to hotel_booking_path(current_hotel, block[:booking]),
                     aria: { label: block_label },
-                    class: "block w-full text-left rounded-lg border p-2 hover:shadow-sm transition #{booking_block_status_classes(block, booking_styles)} focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1",
+                    class: "block w-full text-left rounded-lg border p-2 hover:shadow-sm transition #{booking_block_status_classes(block)} focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1",
                     data: { turbo_frame: "_top" } do %>
                   <%= render "hotel_portal/bookings/board/partials/room_card_booking_content", block: block %>
                 <% end %>

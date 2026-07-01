@@ -1,4 +1,4 @@
-<%# app/views/hotel_portal/bookings/board/partials/_room_card_booking_content.html.erb %>
+<%# locals: (block:) %>
 <div class="flex flex-col min-w-0">
   <div class="flex items-start justify-between gap-1.5">
     <p class="truncate font-black text-xs text-slate-800 leading-tight">
@@ -14,7 +14,7 @@
       <span><%= block[:check_in].strftime("%b %-d") %> → <%= block[:check_out].strftime("%b %-d") %></span>
     </div>
     <div class="text-[11px] font-black text-slate-900">
-      <%= block[:currency] == "MYR" ? "RM" : block[:currency] %> <%= number_with_precision(block[:total_amount], precision: 0) %>
+      <%= currency_symbol(block[:currency]) %> <%= number_with_precision(block[:total_amount], precision: 0) %>
     </div>
   </div>
 </div>

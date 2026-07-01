@@ -133,5 +133,18 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       expect(response.parsed_body.css("[data-room-number='201']")).to be_present
       expect(response.parsed_body.css("[data-room-number='101']")).to be_empty
     end
+
+    it "filters the board rooms by computed room status in Room View" do
+      sign_in_with_permissions("manage_bookings")
+
+      # Room 101 has a confirmed booking today, so it should appear under confirmed, but not under available
+      get board_hotel_bookings_path(hotel, view_type: "room", room_status: "confirmed")
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.css("[data-room-number='101']")).to be_present
+
+      get board_hotel_bookings_path(hotel, view_type: "room", room_status: "available")
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.css("[data-room-number='101']")).to be_empty
+    end
   end
 end

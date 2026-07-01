@@ -1,7 +1,7 @@
+<%# locals: (room:, row_min_base:, block_step:, visible_start_date:, grid_template_columns:, card_padding:, room_number_class:, board_dates:, summary_padding:, can_manage_bookings:, rate_text_class:, currency_text_class:, hotel_today:, current_hotel:, booking_timeline_board:, block_left_pad:, block_top:, visible_end_exclusive:, board_view_type:) %>
 <%
   row_min_height = booking_timeline_board_row_height(room, row_min_base, block_step, visible_start_date)
   room_type = room[:room_type]
-  board_view_type = local_assigns[:board_view_type] || @board_view_type || "stay"
 %>
 
 <div class="grid border-b border-slate-100" style="grid-template-columns: <%= grid_template_columns %>; min-height: <%= row_min_height %>px;">
@@ -9,8 +9,8 @@
     <p class="font-black leading-none text-slate-950 <%= room_number_class %>"><%= room[:room_number] %></p>
 
     <div class="flex items-center gap-2">
-      <% smoking_label = room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking" %>
-      <% smoking_color = room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400" %>
+      <% smoking_label = room_smoking_label(room_type) %>
+      <% smoking_color = room_smoking_color_class(room_type) %>
       <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
         <div data-floating-target="reference" class="<%= smoking_color %> cursor-help">
           <% if room_type.smoking_allowed %>
@@ -24,8 +24,8 @@
         </div>
       </div>
 
-      <% pets_label = room_type.pets_allowed ? "Pets Allowed" : "No Pets" %>
-      <% pets_color = room_type.pets_allowed ? "text-emerald-500" : "text-slate-400" %>
+      <% pets_label = room_pets_label(room_type) %>
+      <% pets_color = room_pets_color_class(room_type) %>
       <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
         <div data-floating-target="reference" class="<%= pets_color %> cursor-help">
           <% if room_type.pets_allowed %>
@@ -48,7 +48,7 @@
          data-room-type-id="<%= room_type.id %>"
          <%= 'data-action="dragover->booking-timeline#onDragOver dragleave->booking-timeline#onDragLeave drop->booking-timeline#onDrop"'.html_safe if can_manage_bookings %>>
       <%# Quick Creation Link & Rate Display %>
-      <% is_occupied = room[:blocks].any? { |b| b[:check_in] <= date && b[:check_out] > date } %>
+      <% is_occupied = room_occupied_on?(room, date) %>
       <% rate = booking_timeline_board_rate_for(booking_timeline_board, room_type.id, date) %>
 
       <% if !is_occupied && can_manage_bookings %>
@@ -64,7 +64,7 @@
             <span class="flex h-4 items-center justify-center">
               <% if rate %>
                 <span class="flex items-center gap-0.5 <%= rate_text_class %> font-bold text-slate-400/60 tracking-tight">
-                  <span class="<%= currency_text_class %> uppercase"><%= rate[:currency] == "MYR" ? "RM" : rate[:currency] %></span>
+                  <span class="<%= currency_text_class %> uppercase"><%= currency_symbol(rate[:currency]) %></span>
                   <span><%= number_with_precision(rate[:price], precision: 0) %></span>
                 </span>
               <% end %>
@@ -133,7 +133,6 @@
                 block_left_pad: block_left_pad,
                 block_top: block_top,
                 block_step: block_step,
-                booking_styles: booking_styles,
                 current_hotel: current_hotel,
                 can_manage_bookings: can_manage_bookings,
                 board_view_type: board_view_type %>
