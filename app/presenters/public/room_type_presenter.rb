@@ -94,6 +94,33 @@ module Public
       pricing_summary[:rate_plan]&.infant_price_multiplier
     end
 
+    def pax_rate_value
+      return 0.0 unless pricing_summary[:rate_plan] && @availability_service
+      rp = pricing_summary[:rate_plan]
+      currency = pricing_summary[:currency]
+
+      dates = @availability_service.send(:stay_dates)
+      return 0.0 if dates.empty?
+
+      rates_by_date = @room_type.room_rates.select { |rr| dates.include?(rr.date) && rr.rate_plan_id == rp.id && rr.currency == currency }.index_by(&:date)
+
+      total_base = dates.sum do |date|
+        rate = rates_by_date[date]
+        rate&.price || @room_type.base_price || 0.to_d
+      end
+
+      (total_base / dates.size).to_f
+    end
+
+    def display_pax_rate(display_currency)
+      rate = pax_rate_value
+      return unless rate > 0
+      @view_context.display_amount(rate,
+                                   quote_currency: pricing_summary[:currency],
+                                   display_currency: display_currency,
+                                   hotel: @hotel)
+    end
+
     def details_json
       {
         name: name,

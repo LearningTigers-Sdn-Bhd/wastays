@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe 'HotelPortal::RatePlans', type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  let(:hotel) { create(:hotel, account: account, status: 'live') }
+  let(:hotel) { create(:hotel, account: account, status: 'live', allow_pax_pricing: true) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
   let!(:room_type) { create(:room_type, hotel: hotel) }
 

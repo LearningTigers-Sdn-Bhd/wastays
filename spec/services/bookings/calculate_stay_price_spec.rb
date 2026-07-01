@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Bookings::CalculateStayPrice do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, allow_pax_pricing: true) }
   let(:room_type) { create(:room_type, hotel: hotel, base_price: 100) }
   let(:check_in) { Date.current }
   let(:check_out) { Date.current + 2.days }

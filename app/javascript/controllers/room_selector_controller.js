@@ -5,12 +5,14 @@ export default class extends Controller {
   static values = {
     adults: Number,
     children: Number,
-    currency: String
+    infants: Number,
+    currency: String,
+    paxPricingOnly: Boolean
   }
 
   connect() {
     this.selections = {} // Format: { roomTypeId: quantity }
-    this.roomData = {} // Format: { roomTypeId: { price, name, maxCapacity, availableQty } }
+    this.roomData = {} // Format: { roomTypeId: { price, paxPrice, name, maxCapacity, availableQty, singleSupplement, childMultiplier, infantMultiplier } }
 
     this.initializeRoomData()
     this.updateUI()
@@ -24,11 +26,25 @@ export default class extends Controller {
     this.roomCardTargets.forEach(card => {
       const id = card.dataset.roomTypeId
       const price = parseFloat(card.dataset.roomPrice || 0)
+      const paxPrice = parseFloat(card.dataset.roomPaxPrice || 0)
       const name = card.dataset.roomName
       const maxCapacity = parseInt(card.dataset.roomMaxCapacity || 1)
       const availableQty = parseInt(card.dataset.roomAvailableQuantity || 0)
 
-      this.roomData[id] = { price, name, maxCapacity, availableQty }
+      const singleSupplement = parseFloat(card.dataset.roomSingleSupplement || 0)
+      const childMultiplier = parseFloat(card.dataset.roomChildMultiplier || 1)
+      const infantMultiplier = parseFloat(card.dataset.roomInfantMultiplier || 0)
+
+      this.roomData[id] = { 
+        price, 
+        paxPrice, 
+        name, 
+        maxCapacity, 
+        availableQty,
+        singleSupplement,
+        childMultiplier,
+        infantMultiplier
+      }
       this.selections[id] = 0
     })
   }
@@ -61,11 +77,73 @@ export default class extends Controller {
     }
   }
 
+  distributeGuests(adults, children, infants, selectedRooms) {
+    const sortedRooms = [...selectedRooms].sort((a, b) => b.maxCapacity - a.maxCapacity)
+    const numRooms = sortedRooms.length
+    if (adults < numRooms) return null
+
+    const occupancies = Array.from({ length: numRooms }, (_, i) => ({
+      room: sortedRooms[i],
+      adults: 1,
+      children: 0,
+      infants: 0
+    }))
+
+    let tempAdults = adults - numRooms
+    let tempChildren = children
+    let tempInfants = infants
+
+    const guestPool = [
+      { key: 'adults', count: tempAdults },
+      { key: 'children', count: tempChildren },
+      { key: 'infants', count: tempInfants }
+    ]
+
+    for (const pool of guestPool) {
+      let count = pool.count
+      if (count <= 0) continue
+
+      for (let i = 0; i < numRooms; i++) {
+        const room = occupancies[i].room
+        const currentTotal = occupancies[i].adults + occupancies[i].children + occupancies[i].infants
+        let spaceLeft = room.maxCapacity - currentTotal
+
+        let specificLimit = room.maxCapacity
+        let currentSpecific = 0
+
+        if (pool.key === 'adults') {
+          specificLimit = room.maxCapacity
+          currentSpecific = occupancies[i].adults
+        } else if (pool.key === 'children') {
+          specificLimit = room.maxCapacity
+          currentSpecific = occupancies[i].children
+        } else {
+          specificLimit = room.maxCapacity
+          currentSpecific = occupancies[i].infants
+        }
+
+        const specificSpace = Math.max(specificLimit - currentSpecific, 0)
+        spaceLeft = Math.min(spaceLeft, specificSpace)
+        if (spaceLeft <= 0) continue
+
+        const toAdd = Math.min(spaceLeft, count)
+        occupancies[i][pool.key] += toAdd
+        count -= toAdd
+        if (count <= 0) break
+      }
+
+      if (count > 0) return null
+    }
+
+    return occupancies
+  }
+
   updateUI() {
     let totalRooms = 0
     let totalPrice = 0
     let totalCapacity = 0
     const summaryItems = []
+    const selectedRoomsList = []
 
     // 1. Update Room Card Steppers
     this.roomCardTargets.forEach(card => {
@@ -110,11 +188,48 @@ export default class extends Controller {
       if (qty > 0) {
         const roomInfo = this.roomData[id]
         totalRooms += qty
-        totalPrice += roomInfo.price * qty
         totalCapacity += roomInfo.maxCapacity * qty
         summaryItems.push(`${qty}x ${roomInfo.name}`)
+
+        for (let k = 0; k < qty; k++) {
+          selectedRoomsList.push({ id, ...roomInfo })
+        }
       }
     })
+
+    // Calculate Price based on Mode
+    if (totalRooms > 0) {
+      if (this.paxPricingOnlyValue) {
+        const occupancies = this.distributeGuests(
+          this.adultsValue, 
+          this.childrenValue, 
+          this.infantsValue, 
+          selectedRoomsList
+        )
+        if (occupancies) {
+          occupancies.forEach(occ => {
+            const room = occ.room
+            const roomPax = occ.adults + occ.children + occ.infants
+            
+            let roomPrice = occ.adults * room.paxPrice
+            roomPrice += occ.children * room.paxPrice * room.childMultiplier
+            roomPrice += occ.infants * room.paxPrice * room.infantMultiplier
+            
+            if (roomPax === 1) {
+              roomPrice += room.singleSupplement
+            }
+            
+            totalPrice += roomPrice
+          })
+        } else {
+          totalPrice = 0
+        }
+      } else {
+        selectedRoomsList.forEach(room => {
+          totalPrice += room.price
+        })
+      }
+    }
 
     // 2. Update Sticky Bar
     if (totalRooms > 0) {

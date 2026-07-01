@@ -146,6 +146,7 @@ RSpec.describe BookingEngine::AvailabilityService do
     let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", sell_mode: "per_person", single_supplement: 20.0, currency: "MYR") }
 
     before do
+      hotel.update!(pax_pricing_only: true)
       # Link pax_rate_plan to room_type
       RoomTypeRatePlan.create!(room_type: room_type, rate_plan: pax_rate_plan)
       # Setup rates on the pax plan
@@ -238,7 +239,7 @@ RSpec.describe BookingEngine::AvailabilityService do
         service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
         plans = service.send(:candidate_rate_plans_for, room_type)
         expect(plans).to include(nil)
-        expect(plans).to include(pax_rate_plan)
+        expect(plans).not_to include(pax_rate_plan)
         expect(plans).to include(room_type.rate_plans.first)
       end
     end

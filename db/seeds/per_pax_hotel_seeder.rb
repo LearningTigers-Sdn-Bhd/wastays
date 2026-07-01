@@ -16,7 +16,7 @@ hotel.usd_conversion_rate = 4.65
 hotel.tourism_tax_enabled = true
 hotel.tourism_tax_amount = 10.0
 hotel.allow_pax_pricing = true
-hotel.pax_pricing_only = false
+hotel.pax_pricing_only = true
 hotel.save!
 puts "Hotel 'Grand Pax Resort' ready."
 
@@ -112,10 +112,11 @@ end
 
 # 3. Standard Rate Plan
 standard_plan = RatePlan.find_or_initialize_by(hotel: hotel, name: "Standard Rate")
-standard_plan.sell_mode = "per_room"
+standard_plan.sell_mode = "per_person"
 standard_plan.currency = "MYR"
-standard_plan.base_occupancy = 2
-standard_plan.extra_pax_charge = 30.0
+standard_plan.single_supplement = 20.0
+standard_plan.child_price_multiplier = 0.5
+standard_plan.infant_price_multiplier = 0.0
 standard_plan.save!
 
 # Delete any existing per pax rate plans

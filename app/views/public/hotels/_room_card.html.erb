@@ -8,6 +8,10 @@
      data-room-type-id="<%= room_type.id %>"
      data-room-name="<%= room_type.name %>"
      data-room-price="<%= room_type.single_room_total_price_value %>"
+     data-room-pax-price="<%= room_type.pax_rate_value %>"
+     data-room-single-supplement="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.single_supplement&.to_f || 0.0) : 0 %>"
+     data-room-child-multiplier="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.child_price_multiplier&.to_f || 1.0) : 1.0 %>"
+     data-room-infant-multiplier="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.infant_price_multiplier&.to_f || 0.0) : 0.0 %>"
      data-room-max-capacity="<%= room_type.max_capacity %>"
      data-room-available-quantity="<%= available_qty %>">
   <div class="flex flex-col md:flex-row">
@@ -82,7 +86,7 @@
                 <%= room_type.per_pax_billing? ? "Price Per Person" : "Price Per Room" %>
               </p>
               <p class="text-2xl font-black text-neutral-text-primary">
-                <%= room_type.display_single_room_total_price(display_currency) %>
+                <%= room_type.per_pax_billing? ? room_type.display_pax_rate(display_currency) : room_type.display_single_room_total_price(display_currency) %>
               </p>
               <p class="text-[10px] text-neutral-text-secondary italic">
                 <%= room_type.rate_plan_name %> · <%= display_currency != room_type.single_room_pricing_summary[:currency] ? "estimate" : "fixed rate" %>

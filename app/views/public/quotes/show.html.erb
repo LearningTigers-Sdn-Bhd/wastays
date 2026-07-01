@@ -324,11 +324,26 @@
                   </div>
                 </div>
 
-                <div class="space-y-3 mb-8">
+                <div class="space-y-4 mb-8">
                   <% @quote_items.each do |item| %>
-                    <div class="flex justify-between text-sm">
-                      <span class="text-neutral-text-secondary font-medium"><%= item.quantity %>x <%= item.room_type_snapshot['name'] %></span>
-                      <span class="text-neutral-text-primary font-bold"><%= @quote.formatted_item_subtotal(item) %></span>
+                    <div class="border-b border-neutral-bg pb-3 last:border-0 last:pb-0">
+                      <div class="flex justify-between text-sm font-bold mb-1.5">
+                        <span class="text-neutral-text-primary"><%= item.quantity %>x <%= item.room_type_snapshot['name'] %></span>
+                        <span class="text-neutral-text-primary"><%= display_amount(item.subtotal, quote_currency: @quote.currency, display_currency: @display_currency, hotel: @hotel) %></span>
+                      </div>
+                      <% if @hotel.pax_pricing_only? %>
+                        <div class="pl-4 space-y-1.5 text-xs text-neutral-text-secondary border-l-2 border-brand-primary/20">
+                          <% pax_pricing_breakdown_items(item, @hotel, @display_currency).each do |line| %>
+                            <div class="flex justify-between items-center">
+                              <span class="flex flex-col">
+                                <span class="font-bold text-neutral-text-primary/95"><%= line[:label] %></span>
+                                <span class="text-[10px] text-neutral-text-secondary/70"><%= line[:detail] %></span>
+                              </span>
+                              <span class="font-semibold text-neutral-text-primary"><%= line[:amount] %></span>
+                            </div>
+                          <% end %>
+                        </div>
+                      <% end %>
                     </div>
                   <% end %>
                 </div>

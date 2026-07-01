@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe BookingEngine::CreateQuote do
   let!(:account) { Account.create!(name: "Test Account", slug: "test-account", status: "active") }
-  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved") }
+  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved", allow_pax_pricing: true) }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
 
   let(:check_in) { Date.today }
@@ -71,7 +71,6 @@ RSpec.describe BookingEngine::CreateQuote do
       expect(result.message).to eq("Please select check-in and check-out dates.")
     end
 
-<<<<<<< HEAD
     context "when a selected rate plan has stay-length restrictions" do
       let(:rate_plan) { create(:rate_plan, room_type: room_type, name: "2-4 Night Rate", currency: "MYR") }
 
@@ -96,7 +95,7 @@ RSpec.describe BookingEngine::CreateQuote do
           result = described_class.new(params.merge(rate_plan_id: rate_plan.id)).call
 
           expect(result.success?).to be false
-          expect(result.message).to eq("No valid rate is available for these dates.")
+          expect(result.message).to eq("No valid rate for room #{room_type.name} with selected occupancy.")
         end
       end
 
@@ -107,7 +106,7 @@ RSpec.describe BookingEngine::CreateQuote do
           result = described_class.new(params.merge(rate_plan_id: rate_plan.id)).call
 
           expect(result.success?).to be false
-          expect(result.message).to eq("No valid rate is available for these dates.")
+          expect(result.message).to eq("No valid rate for room #{room_type.name} with selected occupancy.")
         end
       end
 

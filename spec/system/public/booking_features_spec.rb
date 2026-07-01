@@ -81,39 +81,50 @@ RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
   end
 
   it "calculates per-pax pricing correctly", js: true do
-    # Pax (80 per person):
-    #   1 adult = 80
-    #   2 adults = 160
-    # Standard: 150 per room.
+    # When pax_pricing_only is false:
+    # We should only show per-room rate (150), never per-person rate (80),
+    # regardless of whether adults = 1 or adults = 2.
 
-    # Test 1 adult -> should pick Pax (80) because 80 < 150
+    # Test 1 adult -> should pick Standard (150)
     visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 1)
     within ".group", text: @room_type.name do
-      expect(page).to have_content(/80/)
+      expect(page).to have_content(/150/)
+      expect(page).not_to have_content("PER-PAX BOOKING RULES")
     end
 
-    # Test 2 adults -> should pick Standard (150) because 150 < 160
+    # Test 2 adults -> should pick Standard (150)
     visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2)
     within ".group", text: @room_type.name do
       expect(page).to have_content(/150/)
+      expect(page).not_to have_content("PER-PAX BOOKING RULES")
     end
   end
 
   it "forces per-pax pricing only when pax_pricing_only is enabled on the hotel", js: true do
     hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
 
-    # 1 adult -> should pick Pax (80)
+    # 1 adult -> card shows price per person (80).
+    # When added, sticky bar total price should be 80.
     visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 1)
     within ".group", text: @room_type.name do
       expect(page).to have_content(/80/)
       expect(page).to have_content("PER-PAX BOOKING RULES")
+      click_button "Add to Stay"
+    end
+    within "[data-room-selector-target='stickyBar']" do
+      expect(page).to have_content(/80\.00/)
     end
 
-    # 2 adults -> should pick Pax (160) even though Standard (150) is cheaper
+    # 2 adults -> card shows price per person (80).
+    # When added, sticky bar total price should be 160.
     visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2)
     within ".group", text: @room_type.name do
-      expect(page).to have_content(/160/)
+      expect(page).to have_content(/80/)
       expect(page).to have_content("PER-PAX BOOKING RULES")
+      click_button "Add to Stay"
+    end
+    within "[data-room-selector-target='stickyBar']" do
+      expect(page).to have_content(/160\.00/)
     end
   end
 end
