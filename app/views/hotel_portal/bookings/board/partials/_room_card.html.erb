@@ -1,4 +1,4 @@
-<%# locals: (room:, room_type:, can_manage_bookings:, current_hotel:, visible_start_date:, visible_end_exclusive:) %>
+<%# locals: (room:, room_type:, can_manage_bookings:, current_hotel:, visible_start_date:, visible_end_exclusive:, hotel_today:) %>
 <%
   bookings = room[:blocks].select { |b| b[:type] == "booking" }
   status_blocks = room[:blocks].select { |b| b[:type] == "room_status" }
@@ -6,7 +6,7 @@
   top_bar_color = room_card_top_bar_class(room)
 %>
 
-<div class="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-room-number="<%= room[:room_number] %>">
+<div class="flex flex-col border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-room-number="<%= room[:room_number] %>">
   <div class="h-1.5 w-full <%= top_bar_color %>"></div>
   <div class="p-3.5 flex-1 flex flex-col justify-between">
     <!-- Room Header -->
@@ -89,17 +89,33 @@
                 check_out: visible_start_date + 1.day
               } %>
               <div class="flex flex-col gap-1 w-full max-w-[120px]">
-                <%= link_to hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
-                            class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
-                            data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
-                  <%= cached_icon "plus", stroke_width: 2.5, class: "size-3 text-slate-500" %>
-                  <span>Book</span>
-                <% end %>
-                <%= link_to hotel_booking_transaction_walk_in_check_in_path(current_hotel, slot_params),
-                            class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
-                            data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
-                  <%= cached_icon "user-check", stroke_width: 2.5, class: "size-3 text-slate-500" %>
-                  <span>Walk-in</span>
+                <% if visible_start_date < hotel_today %>
+                  <%= link_to hotel_booking_transaction_backdated_check_in_path(current_hotel, slot_params),
+                              class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
+                              data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+                    <%= cached_icon "history", stroke_width: 2.5, class: "size-3 text-amber-600" %>
+                    <span>Backdated</span>
+                  <% end %>
+                <% elsif visible_start_date == hotel_today %>
+                  <%= link_to hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
+                              class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
+                              data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+                    <%= cached_icon "plus", stroke_width: 2.5, class: "size-3 text-slate-500" %>
+                    <span>Book</span>
+                  <% end %>
+                  <%= link_to hotel_booking_transaction_walk_in_check_in_path(current_hotel, slot_params),
+                              class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
+                              data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+                    <%= cached_icon "user-check", stroke_width: 2.5, class: "size-3 text-slate-500" %>
+                    <span>Walk-in</span>
+                  <% end %>
+                <% else %>
+                  <%= link_to hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
+                              class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
+                              data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+                    <%= cached_icon "plus", stroke_width: 2.5, class: "size-3 text-slate-500" %>
+                    <span>Book</span>
+                  <% end %>
                 <% end %>
               </div>
             <% end %>
