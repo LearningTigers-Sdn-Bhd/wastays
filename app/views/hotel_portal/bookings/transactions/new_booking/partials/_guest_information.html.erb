@@ -1,5 +1,5 @@
 <div class="relative z-40 h-full overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm" 
-     data-controller="guest-autocomplete" 
+     data-controller="guest-autocomplete guest-dob"
      data-guest-autocomplete-url-value="<%= search_hotel_guests_path(current_hotel) %>">
   <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
     <h3 class="text-sm font-bold text-slate-900">Main Guest Information</h3>
@@ -13,7 +13,7 @@
           aria: { expanded: "false", controls: "booking_guest_results", autocomplete: "list" },
             data: { 
             guest_autocomplete_target: "input", guest_change_confirmation_target: "name",
-            action: "input->guest-autocomplete#search focus->guest-autocomplete#search blur->guest-autocomplete#hideOnBlur" 
+            action: "input->guest-autocomplete#clearGuestId input->guest-autocomplete#search focus->guest-autocomplete#search blur->guest-autocomplete#hideOnBlur" 
           } %>
       <%= f.hidden_field :existing_guest_id, data: { guest_autocomplete_target: "guestId", guest_change_confirmation_target: "guestId" } %>
       <div id="booking_guest_results"
@@ -40,7 +40,7 @@
         <%= f.label :guest_country, "Country", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
         <%= f.text_field :guest_country, placeholder: current_hotel.country.presence || "Malaysia",
             class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
-            data: { guest_autocomplete_target: "country", guest_change_confirmation_target: "country", booking_calc_target: "guestCountry", action: "input->booking-calc#calculate" } %>
+            data: { guest_autocomplete_target: "country", guest_change_confirmation_target: "country", guest_dob_target: "country", booking_calc_target: "guestCountry", action: "input->booking-calc#calculate input->guest-dob#autofill" } %>
       </div>
       <div>
         <%= f.label :guest_gender, "Gender", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
@@ -54,13 +54,21 @@
         <%= f.label :guest_document_type, "Document Type", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
         <%= f.select :guest_document_type, Booking::DOCUMENT_TYPES, { include_blank: "Select document type" },
             { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
-              data: { guest_autocomplete_target: "documentType", guest_change_confirmation_target: "documentType" } } %>
+              data: { guest_autocomplete_target: "documentType", guest_change_confirmation_target: "documentType", guest_dob_target: "documentType", action: "change->guest-dob#autofill" } } %>
       </div>
       <div>
         <%= f.label :guest_government_id, "IC / Passport No.", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
         <%= f.text_field :guest_government_id, placeholder: "Identity card or passport number",
             class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
-            data: { guest_autocomplete_target: "governmentId", guest_change_confirmation_target: "governmentId" } %>
+            data: { guest_autocomplete_target: "governmentId", guest_change_confirmation_target: "governmentId", guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+      </div>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-6">
+      <div>
+        <%= f.label :guest_date_of_birth, "Date of Birth", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.date_field :guest_date_of_birth,
+            class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+            data: { guest_autocomplete_target: "dateOfBirth", guest_dob_target: "dateOfBirth" } %>
       </div>
     </div>
   </div>

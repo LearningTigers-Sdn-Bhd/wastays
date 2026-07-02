@@ -9,7 +9,8 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
       government_id: "A123456",
       gender: "FEMALE",
       country: "Singapore",
-      document_type: "PASSPORT"
+      document_type: "PASSPORT",
+      date_of_birth: "1990-05-06"
     }
   end
 
@@ -19,6 +20,7 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
     expect(result.success?).to be(true)
     expect(result.guest).to be_persisted
     expect(result.guest.email).to eq("jane@example.com")
+    expect(result.guest.date_of_birth).to eq(Date.new(1990, 5, 6))
     expect(result.is_repeat?).to be(false)
   end
 
@@ -57,5 +59,20 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
     expect(result.guest.metadata["privacy_consent"]).to be(true)
     expect(result.guest.metadata["marketing_consent_updated_at"]).to be_present
     expect(result.guest.metadata["privacy_consent_updated_at"]).to be_present
+  end
+
+  it "fills a matched guest's blank date of birth" do
+    existing = create(
+      :guest,
+      government_id: "A123456",
+      country: "Malaysia",
+      document_type: "ic",
+      date_of_birth: nil
+    )
+
+    result = described_class.new(params).call
+
+    expect(result.guest.id).to eq(existing.id)
+    expect(existing.reload.date_of_birth).to eq(Date.new(1990, 5, 6))
   end
 end

@@ -6,7 +6,7 @@ RSpec.describe Payments::InitializeCheckout do
   let(:hotel) { create(:hotel) }
   let(:quote) { create(:booking_quote, hotel: hotel) }
   let(:callback_url) { "http://example.com/verify" }
-  let(:guest_details) { { name: "John Doe", email: "john@example.com" } }
+  let(:guest_details) { { name: "John Doe", email: "john@example.com", date_of_birth: "1990-05-20" } }
   let(:gateway) { "razorpay" }
 
   let(:setting) { double("PaymentSetting") }

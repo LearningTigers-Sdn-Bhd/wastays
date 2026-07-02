@@ -10,6 +10,7 @@ module GuestArrival
       @gender = params[:gender]&.downcase&.strip
       @country = params[:country]&.downcase&.strip
       @document_type = params[:document_type]&.downcase&.strip
+      @date_of_birth = params[:date_of_birth].presence
       @marketing_consent = params[:marketing_consent]
       @privacy_consent = params[:privacy_consent]
       @created_by_hotel_id = params[:created_by_hotel_id]
@@ -25,6 +26,7 @@ module GuestArrival
         updates[:gender] = @gender if @gender.present? && guest.gender.blank?
         updates[:document_type] = @document_type if @document_type.present? && guest.document_type.blank?
         updates[:government_id] = @government_id if @government_id.present? && guest.government_id.blank?
+        updates[:date_of_birth] = @date_of_birth if @date_of_birth.present? && guest.date_of_birth.blank?
 
         if @marketing_consent.present? || @privacy_consent.present?
           guest.metadata ||= {}
@@ -58,6 +60,7 @@ module GuestArrival
           country: @country,
           gender: @gender,
           document_type: @document_type,
+          date_of_birth: @date_of_birth,
           metadata: metadata,
           created_by_hotel_id: @created_by_hotel_id
         )

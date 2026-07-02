@@ -88,7 +88,7 @@ RSpec.describe Bookings::CreateManualBooking do
     room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
     room_code.update!(is_taxable: true)
     room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
-    params.merge!(record_payment: "1", payment_method: "cash", guest_country: "Singapore")
+    params.merge!(record_payment: "1", payment_method: "cash", guest_country: "Singapore", guest_date_of_birth: "1990-01-01")
 
     result = subject.call
 
@@ -130,6 +130,7 @@ RSpec.describe Bookings::CreateManualBooking do
       guest_gender: "female",
       guest_document_type: "passport",
       guest_government_id: "new-passport",
+      guest_date_of_birth: "1990-05-06",
       guest_update_intent: "update_existing"
     )
 
@@ -178,7 +179,8 @@ RSpec.describe Bookings::CreateManualBooking do
       guest_country: "Thailand",
       guest_gender: "other",
       guest_document_type: "passport",
-      guest_government_id: "repeat-passport"
+      guest_government_id: "repeat-passport",
+      guest_date_of_birth: "1989-07-08"
     )
 
     expect {
@@ -191,6 +193,19 @@ RSpec.describe Bookings::CreateManualBooking do
     guest.reload
     expect(guest.name).to eq("Repeat Guest Updated")
     expect(guest.phone).to eq("+60222222222")
+  end
+
+  it "persists date of birth when creating a matched guest from manual booking details" do
+    params.merge!(
+      guest_email: "dated@example.com",
+      guest_document_type: "passport",
+      guest_date_of_birth: "1991-02-03"
+    )
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    expect(result.booking.primary_guest.date_of_birth).to eq(Date.new(1991, 2, 3))
   end
 
   it "keeps selected guest unchanged while booking stores edited guest fields" do
@@ -219,6 +234,30 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(guest.phone).to eq("+60111111111")
   end
 
+  it "updates a selected guest date of birth from manual booking details" do
+    guest = create(
+      :guest,
+      created_by_hotel: hotel,
+      name: "Existing Guest",
+      email: "existing@example.com",
+      phone: "+60111111111",
+      country: "Malaysia",
+      document_type: "passport",
+      date_of_birth: Date.new(1980, 1, 1)
+    )
+    params.merge!(
+      existing_guest_id: guest.id,
+      guest_document_type: "passport",
+      guest_date_of_birth: "1992-04-05",
+      guest_update_intent: "update_existing"
+    )
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    expect(guest.reload.date_of_birth).to eq(Date.new(1992, 4, 5))
+  end
+
   it "defaults selected guest changes to keep existing when intent is blank" do
     guest = create(:guest, created_by_hotel: hotel, name: "Existing Guest", email: "existing@example.com", phone: "+60111111111")
     params.merge!(existing_guest_id: guest.id, guest_email: "edited@example.com")
@@ -241,7 +280,8 @@ RSpec.describe Bookings::CreateManualBooking do
       guest_country: "Malaysia",
       guest_gender: "male",
       guest_document_type: "passport",
-      guest_government_id: "new-id"
+      guest_government_id: "new-id",
+      guest_date_of_birth: "1991-09-10"
     )
 
     expect {
@@ -285,7 +325,8 @@ RSpec.describe Bookings::CreateManualBooking do
       guest_country: "Indonesia",
       guest_gender: "female",
       guest_document_type: "passport",
-      guest_government_id: "A987654"
+      guest_government_id: "A987654",
+      guest_date_of_birth: "1995-11-12"
     )
 
     result = subject.call

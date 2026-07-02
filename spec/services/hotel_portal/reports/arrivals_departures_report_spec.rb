@@ -46,10 +46,10 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesReport, type: :service do
       expect(row[:latest_note]).to eq("VIP guest")
     end
 
-    it "marks completed departures with checkout time" do
+    it "marks completed checkout rows with checkout time" do
       booking = create(:booking, hotel: hotel, status: "completed", check_in: start_date - 1.day, check_out: start_date, checked_out_at: Time.zone.local(2026, 5, 7, 10, 30))
 
-      row = service.call.departures.first
+      row = service.call.checkout.first
 
       expect(row[:booking_id]).to eq(booking.id)
       expect(row[:departure_status]).to eq("Checked out 10:30 AM")
@@ -62,6 +62,28 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesReport, type: :service do
 
       expect(row[:booking_id]).to eq(booking.id)
       expect(row[:departure_status]).to eq("Due out")
+    end
+
+    it "returns in-house bookings staying during the selected range" do
+      in_house = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "In House Guest")
+      create(:booking, hotel: hotel, status: "completed", check_in: start_date - 1.day, check_out: start_date, guest_name: "Checked Out Guest")
+
+      result = service.call
+
+      expect(result.in_house_count).to eq(1)
+      expect(result.in_house.map { |row| row[:booking_id] }).to eq([ in_house.id ])
+    end
+
+    it "separates due departures from completed checkout rows" do
+      due_out = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: start_date, guest_name: "Due Out Guest")
+      checked_out = create(:booking, hotel: hotel, status: "completed", check_in: start_date - 1.day, check_out: start_date, checked_out_at: Time.zone.local(2026, 5, 7, 10, 30), guest_name: "Checked Out Guest")
+
+      result = service.call
+
+      expect(result.departures.map { |row| row[:booking_id] }).to eq([ due_out.id ])
+      expect(result.checkout.map { |row| row[:booking_id] }).to eq([ checked_out.id ])
+      expect(result.departure_count).to eq(1)
+      expect(result.checkout_count).to eq(1)
     end
 
     it "returns arrivals and departures across a date range" do
@@ -79,7 +101,8 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesReport, type: :service do
       result = range_service.call
 
       expect(result.arrival_count).to eq(2)
-      expect(result.departure_count).to eq(3)
+      expect(result.departure_count).to eq(2)
+      expect(result.checkout_count).to eq(1)
     end
   end
 end

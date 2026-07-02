@@ -32,27 +32,64 @@ RSpec.describe "HotelPortal booking show actions", type: :request do
 
   it "adds and edits additional guests" do
     post hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "add"), params: {
-      guest: { name: "Added Guest", email: "added@example.com", phone: "123", country: "Malaysia", document_type: "ic" }
+      guest: { name: "Added Guest", email: "added@example.com", phone: "123", country: "Malaysia", document_type: "passport", date_of_birth: "1993-04-05" }
     }
     added = booking.reload.booking_guests.find_by!(is_primary: false)
     expect(added.guest.name).to eq("Added Guest")
+    expect(added.guest.date_of_birth).to eq(Date.new(1993, 4, 5))
 
     patch hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "edit_additional", booking_guest_id: added.id), params: {
-      guest: { name: "Updated Guest", email: "updated@example.com", phone: "456", country: "Singapore", document_type: "passport" }
+      guest: { name: "Updated Guest", email: "updated@example.com", phone: "456", country: "Singapore", document_type: "passport", date_of_birth: "1994-06-07" }
     }
-    expect(added.guest.reload).to have_attributes(name: "Updated Guest", country: "Singapore")
+    expect(added.guest.reload).to have_attributes(name: "Updated Guest", country: "Singapore", date_of_birth: Date.new(1994, 6, 7))
   end
 
   it "edits the primary guest through booking synchronization" do
     patch hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "edit_primary"), params: {
       guest: {
         name: "Updated Primary", email: "primary@example.com", phone: "123456",
-        country: "Malaysia", document_type: "passport", government_id: "P123"
+        country: "Malaysia", document_type: "passport", government_id: "P123", date_of_birth: "1990-01-02"
       }
     }
 
     expect(booking.reload).to have_attributes(guest_name: "Updated Primary", guest_email: "primary@example.com")
-    expect(booking.primary_guest).to have_attributes(name: "Updated Primary", document_type: "passport", government_id: "p123")
+    expect(booking.primary_guest).to have_attributes(
+      name: "Updated Primary",
+      document_type: "passport",
+      government_id: "p123",
+      date_of_birth: Date.new(1990, 1, 2)
+    )
+  end
+
+  it "edits a passport primary guest when the booking has no linked primary guest yet" do
+    booking.booking_guests.destroy_all
+
+    patch hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "edit_primary"), params: {
+      guest: {
+        name: "Aisyah Rahman",
+        email: "ws-ttx-002@example.com",
+        phone: "+601700002002",
+        country: "Afghanistan",
+        gender: "female",
+        document_type: "passport",
+        government_id: "785764675878",
+        date_of_birth: "2000-06-15"
+      }
+    }
+
+    expect(response).to have_http_status(:redirect)
+    expect(booking.reload).to have_attributes(
+      guest_country: "Afghanistan",
+      guest_document_type: "passport"
+    )
+    expect(booking.primary_guest).to have_attributes(
+      name: "Aisyah Rahman",
+      country: "Afghanistan",
+      gender: "female",
+      document_type: "passport",
+      government_id: "785764675878",
+      date_of_birth: Date.new(2000, 6, 15)
+    )
   end
 
   it "renders validation failures inside the guest sheet" do

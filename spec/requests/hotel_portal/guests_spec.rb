@@ -27,7 +27,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         government_id: "A1234567",
         country: "India",
         gender: "male",
-        document_type: "passport"
+        document_type: "passport",
+        date_of_birth: Date.new(1985, 1, 2)
       )
 
       booking = create(
@@ -68,7 +69,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         government_id: "A1234567",
         country: "India",
         gender: "male",
-        document_type: "passport"
+        document_type: "passport",
+        date_of_birth: Date.new(1985, 1, 2)
       )
 
       confirmed_booking = create(:booking, hotel: hotel, status: "confirmed", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 500.0)
@@ -94,7 +96,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         government_id: "A1234567",
         country: "India",
         gender: "male",
-        document_type: "passport"
+        document_type: "passport",
+        date_of_birth: Date.new(1985, 1, 2)
       )
       aisha = Guest.create!(
         name: "Aisha Tan",
@@ -133,6 +136,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         country: "Malaysia",
         gender: "female",
         document_type: "passport",
+        date_of_birth: Date.new(1994, 6, 7),
         created_by_hotel: hotel
       )
 
@@ -148,8 +152,47 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         "country" => "Malaysia",
         "gender" => "female",
         "document_type" => "passport",
-        "government_id" => "p123456"
+        "government_id" => "p123456",
+        "date_of_birth" => "1994-06-07"
       )
+    end
+  end
+
+  describe "POST /create" do
+    it "permits date of birth when creating a guest" do
+      post hotel_guests_path(hotel), params: {
+        guest: {
+          name: "Create Guest",
+          email: "create@example.com",
+          country: "Malaysia",
+          document_type: "passport",
+          date_of_birth: "1990-08-09"
+        }
+      }
+
+      expect(response).to redirect_to(hotel_guest_path(hotel, Guest.last))
+      expect(Guest.last.date_of_birth).to eq(Date.new(1990, 8, 9))
+    end
+  end
+
+  describe "PATCH /update" do
+    it "permits date of birth when updating a guest" do
+      guest = create(
+        :guest,
+        created_by_hotel: hotel,
+        country: "Malaysia",
+        document_type: "passport",
+        date_of_birth: Date.new(1988, 1, 1)
+      )
+
+      patch hotel_guest_path(hotel, guest), params: {
+        guest: {
+          date_of_birth: "1992-03-04"
+        }
+      }
+
+      expect(response).to redirect_to(hotel_guest_path(hotel, guest))
+      expect(guest.reload.date_of_birth).to eq(Date.new(1992, 3, 4))
     end
   end
 
@@ -162,7 +205,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         government_id: "A1234567",
         country: "India",
         gender: "male",
-        document_type: "passport"
+        document_type: "passport",
+        date_of_birth: Date.new(1985, 1, 2)
       )
 
       myr_booking = create(
@@ -213,7 +257,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         government_id: "A1234567",
         country: "India",
         gender: "male",
-        document_type: "passport"
+        document_type: "passport",
+        date_of_birth: Date.new(1985, 1, 2)
       )
 
       confirmed_booking = create(:booking, hotel: hotel, status: "confirmed", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 500.0)
@@ -241,7 +286,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         government_id: "A1234567",
         country: "India",
         gender: "male",
-        document_type: "passport"
+        document_type: "passport",
+        date_of_birth: Date.new(1985, 1, 2)
       )
 
       confirmed_booking = create(:booking, hotel: hotel, status: "confirmed", guest_name: guest.name, guest_email: guest.email, guest_phone: guest.phone, currency: "MYR", total_amount: 500.0)
@@ -266,8 +312,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       role
     end
 
-    let(:guest1) { Guest.create!(name: "Guest One", email: "one@example.com", phone: "+60123456781", government_id: "A1234561", country: "Malaysia", gender: "male", document_type: "passport", created_by_hotel: hotel) }
-    let(:guest2) { Guest.create!(name: "Guest Two", email: "two@example.com", phone: "+60123456782", government_id: "A1234562", country: "Malaysia", gender: "female", document_type: "passport", created_by_hotel: hotel) }
+    let(:guest1) { Guest.create!(name: "Guest One", email: "one@example.com", phone: "+60123456781", government_id: "A1234561", country: "Malaysia", gender: "male", document_type: "passport", date_of_birth: Date.new(1980, 1, 1), created_by_hotel: hotel) }
+    let(:guest2) { Guest.create!(name: "Guest Two", email: "two@example.com", phone: "+60123456782", government_id: "A1234562", country: "Malaysia", gender: "female", document_type: "passport", date_of_birth: Date.new(1981, 2, 2), created_by_hotel: hotel) }
 
     context "when user has delete permission" do
       before do

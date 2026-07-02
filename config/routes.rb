@@ -436,6 +436,9 @@ Rails.application.routes.draw do
         get :journal_batches
         get :sst
         get :refund_report
+        get :extra_charge
+        get :non_national
+        get :tourism_tax
       end
     end
     resources :night_audits, only: [ :index, :show, :create ] do

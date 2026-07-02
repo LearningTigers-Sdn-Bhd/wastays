@@ -28,7 +28,7 @@ class Booking < ApplicationRecord
   has_many :payment_transactions, dependent: :destroy
   has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :room_operational_audit_logs, dependent: :nullify
-  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :status_transition_event
+  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :guest_date_of_birth, :status_transition_event
 
   def online?
     source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"

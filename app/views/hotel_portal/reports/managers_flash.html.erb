@@ -16,9 +16,9 @@
       <%= form_with url: managers_flash_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "managers-flash-range-form", data: { controller: "date-preset" } do |f| %>
         <div>
           <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Time Period</label>
-          <%= select_tag :date_preset, options_for_select(date_preset_options, params[:date_preset] || "this_month"), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
+          <%= select_tag :date_preset, options_for_select(date_preset_options, @date_preset), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
         </div>
-        <div id="custom-date-range" class="<%= params[:date_preset] == 'custom' ? 'flex' : 'hidden' %> gap-3">
+        <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> gap-3">
           <div>
             <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Start Date</label>
             <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
@@ -101,7 +101,7 @@
       <table class="min-w-full">
         <thead class="bg-slate-100">
           <tr>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600"><%= params[:date_preset] == "this_year" ? "Month" : "Date" %></th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600"><%= @date_preset == "this_year" ? "Month" : "Date" %></th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Sold</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Avail</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Occupancy %</th>
@@ -116,7 +116,7 @@
           <% if @report.rows.any? %>
             <% @report.rows.each do |row| %>
               <tr>
-                <td class="px-6 py-4 text-sm font-semibold text-slate-900"><%= params[:date_preset] == "this_year" ? row[:date].strftime("%B %Y") : row[:date].strftime("%d %b %Y") %></td>
+                <td class="px-6 py-4 text-sm font-semibold text-slate-900"><%= @date_preset == "this_year" ? row[:date].strftime("%B %Y") : row[:date].strftime("%d %b %Y") %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= row[:rooms_sold] %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= row[:rooms_available] %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= number_to_percentage(row[:occupancy_rate] * 100, precision: 2) %></td>

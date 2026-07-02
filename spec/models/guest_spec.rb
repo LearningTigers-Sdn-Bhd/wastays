@@ -15,6 +15,50 @@ RSpec.describe Guest, type: :model do
     it { is_expected.not_to allow_value('unknown').for(:gender) }
     it { is_expected.to allow_value('ic', 'passport', nil).for(:document_type) }
     it { is_expected.not_to allow_value('license').for(:document_type) }
+
+    it 'allows a past date_of_birth' do
+      record = build(:guest, date_of_birth: Date.new(1990, 1, 1))
+
+      expect(record).to be_valid
+    end
+
+    it 'allows a blank date_of_birth for Malaysian IC guests' do
+      record = build(:guest, date_of_birth: nil, country: 'Malaysia', document_type: 'ic', government_id: nil)
+
+      expect(record).to be_valid
+    end
+
+    it 'requires date_of_birth for reporting guests who are non-Malaysian' do
+      record = build(:guest, date_of_birth: nil, country: 'Singapore', document_type: 'ic')
+
+      record.validate
+
+      expect(record.errors[:date_of_birth]).to include('is required for passport guests')
+    end
+
+    it 'requires date_of_birth for passport guests' do
+      record = build(:guest, date_of_birth: nil, country: 'Malaysia', document_type: 'passport')
+
+      record.validate
+
+      expect(record.errors[:date_of_birth]).to include('is required for passport guests')
+    end
+
+    it 'rejects date_of_birth on or after today' do
+      record = build(:guest, date_of_birth: Date.current)
+
+      record.validate
+
+      expect(record.errors[:date_of_birth]).to include('must be in the past')
+    end
+
+    it 'allows a valid past date_of_birth' do
+      record = build(:guest, date_of_birth: Date.current - 1.day)
+
+      record.validate
+
+      expect(record.errors[:date_of_birth]).to be_empty
+    end
   end
 
   describe 'normalization' do
@@ -26,6 +70,22 @@ RSpec.describe Guest, type: :model do
       expect(record.gender).to eq('female')
       expect(record.document_type).to eq('passport')
       expect(record.country).to eq('United States')
+    end
+
+    it 'autofills date_of_birth from a Malaysian IC when blank' do
+      record = build(:guest, country: 'Malaysia', document_type: 'ic', government_id: '010203-10-1234', date_of_birth: nil)
+
+      record.validate
+
+      expect(record.date_of_birth).to eq(Date.new(2001, 2, 3))
+    end
+
+    it 'does not overwrite a manually provided date_of_birth' do
+      record = build(:guest, country: 'Malaysia', document_type: 'ic', government_id: '010203-10-1234', date_of_birth: Date.new(1999, 12, 31))
+
+      record.validate
+
+      expect(record.date_of_birth).to eq(Date.new(1999, 12, 31))
     end
   end
 

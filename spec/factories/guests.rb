@@ -6,6 +6,7 @@ FactoryBot.define do
     government_id { "A1234567" }
     country { "Malaysia" }
     gender { "male" }
+    date_of_birth { Date.new(1990, 1, 1) }
     document_type { "passport" }
     metadata { {} }
   end

@@ -1,4 +1,4 @@
-<%= form_with(model: [current_hotel, guest], local: true, class: "space-y-8") do |f| %>
+<%= form_with(model: [current_hotel, guest], local: true, class: "space-y-8", data: { controller: "guest-dob" }) do |f| %>
   <% if guest.errors.any? %>
     <div class="rounded-xl bg-red-50 p-4 border border-red-100">
       <div class="flex">
@@ -48,7 +48,7 @@
       <div class="grid sm:grid-cols-2 gap-6">
         <div>
           <%= f.label :country, "Country", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.text_field :country, required: true, placeholder: "e.g. Malaysia", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          <%= f.text_field :country, required: true, placeholder: "e.g. Malaysia", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "country", action: "input->guest-dob#autofill" } %>
         </div>
         <div>
           <%= f.label :gender, "Gender", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
@@ -67,11 +67,18 @@
       <div class="grid sm:grid-cols-2 gap-6">
         <div>
           <%= f.label :document_type, "Document Type", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.select :document_type, Guest::DOCUMENT_TYPES.map { |dt| [dt.upcase, dt] }, { include_blank: "Select Document Type" }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          <%= f.select :document_type, Guest::DOCUMENT_TYPES.map { |dt| [dt.upcase, dt] }, { include_blank: "Select Document Type" }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
         </div>
         <div>
           <%= f.label :government_id, "ID / Passport Number", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.text_field :government_id, placeholder: "Enter ID number", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          <%= f.text_field :government_id, placeholder: "Enter ID number", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div>
+          <%= f.label :date_of_birth, "Date of Birth", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+          <%= f.date_field :date_of_birth, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "dateOfBirth" } %>
         </div>
       </div>
     </div>

@@ -66,7 +66,8 @@ class Public::QuotesController < ApplicationController
       government_id: guest.government_id,
       gender: guest.gender,
       country: guest.country,
-      document_type: guest.document_type
+      document_type: guest.document_type,
+      date_of_birth: guest.date_of_birth&.iso8601
     }.compact
   end
 end

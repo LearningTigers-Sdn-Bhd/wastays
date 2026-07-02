@@ -30,7 +30,8 @@ RSpec.describe BookingEngine::ConfirmBooking do
       government_id: 'A1234567',
       gender: 'FEMALE',
       country: 'Singapore',
-      document_type: 'PASSPORT'
+      document_type: 'PASSPORT',
+      date_of_birth: '1990-05-20'
     }
   end
 

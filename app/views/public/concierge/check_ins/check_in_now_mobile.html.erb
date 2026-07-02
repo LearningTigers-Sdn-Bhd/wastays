@@ -96,7 +96,7 @@
             <div class="space-y-2">
               <%= f.label :guest_document_type, "Document Type", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-neutral-text-secondary ml-1" %>
               <div class="relative" data-controller="searchable-select">
-                <%= f.hidden_field :guest_document_type, value: @booking.guest_document_type, data: { searchable_select_target: "hiddenInput", pre_checkin_document_target: "select", action: "change->pre-checkin-document#toggleUploads" } %>
+                <%= f.hidden_field :guest_document_type, value: @booking.guest_document_type, data: { searchable_select_target: "hiddenInput", guest_dob_target: "documentType", pre_checkin_document_target: "select", action: "change->guest-dob#autofill change->pre-checkin-document#toggleUploads" } %>
                 <div class="relative cursor-pointer" data-action="click->searchable-select#toggle">
                   <input type="text" readonly 
                          data-searchable-select-target="input"
@@ -125,7 +125,8 @@
               <%= f.label :guest_government_id, "IC / Passport Number", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-neutral-text-secondary ml-1" %>
               <%= f.text_field :guest_government_id, value: @booking.guest_government_id, 
                     class: "w-full bg-neutral-bg border-neutral-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all", 
-                    required: true, placeholder: "e.g. 900101011234" %>
+                    required: true, placeholder: "e.g. 900101011234",
+                    data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
             </div>
 
             <div class="space-y-2">
@@ -143,7 +144,7 @@
             <div class="space-y-2">
               <%= f.label :guest_country, "Nationality", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-neutral-text-secondary ml-1" %>
               <div class="relative" data-controller="searchable-select">
-                <%= f.hidden_field :guest_country, value: @presenter.default_country, data: { searchable_select_target: "hiddenInput" } %>
+                <%= f.hidden_field :guest_country, value: @presenter.default_country, data: { searchable_select_target: "hiddenInput", guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
                 <div class="relative">
                   <input type="text" 
                          data-searchable-select-target="input"
@@ -169,6 +170,13 @@
                   <% end %>
                 </div>
               </div>
+            </div>
+
+            <div class="space-y-2">
+              <%= f.label :guest_date_of_birth, "Date of Birth", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-neutral-text-secondary ml-1" %>
+              <%= f.date_field :guest_date_of_birth, value: @form.guest_date_of_birth,
+                    class: "w-full bg-neutral-bg border-neutral-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all",
+                    data: { guest_dob_target: "dateOfBirth" } %>
             </div>
 
             <div class="space-y-2">

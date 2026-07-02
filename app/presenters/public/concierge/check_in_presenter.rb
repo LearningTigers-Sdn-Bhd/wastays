@@ -62,6 +62,7 @@ module Public
 
       def form_data(view_context, is_mobile: false)
         controllers = [ "scanner", "pre-checkin-document" ]
+        controllers << "guest-dob" if registration_required?
         controllers << "geolocation-check-in" if geolocation_active?
 
         data = {

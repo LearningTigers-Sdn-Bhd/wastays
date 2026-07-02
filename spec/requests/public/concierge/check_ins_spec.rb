@@ -180,6 +180,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       get concierge_check_in_now_path(hotel.slug)
       expect(response.body).to include("Guest Registration")
       expect(response.body).to include("guest_home_address")
+      expect(response.body).to include("guest_date_of_birth")
     end
 
     it "submit_check_in saves guest fields and redirects to confirmation, then checks in" do
@@ -208,6 +209,44 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.reload.guest_home_address).to eq("No. 12, Jalan Ampang, 50450 KL")
       expect(BookingAuditLog.where(auditable: booking, action_type: "guest_updated", source: "guest").count).to eq(1)
+    end
+
+    it "persists passport guest date of birth during registration" do
+      post concierge_submit_check_in_path(hotel.slug), params: {
+        booking: {
+          guest_name: "Ahmad Zulkifli",
+          guest_email: "ahmad@example.com",
+          guest_phone: "+60123456789",
+          guest_country: "Singapore",
+          guest_document_type: "passport",
+          guest_government_id: "P1234567",
+          guest_date_of_birth: "1994-08-21",
+          guest_home_address: "No. 12, Jalan Ampang, 50450 KL",
+          signature: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+        }
+      }
+
+      expect(response).to redirect_to(concierge_check_in_now_path(hotel.slug))
+      expect(booking.reload.primary_guest.date_of_birth).to eq(Date.new(1994, 8, 21))
+    end
+
+    it "fails cleanly when passport date of birth is missing" do
+      post concierge_submit_check_in_path(hotel.slug), params: {
+        booking: {
+          guest_name: "Ahmad Zulkifli",
+          guest_email: "ahmad@example.com",
+          guest_phone: "+60123456789",
+          guest_country: "Singapore",
+          guest_document_type: "passport",
+          guest_government_id: "P1234567",
+          guest_date_of_birth: "",
+          guest_home_address: "No. 12, Jalan Ampang, 50450 KL",
+          signature: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+        }
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Date of birth is required for passport guests")
     end
 
     it "submit_check_in re-renders with error when guest fields missing" do
