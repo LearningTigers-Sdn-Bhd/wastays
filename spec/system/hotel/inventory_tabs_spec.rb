@@ -64,7 +64,7 @@ RSpec.describe "Hotel inventory tabs", type: :system, js: true do
       subtab: "overrides"
     )
 
-    click_link "Next 14 days"
+    find("a[title='Next 14 days']").click
 
     uri = URI.parse(page.current_url)
     query = Rack::Utils.parse_nested_query(uri.query)

@@ -14,15 +14,19 @@ module HotelPortal
         NavItem.new(label: "Daily Revenue", path: daily_revenue_hotel_reports_path(current_hotel), icon: "coins", active: controller_name == "reports" && action_name == "daily_revenue", plan_feature: "revenue_allocation_per_night"),
         NavItem.new(label: "Refund Report", path: refund_report_hotel_reports_path(current_hotel), icon: "credit-card", active: controller_name == "reports" && action_name == "refund_report"),
         NavItem.new(label: "Extra Charge", path: extra_charge_hotel_reports_path(current_hotel), icon: "receipt", active: controller_name == "reports" && action_name == "extra_charge"),
-        NavItem.new(label: "Tourism Tax", path: tourism_tax_hotel_reports_path(current_hotel), icon: "calculator", active: controller_name == "reports" && action_name == "tourism_tax"),
-        NavItem.new(label: "Non-National", path: non_national_hotel_reports_path(current_hotel), icon: "map-pin", active: controller_name == "reports" && action_name == "non_national"),
-        NavItem.new(label: "Guest Reports", path: arrivals_departures_hotel_reports_path(current_hotel), icon: "users", active: controller_name == "reports" && action_name == "arrivals_departures", plan_feature: "arrivals_departures_list"),
         NavItem.new(label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), icon: "percent", active: controller_name == "reports" && action_name == "daily_occupancy", plan_feature: "daily_occupancy_revenue"),
         NavItem.new(label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), icon: "wallet", active: controller_name == "reports" && action_name == "outstanding_balance", plan_feature: "outstanding_balance_noshow"),
-        NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "landmark", active: controller_name == "reports" && action_name == "deposit_liability"),
-        NavItem.new(label: "SST Report", path: sst_hotel_reports_path(current_hotel), icon: "calculator", active: controller_name == "reports" && action_name == "sst")
+        NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "landmark", active: controller_name == "reports" && action_name == "deposit_liability")
       ]
       financial_nav_active = financial_nav_items.any?(&:active)
+
+      guest_compliance_nav_items = [
+        NavItem.new(label: "Tourism Tax", path: tourism_tax_hotel_reports_path(current_hotel), icon: "calculator", active: controller_name == "reports" && action_name == "tourism_tax"),
+        NavItem.new(label: "SST", path: sst_hotel_reports_path(current_hotel), icon: "calculator", active: controller_name == "reports" && action_name == "sst"),
+        NavItem.new(label: "Non-National", path: non_national_hotel_reports_path(current_hotel), icon: "map-pin", active: controller_name == "reports" && action_name == "non_national"),
+        NavItem.new(label: "Guest Reports", path: arrivals_departures_hotel_reports_path(current_hotel), icon: "users", active: controller_name == "reports" && action_name == "arrivals_departures", plan_feature: "arrivals_departures_list")
+      ]
+      guest_compliance_nav_active = guest_compliance_nav_items.any?(&:active)
 
       audit_nav_items = [
         NavItem.new(label: "Night Audit", path: hotel_night_audits_path(current_hotel), icon: "moon", active: controller_name == "night_audits", plan_feature: "no_show_auto_handling")
@@ -102,7 +106,8 @@ module HotelPortal
         NavSection.new(
           label: "Reports",
           items: [
-            NavItem.new(label: "Financial", path: hotel_reports_path(current_hotel), search_text: "Reports Financial Summary Manager Flash Daily Revenue Arrivals Departures Daily Occupancy Outstanding Balance Deposit Liability", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
+            NavItem.new(label: "Financial", path: hotel_reports_path(current_hotel), search_text: "Reports Financial Summary Manager Flash Daily Revenue Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
+            NavItem.new(label: "Tax & Compliance", path: tourism_tax_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National Guest Reports", active: guest_compliance_nav_active, icon: "calculator", children: guest_compliance_nav_items, permission: "view_reports"),
             NavItem.new(label: "Audit", path: hotel_night_audits_path(current_hotel), search_text: "Audit Night Audit Business Date Close Reports", active: audit_nav_active, icon: "clipboard-check", children: audit_nav_items, permission: "manage_night_audit")
           ]
         ),

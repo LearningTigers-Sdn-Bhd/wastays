@@ -61,6 +61,37 @@ RSpec.describe "HotelPortal booking show actions", type: :request do
     )
   end
 
+  it "edits a passport primary guest when the booking has no linked primary guest yet" do
+    booking.booking_guests.destroy_all
+
+    patch hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "edit_primary"), params: {
+      guest: {
+        name: "Aisyah Rahman",
+        email: "ws-ttx-002@example.com",
+        phone: "+601700002002",
+        country: "Afghanistan",
+        gender: "female",
+        document_type: "passport",
+        government_id: "785764675878",
+        date_of_birth: "2000-06-15"
+      }
+    }
+
+    expect(response).to have_http_status(:redirect)
+    expect(booking.reload).to have_attributes(
+      guest_country: "Afghanistan",
+      guest_document_type: "passport"
+    )
+    expect(booking.primary_guest).to have_attributes(
+      name: "Aisyah Rahman",
+      country: "Afghanistan",
+      gender: "female",
+      document_type: "passport",
+      government_id: "785764675878",
+      date_of_birth: Date.new(2000, 6, 15)
+    )
+  end
+
   it "renders validation failures inside the guest sheet" do
     post hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "add"),
       params: { guest: { name: "", country: "Malaysia" } },

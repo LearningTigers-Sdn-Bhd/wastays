@@ -105,7 +105,7 @@ RSpec.describe 'Admin::Dashboard', type: :request do
     end
 
     it 'shows global current-month analytics across hotels' do
-      get admin_analytics_path
+      get admin_analytics_path, params: { date_preset: "this_month" }
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Revenue &amp; Margin Analytics')

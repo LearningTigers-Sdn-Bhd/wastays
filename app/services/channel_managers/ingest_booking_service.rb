@@ -205,16 +205,38 @@ module ChannelManagers
     end
 
     def sync_guest(booking)
-      guest_result = GuestArrival::CreateOrMatchGuest.new(
+      attrs = guest_sync_attributes
+      guest = find_existing_guest_for_sync(attrs)
+
+      if guest.blank? && Guest.new(attrs).valid?
+        guest_result = GuestArrival::CreateOrMatchGuest.new(attrs).call
+        guest = guest_result.guest if guest_result.success?
+      end
+
+      if guest.present? && !booking.booking_guests.exists?(guest: guest)
+        booking.booking_guests.create!(guest: guest, is_primary: true)
+      end
+    end
+
+    def guest_sync_attributes
+      {
         name: @data[:guest_details][:name],
         email: @data[:guest_details][:email],
         phone: @data[:guest_details][:phone],
-        country: @data[:guest_details][:country]
-      ).call
+        government_id: @data[:guest_details][:government_id],
+        gender: @data[:guest_details][:gender],
+        country: @data[:guest_details][:country],
+        document_type: @data[:guest_details][:document_type],
+        date_of_birth: @data[:guest_details][:date_of_birth]
+      }
+    end
 
-      if guest_result.success? && !booking.booking_guests.exists?(guest: guest_result.guest)
-        booking.booking_guests.create!(guest: guest_result.guest, is_primary: true)
-      end
+    def find_existing_guest_for_sync(attrs)
+      return Guest.find_by(government_id: attrs[:government_id].to_s.downcase.strip) if attrs[:government_id].present?
+      return Guest.find_by(email: attrs[:email].to_s.downcase.strip) if attrs[:email].present?
+      return Guest.find_by(phone: attrs[:phone].to_s.strip) if attrs[:phone].present?
+
+      nil
     end
 
     def sync_rooms(booking)
