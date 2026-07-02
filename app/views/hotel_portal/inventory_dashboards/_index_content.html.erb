@@ -96,16 +96,8 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <!-- Room Filter -->
-          <select id="room_type_id_nav" name="room_type_id" class="h-10 sm:h-9 flex-1 sm:flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs font-bold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-0"
-                  data-inventory-calendar-target="navRoomType"
-                  data-action="change->inventory-calendar#navigate">
-            <option value="">All room types</option>
-            <%= options_from_collection_for_select(@calendar.room_type_options, :id, :name, @calendar.selected_room_type_id) %>
-          </select>
-
           <!-- View Currencies -->
-          <div class="inline-flex h-10 sm:h-9 items-center rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-sm gap-1 overflow-x-auto no-scrollbar">
+          <!-- <div class="inline-flex h-10 sm:h-9 items-center rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-sm gap-1 overflow-x-auto no-scrollbar">
             <% @view_currencies.each do |currency| %>
               <div class="group relative flex h-full items-center">
                 <%= link_to currency,
@@ -141,16 +133,8 @@
               </div>
             </div>
           </div>
-
-          <div class="h-4 w-px bg-slate-200 hidden xl:block"></div>
-
+ -->
           <div class="flex items-center gap-2 w-full sm:w-auto">
-            <button type="button" 
-                    data-action="inventory-calendar#openBulk" 
-                    class="h-10 sm:h-9 flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all active:scale-95">
-              Bulk Edit
-            </button>
-
             <button type="button" 
                     data-inventory-calendar-target="syncButton"
                     data-action="inventory-calendar#openReview"
