@@ -54,6 +54,7 @@ module HotelPortal
           [
             row[:guest_name],
             row[:guest_country],
+            row[:date_of_birth]&.strftime("%d %b %Y"),
             row[:guest_home_address],
             row[:check_in].strftime("%d %b %Y"),
             row[:checked_in_at]&.strftime("%I:%M %p"),
@@ -62,9 +63,9 @@ module HotelPortal
         end
 
         pdf.table(
-          [ [ "Full Name", "Nationality", "Home Address", "Check In Date", "Check In Time", "Check Out Date" ] ] +
+          [ [ "Full Name", "Nationality", "Date of Birth", "Home Address", "Check In Date", "Check In Time", "Check Out Date" ] ] +
           rows +
-          [ [ "TOTAL", nil, nil, nil, nil, nil ] ],
+          [ [ "TOTAL", nil, nil, nil, nil, nil, nil ] ],
           width: pdf.bounds.width,
           cell_style: { size: 9, padding: [ 5, 6, 5, 6 ] }
         ) do

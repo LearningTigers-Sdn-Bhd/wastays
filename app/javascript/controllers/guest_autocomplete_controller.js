@@ -1,10 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["input", "results", "guestId", "email", "phone", "country", "gender", "documentType", "governmentId"]
+  static targets = ["input", "results", "guestId", "email", "phone", "country", "gender", "documentType", "governmentId", "dateOfBirth"]
   static values = { url: String }
 
   connect() {
+    this.searchRequestId = 0
     this.hideResults()
   }
 
@@ -15,10 +16,17 @@ export default class extends Controller {
       return
     }
 
+    const requestId = ++this.searchRequestId
+
     fetch(`${this.urlValue}?q=${encodeURIComponent(query)}`)
       .then(response => response.json())
       .then(data => {
+        if (requestId !== this.searchRequestId) return
         this.renderResults(data)
+      })
+      .catch(() => {
+        if (requestId !== this.searchRequestId) return
+        this.hideResults()
       })
   }
 
@@ -47,6 +55,7 @@ export default class extends Controller {
     result.dataset.guestGender = guest.gender || ""
     result.dataset.guestDocumentType = guest.document_type || ""
     result.dataset.guestGovernmentId = guest.government_id || ""
+    result.dataset.guestDateOfBirth = guest.date_of_birth || ""
 
     const name = document.createElement("div")
     name.className = "font-bold text-slate-900"
@@ -73,6 +82,7 @@ export default class extends Controller {
     if (this.hasGenderTarget) this.genderTarget.value = el.dataset.guestGender
     if (this.hasDocumentTypeTarget) this.documentTypeTarget.value = el.dataset.guestDocumentType
     if (this.hasGovernmentIdTarget) this.governmentIdTarget.value = el.dataset.guestGovernmentId
+    if (this.hasDateOfBirthTarget) this.dateOfBirthTarget.value = el.dataset.guestDateOfBirth
 
     this.element.dispatchEvent(new CustomEvent("guest:selected", {
       bubbles: true,
@@ -85,7 +95,8 @@ export default class extends Controller {
           country: el.dataset.guestCountry,
           gender: el.dataset.guestGender,
           document_type: el.dataset.guestDocumentType,
-          government_id: el.dataset.guestGovernmentId
+          government_id: el.dataset.guestGovernmentId,
+          date_of_birth: el.dataset.guestDateOfBirth
         }
       }
     }))

@@ -65,6 +65,7 @@ module Payments
         gender: metadata[:gender],
         country: metadata[:country],
         document_type: metadata[:document_type],
+        date_of_birth: metadata[:date_of_birth],
         marketing_consent: metadata[:marketing_consent],
         privacy_consent: metadata[:privacy_consent],
         special_requests: metadata[:special_requests]
@@ -82,6 +83,7 @@ module Payments
           gender: guest_details[:gender],
           country: guest_details[:country],
           document_type: guest_details[:document_type],
+          date_of_birth: guest_details[:date_of_birth],
           marketing_consent: guest_details[:marketing_consent],
           privacy_consent: guest_details[:privacy_consent],
           special_requests: guest_details[:special_requests],

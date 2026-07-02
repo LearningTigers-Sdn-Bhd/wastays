@@ -31,12 +31,13 @@ class Public::PaymentMocksController < ApplicationController
         gender: guest_details[:gender],
         country: guest_details[:country],
         document_type: guest_details[:document_type],
+        date_of_birth: guest_details[:date_of_birth],
         external_reference: "curlec_evt_#{SecureRandom.hex(8)}"
       }
     ).call
   end
 
   def guest_details_params
-    params.require(:guest_details).permit(:name, :email, :phone, :government_id, :gender, :country, :document_type)
+    params.require(:guest_details).permit(:name, :email, :phone, :government_id, :gender, :country, :document_type, :date_of_birth)
   end
 end

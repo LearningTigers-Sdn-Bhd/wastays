@@ -97,7 +97,7 @@
               Enter your email first. We will auto-fill your details if we find a previous booking.
             </p>
 
-            <div data-checkout-details-target="detailsPanel" class="mt-6 opacity-60 pointer-events-none transition">
+            <div data-checkout-details-target="detailsPanel" data-controller="guest-dob" class="mt-6 opacity-60 pointer-events-none transition">
               <div class="grid sm:grid-cols-3 gap-6">
                 <div class="sm:col-span-2">
                   <label for="name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Full Name (as per ID/Passport)</label>
@@ -142,11 +142,11 @@
                                    placeholder: "Start typing to search",
                                    autocomplete: "off",
                                    inputmode: "search",
-                                   data: {
-                                     checkout_details_target: "countryInput field",
-                                     guest_field: "country",
-                                     action: "input->checkout-details#handleCountryInput focus->checkout-details#handleCountryFocus blur->checkout-details#handleCountryBlur"
-                                   },
+                                    data: {
+                                      checkout_details_target: "countryInput field",
+                                      guest_field: "country",
+                                      action: "input->checkout-details#handleCountryInput focus->checkout-details#handleCountryFocus blur->checkout-details#handleCountryBlur"
+                                    },
                                    disabled: true %>
                   <p class="text-[10px] text-neutral-text-secondary mt-2">Start typing to select a country, then choose the document type.</p>
                   <div class="absolute z-20 mt-2 w-full rounded-xl border border-neutral-200 bg-white shadow-lg max-h-56 overflow-auto hidden"
@@ -173,7 +173,15 @@
                                    required: true,
                                    class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
                                    placeholder: "Enter document number",
-                                   data: { checkout_details_target: "documentInput field", guest_field: "government_id" },
+                                   data: { checkout_details_target: "documentInput field", guest_field: "government_id", guest_dob_target: "governmentId", action: "input->guest-dob#autofill" },
+                                   disabled: true %>
+                </div>
+                <div data-checkout-details-target="documentField" class="hidden">
+                  <label for="date_of_birth" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Date of Birth</label>
+                  <%= f.date_field "guest_details[date_of_birth]",
+                                   id: "date_of_birth",
+                                   class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                                   data: { checkout_details_target: "field", guest_field: "date_of_birth", guest_dob_target: "dateOfBirth" },
                                    disabled: true %>
                 </div>
               </div>

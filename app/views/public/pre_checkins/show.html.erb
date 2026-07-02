@@ -51,7 +51,7 @@
         </div>
       </div>
 
-      <div class="card p-6 md:p-8" data-controller="scanner">
+      <div class="card p-6 md:p-8" data-controller="scanner guest-dob">
         <% if @presenter.completed? %>
           <div class="rounded-2xl border border-green-200 bg-green-50 p-6">
             <h2 class="text-xl font-black text-neutral-text-primary">Pre check-in completed</h2>
@@ -86,12 +86,17 @@
 
                 <div>
                   <%= f.label :guest_document_type, "Document Type", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
-                  <%= f.select :guest_document_type, @presenter.document_type_options, {}, class: "form-input py-3 px-5 border border-neutral-border", required: true %>
+                  <%= f.select :guest_document_type, @presenter.document_type_options, {}, class: "form-input py-3 px-5 border border-neutral-border", required: true, data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
                 </div>
 
                 <div>
                   <%= f.label :guest_government_id, "ID / Passport Number", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
-                  <%= f.text_field :guest_government_id, class: "form-input py-3 px-5 border border-neutral-border", required: true, placeholder: "e.g. 900101011234" %>
+                  <%= f.text_field :guest_government_id, class: "form-input py-3 px-5 border border-neutral-border", required: true, placeholder: "e.g. 900101011234", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+                </div>
+
+                <div>
+                  <%= f.label :guest_date_of_birth, "Date of Birth", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
+                  <%= f.date_field :guest_date_of_birth, class: "form-input py-3 px-5 border border-neutral-border", data: { guest_dob_target: "dateOfBirth" } %>
                 </div>
               </div>
 
@@ -122,7 +127,7 @@
                   <%= f.select :guest_country,
                         country_options,
                         { selected: @presenter.guest_country_default, prompt: "Select nationality" },
-                        class: "form-input py-3 px-5 border border-neutral-border", required: true %>
+                        class: "form-input py-3 px-5 border border-neutral-border", required: true, data: { guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
                 </div>
 
                 <div data-controller="time-picker">

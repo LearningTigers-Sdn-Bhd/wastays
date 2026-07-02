@@ -56,7 +56,7 @@ module Public
             return
           else
             @error_code = :registration_error
-            @error = @presenter.error_message_for(:registration_error)
+            @error = @form.errors.full_messages.to_sentence.presence || @presenter.error_message_for(:registration_error)
             render(mobile_request? ? "check_in_now_mobile" : :check_in_now, status: :unprocessable_content)
             return
           end
@@ -101,6 +101,7 @@ module Public
           :guest_country,
           :guest_document_type,
           :guest_government_id,
+          :guest_date_of_birth,
           :guest_home_address,
           :id_front,
           :id_back,

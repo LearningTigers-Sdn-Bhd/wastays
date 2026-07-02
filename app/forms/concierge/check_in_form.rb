@@ -8,7 +8,7 @@ module Concierge
     include ActiveModel::Model
 
     attr_accessor :booking, :guest_name, :guest_email, :guest_phone, :guest_country,
-                  :guest_document_type, :guest_government_id, :guest_home_address, :signature
+                  :guest_document_type, :guest_government_id, :guest_date_of_birth, :guest_home_address, :signature
     attr_writer :id_front, :id_back
 
     def id_front
@@ -40,8 +40,9 @@ module Concierge
       return false unless valid?
 
       Booking.transaction do
-        old_value = booking.attributes.slice(*registration_keys)
+        old_value = registration_snapshot
         booking.update!(registration_attributes)
+        sync_guest_profile!
         attach_signature
 
         # Transition pre-checkin status to completed
@@ -73,12 +74,12 @@ module Concierge
     def assign_defaults
       registration_keys.each do |key|
         current_value = public_send(key)
-        public_send("#{key}=", current_value.presence || booking.public_send(key))
+        public_send("#{key}=", current_value.presence || booking_value_for(key))
       end
     end
 
     def registration_keys
-      %w[guest_name guest_email guest_phone guest_country guest_document_type guest_government_id guest_home_address]
+      %w[guest_name guest_email guest_phone guest_country guest_document_type guest_government_id guest_date_of_birth guest_home_address]
     end
 
     def registration_attributes
@@ -89,11 +90,39 @@ module Concierge
         guest_country: guest_country,
         guest_document_type: guest_document_type,
         guest_government_id: guest_government_id,
+        guest_date_of_birth: guest_date_of_birth,
         guest_home_address: guest_home_address
       }
       attrs[:id_front] = @id_front if @id_front.present?
       attrs[:id_back] = @id_back if @id_back.present?
       attrs
+    end
+
+    def booking_value_for(key)
+      return booking.primary_guest&.date_of_birth if key == "guest_date_of_birth"
+
+      booking.public_send(key)
+    end
+
+    def registration_snapshot
+      registration_keys.index_with { |key| booking_value_for(key) }
+    end
+
+    def sync_guest_profile!
+      guest_result = GuestArrival::CreateOrMatchGuest.new(
+        name: booking.guest_name,
+        email: booking.guest_email,
+        phone: booking.guest_phone,
+        government_id: booking.guest_government_id,
+        country: booking.guest_country,
+        document_type: booking.guest_document_type,
+        date_of_birth: booking.guest_date_of_birth,
+        created_by_hotel_id: booking.hotel_id
+      ).call
+
+      primary_booking_guest = booking.booking_guests.find_or_initialize_by(is_primary: true)
+      primary_booking_guest.guest = guest_result.guest
+      primary_booking_guest.save!
     end
 
     def attach_signature
@@ -113,7 +142,7 @@ module Concierge
     end
 
     def record_audit_log(old_value)
-      new_value = booking.attributes.slice(*registration_keys)
+      new_value = registration_snapshot
       Bookings::RecordAuditLog.call!(
         auditable: booking,
         action_type: "guest_updated",

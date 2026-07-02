@@ -23,6 +23,8 @@ RSpec.describe HotelPortal::Reports::NonNationalReport, type: :service do
         confirmation_token: "WS-FOREIGN"
       )
       create(:booking_room, booking: included, room_number: "305")
+      guest = create(:guest, date_of_birth: Date.new(1985, 3, 15))
+      create(:booking_guest, booking: included, guest: guest, is_primary: true)
 
       create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Local Guest", guest_country: "Malaysia")
       create(:booking, hotel: hotel, status: "completed", check_in: start_date - 1.day, check_out: end_date, guest_name: "Checked Out Foreigner", guest_country: "Singapore")
@@ -38,6 +40,7 @@ RSpec.describe HotelPortal::Reports::NonNationalReport, type: :service do
       expect(result.rows.map { |row| row[:booking_id] }).to eq([ included.id ])
       expect(result.rows.first[:guest_country]).to eq("Japan")
       expect(result.rows.first[:guest_home_address]).to eq("1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan")
+      expect(result.rows.first[:date_of_birth]).to eq(Date.new(1985, 3, 15))
       expect(result.rows.first[:checked_in_at]).to eq(Time.zone.local(2026, 6, 30, 15, 45, 0))
       expect(result.rows.first[:room_numbers]).to eq("305")
     end

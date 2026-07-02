@@ -45,18 +45,19 @@ module HotelPortal
       end
 
       def detail_rows
-        rows = [ spreadsheet_row([ "Full Name", "Nationality", "Home Address", "Check In Date", "Check In Time", "Check Out Date" ]) ]
+        rows = [ spreadsheet_row([ "Full Name", "Nationality", "Date of Birth", "Home Address", "Check In Date", "Check In Time", "Check Out Date" ]) ]
         @report.rows.each do |row|
           rows << spreadsheet_row([
             row[:guest_name],
             row[:guest_country],
+            row[:date_of_birth]&.strftime("%d %b %Y"),
             row[:guest_home_address],
             row[:check_in].strftime("%d %b %Y"),
             row[:checked_in_at]&.strftime("%I:%M %p"),
             row[:check_out].strftime("%d %b %Y")
           ])
         end
-        rows << spreadsheet_row([ "TOTAL", nil, nil, nil, nil, nil ])
+        rows << spreadsheet_row([ "TOTAL", nil, nil, nil, nil, nil, nil ])
         rows.join("\n")
       end
 

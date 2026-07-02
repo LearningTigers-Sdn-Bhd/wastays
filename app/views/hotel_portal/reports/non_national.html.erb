@@ -63,6 +63,7 @@
           <tr>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Full Name</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Nationality</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Date of Birth</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Home Address</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Check In Date</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Check In Time</th>
@@ -75,6 +76,7 @@
               <tr class="hover:bg-slate-50/50">
                 <td class="px-6 py-4 text-sm font-semibold text-slate-900"><%= row[:guest_name] %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= row[:guest_country] %></td>
+                <td class="px-6 py-4 text-sm text-slate-700"><%= row[:date_of_birth]&.strftime("%d %b %Y") || "-" %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= row[:guest_home_address].presence || "-" %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= row[:check_in].strftime("%d %b %Y") %></td>
                 <td class="px-6 py-4 text-sm text-slate-700"><%= row[:checked_in_at]&.strftime("%I:%M %p") || "-" %></td>
@@ -83,7 +85,7 @@
             <% end %>
           <% else %>
             <tr>
-              <td colspan="6" class="px-6 py-16 text-center text-sm font-medium text-slate-500">
+              <td colspan="7" class="px-6 py-16 text-center text-sm font-medium text-slate-500">
                 No in-house foreign guests found for this selected period.
               </td>
             </tr>

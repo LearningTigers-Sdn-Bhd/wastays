@@ -33,7 +33,7 @@ module HotelPortal
             @guest = if @mode == "edit_additional"
               @booking_guest.guest
             elsif @mode == "edit_primary"
-              Guest.new(primary_guest_attributes)
+              primary_guest_record
             else
               Guest.new(country: current_hotel.country.presence || "Malaysia", document_type: "ic")
             end
@@ -72,33 +72,41 @@ module HotelPortal
           end
 
           def update_primary
-            @guest = Guest.new(guest_params)
+            @guest = primary_guest_record
+            @guest.assign_attributes(guest_params)
             return render_sheet(status: :unprocessable_content) unless @guest.valid?
 
-            result = ::Bookings::UpdateStayService.new(
-              booking: @booking,
-              params: primary_booking_params,
-              user: current_user
-            ).call
-            if result.success?
+            result = nil
+
+            ActiveRecord::Base.transaction do
+              result = ::Bookings::UpdateStayService.new(
+                booking: @booking,
+                params: primary_booking_params,
+                user: current_user
+              ).call
+
+              raise ActiveRecord::Rollback unless result.success?
+
               @booking.reload.primary_guest&.update!(guest_params)
-              return complete_action(notice: "Primary guest updated.")
             end
+
+            return complete_action(notice: "Primary guest updated.") if result&.success?
 
             result.errors.each { |error| @guest.errors.add(:base, error) }
             render_sheet(status: :unprocessable_content)
           end
 
-          def primary_guest_attributes
-            {
-              name: @presenter.primary_guest_name,
-              email: @presenter.primary_guest_email,
-              phone: @presenter.primary_guest_phone,
-              country: @presenter.primary_guest_country == "—" ? nil : @presenter.primary_guest_country,
+          def primary_guest_record
+            @primary_guest_record ||= @booking.primary_guest || Guest.new(
+              name: @booking.guest_name,
+              email: @booking.guest_email,
+              phone: @booking.guest_phone,
+              country: @booking.guest_country,
               gender: @booking.guest_gender,
-              document_type: @presenter.primary_guest_document_type.to_s.downcase,
-              government_id: @presenter.primary_guest_government_id == "—" ? nil : @presenter.primary_guest_government_id
-            }
+              document_type: @booking.guest_document_type,
+              government_id: @booking.guest_government_id,
+              date_of_birth: @booking.primary_guest&.date_of_birth
+            )
           end
 
           def primary_booking_params
@@ -109,16 +117,17 @@ module HotelPortal
               guest_country: guest_params[:country],
               guest_gender: guest_params[:gender],
               guest_document_type: guest_params[:document_type],
-              guest_government_id: guest_params[:government_id]
+              guest_government_id: guest_params[:government_id],
+              guest_date_of_birth: guest_params[:date_of_birth]
             }
           end
 
           def guest_params
-            params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id)
+            params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth)
           end
 
           def guest_audit_values(guest)
-            guest.attributes.slice("name", "email", "phone", "country", "gender", "document_type")
+            guest.attributes.slice("name", "email", "phone", "country", "gender", "document_type", "date_of_birth")
           end
 
           def record_guest_audit(action_type, old_value:, new_value:)

@@ -243,7 +243,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     let(:end_date) { Date.new(2026, 7, 1) }
 
     it "renders the non-national report with in-house foreign guests only" do
-      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, checked_in_at: Time.zone.local(2026, 6, 30, 15, 45, 0), guest_name: "Kenji Sato", guest_country: "Japan", guest_home_address: "1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan", confirmation_token: "WS-NONNAT")
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, checked_in_at: Time.zone.local(2026, 6, 30, 15, 45, 0), guest_name: "Kenji Sato", guest_country: "Japan", guest_home_address: "1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan", confirmation_token: "WS-NONNAT")
+      guest = create(:guest, date_of_birth: Date.new(1990, 5, 20))
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
       create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Ahmad", guest_country: "Malaysia")
 
       get non_national_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
@@ -254,11 +256,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("Japan")
       expect(response.body).to include("1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan")
       expect(response.body).to include("Check In Time")
+      expect(response.body).to include("Date of Birth")
+      expect(response.body).to include("20 May 1990")
       expect(response.body).not_to include("Ahmad")
     end
 
     it "exports csv for the selected range" do
-      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, checked_in_at: Time.zone.local(2026, 6, 30, 14, 10, 0), guest_name: "CSV Foreigner", guest_country: "Singapore", guest_home_address: "25 Beach Road, Singapore", confirmation_token: "WS-CSV-NONNAT")
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, checked_in_at: Time.zone.local(2026, 6, 30, 14, 10, 0), guest_name: "CSV Foreigner", guest_country: "Singapore", guest_home_address: "25 Beach Road, Singapore", confirmation_token: "WS-CSV-NONNAT")
+      guest = create(:guest, date_of_birth: Date.new(1988, 12, 5))
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
 
       get non_national_hotel_reports_path(hotel, format: :csv), params: {
         start_date: start_date.to_s,
@@ -268,10 +274,11 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
       expect(response.headers["Content-Disposition"]).to include("non-national-report")
-      expect(response.body).to include("Full Name,Nationality,Home Address,Check In Date,Check In Time,Check Out Date")
+      expect(response.body).to include("Full Name,Nationality,Date of Birth,Home Address,Check In Date,Check In Time,Check Out Date")
       expect(response.body).to include("CSV Foreigner")
       expect(response.body).to include("Singapore")
       expect(response.body).to include("25 Beach Road, Singapore")
+      expect(response.body).to include("05 Dec 1988")
       expect(response.body).to include("10:10 PM")
     end
 
