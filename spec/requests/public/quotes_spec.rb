@@ -50,7 +50,8 @@ RSpec.describe "Public::Quotes", type: :request do
         government_id: "A1234567",
         gender: "male",
         country: "Malaysia",
-        document_type: "ic"
+        document_type: "ic",
+        date_of_birth: Date.new(1990, 5, 20)
       )
 
       get guest_lookup_quote_path(quote.token), params: { email: "  JOHN@example.com " }
@@ -65,7 +66,8 @@ RSpec.describe "Public::Quotes", type: :request do
         "government_id" => guest.government_id,
         "gender" => guest.gender,
         "country" => guest.country,
-        "document_type" => guest.document_type
+        "document_type" => guest.document_type,
+        "date_of_birth" => "1990-05-20"
       )
     end
 

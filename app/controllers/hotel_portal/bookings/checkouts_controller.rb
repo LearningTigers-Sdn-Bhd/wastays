@@ -188,7 +188,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
             defer_side_effects: true,
             exception_folio_ids: settlement_result&.exception_folio_ids.to_a,
             direct_bill_folio_ids: settlement_result&.direct_bill_folio_ids.to_a
-          }.merge(checkout_blocker_resolution_options)
+          }.merge(checkout_blocker_resolution_options).merge(security_deposit_release_options)
       ).call
 
       unless result.success?
@@ -241,6 +241,17 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     raw_params.to_unsafe_h.transform_values do |value|
       value.to_h.slice("action", "amount", "payment_method", "payment_reference", "reason")
     end
+  end
+
+  def security_deposit_release_options
+    return {} unless params[:release_security_deposit] == "1"
+
+    {
+      security_deposit_release: {
+        method: params[:security_deposit_release_method].to_s.presence || "cash",
+        reference: params[:security_deposit_release_reference].to_s.strip.presence
+      }
+    }
   end
 
   def checkout_booking_scope

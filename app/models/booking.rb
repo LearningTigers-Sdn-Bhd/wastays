@@ -28,7 +28,7 @@ class Booking < ApplicationRecord
   has_many :payment_transactions, dependent: :destroy
   has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :room_operational_audit_logs, dependent: :nullify
-  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :status_transition_event
+  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :guest_date_of_birth, :status_transition_event
 
   def online?
     source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
@@ -64,7 +64,7 @@ class Booking < ApplicationRecord
 
   PRE_CHECKIN_STATUSES = %w[not_started pending in_progress completed failed].freeze
   GUARANTEE_METHODS = %w[none pre_checkin_completed manual_at_hotel card_authorization_document charge_now].freeze
-  DEPOSIT_STATUSES = %w[not_required pending_at_hotel authorized collected released failed].freeze
+  DEPOSIT_STATUSES = %w[not_required pending_at_hotel authorized held collected released failed].freeze
   DOCUMENT_TYPES = [
     [ "Identity Card (IC)", "ic" ],
     [ "Passport", "passport" ]
@@ -375,6 +375,17 @@ class Booking < ApplicationRecord
     hotel_now >= check_in_dt
   rescue ArgumentError, TypeError
     false
+  end
+
+  def duration_in_nights
+    (check_out.to_date - check_in.to_date).to_i
+  end
+
+  def eligible_for_refund?(refund_policy)
+    return false unless status == "confirmed" && refund_request.nil? && refund_policy.present?
+
+    days_until_checkin = (check_in.to_date - Date.current).to_i
+    days_until_checkin >= refund_policy.min_days_before_checkin
   end
 
   private

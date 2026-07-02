@@ -38,6 +38,7 @@ Rails.application.routes.draw do
       member do
         get :receipt
         get :invoice
+        patch :toggle_dnd
       end
       resources :refund_requests, only: [ :new, :create ]
     end
@@ -435,6 +436,9 @@ Rails.application.routes.draw do
         get :journal_batches
         get :sst
         get :refund_report
+        get :extra_charge
+        get :non_national
+        get :tourism_tax
       end
     end
     resources :night_audits, only: [ :index, :show, :create ] do
@@ -471,8 +475,9 @@ Rails.application.routes.draw do
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board
+    get "room-status/housekeeping-requests/:room_number", to: "room_status_board#housekeeping_requests", as: :room_status_housekeeping_requests
     resources :room_statuses, only: [ :update ]
-    resources :room_blocks, only: [ :create, :update, :destroy ] do
+    resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
       post :finish, on: :member
     end
   end

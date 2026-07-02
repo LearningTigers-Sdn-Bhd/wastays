@@ -3,10 +3,24 @@
 module HotelPortal
   module Reports
     class ArrivalsDeparturesReport
-      Result = Struct.new(:start_date, :end_date, :arrivals, :departures, :arrival_count, :departure_count, keyword_init: true)
+      Result = Struct.new(
+        :start_date,
+        :end_date,
+        :arrivals,
+        :in_house,
+        :departures,
+        :checkout,
+        :arrival_count,
+        :in_house_count,
+        :departure_count,
+        :checkout_count,
+        keyword_init: true
+      )
 
       ARRIVAL_STATUSES = %w[confirmed review_no_show checked_in].freeze
-      DEPARTURE_STATUSES = %w[confirmed review_no_show checked_in completed].freeze
+      IN_HOUSE_STATUSES = %w[checked_in checkout_required].freeze
+      DEPARTURE_STATUSES = %w[confirmed review_no_show checked_in checkout_required].freeze
+      CHECKOUT_STATUSES = %w[completed].freeze
 
       def initialize(hotel:, start_date:, end_date:)
         @hotel = hotel
@@ -16,15 +30,21 @@ module HotelPortal
 
       def call
         arrivals = arrival_scope.map { |booking| row_for(booking).merge(arrival_fields(booking)) }
+        in_house = in_house_scope.map { |booking| row_for(booking).merge(in_house_fields(booking)) }
         departures = departure_scope.map { |booking| row_for(booking).merge(departure_fields(booking)) }
+        checkout = checkout_scope.map { |booking| row_for(booking).merge(checkout_fields(booking)) }
 
         Result.new(
           start_date: @start_date,
           end_date: @end_date,
           arrivals: arrivals,
+          in_house: in_house,
           departures: departures,
+          checkout: checkout,
           arrival_count: arrivals.size,
-          departure_count: departures.size
+          in_house_count: in_house.size,
+          departure_count: departures.size,
+          checkout_count: checkout.size
         )
       end
 
@@ -41,6 +61,22 @@ module HotelPortal
       def departure_scope
         @hotel.bookings
               .where(status: DEPARTURE_STATUSES)
+              .checking_out_between(@start_date, @end_date, @hotel.hotel_time_zone)
+              .includes(:booking_notes, booking_rooms: :room_type)
+              .order(:check_out, :created_at, :id)
+      end
+
+      def in_house_scope
+        @hotel.bookings
+              .where(status: IN_HOUSE_STATUSES)
+              .where("check_in <= ? AND check_out >= ?", @end_date, @start_date)
+              .includes(:booking_notes, booking_rooms: :room_type)
+              .order(:check_in, :created_at, :id)
+      end
+
+      def checkout_scope
+        @hotel.bookings
+              .where(status: CHECKOUT_STATUSES)
               .checking_out_between(@start_date, @end_date, @hotel.hotel_time_zone)
               .includes(:booking_notes, booking_rooms: :room_type)
               .order(:check_out, :created_at, :id)
@@ -75,6 +111,18 @@ module HotelPortal
       end
 
       def departure_fields(booking)
+        {
+          departure_status: departure_status(booking)
+        }
+      end
+
+      def in_house_fields(_booking)
+        {
+          departure_status: "In house"
+        }
+      end
+
+      def checkout_fields(booking)
         {
           departure_status: departure_status(booking)
         }

@@ -12,7 +12,8 @@ RSpec.describe "Public::PaymentMocks", type: :request do
       government_id: "A123456789",
       gender: "male",
       country: "Malaysia",
-      document_type: "passport"
+      document_type: "passport",
+      date_of_birth: "1990-05-20"
     }
   end
 

@@ -234,7 +234,8 @@ module Bookings
         guest_country: booking.guest_country.presence || guest.country,
         guest_gender: booking.guest_gender.presence || guest.gender,
         guest_document_type: booking.guest_document_type.presence || guest.document_type,
-        guest_government_id: booking.guest_government_id.presence || guest.government_id
+        guest_government_id: booking.guest_government_id.presence || guest.government_id,
+        guest_date_of_birth: booking.guest_date_of_birth.presence || guest.date_of_birth
       )
     end
 
@@ -250,6 +251,7 @@ module Bookings
           gender: booking.guest_gender,
           document_type: booking.guest_document_type,
           government_id: booking.guest_government_id,
+          date_of_birth: booking.guest_date_of_birth,
           created_by_hotel_id: @hotel.id
         ).call
         guest = guest_result.guest if guest_result.success?
@@ -307,6 +309,7 @@ module Bookings
         gender: booking.guest_gender,
         document_type: booking.guest_document_type,
         government_id: booking.guest_government_id,
+        date_of_birth: booking.guest_date_of_birth,
         created_by_hotel_id: @hotel.id
       )
     end
@@ -324,10 +327,12 @@ module Bookings
       if booking.guest_government_id.present? && guest.government_id != booking.guest_government_id
         updates[:government_id] = booking.guest_government_id
       end
+      if booking.guest_date_of_birth.present? && guest.date_of_birth != booking.guest_date_of_birth
+        updates[:date_of_birth] = booking.guest_date_of_birth
+      end
 
       guest.update!(updates) if updates.any?
     end
-
     def normalized_email(value)
       value.to_s.downcase.strip
     end

@@ -152,7 +152,7 @@ export default class extends Controller {
     })
     if (!unlocked) {
       this.closeCountryMenu()
-      if (this.hasDocumentFieldTarget) this.documentFieldTarget.classList.add("hidden")
+      this.documentFieldTargets.forEach((field) => field.classList.add("hidden"))
     }
     this.updateEnabled()
 
@@ -185,7 +185,7 @@ export default class extends Controller {
     if (!this.detailsUnlocked) {
       this.documentSelectTarget.disabled = true
       this.documentInputTarget.disabled = true
-      this.documentFieldTarget.classList.add("hidden")
+      this.documentFieldTargets.forEach((field) => field.classList.add("hidden"))
       return
     }
 
@@ -199,7 +199,7 @@ export default class extends Controller {
 
     const hasDocumentType = hasCountry && this.documentSelectTarget.value
     this.documentInputTarget.disabled = !hasDocumentType
-    this.documentFieldTarget.classList.toggle("hidden", !hasDocumentType)
+    this.documentFieldTargets.forEach((field) => field.classList.toggle("hidden", !hasDocumentType))
   }
 
   autoSelectDocumentType() {

@@ -2,7 +2,26 @@
 
 module HotelPortal
   class RoomBlocksController < BaseController
+    include OffcanvasTransactionCompletion
+
     before_action :authorize_room_block_management!
+
+    def new
+      @room_block = current_hotel.room_blocks.build(
+        room_number: params[:room_number],
+        room_type_id: params[:room_type_id],
+        start_date: params[:start_date].presence || Date.current,
+        end_date: params[:start_date].presence || Date.current
+      )
+      @room_type = current_hotel.room_types.find(params[:room_type_id])
+      render "form", layout: false
+    end
+
+    def edit
+      @room_block = current_hotel.room_blocks.find(params[:id])
+      @room_type = @room_block.room_type
+      render "form", layout: false
+    end
 
     def create
       result = Rooms::ManageBlock.new(
@@ -12,7 +31,10 @@ module HotelPortal
       ).create
 
       if result.success?
-        redirect_to hotel_room_status_board_path(current_hotel, board_params), notice: "Room blocked for maintenance."
+        offcanvas_transaction_response(
+          destination: hotel_room_status_board_path(current_hotel, board_params),
+          notice: "Room blocked for maintenance."
+        )
       else
         redirect_to hotel_room_status_board_path(current_hotel, board_params), alert: result.error
       end
@@ -28,7 +50,10 @@ module HotelPortal
       ).update
 
       if result.success?
-        redirect_to hotel_room_status_board_path(current_hotel, board_params), notice: "Maintenance block updated."
+        offcanvas_transaction_response(
+          destination: hotel_room_status_board_path(current_hotel, board_params),
+          notice: "Maintenance block updated."
+        )
       else
         redirect_to hotel_room_status_board_path(current_hotel, board_params), alert: result.error
       end
@@ -43,7 +68,10 @@ module HotelPortal
       ).destroy
 
       if result.success?
-        redirect_to hotel_room_status_board_path(current_hotel, board_params), notice: "Maintenance block removed."
+        offcanvas_transaction_response(
+          destination: hotel_room_status_board_path(current_hotel, board_params),
+          notice: "Maintenance block removed."
+        )
       else
         redirect_to hotel_room_status_board_path(current_hotel, board_params), alert: result.error
       end
@@ -58,7 +86,10 @@ module HotelPortal
       ).finish
 
       if result.success?
-        redirect_to hotel_room_status_board_path(current_hotel, board_params), notice: "Maintenance block finished."
+        offcanvas_transaction_response(
+          destination: hotel_room_status_board_path(current_hotel, board_params),
+          notice: "Maintenance block finished."
+        )
       else
         redirect_to hotel_room_status_board_path(current_hotel, board_params), alert: result.error
       end

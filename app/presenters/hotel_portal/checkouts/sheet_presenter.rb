@@ -5,7 +5,6 @@ module HotelPortal
     class SheetPresenter
       include Rails.application.routes.url_helpers
 
-      PAYMENT_METHOD_OPTIONS = [ [ "Cash", "cash" ], [ "Card", "card" ] ].freeze
       EXCEPTION_ACTIONS = %w[keep_open manager_review write_off_approval].freeze
       DIRECT_BILL_ACTION = "direct_bill"
       INPUT_ACTIONS = %w[pay_now direct_bill keep_open manager_review write_off_approval].freeze
@@ -55,7 +54,11 @@ module HotelPortal
       end
 
       def payment_method_options
-        PAYMENT_METHOD_OPTIONS
+        ::Checkouts::PaymentMethods.settlement_options
+      end
+
+      def security_deposit_release_method_options
+        ::Checkouts::PaymentMethods.release_options
       end
 
       def booking_balance
@@ -79,7 +82,7 @@ module HotelPortal
       end
 
       def held_deposits
-        @held_deposits ||= booking.deposits.where(status: "collected")
+        @held_deposits ||= booking.deposits.where(status: "held")
       end
 
       def held_deposit_total

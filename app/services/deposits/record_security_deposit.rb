@@ -32,9 +32,10 @@ module Deposits
         hotel: @booking.hotel,
         booking: @booking,
         booking_folio: @folio,
+        transaction_code: security_deposit_transaction_code,
         user: @user,
         hold_type: "security",
-        status: "collected",
+        status: "held",
         amount: @amount,
         currency: @booking.currency || @booking.hotel.default_currency || "MYR",
         payment_method: @payment_method,
@@ -58,6 +59,11 @@ module Deposits
 
     def failure(error)
       OpenStruct.new(success?: false, error: error)
+    end
+
+    def security_deposit_transaction_code
+      Financials::EnsureDefaultTransactionCodes.call(@booking.hotel)
+      @booking.hotel.transaction_codes.find_by!(system_key: "security_deposit")
     end
   end
 end

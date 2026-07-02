@@ -29,6 +29,17 @@ class Guest::BookingsController < Guest::BaseController
     @refund_policy = RefundPolicy.first
     @booking = current_guest.bookings.find(params[:id])
     append_breadcrumb @booking.confirmation_token.upcase, guest_booking_path(@booking)
+
+    assigned_rooms = @booking.booking_rooms.where.not(room_number: [ nil, "" ])
+    @room_statuses = if assigned_rooms.any?
+      RoomStatus.where(
+        hotel_id: @booking.hotel_id,
+        room_type_id: assigned_rooms.select(:room_type_id),
+        room_number: assigned_rooms.select(:room_number)
+      ).index_by { |rs| [ rs.room_type_id, rs.room_number ] }
+    else
+      {}
+    end
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."
   end
@@ -53,6 +64,19 @@ class Guest::BookingsController < Guest::BaseController
       disposition: "attachment"
   rescue ::Reports::Bookings::GenerateFolioRecords::UnavailableError
     redirect_to guest_bookings_path, alert: "Invoice is only available after checkout."
+  rescue ActiveRecord::RecordNotFound
+    redirect_to guest_bookings_path, alert: "Booking not found."
+  end
+
+  def toggle_dnd
+    @booking = current_guest.bookings.find(params[:id])
+    result = Guest::ToggleDndService.new(booking: @booking).call
+
+    if result.success?
+      redirect_to guest_booking_path(@booking), notice: result.message
+    else
+      redirect_to guest_booking_path(@booking), alert: result.error
+    end
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."
   end

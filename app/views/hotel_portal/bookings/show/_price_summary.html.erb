@@ -3,7 +3,7 @@
     <summary class="flex cursor-pointer list-none items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 [&::-webkit-details-marker]:hidden">
       <div>
         <h2 class="inline-flex items-center gap-2 text-sm font-semibold text-slate-950"><span class="inline-flex size-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-700"><%= cached_icon "coins", class: "size-3.5" %></span> Price Summary</h2>
-        <p class="text-xs text-slate-500">Room total, taxes, and booking total.</p>
+        <p class="text-xs text-slate-500">Room total, taxes, booking total, and held deposits.</p>
       </div>
       <span class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700"><%= cached_icon "list", class: "size-3" %> Breakdown ▾</span>
     </summary>
@@ -30,7 +30,7 @@
     </div>
   </details>
 
-  <div class="grid divide-y divide-slate-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+  <div class="grid divide-y divide-slate-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
     <div class="px-4 py-3">
       <p class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500"><%= cached_icon "bed", class: "size-3 text-slate-400" %> Room Total</p>
       <p class="mt-1 text-sm font-semibold text-slate-950"><%= presenter.currency %> <%= number_with_precision(presenter.room_total, precision: 2) %></p>
@@ -42,6 +42,10 @@
     <div class="px-4 py-3">
       <p class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500"><%= cached_icon "credit-card", class: "size-3 text-emerald-600" %> Total Paid</p>
       <p class="mt-1 text-sm font-semibold text-slate-950"><%= presenter.currency %> <%= number_with_precision(booking.total_amount, precision: 2) %></p>
+    </div>
+    <div class="px-4 py-3">
+      <p class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500"><%= cached_icon "shield-check", class: "size-3 text-amber-600" %> Security Deposits</p>
+      <p class="mt-1 text-sm font-semibold text-slate-950"><%= presenter.formatted_held_security_deposit_total %></p>
     </div>
   </div>
 </section>

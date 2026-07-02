@@ -91,6 +91,28 @@ RSpec.describe Folios::ProcessCheckoutActions do
     )
   end
 
+  {
+    "cash" => "cash",
+    "card" => "card",
+    "bank_transfer" => "bank",
+    "manual" => "gateway"
+  }.each do |method, payment_source|
+    it "posts #{method} checkout payments through the #{payment_source} payment source" do
+      create(:folio_transaction, booking_folio: guest_folio, amount: 100)
+      allow(Folios::PostStaffTransaction).to receive(:call).and_return(OpenStruct.new(success?: true))
+
+      result = call_service({
+        guest_folio.id.to_s => { action: "pay_now", amount: "100.00", payment_method: method, payment_reference: "REF-1" },
+        company_folio.id.to_s => { action: "close" }
+      })
+
+      expect(result).to be_success
+      expect(Folios::PostStaffTransaction).to have_received(:call).with(
+        hash_including(options: hash_including(payment_source: payment_source))
+      )
+    end
+  end
+
   it "requires a reason for checkout exceptions" do
     create(:folio_transaction, booking_folio: company_folio, amount: 100)
 

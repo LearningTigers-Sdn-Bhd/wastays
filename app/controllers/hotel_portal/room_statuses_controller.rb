@@ -7,11 +7,11 @@ module HotelPortal
     def update
       room_status = current_hotel.room_statuses.find(params[:id])
       board_params = params.permit(:start_date, :days, :layout).to_h
-      result = Rooms::SetStatus.new(
+
+      result = Rooms::UpdateStatus.new(
         room_status: room_status,
-        status: room_status_params[:status],
-        user: current_user,
-        reason: room_status_params[:notes]
+        params: room_status_params,
+        user: current_user
       ).call
 
       if result.success?
@@ -28,7 +28,7 @@ module HotelPortal
     end
 
     def room_status_params
-      params.require(:room_status).permit(:status, :notes)
+      params.require(:room_status).permit(:status, :notes, :priority, :dnd)
     end
   end
 end

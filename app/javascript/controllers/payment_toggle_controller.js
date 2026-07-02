@@ -14,6 +14,8 @@ export default class extends Controller {
       field.disabled = !enabled
     })
 
-    this.containerTarget.classList.toggle("opacity-50", !enabled)
+    this.containerTargets.forEach((container) => {
+      container.classList.toggle("opacity-50", !enabled)
+    })
   }
 }

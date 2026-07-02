@@ -212,6 +212,10 @@ module HotelPortal
       booking.tax_total.to_d
     end
 
+    def held_security_deposit_total
+      @held_security_deposit_total ||= booking.deposits.where(status: "held").sum(:amount).to_d
+    end
+
     def projected_outstanding_balance
       (booking.booking_folio&.projected_outstanding_balance || 0).to_d
     end
@@ -364,12 +368,20 @@ module HotelPortal
       booking.guarantee_method.to_s.presence&.tr("_", " ")&.titleize || "No guarantee"
     end
 
+    def security_deposit_status_label
+      booking.deposit_status.to_s.presence&.tr("_", " ")&.titleize || "Not Required"
+    end
+
     def formatted_room_total
       format_currency(room_total)
     end
 
     def formatted_taxes_total
       format_currency(taxes_total)
+    end
+
+    def formatted_held_security_deposit_total
+      format_currency(held_security_deposit_total)
     end
 
     def formatted_total_amount

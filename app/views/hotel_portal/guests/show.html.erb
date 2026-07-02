@@ -44,6 +44,10 @@
         <p class="text-sm font-semibold text-neutral-text-primary"><%= @presenter.government_id %></p>
       </div>
       <div>
+        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Date of Birth</p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @guest.date_of_birth&.strftime("%d %b %Y") || "—" %></p>
+      </div>
+      <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Last Stay</p>
         <p class="text-sm font-semibold text-neutral-text-primary">
           <%= @all_bookings.first&.check_out ? @all_bookings.first.check_out.strftime("%d %b %Y") : "—" %>

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe HotelPortal::Reports::ArrivalsDeparturesExcelExportService do
   describe "#generate" do
-    it "builds an excel xml workbook with arrivals and departures worksheets" do
+    it "builds an excel xml workbook with arrivals worksheet by default" do
       report = double(
         "report",
         arrivals: [
@@ -37,9 +37,18 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesExcelExportService do
 
       expect(xml).to include("<?xml version=\"1.0\"?>")
       expect(xml).to include('Worksheet ss:Name="Arrivals"')
-      expect(xml).to include('Worksheet ss:Name="Departures"')
+      expect(xml).not_to include('Worksheet ss:Name="Departures"')
       expect(xml).to include("Arrival &amp; Guest")
-      expect(xml).to include("Checked out 11:58 AM")
+      expect(xml).not_to include("Departure Guest")
+    end
+
+    it "builds a single checkout worksheet for checkout tab" do
+      report = double("report", arrivals: [], in_house: [], departures: [], checkout: [])
+
+      body = described_class.new(report: report, tab: "checkout").generate
+
+      expect(body).to include('Worksheet ss:Name="Checkout"')
+      expect(body).not_to include('Worksheet ss:Name="Arrivals"')
     end
   end
 end

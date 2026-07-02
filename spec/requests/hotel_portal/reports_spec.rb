@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rails_helper'
+require "nokogiri"
 
 RSpec.describe "HotelPortal::Reports", type: :request do
   let(:plan) { create(:plan) }
@@ -58,7 +59,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     let(:start_date) { Date.new(2026, 5, 7) }
     let(:end_date) { Date.new(2026, 5, 8) }
 
-    it "renders the arrivals and departures report for the selected date range" do
+    it "renders the guest reports page for the selected date range" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "Arriving Guest", confirmation_token: "WS-ARR")
       create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: start_date, guest_name: "Departing Guest", confirmation_token: "WS-DEP")
       create(:booking, hotel: hotel, status: "confirmed", check_in: end_date + 1.day, check_out: end_date + 2.days, guest_name: "Wrong Date")
@@ -66,10 +67,56 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get arrivals_departures_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Arrivals &amp; Departures")
+      expect(response.body).to include("Guest Reports")
+      expect(response.body).to include("Expected Arrivals")
       expect(response.body).to include("Arriving Guest")
-      expect(response.body).to include("Departing Guest")
       expect(response.body).not_to include("Wrong Date")
+    end
+
+    it "renders guest reports heading and defaults invalid tab to arrivals" do
+      create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "Arriving Guest")
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: start_date + 1.day, guest_name: "In House Guest")
+
+      get arrivals_departures_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s,
+        end_date: end_date.to_s,
+        tab: "bad-tab"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Guest Reports")
+      expect(response.body).to include("Expected Arrivals")
+      expect(response.body).to include("Arriving Guest")
+    end
+
+    it "renders in-house tab content when tab=in_house" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "In House Guest")
+      create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date, guest_name: "Arrival Guest")
+
+      get arrivals_departures_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s,
+        end_date: end_date.to_s,
+        tab: "in_house"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Guest Reports")
+      expect(response.body).to include("In-House Guests")
+      expect(response.body).to include("In House Guest")
+    end
+
+    it "keeps today selected when switching guest report tabs" do
+      travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
+        create(:booking, hotel: hotel, status: "checked_in", check_in: Date.new(2026, 6, 14), check_out: Date.new(2026, 6, 16), guest_name: "In House Guest")
+
+        get arrivals_departures_hotel_reports_path(hotel), params: { tab: "in_house" }
+        doc = Nokogiri::HTML(response.body)
+        selected = doc.at_css('select[name="date_preset"] option[selected]')
+
+        expect(response).to have_http_status(:success)
+        expect(selected["value"]).to eq("today")
+        expect(response.body).to include("In-House Guests")
+      end
     end
 
     it "does not show bookings from another hotel" do
@@ -81,13 +128,28 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).not_to include("Other Hotel Guest")
     end
 
+    it "defaults guest reports first load to today" do
+      travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
+        create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 15), check_out: Date.new(2026, 6, 16), guest_name: "Today Arrival")
+        create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 1), check_out: Date.new(2026, 6, 2), guest_name: "Earlier Month Arrival")
+
+        get arrivals_departures_hotel_reports_path(hotel)
+        doc = Nokogiri::HTML(response.body)
+        selected = doc.at_css('select[name="date_preset"] option[selected]')
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("15 Jun")
+        expect(selected["value"]).to eq("today")
+      end
+    end
+
     it "falls back to today when both start and end dates are invalid" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current, check_out: Date.current + 1.day, guest_name: "Today Guest")
 
       get arrivals_departures_hotel_reports_path(hotel), params: { start_date: "bad-start", end_date: "bad-end" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Today Guest")
+      expect(response.body).to include(Date.current.strftime("%d %b"))
     end
 
     it "supports single-date legacy param for backward compatibility" do
@@ -97,7 +159,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get arrivals_departures_hotel_reports_path(hotel), params: { date: date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Legacy Date Guest")
+      expect(response.body).to include("10 May")
     end
 
     it "aligns end date to start date when start date is later than end date" do
@@ -110,8 +172,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Start Date Guest")
-      expect(response.body).not_to include("Old Date Guest")
+      expect(response.body).to include("10 May")
+      expect(response.body).not_to include("08 May")
     end
 
     it "exports CSV for the selected range" do
@@ -129,6 +191,23 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("WS-CSV")
     end
 
+    it "exports CSV for the active checkout tab only" do
+      create(:booking, hotel: hotel, status: "completed", check_in: start_date - 1.day, check_out: start_date, guest_name: "Checked Out Guest", confirmation_token: "WS-CHECKOUT")
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: start_date, guest_name: "Due Out Guest", confirmation_token: "WS-DUEOUT")
+
+      get arrivals_departures_hotel_reports_path(hotel, format: :csv), params: {
+        start_date: start_date.to_s,
+        end_date: end_date.to_s,
+        tab: "checkout"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+      expect(response.headers["Content-Disposition"]).to include("guest-reports-checkout")
+      expect(response.body).to include("Checked Out Guest")
+      expect(response.body).not_to include("Due Out Guest")
+    end
+
     it "exports PDF for the selected range" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "PDF Guest", confirmation_token: "WS-PDF")
 
@@ -142,7 +221,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.headers["Content-Disposition"]).to include(".pdf")
     end
 
-    it "exports Excel with separate arrival and departure worksheets" do
+    it "exports Excel for the default arrivals tab" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Guest", confirmation_token: "WS-XLS")
 
       get arrivals_departures_hotel_reports_path(hotel, format: :xls), params: {
@@ -154,8 +233,168 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.content_type).to include("application/vnd.ms-excel")
       expect(response.headers["Content-Disposition"]).to include(".xls")
       expect(response.body).to include('ss:Name="Arrivals"')
-      expect(response.body).to include('ss:Name="Departures"')
+      expect(response.body).not_to include('ss:Name="Departures"')
       expect(response.body).to include("Excel Guest")
+    end
+  end
+
+  describe "GET /non_national" do
+    let(:start_date) { Date.new(2026, 7, 1) }
+    let(:end_date) { Date.new(2026, 7, 1) }
+
+    it "renders the non-national report with in-house foreign guests only" do
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, checked_in_at: Time.zone.local(2026, 6, 30, 15, 45, 0), guest_name: "Kenji Sato", guest_country: "Japan", guest_home_address: "1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan", confirmation_token: "WS-NONNAT")
+      guest = create(:guest, date_of_birth: Date.new(1990, 5, 20))
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Ahmad", guest_country: "Malaysia")
+
+      get non_national_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Non-National Report")
+      expect(response.body).to include("Kenji Sato")
+      expect(response.body).to include("Japan")
+      expect(response.body).to include("1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan")
+      expect(response.body).to include("Check In Time")
+      expect(response.body).to include("Date of Birth")
+      expect(response.body).to include("20 May 1990")
+      expect(response.body).not_to include("Ahmad")
+    end
+
+    it "exports csv for the selected range" do
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, checked_in_at: Time.zone.local(2026, 6, 30, 14, 10, 0), guest_name: "CSV Foreigner", guest_country: "Singapore", guest_home_address: "25 Beach Road, Singapore", confirmation_token: "WS-CSV-NONNAT")
+      guest = create(:guest, date_of_birth: Date.new(1988, 12, 5))
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+      get non_national_hotel_reports_path(hotel, format: :csv), params: {
+        start_date: start_date.to_s,
+        end_date: end_date.to_s
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+      expect(response.headers["Content-Disposition"]).to include("non-national-report")
+      expect(response.body).to include("Full Name,Nationality,Date of Birth,Home Address,Check In Date,Check In Time,Check Out Date")
+      expect(response.body).to include("CSV Foreigner")
+      expect(response.body).to include("Singapore")
+      expect(response.body).to include("25 Beach Road, Singapore")
+      expect(response.body).to include("05 Dec 1988")
+      expect(response.body).to include("10:10 PM")
+    end
+
+    it "shows the actual check-in date for overlapping guests" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: Date.new(2026, 6, 30), check_out: Date.new(2026, 7, 2), guest_name: "Overlap Guest", guest_country: "Japan", tourism_tax_amount: 10)
+
+      get non_national_hotel_reports_path(hotel), params: { date_preset: "this_month" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Overlap Guest")
+      expect(response.body).to include("30 Jun 2026")
+    end
+  end
+
+  describe "GET /tourism_tax" do
+    let(:start_date) { Date.new(2026, 7, 1) }
+    let(:end_date) { Date.new(2026, 7, 1) }
+
+    it "renders the tourism tax report with due and collected figures" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Kenji Sato", guest_country: "Japan", tourism_tax_amount: 20, tourism_tax_collected: true)
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Ahmad", guest_country: "Malaysia", tourism_tax_amount: 10, tourism_tax_collected: true)
+
+      get tourism_tax_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Tourism Tax Report")
+      expect(response.body).to include("Kenji Sato")
+      expect(response.body).to include("MYR 20.00")
+    end
+
+    it "exports csv for the selected range" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "CSV Foreigner", guest_country: "Singapore", tourism_tax_amount: 10, tourism_tax_collected: false, confirmation_token: "WS-CSV-TTX")
+
+      get tourism_tax_hotel_reports_path(hotel, format: :csv), params: {
+        start_date: start_date.to_s,
+        end_date: end_date.to_s
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+      expect(response.headers["Content-Disposition"]).to include("tourism-tax-report")
+      expect(response.body).to include("Guest Name,Nationality,Booking Ref,Check In,Check Out,Nights,Tax Due (MYR),Tax Collected (MYR),Collection Status")
+      expect(response.body).to include("CSV Foreigner")
+      expect(response.body).to include("Pending")
+    end
+  end
+
+  describe "GET /extra_charge" do
+    it "renders the extra charge report page" do
+      booking = create(:booking, hotel: hotel, guest_name: "FB Guest")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "fb", description: "Restaurant", amount: 20, posting_date: Date.new(2026, 6, 15))
+
+      get extra_charge_hotel_reports_path(hotel), params: {
+        start_date: "2026-06-15",
+        end_date: "2026-06-15"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Extra Charge Report")
+      expect(response.body).to include("FB Guest")
+      expect(response.body).to include("Restaurant")
+      expect(response.body).to include("MYR 20.00")
+    end
+
+    it "defaults to today on first load" do
+      travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
+        booking = create(:booking, hotel: hotel, guest_name: "Today FB Guest")
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, category: "fb", description: "Today Charge", amount: 20, posting_date: Date.new(2026, 6, 15))
+        create(:folio_transaction, booking_folio: folio, category: "fb", description: "Earlier Charge", amount: 20, posting_date: Date.new(2026, 6, 1))
+
+        get extra_charge_hotel_reports_path(hotel)
+        doc = Nokogiri::HTML(response.body)
+        selected = doc.at_css('select[name="date_preset"] option[selected]')
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("15 Jun")
+        expect(selected["value"]).to eq("today")
+      end
+    end
+
+    it "shows only non-fb extra charges on the non-fb tab" do
+      booking = create(:booking, hotel: hotel, guest_name: "Extra Guest")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "fb", description: "Restaurant", amount: 25, posting_date: Date.new(2026, 6, 15))
+      create(:folio_transaction, booking_folio: folio, category: "other", description: "Laundry", amount: 15, posting_date: Date.new(2026, 6, 15))
+
+      get extra_charge_hotel_reports_path(hotel), params: {
+        tab: "non_fb",
+        start_date: "2026-06-15",
+        end_date: "2026-06-15"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Non-F&amp;B")
+      expect(response.body).to include("Laundry")
+      expect(response.body).not_to include("Restaurant")
+      expect(response.body).to include("MYR 15.00")
+    end
+
+    it "exports csv for the active tab only" do
+      booking = create(:booking, hotel: hotel, guest_name: "CSV Guest")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "fb", description: "Restaurant", amount: 20, posting_date: Date.new(2026, 6, 15))
+
+      get extra_charge_hotel_reports_path(hotel, format: :csv), params: {
+        tab: "fb",
+        start_date: "2026-06-15",
+        end_date: "2026-06-15"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("text/csv")
+      expect(response.headers["Content-Disposition"]).to include("extra-charge-report-fb")
+      expect(response.body).to include("Restaurant")
     end
   end
 
@@ -187,6 +426,26 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Daily Occupancy Report")
       expect(response.body).not_to include(booking.confirmation_token)
+    end
+
+    it "defaults blank first load to today" do
+      travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
+        room_type = create(:room_type, hotel: hotel, quantity: 10)
+        create(:room_inventory, room_type: room_type, date: Date.new(2026, 6, 1), quantity: 8, status: "open")
+        create(:room_inventory, room_type: room_type, date: Date.new(2026, 6, 15), quantity: 9, status: "open")
+
+        booking = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 1), check_out: Date.new(2026, 6, 16), guest_name: "Month Guest")
+        create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 300)
+
+        get daily_occupancy_hotel_reports_path(hotel)
+        doc = Nokogiri::HTML(response.body)
+        selected = doc.at_css('select[name="date_preset"] option[selected]')
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).not_to include("01 Jun 2026")
+        expect(response.body).to include("15 Jun 2026")
+        expect(selected["value"]).to eq("today")
+      end
     end
 
     it "exports CSV" do

@@ -102,6 +102,7 @@ module BookingEngine
             gender: gender,
             country: guest_country,
             document_type: document_type,
+            date_of_birth: @payment_details[:date_of_birth],
             marketing_consent: @payment_details[:marketing_consent],
             privacy_consent: @payment_details[:privacy_consent]
           ).call

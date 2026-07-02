@@ -16,9 +16,9 @@
       <%= form_with url: refund_report_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "refund-report-range-form", data: { controller: "date-preset" } do |f| %>
         <div>
           <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Time Period</label>
-          <%= select_tag :date_preset, options_for_select(date_preset_options, params[:date_preset] || "this_month"), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
+          <%= select_tag :date_preset, options_for_select(date_preset_options, @date_preset), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
         </div>
-        <div id="custom-date-range" class="<%= params[:date_preset] == 'custom' ? 'flex' : 'hidden' %> gap-3">
+        <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> gap-3">
           <div>
             <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Start Date</label>
             <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700" %>
@@ -64,7 +64,7 @@
       <table class="min-w-full">
         <thead class="bg-slate-100">
           <tr>
-            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600"><%= params[:date_preset] == "this_year" ? "Month" : "Date" %></th>
+            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600"><%= @date_preset == "this_year" ? "Month" : "Date" %></th>
             <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Room</th>
             <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Guest</th>
             <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Booking</th>
@@ -79,7 +79,7 @@
           <% if @report.rows.any? %>
             <% @report.rows.each do |row| %>
               <tr class="hover:bg-slate-50/50">
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-slate-900"><%= params[:date_preset] == "this_year" ? row[:month_label] : row[:date].strftime("%d %b %Y") %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-slate-900"><%= @date_preset == "this_year" ? row[:month_label] : row[:date].strftime("%d %b %Y") %></td>
                 <td class="px-4 py-3 text-sm text-slate-700"><%= row[:room] %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-700"><%= row[:guest_name] %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900"><%= row[:booking_reference] %></td>

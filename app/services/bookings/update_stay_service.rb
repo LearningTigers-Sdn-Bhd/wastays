@@ -248,6 +248,10 @@ module Bookings
         email: booking.guest_email,
         phone: booking.guest_phone,
         country: booking.guest_country.presence || @hotel.country,
+        gender: booking.guest_gender,
+        document_type: booking.guest_document_type,
+        government_id: booking.guest_government_id,
+        date_of_birth: booking.guest_date_of_birth,
         created_by_hotel_id: @hotel.id
       ).call
 

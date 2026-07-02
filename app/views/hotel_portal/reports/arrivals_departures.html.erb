@@ -1,8 +1,9 @@
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8 print:max-w-none print:pb-0 print:space-y-4">
+  <% guest_report_tabs = [["Arrivals", "arrivals"], ["In-House", "in_house"], ["Departures", "departures"], ["Checkout", "checkout"]] %>
   <div class="px-4 md:px-0 print:px-0">
     <div class="mt-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between print:mt-0 print:block">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl print:text-xl">Arrivals &amp; Departures</h1>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl print:text-xl">Guest Reports</h1>
         <p class="mt-1 text-sm font-medium text-slate-600 print:text-xs">
           <%= current_hotel.name %> ·
           <% if @report.start_date == @report.end_date %>
@@ -15,12 +16,13 @@
 
       <div class="print:hidden">
         <%= form_with url: arrivals_departures_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "arrivals-date-range-form", data: { controller: "date-preset" } do |f| %>
+          <%= hidden_field_tag :tab, @active_guest_report_tab %>
           <div>
             <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Time Period</label>
-            <%= select_tag :date_preset, options_for_select(date_preset_options, params[:date_preset] || "this_month"), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->date-preset#toggleCustom" } %>
+            <%= select_tag :date_preset, options_for_select(date_preset_options, @date_preset), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->date-preset#toggleCustom" } %>
           </div>
 
-          <div id="custom-date-range" class="<%= params[:date_preset] == 'custom' ? 'flex' : 'hidden' %> gap-3">
+          <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> gap-3">
             <div>
               <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Start Date</label>
               <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-start-date" %>
@@ -44,6 +46,8 @@
                   current_hotel,
                   start_date: @report.start_date,
                   end_date: @report.end_date,
+                  date_preset: @date_preset,
+                  tab: @active_guest_report_tab,
                   format: :pdf
                 ),
                 class: "block px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
@@ -52,6 +56,8 @@
                   current_hotel,
                   start_date: @report.start_date,
                   end_date: @report.end_date,
+                  date_preset: @date_preset,
+                  tab: @active_guest_report_tab,
                   format: :xls
                 ),
                 class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
@@ -60,6 +66,8 @@
                   current_hotel,
                   start_date: @report.start_date,
                   end_date: @report.end_date,
+                  date_preset: @date_preset,
+                  tab: @active_guest_report_tab,
                   format: :csv
                 ),
                 class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
@@ -71,47 +79,78 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-2 print:grid-cols-2 print:rounded-none print:shadow-none">
+  <div class="px-4 md:px-0 print:hidden">
+    <div class="flex flex-wrap items-center gap-2">
+      <% guest_report_tabs.each do |label, value| %>
+        <% count = {
+          "arrivals" => @report.arrival_count,
+          "in_house" => @report.in_house_count,
+          "departures" => @report.departure_count,
+          "checkout" => @report.checkout_count
+        }[value] %>
+        <% active = value == @active_guest_report_tab %>
+        <%= link_to arrivals_departures_hotel_reports_path(
+            current_hotel,
+            start_date: @report.start_date,
+            end_date: @report.end_date,
+            date_preset: @date_preset,
+            tab: value
+          ),
+          class: "inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition #{active ? 'border-blue-600 bg-blue-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'}" do %>
+          <span><%= label %></span>
+          <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' %>">
+            <%= count %>
+          </span>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-2 xl:grid-cols-4 print:grid-cols-2 print:rounded-none print:shadow-none">
     <div class="p-6 md:border-r md:border-slate-200 print:p-3">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Arrivals</p>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950 print:text-xl"><%= @report.arrival_count %></h2>
     </div>
-    <div class="bg-slate-50/30 p-6 print:p-3 print:bg-white">
+    <div class="bg-slate-50/30 p-6 xl:border-r xl:border-slate-200 print:p-3 print:bg-white">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">In-House</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950 print:text-xl"><%= @report.in_house_count %></h2>
+    </div>
+    <div class="p-6 md:border-r md:border-slate-200 print:p-3">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Departures</p>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950 print:text-xl"><%= @report.departure_count %></h2>
     </div>
+    <div class="bg-slate-50/30 p-6 print:p-3 print:bg-white">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Checkout</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950 print:text-xl"><%= @report.checkout_count %></h2>
+    </div>
   </div>
 
-  <% if params[:date_preset] == "this_year" %>
-    <% @report.arrivals.group_by { |row| row[:check_in].to_date.beginning_of_month }.each do |month, rows| %>
-      <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
-        title: "Expected Arrivals · #{month.strftime('%B %Y')}",
-        empty_message: "No arrivals scheduled for this selected period.",
-        rows: rows,
-        type: :arrival
-      } %>
-    <% end %>
-
-    <% @report.departures.group_by { |row| row[:check_out].to_date.beginning_of_month }.each do |month, rows| %>
-      <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
-        title: "Expected Departures · #{month.strftime('%B %Y')}",
-        empty_message: "No departures scheduled for this selected period.",
-        rows: rows,
-        type: :departure
-      } %>
-    <% end %>
-  <% else %>
+  <% if @active_guest_report_tab == "arrivals" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
       title: "Expected Arrivals",
       empty_message: "No arrivals scheduled for this selected period.",
       rows: @report.arrivals,
       type: :arrival
     } %>
-
+  <% elsif @active_guest_report_tab == "in_house" %>
+    <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
+      title: "In-House Guests",
+      empty_message: "No in-house guests for this selected period.",
+      rows: @report.in_house,
+      type: :departure
+    } %>
+  <% elsif @active_guest_report_tab == "departures" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
       title: "Expected Departures",
       empty_message: "No departures scheduled for this selected period.",
       rows: @report.departures,
+      type: :departure
+    } %>
+  <% else %>
+    <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
+      title: "Checked-Out Guests",
+      empty_message: "No checked-out guests for this selected period.",
+      rows: @report.checkout,
       type: :departure
     } %>
   <% end %>

@@ -7,8 +7,10 @@ module HotelPortal
     include FinancialFiltering
 
     PAYOUT_TABS = %w[upcoming paid].freeze
+    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout].freeze
+    EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
 
-    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches sst refund_report]
+    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
     before_action :authorize_view_payouts!, only: %i[payouts]
     before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
     before_action -> { require_feature!("arrivals_departures_list") }, only: %i[arrivals_departures]
@@ -306,6 +308,7 @@ module HotelPortal
     end
 
     def arrivals_departures
+      @active_guest_report_tab = GUEST_REPORT_TABS.include?(params[:tab]) ? params[:tab] : "arrivals"
       @report_start_date, @report_end_date = parse_report_date_range
       @report = HotelPortal::Reports::ArrivalsDeparturesReport.new(
         hotel: current_hotel,
@@ -316,22 +319,22 @@ module HotelPortal
       respond_to do |format|
         format.html
         format.csv do
-          csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: @report).generate
+          csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: @report, tab: @active_guest_report_tab).generate
           send_data csv,
-            filename: "arrivals-departures-#{@report.start_date}-#{@report.end_date}.csv",
+            filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.csv",
             type: "text/csv"
         end
         format.any(:xls) do
-          workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: @report).generate
+          workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: @report, tab: @active_guest_report_tab).generate
           send_data workbook,
-            filename: "arrivals-departures-#{@report.start_date}-#{@report.end_date}.xls",
+            filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.xls",
             type: "application/vnd.ms-excel",
             disposition: "attachment"
         end
         format.pdf do
-          pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: @report).generate
+          pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: @report, tab: @active_guest_report_tab).generate
           send_data pdf,
-            filename: "arrivals-departures-#{@report.start_date}-#{@report.end_date}.pdf",
+            filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",
             disposition: "attachment"
         end
@@ -455,14 +458,121 @@ module HotelPortal
       end
     end
 
+    def extra_charge
+      @active_extra_charge_tab = EXTRA_CHARGE_REPORT_TABS.include?(params[:tab]) ? params[:tab] : "fb"
+      @report_start_date, @report_end_date = parse_report_date_range
+      @report = HotelPortal::Reports::ExtraChargeReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date,
+        tab: @active_extra_charge_tab
+      ).call
+
+      respond_to do |format|
+        format.html
+        format.csv do
+          csv = HotelPortal::Reports::ExtraChargeCsvExportService.new(report: @report).generate
+          send_data csv,
+            filename: "extra-charge-report-#{@active_extra_charge_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.csv",
+            type: "text/csv"
+        end
+        format.any(:xls) do
+          workbook = HotelPortal::Reports::ExtraChargeExcelExportService.new(report: @report).generate
+          send_data workbook,
+            filename: "extra-charge-report-#{@active_extra_charge_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.xls",
+            type: "application/vnd.ms-excel",
+            disposition: "attachment"
+        end
+        format.pdf do
+          pdf = HotelPortal::Reports::ExtraChargePdfExportService.new(hotel: current_hotel, report: @report).generate
+          send_data pdf,
+            filename: "extra-charge-report-#{@active_extra_charge_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.pdf",
+            type: "application/pdf",
+            disposition: "attachment"
+        end
+      end
+    end
+
+    def non_national
+      @report_start_date, @report_end_date = parse_report_date_range
+      @report = HotelPortal::Reports::NonNationalReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date
+      ).call
+
+      respond_to do |format|
+        format.html
+        format.csv do
+          csv = HotelPortal::Reports::NonNationalCsvExportService.new(report: @report).generate
+          send_data csv,
+            filename: "non-national-report-#{@report.start_date}-#{@report.end_date}.csv",
+            type: "text/csv"
+        end
+        format.any(:xls) do
+          workbook = HotelPortal::Reports::NonNationalExcelExportService.new(report: @report).generate
+          send_data workbook,
+            filename: "non-national-report-#{@report.start_date}-#{@report.end_date}.xls",
+            type: "application/vnd.ms-excel",
+            disposition: "attachment"
+        end
+        format.pdf do
+          pdf = HotelPortal::Reports::NonNationalPdfExportService.new(hotel: current_hotel, report: @report).generate
+          send_data pdf,
+            filename: "non-national-report-#{@report.start_date}-#{@report.end_date}.pdf",
+            type: "application/pdf",
+            disposition: "attachment"
+        end
+      end
+    end
+
+    def tourism_tax
+      @report_start_date, @report_end_date = parse_report_date_range
+      @report = HotelPortal::Reports::TourismTaxReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date
+      ).call
+
+      respond_to do |format|
+        format.html
+        format.csv do
+          csv = HotelPortal::Reports::TourismTaxCsvExportService.new(report: @report).generate
+          send_data csv,
+            filename: "tourism-tax-report-#{@report.start_date}-#{@report.end_date}.csv",
+            type: "text/csv"
+        end
+        format.any(:xls) do
+          workbook = HotelPortal::Reports::TourismTaxExcelExportService.new(report: @report).generate
+          send_data workbook,
+            filename: "tourism-tax-report-#{@report.start_date}-#{@report.end_date}.xls",
+            type: "application/vnd.ms-excel",
+            disposition: "attachment"
+        end
+        format.pdf do
+          pdf = HotelPortal::Reports::TourismTaxPdfExportService.new(hotel: current_hotel, report: @report).generate
+          send_data pdf,
+            filename: "tourism-tax-report-#{@report.start_date}-#{@report.end_date}.pdf",
+            type: "application/pdf",
+            disposition: "attachment"
+        end
+      end
+    end
+
     private
 
     def parse_report_date_range
       # Handle date_preset parameter (e.g., "2026-05", "this_month", "custom")
-      date_preset = params[:date_preset]
+      date_preset = params[:date_preset].presence
+      date_preset ||= "custom" if params[:start_date].present? || params[:end_date].present?
+      date_preset ||= "legacy_date" if params[:date].present?
+      date_preset ||= default_report_date_preset
+      @date_preset = date_preset
 
       if date_preset.present?
         case date_preset
+        when "today"
+          return [ Date.current, Date.current ]
         when "all_time"
           return [ Date.new(2024, 1, 1), Date.current ]
         when "this_year"
@@ -473,9 +583,13 @@ module HotelPortal
         when "this_month"
           return [ Date.current.beginning_of_month, Date.current.end_of_month ]
         when "custom"
-          start = params[:start_date].present? ? params[:start_date].to_date : Date.current.beginning_of_month
-          end_date = params[:end_date].present? ? params[:end_date].to_date : Date.current.end_of_month
+          start = parse_single_report_date(params[:start_date]) || Date.current.beginning_of_month
+          end_date = parse_single_report_date(params[:end_date]) || Date.current.end_of_month
+          end_date = start if end_date < start
           return [ start, end_date ]
+        when "legacy_date"
+          parsed_date = parse_single_report_date(params[:date])
+          return [ parsed_date, parsed_date ] if parsed_date
         else
           # Check if it's a specific month (e.g. "2026-03")
           if date_preset =~ /\A\d{4}-\d{2}\z/
@@ -510,10 +624,15 @@ module HotelPortal
     end
 
     def parse_deposit_liability_date
-      date_preset = params[:date_preset]
+      date_preset = params[:date_preset].presence
+      date_preset ||= "custom" if params[:as_of_date].present?
+      date_preset ||= "today"
+      @date_preset = date_preset
 
       if date_preset.present?
         case date_preset
+        when "today"
+          return Date.current
         when "all_time", "this_year"
           # As of report - use current date for these
           return Date.current
@@ -535,6 +654,10 @@ module HotelPortal
 
       # Fallback: use as_of_date param or date param or default
       parse_single_report_date(params[:as_of_date]) || parse_single_report_date(params[:date]) || current_hotel.business_date_for || Date.current
+    end
+
+    def default_report_date_preset
+      "today"
     end
 
     def authorize_view_reports!
