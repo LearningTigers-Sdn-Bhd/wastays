@@ -76,25 +76,9 @@
       </div>
     </div>
 
-    <%
-      geolocation_active = @hotel.geolocation_enabled? && !@presenter.registration_required?
-      form_controllers = ["scanner"]
-      form_controllers << "guest-dob" if @presenter.registration_required?
-      form_controllers << "geolocation-check-in" if geolocation_active
-      form_data = { controller: form_controllers.join(" ") }
-      if geolocation_active
-        form_data.merge!(
-          geolocation_check_in_hotel_latitude_value: @hotel.latitude,
-          geolocation_check_in_hotel_longitude_value: @hotel.longitude,
-          geolocation_check_in_allowed_radius_value: 50,
-          geolocation_check_in_refresh_icon_value: cached_icon("refresh-cw", class: "w-4 h-4 mr-1.5 inline-block align-middle animate-spin-slow"),
-          geolocation_check_in_is_mobile_value: true
-        )
-      end
-    %>
-    <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: form_data do |f| %>
-      <%= hidden_field_tag :latitude, nil, data: geolocation_active ? { geolocation_check_in_target: "latitude" } : {} %>
-      <%= hidden_field_tag :longitude, nil, data: geolocation_active ? { geolocation_check_in_target: "longitude" } : {} %>
+    <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: @presenter.form_data(self, is_mobile: true) do |f| %>
+      <%= hidden_field_tag :latitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "latitude" } : {} %>
+      <%= hidden_field_tag :longitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "longitude" } : {} %>
       <% if @presenter.registration_required? %>
         <div class="rounded-2xl border border-neutral-border/50 bg-white p-6 shadow-sm space-y-8">
           <div>
@@ -112,7 +96,7 @@
             <div class="space-y-2">
               <%= f.label :guest_document_type, "Document Type", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-neutral-text-secondary ml-1" %>
               <div class="relative" data-controller="searchable-select">
-                <%= f.hidden_field :guest_document_type, value: @booking.guest_document_type, data: { searchable_select_target: "hiddenInput", guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
+                <%= f.hidden_field :guest_document_type, value: @booking.guest_document_type, data: { searchable_select_target: "hiddenInput", guest_dob_target: "documentType", pre_checkin_document_target: "select", action: "change->guest-dob#autofill change->pre-checkin-document#toggleUploads" } %>
                 <div class="relative cursor-pointer" data-action="click->searchable-select#toggle">
                   <input type="text" readonly 
                          data-searchable-select-target="input"
@@ -205,14 +189,18 @@
         </div>
 
         <%# ID document photos %>
-        <div class="rounded-2xl border border-neutral-border/50 bg-white p-6 shadow-sm space-y-6">
+        <div class="rounded-2xl border border-neutral-border/50 bg-white p-6 shadow-sm space-y-6 transition-all duration-300 transform <%= @presenter.upload_section_class %>" data-pre-checkin-document-target="uploadSection">
           <div>
             <h2 class="text-sm font-black uppercase tracking-[0.2em] text-neutral-text-primary">Identity Document</h2>
             <p class="text-[11px] text-neutral-text-secondary mt-2 leading-relaxed">Upload or scan your IC / passport.</p>
           </div>
           <div class="grid gap-4">
-            <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: "Front ID / Passport" %>
-            <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID / Passport" %>
+            <div data-pre-checkin-document-target="frontContainer" class="transition-all duration-300 transform <%= @presenter.front_container_class %>">
+              <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: @presenter.front_scanner_label %>
+            </div>
+            <div data-pre-checkin-document-target="backContainer" class="transition-all duration-300 transform <%= @presenter.back_container_class %>">
+              <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID Card" %>
+            </div>
           </div>
         </div>
 
@@ -238,12 +226,12 @@
 
       <%# Submit button positioned at the bottom %>
       <div class="fixed bottom-0 left-0 right-0 p-6 bg-landing-bg/95 backdrop-blur-md z-30">
-        <% if geolocation_active %>
+        <% if @presenter.geolocation_active? %>
           <div data-geolocation-check-in-target="status"></div>
         <% end %>
         <%= submit_tag @presenter.registration_required? ? "CONFIRM PRE-CHECK-IN" : "CONFIRM CHECK IN",
               class: "w-full bg-brand-primary text-white font-black py-5 rounded-xl shadow-xl shadow-brand-primary/30 active:scale-[0.98] transition-all cursor-pointer tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed mt-2",
-              data: geolocation_active ? { geolocation_check_in_target: "submitButton" } : {} %>
+              data: @presenter.geolocation_active? ? { geolocation_check_in_target: "submitButton" } : {} %>
       </div>
     <% end %>
 

@@ -13,7 +13,7 @@
 
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
           <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm">
-            Showing <%= @presenter.start_date.strftime("%b %-d, %Y") %> → <%= @presenter.board_range_end.strftime("%b %-d, %Y") %> (<%= @presenter.board_days %> days)
+            <%= @presenter.formatted_date_range %>
           </span>
         </div>
       </div>
@@ -43,13 +43,13 @@
           <div class="h-6 w-px bg-slate-200"></div>
 
           <div class="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
-            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: (@presenter.start_date - @presenter.nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Previous #{@presenter.nav_step_days} days" do %>
+            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.prev_start_date)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Previous #{@presenter.nav_step_days} days" do %>
               &larr; Prev
             <% end %>
             <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: Date.current.to_s)), class: "rounded bg-white px-2.5 py-1 text-xs font-black text-slate-900 shadow-sm transition hover:bg-slate-50" do %>
               Today
             <% end %>
-            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: (@presenter.start_date + @presenter.nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Next #{@presenter.nav_step_days} days" do %>
+            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.next_start_date)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Next #{@presenter.nav_step_days} days" do %>
               Next &rarr;
             <% end %>
           </div>
@@ -57,8 +57,8 @@
 
         <div class="px-2">
           <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.start_date.to_s, layout: @presenter.comfortable_mode? ? "compact" : "comfortable")), class: "flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors" do %>
-            <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= @presenter.comfortable_mode? ? 'bg-slate-200' : 'bg-slate-900' %> transition-colors">
-              <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= @presenter.comfortable_mode? ? 'translate-x-1' : 'translate-x-3' %>"></span>
+            <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= @presenter.compact_toggle_bg_class %> transition-colors">
+              <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= @presenter.compact_toggle_dot_class %>"></span>
             </div>
             Compact Mode
           <% end %>
@@ -71,7 +71,7 @@
           <div class="flex items-center gap-3">
             <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[80px]">Inventory Status</span>
             <div class="flex items-center gap-1.5">
-              <% (["all", "occupied"] + RoomStatus::STATUSES).each do |status| %>
+              <% @presenter.filterable_statuses.each do |status| %>
                 <% count = @presenter.status_counts[status] %>
                 <span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide <%= @presenter.status_style(status) %> transition-all hover:shadow-sm">
                   <%= @presenter.status_icon(status) %>
@@ -102,75 +102,4 @@
   </div>
 
   <%= render "hotel_portal/room_status_board/board_grid", presenter: @presenter %>
-
-  <%# Room Block Modal %>
-  <dialog data-room-block-modal-target="dialog" class="fixed inset-0 z-[200] m-auto p-0 rounded-3xl bg-transparent backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm" onclick="if(event.target===this){this.close()}">
-    <div class="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-      <div class="border-b border-slate-100 bg-slate-50/50 px-8 py-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-xl font-black text-slate-900" data-room-block-modal-target="title">Room Block</h3>
-            <p class="mt-1 text-xs font-medium text-slate-500">Block <span data-room-block-modal-target="roomDisplay" class="font-bold text-slate-900">Room 101</span> for operational holds</p>
-          </div>
-          <button type="button" onclick="this.closest('dialog').close()" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors">
-            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-      </div>
-
-      <%= form_with model: RoomBlock.new, url: hotel_room_blocks_path(current_hotel), 
-          data: { 
-            room_block_modal_target: "form",
-            create_url: hotel_room_blocks_path(current_hotel)
-          }, 
-          class: "contents" do |f| %>
-        <%= f.hidden_field :room_type_id, data: { room_block_modal_target: "roomTypeId" } %>
-        <%= f.hidden_field :room_number, data: { room_block_modal_target: "roomNumber" } %>
-        <%= hidden_field_tag :start_date, @presenter.start_date.to_s %>
-        <%= hidden_field_tag :days, @presenter.board_days %>
-        <%= hidden_field_tag :layout, @presenter.board_layout %>
-
-        <div class="px-8 py-8 space-y-6">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Start Date</label>
-              <%= f.date_field :start_date, 
-                  data: { room_block_modal_target: "startDate" },
-                  class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">End Date</label>
-              <%= f.date_field :end_date, 
-                  data: { room_block_modal_target: "endDate" },
-                  class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Block Type</label>
-            <%= f.text_field :block_type, 
-                placeholder: "e.g. Maintenance, Deep Cleaning, Admin Hold",
-                data: { room_block_modal_target: "blockType" },
-                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
-          </div>
-
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Reason</label>
-            <%= f.text_area :reason, 
-                rows: 3, 
-                placeholder: "Describe the issue (e.g., Leaky faucet, AC repair, Deep cleaning)",
-                data: { room_block_modal_target: "reason" },
-                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
-          </div>
-        </div>
-
-        <div class="border-t border-slate-100 bg-slate-50/50 px-8 py-6 flex items-center justify-between gap-3">
-          <button type="button" onclick="this.closest('dialog').close()" class="rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Cancel</button>
-          <%= f.submit "Block Room", 
-              data: { room_block_modal_target: "submit" },
-              class: "rounded-2xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 hover:bg-slate-800 transition-all active:scale-95" %>
-        </div>
-      <% end %>
-    </div>
-  </dialog>
 </div>

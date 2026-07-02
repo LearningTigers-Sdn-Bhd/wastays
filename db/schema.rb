@@ -350,6 +350,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.datetime "payout_at"
     t.string "payout_reference"
     t.string "payout_batch_id"
+    t.string "source", default: "internal"
+    t.string "external_reference"
+    t.string "channel_manager_reference"
+    t.integer "revision_number", default: 0
     t.jsonb "tax_lines", default: [], null: false
     t.integer "reservation_number"
     t.integer "receipt_number"
@@ -365,11 +369,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.text "special_requests"
     t.string "guest_city"
     t.boolean "tourism_tax_collected", default: false, null: false
-    t.string "source", default: "internal"
     t.string "fund_collector", default: "unknown", null: false
-    t.string "external_reference"
-    t.string "channel_manager_reference"
-    t.integer "revision_number", default: 0
     t.string "folio_account_reference"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id_unique", unique: true, where: "(booking_quote_id IS NOT NULL)"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
@@ -1529,6 +1529,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "priority", default: false, null: false
+    t.boolean "dnd", default: false, null: false
+    t.date "dnd_date"
+    t.index ["hotel_id", "dnd", "dnd_date"], name: "index_room_statuses_on_hotel_id_and_dnd_and_dnd_date"
+    t.index ["hotel_id", "priority"], name: "index_room_statuses_on_hotel_id_and_priority"
     t.index ["hotel_id", "room_type_id", "room_number"], name: "idx_room_statuses_on_hotel_room_type_number", unique: true
     t.index ["hotel_id", "status"], name: "index_room_statuses_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_room_statuses_on_hotel_id"
