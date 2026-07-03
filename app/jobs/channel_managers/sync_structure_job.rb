@@ -15,6 +15,7 @@ module ChannelManagers
         case mappable_type
         when "RoomType" then adapter.delete_room_type(external_id)
         when "RatePlan" then adapter.delete_rate_plan(external_id)
+        when "RoomTypeRatePlan" then adapter.delete_rate_plan(external_id)
         end
         return
       end
@@ -24,7 +25,8 @@ module ChannelManagers
 
       hotel = case mappable_type
       when "RoomType" then mappable.hotel
-      when "RatePlan" then mappable.room_type.hotel
+      when "RatePlan" then mappable.hotel
+      when "RoomTypeRatePlan" then mappable.room_type.hotel
       when "Hotel" then mappable
       end
 
@@ -37,7 +39,11 @@ module ChannelManagers
         case mappable_type
         when "Hotel" then adapter.sync_hotel
         when "RoomType" then adapter.sync_room_type(mappable)
-        when "RatePlan" then adapter.sync_rate_plan(mappable)
+        when "RoomTypeRatePlan" then adapter.sync_rate_plan(mappable.rate_plan, room_type: mappable.room_type)
+        when "RatePlan"
+          mappable.room_type_rate_plans.each do |rtrp|
+            adapter.sync_rate_plan(rtrp.rate_plan, room_type: rtrp.room_type)
+          end
         end
       end
     end

@@ -33,6 +33,26 @@ module ChannelManagers
       ensure_property(client)
     end
 
+    def connected_channels
+      client = Channex::Client.new
+      property_mapping = mapping_for(@hotel)
+      return [] if property_mapping.nil? || property_mapping.external_id == "pending"
+
+      property_id = property_mapping.external_id
+
+      Rails.cache.fetch("channex:channels:#{@hotel.id}", expires_in: 10.minutes) do
+        response = client.get("/channels")
+        if response["data"].is_a?(Array)
+          response["data"].select do |channel|
+            properties_data = channel.dig("relationships", "properties", "data")
+            properties_data.is_a?(Array) && properties_data.any? { |p| p["id"] == property_id }
+          end
+        else
+          []
+        end
+      end rescue []
+    end
+
     def sync_room_type(room_type)
       client = Channex::Client.new
       property_id = mapping_for(@hotel).external_id
@@ -76,13 +96,15 @@ module ChannelManagers
       return nil if room_type.blank?
 
       room_type_id = mapping_for(room_type).external_id
-      mapping = mapping_for(rate_plan)
+      room_type_rate_plan = room_type.room_type_rate_plans.find_by(rate_plan: rate_plan)
+      return nil if room_type_rate_plan.blank?
+      mapping = mapping_for(room_type_rate_plan)
 
       payload = {
         rate_plan: {
           property_id: property_id,
           room_type_id: room_type_id,
-          title: rate_plan.name,
+          title: "#{rate_plan.name} (#{room_type.name})",
           currency: rate_plan.currency,
           sell_mode: rate_plan.sell_mode,
           options: default_rate_plan_options(rate_plan, room_type: room_type)
@@ -154,9 +176,11 @@ module ChannelManagers
           },
           rooms: booking.booking_rooms.group_by { |br| [ br.room_type_id, br.rate_plan_id ] }.map do |(room_type_id, rate_plan_id), rooms|
             br = rooms.first
+            rp = br.rate_plan || br.room_type.rate_plans.first
+            room_type_rate_plan = br.room_type.room_type_rate_plans.find_by(rate_plan: rp)
             {
               room_type_id: mapping_for(br.room_type).external_id,
-              rate_plan_id: mapping_for(br.rate_plan || br.room_type.rate_plans.first).external_id,
+              rate_plan_id: room_type_rate_plan ? mapping_for(room_type_rate_plan).external_id : nil,
               count: rooms.size,
               amount: format("%.2f", rooms.sum { |r| r.subtotal.to_f })
             }
@@ -246,7 +270,8 @@ module ChannelManagers
     def parse_booking_rooms(rooms_data)
       rooms_data.map do |room|
         room_type = ChannelMapping.find_by(provider: provider_name, external_id: room["room_type_id"], mappable_type: "RoomType")&.mappable
-        rate_plan = ChannelMapping.find_by(provider: provider_name, external_id: room["rate_plan_id"], mappable_type: "RatePlan")&.mappable
+        rtrp_mapping = ChannelMapping.find_by(provider: provider_name, external_id: room["rate_plan_id"], mappable_type: "RoomTypeRatePlan")
+        rate_plan = rtrp_mapping&.mappable&.rate_plan
 
         {
           room_type: room_type,
@@ -274,6 +299,11 @@ module ChannelManagers
 
     def push_availability(client, property_id, date_range, room_type_ids: nil)
       values = push_availability_values(date_range, room_type_ids: room_type_ids)
+      
+      # Sync channel-specific availability rules (allotments/closeouts)
+      sync_rt_ids = room_type_ids.is_a?(Hash) ? room_type_ids.keys.map(&:to_i) : (room_type_ids || @hotel.room_types.pluck(:id))
+      sync_channel_availability_rules(client, property_id, date_range, sync_rt_ids)
+
       return { ok: true } if values.empty?
 
       response = client.post("/availability", { values: values })
@@ -401,7 +431,10 @@ module ChannelManagers
             next # Not in sync scope
           end
 
-          ext_rp_id = mapping_for(rate_plan).external_id
+          room_type_rate_plan = room_type.room_type_rate_plans.find_by(rate_plan: rate_plan)
+          next if room_type_rate_plan.blank?
+
+          ext_rp_id = mapping_for(room_type_rate_plan).external_id
           next if ext_rp_id == "pending"
 
           # Determine which fields to include for this specific rate plan
@@ -470,6 +503,83 @@ module ChannelManagers
           end
 
           values << current_range if current_range.present?
+
+          # --- Sync Channel-Specific Overrides for this rate plan ---
+          if ext_rp_id.present? && ext_rp_id != "pending"
+            channels_list = connected_channels
+
+            channels_list.each do |channel|
+              chan_rate_plans = channel.dig("attributes", "rate_plans") || []
+              chan_rate_plans.each do |crp|
+                next unless crp["rate_plan_id"] == ext_rp_id
+                
+                crp_id = crp["id"]
+                overrides_by_date = ChannelRoomRate.where(
+                  room_type_id: room_type.id,
+                  rate_plan_id: rate_plan.id,
+                  channel_rate_plan_id: crp_id,
+                  date: effective_range,
+                  currency: rate_plan.currency
+                ).index_by(&:date)
+
+                rates_by_date = rate_plan.room_rates.where(date: effective_range, currency: rate_plan.currency).index_by(&:date)
+
+                current_crp_range = nil
+
+                effective_range.each do |date|
+                  override = overrides_by_date[date]
+                  rate = rates_by_date[date]
+
+                  # We only sync if an override exists or if we are doing a full sync
+                  next if override.nil? && rate_plan_ids.nil?
+
+                  val_data = {
+                    property_id: property_id,
+                    rate_plan_id: crp_id
+                  }
+
+                  if final_sync_rates
+                    override_price = override&.price.presence
+                    if override_price.blank? && rate&.price
+                      derived_setting = @hotel.channel_derived_settings.find_by(channel_id: channel["id"])
+                      if derived_setting
+                        case derived_setting.pricing_mode
+                        when "multiplier"
+                          override_price = rate.price * (1 + derived_setting.pricing_value.to_d / 100)
+                        when "offset"
+                          override_price = rate.price + derived_setting.pricing_value.to_d
+                        else
+                          override_price = rate.price
+                        end
+                      else
+                        override_price = rate.price
+                      end
+                    end
+                    val_data[:rate] = format("%.2f", override_price.to_f) if override_price
+                  end
+
+                  if final_sync_restrictions
+                    val_data[:min_stay_arrival] = override&.min_stay.presence || rate&.min_stay || 1
+                    val_data[:max_stay_arrival] = override&.max_stay.presence || rate&.max_stay || 999
+                    val_data[:closed_to_arrival] = ((override ? override.closed_to_arrival? : rate&.closed_to_arrival?) ? 1 : 0)
+                    val_data[:closed_to_departure] = ((override ? override.closed_to_departure? : rate&.closed_to_departure?) ? 1 : 0)
+                    val_data[:stop_sell] = ((override ? override.stop_sell? : rate&.stop_sell?) ? 1 : 0)
+                  end
+
+                  if current_crp_range.nil?
+                    current_crp_range = val_data.merge(date_from: date.to_s, date_to: date.to_s)
+                  elsif current_crp_range.except(:date_from, :date_to) == val_data && Date.parse(current_crp_range[:date_to]) + 1.day == date
+                    current_crp_range[:date_to] = date.to_s
+                  else
+                    values << current_crp_range
+                    current_crp_range = val_data.merge(date_from: date.to_s, date_to: date.to_s)
+                  end
+                end
+
+                values << current_crp_range if current_crp_range.present?
+              end
+            end
+          end
         end
       end
 
@@ -561,6 +671,170 @@ module ChannelManagers
       DateTime.parse(value.to_s)
     rescue Date::Error, ArgumentError
       nil
+    end
+
+    def sync_channel_availability_rules(client, property_id, date_range, room_type_ids)
+      overrides = ChannelRoomRate.where(
+        room_type_id: room_type_ids,
+        rate_plan_id: nil,
+        date: date_range
+      )
+      
+      overrides.group_by { |o| [o.room_type_id, o.channel_id] }.each do |(room_type_id, channel_id), chan_overrides|
+        room_type = RoomType.find(room_type_id)
+        ext_rt_id = mapping_for(room_type).external_id
+        next if ext_rt_id == "pending"
+        
+        # 1. Clean up existing rules for this room/channel in this range to avoid duplicates
+        existing_rules = client.get("/channel_availability_rules", { "filter" => { "property_id" => property_id } }) rescue {}
+        if existing_rules["data"].is_a?(Array)
+          existing_rules["data"].each do |rule|
+            attr = rule["attributes"] || {}
+            if attr["title"] == "PMS Override" && attr["affected_channels"]&.include?(channel_id) && attr["affected_room_types"]&.include?(ext_rt_id)
+              r_start = Date.parse(attr["start_date"]) rescue nil
+              r_end = Date.parse(attr["end_date"]) rescue nil
+              if r_start && r_end && (r_start..r_end).overlaps?(date_range)
+                client.delete("/channel_availability_rules/#{rule['id']}") rescue nil
+              end
+            end
+          end
+        end
+        
+        # 2. Push contiguous close_out rules
+        close_out_dates = chan_overrides.select(&:stop_sell).map(&:date).sort
+        group_dates_into_ranges(close_out_dates).each do |range|
+          client.post("/channel_availability_rules", {
+            channel_availability_rule: {
+              title: "PMS Override",
+              type: "close_out",
+              affected_channels: [channel_id],
+              affected_room_types: [ext_rt_id],
+              days: ["mo", "tu", "we", "th", "fr", "sa", "su"],
+              start_date: range.first.to_s,
+              end_date: range.last.to_s,
+              property_id: property_id
+            }
+          }) rescue nil
+        end
+
+        # 3. Push contiguous max_availability rules (allotments)
+        max_avail_overrides = chan_overrides.select { |o| o.availability.present? && !o.stop_sell }
+        max_avail_overrides.group_by(&:availability).each do |avail_value, overrides_with_val|
+          avail_dates = overrides_with_val.map(&:date).sort
+          group_dates_into_ranges(avail_dates).each do |range|
+            client.post("/channel_availability_rules", {
+              channel_availability_rule: {
+                title: "PMS Override",
+                type: "max_availability",
+                value: avail_value.to_i,
+                affected_channels: [channel_id],
+                affected_room_types: [ext_rt_id],
+                days: ["mo", "tu", "we", "th", "fr", "sa", "su"],
+                start_date: range.first.to_s,
+                end_date: range.last.to_s,
+                property_id: property_id
+              }
+            }) rescue nil
+          end
+        end
+      end
+    end
+
+    def group_dates_into_ranges(dates)
+      return [] if dates.empty?
+      ranges = []
+      start_date = dates.first
+      prev_date = dates.first
+      
+      dates[1..].each do |d|
+        if d == prev_date + 1.day
+          prev_date = d
+        else
+          ranges << (start_date..prev_date)
+          start_date = d
+          prev_date = d
+        end
+      end
+      ranges << (start_date..prev_date)
+      ranges
+    end
+
+    def create_channel_availability_rule(rule)
+      client = Channex::Client.new
+      property_id = mapping_for(rule.hotel).external_id
+
+      # Translate PMS room types to Channex room type UUIDs
+      ext_rt_ids = rule.affected_room_types.map do |rt_id|
+        rt = RoomType.find_by(id: rt_id)
+        rt ? mapping_for(rt).external_id : nil
+      end.compact.reject { |id| id == "pending" }
+
+      days_array = rule.days.to_s.split(",").map(&:strip).reject(&:blank?)
+      days_array = ["mo", "tu", "we", "th", "fr", "sa", "su"] if days_array.empty?
+
+      payload = {
+        channel_availability_rule: {
+          title: rule.title,
+          type: rule.rule_type,
+          value: rule.value.presence&.to_i,
+          affected_channels: rule.affected_channels,
+          affected_room_types: ext_rt_ids,
+          days: days_array,
+          start_date: rule.start_date.to_s,
+          end_date: rule.end_date.presence&.to_s,
+          property_id: property_id
+        }.compact
+      }
+
+      response = client.post("/channel_availability_rules", payload)
+      if response["data"] && response["data"]["id"]
+        # Skip validations/callbacks to prevent infinite loops
+        rule.update_columns(external_id: response["data"]["id"])
+        true
+      else
+        Rails.logger.error "Channex: Failed to create availability rule: #{response}"
+        false
+      end
+    end
+
+    def update_channel_availability_rule(rule)
+      client = Channex::Client.new
+      property_id = mapping_for(rule.hotel).external_id
+
+      ext_rt_ids = rule.affected_room_types.map do |rt_id|
+        rt = RoomType.find_by(id: rt_id)
+        rt ? mapping_for(rt).external_id : nil
+      end.compact.reject { |id| id == "pending" }
+
+      days_array = rule.days.to_s.split(",").map(&:strip).reject(&:blank?)
+      days_array = ["mo", "tu", "we", "th", "fr", "sa", "su"] if days_array.empty?
+
+      payload = {
+        channel_availability_rule: {
+          title: rule.title,
+          type: rule.rule_type,
+          value: rule.value.presence&.to_i,
+          affected_channels: rule.affected_channels,
+          affected_room_types: ext_rt_ids,
+          days: days_array,
+          start_date: rule.start_date.to_s,
+          end_date: rule.end_date.presence&.to_s,
+          property_id: property_id
+        }.compact
+      }
+
+      response = client.put("/channel_availability_rules/#{rule.external_id}", payload)
+      if response["data"] && response["data"]["id"]
+        true
+      else
+        Rails.logger.error "Channex: Failed to update availability rule #{rule.id}: #{response}"
+        false
+      end
+    end
+
+    def delete_channel_availability_rule(external_id)
+      client = Channex::Client.new
+      client.delete("/channel_availability_rules/#{external_id}")
     end
   end
 end

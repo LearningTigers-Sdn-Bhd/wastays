@@ -306,5 +306,66 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(rate.extra_pax_charge.to_f).to eq(60.0)
       expect(rate.single_supplement.to_f).to eq(30.0)
     end
+
+    it "creates channel overrides in channel_room_rates table when channel_id is present" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      rate_plan = room_type.rate_plans.first
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
+          apply_rates: "1",
+          price: "150.00",
+          channel_id: "booking_com",
+          channel_rate_plan_id: "b_test_rate_plan",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(true)
+      override = ChannelRoomRate.find_by(
+        room_type_id: room_type.id,
+        rate_plan_id: rate_plan.id,
+        channel_id: "booking_com",
+        channel_rate_plan_id: "b_test_rate_plan",
+        date: start_date
+      )
+      expect(override).to be_present
+      expect(override.price.to_f).to eq(150.0)
+    end
+
+    it "creates channel availability overrides when channel_id is present for channel_availability" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          apply_inventory: "1",
+          quantity: "2",
+          status: "closed",
+          channel_id: "booking_com"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(true)
+      override = ChannelRoomRate.find_by(
+        room_type_id: room_type.id,
+        rate_plan_id: nil,
+        channel_id: "booking_com",
+        date: start_date
+      )
+      expect(override).to be_present
+      expect(override.availability).to eq(2)
+      expect(override.stop_sell).to be(true)
+    end
   end
 end

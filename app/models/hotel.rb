@@ -82,6 +82,8 @@ class Hotel < ApplicationRecord
   has_many :agent_accounts, dependent: :destroy
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+  has_many :channel_derived_settings, dependent: :destroy
+  has_many :channel_availability_rules, dependent: :destroy
 
 
   validates :name, presence: true

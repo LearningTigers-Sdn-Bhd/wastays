@@ -54,4 +54,15 @@ export default class extends Controller {
   get defaultTab() {
     return this.defaultTabValue || this.tabTargets[0]?.dataset.tabName
   }
+
+  togglePricingInput(event) {
+    const value = event.currentTarget.value
+    const form = event.currentTarget.closest("form")
+    if (form) {
+      const pricingValDiv = form.querySelector(".pricing-value-input")
+      if (pricingValDiv) {
+        pricingValDiv.classList.toggle("hidden", value === "same")
+      }
+    }
+  }
 }

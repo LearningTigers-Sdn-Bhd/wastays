@@ -493,6 +493,9 @@ Rails.application.routes.draw do
         post :apply_availability_override
         post :bulk_save_ari
         post :batch_save_ari
+        post :update_channel_derived_pricing
+        post :create_channel_availability_rule
+        delete "channel_availability_rules/:id", action: :destroy_channel_availability_rule, as: :destroy_channel_availability_rule
         delete "pricing_tiers/:rule_type", action: :destroy_pricing_tier_rule, as: :destroy_pricing_tier_rule
         delete "public_holidays/:id", action: :destroy_public_holiday_rule, as: :destroy_public_holiday_rule
       end

@@ -8,6 +8,7 @@ class RoomType < ApplicationRecord
   scope :unassigned, -> { where(room_group_id: nil) }
 
   has_many :room_rates, dependent: :destroy
+  has_many :channel_room_rates, dependent: :destroy
   has_many :room_inventories, dependent: :destroy
   has_many :room_type_rate_plans, dependent: :destroy
   has_many :rate_plans, through: :room_type_rate_plans

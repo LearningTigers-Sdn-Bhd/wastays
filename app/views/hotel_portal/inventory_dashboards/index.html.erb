@@ -49,6 +49,8 @@
 
         <div class="flex-1 overflow-y-auto px-5 py-5 space-y-6">
           <%= f.hidden_field :mode, data: { inventory_calendar_target: "mode" } %>
+          <%= f.hidden_field :channel_id, data: { inventory_calendar_target: "channelIdField" } %>
+          <%= f.hidden_field :channel_rate_plan_id, data: { inventory_calendar_target: "channelRatePlanIdField" } %>
           <%= f.hidden_field :apply_inventory, value: "0", data: { inventory_calendar_target: "applyInventory" } %>
           <%= f.hidden_field :apply_rates, value: "0", data: { inventory_calendar_target: "applyRates" } %>
           <%= f.hidden_field :apply_restrictions, value: "0", data: { inventory_calendar_target: "applyRestrictions" } %>
@@ -139,7 +141,7 @@
               <%= f.number_field :price, step: 0.01, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "priceField", action: "input->inventory-calendar#markTouched" } %>
               <%= f.hidden_field :currency, value: @hotel_base_currency, data: { inventory_calendar_target: "currencyField" } %>
             </div>
-             <div class="grid gap-4 <%= current_hotel.allow_pax_pricing? ? 'sm:grid-cols-3' : 'sm:grid-cols-2' %>">
+             <div data-inventory-calendar-target="paxFields" class="grid gap-4 <%= current_hotel.allow_pax_pricing? ? 'sm:grid-cols-3' : 'sm:grid-cols-2' %>">
               <div>
                 <div class="mb-1.5 flex items-center justify-between">
                   <div class="relative flex items-center gap-1.5">

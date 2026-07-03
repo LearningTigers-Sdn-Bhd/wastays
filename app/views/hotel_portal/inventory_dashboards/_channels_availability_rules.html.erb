@@ -1,0 +1,202 @@
+<div class="space-y-6" data-controller="channel-rules">
+  <!-- Rules Table/List Card -->
+  <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-200 pb-5 mb-5">
+      <div>
+        <h3 class="text-sm font-black uppercase tracking-wider text-slate-900">Availability Rules</h3>
+        <p class="text-xs font-medium text-slate-500 mt-1">Configure automated rules such as close-outs, availability offsets, and maximum allocations for selected OTAs.</p>
+      </div>
+      <% unless @channels.blank? %>
+        <button type="button" 
+                data-action="click->channel-rules#open" 
+                class="inline-flex items-center gap-x-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-sm hover:bg-indigo-700 transition focus:outline-none">
+          <%= cached_icon "plus", class: "size-4" %>
+          Add New Rule
+        </button>
+      <% end %>
+    </div>
+
+    <% if @availability_rules.blank? %>
+      <div class="flex flex-col items-center justify-center py-12 px-4 rounded-xl border border-dashed border-slate-200 text-center">
+        <%= cached_icon "calendar-cog", class: "size-10 text-slate-300 mb-3 animate-pulse" %>
+        <h4 class="text-sm font-bold text-slate-900 mb-1">No Active Rules</h4>
+        <p class="text-xs text-slate-500 max-w-sm">No availability override rules configured yet. Rules let you automatically set stop sells or cap allotments for specific dates.</p>
+      </div>
+    <% else %>
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse text-left text-sm">
+          <thead>
+            <tr class="border-b border-slate-200 text-xs font-black uppercase tracking-wider text-slate-400">
+              <th class="py-3 px-4">Title</th>
+              <th class="py-3 px-4">Type</th>
+              <th class="py-3 px-4">Value</th>
+              <th class="py-3 px-4">Affected Dates</th>
+              <th class="py-3 px-4">Channels</th>
+              <th class="py-3 px-4">Room Types</th>
+              <th class="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-semibold text-slate-700">
+            <% @availability_rules.each do |rule| %>
+              <tr class="hover:bg-slate-50/50 transition-colors">
+                <td class="py-4 px-4">
+                  <div class="text-sm font-bold text-slate-900"><%= rule.title %></div>
+                  <% if rule.days.present? %>
+                    <div class="text-[10px] text-indigo-600 uppercase tracking-wider mt-0.5"><%= rule.days.split(",").join(" • ") %></div>
+                  <% end %>
+                </td>
+                <td class="py-4 px-4">
+                  <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold ring-1 ring-inset <%= 
+                    case rule.rule_type
+                    when 'close_out' then 'bg-rose-50 text-rose-700 ring-rose-600/10'
+                    when 'max_availability' then 'bg-indigo-50 text-indigo-700 ring-indigo-600/10'
+                    else 'bg-amber-50 text-amber-700 ring-amber-600/10'
+                    end
+                  %>">
+                    <%= rule.rule_type.titleize %>
+                  </span>
+                </td>
+                <td class="py-4 px-4 text-slate-900"><%= rule.value.presence || "-" %></td>
+                <td class="py-4 px-4 text-xs font-bold">
+                  <%= rule.start_date.strftime("%b %d, %Y") %>
+                  <% if rule.end_date.present? %>
+                    <span class="text-slate-400 font-normal">→</span> <%= rule.end_date.strftime("%b %d, %Y") %>
+                  <% else %>
+                    <span class="text-slate-400 font-normal">onwards</span>
+                  <% end %>
+                </td>
+                <td class="py-4 px-4 text-xs max-w-[12rem] truncate">
+                  <% 
+                    chan_names = rule.affected_channels.map do |c_id| 
+                      @channels.find { |c| c["id"] == c_id }&.dig("attributes", "title") || c_id 
+                    end
+                  %>
+                  <%= chan_names.to_sentence %>
+                </td>
+                <td class="py-4 px-4 text-xs max-w-[12rem] truncate">
+                  <% 
+                    rt_names = rule.affected_room_types.map do |rt_id| 
+                      RoomType.find_by(id: rt_id)&.name || rt_id.to_s
+                    end
+                  %>
+                  <%= rt_names.to_sentence %>
+                </td>
+                <td class="py-4 px-4 text-right">
+                  <%= link_to destroy_channel_availability_rule_hotel_inventory_dashboards_path(current_hotel, id: rule.id), data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to delete and unsync this availability rule?" }, class: "inline-flex items-center gap-1 rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition" do %>
+                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Create Rule Modal Dialog -->
+  <dialog data-channel-rules-target="dialog" class="fixed inset-0 m-auto max-h-[90vh] w-[min(94vw,34rem)] overflow-hidden rounded-2xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/60 transition-all">
+    <div class="flex h-full max-h-[90vh] flex-col bg-white">
+      <div class="flex-none flex items-start justify-between border-b border-slate-100 px-5 py-4">
+        <div>
+          <h2 class="text-sm font-black uppercase tracking-wider text-slate-900">Add Availability Rule</h2>
+          <p class="text-xs font-semibold text-slate-500 mt-0.5">Define standard availability limits or blocks for channels.</p>
+        </div>
+        <button type="button" data-action="channel-rules#close" class="rounded-lg p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-700" aria-label="Close rule dialog">
+          <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+
+      <%= form_with url: create_channel_availability_rule_hotel_inventory_dashboards_path(current_hotel), method: :post, local: true, class: "flex min-h-0 flex-1 flex-col" do |f| %>
+        <div class="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          
+          <!-- Title -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Rule Title</label>
+            <%= f.text_field :title, value: "PMS Override", class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", required: true %>
+          </div>
+
+          <!-- Affected Dates -->
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Start Date</label>
+              <%= f.date_field :start_date, value: Date.current, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", required: true %>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">End Date (Optional)</label>
+              <%= f.date_field :end_date, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+            </div>
+          </div>
+
+          <!-- Days Grid Checklist -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Applicable Days</label>
+            <div class="flex flex-wrap items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <% %w[mo tu we th fr sa su].each do |day| %>
+                <label class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
+                  <%= check_box_tag "day_#{day}", "1", true, class: "rounded border-slate-200 text-indigo-600 focus:ring-0 size-3.5" %>
+                  <span><%= day.upcase %></span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+
+          <!-- Type Select -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Rule Type</label>
+            <%= f.select :rule_type, [["Max Availability", "max_availability"], ["Close Out / Stop Sell", "close_out"], ["Availability Offset", "availability_offset"]], {}, { class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { channel_rules_target: "typeSelect", action: "change->channel-rules#toggleValueField" } } %>
+          </div>
+
+          <!-- Value Field -->
+          <div data-channel-rules-target="valueGroup" class="space-y-1.5">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">Value (Room Count)</label>
+            <%= f.number_field :value, value: 3, min: 0, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+          </div>
+
+          <!-- Affected Channels Checklist Box -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Affected Channels</label>
+            <div class="rounded-lg border border-slate-200 max-h-[7rem] overflow-y-auto p-3 space-y-2 bg-white">
+              <label class="flex items-center gap-2 text-xs font-bold text-slate-900 pb-2 border-b border-slate-100 cursor-pointer">
+                <%= check_box_tag "select_all_channels", "1", true, class: "rounded border-slate-200 text-indigo-600 focus:ring-0 size-3.5", data: { action: "change->channel-rules#selectAllChannels" } %>
+                <span>Select All Channels</span>
+              </label>
+              <% @channels.each do |channel| %>
+                <% title = channel.dig("attributes", "title") || "OTA Connection" %>
+                <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                  <%= check_box_tag "affected_channels[]", channel["id"], true, class: "rounded border-slate-200 text-indigo-600 focus:ring-0 size-3.5", data: { channel_rules_target: "channelCheckbox" } %>
+                  <span><%= title %></span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+
+          <!-- Affected Room Types Checklist Box -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Affected Room Types</label>
+            <div class="rounded-lg border border-slate-200 max-h-[7rem] overflow-y-auto p-3 space-y-2 bg-white">
+              <label class="flex items-center gap-2 text-xs font-bold text-slate-900 pb-2 border-b border-slate-100 cursor-pointer">
+                <%= check_box_tag "select_all_rooms", "1", true, class: "rounded border-slate-200 text-indigo-600 focus:ring-0 size-3.5", data: { action: "change->channel-rules#selectAllRoomTypes" } %>
+                <span>Select All Room Types</span>
+              </label>
+              <% @room_types.each do |room_type| %>
+                <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                  <%= check_box_tag "affected_room_types[]", room_type.id, true, class: "rounded border-slate-200 text-indigo-600 focus:ring-0 size-3.5", data: { channel_rules_target: "roomTypeCheckbox" } %>
+                  <span><%= room_type.name %></span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="flex-none border-t border-slate-100 bg-slate-50 px-5 py-4 flex gap-3 justify-end">
+          <button type="button" data-action="channel-rules#close" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 transition">
+            Cancel
+          </button>
+          <%= f.submit "Create & Sync Rule", class: "rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-sm hover:bg-indigo-700 transition cursor-pointer" %>
+        </div>
+      <% end %>
+    </div>
+  </dialog>
+</div>

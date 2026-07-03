@@ -14,14 +14,18 @@ module HotelOps
       return failure("Choose at least one action to apply.") unless apply_inventory? || apply_rates? || apply_restrictions?
       return failure("Start date is required.") if start_date.blank?
       return failure("End date is required.") if end_date.blank?
-      return failure("Price is required when applying rates.") if apply_rates? && price.blank? && selection[:single_supplement].blank? && selection[:base_occupancy].blank? && selection[:extra_pax_charge].blank?
+      return failure("Price is required when applying rates.") if channel_id.blank? && apply_rates? && price.blank? && selection[:single_supplement].blank? && selection[:base_occupancy].blank? && selection[:extra_pax_charge].blank?
 
       ActiveRecord::Base.transaction do
         Thread.current[:skip_ari_sync] = true
 
-        room_types.each do |room_type|
-          apply_inventory_to(room_type) if apply_inventory?
-          apply_rates_to(room_type) if apply_rates? || apply_restrictions?
+        if channel_id.present?
+          apply_channel_updates
+        else
+          room_types.each do |room_type|
+            apply_inventory_to(room_type) if apply_inventory?
+            apply_rates_to(room_type) if apply_rates? || apply_restrictions?
+          end
         end
 
         sync_to_channel_manager unless skip_sync
@@ -72,6 +76,56 @@ module HotelOps
 
     def apply_restrictions?
       cast_boolean(selection[:apply_restrictions])
+    end
+
+    def channel_id
+      selection[:channel_id].presence
+    end
+
+    def channel_rate_plan_id
+      selection[:channel_rate_plan_id].presence
+    end
+
+    def apply_channel_updates
+      room_types.each do |room_type|
+        (start_date..end_date).each do |date|
+          crr = room_type.channel_room_rates.find_or_initialize_by(
+            rate_plan_id: rate_plan_ids.first.is_a?(Integer) ? rate_plan_ids.first : nil,
+            channel_id: channel_id,
+            channel_rate_plan_id: channel_rate_plan_id,
+            date: date,
+            currency: currency
+          )
+
+          if apply_inventory?
+            crr.availability = quantity if selection.key?(:quantity)
+            crr.stop_sell = (status == "closed") if selection.key?(:status)
+          end
+
+          if apply_rates?
+            crr.price = price if selection.key?(:price) && price.present?
+            if selection[:modified_fields].present?
+              crr.base_occupancy = base_occupancy if selection[:modified_fields].include?("base_occupancy")
+              crr.extra_pax_charge = extra_pax_charge if selection[:modified_fields].include?("extra_pax_charge")
+              crr.single_supplement = single_supplement if selection[:modified_fields].include?("single_supplement")
+            else
+              crr.base_occupancy = base_occupancy if selection.key?(:base_occupancy) && selection[:base_occupancy].present?
+              crr.extra_pax_charge = extra_pax_charge if selection.key?(:extra_pax_charge) && selection[:extra_pax_charge].present?
+              crr.single_supplement = single_supplement if selection.key?(:single_supplement) && selection[:single_supplement].present?
+            end
+          end
+
+          if apply_restrictions?
+            crr.min_stay = restriction_values[:min_stay]
+            crr.max_stay = restriction_values[:max_stay]
+            crr.closed_to_arrival = restriction_values[:closed_to_arrival]
+            crr.closed_to_departure = restriction_values[:closed_to_departure]
+            crr.stop_sell = restriction_values[:stop_sell]
+          end
+
+          crr.save!
+        end
+      end
     end
 
     def quantity

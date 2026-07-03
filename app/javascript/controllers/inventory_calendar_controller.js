@@ -48,7 +48,10 @@ export default class extends Controller {
     "navStartDate",
     "navRoomType",
     "successDialog",
-    "info"
+    "info",
+    "channelIdField",
+    "channelRatePlanIdField",
+    "paxFields"
   ]
 
   static values = {
@@ -180,8 +183,24 @@ export default class extends Controller {
     this.resetForm()
     this.touchedFields.clear()
     
+    // Set channel-specific fields if present
+    if (this.hasChannelIdFieldTarget) {
+      this.channelIdFieldTarget.value = data.channelId || ""
+    }
+    if (this.hasChannelRatePlanIdFieldTarget) {
+      this.channelRatePlanIdFieldTarget.value = data.channelRatePlanId || ""
+    }
+    this.activeChannelName = data.channelName || ""
+
     // Set mode based on data attribute (rates, availability, etc.)
-    const mode = data.mode === "rates" ? "combined" : (data.mode || this.currentMode())
+    let mode = data.mode
+    if (mode === "channel_availability") {
+      mode = "availability"
+    } else if (mode === "channel_rates" || mode === "rates") {
+      mode = "combined"
+    } else {
+      mode = mode || this.currentMode()
+    }
     this.setMode(mode)
     
     this.startDateTarget.value = data.date
@@ -190,6 +209,11 @@ export default class extends Controller {
     // Select the specific room type
     this.roomTypeCheckboxTargets.forEach(cb => {
       cb.checked = (cb.value === data.roomTypeId)
+      if (data.channelId) {
+        cb.disabled = (cb.value !== data.roomTypeId)
+      } else {
+        cb.disabled = false
+      }
     })
 
     this.syncRatePlans()
@@ -198,10 +222,26 @@ export default class extends Controller {
     if (data.ratePlanId) {
       this.ratePlanCheckboxTargets.forEach(cb => {
         cb.checked = (cb.value === data.ratePlanId)
+        if (data.channelId) {
+          cb.disabled = (cb.value !== data.ratePlanId)
+        } else {
+          cb.disabled = false
+        }
       })
+    } else {
+      if (data.mode === "channel_availability") {
+        this.ratePlanCheckboxTargets.forEach(cb => {
+          cb.checked = false
+          cb.disabled = true
+        })
+      } else {
+        this.ratePlanCheckboxTargets.forEach(cb => {
+          cb.disabled = false
+        })
+      }
     }
 
-    if (data.mode === "availability") {
+    if (data.mode === "channel_availability" || data.mode === "availability") {
       this.quantityFieldTarget.value = data.quantity || ""
       this.statusFieldTarget.value = ""
       
@@ -219,11 +259,6 @@ export default class extends Controller {
       const currency = data.currency || this.baseCurrencyValue || this.defaultCurrencyValue || "MYR"
       this.syncCurrencySelect(currency)
 
-      if (this.hasPriceLabelTarget) {
-        const suffix = this.allowPaxPricingValue ? (data.sellMode === "per_person" ? " - Per Person" : " - Per Room") : ""
-        this.priceLabelTarget.textContent = `Price (${currency})${suffix}`
-      }
-
       this.minStayFieldTarget.value = data.minStay || ""
       this.maxStayFieldTarget.value = data.maxStay || ""
       this.ctaFieldTarget.checked = data.closedToArrival === "true"
@@ -231,7 +266,11 @@ export default class extends Controller {
       this.stopSellFieldTarget.checked = data.stopSell === "true"
     }
 
-    this.titleTarget.textContent = this.titleForMode(data.mode || this.currentMode())
+    if (data.channelName) {
+      this.titleTarget.textContent = `Update ${data.channelName}`
+    } else {
+      this.titleTarget.textContent = this.titleForMode(data.mode || this.currentMode())
+    }
     this.subtitleTarget.textContent = `Staging update for ${data.date}`
     this.submitButtonTarget.value = "Stage Update"
 
@@ -325,6 +364,9 @@ export default class extends Controller {
     const applyRates = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement"].includes(f))
     const applyRestrictions = modifiedFields.some(f => ["min_stay", "max_stay", "closed_to_arrival", "closed_to_departure", "stop_sell"].includes(f))
 
+    const channelId = this.hasChannelIdFieldTarget ? this.channelIdFieldTarget.value : ""
+    const channelRatePlanId = this.hasChannelRatePlanIdFieldTarget ? this.channelRatePlanIdFieldTarget.value : ""
+
     const change = {
       id: Math.random().toString(36).substr(2, 9),
       start_date: this.startDateTarget.value,
@@ -347,6 +389,9 @@ export default class extends Controller {
       closed_to_arrival: currentValues.closed_to_arrival,
       closed_to_departure: currentValues.closed_to_departure,
       stop_sell: currentValues.stop_sell,
+      channel_id: channelId,
+      channel_rate_plan_id: channelRatePlanId,
+      channel_name: this.activeChannelName || "",
       summary: this.buildSummary(selectedRoomTypes, selectedRatePlans, modifiedFields, currentValues)
     }
 
@@ -438,36 +483,61 @@ export default class extends Controller {
     
     dates.forEach(date => {
       change.room_type_ids.forEach(roomTypeId => {
-        if (change.apply_inventory) {
-          this.markCellDirty(`availability-cell-${roomTypeId}-${date}`, {
-            quantity: change.quantity,
-            status: change.status
-          })
-        }
-
-        if (change.apply_rates || change.apply_restrictions) {
-          change.rate_plan_ids.forEach(ratePlanId => {
-            let testid = `rate-cell-${roomTypeId}-${ratePlanId}-${date}`
-
-            // Handle virtual tiers (e.g. tier_walk_in_123)
-            if (typeof ratePlanId === 'string' && ratePlanId.startsWith('tier_')) {
-              const tierName = ratePlanId.split('_')[1].replace('_', '-')
-              testid = `${tierName}-cell-${roomTypeId}-${date}`
-            }
-
-            this.markCellDirty(testid, {
-              price: change.apply_rates ? change.price : undefined,
-              base_occupancy: change.apply_rates ? change.base_occupancy : undefined,
-              extra_pax_charge: change.apply_rates ? change.extra_pax_charge : undefined,
-              single_supplement: change.apply_rates ? change.single_supplement : undefined,
-              currency: change.currency,
-              min_stay: change.apply_restrictions ? change.min_stay : undefined,
-              max_stay: change.apply_restrictions ? change.max_stay : undefined,
-              closed_to_arrival: change.apply_restrictions ? change.closed_to_arrival : undefined,
-              closed_to_departure: change.apply_restrictions ? change.closed_to_departure : undefined,
-              stop_sell: change.apply_restrictions ? change.stop_sell : undefined
+        if (change.channel_id) {
+          if (change.apply_inventory) {
+            this.markCellDirty(`channel-availability-cell-${roomTypeId}-${change.channel_id}-${date}`, {
+              quantity: change.quantity,
+              status: change.status,
+              currency: change.currency
             })
-          })
+          } else {
+            change.rate_plan_ids.forEach(ratePlanId => {
+              this.markCellDirty(`channel-rate-cell-${roomTypeId}-${ratePlanId}-${change.channel_rate_plan_id}-${date}`, {
+                price: change.apply_rates ? change.price : undefined,
+                base_occupancy: change.apply_rates ? change.base_occupancy : undefined,
+                extra_pax_charge: change.apply_rates ? change.extra_pax_charge : undefined,
+                single_supplement: change.apply_rates ? change.single_supplement : undefined,
+                currency: change.currency,
+                min_stay: change.apply_restrictions ? change.min_stay : undefined,
+                max_stay: change.apply_restrictions ? change.max_stay : undefined,
+                closed_to_arrival: change.apply_restrictions ? change.closed_to_arrival : undefined,
+                closed_to_departure: change.apply_restrictions ? change.closed_to_departure : undefined,
+                stop_sell: change.apply_restrictions ? change.stop_sell : undefined
+              })
+            })
+          }
+        } else {
+          if (change.apply_inventory) {
+            this.markCellDirty(`availability-cell-${roomTypeId}-${date}`, {
+              quantity: change.quantity,
+              status: change.status
+            })
+          }
+
+          if (change.apply_rates || change.apply_restrictions) {
+            change.rate_plan_ids.forEach(ratePlanId => {
+              let testid = `rate-cell-${roomTypeId}-${ratePlanId}-${date}`
+
+              // Handle virtual tiers (e.g. tier_walk_in_123)
+              if (typeof ratePlanId === 'string' && ratePlanId.startsWith('tier_')) {
+                const tierName = ratePlanId.split('_')[1].replace('_', '-')
+                testid = `${tierName}-cell-${roomTypeId}-${date}`
+              }
+
+              this.markCellDirty(testid, {
+                price: change.apply_rates ? change.price : undefined,
+                base_occupancy: change.apply_rates ? change.base_occupancy : undefined,
+                extra_pax_charge: change.apply_rates ? change.extra_pax_charge : undefined,
+                single_supplement: change.apply_rates ? change.single_supplement : undefined,
+                currency: change.currency,
+                min_stay: change.apply_restrictions ? change.min_stay : undefined,
+                max_stay: change.apply_restrictions ? change.max_stay : undefined,
+                closed_to_arrival: change.apply_restrictions ? change.closed_to_arrival : undefined,
+                closed_to_departure: change.apply_restrictions ? change.closed_to_departure : undefined,
+                stop_sell: change.apply_restrictions ? change.stop_sell : undefined
+              })
+            })
+          }
         }
       })
     })
@@ -492,8 +562,22 @@ export default class extends Controller {
 
       // Update dataset with pending values so re-editing shows the correct data
       if (data) {
-        if (data.quantity !== undefined && data.quantity !== "") cell.dataset.quantity = data.quantity
-        if (data.status !== undefined && data.status !== "") cell.dataset.status = data.status
+        if (data.quantity !== undefined && data.quantity !== "") {
+          cell.dataset.quantity = data.quantity
+          // Update visual availability count
+          const qtySpan = cell.querySelector(".font-black")
+          if (qtySpan) qtySpan.textContent = data.quantity
+        }
+        if (data.status !== undefined && data.status !== "") {
+          cell.dataset.status = data.status
+          // Update status label ("Open" or "Blocked")
+          const statusSpan = cell.querySelector(".uppercase")
+          if (statusSpan) {
+            statusSpan.textContent = data.status === "closed" ? "Blocked" : "Open"
+            statusSpan.classList.toggle("text-rose-600", data.status === "closed")
+            statusSpan.classList.toggle("text-emerald-600", data.status !== "closed")
+          }
+        }
         if (data.price !== undefined && data.price !== "") {
           cell.dataset.price = data.price
 
@@ -513,11 +597,9 @@ export default class extends Controller {
             })
             priceSpan.textContent = `${symbol}${formatted}`
 
-            // For tiered rates, apply blue coloring if modified
-            if (cell.dataset.rateTier) {
-              priceSpan.classList.remove("text-slate-950")
-              priceSpan.classList.add("text-blue-700")
-            }
+            // For channel rates, apply bold indigo coloring if modified
+            priceSpan.classList.remove("text-slate-500")
+            priceSpan.classList.add("text-indigo-600", "font-extrabold")
           }
         }
         if (data.min_stay !== undefined && data.min_stay !== "") cell.dataset.minStay = data.min_stay
@@ -566,13 +648,16 @@ export default class extends Controller {
       const dateDisplay = change.start_date === change.end_date ? start : `${start} to ${end}`
       
       const detailsDisplay = change.summary.details.replace(/([A-Z]{3})(\d)/g, '$1 $2')
+      const actionBadge = change.channel_name 
+        ? `${change.summary.actions} (${change.channel_name})`
+        : change.summary.actions
 
       return `
         <div class="rounded-xl border border-indigo-100 bg-indigo-50/30 p-4 shadow-sm space-y-3">
           <div class="flex items-start justify-between">
             <div class="space-y-1">
               <div class="flex flex-wrap items-center gap-2">
-                <span class="inline-flex items-center rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-indigo-700">${change.summary.actions}</span>
+                <span class="inline-flex items-center rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-indigo-700">${actionBadge}</span>
                 <span class="text-xs font-black text-slate-900">${dateDisplay}</span>
               </div>
               <p class="text-[11px] font-bold text-indigo-600">${detailsDisplay}</p>
@@ -730,6 +815,7 @@ export default class extends Controller {
 
   toggleSections() {
     const mode = this.currentMode()
+    const isChannelOverride = this.hasChannelIdFieldTarget && this.channelIdFieldTarget.value !== ""
     
     // In Combined or Rates mode, we show everything except Inventory
     // In Availability mode, we show only Inventory
@@ -747,6 +833,10 @@ export default class extends Controller {
     
     if (this.hasRatePlanFieldsTarget) {
       this.ratePlanFieldsTarget.classList.toggle("hidden", mode === "availability")
+    }
+
+    if (this.hasPaxFieldsTarget) {
+      this.paxFieldsTarget.classList.toggle("hidden", mode === "availability" || isChannelOverride)
     }
   }
 

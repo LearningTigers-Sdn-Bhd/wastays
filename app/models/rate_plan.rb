@@ -4,6 +4,7 @@ class RatePlan < ApplicationRecord
   has_many :room_type_rate_plans, dependent: :destroy
   has_many :room_types, through: :room_type_rate_plans
   has_many :room_rates, dependent: :destroy
+  has_many :channel_room_rates, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
 
   validates :name, presence: true
