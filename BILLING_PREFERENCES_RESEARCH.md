@@ -191,6 +191,12 @@ The new folio becomes available in the routing dropdown but receives no transact
 
 ## Billing Instructions
 
+### Booking Control Panel implementation decision (2026-07-03)
+
+The Booking Control Panel no longer embeds an “Advanced Billing Rules” disclosure in Billing Preferences. For a concrete booking, authorized staff use **Change Billing Routes** from the left rail. It opens one wide, staged offcanvas containing the effective research table with Billing party before Target folio. Target folios are constrained to the selected party. All edits—including booking-local tax inclusions—are submitted through one footer **Apply changes** action. When posted charges are affected, the system presents one combined impact review and one global existing-and-future or future-only choice.
+
+Every routable parent row is expandable. Attached taxes and charges render as a flush nested table with aligned borders and no padded card container; an empty parent still expands to an explicit empty state. Hotel-default tax inclusion changes remain outside this booking-local flow.
+
 ### Main table
 
 Billing Instructions contains every active, routable parent transaction code, including system and custom codes. Non-routable payment and system-control codes are excluded rather than displayed as locked rows. A tax or charge code created solely as the posting result of an inclusion is also excluded from the top-level list and appears under its parent.
