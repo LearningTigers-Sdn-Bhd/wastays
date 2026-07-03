@@ -14,10 +14,12 @@ FactoryBot.define do
     end
 
     after(:create) do |hotel, evaluator|
+      Financials::EnsureDefaultGlMaps.call(hotel)
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+
       if evaluator.initialize_current_business_date
-        if evaluator.accounting_business_date
-          hotel.current_business_date_record&.update!(business_date: evaluator.accounting_business_date.to_date)
-        end
+        date = evaluator.accounting_business_date.presence || hotel.business_date_for(Time.current)
+        HotelBusinessDate.initialize_for_hotel!(hotel: hotel, date: date)
       else
         hotel.hotel_business_dates.delete_all
       end

@@ -12,7 +12,14 @@ module HotelPortal
     end
 
     def save
-      hotel.update(tax_params)
+      if hotel.update(tax_params)
+        if (hotel.saved_changes.keys & %w[sst_enabled tourism_tax_enabled]).any?
+          Financials::EnsureDefaultTransactionCodes.call(hotel)
+        end
+        true
+      else
+        false
+      end
     end
 
     private

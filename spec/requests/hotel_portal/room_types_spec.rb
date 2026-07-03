@@ -20,6 +20,27 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
     room_type.photos.attach(photo)
   end
 
+  describe "GET #index" do
+    let!(:room_group) { create(:room_group, hotel: hotel) }
+    let!(:grouped_room_type) { create(:room_type, hotel: hotel, room_group: room_group) }
+    let!(:ungrouped_room_type) { create(:room_type, hotel: hotel, room_group: nil) }
+
+    it "lists all room types by default" do
+      get hotel_room_types_path(hotel)
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "filters by room group id" do
+      get hotel_room_types_path(hotel), params: { room_group_id: room_group.id }
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "filters by unassigned room group" do
+      get hotel_room_types_path(hotel), params: { room_group_id: "unassigned" }
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
   describe "DELETE #destroy_photo" do
     let(:photo_attachment) { room_type.photos.first }
 

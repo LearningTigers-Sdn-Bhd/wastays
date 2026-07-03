@@ -18,9 +18,13 @@ module HotelPortal
         photos = @params.delete(:photos)
         @room_type.assign_attributes(@params)
 
+        is_new_record = @room_type.new_record?
+
         if @room_type.save
+          ensure_standard_rate_plan if is_new_record
           @room_type.attach_photos_with_limit(photos) if photos.present?
-          @hotel.complete_rooms! if @room_type.previously_new_record?
+          @hotel.complete_rooms! if is_new_record
+          sync_with_channel_manager
           OpenStruct.new(success?: true, room_type: @room_type)
         else
           OpenStruct.new(success?: false, room_type: @room_type)
@@ -41,6 +45,22 @@ module HotelPortal
         if @params[:amenities]
           @params[:amenities] = Array(@params[:amenities]).reject(&:blank?)
         end
+      end
+
+      def ensure_standard_rate_plan
+        return if @room_type.rate_plans.exists?
+
+        @room_type.rate_plans.create!(
+          name: "Standard Rate",
+          sell_mode: "per_room",
+          currency: @hotel.default_currency || "MYR"
+        )
+      end
+
+      def sync_with_channel_manager
+        return if @hotel.preferred_channel_manager.blank?
+
+        ChannelManagers::SyncStructureJob.perform_later(@room_type.class.name, @room_type.id, "sync")
       end
     end
   end

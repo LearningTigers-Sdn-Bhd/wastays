@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-center gap-x-4 border-b border-slate-100 px-6 py-5">
       <%= link_to hotel_room_groups_path(@hotel), class: "rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition hover:bg-slate-50" do %>
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        <%= cached_icon "chevron-left", class: "size-4.5" %>
       <% end %>
       <div>
         <h3 class="text-lg font-bold text-slate-900">Edit Room Group</h3>

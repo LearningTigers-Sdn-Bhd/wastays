@@ -46,10 +46,12 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   end
 
   def destroy
-    if @room_type.destroy
+    result = HotelPortal::RoomTypes::DestroyRoomType.new(room_type: @room_type).call
+
+    if result.success?
       redirect_to hotel_room_types_path(@hotel), notice: "Room type deleted successfully."
     else
-      redirect_to hotel_room_types_path(@hotel), alert: "Cannot delete room type: #{@room_type.errors.full_messages.to_sentence}"
+      redirect_to hotel_room_types_path(@hotel), alert: "Cannot delete room type: #{result.errors.full_messages.to_sentence}"
     end
   end
 

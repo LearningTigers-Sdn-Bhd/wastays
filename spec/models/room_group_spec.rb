@@ -14,7 +14,7 @@ RSpec.describe RoomGroup, type: :model do
     describe "uniqueness" do
       let(:hotel) { create(:hotel) }
       subject { build(:room_group, hotel: hotel) }
-      
+
       it { is_expected.to validate_uniqueness_of(:name).scoped_to(:hotel_id) }
     end
   end

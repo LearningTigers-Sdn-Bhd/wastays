@@ -51,8 +51,8 @@
 
     <!-- Amenities -->
     <div data-controller="multi-select-dropdown"
-         data-multi-select-dropdown-selected-value="<%= (room_type.amenities || []).to_json %>"
-         data-multi-select-dropdown-all-value="<%= Hotel::ROOM_AMENITIES.to_json %>"
+         data-multi-select-dropdown-selected-value="<%= room_type_amenities_json(room_type) %>"
+         data-multi-select-dropdown-all-value="<%= all_room_amenities_json %>"
          data-action="click@window->multi-select-dropdown#hideDropdown">
       <div class="flex items-center justify-between mb-3">
         <%= f.label :amenities, "Room Amenities", class: "block text-sm font-semibold text-slate-800" %>
@@ -73,20 +73,20 @@
                  >
 
           <div class="ml-auto pr-2">
-            <svg class="w-4 h-4 text-slate-400 transition-transform duration-200" data-multi-select-dropdown-target="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            <%= cached_icon "chevron-down", class: "w-4 h-4 text-slate-400 transition-transform duration-200", data: { multi_select_dropdown_target: "chevron" } %>
           </div>
         </div>
 
         <!-- Dropdown Options with Categories -->
         <div class="absolute z-50 mt-2 w-full max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl hidden custom-scrollbar"
              data-multi-select-dropdown-target="dropdown">
-          <% Hotel::CATEGORIZED_ROOM_AMENITIES.each do |cat| %>
+          <% categorized_room_amenities.each do |cat| %>
             <div data-category-container data-category-name="<%= cat[:category] %>" class="border-b border-slate-100 last:border-0">
               <button type="button" 
                       class="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-50/50 hover:bg-slate-50 transition-colors"
                       data-action="click->multi-select-dropdown#toggleCategory">
                 <span><%= cat[:category] %></span>
-                <svg class="size-3 text-slate-400 transition-transform duration-200" data-category-chevron xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                <%= cached_icon "chevron-down", class: "size-3 text-slate-400 transition-transform duration-200", data: { category_chevron: true } %>
               </button>
               
               <div class="hidden bg-white" data-category-content>
@@ -116,7 +116,7 @@
         <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold">
           <span data-name></span>
           <button type="button" class="hover:text-slate-300 transition-colors" data-remove-id data-action="click->multi-select-dropdown#remove">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            <%= cached_icon "x", class: "size-3.5" %>
           </button>
           <input type="hidden" name="room_type[amenities][]" value="">
         </div>
@@ -148,7 +148,7 @@
     <div class="p-8 border border-slate-200 rounded-[2.5rem] bg-white space-y-8 shadow-sm">
       <div class="flex items-center gap-x-3">
         <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h.01"/><path d="M12 7h.01"/><path d="M17 7h.01"/><path d="M7 12h.01"/><path d="M12 12h.01"/><path d="M17 12h.01"/><path d="M7 17h.01"/><path d="M12 17h.01"/><path d="M17 17h.01"/></svg>
+          <%= cached_icon "grid-3x3", class: "size-5" %>
         </div>
         <h3 class="text-lg font-bold text-slate-900">Room Numbering</h3>
       </div>
@@ -199,7 +199,7 @@
           <div class="flex justify-center px-8 pt-10 pb-12 border-2 border-slate-300 border-dashed rounded-[2.5rem] bg-white group-hover:bg-slate-50 transition-all group-hover:border-blue-400">
             <div class="space-y-4 text-center">
               <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto text-blue-500 mb-4 group-hover:scale-110 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <%= cached_icon "image", class: "size-8 text-blue-500" %>
               </div>
               <div class="flex text-sm text-slate-600 justify-center">
                 <label for="<%= f.field_id(:photos) %>" class="relative cursor-pointer bg-white rounded-md font-bold text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 px-2">
@@ -238,7 +238,7 @@
 
     <!-- Submit -->
     <div class="pt-10 border-t border-slate-100">
-      <%= f.submit (room_type.new_record? ? "Create Room Type" : "Update Room Type"), class: "w-full py-5 px-8 text-base font-bold rounded-[2rem] bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all shadow-xl shadow-blue-500/20 active:scale-[0.98]" %>
+      <%= f.submit class: "w-full py-5 px-8 text-base font-bold rounded-[2rem] bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all shadow-xl shadow-blue-500/20 active:scale-[0.98] cursor-pointer" %>
     </div>
   </div>
 <% end %>

@@ -6,7 +6,7 @@ class HotelPortal::RoomGroupsController < HotelPortal::BaseController
   before_action :set_room_group, only: [ :edit, :update, :destroy ]
 
   def index
-    @room_groups = @hotel.room_groups.order(:name)
+    @room_groups = @hotel.room_groups.includes(:room_types).order(:name)
     @room_group = @hotel.room_groups.build
   end
 
@@ -16,7 +16,7 @@ class HotelPortal::RoomGroupsController < HotelPortal::BaseController
     if @room_group.save
       redirect_to hotel_room_groups_path(@hotel), notice: "Room group created successfully."
     else
-      @room_groups = @hotel.room_groups.order(:name)
+      @room_groups = @hotel.room_groups.includes(:room_types).order(:name)
       render :index, status: :unprocessable_content
     end
   end
