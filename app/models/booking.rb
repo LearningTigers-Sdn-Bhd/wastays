@@ -23,6 +23,7 @@ class Booking < ApplicationRecord
   has_many :booking_billing_assignments, dependent: :destroy
   has_many :booking_billing_parties, dependent: :restrict_with_error
   has_many :booking_billing_terms, through: :booking_billing_parties, source: :billing_terms
+  has_many :booking_tax_inclusion_overrides, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_one_attached :id_front
   has_one_attached :id_back

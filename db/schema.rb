@@ -387,6 +387,28 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.index ["room_type_id"], name: "index_booking_rooms_on_room_type_id"
   end
 
+  create_table "booking_tax_inclusion_overrides", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "booking_id", null: false
+    t.bigint "transaction_code_id", null: false
+    t.bigint "hotel_tax_id"
+    t.string "primary_tax_key"
+    t.string "action", null: false
+    t.bigint "actor_id"
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_booking_tax_inclusion_overrides_on_actor_id"
+    t.index ["booking_id", "transaction_code_id", "hotel_tax_id"], name: "idx_booking_tax_overrides_hotel_tax", unique: true, where: "(hotel_tax_id IS NOT NULL)"
+    t.index ["booking_id", "transaction_code_id", "primary_tax_key"], name: "idx_booking_tax_overrides_primary", unique: true, where: "(primary_tax_key IS NOT NULL)"
+    t.index ["booking_id"], name: "index_booking_tax_inclusion_overrides_on_booking_id"
+    t.index ["hotel_id"], name: "index_booking_tax_inclusion_overrides_on_hotel_id"
+    t.index ["hotel_tax_id"], name: "index_booking_tax_inclusion_overrides_on_hotel_tax_id"
+    t.index ["transaction_code_id"], name: "index_booking_tax_inclusion_overrides_on_transaction_code_id"
+    t.check_constraint "((hotel_tax_id IS NOT NULL)::integer + (primary_tax_key IS NOT NULL)::integer) = 1", name: "booking_tax_overrides_one_tax_source"
+    t.check_constraint "action::text = ANY (ARRAY['include'::character varying, 'exclude'::character varying]::text[])", name: "booking_tax_overrides_action_allowed"
+  end
+
   create_table "bookings", force: :cascade do |t|
     t.bigint "booking_quote_id"
     t.bigint "hotel_id", null: false
@@ -1925,6 +1947,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
   add_foreign_key "booking_rooms", "bookings"
   add_foreign_key "booking_rooms", "rate_plans"
   add_foreign_key "booking_rooms", "room_types"
+  add_foreign_key "booking_tax_inclusion_overrides", "bookings"
+  add_foreign_key "booking_tax_inclusion_overrides", "hotel_taxes"
+  add_foreign_key "booking_tax_inclusion_overrides", "hotels"
+  add_foreign_key "booking_tax_inclusion_overrides", "transaction_codes"
+  add_foreign_key "booking_tax_inclusion_overrides", "users", column: "actor_id"
   add_foreign_key "bookings", "booking_quotes"
   add_foreign_key "bookings", "corporate_entities"
   add_foreign_key "bookings", "group_bookings"
