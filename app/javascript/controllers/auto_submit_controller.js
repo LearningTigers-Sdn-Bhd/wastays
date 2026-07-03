@@ -52,8 +52,9 @@ export default class extends Controller {
       if (input.name && !input.disabled) {
         const isRadioOrCheckbox = input.type === "radio" || input.type === "checkbox"
         const isEmpty = !input.value || input.value.trim() === ""
+        const isActiveElement = input === document.activeElement
 
-        if (!isRadioOrCheckbox && isEmpty) {
+        if (!isRadioOrCheckbox && isEmpty && !isActiveElement) {
           input.disabled = true
           disabledInputs.push(input)
         } else if (input.type === "radio" && input.checked && input.value === "") {

@@ -14,6 +14,7 @@ class Booking < ApplicationRecord
   has_many :booking_guests, dependent: :destroy
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
+  has_one :guest_registration_card, dependent: :destroy
   has_one :refund_request, dependent: :destroy
   has_many :booking_folios, dependent: :destroy
   has_one :booking_folio, -> { where(is_primary: true) }, dependent: :destroy
@@ -90,6 +91,7 @@ class Booking < ApplicationRecord
 
   before_validation :generate_confirmation_token, on: :create
   before_validation :normalize_guest_data
+  before_create :assign_guest_registration_number
 
   scope :recent_first, -> { order(created_at: :desc) }
   scope :confirmed, -> { where(status: "confirmed") }
@@ -218,6 +220,10 @@ class Booking < ApplicationRecord
 
   def checked_out?
     status == "completed"
+  end
+
+  def guest_registration_card_number_display
+    formatted_guest_registration_number.presence || "Pending check-in"
   end
 
   def payout_eligible?
@@ -442,6 +448,10 @@ class Booking < ApplicationRecord
       self.confirmation_token = candidate
       break
     end
+  end
+
+  def assign_guest_registration_number
+    self.guest_registration_number ||= HotelCounter.increment!(hotel: hotel, type: "guest_registration")
   end
 
   def normalize_guest_data

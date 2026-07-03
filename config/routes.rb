@@ -355,6 +355,7 @@ Rails.application.routes.draw do
 
       resources :refund_requests, only: [ :new, :create ]
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
+      resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
     end
     scope "bookings/:booking_id/show/actions", as: :booking_show_action, module: "bookings/show/actions" do
       match "manage-guest", to: "manage_guests#show", via: [ :get, :post, :patch ], as: :manage_guest
@@ -439,6 +440,7 @@ Rails.application.routes.draw do
         get :extra_charge
         get :non_national
         get :tourism_tax
+        get :guest_registration_cards
       end
     end
     resources :night_audits, only: [ :index, :show, :create ] do
