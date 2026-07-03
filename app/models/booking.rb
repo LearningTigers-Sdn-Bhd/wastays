@@ -7,6 +7,7 @@ class Booking < ApplicationRecord
 
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
+  belongs_to :group_booking, optional: true
   belongs_to :payout_batch, optional: true
   has_many :booking_rooms, dependent: :destroy
   accepts_nested_attributes_for :booking_rooms
@@ -17,8 +18,11 @@ class Booking < ApplicationRecord
   has_one :guest_registration_card, dependent: :destroy
   has_one :refund_request, dependent: :destroy
   has_many :booking_folios, dependent: :destroy
-  has_one :booking_folio, -> { where(is_primary: true) }, dependent: :destroy
+  has_one :booking_folio, -> { where(is_primary: true, booking_room_id: nil) }, dependent: :destroy
   has_many :folio_routing_rules, dependent: :destroy
+  has_many :booking_billing_assignments, dependent: :destroy
+  has_many :booking_billing_parties, dependent: :restrict_with_error
+  has_many :booking_billing_terms, through: :booking_billing_parties, source: :billing_terms
   has_many :deposits, dependent: :restrict_with_error
   has_one_attached :id_front
   has_one_attached :id_back
@@ -104,6 +108,8 @@ class Booking < ApplicationRecord
   validates :check_in, :check_out, :adults, :total_amount, :confirmation_token, presence: true
   validates :confirmation_token, uniqueness: true
   validates :folio_account_reference, uniqueness: { scope: :hotel_id, allow_blank: true }
+  validates :group_position, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validate :group_booking_belongs_to_hotel
 
   before_validation :generate_confirmation_token, on: :create
   before_validation :normalize_guest_data
@@ -240,6 +246,10 @@ class Booking < ApplicationRecord
 
   def guest_registration_card_number_display
     formatted_guest_registration_number.presence || "Pending check-in"
+  end
+
+  def group_booking?
+    group_booking_id.present? || booking_rooms.sum { |booking_room| booking_room.quantity.to_i } > 1
   end
 
   def payout_eligible?
@@ -411,6 +421,12 @@ class Booking < ApplicationRecord
   end
 
   private
+
+  def group_booking_belongs_to_hotel
+    return if group_booking.blank? || hotel_id.blank? || group_booking.hotel_id == hotel_id
+
+    errors.add(:group_booking, "must belong to the same hotel")
+  end
 
   def status_changed_on_persisted_record?
     persisted? && will_save_change_to_status?
