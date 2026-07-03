@@ -248,14 +248,16 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("Upcoming Charges")
       expect(response.body).to include("SGD 150.00")
       expect(response.body).to include("SGD 125.00")
-      expect(response.body).to include("Posted Transactions")
       expect(response.body).to include("Upcoming Charges")
       expect(response.body).to include("Room charge")
       expect(response.body).to include('data-section="posted"')
-      expect(response.body).to include('aria-expanded="true"')
+      expect(response.body).to include('aria-expanded="false"')
       expect(response.body).to include('data-section="forecasted"')
       expect(response.body).to include('data-folio-ledger-section-param="forecasted"')
       expect(response.body).to include("Future room charge")
+      html = Nokogiri::HTML(response.body)
+      expect(html.css("tr[data-section='posted']").all? { |row| !row["class"].to_s.split.include?("hidden") }).to be(true)
+      expect(html.css("tr[data-section='forecasted']").all? { |row| row["class"].to_s.split.include?("hidden") }).to be(true)
     end
   end
 

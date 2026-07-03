@@ -4,8 +4,9 @@ require "ostruct"
 
 module Bookings
   class BuildFinancialSnapshot
-    def initialize(hotel:, check_in:, check_out:, guest_country:, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false, rate_tier: :standard)
+    def initialize(hotel:, check_in:, check_out:, guest_country:, booking: nil, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false, rate_tier: :standard)
       @hotel = hotel
+      @booking = booking
       @check_in = check_in.to_date
       @check_out = check_out.to_date
       @guest_country = guest_country
@@ -178,9 +179,15 @@ module Bookings
     def room_revenue_tax_rules
       return [] unless room_revenue_transaction_code&.active? && room_revenue_transaction_code.is_taxable?
 
-      room_revenue_transaction_code.transaction_code_taxes.includes(:hotel_tax).select do |rule|
+      effective_room_revenue_tax_rules.select do |rule|
         room_transaction_code_tax_enabled?(rule)
       end
+    end
+
+    def effective_room_revenue_tax_rules
+      return room_revenue_transaction_code.transaction_code_taxes.includes(:hotel_tax) unless @booking
+
+      FolioRouting::EffectiveTaxRules.call(booking: @booking, transaction_code: room_revenue_transaction_code)
     end
 
     def room_revenue_transaction_code
