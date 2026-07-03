@@ -16,7 +16,10 @@
             <% if room_type.smoking_allowed %>
               <%= cached_icon "cigarette", stroke_width: 2.25, class: "size-2.5" %>
             <% else %>
-              <%= cached_icon "cigarette-off", stroke_width: 2.25, class: "size-2.5" %>
+              <span class="relative inline-flex items-center justify-center size-2.5">
+                <%= cached_icon "cigarette", stroke_width: 2.25, class: "size-2.5" %>
+                <%= cached_icon "ban", stroke_width: 2.25, class: "absolute size-2.5" %>
+              </span>
             <% end %>
           </div>
           <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded shadow-xl pointer-events-none text-white text-[10px] font-bold uppercase tracking-wider">
@@ -30,7 +33,10 @@
             <% if room_type.pets_allowed %>
               <%= cached_icon "paw-print", stroke_width: 2.25, class: "size-2.5" %>
             <% else %>
-              <%= cached_icon "ban", stroke_width: 2.25, class: "size-2.5" %>
+              <span class="relative inline-flex items-center justify-center size-2.5">
+                <%= cached_icon "paw-print", stroke_width: 2.25, class: "size-2.5" %>
+                <%= cached_icon "ban", stroke_width: 2.25, class: "absolute size-2.5" %>
+              </span>
             <% end %>
           </div>
           <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded shadow-xl pointer-events-none text-white text-[10px] font-bold uppercase tracking-wider">
