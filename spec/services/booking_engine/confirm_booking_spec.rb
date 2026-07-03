@@ -90,6 +90,21 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(quote.reload.special_requests).to eq('Late arrival at 10 PM')
     end
 
+    it "expands a multi-room quote into grouped one-room bookings when the backend gate is enabled" do
+      allow(BookingRedesign).to receive(:enabled?).and_return(true)
+      allow(Notifications::Dispatcher).to receive(:new).and_return(instance_double(Notifications::Dispatcher, call: []))
+      quote_item.update!(quantity: 2, subtotal: 400)
+      quote.update!(total_amount: 400, adults: 2)
+
+      result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
+
+      expect(result).to be_success
+      expect(result.group_booking.bookings.count).to eq(2)
+      expect(result.bookings.map { |booking| booking.booking_rooms.sole.quantity }).to all(eq(1))
+      expect(result.bookings.map { |booking| booking.booking_guests.sole.role }).to all(eq("primary"))
+      expect(result.group_booking.group_deposits.sole).to have_attributes(amount: 400.to_d, status: "allocated")
+    end
+
     it 'returns existing booking when quote is already converted' do
       existing = create(:booking, booking_quote: quote, hotel: hotel)
 
