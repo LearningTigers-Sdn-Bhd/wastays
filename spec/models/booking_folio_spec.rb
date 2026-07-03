@@ -132,6 +132,45 @@ RSpec.describe BookingFolio, type: :model do
       expect(duplicate_primary.errors[:is_primary]).to include("has already been taken")
     end
 
+    it "allows independent booking-level and room-level primary folios" do
+      booking_primary = create(:booking_folio, hotel: booking.hotel, booking: booking, folio_number: 1)
+      booking_room = create(:booking_room, booking: booking)
+      room_primary = create(:booking_folio, hotel: booking.hotel, booking: booking, booking_room: booking_room, folio_number: 2)
+
+      expect(booking_primary).to be_is_primary
+      expect(room_primary).to be_is_primary
+      expect(booking.reload.booking_folio).to eq(booking_primary)
+    end
+
+    it "allows primary folios for different rooms" do
+      first_room = create(:booking_room, booking: booking)
+      second_room = create(:booking_room, booking: booking)
+
+      first_primary = create(:booking_folio, hotel: booking.hotel, booking: booking, booking_room: first_room, folio_number: 1)
+      second_primary = create(:booking_folio, hotel: booking.hotel, booking: booking, booking_room: second_room, folio_number: 2)
+
+      expect(first_primary).to be_valid
+      expect(second_primary).to be_valid
+    end
+
+    it "rejects duplicate primary folios for the same room" do
+      booking_room = create(:booking_room, booking: booking)
+      create(:booking_folio, hotel: booking.hotel, booking: booking, booking_room: booking_room, folio_number: 1)
+
+      duplicate = build(:booking_folio, hotel: booking.hotel, booking: booking, booking_room: booking_room, folio_number: 2)
+
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:is_primary]).to include("has already been taken")
+    end
+
+    it "rejects a booking room from another booking" do
+      other_room = create(:booking_room)
+      folio = build(:booking_folio, :secondary, hotel: booking.hotel, booking: booking, booking_room: other_room)
+
+      expect(folio).not_to be_valid
+      expect(folio.errors[:booking_room]).to include("must belong to the same booking")
+    end
+
     it "allows the same folio number for different hotels" do
       create(:booking_folio, hotel: booking.hotel, booking: booking, folio_number: 1)
       other_booking = create(:booking)
@@ -158,6 +197,39 @@ RSpec.describe BookingFolio, type: :model do
 
       expect(folio).not_to be_valid
       expect(folio.errors[:hotel]).to include("must match booking hotel")
+    end
+  end
+
+  describe "room scope" do
+    let(:booking) { create(:booking) }
+    let(:booking_room) { create(:booking_room, booking: booking) }
+    let!(:booking_level_folio) { create(:booking_folio, booking: booking, hotel: booking.hotel) }
+    let!(:room_folio) { create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, booking_room: booking_room) }
+
+    it "separates room-scoped and booking-level folios" do
+      expect(described_class.booking_level).to include(booking_level_folio)
+      expect(described_class.booking_level).not_to include(room_folio)
+      expect(described_class.room_scoped).to include(room_folio)
+      expect(described_class.room_scoped).not_to include(booking_level_folio)
+    end
+
+    it "enforces the booking room foreign key" do
+      expect {
+        room_folio.update_column(:booking_room_id, -1)
+      }.to raise_error(ActiveRecord::InvalidForeignKey)
+    end
+
+    it "does not count a room primary as a replacement for the booking-level primary" do
+      room_folio.update!(is_primary: true)
+
+      expect(booking_level_folio.update(is_primary: false)).to be(false)
+      expect(booking_level_folio.errors[:is_primary]).to include("must remain set until another primary folio exists in the same scope")
+    end
+
+    it "restricts deletion of a booking room with folios" do
+      expect(booking_room.destroy).to be(false)
+      expect(booking_room.errors[:base]).to include("Cannot delete record because dependent booking folios exist")
+      expect { booking_room.delete }.to raise_error(ActiveRecord::StatementInvalid, /RestrictViolation/)
     end
   end
 

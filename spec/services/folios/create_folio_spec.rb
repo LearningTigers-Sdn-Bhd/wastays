@@ -91,4 +91,48 @@ RSpec.describe Folios::CreateFolio do
     expect(result.folio.reload).to be_is_primary
     expect(result.folio.folio_reference_display).to eq("#{original_account_reference}/3")
   end
+
+  it "creates and promotes a room-scoped folio without disturbing other primary scopes" do
+    first_room = create(:booking_room, booking: booking)
+    second_room = create(:booking_room, booking: booking)
+    first_room_primary = create(:booking_folio, booking: booking, hotel: hotel, booking_room: first_room, folio_number: 103)
+
+    result = described_class.call(
+      booking: booking,
+      user: user,
+      attributes: {
+        booking_room_id: second_room.id,
+        name: "Room 2 Guest Folio",
+        folio_type: "guest",
+        payer_type: "guest",
+        is_primary: true,
+        set_folio_as_primary_reason: "Initialize room billing"
+      }
+    )
+
+    expect(result).to be_success
+    expect(result.folio.booking_room).to eq(second_room)
+    expect(result.folio).to be_is_primary
+    expect(guest_folio.reload).to be_is_primary
+    expect(first_room_primary.reload).to be_is_primary
+    expect(FolioOperationLog.last.metadata["booking_room_id"]).to eq(second_room.id)
+  end
+
+  it "rejects room scope from another booking" do
+    other_room = create(:booking_room)
+
+    result = described_class.call(
+      booking: booking,
+      user: user,
+      attributes: {
+        booking_room_id: other_room.id,
+        name: "Invalid Room Folio",
+        folio_type: "guest",
+        payer_type: "guest"
+      }
+    )
+
+    expect(result).not_to be_success
+    expect(result.error).to include("Booking room must belong to the same booking")
+  end
 end

@@ -1,6 +1,7 @@
 FactoryBot.define do
   factory :booking_folio do
     association :booking
+    booking_room { nil }
     hotel { booking.hotel }
     sequence(:folio_number) { |n| n }
     name { "Guest Folio" }
