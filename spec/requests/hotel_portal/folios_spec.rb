@@ -570,134 +570,27 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response).to have_http_status(:forbidden).or have_http_status(:redirect)
     end
 
-    it "creates, edits, and deactivates a billing instruction with activity logs" do
+    it "redirects every legacy mutation entry point to Change Billing Routes" do
       grant_permission("manage_folio_movements")
       booking = create_booking_with_folio(guest_name: "Rule Manager", confirmation_token: "BK-RULE", folio_number: 635)
-      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 636, name: "Company Folio")
-      guest_folio = booking.booking_folio
       code = create(:transaction_code, hotel: hotel, code: "ROOM-R", name: "Room Charge", category: "accommodation")
+      rule = create(:folio_routing_rule, booking:, hotel:, transaction_code: code, target_folio: booking.booking_folio)
+      destination = billing_routes_hotel_booking_control_panel_path(hotel, booking)
 
       get new_routing_rule_hotel_folio_path(hotel, booking, origin: "folios")
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Add Billing Instruction")
-      expect(response.body).to include("ROOM-R")
+      expect(response).to redirect_to(destination)
 
-      expect {
-        post routing_rules_hotel_folio_path(hotel, booking, origin: "folios", active_folio_id: guest_folio.id), params: {
-          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: company_folio.id }
-        }
-      }.to change(FolioRoutingRule, :count).by(1)
-        .and change(FolioOperationLog.where(operation_type: "create_routing_rule"), :count).by(1)
+      post routing_rules_hotel_folio_path(hotel, booking)
+      expect(response).to redirect_to(destination)
 
-      rule = FolioRoutingRule.last
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios", tab: "billing_instructions", active_folio_id: guest_folio.id))
-      expect(rule.target_folio).to eq(company_folio)
+      get edit_routing_rule_hotel_folio_path(hotel, booking, rule)
+      expect(response).to redirect_to(destination)
 
-      patch routing_rule_hotel_folio_path(hotel, booking, rule), params: {
-        folio_routing_rule: { transaction_code_id: code.id, target_folio_id: guest_folio.id, active: "1" }
-      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+      patch routing_rule_hotel_folio_path(hotel, booking, rule)
+      expect(response).to redirect_to(destination)
 
-      expect(response).to have_http_status(:success)
-      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(hotel_folio_path(hotel, booking))
-
-      rule.reload.update!(target_folio: company_folio)
-
-      expect {
-        patch routing_rule_hotel_folio_path(hotel, booking, rule), params: {
-          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: guest_folio.id, active: "1" }
-        }
-      }.to change(FolioOperationLog.where(operation_type: "update_routing_rule"), :count).by(1)
-
-      expect(rule.reload.target_folio).to eq(guest_folio)
-
-      expect {
-        patch deactivate_routing_rule_hotel_folio_path(hotel, booking, rule)
-      }.to change(FolioOperationLog.where(operation_type: "deactivate_routing_rule"), :count).by(1)
-
-      expect(rule.reload).not_to be_active
-    end
-
-    it "creates a billing instruction and completes the offcanvas for Turbo Stream submissions" do
-      grant_permission("manage_folio_movements")
-      booking = create_booking_with_folio(guest_name: "Rule Sheet", confirmation_token: "BK-RULE-SHEET", folio_number: 645)
-      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 646, name: "Company Folio")
-      code = create(:transaction_code, hotel: hotel, code: "ROOM-S", name: "Room Charge", category: "accommodation")
-
-      expect {
-        post routing_rules_hotel_folio_path(hotel, booking, active_folio_id: booking.booking_folio.id), params: {
-          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: company_folio.id }
-        }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
-      }.to change(FolioRoutingRule, :count).by(1)
-
-      expect(response).to have_http_status(:success)
-      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(hotel_folio_path(hotel, booking))
-    end
-
-    it "renders attached tax selectors and saves only explicit child overrides" do
-      grant_permission("manage_folio_movements")
-      booking = create_booking_with_folio(guest_name: "Tax Rule Manager", confirmation_token: "BK-TAXRULE", folio_number: 637)
-      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 638, name: "Company Folio")
-      tax_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 639, name: "Tax Folio")
-      hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
-      Financials::EnsureDefaultTransactionCodes.call(hotel)
-      code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
-      sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
-      ttx_code = hotel.transaction_codes.find_by!(system_key: "tourism_tax")
-      code.update!(is_taxable: true)
-      code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
-      code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
-
-      get new_routing_rule_hotel_folio_path(hotel, booking, origin: "folios")
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("FNB_TAX_SST")
-      expect(response.body).to include("FNB_TAX_TTX")
-
-      expect {
-        post routing_rules_hotel_folio_path(hotel, booking), params: {
-          folio_routing_rule: {
-            transaction_code_id: code.id,
-            target_folio_id: company_folio.id,
-            child_rules: {
-              sst_code.id => { transaction_code_id: sst_code.id, target_folio_id: company_folio.id, enabled: "1" },
-              ttx_code.id => { transaction_code_id: ttx_code.id, target_folio_id: tax_folio.id, enabled: "1" }
-            }
-          }
-        }
-      }.to change(FolioRoutingRule, :count).by(2)
-
-      expect(FolioRoutingRule.active.find_by(booking: booking, transaction_code: code).target_folio).to eq(company_folio)
-      expect(FolioRoutingRule.active.find_by(booking: booking, transaction_code: sst_code)).to be_nil
-      expect(FolioRoutingRule.active.find_by(booking: booking, transaction_code: ttx_code).target_folio).to eq(tax_folio)
-    end
-
-    it "refreshes active forecasts after a billing instruction changes" do
-      grant_permission("manage_folio_movements")
-      booking = create(:booking,
-        hotel: hotel,
-        status: "checked_in",
-        check_in: Date.current,
-        check_out: Date.current + 1.day)
-      create(:booking_room, booking: booking, subtotal: 100.0)
-      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, folio_number: 641)
-      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 642)
-      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
-      Folios::GenerateForecastedCharges.call(booking_folio: guest_folio)
-
-      post routing_rules_hotel_folio_path(hotel, booking), params: {
-        folio_routing_rule: {
-          transaction_code_id: room_code.id,
-          target_folio_id: company_folio.id
-        }
-      }
-
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, tab: "billing_instructions"))
-      expect(guest_folio.folio_forecasted_charges.forecast).to be_none
-      expect(company_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation").count).to eq(1)
+      patch deactivate_routing_rule_hotel_folio_path(hotel, booking, rule)
+      expect(response).to redirect_to(destination)
     end
   end
 
