@@ -1,0 +1,41 @@
+<dialog class="fixed inset-0 z-[130] m-auto w-[min(92vw,34rem)] rounded-xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-950/55"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="routing-preview-alert-title"
+        aria-describedby="routing-preview-alert-description"
+        data-controller="warning-dialog"
+        data-warning-dialog-close-url-value="<%= presenter.close_alert_path %>"
+        data-warning-dialog-trigger-selector-value='[data-warning-dialog-trigger="routing-preview"]'
+        data-action="click->warning-dialog#closeOnBackdrop">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <p class="text-xs font-semibold text-amber-700">Existing charge impact</p>
+        <h2 id="routing-preview-alert-title" class="mt-1 text-lg font-bold text-slate-950">Apply routing change?</h2>
+      </div>
+      <button type="button" class="rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" aria-label="Close routing warning" data-action="warning-dialog#close"><%= cached_icon "x", class: "size-4" %></button>
+    </div>
+  </div>
+
+  <div class="px-5 py-5">
+    <p id="routing-preview-alert-description" class="text-sm leading-6 text-slate-600"><strong class="text-slate-950"><%= presenter.routing_preview&.count.to_i %> transactions</strong> totaling <strong class="tabular-nums text-slate-950"><%= presenter.money(presenter.routing_preview&.amount || 0) %></strong> currently match this instruction.</p>
+
+    <% if presenter.selected_routing_rule %>
+      <%= form_with url: apply_routing_hotel_booking_control_panel_path(current_hotel, booking), method: :post, class: "mt-5 space-y-4" do %>
+        <%= hidden_field_tag :folio_routing_rule_id, presenter.selected_routing_rule.id %>
+        <fieldset>
+          <legend class="text-xs font-semibold text-slate-600">Apply change to</legend>
+          <div class="mt-2 divide-y divide-slate-200 border-y border-slate-200">
+            <label class="flex cursor-pointer gap-3 px-1 py-3 text-sm"><%= radio_button_tag :confirmation, "existing_and_future", true, class: "mt-0.5 border-slate-300 text-slate-950 focus:ring-blue-600" %><span><strong class="text-slate-950">Existing eligible and future charges</strong><span class="mt-0.5 block text-xs text-slate-500">Moves matching posted transactions and routes future charges.</span></span></label>
+            <label class="flex cursor-pointer gap-3 px-1 py-3 text-sm"><%= radio_button_tag :confirmation, "future_only", false, class: "mt-0.5 border-slate-300 text-slate-950 focus:ring-blue-600" %><span><strong class="text-slate-950">Future charges only</strong><span class="mt-0.5 block text-xs text-slate-500">Leaves posted transactions on their current folios.</span></span></label>
+          </div>
+        </fieldset>
+        <div><%= label_tag :reason, "Reason", class: "mb-1.5 block text-xs font-semibold text-slate-600" %><%= text_field_tag :reason, nil, required: true, autocomplete: "off", class: "w-full rounded-md border border-slate-300 bg-white text-sm focus:border-blue-600 focus:ring-blue-600" %></div>
+        <div class="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-end">
+          <button type="button" class="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" data-action="warning-dialog#close">Cancel</button>
+          <%= submit_tag "Confirm routing change", class: "rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</dialog>

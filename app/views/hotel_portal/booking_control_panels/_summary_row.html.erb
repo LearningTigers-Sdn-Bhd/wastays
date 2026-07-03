@@ -1,0 +1,40 @@
+<section class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" aria-label="Booking summary">
+  <div class="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+    <div class="flex min-w-0 items-center gap-3">
+      <%= link_to hotel_bookings_path(current_hotel), class: "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50", aria: { label: "Back to bookings" } do %>
+        <%= cached_icon "arrow-left", class: "size-4" %>
+      <% end %>
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="truncate text-lg font-black tracking-tight text-slate-950"><%= presenter.primary_guest_name %></h1>
+          <% if presenter.group_booking? %>
+            <span class="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-700">Group</span>
+          <% end %>
+          <span class="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-700"><%= presenter.status_label %></span>
+        </div>
+        <p class="mt-0.5 text-xs font-semibold text-slate-500"><%= presenter.booking_reference %> · <%= presenter.source_label %></p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+        <% if booking.status == "confirmed" %>
+          <%= link_to "Check-in", hotel_booking_transaction_check_in_reservation_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+        <% elsif booking.status == "checked_in" %>
+          <%= link_to "Check-out", hotel_booking_transaction_check_out_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+        <% elsif booking.status == "checkout_required" %>
+          <%= link_to "Complete Checkout", hotel_booking_transaction_check_out_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-6">
+    <% presenter.summary_items.each do |label, value| %>
+      <div class="bg-white px-4 py-3">
+        <p class="text-[10px] font-black uppercase tracking-wider text-slate-500"><%= label %></p>
+        <p class="mt-1 truncate text-sm font-bold text-slate-950"><%= value %></p>
+      </div>
+    <% end %>
+  </div>
+</section>

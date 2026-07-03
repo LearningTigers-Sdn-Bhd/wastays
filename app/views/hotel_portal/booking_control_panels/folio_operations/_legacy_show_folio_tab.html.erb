@@ -1,0 +1,44 @@
+<%= render "hotel_portal/bookings/show_folio_toolbar", booking: booking %>
+
+<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+    <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider text-[10px]">Transaction History</h3>
+  </div>
+  <div class="p-0 overflow-x-auto">
+    <table class="w-full text-left text-sm">
+      <thead>
+        <tr class="bg-slate-50/50 border-b border-slate-200">
+          <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Date</th>
+          <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Description</th>
+          <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px]">Category</th>
+          <th class="px-6 py-3 font-bold text-slate-900 uppercase tracking-wider text-[10px] text-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% if booking.booking_folio&.folio_transactions&.any? %>
+          <% booking.booking_folio.folio_transactions.order(posting_date: :asc, created_at: :asc).each do |tx| %>
+            <tr>
+              <td class="px-6 py-4 text-slate-600 whitespace-nowrap"><%= tx.posting_date.strftime("%d %b %Y") %></td>
+              <td class="px-6 py-4">
+                <p class="font-semibold text-slate-900"><%= tx.description %></p>
+                <p class="text-[10px] text-slate-400 font-medium uppercase"><%= tx.transaction_type %></p>
+              </td>
+              <td class="px-6 py-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 uppercase">
+                  <%= tx.category %>
+                </span>
+              </td>
+              <td class="px-6 py-4 text-right font-bold <%= folio_transaction_amount_class(tx) %>">
+                <%= folio_transaction_amount_label(tx) %>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="4" class="px-6 py-10 text-center text-slate-400 font-medium">No transactions recorded.</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

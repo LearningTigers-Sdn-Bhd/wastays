@@ -359,6 +359,29 @@ Rails.application.routes.draw do
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
     end
+    resources :booking_control_panels, only: :show, param: :booking_id, path: "booking-control-panels" do
+      member do
+        patch :set_primary_guest, controller: :booking_control_panel_actions
+        patch :update_room_rate, controller: :booking_control_panel_actions
+        get :new_folio_window, controller: :booking_control_panel_actions
+        post :create_folio_window, controller: :booking_control_panel_actions
+        post :apply_billing, controller: :booking_control_panel_actions
+        post :add_billing_party, controller: :booking_control_panel_actions
+        patch :update_billing_terms, controller: :booking_control_panel_actions
+        patch :archive_billing_party, controller: :booking_control_panel_actions
+        post :create_group_billing_arrangement, controller: :booking_control_panel_actions
+        patch :update_group_billing_arrangement, controller: :booking_control_panel_actions
+        patch :deactivate_group_billing_arrangement, controller: :booking_control_panel_actions
+        post :apply_routing, controller: :booking_control_panel_actions
+        post :allocate_deposit, controller: :booking_control_panel_actions
+        post :refund_deposit, controller: :booking_control_panel_actions
+        post :reverse_deposit_allocation, controller: :booking_control_panel_actions
+        post :collect_security_deposit, controller: :booking_control_panel_actions
+        post :release_security_deposits, controller: :booking_control_panel_actions
+        post :complete_housekeeping_request, controller: :booking_control_panel_actions
+        post :resolve_complaint_request, controller: :booking_control_panel_actions
+      end
+    end
     scope "bookings/:booking_id/show/actions", as: :booking_show_action, module: "bookings/show/actions" do
       match "manage-guest", to: "manage_guests#show", via: [ :get, :post, :patch ], as: :manage_guest
       match "confirmation", to: "confirmation_actions#show", via: [ :get, :delete ], as: :confirmation

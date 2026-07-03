@@ -1,0 +1,91 @@
+# frozen_string_literal: true
+
+module HotelPortal
+  class BookingControlPanelsController < BaseController
+    include BookingAuditable
+
+    before_action :authorize_view_bookings!
+    before_action :redirect_legacy_tab!
+
+    def show
+      @booking = current_hotel.bookings
+        .includes(
+          { booking_rooms: [ :room_type, :rate_plan ] },
+          { booking_guests: :guest },
+          :deposits,
+          :payment_transactions,
+          :refund_request,
+          :housekeeping_requests,
+          :complaint_requests,
+          :booking_billing_assignments,
+          booking_billing_parties: [ :billing_terms, { booking_guest: :guest }, { hotel_corporate_account: :corporate_account }, :booking_folios ],
+          booking_notes: :user,
+          group_booking: [
+            { bookings: [ :deposits, :housekeeping_requests, :complaint_requests, :folio_operation_logs, :booking_rooms, { booking_guests: :guest }, { booking_folios: [ :group_deposit_allocations, :folio_forecasted_charges, { folio_transactions: [ :user, :transaction_code ] } ] } ] },
+            { group_billing_arrangements: { hotel_corporate_account: :corporate_account } },
+            { group_deposits: :group_deposit_allocations }
+          ],
+          booking_folios: [ :ar_invoice, :group_deposit_allocations, :folio_forecasted_charges, { folio_transactions: [ :user, :transaction_code ] }, { hotel_corporate_account: :corporate_account } ],
+          folio_routing_rules: [ :transaction_code, :target_folio, :created_by, :updated_by ],
+          folio_operation_logs: [ :actor, :source_folio, :target_folio, :source_transaction, :target_transaction ]
+        )
+        .find(params[:booking_id])
+
+      @booking_presenter = BookingPresenter.new(@booking, current_hotel)
+      @folio_show = Folios::ShowPresenter.new(
+        booking: @booking,
+        hotel: current_hotel,
+        user: current_user,
+        active_folio_id: params[:folio_id].presence || params[:active_folio_id].presence,
+        active_tab: folio_tab_param
+      )
+      @presenter = BookingControlPanelPresenter.new(@booking, params: params, hotel: current_hotel, booking_presenter: @booking_presenter, folio_show: @folio_show)
+      set_audit_logs(@booking, group_booking: (@booking.group_booking if @presenter.group_overview?))
+      set_breadcrumbs(@booking)
+
+      render partial: "hotel_portal/booking_control_panels/work_area", locals: workspace_locals if turbo_frame_request?
+    end
+
+    private
+
+    def set_breadcrumbs(booking)
+      override_breadcrumbs(
+        { label: "Operations" },
+        { label: "Bookings", path: hotel_bookings_path(current_hotel) },
+        { label: booking.confirmation_token, path: hotel_booking_control_panel_path(current_hotel, booking) },
+        { label: "Booking Control Panel", tab_label: true }
+      )
+    end
+
+    def authorize_view_bookings!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
+    end
+
+    def folio_tab_param
+      case params[:tab].to_s
+      when "billing_details", "billing_preferences" then "billing_instructions"
+      when "folio_operations"
+        { "forecast" => "ledger", "activity" => "activity_log" }.fetch(params[:folio_tab].to_s, "ledger")
+      else params[:folio_tab].presence
+      end
+    end
+
+    def workspace_locals
+      {
+        booking: @booking,
+        presenter: @presenter,
+        booking_presenter: @booking_presenter,
+        folio_show: @folio_show,
+        audit_logs: @audit_logs,
+        audit_history: @audit_history
+      }
+    end
+
+    def redirect_legacy_tab!
+      replacement = { "room_charges" => "room_and_rate", "billing_details" => "billing_preferences" }[params[:tab].to_s]
+      return if replacement.blank?
+
+      redirect_to hotel_booking_control_panel_path(current_hotel, params[:booking_id], request.query_parameters.merge(tab: replacement)), status: :see_other
+    end
+  end
+end

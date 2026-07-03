@@ -1,0 +1,37 @@
+<% if presenter.group_overview? %>
+  <section aria-labelledby="group-booking-details-heading">
+    <header class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <p class="text-xs font-semibold text-slate-500"><%= presenter.group_booking.reference %></p>
+        <h2 id="group-booking-details-heading" class="mt-1 text-lg font-bold text-slate-950"><%= presenter.group_booking.name %></h2>
+        <p class="mt-1 text-sm text-slate-600"><%= pluralize(presenter.child_bookings.size, "booking") %> from <%= presenter.time_label(presenter.group_arrival) %> to <%= presenter.time_label(presenter.group_departure) %>.</p>
+      </div>
+      <span class="inline-flex self-start rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700"><%= presenter.group_booking.projected_status.humanize %></span>
+    </header>
+
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[880px] text-left text-sm">
+        <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
+          <tr><th class="px-5 py-3">Booking</th><th class="px-5 py-3">Guest</th><th class="px-5 py-3">Room</th><th class="px-5 py-3">Stay</th><th class="px-5 py-3">Status</th><th class="px-5 py-3 text-right">Balance</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          <% presenter.group_room_rows.each do |row| %>
+            <tr>
+              <td class="px-5 py-3 font-semibold text-slate-950"><%= row[:booking].confirmation_token %></td>
+              <td class="px-5 py-3 text-slate-700"><%= row[:guest] %></td>
+              <td class="px-5 py-3 text-slate-700"><%= row[:room] %> · <%= row[:room_type] %></td>
+              <td class="px-5 py-3 whitespace-nowrap text-slate-700"><%= row[:stay] %></td>
+              <td class="px-5 py-3 text-slate-700"><%= row[:status] %></td>
+              <td class="px-5 py-3 text-right font-semibold tabular-nums text-slate-950"><%= presenter.money_for(row[:booking], row[:booking].booking_folios.sum { |folio| folio.projected_outstanding_balance.to_d }) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot class="border-t border-slate-300 bg-slate-50">
+          <tr><th colspan="5" class="px-5 py-3 text-right text-sm font-semibold text-slate-700">Group Outstanding Balance</th><td class="px-5 py-3 text-right font-bold tabular-nums text-slate-950"><%= presenter.money(presenter.group_total_balance) %></td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+<% else %>
+  <%= render "hotel_portal/booking_control_panels/booking_details/stay_details", booking: booking, presenter: booking_presenter %>
+<% end %>

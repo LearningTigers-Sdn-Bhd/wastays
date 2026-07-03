@@ -1,0 +1,7 @@
+<%= render "hotel_portal/booking_control_panels/left_rails/booking_entity_tree",
+    booking: booking,
+    presenter: presenter,
+    groups: presenter.guest_tree_groups,
+    aria_label: "Booking guests",
+    empty_label: "No guests available.",
+    single_booking: true %>

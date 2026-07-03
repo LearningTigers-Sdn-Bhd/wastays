@@ -1,0 +1,63 @@
+<section aria-labelledby="booking-details-heading">
+  <header class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <p class="text-xs font-semibold text-slate-500"><%= booking.confirmation_token %></p>
+      <h2 id="booking-details-heading" class="mt-1 text-lg font-bold text-slate-950">Booking Details</h2>
+      <p class="mt-1 text-sm text-slate-600">Booking, stay, and financial information.</p>
+    </div>
+    <% if presenter.can_manage_bookings?(current_user) %>
+      <%= link_to "Edit Stay", hotel_booking_transaction_amend_stay_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" %>
+    <% end %>
+  </header>
+
+  <% sections = [
+    ["Identifiers", [
+      ["Confirmation", presenter.confirmation_token.presence || "—"],
+      ["Booking", booking.formatted_reservation_number.presence || "—"],
+      ["Folio Account", booking.folio_account_reference_display.presence || "—"],
+      ["Guest Registration", booking.formatted_guest_registration_number.presence || "—"],
+      ["External Reference", booking.external_reference.presence || "—"],
+      ["Channel Manager", booking.channel_manager_reference.presence || "—"]
+    ]],
+    ["Stay", [
+      ["Check-in", presenter.check_in_formatted.presence || "—"],
+      ["Check-out", presenter.check_out_formatted.presence || "—"],
+      ["Nights", presenter.nights_count],
+      ["Occupancy", presenter.occupancy_text(variant: :desktop)],
+      ["Room", presenter.room_display_text(variant: :desktop)],
+      ["Rate Plan", presenter.rate_plan_label.presence || "Standard Rate"]
+    ]],
+    ["Financial", [
+      ["Projected Balance", presenter.formatted_projected_balance],
+      ["Payment Status", presenter.payment_status_label],
+      ["Guarantee", presenter.guarantee_method_label],
+      ["Security Deposit", presenter.security_deposit_status_label],
+      ["Room Total", presenter.formatted_room_total],
+      ["Taxes & Charges", presenter.formatted_taxes_total],
+      ["Total Amount", presenter.formatted_total_amount]
+    ]]
+  ] %>
+
+  <div class="divide-y divide-slate-200">
+    <% sections.each do |title, rows| %>
+      <section class="grid md:grid-cols-[12rem_minmax(0,1fr)]" aria-labelledby="<%= title.parameterize %>-heading">
+        <h3 id="<%= title.parameterize %>-heading" class="bg-slate-50 px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-600"><%= title %></h3>
+        <dl class="grid sm:grid-cols-2">
+          <% rows.each do |label, value| %>
+            <div class="border-t border-slate-200 px-5 py-3 first:border-t-0 sm:odd:border-r sm:[&:nth-child(2)]:border-t-0">
+              <dt class="text-xs font-semibold text-slate-500"><%= label %></dt>
+              <dd class="mt-1 break-words text-sm font-semibold text-slate-950"><%= value %></dd>
+            </div>
+          <% end %>
+        </dl>
+      </section>
+    <% end %>
+
+    <% if booking.special_requests.present? %>
+      <section class="grid md:grid-cols-[12rem_minmax(0,1fr)]">
+        <h3 class="bg-slate-50 px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-600">Special Requests</h3>
+        <p class="whitespace-pre-wrap px-5 py-4 text-sm leading-6 text-slate-800"><%= booking.special_requests %></p>
+      </section>
+    <% end %>
+  </div>
+</section>

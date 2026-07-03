@@ -1,0 +1,112 @@
+<% row = local_assigns.fetch(:row) %>
+<% row_kind = local_assigns.fetch(:row_kind) %>
+<% row_key = "#{row_kind}-#{row.code.to_s.parameterize.presence || 'row'}-#{row.rule&.id || row.code.to_s.parameterize}" %>
+<% has_children = row.children.any? %>
+<% expanded = has_children && row.expanded %>
+
+<tr class="<%= has_children ? 'cursor-pointer transition hover:bg-slate-50' : '' %>"
+    <% if has_children %>
+      aria-expanded="<%= expanded %>"
+      data-billing-instructions-row-key="<%= row_key %>"
+      data-action="click->billing-instructions#toggle"
+      data-billing-instructions-key-param="<%= row_key %>"
+    <% end %>>
+  <td class="px-4 py-3">
+    <div class="flex items-center gap-2">
+      <% if has_children %>
+        <span class="inline-flex size-5 items-center justify-center rounded-md text-slate-500">
+          <%= cached_icon "chevron-right", class: "size-3 transition-transform #{expanded ? 'rotate-90' : ''}", data: { billing_instructions_target: "chevron", billing_instructions_key: row_key } %>
+        </span>
+      <% else %>
+        <span class="size-5"></span>
+      <% end %>
+      <span class="font-mono text-xs font-bold text-slate-900"><%= row.code %></span>
+    </div>
+  </td>
+  <td class="px-4 py-3">
+    <p class="font-semibold text-slate-900"><%= row.charge_label %></p>
+    <% if row.source.present? && row_kind != :default %>
+      <p class="mt-0.5 text-[11px] font-medium text-slate-500"><%= row.source %></p>
+    <% end %>
+  </td>
+  <td class="px-4 py-3">
+    <p class="font-semibold text-slate-900"><%= row.target_label %></p>
+    <p class="mt-0.5 font-mono text-[11px] text-slate-500"><%= row.target_reference.presence || "—" %></p>
+  </td>
+  <td class="px-4 py-3">
+    <span class="rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wider <%= row.status == 'Active' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600' %>"><%= row.status %></span>
+  </td>
+  <td class="px-4 py-3 text-right">
+    <div class="inline-flex items-center justify-end gap-2">
+      <% if has_children %>
+        <button type="button"
+                class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                aria-label="Toggle taxes and fees for <%= row.code %>"
+                data-action="billing-instructions#buttonToggle"
+                data-billing-instructions-key-param="<%= row_key %>">
+          Taxes/Fees
+        </button>
+      <% end %>
+
+      <% if row.editable %>
+        <%= link_to "Review routing",
+            hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences", alert_action: "routing_preview", folio_routing_rule_id: row.rule.id),
+            class: "text-xs font-black text-blue-700 hover:text-blue-900",
+            data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance", billing_instructions_ignore: true, warning_dialog_trigger: "routing-preview" } %>
+        <%= link_to "Edit",
+            edit_routing_rule_hotel_folio_path(hotel, booking, row.rule, origin: folio_origin, tab: "billing_instructions", active_folio_id: active_folio_id),
+            class: "text-xs font-black text-slate-700 hover:text-slate-950",
+            data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right", billing_instructions_ignore: true } %>
+        <% if row.rule.active? %>
+          <%= button_to "Deactivate",
+              deactivate_routing_rule_hotel_folio_path(hotel, booking, row.rule, origin: folio_origin, tab: "billing_instructions", active_folio_id: active_folio_id),
+              method: :patch,
+              class: "text-xs font-black text-rose-700 hover:text-rose-900",
+              form_class: "inline",
+              data: { turbo_confirm: "Deactivate this billing instruction?", billing_instructions_ignore: true } %>
+        <% end %>
+      <% elsif !has_children %>
+        <span class="text-slate-400">—</span>
+      <% end %>
+    </div>
+  </td>
+</tr>
+
+<% if has_children %>
+  <tr class="<%= 'hidden' unless expanded %> bg-slate-50/60"
+      data-billing-instructions-target="childRow"
+      data-billing-instructions-key="<%= row_key %>">
+    <td colspan="5" class="px-10 py-3">
+      <div class="overflow-hidden rounded-md border border-slate-200 bg-white">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr class="border-b border-slate-200">
+              <th class="w-40 px-3 py-2">Code</th>
+              <th class="px-3 py-2">Tax / Fee</th>
+              <th class="w-52 px-3 py-2">Target Folio</th>
+              <th class="w-36 px-3 py-2">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <% row.children.each do |child| %>
+              <tr>
+                <td class="px-3 py-2 font-mono font-bold text-slate-800"><%= child.code %></td>
+                <td class="px-3 py-2">
+                  <span class="font-semibold text-slate-900"><%= child.charge_label %></span>
+                  <span class="ml-2 text-[11px] font-medium text-slate-500"><%= child.source %></span>
+                </td>
+                <td class="px-3 py-2">
+                  <p class="font-semibold text-slate-900"><%= child.target_label %></p>
+                  <p class="mt-0.5 font-mono text-[11px] text-slate-500"><%= child.target_reference.presence || "—" %></p>
+                </td>
+                <td class="px-3 py-2">
+                  <span class="inline-flex rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wider <%= child.enabled ? 'border-slate-200 bg-white text-slate-600' : 'border-amber-200 bg-amber-50 text-amber-700' %>"><%= child.status %></span>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </td>
+  </tr>
+<% end %>

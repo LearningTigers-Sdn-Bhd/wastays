@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# LEGACY: frozen pending booking-control-panel migration. Do not add features here.
+
 class HotelPortal::BookingsController < HotelPortal::BaseController
   include BookingAuditable
 
