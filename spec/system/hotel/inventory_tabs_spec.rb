@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Hotel inventory tabs", type: :system, js: true do
   let(:account) { create(:account) }
-  let(:user) { create(:user, account: account, role: "admin", email: "inventory-tabs@example.com") }
+  let(:user) { create(:user, account: account, role: "admin") }
   let(:hotel) { create(:hotel, account: account, status: "approved", default_currency: "MYR") }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let!(:room_type) { create(:room_type, hotel: hotel, name: "Twin Room", quantity: 4) }
@@ -14,10 +14,7 @@ RSpec.describe "Hotel inventory tabs", type: :system, js: true do
     RolePermission.find_or_create_by!(role: role, permission: permission)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   it "synchronizes top-level tabs, nested subtabs, URLs, and breadcrumbs" do

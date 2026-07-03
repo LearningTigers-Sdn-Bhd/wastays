@@ -13,10 +13,7 @@ RSpec.describe "Hotel payout tabs", type: :system, js: true do
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     create(:payout_batch, hotel: hotel, status: "paid", payout_reference: "PAID-TAB")
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   it "loads direct tab links and synchronizes switches with the URL and breadcrumb" do
@@ -45,6 +42,7 @@ RSpec.describe "Hotel payout tabs", type: :system, js: true do
 
   it "keeps Paid History active after filtering its Turbo Frame" do
     visit payouts_hotel_reports_path(hotel, tab: "paid")
+    expect(page).to have_css("[data-testid='payouts-paid-panel']")
 
     fill_in "paid_start_date", with: 1.month.ago.to_date
     fill_in "paid_end_date", with: Date.current

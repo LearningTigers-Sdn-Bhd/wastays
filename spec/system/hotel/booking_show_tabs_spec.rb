@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Hotel booking show tabs", type: :system, js: true do
   let(:account) { create(:account) }
-  let(:user) { create(:user, account: account, role: "hotel_staff", email: "frontdesk@example.com") }
+  let(:user) { create(:user, account: account, role: "hotel_staff") }
   let(:hotel) { create(:hotel, account: account, status: "approved") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
   let(:booking) { create(:booking, hotel: hotel) }
@@ -15,10 +15,7 @@ RSpec.describe "Hotel booking show tabs", type: :system, js: true do
     end
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   it "loads direct tab links and persists tab switches in the URL" do

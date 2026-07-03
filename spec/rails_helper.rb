@@ -95,6 +95,10 @@ RSpec.configure do |config|
       skip "Skipping system test: Chrome executable not detected in supported Linux/macOS locations."
     end
   end
+
+  config.after(:each) do
+    travel_back
+  end
 end
 
 def chrome_available?

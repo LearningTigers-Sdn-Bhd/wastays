@@ -7,7 +7,7 @@ module HotelPortal
     include FinancialFiltering
 
     PAYOUT_TABS = %w[upcoming paid].freeze
-    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout].freeze
+    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
 
     before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax guest_registration_cards]
@@ -315,16 +315,21 @@ module HotelPortal
         start_date: @report_start_date,
         end_date: @report_end_date
       ).call
+      load_guest_registration_cards(start_date: @report.start_date, end_date: @report.end_date)
 
       respond_to do |format|
         format.html
         format.csv do
+          return head :not_acceptable if @active_guest_report_tab == "registration_cards"
+
           csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: @report, tab: @active_guest_report_tab).generate
           send_data csv,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.csv",
             type: "text/csv"
         end
         format.any(:xls) do
+          return head :not_acceptable if @active_guest_report_tab == "registration_cards"
+
           workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: @report, tab: @active_guest_report_tab).generate
           send_data workbook,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.xls",
@@ -332,6 +337,8 @@ module HotelPortal
             disposition: "attachment"
         end
         format.pdf do
+          return head :not_acceptable if @active_guest_report_tab == "registration_cards"
+
           pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: @report, tab: @active_guest_report_tab).generate
           send_data pdf,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.pdf",
@@ -342,11 +349,16 @@ module HotelPortal
     end
 
     def guest_registration_cards
+      load_guest_registration_cards
+    end
+
+    def load_guest_registration_cards(start_date: nil, end_date: nil)
       @status_filter = params[:status].to_s
       @grc_query = params[:q].to_s.strip
       base_scope = current_hotel.guest_registration_cards
                                 .includes(:hotel, booking: :booking_rooms)
                                 .joins(:booking)
+      base_scope = base_scope.where(bookings: { check_in: start_date..end_date }) if start_date && end_date
       @grc_total_count = base_scope.count
       @grc_signed_count = base_scope.where(status: "signed").count
       @grc_draft_count = base_scope.where(status: "draft").count

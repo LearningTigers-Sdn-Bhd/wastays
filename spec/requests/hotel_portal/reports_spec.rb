@@ -105,6 +105,34 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("In House Guest")
     end
 
+    it "renders registration cards tab with date filtering and no export menu" do
+      matching_booking = create(:booking, hotel: hotel, guest_name: "Current GRC", check_in: start_date, check_out: start_date + 1.day)
+      old_booking = create(:booking, hotel: hotel, guest_name: "Old GRC", check_in: start_date - 1.month, check_out: start_date - 1.month + 1.day)
+      create(:guest_registration_card, :signed, booking: matching_booking, hotel: hotel)
+      create(:guest_registration_card, booking: old_booking, hotel: hotel)
+
+      get arrivals_departures_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s,
+        end_date: end_date.to_s,
+        tab: "registration_cards"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Registration Cards")
+      expect(response.body).to include("Current GRC")
+      expect(response.body).not_to include("Old GRC")
+      expect(response.body).to include(hotel_booking_guest_registration_card_path(hotel, matching_booking))
+      expect(response.body).not_to include("Export PDF")
+      expect(response.body).not_to include("Export Excel")
+      expect(response.body).not_to include("Export CSV")
+    end
+
+    it "does not export registration cards from guest reports" do
+      get arrivals_departures_hotel_reports_path(hotel, format: :csv), params: { tab: "registration_cards" }
+
+      expect(response).to have_http_status(:not_acceptable)
+    end
+
     it "keeps today selected when switching guest report tabs" do
       travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
         create(:booking, hotel: hotel, status: "checked_in", check_in: Date.new(2026, 6, 14), check_out: Date.new(2026, 6, 16), guest_name: "In House Guest")

@@ -17,10 +17,7 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
     create(:role_permission, role: role, permission: permission)
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
     visit hotel_reports_path(hotel)
   end
 
