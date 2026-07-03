@@ -5,6 +5,9 @@ class HotelCorporateAccount < ApplicationRecord
   belongs_to :corporate_account, class_name: "Account"
   has_many :ar_invoices, dependent: :restrict_with_error
   has_many :ar_payments, dependent: :restrict_with_error
+  has_many :group_billing_arrangements, dependent: :restrict_with_error
+  has_many :group_deposits, dependent: :restrict_with_error
+  has_many :booking_billing_parties, dependent: :restrict_with_error
 
   enum :relationship_type, { standard: "standard", direct_bill: "direct_bill" }, prefix: true, validate: true
   enum :status, { active: "active", suspended: "suspended" }, validate: true
