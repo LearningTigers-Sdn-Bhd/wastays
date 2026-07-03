@@ -1,44 +1,7 @@
-<% comfortable_mode = @board_layout == "comfortable" %>
-<% board_dates = @booking_timeline_board[:dates] %>
-<% board_groups = @booking_timeline_board[:room_groups] %>
-<% visible_start_date = board_dates.first %>
-<% visible_end_exclusive = board_dates.last + 1.day %>
-<% board_range_end = @start_date + (@board_days - 1).days %>
-<% nav_step_days = @board_days %>
-<% grid_room_width = comfortable_mode ? 240 : 180 %>
-<% grid_day_width = comfortable_mode ? 84 : 64 %>
-<% grid_template_columns = "#{grid_room_width}px repeat(#{board_dates.size}, minmax(#{grid_day_width}px, 1fr))" %>
-<% page_spacing = comfortable_mode ? "space-y-6" : "space-y-4" %>
-<% container_padding = comfortable_mode ? "px-4 md:px-0" : "px-3 md:px-0" %>
-<% card_padding = comfortable_mode ? "px-4 py-1.5" : "px-3 py-1" %>
-<% summary_padding = comfortable_mode ? "px-4 py-3" : "px-3 py-2" %>
-<% room_number_class = comfortable_mode ? "text-xl" : "text-base" %>
-<% rate_text_class = comfortable_mode ? "text-[13px]" : "text-[11px]" %>
-<% currency_text_class = comfortable_mode ? "text-[11px]" : "text-[9px]" %>
-<% row_min_base = comfortable_mode ? 40 : 40 %>
-<% block_step = 0 %>
-<% block_top = 0 %>
-<% block_left_pad = comfortable_mode ? 6 : 4 %>
-<% can_manage_bookings = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-<% hotel_today = Time.current.in_time_zone(current_hotel.hotel_time_zone).to_date %>
-
-<% booking_styles = {
-  "pending" => "border-amber-200 bg-amber-50 text-amber-700",
-  "confirmed" => "border-blue-200 bg-blue-50 text-blue-700",
-  "review_no_show" => "border-amber-300 bg-amber-50 text-amber-800",
-  "checked_in" => "border-violet-200 bg-violet-50 text-violet-700",
-  "review_due_out" => "border-orange-200 bg-orange-50 text-orange-700",
-  "checkout_required" => "border-rose-200 bg-rose-50 text-rose-700",
-  "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
-  "cancelled" => "border-slate-300 bg-slate-100 text-slate-600",
-  "no_show" => "border-rose-200 bg-rose-50 text-rose-700",
-  "not_ready" => "border-red-200 bg-red-50 text-red-700"
-} %>
-
 <div class="max-w-[1600px] mx-auto pb-20">
   <%= turbo_frame_tag "booking_timeline_board" do %>
-    <div class="<%= page_spacing %>">
-      <div class="mt-5 <%= container_padding %>">
+    <div class="<%= @presenter.page_spacing %>">
+      <div class="mt-5 <%= @presenter.container_padding %>">
       <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div class="space-y-3">
           <div>
@@ -48,8 +11,38 @@
 
           <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
             <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm">
-              Showing <%= @start_date.strftime("%b %-d, %Y") %> → <%= board_range_end.strftime("%b %-d, %Y") %> (<%= @board_days %> days)
+              <%= board_date_range_label(@board_view_type, @start_date, @board_days) %>
             </span>
+          </div>
+        </div>
+
+        <div class="relative inline-block text-left" data-controller="dropdown">
+          <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center gap-x-1.5 rounded-xl bg-slate-900 px-3.5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 active:scale-95 md:px-4" id="view-menu-button" aria-expanded="false" aria-haspopup="true">
+            <%= cached_icon board_view_icon(@board_view_type), stroke_width: 2.2, class: "size-4 text-slate-300" %>
+            <span><%= board_view_label(@board_view_type) %></span>
+            <%= cached_icon "chevron-down", stroke_width: 2.2, class: "-mr-1 size-4 text-slate-400" %>
+          </button>
+
+          <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-2xl bg-slate-900 border border-slate-800 p-1.5 shadow-xl shadow-slate-950/20 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="view-menu-button" tabindex="-1">
+            <div class="py-0.5" role="none">
+              <div class="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-800 mb-1">Switch Board View</div>
+              
+              <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(view_type: "stay", room_type_id: nil, room_status: nil)), 
+                          class: "group flex items-center px-3 py-2 text-xs font-bold rounded-xl transition #{ @board_view_type == 'stay' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800' }", 
+                          role: "menuitem", 
+                          data: { turbo_frame: "booking_timeline_board" } do %>
+                <%= cached_icon "calendar-days", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
+                Stay View
+              <% end %>
+              
+              <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(view_type: "room", start_date: Time.current.in_time_zone(current_hotel.hotel_time_zone).to_date.to_s)), 
+                          class: "group flex items-center px-3 py-2 text-xs font-bold rounded-xl transition #{ @board_view_type == 'room' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800' }", 
+                          role: "menuitem", 
+                          data: { turbo_frame: "booking_timeline_board" } do %>
+                <%= cached_icon "layout-grid", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
+                Room View
+              <% end %>
+            </div>
           </div>
         </div>
       </div>
@@ -60,42 +53,73 @@
                    board_layout: @board_layout,
                    start_date: @start_date,
                    current_hotel: current_hotel,
-                   comfortable_mode: comfortable_mode,
+                   comfortable_mode: @presenter.comfortable_mode?,
                    board_query_params: @board_query_params,
-                   nav_step_days: nav_step_days,
+                   nav_step_days: @presenter.nav_step_days,
                    rate_plan_names: @rate_plan_names,
-                   selected_rate_plan_name: @selected_rate_plan_name %>
+                   selected_rate_plan_name: @selected_rate_plan_name,
+                   view_type: @board_view_type,
+                   room_types: @room_types,
+                   selected_room_type_id: @selected_room_type_id,
+                   selected_room_status: @selected_room_status,
+                   common_params: @common_params %>
 
         <%= render "hotel_portal/bookings/board/partials/legend",
-                   booking_styles: booking_styles,
                    booking_timeline_board: @booking_timeline_board %>
       </div>
     </div>
 
     <div class="overflow-auto max-h-[calc(100vh-18rem)] rounded-2xl border border-slate-200 bg-white bg-[repeating-linear-gradient(-45deg,transparent,transparent_10px,#f8fafc_10px,#f8fafc_20px)] shadow-sm">
-      <% if board_groups.blank? %>
+      <% if @presenter.board_groups.blank? %>
         <div class="px-8 py-20 text-center bg-white">
           <p class="text-sm font-medium text-slate-500">No rooms found for this property.</p>
+        </div>
+      <% elsif @board_view_type == "room" %>
+        <!-- Category Tab Bar (Sticky at the top of the room board) -->
+        <div class="sticky top-0 z-30 bg-slate-100 border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
+          <% @room_types.each do |rt| %>
+            <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(room_type_id: rt.id)),
+                        class: "cursor-pointer rounded-full border px-4 py-1.5 text-xs font-bold shadow-sm transition inline-flex items-center gap-1.5 uppercase tracking-wider #{ @selected_room_type_id.to_s == rt.id.to_s ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900' }",
+                        data: { turbo_frame: "booking_timeline_board" } do %>
+              <%= cached_icon "bed", stroke_width: 2.5, class: "size-3.5" %>
+              <span><%= rt.name %></span>
+            <% end %>
+          <% end %>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 p-3 bg-slate-50">
+          <% @presenter.board_groups.each do |group| %>
+            <% group[:rooms].each do |room| %>
+              <%= render "hotel_portal/bookings/board/partials/room_card",
+                         room: room,
+                         room_type: group[:room_type],
+                         can_manage_bookings: @presenter.can_manage_bookings?,
+                         current_hotel: current_hotel,
+                         visible_start_date: @presenter.visible_start_date,
+                         visible_end_exclusive: @presenter.visible_end_exclusive,
+                         hotel_today: @presenter.hotel_today %>
+            <% end %>
+          <% end %>
         </div>
       <% else %>
         <div class="overflow-x-auto">
           <div class="min-w-[1200px] w-fit" data-controller="booking-timeline">
             <%= render "hotel_portal/bookings/board/partials/timeline_header",
-                       grid_template_columns: grid_template_columns,
-                       card_padding: card_padding,
-                       board_dates: board_dates,
-                       summary_padding: summary_padding %>
+                       grid_template_columns: @presenter.grid_template_columns,
+                       card_padding: @presenter.card_padding,
+                       board_dates: @presenter.board_dates,
+                       summary_padding: @presenter.summary_padding %>
 
-            <% board_groups.each do |group| %>
+            <% @presenter.board_groups.each do |group| %>
               <details open class="group border-b border-slate-200">
                 <summary class="list-none cursor-pointer bg-slate-100 [&::-webkit-details-marker]:hidden">
-                  <div class="grid" style="grid-template-columns: <%= grid_template_columns %>;">
+                  <div class="grid" style="grid-template-columns: <%= @presenter.grid_template_columns %>;">
                     <div class="sticky left-0 z-20 bg-slate-100 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
-                      <div class="flex items-center justify-between gap-2 opacity-0 <%= summary_padding %> pointer-events-none">
+                      <div class="flex items-center justify-between gap-2 opacity-0 <%= @presenter.summary_padding %> pointer-events-none">
                         <span class="truncate whitespace-nowrap font-black text-slate-800"><%= group[:room_type].name %></span>
                         <%= cached_icon "chevron-right", stroke_width: 2.25, class: "size-4 shrink-0 text-slate-500" %>
                       </div>
-                      <div class="absolute inset-y-0 left-0 w-max min-w-full flex items-center justify-between gap-4 <%= summary_padding %> pointer-events-auto">
+                      <div class="absolute inset-y-0 left-0 w-max min-w-full flex items-center justify-between gap-4 <%= @presenter.summary_padding %> pointer-events-auto">
                         <span class="whitespace-nowrap font-black text-slate-800"><%= group[:room_type].name %></span>
                         <%= cached_icon "chevron-right", stroke_width: 2.25, class: "size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" %>
                       </div>
@@ -107,24 +131,24 @@
                 <% group[:rooms].each do |room| %>
                   <%= render "hotel_portal/bookings/board/partials/room_row",
                              room: room,
-                             grid_template_columns: grid_template_columns,
-                             row_min_base: row_min_base,
-                             block_step: block_step,
-                             card_padding: card_padding,
-                             room_number_class: room_number_class,
-                             board_dates: board_dates,
-                             summary_padding: summary_padding,
+                             grid_template_columns: @presenter.grid_template_columns,
+                             row_min_base: @presenter.row_min_base,
+                             block_step: @presenter.block_step,
+                             card_padding: @presenter.card_padding,
+                             room_number_class: @presenter.room_number_class,
+                             board_dates: @presenter.board_dates,
+                             summary_padding: @presenter.summary_padding,
                              booking_timeline_board: @booking_timeline_board,
-                             visible_start_date: visible_start_date,
-                             block_left_pad: block_left_pad,
-                             block_top: block_top,
-                             booking_styles: booking_styles,
-                             visible_end_exclusive: visible_end_exclusive,
+                             visible_start_date: @presenter.visible_start_date,
+                             block_left_pad: @presenter.block_left_pad,
+                             block_top: @presenter.block_top,
+                             visible_end_exclusive: @presenter.visible_end_exclusive,
                              current_hotel: current_hotel,
-                             can_manage_bookings: can_manage_bookings,
-                             hotel_today: hotel_today,
-                             rate_text_class: rate_text_class,
-                             currency_text_class: currency_text_class %>
+                             can_manage_bookings: @presenter.can_manage_bookings?,
+                             hotel_today: @presenter.hotel_today,
+                             rate_text_class: @presenter.rate_text_class,
+                             currency_text_class: @presenter.currency_text_class,
+                             board_view_type: @board_view_type %>
                 <% end %>
               </details>
             <% end %>
