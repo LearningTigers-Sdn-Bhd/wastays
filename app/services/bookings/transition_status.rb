@@ -97,6 +97,11 @@ module Bookings
             next
           end
 
+          if BookingRedesign.enabled? && !@booking.booking_guests.exists?(role: "primary")
+            error = "A primary guest is required before check-in."
+            next
+          end
+
           if is_retroactive && !(@options[:override_night_audit] && @options[:reason].present?)
             error = "Reason required for backdated check-in on closed date #{business_date}."
             next
