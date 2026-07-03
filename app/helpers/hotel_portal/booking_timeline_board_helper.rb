@@ -18,32 +18,32 @@ module HotelPortal
     }.freeze
 
     STATUS_ICON_CLASSES = {
-      "pending" => "text-amber-600",
+      "pending" => "text-orange-600",
       "confirmed" => "text-blue-600",
       "review_no_show" => "text-amber-600",
-      "checked_in" => "text-violet-600",
+      "checked_in" => "text-purple-600",
       "completed" => "text-emerald-600",
       "cancelled" => "text-slate-500",
-      "no_show" => "text-rose-600",
-      "review_due_out" => "text-orange-600",
-      "checkout_required" => "text-rose-600",
+      "no_show" => "text-slate-700",
+      "review_due_out" => "text-amber-900",
+      "checkout_required" => "text-orange-700",
       "overbooked" => "text-red-700",
-      "not_ready" => "text-red-500",
-      "available" => "text-emerald-600"
+      "not_ready" => "text-red-600",
+      "available" => "text-green-600"
     }.freeze
 
     BOOKING_STYLES = {
-      "pending" => "border-amber-200 bg-amber-50 text-amber-700",
+      "pending" => "border-orange-200 bg-orange-50 text-orange-700",
       "confirmed" => "border-blue-200 bg-blue-50 text-blue-700",
-      "review_no_show" => "border-amber-300 bg-amber-50 text-amber-800",
-      "checked_in" => "border-violet-200 bg-violet-50 text-violet-700",
-      "review_due_out" => "border-orange-200 bg-orange-50 text-orange-700",
-      "checkout_required" => "border-rose-200 bg-rose-50 text-rose-700",
+      "review_no_show" => "border-amber-200 bg-amber-50 text-amber-800",
+      "checked_in" => "border-purple-200 bg-purple-50 text-purple-700",
+      "review_due_out" => "border-amber-900/20 bg-amber-50/30 text-amber-900",
+      "checkout_required" => "border-orange-300 bg-orange-50/50 text-orange-800",
       "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
       "cancelled" => "border-slate-300 bg-slate-100 text-slate-600",
-      "no_show" => "border-rose-200 bg-rose-50 text-rose-700",
+      "no_show" => "border-slate-300 bg-slate-100 text-slate-700",
       "not_ready" => "border-red-200 bg-red-50 text-red-700",
-      "available" => "border-emerald-200 bg-emerald-50 text-emerald-700"
+      "available" => "border-green-200 bg-green-50 text-green-700"
     }.freeze
 
     def booking_status_icon(status)
@@ -128,24 +128,42 @@ module HotelPortal
     end
 
     def room_card_top_bar_class(room)
-      bookings = room[:blocks].select { |b| b[:type] == "booking" }
-      status_blocks = room[:blocks].select { |b| b[:type] == "room_status" }
+      bookings = room_card_bookings(room)
+      status_blocks = room_card_status_blocks(room)
 
       if status_blocks.any?
-        "bg-rose-500"
+        "bg-red-500"
       elsif bookings.any?
         case bookings.first[:status].to_s
-        when "pending" then "bg-amber-500"
+        when "pending" then "bg-orange-500"
         when "confirmed" then "bg-blue-500"
-        when "checked_in" then "bg-violet-500"
-        when "checkout_required" then "bg-rose-500"
+        when "checked_in" then "bg-purple-500"
+        when "review_no_show" then "bg-amber-500"
+        when "review_due_out" then "bg-amber-900"
+        when "checkout_required" then "bg-orange-700"
         when "completed" then "bg-emerald-500"
-        when "no_show" then "bg-rose-500"
-        else "bg-sky-500"
+        when "no_show" then "bg-slate-700"
+        else "bg-slate-500"
         end
       else
-        "bg-emerald-500"
+        "bg-green-500"
       end
+    end
+
+    def room_card_bookings(room)
+      room_blocks_by_type(room, :booking)
+    end
+
+    def room_card_status_blocks(room)
+      room_blocks_by_type(room, :room_status)
+    end
+
+    def room_blocks_by_type(room, type)
+      room[:blocks].select { |b| b[:type] == type.to_s }
+    end
+
+    def room_card_checking_out_booking(room)
+      room_card_bookings(room).find { |b| b[:status].in?(%w[checked_in review_due_out checkout_required]) }
     end
 
     def room_card_smoking_badge_color_class(room_type)

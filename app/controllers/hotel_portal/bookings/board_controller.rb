@@ -134,7 +134,7 @@ module HotelPortal
         when "not_ready"
           current_status == "not_ready"
         else
-          true
+          current_status == selected_status
         end
       end
 

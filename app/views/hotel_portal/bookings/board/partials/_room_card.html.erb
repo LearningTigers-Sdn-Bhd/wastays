@@ -1,64 +1,54 @@
 <%# locals: (room:, room_type:, can_manage_bookings:, current_hotel:, visible_start_date:, visible_end_exclusive:, hotel_today:) %>
-<%
-  bookings = room[:blocks].select { |b| b[:type] == "booking" }
-  status_blocks = room[:blocks].select { |b| b[:type] == "room_status" }
-  checking_out_booking = bookings.find { |b| b[:status].in?(%w[checked_in review_due_out checkout_required]) }
-  top_bar_color = room_card_top_bar_class(room)
-%>
 
 <div class="flex flex-col border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-room-number="<%= room[:room_number] %>">
-  <div class="h-1.5 w-full <%= top_bar_color %>"></div>
-  <div class="p-3.5 flex-1 flex flex-col justify-between">
+  <div class="h-1.5 w-full <%= room_card_top_bar_class(room) %>"></div>
+  <div class="p-2 flex-1 flex flex-col justify-between">
     <!-- Room Header -->
-    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-1">
       <div>
-        <h3 class="text-sm font-black text-slate-900 leading-none">Room <%= room[:room_number] %></h3>
+        <h3 class="text-xs font-black text-slate-950 leading-none"><%= room[:room_number] %></h3>
       </div>
       
       <div class="flex items-center gap-1.5">
         <!-- Smoking Icon -->
-        <% smoking_label = room_smoking_label(room_type) %>
-        <% smoking_color = room_card_smoking_badge_color_class(room_type) %>
         <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-          <div data-floating-target="reference" class="p-1 rounded border <%= smoking_color %> cursor-help">
+          <div data-floating-target="reference" class="p-0.5 rounded-sm border <%= room_card_smoking_badge_color_class(room_type) %> cursor-help">
             <% if room_type.smoking_allowed %>
-              <%= cached_icon "alarm-smoke", stroke_width: 2.25, class: "size-3.5" %>
+              <%= cached_icon "cigarette", stroke_width: 2.25, class: "size-2.5" %>
             <% else %>
-              <%= cached_icon "ban", stroke_width: 2.25, class: "size-3.5" %>
+              <%= cached_icon "cigarette-off", stroke_width: 2.25, class: "size-2.5" %>
             <% end %>
           </div>
           <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded shadow-xl pointer-events-none text-white text-[10px] font-bold uppercase tracking-wider">
-            <%= smoking_label %>
+            <%= room_smoking_label(room_type) %>
           </div>
         </div>
 
         <!-- Pets Icon -->
-        <% pets_label = room_pets_label(room_type) %>
-        <% pets_color = room_card_pets_badge_color_class(room_type) %>
         <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-          <div data-floating-target="reference" class="p-1 rounded border <%= pets_color %> cursor-help">
+          <div data-floating-target="reference" class="p-0.5 rounded-sm border <%= room_card_pets_badge_color_class(room_type) %> cursor-help">
             <% if room_type.pets_allowed %>
-              <%= cached_icon "paw-print", stroke_width: 2.25, class: "size-3.5" %>
+              <%= cached_icon "paw-print", stroke_width: 2.25, class: "size-2.5" %>
             <% else %>
-              <%= cached_icon "ban", stroke_width: 2.25, class: "size-3.5" %>
+              <%= cached_icon "ban", stroke_width: 2.25, class: "size-2.5" %>
             <% end %>
           </div>
           <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded shadow-xl pointer-events-none text-white text-[10px] font-bold uppercase tracking-wider">
-            <%= pets_label %>
+            <%= room_pets_label(room_type) %>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Room Status Blocks (e.g. Out of Service) -->
-    <% if status_blocks.any? %>
-      <div class="mt-2 space-y-1.5">
-        <% status_blocks.each do |sb| %>
-          <div class="rounded-lg border border-rose-200 bg-rose-50/50 p-2 flex items-center gap-1.5 text-rose-700">
-            <%= cached_icon "ban", stroke_width: 2.25, class: "size-3.5 shrink-0" %>
+    <% if room_card_status_blocks(room).any? %>
+      <div class="mt-1 space-y-1">
+        <% room_card_status_blocks(room).each do |sb| %>
+          <div class="rounded-md border border-rose-200 bg-rose-50/50 p-1 flex items-center gap-1 text-rose-700">
+            <%= cached_icon "ban", stroke_width: 2.25, class: "size-2.5 shrink-0" %>
             <div class="min-w-0">
-              <p class="text-[11px] font-bold leading-none"><%= sb[:status_name] %></p>
-              <p class="mt-0.5 text-[9px] opacity-75 font-semibold leading-none">Blocked</p>
+              <p class="text-[9px] font-bold leading-none"><%= sb[:status_name] %></p>
+              <p class="mt-0.5 text-[8px] opacity-75 font-semibold leading-none">Blocked</p>
             </div>
           </div>
         <% end %>
@@ -66,21 +56,19 @@
     <% end %>
 
     <!-- Bookings List -->
-    <div class="mt-2.5 flex-1 flex flex-col justify-between">
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <h4 class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Scheduled</h4>
-          <% if checking_out_booking %>
-            <% countdown_class, countdown_text = room_card_checkout_badge(checking_out_booking, visible_start_date) %>
+    <div class="mt-1.5 flex-1 flex flex-col justify-between">
+      <div class="space-y-1.5">
+        <% if room_card_checking_out_booking(room) %>
+          <div class="flex items-center justify-end">
+            <% countdown_class, countdown_text = room_card_checkout_badge(room_card_checking_out_booking(room), visible_start_date) %>
             <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider <%= countdown_class %>">
               <%= cached_icon "clock", stroke_width: 2.5, class: "size-2.5 shrink-0" %>
               <span><%= countdown_text %></span>
             </span>
-          <% end %>
-        </div>
-        <% if bookings.blank? %>
-          <div class="flex flex-col items-center justify-center py-4 px-2 rounded-lg border border-dashed border-slate-200 text-center gap-1.5">
-            <p class="text-[10px] font-bold text-slate-400">No bookings</p>
+          </div>
+        <% end %>
+        <% if room_card_bookings(room).blank? %>
+          <div class="flex flex-col items-center justify-center py-2 px-1.5 rounded-lg border border-dashed border-slate-200 text-center gap-1">
             <% if can_manage_bookings %>
               <% slot_params = {
                 room_type_id: room_type.id,
@@ -88,32 +76,32 @@
                 check_in: visible_start_date,
                 check_out: visible_start_date + 1.day
               } %>
-              <div class="flex flex-col gap-1 w-full max-w-[120px]">
+              <div class="flex flex-col gap-0.5 w-full max-w-[120px]">
                 <% if visible_start_date < hotel_today %>
                   <%= link_to hotel_booking_transaction_backdated_check_in_path(current_hotel, slot_params),
-                              class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
+                              class: "w-full py-0.5 rounded bg-white shadow-sm border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-0.5 transition active:scale-95",
                               data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
-                    <%= cached_icon "history", stroke_width: 2.5, class: "size-3 text-amber-600" %>
+                    <%= cached_icon "history", stroke_width: 2.5, class: "size-2.5 text-amber-600" %>
                     <span>Backdated</span>
                   <% end %>
                 <% elsif visible_start_date == hotel_today %>
                   <%= link_to hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
-                              class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
+                              class: "w-full py-0.5 rounded bg-white shadow-sm border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-0.5 transition active:scale-95",
                               data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
-                    <%= cached_icon "plus", stroke_width: 2.5, class: "size-3 text-slate-500" %>
+                    <%= cached_icon "plus", stroke_width: 2.5, class: "size-2.5 text-slate-500" %>
                     <span>Book</span>
                   <% end %>
                   <%= link_to hotel_booking_transaction_walk_in_check_in_path(current_hotel, slot_params),
-                              class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
+                              class: "w-full py-0.5 rounded bg-white shadow-sm border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-0.5 transition active:scale-95",
                               data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
-                    <%= cached_icon "user-check", stroke_width: 2.5, class: "size-3 text-slate-500" %>
+                    <%= cached_icon "user-check", stroke_width: 2.5, class: "size-2.5 text-slate-500" %>
                     <span>Walk-in</span>
                   <% end %>
                 <% else %>
                   <%= link_to hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
-                              class: "w-full py-1 rounded bg-white shadow-sm border border-slate-200 text-[9px] font-black text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1 transition active:scale-95",
+                              class: "w-full py-0.5 rounded bg-white shadow-sm border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-0.5 transition active:scale-95",
                               data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
-                    <%= cached_icon "plus", stroke_width: 2.5, class: "size-3 text-slate-500" %>
+                    <%= cached_icon "plus", stroke_width: 2.5, class: "size-2.5 text-slate-500" %>
                     <span>Book</span>
                   <% end %>
                 <% end %>
@@ -122,15 +110,12 @@
           </div>
         <% else %>
           <div class="space-y-2">
-            <% bookings.each do |block| %>
-              <%
-                block_label = "#{block[:guest_name]}, #{block[:status].humanize}, room #{block[:room_number]}, #{block[:check_in].strftime('%B %-d')} to #{block[:check_out].strftime('%B %-d, %Y')}"
-              %>
+            <% room_card_bookings(room).each do |block| %>
               <% if can_manage_bookings %>
                 <div
                   role="button"
                   tabindex="0"
-                  aria-label="<%= block_label %>"
+                  aria-label="<%= booking_block_accessibility_label(block) %>"
                   data-id="<%= block[:id] %>"
                   data-controller="booking-actions"
                   data-booking-actions-id-value="<%= block[:id] %>"
@@ -143,14 +128,14 @@
                   data-booking-actions-payment-status-value="<%= block[:payment_status] %>"
                   data-booking-actions-notes-value="<%= block[:notes] %>"
                   data-action="click->booking-actions#openBookingSheet keydown.enter->booking-actions#openBookingSheet keydown.space->booking-actions#openBookingSheet"
-                  class="block w-full text-left rounded-lg border p-2 hover:shadow-sm transition <%= booking_block_status_classes(block) %> cursor-pointer focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1"
+                  class="block w-full text-left rounded-md border p-1.5 hover:shadow-sm transition <%= booking_block_status_classes(block) %> cursor-pointer focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1"
                 >
                   <%= render "hotel_portal/bookings/board/partials/room_card_booking_content", block: block %>
                 </div>
               <% else %>
                 <%= link_to hotel_booking_path(current_hotel, block[:booking]),
-                    aria: { label: block_label },
-                    class: "block w-full text-left rounded-lg border p-2 hover:shadow-sm transition #{booking_block_status_classes(block)} focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1",
+                    aria: { label: booking_block_accessibility_label(block) },
+                    class: "block w-full text-left rounded-md border p-1.5 hover:shadow-sm transition #{booking_block_status_classes(block)} focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1",
                     data: { turbo_frame: "_top" } do %>
                   <%= render "hotel_portal/bookings/board/partials/room_card_booking_content", block: block %>
                 <% end %>

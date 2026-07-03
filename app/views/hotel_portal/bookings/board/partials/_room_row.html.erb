@@ -1,41 +1,33 @@
 <%# locals: (room:, row_min_base:, block_step:, visible_start_date:, grid_template_columns:, card_padding:, room_number_class:, board_dates:, summary_padding:, can_manage_bookings:, rate_text_class:, currency_text_class:, hotel_today:, current_hotel:, booking_timeline_board:, block_left_pad:, block_top:, visible_end_exclusive:, board_view_type:) %>
-<%
-  row_min_height = booking_timeline_board_row_height(room, row_min_base, block_step, visible_start_date)
-  room_type = room[:room_type]
-%>
 
-<div class="grid border-b border-slate-100" style="grid-template-columns: <%= grid_template_columns %>; min-height: <%= row_min_height %>px;">
+<div class="grid border-b border-slate-100" style="grid-template-columns: <%= grid_template_columns %>; min-height: <%= booking_timeline_board_row_height(room, row_min_base, block_step, visible_start_date) %>px;">
   <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= card_padding %> flex items-center justify-between gap-4">
     <p class="font-black leading-none text-slate-950 <%= room_number_class %>"><%= room[:room_number] %></p>
 
     <div class="flex items-center gap-2">
-      <% smoking_label = room_smoking_label(room_type) %>
-      <% smoking_color = room_smoking_color_class(room_type) %>
       <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-        <div data-floating-target="reference" class="<%= smoking_color %> cursor-help">
-          <% if room_type.smoking_allowed %>
+        <div data-floating-target="reference" class="<%= room_smoking_color_class(room[:room_type]) %> cursor-help">
+          <% if room[:room_type].smoking_allowed %>
             <%= cached_icon "alarm-smoke", stroke_width: 2, class: "size-3.5" %>
           <% else %>
             <%= cached_icon "ban", stroke_width: 2, class: "size-3.5" %>
           <% end %>
         </div>
         <div data-floating-target="floating" class="hidden z-[100] px-3 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white">
-          <span class="text-[10px] font-bold uppercase tracking-wider"><%= smoking_label %></span>
+          <span class="text-[10px] font-bold uppercase tracking-wider"><%= room_smoking_label(room[:room_type]) %></span>
         </div>
       </div>
 
-      <% pets_label = room_pets_label(room_type) %>
-      <% pets_color = room_pets_color_class(room_type) %>
       <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-        <div data-floating-target="reference" class="<%= pets_color %> cursor-help">
-          <% if room_type.pets_allowed %>
+        <div data-floating-target="reference" class="<%= room_pets_color_class(room[:room_type]) %> cursor-help">
+          <% if room[:room_type].pets_allowed %>
             <%= cached_icon "paw-print", stroke_width: 2, class: "size-3.5" %>
           <% else %>
             <%= cached_icon "ban", stroke_width: 2, class: "size-3.5" %>
           <% end %>
         </div>
         <div data-floating-target="floating" class="hidden z-[100] px-3 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white">
-          <span class="text-[10px] font-bold uppercase tracking-wider"><%= pets_label %></span>
+          <span class="text-[10px] font-bold uppercase tracking-wider"><%= room_pets_label(room[:room_type]) %></span>
         </div>
       </div>
     </div>
@@ -45,14 +37,11 @@
          data-booking-timeline-target="cell"
          data-date="<%= date %>"
          data-room-number="<%= room[:room_number] %>"
-         data-room-type-id="<%= room_type.id %>"
+         data-room-type-id="<%= room[:room_type].id %>"
          <%= 'data-action="dragover->booking-timeline#onDragOver dragleave->booking-timeline#onDragLeave drop->booking-timeline#onDrop"'.html_safe if can_manage_bookings %>>
       <%# Quick Creation Link & Rate Display %>
-      <% is_occupied = room_occupied_on?(room, date) %>
-      <% rate = booking_timeline_board_rate_for(booking_timeline_board, room_type.id, date) %>
-
-      <% if !is_occupied && can_manage_bookings %>
-        <% slot_params = { check_in: date, room_type_id: room_type.id, room_number: room[:room_number], source: "booking_timeline_board", return_to: request.fullpath } %>
+      <% if !room_occupied_on?(room, date) && can_manage_bookings %>
+        <% slot_params = { check_in: date, room_type_id: room[:room_type].id, room_number: room[:room_number], source: "booking_timeline_board", return_to: request.fullpath } %>
         <div class="absolute inset-0 z-0" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
           <button type="button"
                   class="flex h-full w-full flex-col justify-between p-1 transition-colors hover:bg-slate-50/80 focus-visible:z-20 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-900"
@@ -62,7 +51,7 @@
                   data-dropdown-target="button"
                   data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
             <span class="flex h-4 items-center justify-center">
-              <% if rate %>
+              <% if (rate = booking_timeline_board_rate_for(booking_timeline_board, room[:room_type].id, date)) %>
                 <span class="flex items-center gap-0.5 <%= rate_text_class %> font-bold text-slate-400/60 tracking-tight">
                   <span class="<%= currency_text_class %> uppercase"><%= currency_symbol(rate[:currency]) %></span>
                   <span><%= number_with_precision(rate[:price], precision: 0) %></span>

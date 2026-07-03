@@ -37,9 +37,14 @@
           <%= select_tag :room_status, options_for_select([
             ["All Rooms", "all"],
             ["Available", "available"],
-            ["Checked In", "checked_in"],
+            ["Not Ready", "not_ready"],
             ["Confirmed", "confirmed"],
-            ["Not Ready", "not_ready"]
+            ["Review No Show", "review_no_show"],
+            ["Checked In", "checked_in"],
+            ["Pending", "pending"],
+            ["Review Due Out", "review_due_out"],
+            ["Checkout Required", "checkout_required"],
+            ["No Show", "no_show"]
           ], selected_room_status), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
         </div>
       <% end %>

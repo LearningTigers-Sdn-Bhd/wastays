@@ -16,14 +16,10 @@
           </div>
         </div>
 
-        <%
-          current_view_label = board_view_label(@board_view_type)
-          current_view_icon = board_view_icon(@board_view_type)
-        %>
         <div class="relative inline-block text-left" data-controller="dropdown">
           <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center gap-x-1.5 rounded-xl bg-slate-900 px-3.5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 active:scale-95 md:px-4" id="view-menu-button" aria-expanded="false" aria-haspopup="true">
-            <%= cached_icon current_view_icon, stroke_width: 2.2, class: "size-4 text-slate-300" %>
-            <span><%= current_view_label %></span>
+            <%= cached_icon board_view_icon(@board_view_type), stroke_width: 2.2, class: "size-4 text-slate-300" %>
+            <span><%= board_view_label(@board_view_type) %></span>
             <%= cached_icon "chevron-down", stroke_width: 2.2, class: "-mr-1 size-4 text-slate-400" %>
           </button>
 
@@ -91,7 +87,7 @@
           <% end %>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4 bg-slate-50">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 p-3 bg-slate-50">
           <% @presenter.board_groups.each do |group| %>
             <% group[:rooms].each do |room| %>
               <%= render "hotel_portal/bookings/board/partials/room_card",
