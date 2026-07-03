@@ -173,6 +173,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.index ["account_id"], name: "index_banking_details_on_account_id", unique: true
   end
 
+  create_table "billing_route_batches", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "booking_id", null: false
+    t.bigint "actor_id"
+    t.string "idempotency_key", null: false
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_billing_route_batches_on_actor_id"
+    t.index ["booking_id", "idempotency_key"], name: "idx_billing_route_batches_idempotency", unique: true
+    t.index ["booking_id"], name: "index_billing_route_batches_on_booking_id"
+    t.index ["hotel_id"], name: "index_billing_route_batches_on_hotel_id"
+  end
+
   create_table "booking_audit_logs", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.string "auditable_type", null: false
@@ -1917,6 +1931,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
   add_foreign_key "ar_payments", "hotel_corporate_accounts"
   add_foreign_key "ar_payments", "hotels"
   add_foreign_key "banking_details", "accounts"
+  add_foreign_key "billing_route_batches", "bookings"
+  add_foreign_key "billing_route_batches", "hotels"
+  add_foreign_key "billing_route_batches", "users", column: "actor_id"
   add_foreign_key "booking_audit_logs", "hotels"
   add_foreign_key "booking_audit_logs", "users"
   add_foreign_key "booking_billing_assignments", "bookings"

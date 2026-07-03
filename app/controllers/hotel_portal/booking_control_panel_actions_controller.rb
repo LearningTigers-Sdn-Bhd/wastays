@@ -8,6 +8,7 @@ module HotelPortal
 
     before_action :authorize_manage_bookings!, except: %i[new_folio_window create_folio_window]
     before_action :authorize_manage_folio_windows!, only: %i[new_folio_window create_folio_window]
+    before_action :authorize_manage_billing_routes!, only: %i[billing_routes preview_billing_routes apply_billing_routes]
     before_action :set_booking
 
     def new_folio_window
@@ -151,6 +152,46 @@ module HotelPortal
       redirect_with_result(result, tab: "billing_preferences")
     end
 
+    def billing_routes
+      prepare_billing_routes
+      render "hotel_portal/booking_control_panels/actions/billing_routes/offcanvas"
+    end
+
+    def preview_billing_routes
+      prepare_billing_routes
+      @route_draft = billing_routes_params
+      @batch_preview = ::FolioRouting::ApplyBatch.preview(booking: @booking, routes: @route_draft)
+      if @batch_preview.success? && !@batch_preview.review_required?
+        return apply_billing_routes
+      end
+
+      render "hotel_portal/booking_control_panels/actions/billing_routes/offcanvas", status: (@batch_preview.success? ? :ok : :unprocessable_entity)
+    end
+
+    def apply_billing_routes
+      result = ::FolioRouting::ApplyBatch.call(
+        booking: @booking, actor: current_user, routes: billing_routes_params,
+        confirmation: params[:confirmation], forecast_confirmation: params[:forecast_confirmation],
+        reason: params[:reason], idempotency_key: params[:idempotency_key]
+      )
+      destination = hotel_booking_control_panel_path(current_hotel, @booking, tab: "billing_preferences")
+      if result.success?
+        respond_to do |format|
+          format.turbo_stream do
+            flash[:notice] = "Billing routes updated."
+            render_offcanvas_completion(destination)
+          end
+          format.html { redirect_to destination, notice: "Billing routes updated.", status: :see_other }
+        end
+      else
+        prepare_billing_routes
+        @route_draft = billing_routes_params
+        @batch_preview = ::FolioRouting::ApplyBatch.preview(booking: @booking, routes: @route_draft)
+        flash.now[:alert] = result.error
+        render "hotel_portal/booking_control_panels/actions/billing_routes/offcanvas", status: :unprocessable_entity
+      end
+    end
+
     def allocate_deposit
       deposit = group_booking.group_deposits.find(params[:group_deposit_id])
       folio = @booking.booking_folios.find(params[:booking_folio_id])
@@ -240,6 +281,15 @@ module HotelPortal
         :purchase_order_reference, :billing_reference, :authorization_reference)
     end
 
+    def billing_routes_params
+      params.fetch(:routes, {}).permit!.to_h
+    end
+
+    def prepare_billing_routes
+      @routing_matrix = ::FolioRouting::RoutingMatrix.new(booking: @booking)
+      @batch_key = params[:idempotency_key].presence || SecureRandom.uuid
+    end
+
     def group_billing_arrangement_params
       params.fetch(:group_billing_arrangement, {}).permit(:name, :payer_type,
         :hotel_corporate_account_id, :settlement_type, :preferred_payment_method,
@@ -254,6 +304,12 @@ module HotelPortal
     def authorize_manage_folio_windows!
       allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
         current_user.has_permission?("manage_folio_windows", hotel: current_hotel)
+      raise Pundit::NotAuthorizedError unless allowed
+    end
+
+    def authorize_manage_billing_routes!
+      allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
+        current_user.has_permission?("manage_folio_movements", hotel: current_hotel)
       raise Pundit::NotAuthorizedError unless allowed
     end
 

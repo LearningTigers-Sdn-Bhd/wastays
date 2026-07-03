@@ -22,12 +22,7 @@ module FolioRouting
       moved = []
       preview = FolioRouting::PreviewExistingCharges.call(rule: @rule)
       preview.transactions.each do |transaction|
-        result = Folios::MoveTransaction.call(
-          transaction: transaction,
-          target_folio: @rule.target_folio,
-          user: @actor,
-          reason: @reason
-        )
+        result = move_transaction(transaction)
         return failure(result.error, moved) unless result.success?
 
         moved.concat(result.transactions)
@@ -36,6 +31,30 @@ module FolioRouting
     end
 
     private
+
+    def move_transaction(transaction)
+      parent_id = transaction.metadata.to_h["parent_folio_transaction_id"].presence ||
+        transaction.metadata.to_h[:parent_folio_transaction_id].presence
+      if parent_id
+        parent = FolioTransaction.find_by(id: parent_id)
+        return failure("Attached charge parent is unavailable.") unless parent
+
+        tax_routes = Folios::AttachedTaxTransactions.call(parent).each_with_object({}) do |tax, routes|
+          child_rule = @rule.booking.folio_routing_rules.active.find_by(transaction_code_id: tax.transaction_code_id)
+          routes[tax.id] = child_rule.target_folio_id if child_rule
+        end
+        tax_routes[transaction.id] = @rule.target_folio_id
+        return Folios::MoveTransaction.call(transaction: parent, target_folio: parent.booking_folio,
+          user: @actor, reason: @reason, tax_routes: tax_routes)
+      end
+
+      tax_routes = Folios::AttachedTaxTransactions.call(transaction).each_with_object({}) do |tax, routes|
+        child_rule = @rule.booking.folio_routing_rules.active.find_by(transaction_code_id: tax.transaction_code_id)
+        routes[tax.id] = child_rule.target_folio_id if child_rule
+      end
+      Folios::MoveTransaction.call(transaction:, target_folio: @rule.target_folio, user: @actor,
+        reason: @reason, tax_routes: tax_routes)
+    end
 
     def success(transactions)
       OpenStruct.new(success?: true, transactions: transactions)

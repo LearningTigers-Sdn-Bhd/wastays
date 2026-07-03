@@ -8,12 +8,28 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
   let(:role) { create(:role, account: hotel.account) }
   let(:manage_bookings) { Permission.find_or_create_by!(slug: "manage_bookings") { |permission| permission.name = "Manage Bookings" } }
   let(:manage_folio_windows) { Permission.find_or_create_by!(slug: "manage_folio_windows") { |permission| permission.name = "Manage Folio Windows" } }
+  let(:manage_folio_movements) { Permission.find_or_create_by!(slug: "manage_folio_movements") { |permission| permission.name = "Manage Folio Movements" } }
   let(:booking) { create(:booking, hotel: hotel) }
 
   before do
     role.permissions << manage_bookings
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
+  end
+
+  it "renders the staged billing routes offcanvas for authorized staff" do
+    role.permissions << manage_folio_movements
+    party = create(:booking_billing_party, :company, booking:, hotel: hotel)
+    create(:booking_folio, :secondary, booking:, hotel:, booking_billing_party: party,
+      payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, name: "Company Folio")
+    create(:transaction_code, hotel:, kind: "charge", code: "ROOMX", name: "Room charge")
+
+    get billing_routes_hotel_booking_control_panel_path(hotel, booking)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Change Billing Routes", "Billing party", "Target folio", "Apply changes", "Room charge")
+    headers = Nokogiri::HTML(response.body).css("table thead th").map { |node| node.text.squish }
+    expect(headers).not_to include("Status", "Action")
   end
 
   it "changes the primary guest only inside the selected booking" do
@@ -127,6 +143,57 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     }
 
     expect(party.billing_terms.reload).to have_attributes(settlement_type: "cash_bank", billing_reference: "BILL-9")
+  end
+
+  it "adds and edits a company billing party only on the selected group child" do
+    allow(BookingRedesign).to receive(:enabled?).and_return(true)
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1)
+    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+    arrangement = create(:group_billing_arrangement, group_booking: group, hotel: hotel, name: "Unchanged arrangement")
+    arrangement_attributes = arrangement.attributes
+    account = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+    folio_count = BookingFolio.count
+    routing_rule_count = FolioRoutingRule.count
+
+    expect do
+      post add_billing_party_hotel_booking_control_panel_path(hotel, booking), params: {
+        billing_party: { hotel_corporate_account_id: account.id, settlement_type: "city_ledger", purchase_order_reference: "CHILD-PO" }
+      }
+    end.to change { booking.booking_billing_parties.companies.count }.by(1)
+
+    party = booking.booking_billing_parties.companies.sole
+    patch update_billing_terms_hotel_booking_control_panel_path(hotel, booking), params: {
+      billing_party_id: party.id,
+      billing_terms: { settlement_type: "cash_bank", billing_reference: "CHILD-BILL" }
+    }
+
+    expect(party.billing_terms.reload).to have_attributes(settlement_type: "cash_bank", billing_reference: "CHILD-BILL")
+    expect(sibling.booking_billing_parties).to be_empty
+    expect(arrangement.reload.attributes).to eq(arrangement_attributes)
+    expect(BookingFolio.count).to eq(folio_count)
+    expect(FolioRoutingRule.count).to eq(routing_rule_count)
+  end
+
+  it "removes a company billing party without folios" do
+    party = create(:booking_billing_party, :company, booking: booking, hotel: hotel)
+
+    patch archive_billing_party_hotel_booking_control_panel_path(hotel, booking), params: { billing_party_id: party.id }
+
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences"))
+    expect(party.reload.archived_at).to be_present
+  end
+
+  it "does not remove a company billing party that owns a folio" do
+    party = create(:booking_billing_party, :company, booking: booking, hotel: hotel)
+    create(:booking_folio, :secondary, booking: booking, hotel: hotel, booking_billing_party: party,
+      hotel_corporate_account: party.hotel_corporate_account)
+
+    patch archive_billing_party_hotel_booking_control_panel_path(hotel, booking), params: { billing_party_id: party.id }
+
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences"))
+    expect(flash[:alert]).to eq("Billing parties with folios cannot be archived.")
+    expect(party.reload.archived_at).to be_nil
   end
 
   it "creates a group billing arrangement inline without creating routing rules" do

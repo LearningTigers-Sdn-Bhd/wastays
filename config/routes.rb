@@ -373,6 +373,9 @@ Rails.application.routes.draw do
         patch :update_group_billing_arrangement, controller: :booking_control_panel_actions
         patch :deactivate_group_billing_arrangement, controller: :booking_control_panel_actions
         post :apply_routing, controller: :booking_control_panel_actions
+        get :billing_routes, controller: :booking_control_panel_actions
+        post :preview_billing_routes, controller: :booking_control_panel_actions
+        post :apply_billing_routes, controller: :booking_control_panel_actions
         post :allocate_deposit, controller: :booking_control_panel_actions
         post :refund_deposit, controller: :booking_control_panel_actions
         post :reverse_deposit_allocation, controller: :booking_control_panel_actions

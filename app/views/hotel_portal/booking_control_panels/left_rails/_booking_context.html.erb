@@ -1,4 +1,12 @@
 <div class="p-4">
+  <% if presenter.active_tab == "billing_preferences" && !presenter.group_overview? && current_user.has_permission?("manage_folio_movements", hotel: current_hotel) %>
+    <%= link_to billing_routes_hotel_booking_control_panel_path(current_hotel, booking),
+      class: "mb-4 flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white hover:bg-slate-800",
+      data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
+      <%= cached_icon "route", class: "size-4" %>
+      Change Billing Routes
+    <% end %>
+  <% end %>
   <p class="text-sm font-bold text-slate-950"><%= booking.confirmation_token %></p>
   <p class="mt-1 text-xs leading-5 text-slate-500"><%= presenter.booking_context_description %></p>
   <div class="mt-4 border-t border-slate-200 pt-3">
