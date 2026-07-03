@@ -23,11 +23,11 @@
     </header>
 
     <%= form_with model: transaction_code,
-                  url: persisted ? hotel_transaction_code_path(current_hotel, transaction_code) : hotel_transaction_codes_path(current_hotel),
+                  url: persisted ? hotel_preview_transaction_code_hotel_tax_rules_path(current_hotel, transaction_code) : hotel_transaction_codes_path(current_hotel),
                   method: persisted ? :patch : :post,
                   class: "flex min-h-0 flex-1 flex-col",
                   data: {
-                    turbo_frame: "_top",
+                    turbo_frame: persisted ? "offcanvas_drawer" : "_top",
                     controller: "transaction-code-form",
                     transaction_code_form_amount_value: preview_amount.to_s("F"),
                     transaction_code_form_currency_value: currency

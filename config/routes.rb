@@ -329,6 +329,7 @@ Rails.application.routes.draw do
     post "transaction-codes", to: "transaction_codes#create"
     patch "transaction-codes/configuration", to: "transaction_codes#update_configuration", as: :transaction_code_configuration
     get "transaction-codes/:id/edit", to: "transaction_codes#edit", as: :edit_transaction_code
+    patch "transaction-codes/:id/preview-hotel-tax-rules", to: "transaction_codes#preview_hotel_tax_rules", as: :preview_transaction_code_hotel_tax_rules
     patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
 
     resources :bookings, only: [ :index, :show, :update ] do

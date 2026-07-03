@@ -168,4 +168,26 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
       expect(page).to have_no_select("Category", options: [ "Tax" ])
     end
   end
+
+  it "reviews and confirms a hotel-wide transaction-code tax change" do
+    visit hotel_transaction_codes_path(hotel)
+
+    within("tr", text: "FNB") { click_link "Edit" }
+    taxable_input = find("#transaction_code_is_taxable", visible: :all)
+    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", taxable_input)
+    sst_input = find("label", text: "SST 8%").find("input[type='checkbox']", visible: :all)
+    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", sst_input)
+    click_button "Save"
+
+    expect(page).to have_css('[role="alertdialog"]', text: "Change hotel default?")
+    expect(page).to have_content("FNB · Food & Beverage")
+    expect(page).to have_content("SST 8%")
+    expect(page).to have_content("Posted transactions will not change")
+    fill_in "Reason", with: "Approved finance policy"
+    click_button "Apply hotel-wide"
+
+    expect(page).to have_current_path(hotel_transaction_codes_path(hotel, tab: "default_codes"))
+    fnb = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+    expect(fnb.reload.tax_rule_keys).to include("primary:sst_tax")
+  end
 end
