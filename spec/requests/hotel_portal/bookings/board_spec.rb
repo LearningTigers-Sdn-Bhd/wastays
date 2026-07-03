@@ -47,7 +47,7 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       booking_block = response.parsed_body.at_css("[data-id='#{booking.id}']")
       expect(booking_block).to be_present
       expect(booking_block.text).to include(booking.guest_name)
-      expect(booking_block.text).to include(booking.status.humanize)
+      expect(booking_block.at_css("[title='#{booking.status.humanize}']")).to be_present
       expect(booking_block.classes).to include("rounded-md")
       expect(booking_block.at_css("span[title='0 Children']")).to be_present
       expect(booking_block.at_css("span[title='0 Children']").text).to include("0")

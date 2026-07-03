@@ -4,8 +4,8 @@
     <p class="truncate font-black text-xs text-slate-800 leading-tight">
       <%= block[:guest_name] %>
     </p>
-    <div class="flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-white/60 border border-current">
-      <span><%= block[:status].to_s.humanize %></span>
+    <div class="flex items-center shrink-0 p-0.5 rounded-full bg-white/60 border border-current <%= booking_icon_class(block[:status]) %>" title="<%= block[:status].to_s.humanize %>">
+      <%= cached_icon booking_status_icon(block[:status]), stroke_width: 3, class: "size-2.5" %>
     </div>
   </div>
 
