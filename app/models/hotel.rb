@@ -42,6 +42,7 @@ class Hotel < ApplicationRecord
   has_one :property_policy, dependent: :destroy
   accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
+  has_many :room_groups, dependent: :destroy
   has_many :knowledge_documents, class_name: "HotelKnowledgeDocument", dependent: :destroy
   has_many :knowledge_diagnostics, class_name: "HotelKnowledgeDiagnostic", dependent: :destroy
   has_many :nearby_attractions, dependent: :destroy

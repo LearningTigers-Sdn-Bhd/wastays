@@ -21,6 +21,13 @@
           Open Rates & Availability
         <% end %>
 
+        <%= link_to hotel_room_groups_path(current_hotel), 
+                    class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50",
+                    data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" } do %>
+          <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Manage Room Groups
+        <% end %>
+
         <%= link_to new_hotel_room_type_path(current_hotel), class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
           <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
           Add Room Category
@@ -66,7 +73,14 @@
                       <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="7" height="5" x="7" y="7" rx="1"/><rect width="7" height="5" x="10" y="12" rx="1"/></svg>
                     </div>
                     <div class="flex flex-col gap-1">
-                      <span class="text-sm font-bold text-slate-900"><%= room_type.name %></span>
+                      <div class="flex items-center gap-x-2">
+                        <span class="text-sm font-bold text-slate-900"><%= room_type.name %></span>
+                        <% if room_type.room_group.present? %>
+                          <span class="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                            <%= room_type.room_group.name %>
+                          </span>
+                        <% end %>
+                      </div>
                       <span class="text-xs text-slate-500 line-clamp-2 leading-relaxed"><%= room_type.description %></span>
                     </div>
                   </div>

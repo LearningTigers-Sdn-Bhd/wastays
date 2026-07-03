@@ -3,6 +3,8 @@
 class RoomType < ApplicationRecord
   include HotelScopable
 
+  belongs_to :room_group, optional: true
+
   has_many :room_rates, dependent: :destroy
   has_many :room_inventories, dependent: :destroy
   has_many :rate_plans, dependent: :destroy

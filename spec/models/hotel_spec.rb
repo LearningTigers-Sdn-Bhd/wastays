@@ -5,6 +5,7 @@ RSpec.describe Hotel, type: :model do
     it { should belong_to(:account) }
     it { should have_many(:user_hotel_accesses).dependent(:destroy) }
     it { should have_many(:users).through(:user_hotel_accesses) }
+    it { should have_many(:room_groups).dependent(:destroy) }
   end
 
   describe 'validations' do
