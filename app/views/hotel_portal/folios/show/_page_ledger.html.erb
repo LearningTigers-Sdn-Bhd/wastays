@@ -5,16 +5,11 @@
 
 <section class="overflow-hidden" data-controller="folio-ledger">
   <div class="flex items-center justify-between py-3">
-    <div class="flex items-center gap-2">
-      <span class="inline-flex size-7 items-center justify-center rounded-md bg-slate-100 text-slate-700">
-        <%= cached_icon "receipt-text", class: "size-3.5" %>
-      </span>
-      <h2 class="text-sm font-black uppercase tracking-[0.18em] text-slate-700">Ledger</h2>
-    </div>
+    <h2 class="text-sm font-bold text-slate-950">Ledger</h2>
     <span class="text-xs font-medium tabular-nums text-slate-500"><%= pluralize(folio_show.ledger_entry_count, "entry") %></span>
   </div>
 
-  <div class="overflow-x-auto rounded-md border border-slate-200">
+  <div class="overflow-x-auto border border-slate-200">
     <table class="w-full min-w-[760px] table-fixed text-left text-xs">
       <thead class="sticky top-0 z-[1] bg-slate-50 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
         <tr class="border-b border-slate-200">

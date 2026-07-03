@@ -151,6 +151,8 @@ module HotelPortal
       active_folio_id = options.delete(:active_folio_id)
       destination = if params[:redirect_to_checkout] == "true"
         hotel_booking_transaction_check_out_path(current_hotel, @booking)
+      elsif params[:folio_origin] == "booking_control_panel"
+        hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations", folio_id: active_folio_id)
       elsif params[:redirect_to_folio] == "true"
         hotel_folio_path(current_hotel, @booking, folio_origin_params.merge(active_folio_id: active_folio_id).compact)
       else
