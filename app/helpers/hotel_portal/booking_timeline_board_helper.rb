@@ -167,11 +167,11 @@ module HotelPortal
     end
 
     def room_card_smoking_badge_color_class(room_type)
-      room_type.smoking_allowed ? "text-emerald-500 bg-emerald-50 border-emerald-100" : "text-slate-400 bg-slate-50 border-slate-100"
+      room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400"
     end
 
     def room_card_pets_badge_color_class(room_type)
-      room_type.pets_allowed ? "text-emerald-500 bg-emerald-50 border-emerald-100" : "text-slate-400 bg-slate-50 border-slate-100"
+      room_type.pets_allowed ? "text-emerald-500" : "text-slate-400"
     end
 
     def room_card_checkout_badge(booking, visible_start_date)
