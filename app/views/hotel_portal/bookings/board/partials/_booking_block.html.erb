@@ -1,22 +1,9 @@
-<%# app/views/hotel_portal/bookings/board/partials/_booking_block.html.erb %>
-<%
-  clipped_left = block[:check_in] < visible_start_date
-  clipped_right = block[:check_out] > visible_end_exclusive
-  left_offset = clipped_left ? 0 : block_left_pad
-  right_trim = clipped_right ? 0 : block_left_pad
-  width_calc = "calc(#{block[:span]} * 100% - #{left_offset + right_trim}px)"
-  top_offset = block_top + (block_index * block_step)
-  block_height = 40
-  block_classes = "absolute z-10 overflow-hidden rounded-sm border cursor-pointer #{booking_block_status_classes(block, booking_styles)} #{booking_block_clip_corner_class(block, visible_start_date, visible_end_exclusive)} transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1"
-  block_style = "top: #{top_offset}px; left: #{left_offset}px; width: #{width_calc}; min-width: 40px; height: #{block_height}px;"
-  block_label = "#{block[:guest_name]}, #{block[:status].humanize}, room #{block[:room_number]}, #{block[:check_in].strftime('%B %-d')} to #{block[:check_out].strftime('%B %-d, %Y')}"
-%>
-
+<%# locals: (block:, block_index:, visible_start_date:, visible_end_exclusive:, block_left_pad:, block_top:, block_step:, current_hotel:, can_manage_bookings:, board_view_type:) %>
 <% if can_manage_bookings %>
   <div
     role="button"
     tabindex="0"
-    aria-label="<%= block_label %>"
+    aria-label="<%= booking_block_accessibility_label(block) %>"
     draggable="true"
     data-id="<%= block[:id] %>"
     data-controller="booking-actions floating"
@@ -32,26 +19,28 @@
     data-booking-actions-payment-status-value="<%= block[:payment_status] %>"
     data-booking-actions-notes-value="<%= block[:notes] %>"
     data-action="click->booking-actions#openBookingSheet keydown.enter->booking-actions#openBookingSheet keydown.space->booking-actions#openBookingSheet dragstart->booking-timeline#onDragStart dragend->booking-timeline#onDragEnd"
-    class="<%= block_classes %>"
-    style="<%= block_style %>"
+    class="<%= booking_block_classes(block, board_view_type, visible_start_date, visible_end_exclusive) %>"
+    style="<%= booking_block_style_attributes(block, visible_start_date, visible_end_exclusive, block_left_pad, block_top, block_index, block_step) %>"
     data-floating-target="reference"
   >
     <%= render "hotel_portal/bookings/board/partials/booking_block_content",
       block: block,
       can_manage_bookings: can_manage_bookings,
-      clipped_left: clipped_left,
-      clipped_right: clipped_right %>
+      clipped_left: booking_clipped_left?(block, visible_start_date),
+      clipped_right: booking_clipped_right?(block, visible_end_exclusive),
+      view_type: board_view_type %>
   </div>
 <% else %>
   <%= link_to hotel_booking_path(current_hotel, block[:booking]),
-      aria: { label: block_label },
-      class: block_classes,
-      style: block_style,
+      aria: { label: booking_block_accessibility_label(block) },
+      class: booking_block_classes(block, board_view_type, visible_start_date, visible_end_exclusive),
+      style: booking_block_style_attributes(block, visible_start_date, visible_end_exclusive, block_left_pad, block_top, block_index, block_step),
       data: { turbo_frame: "_top" } do %>
     <%= render "hotel_portal/bookings/board/partials/booking_block_content",
       block: block,
       can_manage_bookings: can_manage_bookings,
-      clipped_left: clipped_left,
-      clipped_right: clipped_right %>
+      clipped_left: booking_clipped_left?(block, visible_start_date),
+      clipped_right: booking_clipped_right?(block, visible_end_exclusive),
+      view_type: board_view_type %>
   <% end %>
 <% end %>
