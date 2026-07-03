@@ -99,12 +99,23 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("PRIVATE FOLIO MARKER")
       expect(response.body).to include("PRIVATE TRANSACTION MARKER")
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css('nav[aria-label="Folio operation sections"]')).to be_nil
+      expect(response.body).not_to include("Activity Log")
+      expect(document.at_css('[data-folio-ledger-section-param="forecasted"]')["aria-expanded"]).to eq("false")
+      expect(document.css("tr[data-section='posted']").all? { |row| !row["class"].to_s.split.include?("hidden") }).to be(true)
+      expect(document.css("tr[data-section='forecasted']").all? { |row| row["class"].to_s.split.include?("hidden") }).to be(true)
+
+      get hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: folio.id, folio_tab: "activity")
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("PRIVATE TRANSACTION MARKER")
+      expect(response.body).not_to include("Activity Log")
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences", folio_id: target_folio.id)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("PRIVATE ROUTE MARKER")
-      expect(response.body).to include("Billing Instructions")
+      expect(response.body).not_to include("PRIVATE ROUTE MARKER", "Advanced Billing Rules", "Billing Instructions")
     end
 
     it "renders standalone billing preferences from billing parties" do
@@ -124,7 +135,32 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response.body).to include("Acme Engineering")
       expect(response.body).to include("City Ledger · Direct bill enabled")
       expect(response.body).to include("Corporate Folio")
-      expect(response.body).to include("Billing Instructions")
+      expect(response.body).not_to include("Advanced Billing Rules", "Billing Instructions")
+    end
+
+    it "renders booking-local billing parties before group assignment controls for a child booking" do
+      allow(BookingRedesign).to receive(:enabled?).and_return(true)
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      create(:group_billing_arrangement, group_booking: group, hotel: hotel, name: "Group accommodation payer")
+
+      guest = create(:guest, name: "Child Booking Guest")
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+      account = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      company_party = create(:booking_billing_party, :company, booking: booking, hotel: hotel, hotel_corporate_account: account)
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, booking_billing_party: company_party,
+        hotel_corporate_account: account, name: "Child Corporate Folio")
+
+      get hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences")
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      text = document.text
+      expect(text).to include("Billing parties", "Child Booking Guest", account.corporate_account.name,
+        "Child Corporate Folio", "+ Add billing party", "Edit terms", "Booking-local billing exception",
+        "Group accommodation payer")
+      expect(text.index("Billing parties")).to be < text.index("Booking-local billing exception")
     end
 
     it "renders billing-party creation inline without an offcanvas target" do
@@ -181,6 +217,17 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(add_folio["href"]).to eq(new_folio_window_hotel_booking_control_panel_path(hotel, booking))
       expect(add_folio["href"]).not_to eq(new_window_hotel_folio_path(hotel, booking))
       expect(add_folio["data-turbo-frame"]).to eq("offcanvas_drawer")
+    end
+
+    it "keeps folio tree links free of obsolete subtab state" do
+      folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Guest Folio")
+
+      get hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_tab: "forecast")
+
+      document = Nokogiri::HTML(response.body)
+      folio_link = document.at_css("nav[aria-label='Booking folios'] a[href*='folio_id=#{folio.id}']")
+      expect(folio_link).to be_present
+      expect(folio_link["href"]).not_to include("folio_tab")
     end
 
     it "opens only the current booking in grouped entity rails" do
@@ -252,7 +299,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences"))
     end
 
-    it "renders rate and routing warnings as alert dialogs without widening the workspace" do
+    it "renders rate warnings as alert dialogs without widening the workspace" do
       create(:booking_room, booking: booking)
       folio = create(:booking_folio, booking: booking, hotel: hotel, is_primary: true)
       transaction_code = create(:transaction_code, hotel: hotel)
@@ -270,8 +317,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-layout-mode="left_and_center"')
-      expect(response.body).to include("Apply routing change?")
-      expect(response.body).to include("existing_and_future")
+      expect(response.body).not_to include("Apply routing change?", "existing_and_future")
     end
 
     it "opens room and guest editors directly in the offcanvas" do
@@ -408,6 +454,20 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Arrangement name", "Group Account", "Default coverage", "Create arrangement")
       expect(Nokogiri::HTML(response.body).at_css("form[action*='create_group_billing_arrangement']")).to be_present
+    end
+
+    it "keeps the group overview focused on arrangements rather than child billing parties" do
+      allow(BookingRedesign).to receive(:enabled?).and_return(true)
+      group = create(:group_booking, hotel: hotel, name: "Overview Group")
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking_guest, booking: booking, guest: create(:guest, name: "Child-only payer"), is_primary: true)
+
+      get hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences", scope: "group")
+
+      expect(response).to have_http_status(:success)
+      panel = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="billing-preferences-heading"]')
+      expect(panel.text).to include("Default payers and settlement methods for the group", "+ Add arrangement")
+      expect(panel.text).not_to include("Billing parties", "+ Add billing party", "Child-only payer")
     end
 
     it "renders a directed empty state for a booking without a room" do

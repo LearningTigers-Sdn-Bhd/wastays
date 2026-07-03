@@ -322,6 +322,7 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
       room_presenter = described_class.new(booking, params: { tab: "booking_details" })
 
       expect(folio_presenter.folio_tree_rows.find { |row| row.id == folio.id }).to have_attributes(active: true)
+      expect(folio_presenter.folio_tree_rows.find { |row| row.id == folio.id }.href).not_to include("folio_tab")
       expect(room_presenter.folio_tree_rows.find { |row| row.id == folio.id }).to have_attributes(active: false)
     end
   end

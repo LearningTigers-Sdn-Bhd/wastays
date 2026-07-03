@@ -15,8 +15,7 @@
 
       <% if active_folio.group_deposit_allocations.any? %><div class="border-b border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-900"><strong>Group Deposit Allocation:</strong> <%= active_folio.group_deposit_allocations.map { |allocation| "##{allocation.group_deposit_id} · #{presenter.money(allocation.amount)}" }.to_sentence %></div><% end %>
 
-      <nav class="flex overflow-x-auto border-b border-slate-200 bg-slate-50 px-3" aria-label="Folio operation sections"><% presenter.folio_operations_tab_rows.each do |key, label| %><% active = presenter.folio_operations_tab == key %><%= link_to label, hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations", folio_id: active_folio.id, folio_tab: key), data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" }, class: "border-b-2 px-3 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 #{active ? 'border-slate-950 text-slate-950' : 'border-transparent text-slate-500 hover:text-slate-950'}" %><% end %></nav>
-      <div class="px-5 pb-5"><% if presenter.folio_operations_tab == "activity" %><%= render "hotel_portal/folios/show/activity_log", folio_show: folio_show %><% else %><%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: booking, hotel: current_hotel, folio_origin: "booking_control_panel" %><% end %></div>
+      <div class="px-5 pb-5"><%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: booking, hotel: current_hotel, folio_origin: "booking_control_panel" %></div>
     </section>
   <% else %>
     <div class="px-5 py-12 text-center"><p class="font-semibold text-slate-900">No folios are available.</p><p class="mt-1 text-sm text-slate-500">Create a folio before posting charges or payments.</p></div>

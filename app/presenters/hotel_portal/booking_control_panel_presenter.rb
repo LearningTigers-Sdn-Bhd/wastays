@@ -23,7 +23,7 @@ module HotelPortal
       Tab.new("housekeeping_requests", "Requests"),
       Tab.new("audit_trails", "Audit Trails")
     ].freeze
-    ALERT_ACTIONS = %w[change_rate routing_preview].freeze
+    ALERT_ACTIONS = %w[change_rate].freeze
 
     STATUS_LABELS = {
       "pending" => "Pending",
@@ -119,7 +119,6 @@ module HotelPortal
         scope: group_overview? ? "group" : nil,
         folio_id: @params[:folio_id].presence,
         booking_guest_id: @params[:booking_guest_id].presence,
-        folio_tab: @params[:folio_tab].presence,
         billing_scope: @params[:billing_scope].presence
       )
     end
@@ -144,7 +143,6 @@ module HotelPortal
         scope: group_overview? ? "group" : nil,
         folio_id: @params[:folio_id].presence,
         booking_guest_id: @params[:booking_guest_id].presence,
-        folio_tab: @params[:folio_tab].presence,
         billing_scope: @params[:billing_scope].presence,
         folio_routing_rule_id: @params[:folio_routing_rule_id].presence
       )
@@ -597,7 +595,7 @@ module HotelPortal
     def folio_tree_rows
       folios.map do |folio|
         folio_tree_row(folio, active: folio_operations_folio_active?(folio)).with(
-          href: path_for(booking, tab: active_tab, folio_id: folio.id, folio_tab: folio_operations_tab)
+          href: path_for(booking, tab: active_tab, folio_id: folio.id)
         )
       end
     end
@@ -713,18 +711,6 @@ module HotelPortal
       return folio_show&.folio if folio_show.present?
 
       folios.find { |folio| folio.id.to_s == (@params[:folio_id].presence || @params[:active_folio_id]).to_s } || booking.booking_folio || folios.first
-    end
-
-    def folio_operations_tab
-      @params[:folio_tab].to_s.in?(%w[ledger forecast activity]) ? @params[:folio_tab].to_s : "ledger"
-    end
-
-    def folio_operations_tab_rows
-      [
-        [ "ledger", "Ledger" ],
-        [ "forecast", "Forecast" ],
-        [ "activity", "Activity" ]
-      ]
     end
 
     def group_deposit_provenance_for(transaction)

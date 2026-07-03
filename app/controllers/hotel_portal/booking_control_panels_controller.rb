@@ -37,7 +37,7 @@ module HotelPortal
         hotel: current_hotel,
         user: current_user,
         active_folio_id: params[:folio_id].presence || params[:active_folio_id].presence,
-        active_tab: folio_tab_param
+        active_tab: folio_show_tab
       )
       @presenter = BookingControlPanelPresenter.new(@booking, params: params, hotel: current_hotel, booking_presenter: @booking_presenter, folio_show: @folio_show)
       set_audit_logs(@booking, group_booking: (@booking.group_booking if @presenter.group_overview?))
@@ -61,12 +61,10 @@ module HotelPortal
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
     end
 
-    def folio_tab_param
+    def folio_show_tab
       case params[:tab].to_s
       when "billing_details", "billing_preferences" then "billing_instructions"
-      when "folio_operations"
-        { "forecast" => "ledger", "activity" => "activity_log" }.fetch(params[:folio_tab].to_s, "ledger")
-      else params[:folio_tab].presence
+      when "folio_operations" then "ledger"
       end
     end
 
