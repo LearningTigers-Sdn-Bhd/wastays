@@ -24,8 +24,16 @@ module HotelPortal
             @return_to = offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking))
           end
 
-          def complete_action(notice:)
-            offcanvas_transaction_response(destination: @return_to, notice: notice)
+          def complete_action(notice: nil, alert: nil)
+            return offcanvas_transaction_response(destination: @return_to, notice: notice) if alert.blank?
+
+            respond_to do |format|
+              format.turbo_stream do
+                flash[:alert] = alert
+                render_offcanvas_completion(@return_to)
+              end
+              format.html { redirect_to @return_to, alert: alert, status: :see_other }
+            end
           end
 
           def authorize_manage_bookings!

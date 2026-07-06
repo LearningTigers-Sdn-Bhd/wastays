@@ -32,19 +32,9 @@ class HotelPortal::Bookings::GuestsController < HotelPortal::BaseController
   def destroy
     @booking = current_hotel.bookings.find(params[:id])
     bg = @booking.booking_guests.find_by!(id: params[:guest_id], is_primary: false)
-    guest = bg.guest
-    Booking.transaction do
-      bg.destroy!
-      guest.destroy! if guest.booking_guests.empty?
-      Bookings::RecordAuditLog.call!(
-        auditable: @booking,
-        user: current_user,
-        action_type: "guest_removed",
-        old_value: guest.attributes.slice("name", "email", "phone", "country"),
-        new_value: {}
-      )
-    end
-    redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest removed."
+    result = ::BookingGuests::Remove.call(booking_guest: bg, actor: current_user)
+    redirect_to hotel_booking_path(current_hotel, @booking),
+      result.success? ? { notice: "Guest removed." } : { alert: result.error }
   end
 
   private
