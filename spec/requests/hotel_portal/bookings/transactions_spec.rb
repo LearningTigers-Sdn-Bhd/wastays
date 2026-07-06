@@ -25,16 +25,24 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
-    expect(response.body).to include("New booking")
+    expect(response.body).to include("Full Booking")
     expect(response.body).to include('type="datetime-local"')
+    expect(response.body).to include("bg-stone-50")
+    expect(response.body).to include("xl:sticky", "xl:max-h-[calc(100vh-9rem)]")
+    expect(response.body).to include('aside class="min-h-full border-l border-stone-200 bg-white"')
+    expect(response.body).to include("overflow-x-auto border-x border-stone-200")
+    expect(response.body).to include('main class="min-w-0"')
+    expect(response.body).to include("Record payment now")
+    expect(response.body).not_to include("Booking Payment")
+    expect(response.body).to include("booking-form__textarea")
   end
 
   it "reuses stay details for backdated walk-ins and places the reason details before internal notes" do
     get hotel_booking_transaction_backdated_check_in_path(hotel), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Stay and Backdated Details")
-    expect(response.body.index("Reason Details")).to be < response.body.index("Internal Notes")
+    expect(response.body).to include("Stay details")
+    expect(response.body.index("Details")).to be < response.body.index("Notes")
   end
 
   it "displays the backdated check-in warning banner, reason category select, and posting date in the form" do
@@ -42,10 +50,10 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include("Backdated check-in")
-    expect(response.body).to include("uses a past arrival date. It may affect occupancy, folio charges, revenue reports, and audit logs. Reason is required.")
-    expect(response.body).to include("Backdate Reason")
-    expect(response.body).to include("Posting Date")
-    expect(response.body).to include("Actual Check-In")
+    expect(response.body).to include("Reservation, walk-in, or backdated check-in")
+    expect(response.body).to include("Reason")
+    expect(response.body).to include("Posting date")
+    expect(response.body).to include("Check-in")
   end
 
   it "renders the same amend-stay sheet independently of its launcher" do
@@ -254,7 +262,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(Booking.last).to be_checked_in
     expect(Booking.last.booking_folio).to be_present
     expect(BookingFolio.where(booking: Booking.last).count).to eq(1)
-    expect(response).to redirect_to(hotel_booking_path(hotel, Booking.last))
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
   end
 
   it "requires a reason before backdating an existing reservation check-in" do
@@ -486,7 +494,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
 
     booking = Booking.last
     expect(booking).to be_checked_in
-    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking))
 
     # Payment transaction captured_at must be override
     payment = booking.payment_transactions.last

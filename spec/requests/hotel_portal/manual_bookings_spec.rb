@@ -75,13 +75,166 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
         post hotel_booking_transaction_new_booking_path(hotel), params: valid_params
       }.to change(Booking, :count).by(1)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, Booking.last))
+      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
       expect(Booking.last.booking_folio).to be_present
       expect(BookingFolio.where(booking: Booking.last).count).to eq(1)
 
       # Check inventory deduction
       inventory = room_type.room_inventories.find_by(date: Date.current)
       expect(inventory.quantity).to eq(9) # 10 - 1
+    end
+  end
+
+  describe "quick and grouped booking creation" do
+    let(:rate_plan) { create(:rate_plan, room_type: room_type) }
+
+    it "launches quick booking with the universal right drawer" do
+      get hotel_bookings_path(hotel)
+
+      quick_link = Nokogiri::HTML(response.body).at_css("a[href='#{hotel_booking_transaction_quick_booking_path(hotel)}']")
+      expect(quick_link["data-offcanvas-variant"]).to eq("right")
+    end
+
+    it "renders quick booking as a compact room-row form" do
+      get hotel_booking_transaction_quick_booking_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Quick Booking", "Every row creates one assigned room booking", "Confirm booking")
+      expect(response.body).to include('data-offcanvas-variant="right"')
+      expect(response.body).to include("bg-stone-50")
+      expect(response.body).to include("Phone", "+60 12-345 6789", "guest@example.com")
+      expect(response.body).not_to include(">Mobile</label>")
+      expect(response.body.scan('data-booking-room-rows-target="template"').size).to eq(1)
+    end
+
+    it "keeps quick booking row values and emits a toast when creation fails" do
+      params = {
+        booking: {
+          guest_name: "Toast Guest", guest_email: "toast@example.com", guest_phone: "60123456789",
+          check_in: Date.current, check_out: Date.current + 2.days,
+          source: "phone",
+          rooms: {
+            "0" => { room_type_id: room_type.id, rate_plan_id: rate_plan.id, room_number: "", adults: 2, children: 0 }
+          }
+        }
+      }
+
+      expect {
+        post hotel_booking_transaction_quick_booking_path(hotel), params: params, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+      }.not_to change(Booking, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('turbo-stream action="prepend" target="flash_toasts"')
+      expect(response.body).to include("Each room row requires a room category and room number.")
+      decoded_body = CGI.unescapeHTML(response.body)
+      expect(decoded_body).to include(%("room_type_id":"#{room_type.id}"), %("rate_plan_id":"#{rate_plan.id}"))
+      expect(response.body).not_to include("prohibited this booking from being saved")
+    end
+
+    it "rejects composite room row keys because Rails filters them from strong params" do
+      params = {
+        booking: {
+          guest_name: "Composite Key", guest_email: "composite@example.com", guest_phone: "60123456789",
+          check_in: Date.current, check_out: Date.current + 2.days,
+          source: "phone",
+          rooms: {
+            "1750000000000_0" => { room_type_id: room_type.id, rate_plan_id: rate_plan.id, room_number: "101", adults: 1, children: 0 }
+          }
+        }
+      }
+
+      expect {
+        post hotel_booking_transaction_quick_booking_path(hotel), params: params, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+      }.not_to change(Booking, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Add at least one room.")
+    end
+
+    it "creates a quick booking when room row keys are numeric" do
+      params = {
+        booking: {
+          guest_name: "Numeric Key", guest_email: "numeric@example.com", guest_phone: "60123456789",
+          check_in: Date.current, check_out: Date.current + 2.days,
+          source: "phone",
+          rooms: {
+            "0" => { room_type_id: room_type.id, rate_plan_id: rate_plan.id, room_number: "101", adults: 1, children: 0 }
+          }
+        }
+      }
+
+      expect {
+        post hotel_booking_transaction_quick_booking_path(hotel), params: params
+      }.to change(Booking, :count).by(1)
+
+      booking_room = Booking.last.booking_rooms.first
+      expect(booking_room.room_number).to eq("101")
+      expect(booking_room.rate_plan_id).to eq(rate_plan.id)
+      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
+    end
+
+    it "hydrates the full booking form from nested quick booking params" do
+      get hotel_booking_transaction_new_booking_path(hotel), params: {
+        booking: {
+          guest_name: "Quick Carry", guest_email: "carry@example.com", guest_phone: "60199887766",
+          check_in: Date.current, check_out: Date.current + 2.days,
+          source: "whatsapp",
+          rooms: {
+            "0" => { room_type_id: room_type.id, rate_plan_id: rate_plan.id, room_number: "101", adults: 2, children: 1 }
+          }
+        }
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Full Booking", "Quick Carry", "carry@example.com", "60199887766")
+      decoded_body = CGI.unescapeHTML(response.body)
+      expect(decoded_body).to include(%("room_type_id":"#{room_type.id}"), %("rate_plan_id":"#{rate_plan.id}"), %("room_number":"101"))
+    end
+
+    it "creates one child booking per room row and redirects to the group control panel" do
+      params = {
+        booking: {
+          guest_name: "Group Lead", guest_email: "lead@example.com", guest_phone: "60123456789",
+          check_in: Date.current, check_out: Date.current + 2.days,
+          source: "phone",
+          rooms: {
+            "0" => { room_type_id: room_type.id, room_number: "101", adults: 2, children: 0 },
+            "1" => { room_type_id: room_type.id, room_number: "102", adults: 1, children: 1 }
+          }
+        }
+      }
+
+      expect {
+        post hotel_booking_transaction_quick_booking_path(hotel), params: params
+      }.to change(Booking, :count).by(2).and change(GroupBooking, :count).by(1)
+
+      group = GroupBooking.last
+      expect(BookingRoom.where(booking: group.bookings).pluck(:room_number)).to contain_exactly("101", "102")
+      expect(group.bookings.pluck(:payment_status)).to all(eq("pending"))
+      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, group.bookings.first, scope: "group"))
+    end
+
+    it "records one group deposit and allocates it across child folios" do
+      params = {
+        booking: {
+          guest_name: "Paying Group", guest_email: "payer@example.com", guest_phone: "60111222333",
+          check_in: Date.current, check_out: Date.current + 2.days, source: "phone",
+          record_payment: "1", payment_method: "cash", payment_amount: "100.00",
+          rooms: {
+            "0" => { room_type_id: room_type.id, room_number: "101", adults: 1, children: 0 },
+            "1" => { room_type_id: room_type.id, room_number: "102", adults: 1, children: 0 }
+          }
+        }
+      }
+
+      expect {
+        post hotel_booking_transaction_new_booking_path(hotel), params: params
+      }.to change(GroupDeposit, :count).by(1).and change(GroupDepositAllocation, :count).by(2)
+
+      group = GroupBooking.last
+      expect(group.group_deposits.last.amount).to eq(100.to_d)
+      expect(group.bookings.pluck(:payment_status)).to all(eq("partial"))
     end
   end
 

@@ -1,39 +1,37 @@
-<div class="h-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-controller="payment-toggle">
-  <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
-    <h3 class="text-sm font-bold text-slate-900">Booking Payment</h3>
-  </div>
-  <div class="p-6 space-y-6">
+<section class="border-t border-stone-200 px-5 py-5" data-controller="payment-toggle">
+  <div class="space-y-5">
+    <p class="text-xs font-bold uppercase tracking-wider text-stone-500">Payment</p>
     <label class="flex items-center justify-between gap-4">
       <span>
-        <span class="block text-sm font-bold text-slate-900">Record booking payment now</span>
-        <span class="mt-1 block text-xs font-medium text-slate-500">Enable payment method, amount, and receipt reference fields.</span>
+        <span class="block text-sm font-bold text-stone-900">Record payment now</span>
+        <span class="mt-1 block text-xs text-stone-500">Otherwise payment remains pending.</span>
       </span>
       <span class="relative inline-flex shrink-0 items-center">
         <%= f.check_box :record_payment,
             class: "peer sr-only",
             aria: { label: "Record booking payment now" },
             data: { action: "change->payment-toggle#toggle", payment_toggle_target: "checkbox" } %>
-        <span class="h-7 w-12 rounded-full bg-slate-200 transition peer-checked:bg-slate-900 peer-focus:ring-2 peer-focus:ring-slate-300"></span>
+        <span class="h-7 w-12 rounded-full bg-stone-200 transition peer-checked:bg-stone-900 peer-focus:ring-2 peer-focus:ring-stone-300"></span>
         <span class="absolute left-1 size-5 rounded-full bg-white shadow transition peer-checked:translate-x-5"></span>
       </span>
     </label>
 
-    <div class="space-y-6 pt-4 border-t border-slate-100 opacity-50" data-payment-toggle-target="container">
-      <div class="grid grid-cols-1 gap-6">
+    <div class="space-y-4 border-t border-stone-200 pt-5 opacity-50" data-payment-toggle-target="container">
+      <div class="grid grid-cols-1 gap-4">
         <div>
-          <%= f.label :payment_method, "Payment Method", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.select :payment_method, [["Cash", "cash"], ["Credit Card", "credit_card"], ["Bank Transfer", "bank_transfer"]], { selected: "cash" }, { disabled: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm disabled:cursor-not-allowed", data: { payment_toggle_target: "field" } } %>
+          <%= f.label :payment_method, "Payment method", class: "booking-form__label" %>
+          <%= f.select :payment_method, [["Cash", "cash"], ["Credit Card", "credit_card"], ["Bank Transfer", "bank_transfer"]], { selected: "cash" }, { disabled: true, class: "booking-form__control", data: { payment_toggle_target: "field" } } %>
         </div>
         <div>
-          <%= f.label :payment_amount, "Amount (MYR)", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.number_field :payment_amount, step: 0.01, disabled: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm disabled:cursor-not-allowed", data: { booking_calc_target: "paymentAmountInput", payment_toggle_target: "field" } %>
-          <p class="mt-1.5 text-[10px] font-medium text-slate-500">Defaults to total stay price if left blank.</p>
+          <%= f.label :payment_amount, "Amount (MYR)", class: "booking-form__label" %>
+          <%= f.number_field :payment_amount, step: 0.01, disabled: true, class: "booking-form__control", data: { booking_calc_target: "paymentAmountInput", payment_toggle_target: "field" } %>
+          <p class="mt-1.5 text-[10px] text-stone-500">Defaults to the total if left blank.</p>
         </div>
         <div>
-          <%= f.label :payment_reference, "Reference / Receipt No.", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.text_field :payment_reference, placeholder: "Optional reference number", disabled: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm disabled:cursor-not-allowed", data: { payment_toggle_target: "field" } %>
+          <%= f.label :payment_reference, "Reference / receipt no.", class: "booking-form__label" %>
+          <%= f.text_field :payment_reference, placeholder: "Optional reference", disabled: true, class: "booking-form__control", data: { payment_toggle_target: "field" } %>
         </div>
       </div>
     </div>
   </div>
-</div>
+</section>

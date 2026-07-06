@@ -395,6 +395,7 @@ Rails.application.routes.draw do
       match "manage-internal-notes", to: "manage_internal_notes#show", via: [ :get, :post, :patch ], as: :manage_internal_notes
     end
     scope "booking-transactions", as: :booking_transaction, module: "bookings/transactions" do
+      match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
       match "new-booking", to: "new_bookings#show", via: [ :get, :post ], as: :new_booking
       match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in
       match "backdated-check-in", to: "backdated_check_ins#show", via: [ :get, :post ], as: :backdated_check_in

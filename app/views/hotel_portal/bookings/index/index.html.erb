@@ -16,10 +16,14 @@
         <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-60 origin-top-right rounded-2xl bg-slate-900 border border-slate-800 p-1.5 shadow-xl shadow-slate-950/20 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="add-booking-menu-button" tabindex="-1">
           <div class="py-0.5" role="none">
             <div class="px-3.5 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-800 mb-1">Insert Transaction</div>
-            
-            <%= link_to hotel_booking_transaction_new_booking_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+
+            <%= link_to hotel_booking_transaction_quick_booking_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
               <%= cached_icon "calendar-plus", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
-              Booking
+              Quick Booking
+            <% end %>
+            <%= link_to hotel_booking_transaction_new_booking_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+              <%= cached_icon "clipboard-list", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
+              Full Booking
             <% end %>
             <%= link_to hotel_booking_transaction_walk_in_check_in_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
               <%= cached_icon "user-check", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
