@@ -81,10 +81,17 @@
 
     <!-- Page Header -->
     <div class="mb-5 flex flex-wrap items-end justify-end gap-4">
-      <div class="flex items-center gap-3">
-        <span class="hidden text-xs text-slate-400 sm:block">
-          Last synced <%= Time.current.strftime("%-I:%M %p") %>
-        </span>
+      <div class="flex items-center gap-3.5">
+        <div class="flex items-center gap-1">
+          <span class="hidden text-xs text-slate-400 sm:block">
+            Last synced <%= Time.current.strftime("%-I:%M %p") %>
+          </span>
+          <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(force_refresh: true)), 
+                      class: "text-slate-400 hover:text-indigo-600 transition-all hover:rotate-180 duration-500 p-1 rounded-md hover:bg-slate-100 flex items-center justify-center size-7", 
+                      title: "Refresh channel connections" do %>
+            <%= cached_icon "refresh-cw", class: "size-3.5" %>
+          <% end %>
+        </div>
         <button type="button" 
                 data-inventory-calendar-target="syncButton"
                 data-action="inventory-calendar#openReview"

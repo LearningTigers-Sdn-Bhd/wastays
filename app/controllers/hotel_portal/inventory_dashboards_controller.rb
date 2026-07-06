@@ -496,7 +496,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   def load_channels_data
     if current_hotel.preferred_channel_manager == "channex"
       adapter = ChannelManagers::SyncOrchestrator.adapter_for(current_hotel)
-      @channels = adapter.connected_channels
+      force = ActiveModel::Type::Boolean.new.cast(params[:force_refresh])
+      @channels = adapter.connected_channels(force_refresh: force)
       @derived_settings_by_channel_id = current_hotel.channel_derived_settings.index_by(&:channel_id)
       @availability_rules = current_hotel.channel_availability_rules.order(created_at: :desc)
     else

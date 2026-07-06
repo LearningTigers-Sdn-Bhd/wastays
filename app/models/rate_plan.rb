@@ -64,6 +64,6 @@ class RatePlan < ApplicationRecord
   end
 
   def synced_with_channel_manager?
-    hotel.preferred_channel_manager.present? && channel_mapping.present? && channel_mapping.external_id != "pending"
+    hotel.preferred_channel_manager.present? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
   end
 end

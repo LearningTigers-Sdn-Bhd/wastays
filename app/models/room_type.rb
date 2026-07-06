@@ -86,4 +86,18 @@ class RoomType < ApplicationRecord
     # Associate this room type with the rate plan
     room_type_rate_plans.create!(rate_plan: rate_plan)
   end
+
+  def sync_with_channel_manager
+    return if hotel.preferred_channel_manager.blank?
+
+    ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
+  end
+
+  def delete_from_channel_manager
+    ChannelManagers::SyncStructureJob.perform_later(self.class.name, nil, "delete", hotel_id: hotel_id, external_id: channel_mapping.external_id)
+  end
+
+  def synced_with_channel_manager?
+    hotel.preferred_channel_manager.present? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
+  end
 end

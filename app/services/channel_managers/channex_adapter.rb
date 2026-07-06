@@ -33,14 +33,17 @@ module ChannelManagers
       ensure_property(client)
     end
 
-    def connected_channels
+    def connected_channels(force_refresh: false)
       client = Channex::Client.new
       property_mapping = mapping_for(@hotel)
-      return [] if property_mapping.nil? || property_mapping.external_id == "pending"
+      return [] if property_mapping.nil? || property_mapping.external_id.to_s.start_with?("pending")
 
       property_id = property_mapping.external_id
 
-      Rails.cache.fetch("channex:channels:#{@hotel.id}", expires_in: 10.minutes) do
+      cache_key = "channex:channels:#{@hotel.id}"
+      Rails.cache.delete(cache_key) if force_refresh
+
+      Rails.cache.fetch(cache_key, expires_in: 10.minutes) do
         response = client.get("/channels")
         if response["data"].is_a?(Array)
           response["data"].select do |channel|
@@ -71,7 +74,7 @@ module ChannelManagers
         }
       }
 
-      response = if mapping.external_id == "pending"
+      response = if mapping.external_id.to_s.start_with?("pending")
                    client.post("/room_types", payload)
       else
                    client.put("/room_types/#{mapping.external_id}", payload)
@@ -111,7 +114,7 @@ module ChannelManagers
         }
       }
 
-      response = if mapping.external_id == "pending"
+      response = if mapping.external_id.to_s.start_with?("pending")
                    client.post("/rate_plans", payload)
       else
                    client.put("/rate_plans/#{mapping.external_id}", payload)
@@ -372,7 +375,7 @@ module ChannelManagers
         end
 
         ext_rt_id = mapping_for(room_type).external_id
-        next if ext_rt_id == "pending"
+        next if ext_rt_id.to_s.start_with?("pending")
 
         current_range = nil
         inventories_by_date = room_type.room_inventories.where(date: effective_range).index_by(&:date)
@@ -435,7 +438,7 @@ module ChannelManagers
           next if room_type_rate_plan.blank?
 
           ext_rp_id = mapping_for(room_type_rate_plan).external_id
-          next if ext_rp_id == "pending"
+          next if ext_rp_id.to_s.start_with?("pending")
 
           # Determine which fields to include for this specific rate plan
           specific_fields = rate_plan_fields&.fetch(rate_plan.id.to_s, nil) || rate_plan_fields&.fetch(rate_plan.id, nil)
@@ -505,7 +508,7 @@ module ChannelManagers
           values << current_range if current_range.present?
 
           # --- Sync Channel-Specific Overrides for this rate plan ---
-          if ext_rp_id.present? && ext_rp_id != "pending"
+          if ext_rp_id.present? && !ext_rp_id.to_s.start_with?("pending")
             channels_list = connected_channels
 
             channels_list.each do |channel|
@@ -600,7 +603,7 @@ module ChannelManagers
         }
       }
 
-      response = if mapping.external_id == "pending"
+      response = if mapping.external_id.to_s.start_with?("pending")
                    client.post("/properties", payload)
       else
                    client.put("/properties/#{mapping.external_id}", payload)
@@ -683,7 +686,7 @@ module ChannelManagers
       overrides.group_by { |o| [ o.room_type_id, o.channel_id ] }.each do |(room_type_id, channel_id), chan_overrides|
         room_type = RoomType.find(room_type_id)
         ext_rt_id = mapping_for(room_type).external_id
-        next if ext_rt_id == "pending"
+        next if ext_rt_id.to_s.start_with?("pending")
 
         # 1. Clean up existing rules for this room/channel in this range to avoid duplicates
         existing_rules = client.get("/channel_availability_rules", { "filter" => { "property_id" => property_id } }) rescue {}
@@ -767,7 +770,7 @@ module ChannelManagers
       ext_rt_ids = rule.affected_room_types.map do |rt_id|
         rt = RoomType.find_by(id: rt_id)
         rt ? mapping_for(rt).external_id : nil
-      end.compact.reject { |id| id == "pending" }
+      end.compact.reject { |id| id.to_s.start_with?("pending") }
 
       days_array = rule.days.to_s.split(",").map(&:strip).reject(&:blank?)
       days_array = [ "mo", "tu", "we", "th", "fr", "sa", "su" ] if days_array.empty?
@@ -804,7 +807,7 @@ module ChannelManagers
       ext_rt_ids = rule.affected_room_types.map do |rt_id|
         rt = RoomType.find_by(id: rt_id)
         rt ? mapping_for(rt).external_id : nil
-      end.compact.reject { |id| id == "pending" }
+      end.compact.reject { |id| id.to_s.start_with?("pending") }
 
       days_array = rule.days.to_s.split(",").map(&:strip).reject(&:blank?)
       days_array = [ "mo", "tu", "we", "th", "fr", "sa", "su" ] if days_array.empty?
