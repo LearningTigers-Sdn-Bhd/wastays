@@ -33,8 +33,8 @@ module HotelPortal
       private
 
       def synced_with_channel_manager?
-        @hotel.preferred_channel_manager.present? &&
-          @room_type.channel_mapping.present? &&
+        @room_type.channel_mapping.present? &&
+          @room_type.channel_mapping.external_id.present? &&
           @room_type.channel_mapping.external_id != "pending"
       end
     end

@@ -38,37 +38,39 @@
 
   <turbo-frame id="room_types_results">
     <!-- Tabs Filter -->
-    <div class="rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm mb-6">
-      <nav class="flex items-center gap-1 overflow-x-auto" aria-label="Room Group Filter" role="tablist">
-        <% active_group_id = params[:room_group_id] %>
-        
-        <!-- All Tab -->
-        <%= link_to hotel_room_types_path(current_hotel),
-                    class: room_group_tab_class(active_group_id, :all),
-                    data: { turbo_action: "advance" } do %>
-          <span>All</span>
-        <% end %>
-
-        <!-- Group Tabs -->
-        <% current_hotel.room_groups.order(:name).each do |group| %>
-          <%= link_to hotel_room_types_path(current_hotel, room_group_id: group.id),
-                      class: room_group_tab_class(active_group_id, group.id),
+    <% if current_hotel.room_groups.any? %>
+      <div class="rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm mb-6">
+        <nav class="flex items-center gap-1 overflow-x-auto" aria-label="Room Group Filter" role="tablist">
+          <% active_group_id = params[:room_group_id] %>
+          
+          <!-- All Tab -->
+          <%= link_to hotel_room_types_path(current_hotel),
+                      class: room_group_tab_class(active_group_id, :all),
                       data: { turbo_action: "advance" } do %>
-            <span><%= group.name %></span>
+            <span>All</span>
           <% end %>
-        <% end %>
 
-        <!-- Unassigned Tab -->
-        <% unassigned_count = unassigned_room_types_count(current_hotel) %>
-        <% if unassigned_count > 0 %>
-          <%= link_to hotel_room_types_path(current_hotel, room_group_id: 'unassigned'),
-                      class: room_group_tab_class(active_group_id, :unassigned),
-                      data: { turbo_action: "advance" } do %>
-            <span>Unassigned (<%= unassigned_count %>)</span>
+          <!-- Group Tabs -->
+          <% current_hotel.room_groups.order(:name).each do |group| %>
+            <%= link_to hotel_room_types_path(current_hotel, room_group_id: group.id),
+                        class: room_group_tab_class(active_group_id, group.id),
+                        data: { turbo_action: "advance" } do %>
+              <span><%= group.name %></span>
+            <% end %>
           <% end %>
-        <% end %>
-      </nav>
-    </div>
+
+          <!-- Unassigned Tab -->
+          <% unassigned_count = unassigned_room_types_count(current_hotel) %>
+          <% if unassigned_count > 0 %>
+            <%= link_to hotel_room_types_path(current_hotel, room_group_id: 'unassigned'),
+                        class: room_group_tab_class(active_group_id, :unassigned),
+                        data: { turbo_action: "advance" } do %>
+              <span>Unassigned (<%= unassigned_count %>)</span>
+            <% end %>
+          <% end %>
+        </nav>
+      </div>
+    <% end %>
 
   <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-visible">
     <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8 rounded-t-2xl">
@@ -104,7 +106,7 @@
                 <td class="px-6 py-4 sm:px-8">
                   <div class="flex items-start gap-x-4">
                     <div class="flex-none size-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
-                      <%= cached_icon "layers", class: "size-5" %>
+                      <%= cached_icon "images", library: "phosphor", variant: "regular", class: "size-6" %>
                     </div>
                     <div class="flex flex-col gap-1">
                       <span class="text-sm font-bold text-slate-900"><%= room_type.name %></span>
@@ -161,7 +163,7 @@
             <tr>
               <td colspan="5" class="px-6 py-20 text-center sm:px-8">
                 <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
-                  <%= cached_icon "layers", class: "size-6" %>
+                  <%= cached_icon "images", library: "phosphor", variant: "regular", class: "size-6" %>
                 </div>
                 <h3 class="mt-4 text-sm font-bold text-slate-900">No room categories found</h3>
                 <p class="mt-1 text-sm text-slate-500 text-sm">Start by adding your first room configuration.</p>
@@ -182,7 +184,7 @@
           <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
             <div class="flex items-start gap-3">
               <div class="flex-none size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 shadow-sm">
-                <%= cached_icon "layers", class: "size-5" %>
+                <%= cached_icon "images", library: "phosphor", variant: "regular", class: "size-6" %>
               </div>
               <div class="min-w-0">
                 <p class="text-sm font-bold text-slate-900 truncate"><%= room_type.name %></p>

@@ -20,6 +20,7 @@ class RoomType < ApplicationRecord
   MAX_PHOTOS = 10
 
   before_validation :set_default_room_number_mode, on: :create
+  after_create :ensure_standard_rate_plan
 
   validates :name, presence: true
   validates :quantity, presence: true, numericality: { greater_than_or_equal_to: 0 }
@@ -65,5 +66,15 @@ class RoomType < ApplicationRecord
 
   def set_default_room_number_mode
     self.room_number_mode = room_number_mode.presence || "range"
+  end
+
+  def ensure_standard_rate_plan
+    return if rate_plans.exists?
+
+    rate_plans.create!(
+      name: "Standard Rate",
+      sell_mode: "per_room",
+      currency: hotel.default_currency || "MYR"
+    )
   end
 end

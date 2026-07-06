@@ -24,7 +24,6 @@ module Folios
     def action_label
       return "Voided" if transaction.voided_by_transaction_id.present?
       return "Correction" if transaction.reversal_of_transaction_id.present?
-      return "Tax reverses with parent" if generated_tax_child?
       return gateway_payment_action_label if gateway_payment?
       return ota_payment_action_label if ota_payment?
       return "—" if completed_gateway_refund?
@@ -32,6 +31,7 @@ module Folios
       return "Reverse group" if reverse_allowed? && taxable_parent?
       return "Reverse payment" if reverse_allowed? && manual_payment?
       return "Reverse" if reverse_allowed?
+      return "Tax reverses with parent" if generated_tax_child?
 
       "—"
     end

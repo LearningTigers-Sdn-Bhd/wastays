@@ -39,6 +39,22 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       get hotel_room_types_path(hotel), params: { room_group_id: "unassigned" }
       expect(response).to have_http_status(:ok)
     end
+
+    it "renders the room group filter tab navigation when room groups exist" do
+      get hotel_room_types_path(hotel)
+      expect(response.body).to include('aria-label="Room Group Filter"')
+    end
+
+    context "when there are no room groups" do
+      before do
+        hotel.room_groups.destroy_all
+      end
+
+      it "does not render the room group filter tab navigation" do
+        get hotel_room_types_path(hotel)
+        expect(response.body).not_to include('aria-label="Room Group Filter"')
+      end
+    end
   end
 
   describe "DELETE #destroy_photo" do

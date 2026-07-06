@@ -14,7 +14,10 @@ class HotelPortal::RoomGroupsController < HotelPortal::BaseController
     @room_group = @hotel.room_groups.build(room_group_params)
 
     if @room_group.save
-      redirect_to hotel_room_groups_path(@hotel), notice: "Room group created successfully."
+      respond_to do |format|
+        format.html { redirect_to hotel_room_groups_path(@hotel), notice: "Room group created successfully." }
+        format.turbo_stream { render turbo_stream: turbo_stream.append("offcanvas_drawer", html: "<script>window.location.reload();</script>".html_safe) }
+      end
     else
       @room_groups = @hotel.room_groups.includes(:room_types).order(:name)
       render :index, status: :unprocessable_content
@@ -25,7 +28,10 @@ class HotelPortal::RoomGroupsController < HotelPortal::BaseController
 
   def update
     if @room_group.update(room_group_params)
-      redirect_to hotel_room_groups_path(@hotel), notice: "Room group updated successfully."
+      respond_to do |format|
+        format.html { redirect_to hotel_room_groups_path(@hotel), notice: "Room group updated successfully." }
+        format.turbo_stream { render turbo_stream: turbo_stream.append("offcanvas_drawer", html: "<script>window.location.reload();</script>".html_safe) }
+      end
     else
       render :edit, status: :unprocessable_content
     end
@@ -33,9 +39,15 @@ class HotelPortal::RoomGroupsController < HotelPortal::BaseController
 
   def destroy
     if @room_group.destroy
-      redirect_to hotel_room_groups_path(@hotel), notice: "Room group deleted successfully."
+      respond_to do |format|
+        format.html { redirect_to hotel_room_groups_path(@hotel), notice: "Room group deleted successfully." }
+        format.turbo_stream { render turbo_stream: turbo_stream.append("offcanvas_drawer", html: "<script>window.location.href = '#{hotel_room_types_path(@hotel)}';</script>".html_safe) }
+      end
     else
-      redirect_to hotel_room_groups_path(@hotel), alert: "Cannot delete room group."
+      respond_to do |format|
+        format.html { redirect_to hotel_room_groups_path(@hotel), alert: "Cannot delete room group." }
+        format.turbo_stream { render turbo_stream: turbo_stream.append("offcanvas_drawer", html: "<script>alert('Cannot delete room group.');</script>".html_safe) }
+      end
     end
   end
 

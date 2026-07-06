@@ -39,12 +39,12 @@
       </div>
 
       <div>
-        <%= f.label :room_group_id, "Room Group / Wing Location", class: "block text-sm mb-2 font-semibold text-slate-800" %>
+        <%= f.label :room_group_id, "Room Group", class: "block text-sm mb-2 font-semibold text-slate-800" %>
         <%= f.collection_select :room_group_id, 
                                 @hotel.room_groups.order(:name), 
                                 :id, 
                                 :name, 
-                                { include_blank: "Unassigned / No Group" }, 
+                                { include_blank: "No Group" }, 
                                 class: "py-3.5 px-5 block w-full border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm bg-white" %>
       </div>
     </div>
