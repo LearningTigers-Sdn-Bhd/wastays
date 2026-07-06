@@ -350,10 +350,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.datetime "payout_at"
     t.string "payout_reference"
     t.string "payout_batch_id"
-    t.string "source", default: "internal"
-    t.string "external_reference"
-    t.string "channel_manager_reference"
-    t.integer "revision_number", default: 0
     t.jsonb "tax_lines", default: [], null: false
     t.integer "reservation_number"
     t.integer "receipt_number"
@@ -369,7 +365,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.text "special_requests"
     t.string "guest_city"
     t.boolean "tourism_tax_collected", default: false, null: false
+    t.string "source", default: "internal"
     t.string "fund_collector", default: "unknown", null: false
+    t.string "external_reference"
+    t.string "channel_manager_reference"
+    t.integer "revision_number", default: 0
     t.string "folio_account_reference"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id_unique", unique: true, where: "(booking_quote_id IS NOT NULL)"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
@@ -714,6 +714,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.index ["transfer_group_id"], name: "index_folio_transactions_on_transfer_group_id"
     t.index ["user_id"], name: "index_folio_transactions_on_user_id"
     t.index ["voided_by_transaction_id"], name: "index_folio_transactions_on_voided_by_transaction_id"
+  end
+
+  create_table "guest_registration_cards", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "booking_id", null: false
+    t.string "status", default: "draft", null: false
+    t.string "signer_name"
+    t.text "signature_data_url"
+    t.jsonb "terms_snapshot", default: {}, null: false
+    t.datetime "signed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_guest_registration_cards_on_booking_id", unique: true
+    t.index ["hotel_id"], name: "index_guest_registration_cards_on_hotel_id"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'signed'::character varying]::text[])", name: "guest_registration_cards_status_allowed"
   end
 
   create_table "guests", force: :cascade do |t|
@@ -1755,6 +1770,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
   add_foreign_key "folio_transactions", "night_audits", on_delete: :restrict
   add_foreign_key "folio_transactions", "transaction_codes"
   add_foreign_key "folio_transactions", "users"
+  add_foreign_key "guest_registration_cards", "bookings"
+  add_foreign_key "guest_registration_cards", "hotels"
   add_foreign_key "hotel_business_dates", "hotels"
   add_foreign_key "hotel_business_dates", "users", column: "force_closed_by_id", on_delete: :nullify
   add_foreign_key "hotel_corporate_accounts", "accounts", column: "corporate_account_id"

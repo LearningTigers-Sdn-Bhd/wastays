@@ -105,6 +105,34 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("In House Guest")
     end
 
+    it "renders registration cards tab with date filtering and no export menu" do
+      matching_booking = create(:booking, hotel: hotel, guest_name: "Current GRC", check_in: start_date, check_out: start_date + 1.day)
+      old_booking = create(:booking, hotel: hotel, guest_name: "Old GRC", check_in: start_date - 1.month, check_out: start_date - 1.month + 1.day)
+      create(:guest_registration_card, :signed, booking: matching_booking, hotel: hotel)
+      create(:guest_registration_card, booking: old_booking, hotel: hotel)
+
+      get arrivals_departures_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s,
+        end_date: end_date.to_s,
+        tab: "registration_cards"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Registration Cards")
+      expect(response.body).to include("Current GRC")
+      expect(response.body).not_to include("Old GRC")
+      expect(response.body).to include(hotel_booking_guest_registration_card_path(hotel, matching_booking))
+      expect(response.body).not_to include("Export PDF")
+      expect(response.body).not_to include("Export Excel")
+      expect(response.body).not_to include("Export CSV")
+    end
+
+    it "does not export registration cards from guest reports" do
+      get arrivals_departures_hotel_reports_path(hotel, format: :csv), params: { tab: "registration_cards" }
+
+      expect(response).to have_http_status(:not_acceptable)
+    end
+
     it "keeps today selected when switching guest report tabs" do
       travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
         create(:booking, hotel: hotel, status: "checked_in", check_in: Date.new(2026, 6, 14), check_out: Date.new(2026, 6, 16), guest_name: "In House Guest")
@@ -235,6 +263,62 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include('ss:Name="Arrivals"')
       expect(response.body).not_to include('ss:Name="Departures"')
       expect(response.body).to include("Excel Guest")
+    end
+  end
+
+  describe "GET /guest_registration_cards" do
+    it "renders guest registration cards report with view and print links" do
+      booking = create(:booking, hotel: hotel, guest_name: "Jane GRC", check_in: Date.new(2026, 5, 7), check_out: Date.new(2026, 5, 8))
+      create(:guest_registration_card, :signed, booking: booking, hotel: hotel)
+
+      get guest_registration_cards_hotel_reports_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Guest Registration Cards")
+      expect(response.body).to include("Jane GRC")
+      expect(response.body).to include(booking.guest_registration_card_number_display)
+      expect(response.body).to include(hotel_booking_guest_registration_card_path(hotel, booking))
+      expect(response.body).to include("Print / Save as PDF")
+    end
+
+    it "filters by status and searches guest registration cards" do
+      signed_booking = create(:booking, hotel: hotel, guest_name: "Jane GRC", confirmation_token: "GRC-JANE")
+      draft_booking = create(:booking, hotel: hotel, guest_name: "Ali Draft", confirmation_token: "GRC-ALI")
+      create(:guest_registration_card, :signed, booking: signed_booking, hotel: hotel)
+      create(:guest_registration_card, booking: draft_booking, hotel: hotel)
+
+      get guest_registration_cards_hotel_reports_path(hotel), params: { status: "signed", q: "Jane" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Jane GRC")
+      expect(response.body).not_to include("Ali Draft")
+      expect(response.body).to include("data-controller=\"auto-submit\"")
+      expect(response.body).to include("data-turbo-frame=\"grc_results\"")
+      expect(response.body).to include("input-&gt;auto-submit#submit")
+      expect(response.body).not_to include("Filter")
+    end
+
+    it "searches by confirmation token case-insensitively" do
+      matching_booking = create(:booking, hotel: hotel, guest_name: "Token Match", confirmation_token: "8TPT7Y")
+      other_booking = create(:booking, hotel: hotel, guest_name: "Token Miss", confirmation_token: "HCXUNU")
+      create(:guest_registration_card, booking: matching_booking, hotel: hotel)
+      create(:guest_registration_card, booking: other_booking, hotel: hotel)
+
+      get guest_registration_cards_hotel_reports_path(hotel), params: { q: "8tp" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Token Match")
+      expect(response.body).not_to include("Token Miss")
+    end
+
+    it "searches by formatted guest registration card number" do
+      booking = create(:booking, hotel: hotel, guest_name: "Formatted GRC", confirmation_token: "GRC-FMT")
+      create(:guest_registration_card, booking: booking, hotel: hotel)
+
+      get guest_registration_cards_hotel_reports_path(hotel), params: { q: booking.guest_registration_card_number_display.delete("-").downcase }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Formatted GRC")
     end
   end
 

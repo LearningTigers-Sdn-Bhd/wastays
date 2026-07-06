@@ -9,10 +9,17 @@
         <span class="inline-flex items-center gap-1 text-xs font-semibold text-slate-500">Download <%= cached_icon "download", class: "size-3" %></span>
       <% end %>
 
-      <div class="flex items-center justify-between px-4 py-3 text-slate-400">
-        <span class="inline-flex items-center gap-2"><span class="inline-flex size-6 items-center justify-center rounded-md bg-slate-100 text-slate-400"><%= cached_icon "clipboard-list", class: "size-3.5" %></span> Guest Registration</span>
-        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">Unavailable</span>
-      </div>
+      <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+        <%= link_to hotel_booking_guest_registration_card_path(current_hotel, booking), target: "_blank", class: "flex items-center justify-between px-4 py-3 text-slate-700 hover:bg-slate-50", data: { turbo: false } do %>
+          <span class="inline-flex items-center gap-2"><span class="inline-flex size-6 items-center justify-center rounded-md bg-amber-50 text-amber-700"><%= cached_icon "clipboard-list", class: "size-3.5" %></span> Guest Registration Card</span>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold text-slate-500">Open <%= cached_icon "chevron-right", class: "size-3" %></span>
+        <% end %>
+      <% else %>
+        <div class="flex items-center justify-between px-4 py-3 text-slate-400">
+          <span class="inline-flex items-center gap-2"><span class="inline-flex size-6 items-center justify-center rounded-md bg-slate-100 text-slate-400"><%= cached_icon "clipboard-list", class: "size-3.5" %></span> Guest Registration Card</span>
+          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">Manage bookings</span>
+        </div>
+      <% end %>
 
       <% if booking.status == "completed" %>
         <%= link_to invoice_booking_path(booking.confirmation_token), target: "_blank", class: "flex items-center justify-between px-4 py-3 text-slate-700 hover:bg-slate-50", data: { turbo: false } do %>
