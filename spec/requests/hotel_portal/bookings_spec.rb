@@ -40,6 +40,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_bookings_path(hotel)
 
       expect(response).to have_http_status(:success)
+      expect(response.body).not_to include(hotel_booking_transaction_quick_booking_path(hotel))
       expect(response.body).not_to include(hotel_booking_transaction_new_booking_path(hotel))
       expect(response.body).not_to include(hotel_booking_transaction_walk_in_check_in_path(hotel))
       expect(response.body).not_to include(hotel_booking_transaction_backdated_check_in_path(hotel))
@@ -70,7 +71,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
-      expect(response.body).to include("New booking")
+      expect(response.body).to include("Full Booking")
     end
   end
 
@@ -412,7 +413,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "creates and redirects from the shared transaction sheet" do
       post hotel_booking_transaction_new_booking_path(hotel), params: { booking: booking_params }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, Booking.last))
+      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
     end
 
     it "renders validation errors inside the offcanvas frame" do

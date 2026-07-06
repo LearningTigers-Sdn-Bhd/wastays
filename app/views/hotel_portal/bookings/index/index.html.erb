@@ -19,11 +19,7 @@
 
             <%= link_to hotel_booking_transaction_quick_booking_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
               <%= cached_icon "calendar-plus", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
-              Quick Booking
-            <% end %>
-            <%= link_to hotel_booking_transaction_new_booking_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
-              <%= cached_icon "clipboard-list", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
-              Full Booking
+              New Booking
             <% end %>
             <%= link_to hotel_booking_transaction_walk_in_check_in_path(current_hotel), class: "group flex items-center px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
               <%= cached_icon "user-check", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>

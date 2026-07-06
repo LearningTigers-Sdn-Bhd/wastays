@@ -57,6 +57,7 @@ module BookingEngine
         gender: normalized_gender,
         country: normalized_country,
         document_type: normalized_document_type,
+        date_of_birth: @payment_details[:date_of_birth],
         marketing_consent: @payment_details[:marketing_consent],
         privacy_consent: @payment_details[:privacy_consent]
       ).call
