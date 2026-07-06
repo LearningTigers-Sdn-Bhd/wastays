@@ -1,26 +1,27 @@
 <% if presenter.group_overview? %>
   <section aria-labelledby="security-deposits-heading">
     <header class="border-b border-slate-200 px-5 py-4">
-      <p class="text-xs font-semibold text-slate-500"><%= presenter.group_booking.reference %></p>
+      <p class="text-xs font-semibold text-slate-500">Booking No. <%= presenter.group_booking_number %></p>
       <h2 id="security-deposits-heading" class="mt-1 text-lg font-bold text-slate-950">Security Deposits</h2>
       <p class="mt-1 text-sm text-slate-600">Booking-level refundable deposits across this group. Select a booking before collecting or releasing a deposit.</p>
     </header>
     <div class="overflow-x-auto">
       <table class="w-full min-w-[760px] text-left text-sm">
-        <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600"><tr><th class="px-5 py-3">Booking</th><th class="px-5 py-3">Guest</th><th class="px-5 py-3">Room</th><th class="px-5 py-3">Status</th><th class="px-5 py-3 text-right">Held</th><th class="px-5 py-3 text-right">Records</th></tr></thead>
+        <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600"><tr><th class="px-5 py-3">Booking No.</th><th class="px-5 py-3">Guest</th><th class="px-5 py-3">Room</th><th class="px-5 py-3">Status</th><th class="px-5 py-3 text-right">Held</th><th class="px-5 py-3 text-right">Records</th></tr></thead>
         <tbody class="divide-y divide-slate-200">
           <% presenter.group_security_deposit_rows.each do |row| %>
-            <tr><td class="px-5 py-3 font-semibold text-slate-950"><%= row[:booking].confirmation_token %></td><td class="px-5 py-3 text-slate-700"><%= row[:guest] %></td><td class="px-5 py-3 text-slate-700"><%= row[:room] %></td><td class="px-5 py-3 text-slate-700"><%= row[:status] %></td><td class="px-5 py-3 text-right font-semibold tabular-nums text-slate-950"><%= row[:held] %></td><td class="px-5 py-3 text-right tabular-nums text-slate-700"><%= row[:count] %></td></tr>
+            <tr><td class="px-5 py-3 font-semibold text-slate-950"><%= row[:booking_number] %></td><td class="px-5 py-3 text-slate-700"><%= row[:guest] %></td><td class="px-5 py-3 text-slate-700"><%= row[:room] %></td><td class="px-5 py-3 text-slate-700"><%= row[:status] %></td><td class="px-5 py-3 text-right font-semibold tabular-nums text-slate-950"><%= row[:held] %></td><td class="px-5 py-3 text-right tabular-nums text-slate-700"><%= row[:count] %></td></tr>
           <% end %>
         </tbody>
       </table>
     </div>
+    <%= render "hotel_portal/booking_control_panels/security_deposits/group_deposits", presenter: presenter %>
   </section>
 <% else %>
   <% deposit_booking = presenter.security_deposit_booking %>
   <section aria-labelledby="security-deposits-heading">
     <header class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-      <div><p class="text-xs font-semibold text-slate-500"><%= deposit_booking.confirmation_token %></p><h2 id="security-deposits-heading" class="mt-1 text-lg font-bold text-slate-950">Security Deposits</h2><p class="mt-1 text-sm text-slate-600">Refundable security deposits for this booking.</p></div>
+      <div><p class="text-xs font-semibold text-slate-500">Booking No. <%= deposit_booking.formatted_reservation_number.presence || "—" %></p><h2 id="security-deposits-heading" class="mt-1 text-lg font-bold text-slate-950">Security Deposits</h2><p class="mt-1 text-sm text-slate-600">Refundable security deposits for this booking.</p></div>
       <div class="text-left sm:text-right"><p class="text-xs font-semibold text-slate-500">Held Total</p><p class="mt-1 text-lg font-bold tabular-nums text-slate-950"><%= presenter.money_for(deposit_booking, presenter.held_security_deposit_total) %></p><p class="text-xs text-slate-500"><%= presenter.security_deposit_status_label %></p></div>
     </header>
 
