@@ -16,20 +16,22 @@ module HotelPortal
       @booking_presenter = BookingPresenter.new(@booking, current_hotel)
       @folio_show = Folios::ShowPresenter.new(booking: @booking, hotel: current_hotel, user: current_user, active_folio_id: params[:folio_id])
       @presenter = BookingControlPanelPresenter.new(@booking, params: params.merge(tab: "folio_operations"), hotel: current_hotel, booking_presenter: @booking_presenter, folio_show: @folio_show)
+      @folio_booking_options = folio_booking_options
 
       render "hotel_portal/booking_control_panels/actions/create_folio_window/offcanvas"
     end
 
     def create_folio_window
+      target_booking = folio_window_booking
       result = ::BookingControlPanels::CreateFolioWindow.call(
-        booking: @booking,
+        booking: target_booking,
         user: current_user,
         attributes: create_folio_window_params
       )
 
       destination = hotel_booking_control_panel_path(
         current_hotel,
-        @booking,
+        target_booking,
         tab: "folio_operations",
         folio_id: result.folio&.id
       )
@@ -308,6 +310,37 @@ module HotelPortal
 
     def create_folio_window_params
       params.fetch(:folio_window, {}).permit(:booking_billing_party_id, :name, :currency, :reason)
+    end
+
+    def folio_window_booking
+      return @booking unless @booking.group_booking_id?
+
+      selected_id = params.dig(:folio_window, :booking_id).presence || @booking.id
+      current_hotel.bookings.where(group_booking_id: @booking.group_booking_id).find(selected_id)
+    end
+
+    def folio_booking_options
+      bookings = if @booking.group_booking_id?
+        current_hotel.bookings
+          .where(group_booking_id: @booking.group_booking_id)
+          .includes(:booking_rooms, booking_billing_parties: [ :booking_guest, { hotel_corporate_account: :corporate_account } ])
+          .order(:group_position, :id)
+      else
+        current_hotel.bookings
+          .where(id: @booking.id)
+          .includes(:booking_rooms, booking_billing_parties: [ :booking_guest, { hotel_corporate_account: :corporate_account } ])
+      end
+
+      bookings.map do |booking|
+        room = booking.booking_rooms.first
+        room_label = room&.room_number.present? ? "Room #{room.room_number}" : "Unassigned room"
+        number = booking.formatted_reservation_number.presence || "—"
+        {
+          booking: booking,
+          label: "#{room_label} · Booking No. #{number}",
+          parties: booking.booking_billing_parties.active.to_a.sort_by { |party| party.display_name.to_s.downcase }
+        }
+      end
     end
 
     def billing_party_params

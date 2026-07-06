@@ -90,8 +90,8 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
   it "applies a group billing arrangement only to explicitly selected children" do
     allow(BookingRedesign).to receive(:enabled?).and_return(true)
     group = create(:group_booking, hotel: hotel)
-    booking.update!(group_booking: group, group_position: 1)
-    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+    booking.update!(group_booking: group, group_position: 1, reservation_number: 101)
+    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, reservation_number: 102)
     arrangement = create(:group_billing_arrangement, group_booking: group, hotel: hotel)
 
     post apply_billing_hotel_booking_control_panel_path(hotel, booking), params: {
@@ -125,8 +125,8 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     allow(BookingRedesign).to receive(:enabled?).and_return(true)
     role.permissions << manage_folio_movements
     group = create(:group_booking, hotel: hotel)
-    booking.update!(group_booking: group, group_position: 1)
-    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+    booking.update!(group_booking: group, group_position: 1, reservation_number: 101)
+    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, reservation_number: 102)
     [ booking, sibling ].each do |child|
       create(:booking_room, booking: child)
       guest = create(:booking_guest, booking: child, is_primary: true)
@@ -138,7 +138,7 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
 
     get group_billing_routes_hotel_booking_control_panel_path(hotel, booking)
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Change Group Billing Routes", booking.confirmation_token, sibling.confirmation_token)
+    expect(response.body).to include("Change Group Billing Routes", booking.formatted_reservation_number, sibling.formatted_reservation_number)
 
     draft = { group_billing_arrangement_id: arrangement.id, booking_ids: [ booking.id ],
       charge_categories: [ "accommodation" ], idempotency_key: "group-request" }
@@ -199,6 +199,67 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     expect(folio).to have_attributes(booking_billing_party: party, name: "Incidentals Folio", is_primary: false)
     expect(FolioRoutingRule.count).to eq(routing_rule_count)
     expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
+  end
+
+  it "renders a booking selector when adding a folio in group context" do
+    role.permissions << manage_folio_windows
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1, reservation_number: 41)
+    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, reservation_number: 42)
+    create(:booking_room, booking: booking, room_number: "105")
+    create(:booking_room, booking: sibling, room_number: "106")
+    create(:booking_guest, booking: booking, guest: create(:guest, name: "Guest One"), is_primary: true)
+    create(:booking_guest, booking: sibling, guest: create(:guest, name: "Guest Two"), is_primary: true)
+
+    get new_folio_window_hotel_booking_control_panel_path(hotel, booking, scope: "group")
+
+    document = Nokogiri::HTML(response.body)
+    booking_select = document.at_css('select[name="folio_window[booking_id]"]')
+    expect(booking_select).to be_present
+    expect(booking_select.css("option").map(&:text)).to include(
+      "Room 105 · Booking No. #{booking.formatted_reservation_number}",
+      "Room 106 · Booking No. #{sibling.formatted_reservation_number}"
+    )
+    expect(response.body).to include("Guest One", "Guest Two")
+  end
+
+  it "creates a group-context folio on the selected child booking" do
+    role.permissions << manage_folio_windows
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1)
+    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+    sibling_party = create(:booking_guest, booking: sibling).booking_billing_party
+    original_booking_folio_count = booking.booking_folios.count
+
+    expect do
+      post create_folio_window_hotel_booking_control_panel_path(hotel, booking), params: {
+        folio_window: {
+          booking_id: sibling.id,
+          booking_billing_party_id: sibling_party.id,
+          name: "Room 106 Incidentals",
+          currency: "MYR"
+        }
+      }
+    end.to change { sibling.booking_folios.count }.by(1)
+
+    folio = sibling.booking_folios.order(:created_at).last
+    expect(booking.booking_folios.count).to eq(original_booking_folio_count)
+    expect(folio).to have_attributes(name: "Room 106 Incidentals", booking_billing_party: sibling_party)
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, sibling, tab: "folio_operations", folio_id: folio.id))
+  end
+
+  it "rejects a folio target outside the current group" do
+    role.permissions << manage_folio_windows
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1)
+    outsider = create(:booking, hotel: hotel)
+    outsider_party = create(:booking_guest, booking: outsider).booking_billing_party
+
+    post create_folio_window_hotel_booking_control_panel_path(hotel, booking), params: {
+      folio_window: { booking_id: outsider.id, booking_billing_party_id: outsider_party.id }
+    }
+
+    expect(response).to have_http_status(:not_found)
   end
 
   it "redirects failed folio window creation back to Folio Operations" do

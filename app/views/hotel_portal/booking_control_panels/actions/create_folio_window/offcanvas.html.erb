@@ -1,14 +1,16 @@
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right" } do %>
+  <% booking_number = @booking.formatted_reservation_number.presence || "—" %>
   <div class="flex h-full flex-col bg-white">
     <%= render "hotel_portal/bookings/board/partials/content_header",
       title: "Add Folio Window",
-      subtitle: "#{@booking.confirmation_token} · Folio Operations",
+      subtitle: "Booking No. #{booking_number} · Folio Operations",
       icon: cached_icon("book-open", stroke_width: 2.5, class: "size-5") %>
 
     <div class="min-h-0 flex-1 overflow-y-auto bg-white p-6">
       <%= render "hotel_portal/booking_control_panels/actions/create_folio_window/partials/form",
         booking: @booking,
-        presenter: @presenter %>
+        presenter: @presenter,
+        folio_booking_options: @folio_booking_options %>
     </div>
   </div>
 <% end %>
