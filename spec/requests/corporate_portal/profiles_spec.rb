@@ -17,8 +17,8 @@ RSpec.describe "CorporatePortal::Profiles", type: :request do
     expect(response.body).to include("Corporate Profile")
     expect(response.body).to include(CGI.escapeHTML(user.account.name))
     expect(response.body).to include(CGI.escapeHTML(user.email))
-    expect(response.body).to include(relationship.hotel.name)
+    expect(response.body).to include(CGI.escapeHTML(relationship.hotel.name))
     expect(response.body).to include("MYR 1000.00")
-    expect(response.body).not_to include(hidden.hotel.name)
+    expect(response.body).not_to include(CGI.escapeHTML(hidden.hotel.name))
   end
 end

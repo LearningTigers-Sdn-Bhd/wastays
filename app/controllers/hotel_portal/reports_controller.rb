@@ -10,10 +10,10 @@ module HotelPortal
     GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
 
-    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability arrivals_departures folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax guest_registration_cards]
+    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
     before_action :authorize_view_payouts!, only: %i[payouts]
     before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
-    before_action -> { require_feature!("arrivals_departures_list") }, only: %i[arrivals_departures]
+    before_action -> { require_feature!("arrivals_departures_list") }, only: %i[guest_reports]
     before_action -> { require_feature!("outstanding_balance_noshow") }, only: %i[outstanding_balance]
     before_action -> { require_feature!("housekeeper_productivity") }, only: %i[managers_flash]
     before_action -> { require_feature!("booking_source_analysis") }, only: %i[breakdown]
@@ -307,7 +307,7 @@ module HotelPortal
       end
     end
 
-    def arrivals_departures
+    def guest_reports
       @active_guest_report_tab = GUEST_REPORT_TABS.include?(params[:tab]) ? params[:tab] : "arrivals"
       @report_start_date, @report_end_date = parse_report_date_range
       @report = HotelPortal::Reports::ArrivalsDeparturesReport.new(
@@ -346,36 +346,6 @@ module HotelPortal
             disposition: "attachment"
         end
       end
-    end
-
-    def guest_registration_cards
-      load_guest_registration_cards
-    end
-
-    def load_guest_registration_cards(start_date: nil, end_date: nil)
-      @status_filter = params[:status].to_s
-      @grc_query = params[:q].to_s.strip
-      base_scope = current_hotel.guest_registration_cards
-                                .includes(:hotel, booking: :booking_rooms)
-                                .joins(:booking)
-      base_scope = base_scope.where(bookings: { check_in: start_date..end_date }) if start_date && end_date
-      @grc_total_count = base_scope.count
-      @grc_signed_count = base_scope.where(status: "signed").count
-      @grc_draft_count = base_scope.where(status: "draft").count
-      @grc_cards = base_scope.order("bookings.check_in DESC")
-      @grc_cards = @grc_cards.where(status: @status_filter) if %w[draft signed].include?(@status_filter)
-      if @grc_query.present?
-        query = "%#{ActiveRecord::Base.sanitize_sql_like(@grc_query.downcase)}%"
-        compact_query = "%#{ActiveRecord::Base.sanitize_sql_like(@grc_query.downcase.delete("-"))}%"
-        hotel_prefix = ActiveRecord::Base.connection.quote(current_hotel.hotel_prefix.to_s.downcase)
-        formatted_grc_sql = "LOWER(CONCAT(#{hotel_prefix}, '-2', LPAD(CAST(bookings.guest_registration_number AS TEXT), 7, '0')))"
-        @grc_cards = @grc_cards.where(
-          "LOWER(bookings.guest_name) LIKE :query OR LOWER(bookings.confirmation_token) LIKE :query OR CAST(bookings.guest_registration_number AS TEXT) LIKE :query OR #{formatted_grc_sql} LIKE :query OR REPLACE(#{formatted_grc_sql}, '-', '') LIKE :compact_query",
-          compact_query: compact_query,
-          query: query
-        )
-      end
-      @grc_cards = @grc_cards.page(params[:page]).per(25)
     end
 
     def folio_ledger
@@ -597,6 +567,32 @@ module HotelPortal
     end
 
     private
+
+    def load_guest_registration_cards(start_date: nil, end_date: nil)
+      @status_filter = params[:status].to_s
+      @grc_query = params[:q].to_s.strip
+      base_scope = current_hotel.guest_registration_cards
+                                .includes(:hotel, booking: :booking_rooms)
+                                .joins(:booking)
+      base_scope = base_scope.where(bookings: { check_in: start_date..end_date }) if start_date && end_date
+      @grc_total_count = base_scope.count
+      @grc_signed_count = base_scope.where(status: "signed").count
+      @grc_draft_count = base_scope.where(status: "draft").count
+      @grc_cards = base_scope.order("bookings.check_in DESC")
+      @grc_cards = @grc_cards.where(status: @status_filter) if %w[draft signed].include?(@status_filter)
+      if @grc_query.present?
+        query = "%#{ActiveRecord::Base.sanitize_sql_like(@grc_query.downcase)}%"
+        compact_query = "%#{ActiveRecord::Base.sanitize_sql_like(@grc_query.downcase.delete("-"))}%"
+        hotel_prefix = ActiveRecord::Base.connection.quote(current_hotel.hotel_prefix.to_s.downcase)
+        formatted_grc_sql = "LOWER(CONCAT(#{hotel_prefix}, '-2', LPAD(CAST(bookings.guest_registration_number AS TEXT), 7, '0')))"
+        @grc_cards = @grc_cards.where(
+          "LOWER(bookings.guest_name) LIKE :query OR LOWER(bookings.confirmation_token) LIKE :query OR CAST(bookings.guest_registration_number AS TEXT) LIKE :query OR #{formatted_grc_sql} LIKE :query OR REPLACE(#{formatted_grc_sql}, '-', '') LIKE :compact_query",
+          compact_query: compact_query,
+          query: query
+        )
+      end
+      @grc_cards = @grc_cards.page(params[:page]).per(25)
+    end
 
     def parse_report_date_range
       # Handle date_preset parameter (e.g., "2026-05", "this_month", "custom")

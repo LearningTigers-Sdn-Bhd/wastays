@@ -24,8 +24,7 @@ module HotelPortal
         NavItem.new(label: "Tourism Tax", path: tourism_tax_hotel_reports_path(current_hotel), icon: "calculator", active: controller_name == "reports" && action_name == "tourism_tax"),
         NavItem.new(label: "SST", path: sst_hotel_reports_path(current_hotel), icon: "calculator", active: controller_name == "reports" && action_name == "sst"),
         NavItem.new(label: "Non-National", path: non_national_hotel_reports_path(current_hotel), icon: "map-pin", active: controller_name == "reports" && action_name == "non_national"),
-        NavItem.new(label: "Guest Registration Cards", path: guest_registration_cards_hotel_reports_path(current_hotel), icon: "clipboard-list", active: controller_name == "reports" && action_name == "guest_registration_cards"),
-        NavItem.new(label: "Guest Reports", path: arrivals_departures_hotel_reports_path(current_hotel), icon: "users", active: controller_name == "reports" && action_name == "arrivals_departures", plan_feature: "arrivals_departures_list")
+        NavItem.new(label: "Guest Reports", path: guest_reports_hotel_reports_path(current_hotel), icon: "users", active: controller_name == "reports" && action_name == "guest_reports", plan_feature: "arrivals_departures_list")
       ]
       guest_compliance_nav_active = guest_compliance_nav_items.any?(&:active)
 

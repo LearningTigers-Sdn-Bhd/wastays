@@ -15,7 +15,7 @@
       </div>
 
       <div class="print:hidden">
-        <%= form_with url: arrivals_departures_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "arrivals-date-range-form", data: { controller: "date-preset" } do |f| %>
+        <%= form_with url: guest_reports_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "arrivals-date-range-form", data: { controller: "date-preset" } do |f| %>
           <%= hidden_field_tag :tab, @active_guest_report_tab %>
           <div>
             <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Time Period</label>
@@ -42,7 +42,7 @@
             </summary>
             <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
               <%= link_to "Export PDF",
-                arrivals_departures_hotel_reports_path(
+                guest_reports_hotel_reports_path(
                   current_hotel,
                   start_date: @report.start_date,
                   end_date: @report.end_date,
@@ -52,7 +52,7 @@
                 ),
                 class: "block px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
               <%= link_to "Export Excel",
-                arrivals_departures_hotel_reports_path(
+                guest_reports_hotel_reports_path(
                   current_hotel,
                   start_date: @report.start_date,
                   end_date: @report.end_date,
@@ -62,7 +62,7 @@
                 ),
                 class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
               <%= link_to "Export CSV",
-                arrivals_departures_hotel_reports_path(
+                guest_reports_hotel_reports_path(
                   current_hotel,
                   start_date: @report.start_date,
                   end_date: @report.end_date,
@@ -90,7 +90,7 @@
           "registration_cards" => @grc_total_count
         }[value] %>
         <% active = value == @active_guest_report_tab %>
-        <%= link_to arrivals_departures_hotel_reports_path(
+        <%= link_to guest_reports_hotel_reports_path(
             current_hotel,
             start_date: @report.start_date,
             end_date: @report.end_date,
@@ -158,7 +158,7 @@
     } %>
   <% else %>
     <%= render "hotel_portal/reports/guest_registration_cards_section",
-      form_url: arrivals_departures_hotel_reports_path(current_hotel),
+      form_url: guest_reports_hotel_reports_path(current_hotel),
       hidden_fields: {
         tab: @active_guest_report_tab,
         start_date: @report.start_date,

@@ -427,7 +427,8 @@ Rails.application.routes.draw do
       collection do
         get :payouts
         get :breakdown, defaults: { format: "html" }
-        get :arrivals_departures
+        get :guest_reports
+        get :arrivals_departures, to: redirect { |params, request| "/hotel/#{params[:hotel_id]}/reports/guest_reports#{request.query_string.present? ? "?#{request.query_string}" : ""}" }
         get :daily_occupancy
         get :daily_revenue
         get :managers_flash
@@ -440,7 +441,6 @@ Rails.application.routes.draw do
         get :extra_charge
         get :non_national
         get :tourism_tax
-        get :guest_registration_cards
       end
     end
     resources :night_audits, only: [ :index, :show, :create ] do
