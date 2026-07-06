@@ -27,17 +27,18 @@ RSpec.describe "HotelPortal::RoomGroups", type: :request do
         post hotel_room_groups_path(hotel), params: { room_group: { name: "New Wing" } }
       }.to change(RoomGroup, :count).by(1)
 
-      expect(response).to redirect_to(hotel_room_groups_path(hotel))
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
       expect(flash[:notice]).to eq("Room group created successfully.")
     end
 
-    it "creates a new room group and returns a reload script via turbo stream" do
+    it "creates a new room group and returns an offcanvas complete action via turbo stream" do
       expect {
         post hotel_room_groups_path(hotel), params: { room_group: { name: "New Stream Wing" } }, as: :turbo_stream
       }.to change(RoomGroup, :count).by(1)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("<script>window.location.reload();</script>")
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include(hotel_room_types_path(hotel))
     end
 
     it "renders index with unprocessable_content when parameters are invalid" do
@@ -60,15 +61,16 @@ RSpec.describe "HotelPortal::RoomGroups", type: :request do
     it "updates the room group name with valid parameters" do
       patch hotel_room_group_path(hotel, room_group), params: { room_group: { name: "Updated Wing" } }
       expect(room_group.reload.name).to eq("Updated Wing")
-      expect(response).to redirect_to(hotel_room_groups_path(hotel))
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
       expect(flash[:notice]).to eq("Room group updated successfully.")
     end
 
-    it "updates the room group and returns a reload script via turbo stream" do
+    it "updates the room group and returns an offcanvas complete action via turbo stream" do
       patch hotel_room_group_path(hotel, room_group), params: { room_group: { name: "Updated Stream Wing" } }, as: :turbo_stream
       expect(room_group.reload.name).to eq("Updated Stream Wing")
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("<script>window.location.reload();</script>")
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include(hotel_room_types_path(hotel))
     end
 
     it "renders edit with unprocessable_content when parameters are invalid" do
@@ -87,14 +89,15 @@ RSpec.describe "HotelPortal::RoomGroups", type: :request do
 
       expect(RoomType.exists?(room_type.id)).to be true
       expect(room_type.reload.room_group_id).to be_nil
-      expect(response).to redirect_to(hotel_room_groups_path(hotel))
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
       expect(flash[:notice]).to eq("Room group deleted successfully.")
     end
 
-    it "deletes the room group and returns a reload script via turbo stream" do
+    it "deletes the room group and returns an offcanvas complete action via turbo stream" do
       delete hotel_room_group_path(hotel, room_group), as: :turbo_stream
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("<script>window.location.href = '#{hotel_room_types_path(hotel)}';</script>")
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include(hotel_room_types_path(hotel))
     end
   end
 end

@@ -34,7 +34,7 @@ RSpec.describe 'Room Setup', type: :system do
     fill_in 'Total Number of Rooms', with: 5
     fill_in 'Base Nightly Rate (MYR)', with: 250
 
-    click_button 'Create Room Type'
+    click_button 'Create Room type'
 
     expect(page).to have_content('Room type created successfully.')
     expect(page).to have_content('Deluxe Suite')
