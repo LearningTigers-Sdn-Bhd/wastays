@@ -1,5 +1,5 @@
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right" } do %>
-  <div class="flex h-full flex-col bg-white">
+  <div class="flex h-full min-h-0 flex-col bg-white">
     <%= render "hotel_portal/bookings/board/partials/content_header",
       title: "Change Billing Routes",
       subtitle: "#{@booking.confirmation_token} · Billing Preferences",
@@ -9,7 +9,7 @@
       <div class="border-b border-rose-200 bg-rose-50 px-6 py-3 text-sm font-semibold text-rose-800"><%= flash.now[:alert] %></div>
     <% end %>
 
-    <% if @batch_preview&.success? && @batch_preview.impacts.any? %>
+    <% if @batch_preview&.success? && @batch_preview.review_required? %>
       <%= render "hotel_portal/booking_control_panels/actions/billing_routes/impact_review" %>
     <% else %>
       <%= render "hotel_portal/booking_control_panels/actions/billing_routes/form" %>

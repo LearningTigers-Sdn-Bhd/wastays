@@ -29,7 +29,7 @@ export default class extends Controller {
     const folio = row.querySelector("select[data-billing-routes-target='folio']")
     if (!party || !folio) return
     Array.from(folio.options).forEach((option) => {
-      const matches = option.dataset.partyId === party.value
+      const matches = (option.dataset.partyId || "") === party.value
       option.hidden = !matches
       option.disabled = !matches || option.dataset.closed === "true"
     })
@@ -58,7 +58,7 @@ export default class extends Controller {
 
     folio.disabled = false
     Array.from(folio.options).forEach((option) => {
-      const matches = option.dataset.partyId === selectedPartyId
+      const matches = (option.dataset.partyId || "") === selectedPartyId
       option.hidden = !matches
       option.disabled = !matches || option.dataset.closed === "true"
     })

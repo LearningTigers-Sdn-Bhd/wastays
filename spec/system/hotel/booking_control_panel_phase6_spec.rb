@@ -9,8 +9,8 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
   let(:booking) { create(:booking, hotel: hotel) }
 
-  before do
-    driven_by(:rack_test)
+  before do |example|
+    driven_by(example.metadata[:js] ? :cuprite : :rack_test)
     %w[view_bookings manage_bookings].each do |slug|
       role.permissions << Permission.find_or_create_by!(slug: slug) { |record| record.name = slug.humanize }
     end
@@ -59,5 +59,22 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(page).to have_css('[data-layout-mode="left_and_center"]')
     expect(page).to have_content("Fresh towels")
     expect(page).to have_content("Noisy hallway")
+  end
+
+  it "clicks Apply changes in the billing routes offcanvas", js: true do
+    role.permissions << Permission.find_or_create_by!(slug: "manage_folio_movements") { |record| record.name = "Manage Folio Movements" }
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    parent_code = create(:transaction_code, hotel: hotel, kind: "charge", code: "SPA", name: "Spa charge")
+
+    visit hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences")
+    click_link "Change Billing Routes"
+
+    expect(page).to have_css("#offcanvas_drawer_container.block", visible: :all)
+    within("#offcanvas_drawer") do
+      expect(page).to have_content(/change billing routes/i)
+      expect(page).to have_content(parent_code.code)
+      click_button "Apply changes"
+    end
+    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 3)
   end
 end

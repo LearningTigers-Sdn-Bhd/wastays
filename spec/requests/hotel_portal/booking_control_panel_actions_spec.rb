@@ -32,6 +32,47 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     expect(headers).not_to include("Status", "Action")
   end
 
+  it "reviews and applies tax-only billing route inclusion changes" do
+    role.permissions << manage_folio_movements
+    hotel.update!(sst_enabled: true)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    parent_code = create(:transaction_code, hotel:, kind: "charge", code: "SPA", name: "Spa charge")
+    party = create(:booking_billing_party, :company, booking:, hotel:)
+    folio = create(:booking_folio, :secondary, booking:, hotel:, booking_billing_party: party,
+      payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, name: "Company Folio")
+    routes = {
+      parent_code.id.to_s => {
+        "billing_party_id" => party.id.to_s,
+        "target_folio_id" => folio.id.to_s,
+        "taxes" => { "primary:sst_tax" => "1" }
+      }
+    }
+
+    post preview_billing_routes_hotel_booking_control_panel_path(hotel, booking), params: {
+      idempotency_key: "tax-only-preview",
+      routes: routes
+    }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Tax inclusion changes", "SPA", "SST 8%", "Include")
+
+    expect do
+      post apply_billing_routes_hotel_booking_control_panel_path(hotel, booking), params: {
+        idempotency_key: "tax-only-apply",
+        reason: "Route SST to booking billing rules",
+        routes: routes
+      }
+    end.to change(BookingTaxInclusionOverride, :count).by(1)
+
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences"))
+    expect(booking.booking_tax_inclusion_overrides.sole).to have_attributes(
+      transaction_code: parent_code,
+      primary_tax_key: "sst_tax",
+      action: "include",
+      reason: "Route SST to booking billing rules"
+    )
+  end
+
   it "changes the primary guest only inside the selected booking" do
     original = create(:booking_guest, booking: booking, is_primary: true)
     replacement = create(:booking_guest, booking: booking, is_primary: false)

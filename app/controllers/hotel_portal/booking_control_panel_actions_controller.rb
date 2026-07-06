@@ -203,6 +203,7 @@ module HotelPortal
         return apply_billing_routes
       end
 
+      flash.now[:alert] = @batch_preview.error unless @batch_preview.success?
       render "hotel_portal/booking_control_panels/actions/billing_routes/offcanvas", status: (@batch_preview.success? ? :ok : :unprocessable_entity)
     end
 
