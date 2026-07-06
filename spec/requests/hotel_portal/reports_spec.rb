@@ -55,7 +55,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
   end
 
-  describe "GET /arrivals_departures" do
+  describe "GET /guest_reports" do
     let(:start_date) { Date.new(2026, 5, 7) }
     let(:end_date) { Date.new(2026, 5, 8) }
 
@@ -64,7 +64,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: start_date, guest_name: "Departing Guest", confirmation_token: "WS-DEP")
       create(:booking, hotel: hotel, status: "confirmed", check_in: end_date + 1.day, check_out: end_date + 2.days, guest_name: "Wrong Date")
 
-      get arrivals_departures_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get guest_reports_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Guest Reports")
@@ -73,11 +73,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).not_to include("Wrong Date")
     end
 
+    it "redirects the legacy arrivals_departures URL to guest reports" do
+      get arrivals_departures_hotel_reports_path(hotel), params: { tab: "registration_cards" }
+
+      expect(response).to redirect_to(guest_reports_hotel_reports_path(hotel, tab: "registration_cards"))
+    end
+
     it "renders guest reports heading and defaults invalid tab to arrivals" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "Arriving Guest")
       create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: start_date + 1.day, guest_name: "In House Guest")
 
-      get arrivals_departures_hotel_reports_path(hotel), params: {
+      get guest_reports_hotel_reports_path(hotel), params: {
         start_date: start_date.to_s,
         end_date: end_date.to_s,
         tab: "bad-tab"
@@ -93,7 +99,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "In House Guest")
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date, guest_name: "Arrival Guest")
 
-      get arrivals_departures_hotel_reports_path(hotel), params: {
+      get guest_reports_hotel_reports_path(hotel), params: {
         start_date: start_date.to_s,
         end_date: end_date.to_s,
         tab: "in_house"
@@ -111,7 +117,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       create(:guest_registration_card, :signed, booking: matching_booking, hotel: hotel)
       create(:guest_registration_card, booking: old_booking, hotel: hotel)
 
-      get arrivals_departures_hotel_reports_path(hotel), params: {
+      get guest_reports_hotel_reports_path(hotel), params: {
         start_date: start_date.to_s,
         end_date: end_date.to_s,
         tab: "registration_cards"
@@ -127,8 +133,29 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).not_to include("Export CSV")
     end
 
+    it "filters and searches registration cards from guest reports" do
+      signed_booking = create(:booking, hotel: hotel, guest_name: "Jane GRC", confirmation_token: "GRC-JANE", check_in: start_date, check_out: start_date + 1.day)
+      draft_booking = create(:booking, hotel: hotel, guest_name: "Ali Draft", confirmation_token: "GRC-ALI", check_in: start_date, check_out: start_date + 1.day)
+      create(:guest_registration_card, :signed, booking: signed_booking, hotel: hotel)
+      create(:guest_registration_card, booking: draft_booking, hotel: hotel)
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s,
+        end_date: end_date.to_s,
+        tab: "registration_cards",
+        status: "signed",
+        q: "Jane"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Jane GRC")
+      expect(response.body).not_to include("Ali Draft")
+      expect(response.body).to include("data-controller=\"auto-submit\"")
+      expect(response.body).to include("data-turbo-frame=\"grc_results\"")
+    end
+
     it "does not export registration cards from guest reports" do
-      get arrivals_departures_hotel_reports_path(hotel, format: :csv), params: { tab: "registration_cards" }
+      get guest_reports_hotel_reports_path(hotel, format: :csv), params: { tab: "registration_cards" }
 
       expect(response).to have_http_status(:not_acceptable)
     end
@@ -137,7 +164,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
         create(:booking, hotel: hotel, status: "checked_in", check_in: Date.new(2026, 6, 14), check_out: Date.new(2026, 6, 16), guest_name: "In House Guest")
 
-        get arrivals_departures_hotel_reports_path(hotel), params: { tab: "in_house" }
+        get guest_reports_hotel_reports_path(hotel), params: { tab: "in_house" }
         doc = Nokogiri::HTML(response.body)
         selected = doc.at_css('select[name="date_preset"] option[selected]')
 
@@ -150,7 +177,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "does not show bookings from another hotel" do
       create(:booking, hotel: create(:hotel), status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "Other Hotel Guest")
 
-      get arrivals_departures_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get guest_reports_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
       expect(response.body).not_to include("Other Hotel Guest")
@@ -161,7 +188,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 15), check_out: Date.new(2026, 6, 16), guest_name: "Today Arrival")
         create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 1), check_out: Date.new(2026, 6, 2), guest_name: "Earlier Month Arrival")
 
-        get arrivals_departures_hotel_reports_path(hotel)
+        get guest_reports_hotel_reports_path(hotel)
         doc = Nokogiri::HTML(response.body)
         selected = doc.at_css('select[name="date_preset"] option[selected]')
 
@@ -174,7 +201,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "falls back to today when both start and end dates are invalid" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current, check_out: Date.current + 1.day, guest_name: "Today Guest")
 
-      get arrivals_departures_hotel_reports_path(hotel), params: { start_date: "bad-start", end_date: "bad-end" }
+      get guest_reports_hotel_reports_path(hotel), params: { start_date: "bad-start", end_date: "bad-end" }
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include(Date.current.strftime("%d %b"))
@@ -184,7 +211,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       date = Date.new(2026, 5, 10)
       create(:booking, hotel: hotel, status: "confirmed", check_in: date, check_out: date + 1.day, guest_name: "Legacy Date Guest")
 
-      get arrivals_departures_hotel_reports_path(hotel), params: { date: date.to_s }
+      get guest_reports_hotel_reports_path(hotel), params: { date: date.to_s }
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("10 May")
@@ -194,7 +221,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 5, 10), check_out: Date.new(2026, 5, 11), guest_name: "Start Date Guest")
       create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 5, 8), check_out: Date.new(2026, 5, 9), guest_name: "Old Date Guest")
 
-      get arrivals_departures_hotel_reports_path(hotel), params: {
+      get guest_reports_hotel_reports_path(hotel), params: {
         start_date: "2026-05-10",
         end_date: "2026-05-09"
       }
@@ -207,7 +234,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports CSV for the selected range" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "CSV Guest", confirmation_token: "WS-CSV")
 
-      get arrivals_departures_hotel_reports_path(hotel, format: :csv), params: {
+      get guest_reports_hotel_reports_path(hotel, format: :csv), params: {
         start_date: start_date.to_s,
         end_date: end_date.to_s
       }
@@ -223,7 +250,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       create(:booking, hotel: hotel, status: "completed", check_in: start_date - 1.day, check_out: start_date, guest_name: "Checked Out Guest", confirmation_token: "WS-CHECKOUT")
       create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: start_date, guest_name: "Due Out Guest", confirmation_token: "WS-DUEOUT")
 
-      get arrivals_departures_hotel_reports_path(hotel, format: :csv), params: {
+      get guest_reports_hotel_reports_path(hotel, format: :csv), params: {
         start_date: start_date.to_s,
         end_date: end_date.to_s,
         tab: "checkout"
@@ -239,7 +266,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports PDF for the selected range" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "PDF Guest", confirmation_token: "WS-PDF")
 
-      get arrivals_departures_hotel_reports_path(hotel, format: :pdf), params: {
+      get guest_reports_hotel_reports_path(hotel, format: :pdf), params: {
         start_date: start_date.to_s,
         end_date: end_date.to_s
       }
@@ -252,7 +279,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports Excel for the default arrivals tab" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Guest", confirmation_token: "WS-XLS")
 
-      get arrivals_departures_hotel_reports_path(hotel, format: :xls), params: {
+      get guest_reports_hotel_reports_path(hotel, format: :xls), params: {
         start_date: start_date.to_s,
         end_date: end_date.to_s
       }
@@ -263,62 +290,6 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include('ss:Name="Arrivals"')
       expect(response.body).not_to include('ss:Name="Departures"')
       expect(response.body).to include("Excel Guest")
-    end
-  end
-
-  describe "GET /guest_registration_cards" do
-    it "renders guest registration cards report with view and print links" do
-      booking = create(:booking, hotel: hotel, guest_name: "Jane GRC", check_in: Date.new(2026, 5, 7), check_out: Date.new(2026, 5, 8))
-      create(:guest_registration_card, :signed, booking: booking, hotel: hotel)
-
-      get guest_registration_cards_hotel_reports_path(hotel)
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Guest Registration Cards")
-      expect(response.body).to include("Jane GRC")
-      expect(response.body).to include(booking.guest_registration_card_number_display)
-      expect(response.body).to include(hotel_booking_guest_registration_card_path(hotel, booking))
-      expect(response.body).to include("Print / Save as PDF")
-    end
-
-    it "filters by status and searches guest registration cards" do
-      signed_booking = create(:booking, hotel: hotel, guest_name: "Jane GRC", confirmation_token: "GRC-JANE")
-      draft_booking = create(:booking, hotel: hotel, guest_name: "Ali Draft", confirmation_token: "GRC-ALI")
-      create(:guest_registration_card, :signed, booking: signed_booking, hotel: hotel)
-      create(:guest_registration_card, booking: draft_booking, hotel: hotel)
-
-      get guest_registration_cards_hotel_reports_path(hotel), params: { status: "signed", q: "Jane" }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Jane GRC")
-      expect(response.body).not_to include("Ali Draft")
-      expect(response.body).to include("data-controller=\"auto-submit\"")
-      expect(response.body).to include("data-turbo-frame=\"grc_results\"")
-      expect(response.body).to include("input-&gt;auto-submit#submit")
-      expect(response.body).not_to include("Filter")
-    end
-
-    it "searches by confirmation token case-insensitively" do
-      matching_booking = create(:booking, hotel: hotel, guest_name: "Token Match", confirmation_token: "8TPT7Y")
-      other_booking = create(:booking, hotel: hotel, guest_name: "Token Miss", confirmation_token: "HCXUNU")
-      create(:guest_registration_card, booking: matching_booking, hotel: hotel)
-      create(:guest_registration_card, booking: other_booking, hotel: hotel)
-
-      get guest_registration_cards_hotel_reports_path(hotel), params: { q: "8tp" }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Token Match")
-      expect(response.body).not_to include("Token Miss")
-    end
-
-    it "searches by formatted guest registration card number" do
-      booking = create(:booking, hotel: hotel, guest_name: "Formatted GRC", confirmation_token: "GRC-FMT")
-      create(:guest_registration_card, booking: booking, hotel: hotel)
-
-      get guest_registration_cards_hotel_reports_path(hotel), params: { q: booking.guest_registration_card_number_display.delete("-").downcase }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Formatted GRC")
     end
   end
 
