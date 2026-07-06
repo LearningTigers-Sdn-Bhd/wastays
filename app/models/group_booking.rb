@@ -8,6 +8,7 @@ class GroupBooking < ApplicationRecord
   has_many :bookings, -> { order(:group_position, :id) }, dependent: :restrict_with_error
   has_many :group_billing_arrangements, dependent: :restrict_with_error
   has_many :group_deposits, dependent: :restrict_with_error
+  has_many :group_billing_change_batches, dependent: :restrict_with_error
 
   validates :reference, :name, :status, presence: true
   validates :reference, uniqueness: { scope: :hotel_id }

@@ -80,6 +80,51 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     expect(response).to have_http_status(:not_found)
   end
 
+  it "renders, previews, and applies selected-child group billing routes for authorized staff" do
+    allow(BookingRedesign).to receive(:enabled?).and_return(true)
+    role.permissions << manage_folio_movements
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1)
+    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+    [ booking, sibling ].each do |child|
+      create(:booking_room, booking: child)
+      guest = create(:booking_guest, booking: child, is_primary: true)
+      create(:booking_folio, booking: child, hotel: hotel, is_primary: true,
+        booking_billing_party: guest.booking_billing_party)
+    end
+    arrangement = create(:group_billing_arrangement, :company, group_booking: group, hotel: hotel)
+    code = create(:transaction_code, hotel: hotel, code: "ROOMBULK", category: "accommodation")
+
+    get group_billing_routes_hotel_booking_control_panel_path(hotel, booking)
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Change Group Billing Routes", booking.confirmation_token, sibling.confirmation_token)
+
+    draft = { group_billing_arrangement_id: arrangement.id, booking_ids: [ booking.id ],
+      charge_categories: [ "accommodation" ], idempotency_key: "group-request" }
+    post preview_group_billing_routes_hotel_booking_control_panel_path(hotel, booking), params: draft
+    expect(response).to have_http_status(:success)
+    token = Nokogiri::HTML(response.body).at_css('input[name="freshness_token"]')["value"]
+
+    post apply_group_billing_routes_hotel_booking_control_panel_path(hotel, booking), params: draft.merge(
+      freshness_token: token, confirmation: "future_only", reason: "Approved group payer")
+
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking,
+      tab: "billing_preferences", billing_scope: "group", scope: "group"))
+    expect(booking.folio_routing_rules.active.find_by(transaction_code: code)).to be_present
+    expect(sibling.folio_routing_rules.active.where(transaction_code: code)).to be_empty
+  end
+
+  it "requires folio movement permission for group route preview" do
+    allow(BookingRedesign).to receive(:enabled?).and_return(true)
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1)
+
+    post preview_group_billing_routes_hotel_booking_control_panel_path(hotel, booking), params: {}
+
+    expect(response).to have_http_status(:found)
+    expect(response).to redirect_to(root_path)
+  end
+
   it "renders the create folio window offcanvas from billing parties" do
     role.permissions << manage_folio_windows
     create(:booking_guest, booking: booking, guest: create(:guest, name: "Aina Rahman"), is_primary: true)

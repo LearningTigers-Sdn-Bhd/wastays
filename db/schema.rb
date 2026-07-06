@@ -877,6 +877,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "group_billing_arrangements_status_allowed"
   end
 
+  create_table "group_billing_change_batches", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "group_booking_id", null: false
+    t.bigint "actor_id"
+    t.string "idempotency_key", null: false
+    t.string "payload_digest", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_group_billing_change_batches_on_actor_id"
+    t.index ["group_booking_id", "idempotency_key"], name: "idx_group_billing_change_batches_idempotency", unique: true
+    t.index ["group_booking_id"], name: "index_group_billing_change_batches_on_group_booking_id"
+    t.index ["hotel_id"], name: "index_group_billing_change_batches_on_hotel_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'completed'::character varying]::text[])", name: "group_billing_change_batches_status_allowed"
+  end
+
   create_table "group_bookings", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.bigint "organizer_guest_id"
@@ -2028,6 +2045,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
   add_foreign_key "group_billing_arrangements", "group_bookings"
   add_foreign_key "group_billing_arrangements", "hotel_corporate_accounts"
   add_foreign_key "group_billing_arrangements", "hotels"
+  add_foreign_key "group_billing_change_batches", "group_bookings"
+  add_foreign_key "group_billing_change_batches", "hotels"
+  add_foreign_key "group_billing_change_batches", "users", column: "actor_id"
   add_foreign_key "group_bookings", "guests", column: "organizer_guest_id"
   add_foreign_key "group_bookings", "hotels"
   add_foreign_key "group_deposit_allocations", "booking_folios"

@@ -8,7 +8,8 @@ module HotelPortal
 
     before_action :authorize_manage_bookings!, except: %i[new_folio_window create_folio_window]
     before_action :authorize_manage_folio_windows!, only: %i[new_folio_window create_folio_window]
-    before_action :authorize_manage_billing_routes!, only: %i[billing_routes preview_billing_routes apply_billing_routes]
+    before_action :authorize_manage_billing_routes!, only: %i[billing_routes preview_billing_routes apply_billing_routes
+      group_billing_routes preview_group_billing_routes apply_group_billing_routes]
     before_action :set_booking
 
     def new_folio_window
@@ -85,6 +86,43 @@ module HotelPortal
         replace_local_exceptions: ActiveModel::Type::Boolean.new.cast(params[:replace_local_exceptions])
       )
       redirect_with_result(result, tab: "billing_preferences", billing_scope: params[:billing_scope], scope: ("group" if params[:billing_scope] == "group"))
+    end
+
+    def group_billing_routes
+      prepare_group_billing_routes
+      render "hotel_portal/booking_control_panels/actions/group_billing_routes/offcanvas"
+    end
+
+    def preview_group_billing_routes
+      prepare_group_billing_routes
+      @group_draft = group_billing_change_params
+      @group_preview = ::GroupBillingChanges::Batch.preview(**group_billing_change_arguments)
+      flash.now[:alert] = @group_preview.error unless @group_preview.success?
+      render "hotel_portal/booking_control_panels/actions/group_billing_routes/offcanvas",
+        status: (@group_preview.success? ? :ok : :unprocessable_entity)
+    end
+
+    def apply_group_billing_routes
+      prepare_group_billing_routes
+      @group_draft = group_billing_change_params
+      result = ::GroupBillingChanges::Batch.call(**group_billing_change_arguments.merge(
+        confirmation: params[:confirmation], forecast_confirmation: params[:forecast_confirmation],
+        reason: params[:reason], freshness_token: params[:freshness_token]))
+      destination = hotel_booking_control_panel_path(current_hotel, @booking, tab: "billing_preferences",
+        billing_scope: "group", scope: "group")
+      if result.success?
+        respond_to do |format|
+          format.turbo_stream do
+            flash[:notice] = "Group billing routes updated."
+            render_offcanvas_completion(destination)
+          end
+          format.html { redirect_to destination, notice: "Group billing routes updated.", status: :see_other }
+        end
+      else
+        @group_preview = ::GroupBillingChanges::Batch.preview(**group_billing_change_arguments)
+        flash.now[:alert] = result.error
+        render "hotel_portal/booking_control_panels/actions/group_billing_routes/offcanvas", status: :unprocessable_entity
+      end
     end
 
     def add_billing_party
@@ -285,9 +323,39 @@ module HotelPortal
       params.fetch(:routes, {}).permit!.to_h
     end
 
+    def group_billing_change_params
+      params.permit(:group_billing_arrangement_id, :replace_local_exceptions, :idempotency_key,
+        booking_ids: [], charge_categories: [], inclusion_changes: {}).to_h
+    end
+
+    def group_billing_change_arguments
+      draft = @group_draft || group_billing_change_params
+      {
+        group_booking: group_booking,
+        actor: current_user,
+        booking_ids: draft["booking_ids"],
+        arrangement_id: draft["group_billing_arrangement_id"],
+        categories: draft["charge_categories"],
+        inclusion_changes: draft["inclusion_changes"] || {},
+        replace_local_exceptions: draft["replace_local_exceptions"],
+        idempotency_key: draft["idempotency_key"]
+      }
+    end
+
     def prepare_billing_routes
       @routing_matrix = ::FolioRouting::RoutingMatrix.new(booking: @booking)
       @batch_key = params[:idempotency_key].presence || SecureRandom.uuid
+    end
+
+    def prepare_group_billing_routes
+      @group = group_booking
+      @group_children = scoped_group_bookings.includes(:booking_guests, :booking_folios).order(:group_position, :id)
+      @group_arrangements = @group.group_billing_arrangements.active.includes(hotel_corporate_account: :corporate_account)
+      @group_codes = ::FolioRouting::RoutabilityPolicy.parent_codes(hotel: current_hotel)
+        .where(category: ::GroupBillingChanges::Batch::CATEGORIES).includes(:transaction_code_taxes)
+      @group_tax_candidates = ::FolioRouting::RoutingMatrix.new(booking: @booking).rows
+        .flat_map(&:children).uniq(&:key)
+      @group_batch_key = params[:idempotency_key].presence || SecureRandom.uuid
     end
 
     def group_billing_arrangement_params

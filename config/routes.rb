@@ -367,6 +367,9 @@ Rails.application.routes.draw do
         get :new_folio_window, controller: :booking_control_panel_actions
         post :create_folio_window, controller: :booking_control_panel_actions
         post :apply_billing, controller: :booking_control_panel_actions
+        get :group_billing_routes, controller: :booking_control_panel_actions
+        post :preview_group_billing_routes, controller: :booking_control_panel_actions
+        post :apply_group_billing_routes, controller: :booking_control_panel_actions
         post :add_billing_party, controller: :booking_control_panel_actions
         patch :update_billing_terms, controller: :booking_control_panel_actions
         patch :archive_billing_party, controller: :booking_control_panel_actions
