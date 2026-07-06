@@ -38,8 +38,9 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(page).to have_current_path(hotel_booking_control_panel_path(hotel, booking, tab: "guest_details"))
     expect(page).to have_css('[data-layout-mode="left_and_center"]')
     expect(page).to have_content("Primary guest for this room")
-    expect(page).to have_content("h***@mail.com")
-    expect(page).to have_content("Guest Profile")
+    expect(page).to have_field("Email", with: "hanami@mail.com")
+    expect(page).to have_content("Guest details recorded for this stay.")
+    expect(page).to have_button("Save Guest")
 
     click_link "Security Deposits"
     expect(page).to have_css('[data-layout-mode="left_and_center"]')
@@ -59,6 +60,24 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(page).to have_css('[data-layout-mode="left_and_center"]')
     expect(page).to have_content("Fresh towels")
     expect(page).to have_content("Noisy hallway")
+  end
+
+  it "protects unsaved snapshot changes with the control-panel alert", js: true do
+    visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
+
+    fill_in "Full Name", with: "Unsaved Guest Name"
+
+    click_link "Booking Details"
+    expect(page).to have_css('[role="alertdialog"]', text: "Discard your changes?")
+    click_button "Keep Editing"
+    expect(page).to have_field("Full Name", with: "Unsaved Guest Name")
+    expect(page).to have_current_path(hotel_booking_control_panel_path(hotel, booking, tab: "guest_details"))
+
+    click_link "Booking Details"
+    within('[role="alertdialog"]') { click_button "Discard Changes" }
+
+    expect(page).to have_current_path(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+    expect(booking.reload.guest_name).not_to eq("Unsaved Guest Name")
   end
 
   it "clicks Apply changes in the billing routes offcanvas", js: true do
