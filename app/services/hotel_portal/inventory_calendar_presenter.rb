@@ -12,9 +12,10 @@ module HotelPortal
         case kind
         when :walk_in then "Walk-in Rate"
         when :corporate then "Corporate Rate"
-        when :ota then "OTA Rate"
+        when :ota then "OTA Rates"
         when :channel_availability then "#{channel['attributes']['channel']} (#{channel['attributes']['title']})"
         when :channel_rate then "#{channel['attributes']['channel']} (#{channel['attributes']['title']})"
+        when :channel_summary then "OTA Channels"
         else "#{rate_plan&.name}"
         end
       end
@@ -25,6 +26,7 @@ module HotelPortal
       def ota_row? = kind == :ota
       def channel_availability_row? = kind == :channel_availability
       def channel_rate_row? = kind == :channel_rate
+      def channel_summary_row? = kind == :channel_summary
     end
 
     attr_reader :hotel, :start_date, :end_date, :display_currency
@@ -64,7 +66,7 @@ module HotelPortal
               []
             end
           rescue => e
-            Rails.logger.error "Failed to fetch connected channels from Channex: #{e.message}"
+            Rails.logger.error "Failed to fetch connected channels from Channel Manager: #{e.message}"
             []
           end
         else
@@ -93,6 +95,12 @@ module HotelPortal
       @rows ||= visible_room_types.flat_map do |room_type|
         inventory_row = Row.new(key: "room-#{room_type.id}-inventory", kind: :availability, room_type: room_type)
         
+        summary_rows = if connected_channels.any?
+          [ Row.new(key: "room-#{room_type.id}-summary", kind: :channel_summary, room_type: room_type) ]
+        else
+          []
+        end
+
         # Collapsible connected OTAs under room inventory row
         inventory_sub_rows = connected_channels.map do |channel|
           Row.new(
@@ -105,16 +113,14 @@ module HotelPortal
 
         walk_in_row = Row.new(key: "room-#{room_type.id}-walk-in", kind: :walk_in, room_type: room_type)
         corporate_row = Row.new(key: "room-#{room_type.id}-corporate", kind: :corporate, room_type: room_type)
-        ota_row = Row.new(key: "room-#{room_type.id}-ota", kind: :ota, room_type: room_type)
 
-        rate_rows = rate_plans_for(room_type).flat_map do |rate_plan|
+        rate_and_sub_rows = rate_plans_for(room_type).flat_map do |rate_plan|
           parent_row = Row.new(key: "room-#{room_type.id}-rate-#{rate_plan.id}", kind: :rate, room_type: room_type, rate_plan: rate_plan)
           
-          # Find mapped channel rate plans for this RoomTypeRatePlan
+          sub_rows = []
           rtrp = room_type.room_type_rate_plans.find_by(rate_plan: rate_plan)
           ext_rp_id = rtrp&.channel_mapping&.external_id
-          
-          sub_rows = []
+
           if ext_rp_id.present? && ext_rp_id != "pending"
             connected_channels.each do |channel|
               chan_rate_plans = channel.dig("attributes", "rate_plans") || []
@@ -132,11 +138,11 @@ module HotelPortal
               end
             end
           end
-          
+
           [ parent_row ] + sub_rows
         end
 
-        [ inventory_row ] + inventory_sub_rows + rate_rows + [ walk_in_row, corporate_row, ota_row ]
+        [ inventory_row ] + summary_rows + inventory_sub_rows + rate_and_sub_rows + [ walk_in_row, corporate_row ]
       end
     end
 
@@ -189,6 +195,8 @@ module HotelPortal
     def cell_for(row, date)
       if row.inventory_row?
         inventory_cell(row.room_type, date)
+      elsif row.channel_summary_row?
+        channel_summary_cell(row.room_type, date)
       elsif row.channel_availability_row?
         channel_availability_cell(row.room_type, row.channel, date)
       elsif row.walk_in_row?
@@ -201,6 +209,56 @@ module HotelPortal
         channel_rate_cell(row.room_type, row.rate_plan, row.channel_rate_plan_id, row.channel, date)
       else
         rate_cell(row.room_type, row.rate_plan, date)
+      end
+    end
+
+    def channel_summary_cell(room_type, date)
+      total = connected_channels.size
+      open_count = 0
+      channels_status = connected_channels.map do |channel|
+        cell = channel_availability_cell(room_type, channel, date)
+        is_open = !cell[:closed]
+        open_count += 1 if is_open
+        {
+          channel_id: channel["id"],
+          channel_name: channel["attributes"]["title"],
+          color: channel_color_for(channel["attributes"]["channel"]),
+          short: channel_short_for(channel["attributes"]["channel"]),
+          open: is_open
+        }
+      end
+
+      {
+        date: date,
+        total: total,
+        open_count: open_count,
+        channels: channels_status
+      }
+    end
+
+    def channel_color_for(channel_name)
+      case channel_name.to_s.downcase
+      when /booking/ then "bg-blue-600"
+      when /expedia/ then "bg-yellow-500"
+      when /agoda/ then "bg-red-500"
+      when /airbnb/ then "bg-pink-500"
+      when /hotels/ then "bg-rose-600"
+      when /trip/ then "bg-sky-500"
+      when /google/ then "bg-emerald-600"
+      else "bg-slate-400"
+      end
+    end
+
+    def channel_short_for(channel_name)
+      case channel_name.to_s.downcase
+      when /booking/ then "B"
+      when /expedia/ then "E"
+      when /agoda/ then "A"
+      when /airbnb/ then "Ab"
+      when /hotels/ then "H"
+      when /trip/ then "T"
+      when /google/ then "G"
+      else channel_name.to_s[0..1].capitalize
       end
     end
 
@@ -224,12 +282,6 @@ module HotelPortal
       end
     end
 
-    def has_ota_rates?(room_type)
-      rate_plans_for(room_type).any? do |rp|
-        rates_by_rate_plan[rp.id]&.values&.any? { |r| r.ota_price.present? }
-      end
-    end
-
     def tier_cell(room_type, date, tier_type)
       # Tiers are tied to the first rate plan in our current implementation
       rate_plan = room_type.rate_plans.sort_by(&:id).first
@@ -240,7 +292,6 @@ module HotelPortal
       actual_price = case tier_type
       when :walk_in then rate&.walk_in_price
       when :corporate then rate&.corporate_price
-      when :ota then rate&.ota_price
       end
 
       price = actual_price.presence || rate&.price || room_type.base_price
