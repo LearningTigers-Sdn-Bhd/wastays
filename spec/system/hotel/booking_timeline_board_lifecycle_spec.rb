@@ -4,7 +4,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
   include ActiveJob::TestHelper
 
   let(:account) { create(:account) }
-  let(:user) { create(:user, account: account, role: "hotel_staff", email: "staff@example.com") }
+  let(:user) { create(:user, account: account, role: "hotel_staff") }
   let(:hotel) { create(:hotel, account: account, status: "approved", time_zone: "UTC") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
 
@@ -25,6 +25,10 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
   end
 
   def drag_booking_to(booking:, room_number:, date:)
+    expect(page).to have_selector("[data-booking-actions-id-value='#{booking.id}']")
+    expect(page).to have_selector("[data-room-number='#{room_number}'][data-date='#{date}']")
+    wait_for_booking_timeline_controller
+
     page.execute_script(<<~JS)
       const source = document.querySelector("[data-booking-actions-id-value='#{booking.id}']")
       const handle = source.querySelector("[data-action*='onDragHandleMouseDown']")
@@ -137,15 +141,12 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     )
     create(:booking_room, booking: @booking, room_type: @room_type, room_number: "101")
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   it "completes a full booking lifecycle via the Booking Timeline Board", js: true do
     # 1. Check-in
-    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
 
     # The block exists but might not show the name directly (only in tooltip or sheet)
     expect(page).to have_selector("[data-booking-actions-id-value='#{@booking.id}']")
@@ -183,7 +184,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     end
 
     # Reload board for the next day, but keep the start date to see the booking
-    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
 
     # 3. Checkout
     # Record payment so checkout is not blocked
@@ -212,12 +213,16 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     # After checkout, the board should reload via Turbo Stream.
     # Completed bookings are hidden by default on the Booking Timeline Board,
     # so we expect the booking block to disappear.
-    expect(page).to have_no_selector("[data-booking-actions-id-value='#{@booking.id}']", wait: 5)
-    expect(@booking.reload.status).to eq("completed")
+    booking_selector = "[data-booking-actions-id-value='#{@booking.id}']"
+    page.document.synchronize do
+      booking_completed = @booking.reload.status == "completed"
+      booking_removed = page.evaluate_script("document.querySelector(#{booking_selector.to_json}) === null")
+      raise Capybara::ElementNotFound, "completed booking is still visible on the board" unless booking_completed && booking_removed
+    end
   end
 
   it "opens a booking from the keyboard and closes the amend-stay drawer", js: true do
-    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
 
     booking_block = find("[data-booking-actions-id-value='#{@booking.id}']")
     booking_block.send_keys(:enter)
@@ -233,7 +238,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
   end
 
   it "opens today slot actions and prefills the selected room", js: true do
-    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
     board_url = page.current_url
 
     cell = find("[data-room-number='102'][data-date='#{@business_date}']")
@@ -258,7 +263,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
   end
 
   it "opens a walk-in from today slot actions without leaving the board", js: true do
-    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
     board_url = page.current_url
 
     cell = find("[data-room-number='102'][data-date='#{@business_date}']")
@@ -277,7 +282,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
   end
 
   it "restores a portaled slot menu after Escape", js: true do
-    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
 
     cell = find("[data-room-number='102'][data-date='#{@business_date}']")
     trigger = cell.find("button[aria-haspopup='menu']")
@@ -292,7 +297,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
   end
 
   it "does not open Edit Booking from a timeline handle", js: true do
-    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
 
     page.execute_script(<<~JS)
       const source = document.querySelector("[data-booking-actions-id-value='#{@booking.id}']")
@@ -304,7 +309,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
 
   it "cancels a proposed move without changing the booking", js: true do
     target_date = @business_date + 1.day
-    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
 
     drag_booking_to(booking: @booking, room_number: "102", date: target_date)
     expect_offcanvas_to_finish_opening
@@ -322,7 +327,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
 
   it "moves a booking by dragging its handle and confirming the timeline sheet", js: true do
     target_date = @business_date + 1.day
-    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
 
     drag_booking_to(booking: @booking, room_number: "102", date: target_date)
     expect_offcanvas_to_finish_opening
@@ -344,7 +349,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
   it "extends a booking by resizing it and confirming the timeline sheet", js: true do
     target_date = @business_date + 2.days
     proposed_check_out = target_date.next_day
-    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
 
     resize_booking_to(booking: @booking, room_number: "101", date: target_date)
 

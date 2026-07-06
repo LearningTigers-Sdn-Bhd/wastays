@@ -18,10 +18,7 @@ RSpec.describe "Operational Exceptions", type: :system do
 
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   describe "Late Checkout" do
@@ -53,6 +50,7 @@ RSpec.describe "Operational Exceptions", type: :system do
 
       click_button "Process Late Checkout"
 
+      expect(page).to have_content("Late checkout charge applied.", wait: 10)
       expect(booking.reload.status).to eq("checked_in")
       expect(folio.reload.outstanding_balance).to eq(174.99)
     end

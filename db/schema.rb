@@ -713,6 +713,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_03_054820) do
     t.index ["voided_by_transaction_id"], name: "index_folio_transactions_on_voided_by_transaction_id"
   end
 
+  create_table "guest_registration_cards", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.bigint "booking_id", null: false
+    t.string "status", default: "draft", null: false
+    t.string "signer_name"
+    t.text "signature_data_url"
+    t.jsonb "terms_snapshot", default: {}, null: false
+    t.datetime "signed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_guest_registration_cards_on_booking_id", unique: true
+    t.index ["hotel_id"], name: "index_guest_registration_cards_on_hotel_id"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'signed'::character varying]::text[])", name: "guest_registration_cards_status_allowed"
+  end
+
   create_table "guests", force: :cascade do |t|
     t.string "name"
     t.string "email"
@@ -1761,6 +1776,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_03_054820) do
   add_foreign_key "folio_transactions", "night_audits", on_delete: :restrict
   add_foreign_key "folio_transactions", "transaction_codes"
   add_foreign_key "folio_transactions", "users"
+  add_foreign_key "guest_registration_cards", "bookings"
+  add_foreign_key "guest_registration_cards", "hotels"
   add_foreign_key "hotel_business_dates", "hotels"
   add_foreign_key "hotel_business_dates", "users", column: "force_closed_by_id", on_delete: :nullify
   add_foreign_key "hotel_corporate_accounts", "accounts", column: "corporate_account_id"

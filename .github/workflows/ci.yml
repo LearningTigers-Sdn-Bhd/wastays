@@ -58,6 +58,8 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    env:
+      PARALLEL_TEST_PROCESSORS: 4
 
     services:
       postgres:
@@ -92,9 +94,11 @@ jobs:
       - name: Prepare database
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/wastays_test
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
           # REDIS_URL: redis://localhost:6379/0
-        run: bin/rails db:prepare
+        run: bundle exec rails "parallel:setup[${PARALLEL_TEST_PROCESSORS}]"
 
       - name: Build Tailwind CSS
         env:
@@ -104,9 +108,11 @@ jobs:
       - name: Run tests
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/wastays_test
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
           # REDIS_URL: redis://localhost:6379/0
-        run: bundle exec rspec
+        run: bundle exec parallel_rspec -n "${PARALLEL_TEST_PROCESSORS}"
 
 
       - name: Keep screenshots from failed system tests
