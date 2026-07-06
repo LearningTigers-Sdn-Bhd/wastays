@@ -80,6 +80,62 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(booking.reload.guest_name).not_to eq("Unsaved Guest Name")
   end
 
+  it "prints the existing GRC in place without navigating or opening a window", js: true do
+    visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
+    original_url = page.current_url
+
+    page.execute_script <<~JS
+      document.addEventListener("document-print:ready", (event) => {
+        event.detail.frame.contentWindow.print = () => {
+          window.__grcPrintCalled = true
+          event.detail.frame.contentWindow.dispatchEvent(new Event("afterprint"))
+        }
+      }, { once: true })
+    JS
+
+    within("[data-testid='guest-details-footer']") { click_button "Print" }
+    click_button "Guest Registration Card"
+
+    expect(page).to have_no_css("iframe[data-document-print-frame]", wait: 3)
+    expect(page.evaluate_script("window.__grcPrintCalled")).to be(true)
+    expect(page.current_url).to eq(original_url)
+    expect(page.driver.browser.window_handles.size).to eq(1)
+  end
+
+  it "saves the selected guest from the full-width external footer", js: true do
+    visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
+    profile_name = booking.primary_guest.name
+
+    expect(page).to have_css("turbo-frame#booking_control_panel_workspace > footer[data-testid='guest-details-footer']")
+    fill_in "Full Name", with: "Saved From Footer"
+    click_button "Save Guest"
+
+    primary_booking_guest = booking.booking_guests.find_by!(is_primary: true)
+    expect(page).to have_current_path(hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: primary_booking_guest.id))
+    expect(page).to have_field("Full Name", with: "Saved From Footer")
+    expect(booking.reload.guest_name).to eq("Saved From Footer")
+    expect(booking.primary_guest.reload.name).to eq(profile_name)
+  end
+
+  it "updates the reusable guest only from the explicit split-save option", js: true do
+    visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
+
+    fill_in "Full Name", with: "Shared Guest Name"
+    save_options_trigger = find("button[aria-label='More save options']")
+    save_options_trigger.click
+    expect(page.evaluate_script(<<~JS)).to be(true)
+      (() => {
+        const trigger = document.querySelector("button[aria-label='More save options']").getBoundingClientRect()
+        const menu = document.querySelector("[data-testid='save-options-menu']").getBoundingClientRect()
+        return menu.left < trigger.left && menu.right <= trigger.right + 1
+      })()
+    JS
+    click_button "Save & Update Guest Record"
+
+    expect(page).to have_field("Full Name", with: "Shared Guest Name")
+    expect(booking.reload.primary_guest.name).to eq("Shared Guest Name")
+  end
+
   it "clicks Apply changes in the billing routes offcanvas", js: true do
     role.permissions << Permission.find_or_create_by!(slug: "manage_folio_movements") { |record| record.name = "Manage Folio Movements" }
     Financials::EnsureDefaultTransactionCodes.call(hotel)

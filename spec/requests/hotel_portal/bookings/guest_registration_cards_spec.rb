@@ -37,6 +37,34 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response).to have_http_status(:success)
       expect(response.body).to include("#{hotel.hotel_prefix}-20000001")
     end
+
+    it "keeps the existing official print button and printable document" do
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).not_to include('data-official-print="true"')
+      expect(response.body.scan("Print official form").size).to eq(1)
+      expect(response.body).to include('onclick="window.print()"')
+      expect(response.body).to include("grc-print grc-print-page")
+    end
+
+    it "renders primary stay snapshot details instead of later profile changes" do
+      guest = create(:guest, name: "Profile Name", email: "profile@example.com", phone: "111")
+      create(
+        :booking_guest,
+        booking: booking,
+        guest: guest,
+        is_primary: true,
+        name_snapshot: "Stay Name",
+        email_snapshot: "stay@example.com",
+        phone_snapshot: "222"
+      )
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).to include("Stay Name", "stay@example.com", "222")
+      expect(response.body).not_to include("Profile Name", "profile@example.com")
+    end
   end
 
   describe "PATCH /hotel/:hotel_id/bookings/:booking_id/guest_registration_card" do
