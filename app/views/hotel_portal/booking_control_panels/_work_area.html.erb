@@ -38,7 +38,7 @@
   <div class="grid min-h-0 flex-1 grid-cols-1 divide-slate-200 xl:divide-x <%= grid_class %>" data-layout-mode="<%= presenter.layout_mode %>">
     <%= render "left_rail", booking: booking, presenter: presenter %>
 
-    <main class="min-h-0 min-w-0 overflow-y-auto overscroll-contain custom-scrollbar" id="booking-control-panel-content">
+    <main class="min-h-0 min-w-0 <%= presenter.active_tab == 'guest_details' ? 'overflow-hidden' : 'overflow-y-auto overscroll-contain custom-scrollbar' %>" id="booking-control-panel-content">
       <%= render presenter.active_tab_partial,
         booking: booking,
         presenter: presenter,
@@ -54,6 +54,11 @@
       </aside>
     <% end %>
   </div>
+
+  <% if presenter.active_tab == "guest_details" && presenter.selected_booking_guest&.guest.present? %>
+    <%= render "hotel_portal/booking_control_panels/guest_details/footer", booking: booking, presenter: presenter %>
+    <%= render "hotel_portal/booking_control_panels/alerts/confirm_discard_alert" %>
+  <% end %>
 
   <% if presenter.alert_open? %>
     <%= render presenter.alert_partial, booking: booking, presenter: presenter %>

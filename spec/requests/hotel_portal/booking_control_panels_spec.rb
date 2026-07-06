@@ -8,6 +8,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
   let(:view_bookings) { Permission.find_or_create_by!(slug: "view_bookings") { |permission| permission.name = "View Bookings" } }
+  let(:manage_bookings) { Permission.find_or_create_by!(slug: "manage_bookings") { |permission| permission.name = "Manage Bookings" } }
   let(:manage_folio_windows) { Permission.find_or_create_by!(slug: "manage_folio_windows") { |permission| permission.name = "Manage Folio Windows" } }
   let(:manage_folio_movements) { Permission.find_or_create_by!(slug: "manage_folio_movements") { |permission| permission.name = "Manage Folio Movements" } }
   let(:booking) do
@@ -378,7 +379,8 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response.body).not_to include("Apply routing change?", "existing_and_future")
     end
 
-    it "opens room and guest editors directly in the offcanvas" do
+    it "opens room changes offcanvas and renders guest editing inline" do
+      role.permissions << manage_bookings
       guest = create(:booking_guest, booking: booking, is_primary: true)
       create(:booking_room, booking: booking)
 
@@ -390,8 +392,45 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: guest.id)
       document = Nokogiri::HTML(response.body)
-      expect(document.at_xpath("//a[normalize-space()='Add Guest']")["data-turbo-frame"]).to eq("offcanvas_drawer")
-      expect(document.at_xpath("//a[normalize-space()='Edit Guest']")["data-turbo-frame"]).to eq("offcanvas_drawer")
+      add_guest = document.at_xpath("//a[normalize-space()='+ Add Guest']")
+      expect(add_guest["data-turbo-frame"]).to eq("offcanvas_drawer")
+      form = document.at_css("form#guest-details-form[data-controller*='guest-details-editor']")
+      footer = document.at_css('[data-testid="guest-details-footer"]')
+      save_guest = footer.at_xpath(".//button[@type='submit' and normalize-space()='Save Guest']")
+      view_grc = footer.at_xpath(".//a[normalize-space()='View GRC']")
+      print_grc = footer.at_xpath(".//button[normalize-space()='Guest Registration Card']")
+      print_status = footer.at_css("[data-document-print-status]")
+      discard_alert = document.at_css('dialog[data-controller="confirm-discard"]')
+
+      expect(form).to be_present
+      expect(footer.parent["id"]).to eq("booking_control_panel_workspace")
+      expect(footer.ancestors("#booking-control-panel-content")).to be_empty
+      expect(footer["class"]).to include("border-t", "bg-white")
+      expect(footer["class"]).not_to include("shadow")
+      expect(document.at_xpath("//a[normalize-space()='Edit Guest']")).to be_nil
+      expect(save_guest["form"]).to eq("guest-details-form")
+      expect(view_grc["href"]).to eq(hotel_booking_guest_registration_card_path(hotel, booking))
+      expect(print_grc).to be_present
+      expect(print_status.parent["class"]).to include("items-center")
+      expect(print_status["class"]).not_to include("mt-2")
+      print_menu = print_grc.ancestors('[data-controller="document-print"]').first
+      expect(print_menu["data-document-print-url-value"]).to eq(hotel_booking_guest_registration_card_path(hotel, booking))
+      expect(discard_alert["role"]).to eq("alertdialog")
+      expect(response.body).to include("Guest Details", "Guest details recorded for this stay.", "GRC Actions", "Print")
+      expect(response.body).not_to include("Stay Record", "Guest Profile")
+      expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Select country", "Select gender", "Select document type", "Enter IC or passport number", "Select date")
+      expect(footer.at_xpath(".//button[@name='save_scope' and @value='snapshot']")).to be_present
+      expect(footer.at_xpath(".//button[@name='save_scope' and @value='snapshot_and_profile']")).to be_present
+      expect(response.body).not_to include("C Form")
+    end
+
+    it "keeps guest details in a two-column workspace even when drawer state is requested" do
+      create(:booking_guest, booking: booking, is_primary: true)
+
+      get hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", drawer: "billing")
+
+      expect(response.body).to include('data-layout-mode="left_and_center"')
+      expect(response.body).not_to include('data-testid="control-panel-action-drawer"')
     end
 
     it "renders only true editor drawers" do

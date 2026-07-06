@@ -95,7 +95,7 @@ module HotelPortal
     end
 
     def primary_guest_name
-      primary_booking_guest&.guest&.name.presence || booking.guest_name
+      primary_booking_guest&.name_snapshot.presence || primary_booking_guest&.guest&.name.presence || booking.guest_name
     end
 
     def room_count
@@ -194,6 +194,8 @@ module HotelPortal
     end
 
     def layout_mode
+      return "left_and_center" if active_tab == "guest_details"
+
       drawer_open? ? "left_center_right" : "left_and_center"
     end
 
@@ -698,10 +700,9 @@ module HotelPortal
 
     def guest_tree_groups
       guest_rows = booking.booking_guests.sort_by { |booking_guest| booking_guest.primary? ? 0 : 1 }.map do |booking_guest|
-        guest = booking_guest.guest
         TreeRow.new(
           booking_guest.id,
-          guest&.name.presence || booking.guest_name,
+          booking_guest.name_snapshot.presence || booking_guest.guest&.name.presence || booking.guest_name,
           booking_guest.primary? ? "Primary guest" : "Additional guest",
           "guest",
           guest_row_active?(booking_guest),
@@ -717,7 +718,7 @@ module HotelPortal
         rows = child.booking_guests.sort_by { |record| record.primary? ? 0 : 1 }.map do |booking_guest|
           TreeRow.new(
             booking_guest.id,
-            booking_guest.guest&.name.presence || booking_guest.name_snapshot.presence || child.guest_name,
+            booking_guest.name_snapshot.presence || booking_guest.guest&.name.presence || child.guest_name,
             booking_guest.primary? ? "Primary guest" : "Additional guest",
             "guest",
             child.id == booking.id && selected_booking_guest&.id == booking_guest.id && !group_overview?,
@@ -916,7 +917,7 @@ module HotelPortal
       room = child.booking_rooms.first
       room_type = room ? room_type_label(room) : "Room type unavailable"
       primary_guest = child.booking_guests.find(&:primary?)
-      guest_name = primary_guest&.guest&.name.presence || primary_guest&.name_snapshot.presence || child.guest_name
+      guest_name = primary_guest&.name_snapshot.presence || primary_guest&.guest&.name.presence || child.guest_name
       "#{room_type} - #{guest_name}"
     end
 
