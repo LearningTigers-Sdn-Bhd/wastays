@@ -113,7 +113,8 @@ class Booking < ApplicationRecord
   validates :group_position, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validate :group_booking_belongs_to_hotel
 
-  before_validation :generate_confirmation_token, on: :create
+  before_validation :assign_confirmation_token, on: :create
+  before_create :assign_document_counters
   before_validation :normalize_guest_data
   before_create :assign_guest_registration_number
 
@@ -444,13 +445,8 @@ class Booking < ApplicationRecord
     errors.add(:status, Bookings::StatusLifecycle.transition_error(from: from, to: to, event: event))
   end
 
-  DOCUMENT_NUMBER_PAD_LENGTH = 7
-
   def format_number(number, type_code:)
-    return nil unless number
-    prefix = hotel&.hotel_prefix.presence || "WS"
-    padded = number.to_s.rjust(DOCUMENT_NUMBER_PAD_LENGTH, "0")
-    "#{prefix}-#{type_code}#{padded}"
+    DocumentIdentifiers::HotelReferences.format(hotel: hotel, number: number, type_code: type_code)
   end
 
   def set_payout_status
@@ -469,19 +465,13 @@ class Booking < ApplicationRecord
     SendInvoiceEmailJob.perform_later(id)
   end
 
-  CONFIRMATION_TOKEN_CHARSET = (("A".."Z").to_a + ("2".."9").to_a - %w[I O L]).freeze
-  CONFIRMATION_TOKEN_LENGTH = 6
+  def assign_confirmation_token
+    DocumentIdentifiers::HotelReferences.assign_confirmation_token(self, unique_against: [ Booking, GroupBooking ])
+  end
 
-  def generate_confirmation_token
-    return if confirmation_token.present?
-
-    loop do
-      candidate = Array.new(CONFIRMATION_TOKEN_LENGTH) { CONFIRMATION_TOKEN_CHARSET.sample }.join
-      next if Booking.exists?(confirmation_token: candidate)
-
-      self.confirmation_token = candidate
-      break
-    end
+  def assign_document_counters
+    DocumentIdentifiers::HotelReferences.assign_counter(self, attribute: :reservation_number, counter_type: "reservation")
+    DocumentIdentifiers::HotelReferences.assign_counter(self, attribute: :receipt_number, counter_type: "receipt")
   end
 
   def assign_guest_registration_number

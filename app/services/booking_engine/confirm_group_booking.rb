@@ -68,7 +68,6 @@ module BookingEngine
     def create_group!(guest)
       @quote.hotel.group_bookings.create!(
         organizer_guest: guest,
-        reference: "GRP-#{@quote.token.first(10).upcase}",
         name: @payment_details[:group_name].presence || "#{@payment_details[:guest_name]} group",
         source: "booking_quote",
         external_reference: @quote.token,

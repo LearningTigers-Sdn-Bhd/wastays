@@ -12,7 +12,9 @@
 
   <% sections = [
     ["Identifiers", [
+      ["Confirmation", booking.confirmation_token.presence || "—"],
       ["Booking No.", booking.formatted_reservation_number.presence || "—"],
+      ["Receipt No.", booking.formatted_receipt_number.presence || "—"],
       ["Folio Account", booking.folio_account_reference_display.presence || "—"],
       ["Guest Registration", booking.formatted_guest_registration_number.presence || "—"],
       ["External Reference", booking.external_reference.presence || "—"],

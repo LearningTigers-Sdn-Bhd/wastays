@@ -86,9 +86,8 @@ module Bookings
     end
 
     def group_attributes(bookings)
-      token = SecureRandom.hex(5).upcase
       {
-        reference: "GRP-#{token}", name: @common_params[:guest_name].presence || "Group booking",
+        name: @common_params[:guest_name].presence || "Group booking",
         status: "active", default_check_in: bookings.first.check_in, default_check_out: bookings.first.check_out,
         organizer_guest: bookings.first.booking_guests.find_by(is_primary: true)&.guest
       }

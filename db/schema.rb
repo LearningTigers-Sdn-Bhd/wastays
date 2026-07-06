@@ -490,6 +490,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.index ["group_booking_id", "group_position"], name: "idx_bookings_group_position", unique: true, where: "(group_booking_id IS NOT NULL)"
     t.index ["group_booking_id"], name: "index_bookings_on_group_booking_id"
     t.index ["hotel_id", "folio_account_reference"], name: "idx_bookings_on_hotel_folio_account_reference", unique: true, where: "(folio_account_reference IS NOT NULL)"
+    t.index ["hotel_id", "receipt_number"], name: "idx_bookings_on_hotel_receipt_number", unique: true, where: "(receipt_number IS NOT NULL)"
+    t.index ["hotel_id", "reservation_number"], name: "idx_bookings_on_hotel_reservation_number", unique: true, where: "(reservation_number IS NOT NULL)"
     t.index ["hotel_id", "status", "no_show_review_business_date"], name: "index_bookings_on_hotel_status_no_show_review_date"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
@@ -897,7 +899,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
   create_table "group_bookings", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.bigint "organizer_guest_id"
-    t.string "reference", null: false
     t.string "name", null: false
     t.string "status", default: "active", null: false
     t.string "source"
@@ -908,7 +909,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["hotel_id", "reference"], name: "index_group_bookings_on_hotel_id_and_reference", unique: true
+    t.string "confirmation_token", null: false
+    t.integer "reservation_number", null: false
+    t.integer "receipt_number", null: false
+    t.index ["confirmation_token"], name: "index_group_bookings_on_confirmation_token", unique: true
+    t.index ["hotel_id", "receipt_number"], name: "idx_group_bookings_on_hotel_receipt_number", unique: true
+    t.index ["hotel_id", "reservation_number"], name: "idx_group_bookings_on_hotel_reservation_number", unique: true
     t.index ["hotel_id", "status"], name: "index_group_bookings_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_group_bookings_on_hotel_id"
     t.index ["organizer_guest_id"], name: "index_group_bookings_on_organizer_guest_id"

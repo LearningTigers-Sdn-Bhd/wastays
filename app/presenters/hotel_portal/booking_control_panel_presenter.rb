@@ -63,7 +63,11 @@ module HotelPortal
     end
 
     def group_booking_number
-      group_booking&.reference.presence || "—"
+      group_booking&.formatted_reservation_number.presence || "—"
+    end
+
+    def summary_booking_number
+      group_context_enabled? ? group_booking_number : booking_number
     end
 
     def summary_heading
@@ -71,11 +75,7 @@ module HotelPortal
     end
 
     def summary_subtitle
-      if group_overview?
-        "Booking No. #{group_booking_number}"
-      else
-        "Booking No. #{booking_number}"
-      end
+      "Booking No. #{summary_booking_number}"
     end
 
     def mobile_context_label
@@ -630,7 +630,7 @@ module HotelPortal
         [ "Departure", booking.check_out.in_time_zone(hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") ],
         [ "Nights", nights_count ],
         [ "Room / Room Type", room_summary ],
-        [ "Booking No.", booking_number ],
+        [ "Booking No.", summary_booking_number ],
         [ "Balance", money(total_balance) ]
       ]
     end

@@ -38,7 +38,9 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Booking control panel")
+      expect(response.body).to include(booking.confirmation_token)
       expect(response.body).to include(booking.formatted_reservation_number)
+      expect(response.body).to include(booking.formatted_receipt_number)
       expect(response.body).to include("Aina Rahman")
       expect(response.body).to include("Garden Suite")
       expect(response.body).to include("208")
@@ -460,7 +462,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
     end
 
     it "renders overview and booking rows as chevron navigation without a group identity block" do
-      group = create(:group_booking, hotel: hotel, reference: "HIDDEN-GROUP-REF", name: "Hidden Group Name")
+      group = create(:group_booking, hotel: hotel, name: "Hidden Group Name")
       booking.update!(group_booking: group, group_position: 1, guest_name: "Hanami Ume")
       room_type = create(:room_type, hotel: hotel, name: "Garden Prestige Suite")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "105")
@@ -475,16 +477,20 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(links).to all(satisfy { |link| link.at_css("svg").present? })
       expect(links.first["href"]).to include("tab=booking_details", "scope=group")
       expect(links.first["class"]).to include("bg-slate-900")
-      expect(nav.text).not_to include("HIDDEN-GROUP-REF", "Hidden Group Name")
+      expect(nav.text).not_to include(group.formatted_reservation_number, "Hidden Group Name")
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
-      child_nav = Nokogiri::HTML(response.body).at_css('nav[aria-label="Group booking context"]')
+      child_document = Nokogiri::HTML(response.body)
+      child_nav = child_document.at_css('nav[aria-label="Group booking context"]')
+      summary = child_document.at_css('section[aria-label="Booking summary"]')
+      expect(summary.text).to include("Booking No. #{group.formatted_reservation_number}")
+      expect(summary.text).not_to include("Booking No. #{booking.formatted_reservation_number}")
       expect(child_nav.css("a").last["class"]).to include("bg-slate-900")
       expect(child_nav.css("a").first["class"]).not_to include("bg-slate-900")
     end
 
     it "renders functional group overviews across every tab" do
-      group = create(:group_booking, hotel: hotel, reference: "GROUP-OVERVIEW", name: "Conference Group")
+      group = create(:group_booking, hotel: hotel, name: "Conference Group")
       booking.update!(group_booking: group, group_position: 1)
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, confirmation_token: "GROUP-CHILD-2", reservation_number: 45)
       [ booking, sibling ].each_with_index do |child, index|
@@ -510,7 +516,11 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
         expect(response).to have_http_status(:success), "expected group overview for #{tab}"
         expect(response.body).to include(marker)
-        expect(response.body).to include("GROUP-OVERVIEW")
+        expect(response.body).to include(group.formatted_reservation_number)
+        if tab == "booking_details"
+          expect(response.body).to include(group.confirmation_token)
+          expect(response.body).to include(group.formatted_receipt_number)
+        end
         if tab == "room_and_rate"
           table = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="room-rate-heading"] table')
           expect(table.css("thead th").map { |header| header.text.strip }).to eq([ "Booking No.", "Stay Date", "Room Type", "Room", "Rate Plan", "Nightly Rate" ])

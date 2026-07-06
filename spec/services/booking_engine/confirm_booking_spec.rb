@@ -99,7 +99,12 @@ RSpec.describe BookingEngine::ConfirmBooking do
       result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
 
       expect(result).to be_success
+      expect(result.group_booking.confirmation_token).to be_present
+      expect(result.group_booking.reservation_number).to eq(1)
+      expect(result.group_booking.receipt_number).to eq(1)
       expect(result.group_booking.bookings.count).to eq(2)
+      expect(result.bookings.map(&:reservation_number)).to eq([ 2, 3 ])
+      expect(result.bookings.map(&:receipt_number)).to eq([ 2, 3 ])
       expect(result.bookings.map { |booking| booking.booking_rooms.sole.quantity }).to all(eq(1))
       expect(result.bookings.map { |booking| booking.booking_guests.sole.role }).to all(eq("primary"))
       expect(result.group_booking.group_deposits.sole).to have_attributes(amount: 400.to_d, status: "allocated")

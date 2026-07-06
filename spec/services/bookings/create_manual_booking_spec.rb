@@ -35,6 +35,8 @@ RSpec.describe Bookings::CreateManualBooking do
       result = subject.call
       expect(result.success?).to be true
       expect(result.booking).to be_persisted
+      expect(result.booking.reservation_number).to be_present
+      expect(result.booking.receipt_number).to be_present
       expect(result.booking.hotel_snapshot["room_number"]).to eq("101")
       expect(result.booking.booking_folio).to be_present
       expect(result.booking.booking_folio).to be_open

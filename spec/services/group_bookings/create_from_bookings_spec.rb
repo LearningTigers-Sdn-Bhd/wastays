@@ -13,10 +13,13 @@ RSpec.describe GroupBookings::CreateFromBookings do
     result = described_class.call(
       hotel: hotel,
       bookings: [ first, second ],
-      attributes: { reference: "GRP-100", name: "Wedding" }
+      attributes: { name: "Wedding" }
     )
 
     expect(result).to be_success
+    expect(result.group_booking.confirmation_token).to be_present
+    expect(result.group_booking.reservation_number).to be_present
+    expect(result.group_booking.receipt_number).to be_present
     expect(result.group_booking.bookings.reload).to contain_exactly(first, second)
     expect(first.reload.group_position).to eq(1)
     expect(second.reload.group_position).to eq(2)
@@ -32,7 +35,7 @@ RSpec.describe GroupBookings::CreateFromBookings do
     result = described_class.call(
       hotel: hotel,
       bookings: [ aggregated, normal ],
-      attributes: { reference: "GRP-101", name: "Invalid" }
+      attributes: { name: "Invalid" }
     )
 
     expect(result).not_to be_success

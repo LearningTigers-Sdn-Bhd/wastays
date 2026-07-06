@@ -28,6 +28,14 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
       expect(presenter.check_out_date).to eq(booking.check_out.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y"))
       expect(presenter.source_label).to eq("Booking Com")
     end
+
+    it "uses the group booking number in the summary when viewing a child booking" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+
+      expect(presenter.summary_subtitle).to eq("Booking No. #{group.formatted_reservation_number}")
+      expect(presenter.summary_items).to include([ "Booking No.", group.formatted_reservation_number ])
+    end
   end
 
   describe "primary guest" do
