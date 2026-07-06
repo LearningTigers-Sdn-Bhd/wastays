@@ -51,7 +51,10 @@ export default class extends Controller {
     "info",
     "channelIdField",
     "channelRatePlanIdField",
-    "paxFields"
+    "paxFields",
+    "otasExpandedBtn",
+    "otasCompactBtn",
+    "otasHiddenBtn"
   ]
 
   static values = {
@@ -80,6 +83,10 @@ export default class extends Controller {
     this.toggleSections()
     this.loadStagedChanges()
     this.updateSyncButton()
+
+    // Restore OTAs mode
+    const storedOtasMode = localStorage.getItem(`ari_otas_mode_${this.hotelIdValue}`) || "hidden"
+    this.updateOtasMode(storedOtasMode)
 
     // Re-apply highlights when Turbo Frame reloads
     const frame = document.getElementById("inventory_calendar_frame")
@@ -118,6 +125,37 @@ export default class extends Controller {
     if (this.closeAllTooltipsHandler) {
       document.removeEventListener("click", this.closeAllTooltipsHandler)
     }
+  }
+
+  setOtasMode(event) {
+    if (event) event.preventDefault()
+    const btn = event.currentTarget
+    const mode = btn.dataset.otasMode
+    this.updateOtasMode(mode)
+  }
+
+  updateOtasMode(mode) {
+    this.otasMode = mode
+    localStorage.setItem(`ari_otas_mode_${this.hotelIdValue}`, mode)
+
+    const grid = this.element.querySelector('[data-testid="inventory-calendar-grid"]')
+    if (grid) {
+      grid.setAttribute('data-otas-mode', mode)
+    }
+
+    const buttons = [
+      this.hasOtasExpandedBtnTarget ? this.otasExpandedBtnTarget : null,
+      this.hasOtasCompactBtnTarget ? this.otasCompactBtnTarget : null,
+      this.hasOtasHiddenBtnTarget ? this.otasHiddenBtnTarget : null
+    ].filter(Boolean)
+
+    buttons.forEach(btn => {
+      if (btn.dataset.otasMode === mode) {
+        btn.className = "rounded-md px-3 py-1 text-sm font-semibold bg-white text-slate-900 shadow-sm transition-all border border-slate-200"
+      } else {
+        btn.className = "rounded-md px-3 py-1 text-sm font-medium text-slate-500 hover:text-slate-700 transition-all"
+      }
+    })
   }
 
   loadStagedChanges() {
@@ -557,7 +595,20 @@ export default class extends Controller {
   markCellDirty(testid, data = null) {
     const cell = this.element.querySelector(`[data-testid="${testid}"]`)
     if (cell) {
-      cell.classList.add("ring-2", "ring-inset", "ring-indigo-500", "after:content-['*']", "after:absolute", "after:top-0", "after:right-1", "after:text-[10px]", "after:font-black", "after:text-indigo-600")
+      cell.classList.add("bg-indigo-50/70", "font-semibold")
+      
+      const priceSpan = cell.querySelector(".tabular-nums") || cell.querySelector("span")
+      if (priceSpan) {
+        priceSpan.classList.add("text-indigo-700", "font-extrabold")
+      }
+
+      // Add an absolute dot on top-right
+      let dot = cell.querySelector(".dirty-dot")
+      if (!dot) {
+        dot = document.createElement("span")
+        dot.className = "dirty-dot absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-indigo-500"
+        cell.appendChild(dot)
+      }
       cell.style.position = "relative"
 
       // Update dataset with pending values so re-editing shows the correct data
@@ -615,8 +666,19 @@ export default class extends Controller {
   }
 
   clearAllHighlights() {
+    this.element.querySelectorAll(".bg-indigo-50\\/70").forEach(cell => {
+      cell.classList.remove("bg-indigo-50/70", "font-semibold")
+      const priceSpan = cell.querySelector(".tabular-nums") || cell.querySelector("span")
+      if (priceSpan) {
+        priceSpan.classList.remove("text-indigo-700", "font-extrabold")
+      }
+      const dot = cell.querySelector(".dirty-dot")
+      if (dot) dot.remove()
+    })
     this.element.querySelectorAll(".ring-indigo-500").forEach(cell => {
       cell.classList.remove("ring-2", "ring-inset", "ring-indigo-500", "after:content-['*']", "after:absolute", "after:top-0", "after:right-1", "after:text-[10px]", "after:font-black", "after:text-indigo-600")
+      const dot = cell.querySelector(".dirty-dot")
+      if (dot) dot.remove()
     })
   }
 
@@ -966,7 +1028,7 @@ export default class extends Controller {
     if (event) event.preventDefault()
 
     const startDate = this.navStartDateTarget.value
-    const roomTypeId = this.navRoomTypeTarget.value
+    const roomTypeId = this.hasNavRoomTypeTarget ? this.navRoomTypeTarget.value : null
     
     const url = new URL(window.location.href)
     url.searchParams.set("start_date", startDate)

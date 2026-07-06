@@ -11,7 +11,7 @@ class CreateChannelSettingsAndRules < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :channel_derived_settings, [:hotel_id, :channel_id], unique: true
+    add_index :channel_derived_settings, [ :hotel_id, :channel_id ], unique: true
 
     create_table :channel_availability_rules do |t|
       t.references :hotel, null: false, foreign_key: true

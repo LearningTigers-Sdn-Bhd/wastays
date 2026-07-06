@@ -7,8 +7,10 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   def index
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
+    @days = (params[:days] || 14).to_i
+    @days = 14 unless [ 7, 14 ].include?(@days)
     @start_date = (params[:start_date] || Date.current).to_date
-    @end_date = @start_date + 13.days
+    @end_date = @start_date + (@days - 1).days
     @view_mode = "combined"
 
     # Handle multiple view currencies
@@ -148,15 +150,14 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       cr_price: pricing_params[:cr_price],
       cr_start_date: pricing_params[:cr_start_date],
       cr_end_date: pricing_params[:cr_end_date],
-      ota_price: pricing_params[:ota_price],
-      ota_start_date: pricing_params[:ota_start_date],
-      ota_end_date: pricing_params[:ota_end_date],
       public_holidays: pricing_params[:public_holidays]
     ).call
 
     unless sync_result[:success]
       @start_date = Date.current
-      @end_date = @start_date + 13.days
+      @days = (params[:days] || 14).to_i
+      @days = 14 unless [ 7, 14 ].include?(@days)
+      @end_date = @start_date + (@days - 1).days
       @view_mode = "combined"
       @room_types = current_hotel.room_types.order(:id)
 
@@ -375,9 +376,6 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :cr_price,
       :cr_start_date,
       :cr_end_date,
-      :ota_price,
-      :ota_start_date,
-      :ota_end_date,
       room_type_ids: [],
       weekend_days: [],
       school_holidays: [ :name, :price, :start_date, :end_date ],
@@ -430,6 +428,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
     {
       start_date: params[:start_date] || permitted_selection[:start_date],
+      days: params[:days],
       view_currencies: params[:view_currencies] || permitted_selection[:view_currencies],
       display_currency: params[:display_currency],
       room_type_id: Array(permitted_selection[:room_type_ids]).reject(&:blank?).first || params[:room_type_id],
@@ -461,10 +460,10 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   def set_active_tabs
     @active_tab = INVENTORY_TABS.include?(params[:tab]) ? params[:tab] : "calendar"
     default_subtab = if @active_tab == "channels"
-                       "derived_settings"
-                     else
-                       "pricing"
-                     end
+      "derived_settings"
+    else
+      "pricing"
+    end
     @active_subtab = INVENTORY_SUBTABS.include?(params[:subtab]) ? params[:subtab] : default_subtab
   end
 
@@ -473,7 +472,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     append_breadcrumb({
       label: inventory_subtab_label,
       subtab_label: true,
-      hidden: !@active_tab.in?(["advanced", "channels"])
+      hidden: !@active_tab.in?([ "advanced", "channels" ])
     })
   end
 

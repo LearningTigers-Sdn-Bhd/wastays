@@ -63,7 +63,6 @@ module Bookings
       case @rate_tier
       when :corporate then rate.corporate_price
       when :walk_in then rate.walk_in_price
-      when :ota then rate.ota_price
       else
         @corporate_rate ? rate.corporate_price : nil
       end

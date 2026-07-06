@@ -618,3 +618,13 @@
     }
   }
 }
+
+/* OTA Visibility Modes */
+[data-otas-mode="hidden"] [data-channel-summary-row="true"],
+[data-otas-mode="hidden"] [data-channel-detail-row="true"] {
+  display: none !important;
+}
+
+[data-otas-mode="compact"] [data-channel-detail-row="true"] {
+  display: none !important;
+}

@@ -9,7 +9,7 @@ FactoryBot.define do
     rule_type { "max_availability" }
     value { 3 }
     days { "mo,tu,we,th,fr,sa,su" }
-    affected_channels { ["test_channel"] }
-    affected_room_types { [1] }
+    affected_channels { [ "test_channel" ] }
+    affected_room_types { [ 1 ] }
   end
 end

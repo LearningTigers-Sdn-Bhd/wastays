@@ -18,6 +18,6 @@ class CreateChannelRoomRates < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :channel_room_rates, [:room_type_id, :rate_plan_id, :channel_rate_plan_id, :date, :currency], unique: true, name: 'idx_channel_room_rates_uniqueness'
+    add_index :channel_room_rates, [ :room_type_id, :rate_plan_id, :channel_rate_plan_id, :date, :currency ], unique: true, name: 'idx_channel_room_rates_uniqueness'
   end
 end

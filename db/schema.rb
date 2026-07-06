@@ -1774,7 +1774,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.boolean "closed_to_departure"
     t.boolean "stop_sell"
     t.decimal "walk_in_price", precision: 10, scale: 2
-    t.decimal "ota_price", precision: 10, scale: 2
     t.string "applied_rule_type"
     t.decimal "corporate_price", precision: 10, scale: 2
     t.decimal "single_supplement", precision: 10, scale: 2

@@ -318,8 +318,8 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
         value: "4",
         day_mo: "1",
         day_fr: "1",
-        affected_channels: ["ch_1"],
-        affected_room_types: [123]
+        affected_channels: [ "ch_1" ],
+        affected_room_types: [ 123 ]
       }
 
       expect(response).to redirect_to(hotel_inventory_index_path(hotel, tab: "channels", subtab: "availability_rules"))
@@ -328,8 +328,8 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(rule.rule_type).to eq("max_availability")
       expect(rule.value).to eq(4)
       expect(rule.days).to eq("mo,fr")
-      expect(rule.affected_channels).to eq(["ch_1"])
-      expect(rule.affected_room_types).to eq([123])
+      expect(rule.affected_channels).to eq([ "ch_1" ])
+      expect(rule.affected_room_types).to eq([ 123 ])
     end
   end
 

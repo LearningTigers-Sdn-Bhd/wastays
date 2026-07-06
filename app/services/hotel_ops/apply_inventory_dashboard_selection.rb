@@ -276,7 +276,6 @@ module HotelOps
             price: rate.price&.to_f,
             walk_in_price: rate.walk_in_price&.to_f,
             corporate_price: rate.corporate_price&.to_f,
-            ota_price: rate.ota_price&.to_f,
             min_stay: rate.min_stay,
             max_stay: rate.max_stay,
             closed_to_arrival: rate.closed_to_arrival,
@@ -293,7 +292,6 @@ module HotelOps
             case tier
             when :walk_in then rate.walk_in_price = price
             when :corporate then rate.corporate_price = price
-            when :ota then rate.ota_price = price
             else
               rate.price = price if selection[:price].present?
             end
@@ -335,7 +333,6 @@ module HotelOps
               price: rate.price.to_f,
               walk_in_price: rate.walk_in_price&.to_f,
               corporate_price: rate.corporate_price&.to_f,
-              ota_price: rate.ota_price&.to_f,
               min_stay: rate.min_stay,
               max_stay: rate.max_stay,
               closed_to_arrival: rate.closed_to_arrival,
@@ -394,7 +391,6 @@ module HotelOps
       old_values[:price] != rate.price.to_f ||
         old_values[:walk_in_price] != rate.walk_in_price&.to_f ||
         old_values[:corporate_price] != rate.corporate_price&.to_f ||
-        old_values[:ota_price] != rate.ota_price&.to_f ||
         old_values[:min_stay] != rate.min_stay ||
         old_values[:max_stay] != rate.max_stay ||
         old_values[:closed_to_arrival] != rate.closed_to_arrival ||

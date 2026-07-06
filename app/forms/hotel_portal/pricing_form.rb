@@ -6,7 +6,7 @@ module HotelPortal
 
     HolidayFormRow = Struct.new(:id, :name, :start_date, :end_date, :price, :persisted?, keyword_init: true)
 
-    attr_accessor :general_rule, :weekends_rule, :walk_in_rule, :corporate_rule, :ota_rule, :pricing_data, :weekend_days,
+    attr_accessor :general_rule, :weekends_rule, :walk_in_rule, :corporate_rule, :pricing_data, :weekend_days,
                   :public_holiday_rows, :school_holiday_rows, :selected_room_type_ids, :errors
 
     def initialize(hotel, room_types)
@@ -28,7 +28,6 @@ module HotelPortal
       @weekends_rule = rules.find { |r| r.rule_type == "weekends" }
       @walk_in_rule = rules.find { |r| r.rule_type == "walk_in" }
       @corporate_rule = rules.find { |r| r.rule_type == "corporate_rate" }
-      @ota_rule = rules.find { |r| r.rule_type == "ota_rate" }
 
       @pricing_data = {
         gp_price: @general_rule&.price,
@@ -42,10 +41,7 @@ module HotelPortal
         wi_end_date: @walk_in_rule&.end_date,
         cr_price: @corporate_rule&.price,
         cr_start_date: @corporate_rule&.start_date,
-        cr_end_date: @corporate_rule&.end_date,
-        ota_price: @ota_rule&.price,
-        ota_start_date: @ota_rule&.start_date,
-        ota_end_date: @ota_rule&.end_date
+        cr_end_date: @corporate_rule&.end_date
       }
 
       @weekend_days = @weekends_rule&.weekdays.presence || [ 5, 6, 0 ]
@@ -67,7 +63,6 @@ module HotelPortal
       @weekends_rule = nil
       @walk_in_rule = nil
       @corporate_rule = nil
-      @ota_rule = nil
 
       @pricing_data = {
         gp_price: params[:gp_price],
@@ -81,10 +76,7 @@ module HotelPortal
         wi_end_date: params[:wi_end_date],
         cr_price: params[:cr_price],
         cr_start_date: params[:cr_start_date],
-        cr_end_date: params[:cr_end_date],
-        ota_price: params[:ota_price],
-        ota_start_date: params[:ota_start_date],
-        ota_end_date: params[:ota_end_date]
+        cr_end_date: params[:cr_end_date]
       }
 
       @weekend_days = Array(params[:weekend_days]).reject(&:blank?).map(&:to_i)

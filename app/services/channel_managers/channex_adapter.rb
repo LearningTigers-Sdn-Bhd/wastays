@@ -299,7 +299,7 @@ module ChannelManagers
 
     def push_availability(client, property_id, date_range, room_type_ids: nil)
       values = push_availability_values(date_range, room_type_ids: room_type_ids)
-      
+
       # Sync channel-specific availability rules (allotments/closeouts)
       sync_rt_ids = room_type_ids.is_a?(Hash) ? room_type_ids.keys.map(&:to_i) : (room_type_ids || @hotel.room_types.pluck(:id))
       sync_channel_availability_rules(client, property_id, date_range, sync_rt_ids)
@@ -468,7 +468,7 @@ module ChannelManagers
             }
 
             if final_sync_rates
-              ota_price = rate&.ota_price.presence || rate&.price
+              ota_price = rate&.price
               val_data[:rate] = format("%.2f", ota_price.to_f) if ota_price
             end
 
@@ -512,7 +512,7 @@ module ChannelManagers
               chan_rate_plans = channel.dig("attributes", "rate_plans") || []
               chan_rate_plans.each do |crp|
                 next unless crp["rate_plan_id"] == ext_rp_id
-                
+
                 crp_id = crp["id"]
                 overrides_by_date = ChannelRoomRate.where(
                   room_type_id: room_type.id,
@@ -679,12 +679,12 @@ module ChannelManagers
         rate_plan_id: nil,
         date: date_range
       )
-      
-      overrides.group_by { |o| [o.room_type_id, o.channel_id] }.each do |(room_type_id, channel_id), chan_overrides|
+
+      overrides.group_by { |o| [ o.room_type_id, o.channel_id ] }.each do |(room_type_id, channel_id), chan_overrides|
         room_type = RoomType.find(room_type_id)
         ext_rt_id = mapping_for(room_type).external_id
         next if ext_rt_id == "pending"
-        
+
         # 1. Clean up existing rules for this room/channel in this range to avoid duplicates
         existing_rules = client.get("/channel_availability_rules", { "filter" => { "property_id" => property_id } }) rescue {}
         if existing_rules["data"].is_a?(Array)
@@ -699,7 +699,7 @@ module ChannelManagers
             end
           end
         end
-        
+
         # 2. Push contiguous close_out rules
         close_out_dates = chan_overrides.select(&:stop_sell).map(&:date).sort
         group_dates_into_ranges(close_out_dates).each do |range|
@@ -707,9 +707,9 @@ module ChannelManagers
             channel_availability_rule: {
               title: "PMS Override",
               type: "close_out",
-              affected_channels: [channel_id],
-              affected_room_types: [ext_rt_id],
-              days: ["mo", "tu", "we", "th", "fr", "sa", "su"],
+              affected_channels: [ channel_id ],
+              affected_room_types: [ ext_rt_id ],
+              days: [ "mo", "tu", "we", "th", "fr", "sa", "su" ],
               start_date: range.first.to_s,
               end_date: range.last.to_s,
               property_id: property_id
@@ -727,9 +727,9 @@ module ChannelManagers
                 title: "PMS Override",
                 type: "max_availability",
                 value: avail_value.to_i,
-                affected_channels: [channel_id],
-                affected_room_types: [ext_rt_id],
-                days: ["mo", "tu", "we", "th", "fr", "sa", "su"],
+                affected_channels: [ channel_id ],
+                affected_room_types: [ ext_rt_id ],
+                days: [ "mo", "tu", "we", "th", "fr", "sa", "su" ],
                 start_date: range.first.to_s,
                 end_date: range.last.to_s,
                 property_id: property_id
@@ -745,7 +745,7 @@ module ChannelManagers
       ranges = []
       start_date = dates.first
       prev_date = dates.first
-      
+
       dates[1..].each do |d|
         if d == prev_date + 1.day
           prev_date = d
@@ -770,7 +770,7 @@ module ChannelManagers
       end.compact.reject { |id| id == "pending" }
 
       days_array = rule.days.to_s.split(",").map(&:strip).reject(&:blank?)
-      days_array = ["mo", "tu", "we", "th", "fr", "sa", "su"] if days_array.empty?
+      days_array = [ "mo", "tu", "we", "th", "fr", "sa", "su" ] if days_array.empty?
 
       payload = {
         channel_availability_rule: {
@@ -807,7 +807,7 @@ module ChannelManagers
       end.compact.reject { |id| id == "pending" }
 
       days_array = rule.days.to_s.split(",").map(&:strip).reject(&:blank?)
-      days_array = ["mo", "tu", "we", "th", "fr", "sa", "su"] if days_array.empty?
+      days_array = [ "mo", "tu", "we", "th", "fr", "sa", "su" ] if days_array.empty?
 
       payload = {
         channel_availability_rule: {

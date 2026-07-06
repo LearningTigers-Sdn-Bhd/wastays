@@ -68,7 +68,20 @@ module HotelPortal
     def update_rate_plans
       authorize_settings_update!
 
-      rate_plans_params = params.require(:rate_plans).permit!
+      rate_plans_params = {}
+      params.require(:rate_plans).each do |rp_id, rp_attrs|
+        next unless rp_id.to_s.match?(/\A\d+\z/)
+
+        rate_plans_params[rp_id] = rp_attrs.permit(
+          :sell_mode,
+          :base_occupancy,
+          :extra_pax_charge,
+          :single_supplement,
+          :child_price_multiplier,
+          :infant_price_multiplier,
+          room_type_ids: []
+        )
+      end
 
       success = true
       ActiveRecord::Base.transaction do

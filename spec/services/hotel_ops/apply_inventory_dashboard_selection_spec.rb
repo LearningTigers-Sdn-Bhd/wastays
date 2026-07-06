@@ -253,32 +253,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(rate.corporate_price.to_f).to eq(200.0) # Corporate price should REMAIN unchanged
     end
 
-    it "updates only the ota price when only ota tier is selected" do
-      room_type = create(:room_type, hotel: hotel, base_price: 100)
-      rate_plan = room_type.rate_plans.first # Use auto-created plan
-      # Pre-create a rate record with standard and corporate prices
-      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150, corporate_price: 200)
 
-      result = described_class.new(
-        hotel: hotel,
-        selection: {
-          start_date: start_date,
-          end_date: start_date,
-          room_type_ids: [ room_type.id ],
-          rate_plan_ids: [ "tier_ota_#{room_type.id}" ],
-          apply_rates: "1",
-          price: "250.00",
-          currency: "MYR"
-        },
-        user: user
-      ).call
-
-      expect(result[:success]).to be(true)
-      rate = rate_plan.room_rates.find_by(date: start_date, currency: "MYR")
-      expect(rate.ota_price.to_f).to eq(250.0)
-      expect(rate.price.to_f).to eq(150.0)
-      expect(rate.corporate_price.to_f).to eq(200.0)
-    end
 
     it "updates base_occupancy, extra_pax_charge, and single_supplement when rates are modified" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
