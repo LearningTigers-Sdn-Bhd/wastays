@@ -132,11 +132,6 @@
                       <%= cached_icon "chevron-down", class: "ms-1.5 size-3.5" %>
                     </button>
                     <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[100] mt-2 min-w-[14rem] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in duration-200">
-                      <%= link_to hotel_inventory_index_path(current_hotel, room_type_id: room_type.id), class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors", data: { turbo_frame: "_top" } do %>
-                        <%= cached_icon "calendar", class: "size-4 text-emerald-500" %>
-                        Open Rates & Availability
-                      <% end %>
-                      <div class="my-1 border-t border-slate-100"></div>
                       <%= link_to edit_hotel_room_type_path(current_hotel, room_type), class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors", data: { turbo_frame: "_top" } do %>
                         <%= cached_icon "pencil", class: "size-4 text-slate-400" %>
                         Edit Details
@@ -206,7 +201,6 @@
             </dl>
 
             <div class="mt-6 flex flex-wrap items-center justify-end gap-2">
-              <%= link_to "Calendar", hotel_inventory_index_path(current_hotel, room_type_id: room_type.id), class: "inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 shadow-sm transition", data: { turbo_frame: "_top" } %>
               <%= link_to "Edit", edit_hotel_room_type_path(current_hotel, room_type), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition", data: { turbo_frame: "_top" } %>
             </div>
           </div>
