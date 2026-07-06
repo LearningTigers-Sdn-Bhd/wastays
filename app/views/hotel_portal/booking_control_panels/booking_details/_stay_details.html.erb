@@ -1,7 +1,7 @@
 <section aria-labelledby="booking-details-heading">
   <header class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
     <div>
-      <p class="text-xs font-semibold text-slate-500"><%= booking.confirmation_token %></p>
+      <p class="text-xs font-semibold text-slate-500">Booking No. <%= booking.formatted_reservation_number.presence || "—" %></p>
       <h2 id="booking-details-heading" class="mt-1 text-lg font-bold text-slate-950">Booking Details</h2>
       <p class="mt-1 text-sm text-slate-600">Booking, stay, and financial information.</p>
     </div>
@@ -12,8 +12,7 @@
 
   <% sections = [
     ["Identifiers", [
-      ["Confirmation", presenter.confirmation_token.presence || "—"],
-      ["Booking", booking.formatted_reservation_number.presence || "—"],
+      ["Booking No.", booking.formatted_reservation_number.presence || "—"],
       ["Folio Account", booking.folio_account_reference_display.presence || "—"],
       ["Guest Registration", booking.formatted_guest_registration_number.presence || "—"],
       ["External Reference", booking.external_reference.presence || "—"],

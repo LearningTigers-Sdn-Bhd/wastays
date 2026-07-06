@@ -31,6 +31,8 @@ module HotelPortal
         )
         .find(params[:booking_id])
 
+      return if redirect_group_entity_context!
+
       @booking_presenter = BookingPresenter.new(@booking, current_hotel)
       @folio_show = Folios::ShowPresenter.new(
         booking: @booking,
@@ -84,6 +86,33 @@ module HotelPortal
       return if replacement.blank?
 
       redirect_to hotel_booking_control_panel_path(current_hotel, params[:booking_id], request.query_parameters.merge(tab: replacement)), status: :see_other
+    end
+
+    def redirect_group_entity_context!
+      tab = params[:tab].to_s
+      entity_param = { "folio_operations" => "folio_id", "guest_details" => "booking_guest_id" }[tab]
+      return false if entity_param.blank? || @booking.group_booking_id.blank?
+
+      legacy_group_scope = params[:scope].to_s == "group"
+      return false if params[entity_param].present? && !legacy_group_scope
+
+      first_child = @booking.group_booking.bookings.min_by { |child| [ child.group_position || Float::INFINITY, child.id ] }
+      return false unless first_child
+
+      entity_id = if tab == "folio_operations"
+        folios = first_child.booking_folios.to_a
+        (folios.find(&:is_primary?) || folios.min_by { |folio| [ folio.folio_sequence.to_i, folio.id ] })&.id
+      else
+        guests = first_child.booking_guests.to_a
+        (guests.find(&:is_primary?) || guests.min_by(&:id))&.id
+      end
+
+      query = request.query_parameters.except("scope", "folio_id", "active_folio_id", "booking_guest_id")
+      query[entity_param] = entity_id if entity_id
+      return false if !legacy_group_scope && first_child.id == @booking.id && entity_id.blank?
+
+      redirect_to hotel_booking_control_panel_path(current_hotel, first_child, query), status: :see_other
+      true
     end
   end
 end

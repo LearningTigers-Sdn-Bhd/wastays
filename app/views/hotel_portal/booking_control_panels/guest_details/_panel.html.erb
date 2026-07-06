@@ -1,27 +1,8 @@
-<% if presenter.group_overview? %>
-  <section aria-labelledby="guest-details-heading">
-    <header class="border-b border-slate-200 px-5 py-4"><p class="text-xs font-semibold text-slate-500"><%= presenter.group_booking.reference %></p><h2 id="guest-details-heading" class="mt-1 text-lg font-bold text-slate-950">Group Guests</h2><p class="mt-1 text-sm text-slate-600">Guests linked to each child booking.</p></header>
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[760px] text-left text-sm">
-        <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600"><tr><th class="px-5 py-3">Booking</th><th class="px-5 py-3">Room</th><th class="px-5 py-3">Guest</th><th class="px-5 py-3">Role</th><th class="px-5 py-3">Country</th></tr></thead>
-        <tbody class="divide-y divide-slate-200">
-          <% if presenter.group_guest_rows.any? %>
-            <% presenter.group_guest_rows.each do |row| %>
-              <tr><td class="px-5 py-3 font-semibold text-slate-950"><%= row[:booking].confirmation_token %></td><td class="px-5 py-3 text-slate-700"><%= row[:room] %></td><td class="px-5 py-3 text-slate-700"><%= row[:name] %></td><td class="px-5 py-3 text-slate-700"><%= row[:role] %></td><td class="px-5 py-3 text-slate-700"><%= row[:country] %></td></tr>
-            <% end %>
-          <% else %>
-            <tr><td colspan="5" class="px-5 py-10 text-center text-slate-500">No guests are linked to this group.</td></tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </section>
-<% else %>
-  <% booking_guest = presenter.selected_booking_guest %>
-  <% guest_display = presenter.guest_display(booking_guest) %>
-  <section aria-labelledby="guest-details-heading">
+<% booking_guest = presenter.selected_booking_guest %>
+<% guest_display = presenter.guest_display(booking_guest) %>
+<section aria-labelledby="guest-details-heading">
     <header class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-      <div><p class="text-xs font-semibold text-slate-500"><%= booking.confirmation_token %></p><h2 id="guest-details-heading" class="mt-1 text-lg font-bold text-slate-950"><%= guest_display[:name] %></h2><p class="mt-1 text-sm text-slate-600"><%= guest_display[:role] %></p></div>
+      <div><p class="text-xs font-semibold text-slate-500">Booking No. <%= presenter.booking_number %></p><h2 id="guest-details-heading" class="mt-1 text-lg font-bold text-slate-950"><%= guest_display[:name] %></h2><p class="mt-1 text-sm text-slate-600"><%= guest_display[:role] %></p></div>
       <div class="flex flex-wrap gap-2">
         <%= link_to "Add Guest", hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "add"), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" %>
         <% if booking_guest %><%= link_to "Edit Guest", hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: booking_guest.primary? ? "edit_primary" : "edit_additional", booking_guest_id: booking_guest.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" %><% end %>
@@ -53,5 +34,4 @@
     <% else %>
       <div class="px-5 py-12 text-center"><p class="font-semibold text-slate-900">No guest is linked to this booking.</p><p class="mt-1 text-sm text-slate-500">Add a primary guest before check-in.</p></div>
     <% end %>
-  </section>
-<% end %>
+</section>

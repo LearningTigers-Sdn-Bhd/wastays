@@ -1,15 +1,16 @@
-<nav aria-label="<%= aria_label %>">
+<nav aria-label="<%= aria_label %>" data-controller="booking-entity-tree" data-booking-entity-tree-scope-value="<%= aria_label %>">
   <% if local_assigns[:overview_path].present? %>
     <%= link_to overview_path,
         data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" },
-        class: "block border-b border-slate-200 px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 #{presenter.group_overview? ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}" do %>
-      <%= overview_label %>
+        class: "flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 #{presenter.group_overview? ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}" do %>
+      <span><%= overview_label %></span>
+      <%= cached_icon "chevron-right", class: "size-4 shrink-0 opacity-70", aria: { hidden: true } %>
     <% end %>
   <% end %>
 
   <div class="divide-y divide-slate-200">
-    <% groups.each do |group| %>
-      <details class="group" <%= "open" if local_assigns.fetch(:single_booking, false) || presenter.booking_tree_group_open?(group) %>>
+    <% groups.each_with_index do |group, index| %>
+      <details class="group" data-booking-entity-tree-target="group" data-group-key="<%= index %>" data-action="toggle->booking-entity-tree#remember" <%= "open" if local_assigns.fetch(:single_booking, false) || presenter.booking_tree_group_open?(group) %>>
         <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 group-open:bg-slate-100 [&::-webkit-details-marker]:hidden">
           <span class="min-w-0">
             <span class="block truncate"><%= group.label %></span>

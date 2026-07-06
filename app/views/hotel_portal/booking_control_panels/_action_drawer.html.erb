@@ -1,7 +1,7 @@
 <section class="min-h-full bg-white" data-testid="control-panel-action-drawer">
   <div class="flex items-start gap-3 border-b border-slate-200 px-4 py-4">
     <div class="min-w-0 flex-1">
-      <p class="text-xs font-semibold text-slate-500"><%= presenter.booking_reference %></p>
+      <p class="text-xs font-semibold text-slate-500">Booking No. <%= presenter.booking_number %></p>
       <h2 class="mt-1 text-base font-bold text-slate-950"><%= presenter.drawer.to_s.tr("_", " ").titleize %></h2>
     </div>
     <%= link_to presenter.close_drawer_path, class: "rounded-md p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600", aria: { label: "Close editor" } do %>

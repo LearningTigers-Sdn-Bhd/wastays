@@ -1,19 +1,5 @@
-<nav aria-label="Group booking context">
-  <div class="border-b border-slate-200 px-4 py-3">
-    <p class="text-sm font-bold text-slate-950"><%= presenter.group_booking.reference %></p>
-    <p class="mt-0.5 truncate text-xs text-slate-500"><%= presenter.group_booking.name %></p>
-  </div>
-  <%= link_to presenter.group_overview_path,
-      data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" },
-      class: "block border-b border-slate-200 px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 #{presenter.group_overview? ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}" do %>
-    Group Overview
-  <% end %>
-  <% presenter.child_booking_rows.each do |row| %>
-    <%= link_to row.href, data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" }, class: "block border-b border-slate-200 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 #{row.active ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"}" do %>
-      <span class="min-w-0 block">
-        <span class="block truncate text-sm font-bold"><%= row.label %></span>
-        <span class="mt-0.5 block truncate text-xs opacity-70"><%= row.description %></span>
-      </span>
-    <% end %>
-  <% end %>
-</nav>
+<%= render "hotel_portal/booking_control_panels/left_rails/booking_navigation",
+    presenter: presenter,
+    rows: presenter.child_booking_rows,
+    overview_path: presenter.group_overview_path,
+    aria_label: "Group booking context" %>

@@ -55,7 +55,31 @@ module HotelPortal
     end
 
     def booking_reference
-      booking.confirmation_token
+      booking_number
+    end
+
+    def booking_number
+      booking.formatted_reservation_number.presence || "—"
+    end
+
+    def group_booking_number
+      group_booking&.reference.presence || "—"
+    end
+
+    def summary_heading
+      group_overview? ? group_booking.name : primary_guest_name
+    end
+
+    def summary_subtitle
+      if group_overview?
+        "Booking No. #{group_booking_number}"
+      else
+        "Booking No. #{booking_number}"
+      end
+    end
+
+    def mobile_context_label
+      group_overview? ? group_booking.name : booking_number
     end
 
     def status_label
@@ -109,7 +133,8 @@ module HotelPortal
     end
 
     def tab_path(tab_key)
-      path_for(booking, tab: tab_key, scope: group_overview? ? "group" : nil)
+      entity_tab = tab_key.to_s.in?(%w[folio_operations guest_details])
+      path_for(booking, tab: tab_key, scope: ("group" if group_overview? && !entity_tab))
     end
 
     def close_drawer_path
@@ -159,10 +184,11 @@ module HotelPortal
     def left_rail_title
       case left_rail_mode
       when "folio_tree" then "Booking / Folios"
-      when "grouped_folio_tree" then "Group / Bookings / Folios"
+      when "grouped_folio_tree" then "Bookings / Folios"
       when "guest_tree" then "Booking / Guests"
-      when "grouped_guest_tree" then "Group / Bookings / Guests"
-      when "child_booking_tree" then "Group Booking"
+      when "grouped_guest_tree" then "Bookings / Guests"
+      when "child_booking_tree" then grouped_booking_rail_title
+      when "booking_context" then standalone_booking_rail_title
       else "Booking"
       end
     end
@@ -192,7 +218,7 @@ module HotelPortal
     end
 
     def group_context_enabled?
-      BookingRedesign.enabled? && booking.group_booking_id.present?
+      booking.group_booking_id.present?
     end
 
     def group_overview?
@@ -277,17 +303,31 @@ module HotelPortal
     end
 
     def child_booking_rows
-      child_bookings.map do |child|
-        room = child.booking_rooms.first
-        TreeRow.new(
-          child.id,
-          [ child.confirmation_token, room&.room_number.presence || "Unassigned" ].join(" · "),
-          [ child_booking_description(child), money_for(child, child.total_amount) ].compact_blank.join(" · "),
-          "booking",
-          child.id == booking.id && !group_overview?,
-          path_for(child, tab: active_tab)
-        )
-      end
+      child_bookings.map { |child| booking_navigation_row(child, active: child.id == booking.id && !group_overview?) }
+    end
+
+    def standalone_booking_rows
+      [ booking_navigation_row(booking, active: true) ]
+    end
+
+    def grouped_booking_rail_title
+      "Bookings / #{booking_rail_suffix}"
+    end
+
+    def standalone_booking_rail_title
+      "Booking / #{booking_rail_suffix}"
+    end
+
+    def booking_rail_suffix
+      {
+        "booking_details" => "Details",
+        "security_deposits" => "Deposits",
+        "billing_preferences" => "Billing",
+        "room_and_rate" => "Room Rate",
+        "source_details" => "Sources",
+        "housekeeping_requests" => "Requests",
+        "audit_trails" => "Audit Trails"
+      }.fetch(active_tab, active_tab_label)
     end
 
     def group_overview_path
@@ -364,6 +404,7 @@ module HotelPortal
         held = deposits.select { |deposit| deposit.status == "held" }.sum { |deposit| deposit.amount.to_d }
         {
           booking: child,
+          booking_number: child_booking_number(child),
           room: child.booking_rooms.first&.room_number.presence || "Unassigned",
           guest: child.booking_guests.find(&:primary?)&.guest&.name.presence || child.guest_name,
           status: deposits.empty? ? "No deposit" : deposits.map { |deposit| deposit.status.humanize }.uniq.to_sentence,
@@ -378,6 +419,7 @@ module HotelPortal
         child.booking_guests.map do |record|
           {
             booking: child,
+            booking_number: child_booking_number(child),
             booking_guest: record,
             name: record.guest&.name.presence || record.name_snapshot.presence || child.guest_name,
             role: record.primary? ? "Primary" : "Additional",
@@ -395,7 +437,7 @@ module HotelPortal
     def group_room_rate_issues
       child_bookings.filter_map do |child|
         message = room_rate_empty_message(child)
-        { booking_reference: child.confirmation_token, message: message } if message.present?
+        { booking_reference: child_booking_number(child), message: message } if message.present?
       end
     end
 
@@ -404,6 +446,7 @@ module HotelPortal
         room = child.booking_rooms.first
         {
           booking: child,
+          booking_number: child_booking_number(child),
           guest: child.booking_guests.find(&:primary?)&.guest&.name.presence || child.guest_name,
           room_type: room ? room_type_label(room) : "Room type unavailable",
           room: room&.room_number.presence || "Unassigned",
@@ -419,6 +462,7 @@ module HotelPortal
       child_bookings.map do |child|
         {
           booking: child,
+          booking_number: child_booking_number(child),
           guest: child.booking_guests.find(&:primary?)&.guest&.name.presence || child.guest_name,
           source: child.source.to_s.presence&.tr("_", " ")&.titleize || "Not available",
           external_reference: child.external_reference.presence || "—",
@@ -476,7 +520,7 @@ module HotelPortal
     def billing_scope_rows
       [
         TreeRow.new("group", "Group arrangements", booking.group_booking&.name || "Group defaults", "billing", billing_scope == "group", nil),
-        TreeRow.new("booking", "This booking", booking.confirmation_token, "billing", billing_scope == "booking", nil)
+        TreeRow.new("booking", "This booking", booking_number, "billing", billing_scope == "booking", nil)
       ]
     end
 
@@ -534,7 +578,7 @@ module HotelPortal
           rate_missing = snapshot_amount.blank?
 
           RoomRateRow.new(
-            child.confirmation_token,
+            child_booking_number(child),
             date,
             room_type_label(room),
             room.room_number.presence || "Not assigned",
@@ -570,12 +614,23 @@ module HotelPortal
     end
 
     def summary_items
+      if group_overview?
+        return [
+          [ "Arrival", format_summary_time(group_arrival) ],
+          [ "Departure", format_summary_time(group_departure) ],
+          [ "Rooms", child_bookings.size ],
+          [ "Status", group_booking.projected_status.humanize ],
+          [ "Booking No.", group_booking_number ],
+          [ "Balance", money(group_total_balance) ]
+        ]
+      end
+
       [
         [ "Arrival", booking.check_in.in_time_zone(hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") ],
         [ "Departure", booking.check_out.in_time_zone(hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") ],
         [ "Nights", nights_count ],
         [ "Room / Room Type", room_summary ],
-        [ "Booking No.", booking.formatted_reservation_number || booking_reference ],
+        [ "Booking No.", booking_number ],
         [ "Balance", money(total_balance) ]
       ]
     end
@@ -600,20 +655,22 @@ module HotelPortal
       end
     end
 
+    def booking_folio_tree_groups
+      [ booking_entity_tree_group(booking, folio_tree_rows) ]
+    end
+
     def grouped_folio_tree_groups
-      child_bookings.map do |child|
+      @grouped_folio_tree_groups ||= child_bookings.map do |child|
         rows = child.booking_folios.to_a.sort_by { |folio| [ folio.is_primary? ? 0 : 1, folio.folio_sequence.to_i, folio.id ] }.map do |folio|
-          TreeRow.new(
-            folio.id,
-            folio.display_name,
-            [ folio.status.to_s.humanize, money_for(child, folio.projected_outstanding_balance) ].compact_blank.join(" · "),
-            "folio",
-            child.id == booking.id && folio_operations_folio_active?(folio),
-            Rails.application.routes.url_helpers.hotel_booking_control_panel_path(hotel, child, tab: active_tab, folio_id: folio.id)
+          folio_tree_row(
+            folio,
+            active: !group_overview? && child.id == booking.id && folio_operations_folio_active?(folio)
+          ).with(
+            href: Rails.application.routes.url_helpers.hotel_booking_control_panel_path(hotel, child, tab: active_tab, folio_id: folio.id)
           )
         end
 
-        TreeGroup.new(child_booking_label(child), child_booking_description(child), rows)
+        booking_entity_tree_group(child, rows)
       end
     end
 
@@ -652,11 +709,11 @@ module HotelPortal
         )
       end
 
-      [ TreeGroup.new(booking.confirmation_token, booking_tree_description(booking), guest_rows) ]
+      [ booking_entity_tree_group(booking, guest_rows) ]
     end
 
     def grouped_guest_tree_groups
-      child_bookings.map do |child|
+      @grouped_guest_tree_groups ||= child_bookings.map do |child|
         rows = child.booking_guests.sort_by { |record| record.primary? ? 0 : 1 }.map do |booking_guest|
           TreeRow.new(
             booking_guest.id,
@@ -668,14 +725,14 @@ module HotelPortal
           )
         end
 
-        TreeGroup.new(child_booking_label(child), child_booking_description(child), rows)
+        booking_entity_tree_group(child, rows)
       end
     end
 
     def booking_tree_group_open?(group)
       return false if group_overview?
 
-      group.rows.any?(&:active) || group.label == child_booking_label(booking)
+      group.rows.any?(&:active) || group.equal?(current_booking_tree_group)
     end
 
     def request_tree_groups
@@ -834,11 +891,54 @@ module HotelPortal
     end
 
     def child_booking_label(child)
-      child.confirmation_token
+      room = child.booking_rooms.first
+      room&.room_number.present? ? "Room #{room.room_number}" : "Unassigned room"
+    end
+
+    def booking_entity_tree_group(child, rows)
+      TreeGroup.new(child_booking_label(child), child_booking_menu_description(child), rows)
+    end
+
+    def child_booking_number(child)
+      child.formatted_reservation_number.presence || "—"
+    end
+
+    def child_booking_number_label(child)
+      number = child_booking_number(child)
+      "Booking No. #{number}" if number != "—"
     end
 
     def child_booking_description(child)
       booking_tree_description(child)
+    end
+
+    def child_booking_menu_description(child)
+      room = child.booking_rooms.first
+      room_type = room ? room_type_label(room) : "Room type unavailable"
+      primary_guest = child.booking_guests.find(&:primary?)
+      guest_name = primary_guest&.guest&.name.presence || primary_guest&.name_snapshot.presence || child.guest_name
+      "#{room_type} - #{guest_name}"
+    end
+
+    def booking_navigation_row(child, active:)
+      TreeRow.new(
+        child.id,
+        child_booking_label(child),
+        child_booking_menu_description(child),
+        "booking",
+        active,
+        path_for(child, tab: active_tab)
+      )
+    end
+
+    def current_booking_tree_group
+      index = child_bookings.index { |child| child.id == booking.id }
+      return unless index
+
+      case left_rail_mode
+      when "grouped_folio_tree" then grouped_folio_tree_groups[index]
+      when "grouped_guest_tree" then grouped_guest_tree_groups[index]
+      end
     end
 
     def booking_tree_description(child)
@@ -922,6 +1022,12 @@ module HotelPortal
 
     def format_stay_date(value)
       value.in_time_zone(booking.hotel.hotel_time_zone).strftime("%d %b %Y")
+    end
+
+    def format_summary_time(value)
+      return "—" if value.blank?
+
+      value.in_time_zone(hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M")
     end
 
     def path_for(target_booking, **query)

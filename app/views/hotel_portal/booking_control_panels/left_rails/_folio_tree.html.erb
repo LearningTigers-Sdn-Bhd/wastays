@@ -11,7 +11,7 @@
 <%= render "hotel_portal/booking_control_panels/left_rails/booking_entity_tree",
     booking: booking,
     presenter: presenter,
-    groups: [HotelPortal::BookingControlPanelPresenter::TreeGroup.new(booking.confirmation_token, presenter.booking_context_description, presenter.folio_tree_rows)],
+    groups: presenter.booking_folio_tree_groups,
     aria_label: "Booking folios",
     empty_label: "No folios available.",
     single_booking: true %>
