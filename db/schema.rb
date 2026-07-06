@@ -323,6 +323,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.string "gender_snapshot"
     t.string "country_snapshot"
     t.string "document_type_snapshot"
+    t.date "date_of_birth_snapshot"
     t.index ["booking_id", "guest_id"], name: "index_booking_guests_on_booking_id_and_guest_id", unique: true
     t.index ["booking_id"], name: "idx_booking_guests_one_primary_per_booking", unique: true, where: "((role)::text = 'primary'::text)"
     t.index ["booking_id"], name: "index_booking_guests_on_booking_id"

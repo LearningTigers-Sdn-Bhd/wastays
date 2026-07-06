@@ -47,6 +47,7 @@ class BookingGuest < ApplicationRecord
     self.gender_snapshot ||= guest.gender
     self.country_snapshot ||= guest.country
     self.document_type_snapshot ||= guest.document_type
+    self.date_of_birth_snapshot ||= guest.date_of_birth
   end
 
   def ensure_guest_billing_party

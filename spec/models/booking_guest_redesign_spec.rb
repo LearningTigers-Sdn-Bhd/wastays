@@ -4,13 +4,14 @@ require "rails_helper"
 
 RSpec.describe BookingGuest, type: :model do
   it "captures stay-time guest details and synchronizes the primary role" do
-    guest = create(:guest, name: "Original Name", email: "guest@example.test")
+    guest = create(:guest, name: "Original Name", email: "guest@example.test", date_of_birth: Date.new(1990, 1, 2))
     booking_guest = create(:booking_guest, guest: guest, is_primary: true)
 
     expect(booking_guest).to have_attributes(
       role: "primary",
       name_snapshot: "Original Name",
-      email_snapshot: "guest@example.test"
+      email_snapshot: "guest@example.test",
+      date_of_birth_snapshot: Date.new(1990, 1, 2)
     )
     expect { guest.update!(name: "Later Name") }
       .not_to change { booking_guest.reload.name_snapshot }
