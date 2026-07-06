@@ -27,7 +27,7 @@
                   method: persisted ? :patch : :post,
                   class: "flex min-h-0 flex-1 flex-col",
                   data: {
-                    turbo_frame: persisted ? "offcanvas_drawer" : "_top",
+                    turbo_frame: "offcanvas_drawer",
                     controller: "transaction-code-form",
                     transaction_code_form_amount_value: preview_amount.to_s("F"),
                     transaction_code_form_currency_value: currency

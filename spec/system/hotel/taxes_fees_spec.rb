@@ -169,10 +169,17 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     end
   end
 
-  it "reviews and confirms a hotel-wide transaction-code tax change" do
+  it "reviews and confirms a forecast-impacting hotel-wide transaction-code tax change" do
+    hotel.transaction_configuration.update!(room_revenue_tax_rule_application: "open_folio_forecasts")
+    room_type = create(:room_type, hotel: hotel)
+    booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 1.day)
+    create(:booking_room, booking: booking, room_type: room_type, subtotal: 150.0)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(:folio_forecasted_charge, booking_folio: folio, amount: 150.0)
+
     visit hotel_transaction_codes_path(hotel)
 
-    within("tr", text: "FNB") { click_link "Edit" }
+    within("tr", text: "ROOM") { click_link "Edit" }
     taxable_input = find("#transaction_code_is_taxable", visible: :all)
     page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", taxable_input)
     sst_input = find("label", text: "SST 8%").find("input[type='checkbox']", visible: :all)
@@ -180,14 +187,14 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     click_button "Save"
 
     expect(page).to have_css('[role="alertdialog"]', text: "Change hotel default?")
-    expect(page).to have_content("FNB · Food & Beverage")
+    expect(page).to have_content("ROOM · Room Revenue")
     expect(page).to have_content("SST 8%")
     expect(page).to have_content("Posted transactions will not change")
     fill_in "Reason", with: "Approved finance policy"
     click_button "Apply hotel-wide"
 
     expect(page).to have_current_path(hotel_transaction_codes_path(hotel, tab: "default_codes"))
-    fnb = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
-    expect(fnb.reload.tax_rule_keys).to include("primary:sst_tax")
+    room = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    expect(room.reload.tax_rule_keys).to include("primary:sst_tax")
   end
 end

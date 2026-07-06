@@ -2,6 +2,8 @@
 
 module HotelPortal
   class TransactionCodesController < HotelPortal::BaseController
+    include OffcanvasTransactionCompletion
+
     TABS = %w[default_codes additional_service_codes configuration].freeze
 
     before_action :set_hotel
@@ -27,7 +29,7 @@ module HotelPortal
 
       if @transaction_code.save
         assign_tax_rules(@transaction_code)
-        redirect_to hotel_transaction_codes_path(@hotel, tab: "additional_service_codes"), notice: "Transaction code created."
+        transaction_code_success_response(@transaction_code, "Transaction code created.")
       else
         @tax_rules = tax_rules
         render :new, status: :unprocessable_entity
@@ -47,7 +49,11 @@ module HotelPortal
       normalize_taxable_flag(@transaction_code)
 
       if hotel_tax_rules_changed?
-        return render_unconfirmed_tax_rule_change unless confirmed_hotel_tax_rule_change?
+        unless confirmed_hotel_tax_rule_change?
+          return render_unconfirmed_tax_rule_change if hotel_tax_rule_change_requires_review?
+
+          return save_transaction_code_without_hotel_wide_confirmation
+        end
 
         result = ::TransactionCodes::ApplyHotelTaxRuleChange.call(
           transaction_code: @transaction_code,
@@ -63,10 +69,10 @@ module HotelPortal
           return render :edit, status: :unprocessable_entity
         end
 
-        redirect_to hotel_transaction_codes_path(@hotel, tab: tab_for(@transaction_code)), notice: "Transaction code updated."
+        transaction_code_success_response(@transaction_code, "Transaction code updated.")
       elsif @transaction_code.save
         assign_tax_rules(@transaction_code)
-        redirect_to hotel_transaction_codes_path(@hotel, tab: tab_for(@transaction_code)), notice: "Transaction code updated."
+        transaction_code_success_response(@transaction_code, "Transaction code updated.")
       else
         @tax_rules = tax_rules
         render :edit, status: :unprocessable_entity
@@ -85,11 +91,11 @@ module HotelPortal
         transaction_code: @transaction_code,
         proposed_keys: tax_rule_keys_param
       )
-      return update unless @tax_rule_change.changed?
+      return update unless @tax_rule_change.changed? && hotel_tax_rule_change_review_required?(@tax_rule_change)
 
       @reviewed_attributes = transaction_code_params.to_h
       @tax_rules = tax_rules
-      render :confirm_hotel_tax_rules
+      render :confirm_hotel_tax_rules, formats: :html
     rescue ArgumentError => e
       @transaction_code.errors.add(:base, e.message)
       @tax_rules = tax_rules
@@ -208,10 +214,42 @@ module HotelPortal
       ActiveModel::Type::Boolean.new.cast(params[:confirm_hotel_tax_rules])
     end
 
+    def save_transaction_code_without_hotel_wide_confirmation
+      if @transaction_code.save
+        assign_tax_rules(@transaction_code)
+        transaction_code_success_response(@transaction_code, "Transaction code updated.")
+      else
+        @tax_rules = tax_rules
+        render :edit, status: :unprocessable_entity
+      end
+    end
+
     def render_unconfirmed_tax_rule_change
       @transaction_code.errors.add(:base, "Review and confirm hotel-wide tax inclusion changes before applying them.")
       @tax_rules = tax_rules
       render :edit, status: :unprocessable_entity
+    end
+
+    def hotel_tax_rule_change_requires_review?
+      @tax_rule_change = ::TransactionCodes::HotelTaxRuleChange.preview(
+        transaction_code: @transaction_code,
+        proposed_keys: tax_rule_keys_param
+      )
+      hotel_tax_rule_change_review_required?(@tax_rule_change)
+    rescue ArgumentError => e
+      @transaction_code.errors.add(:base, e.message)
+      true
+    end
+
+    def hotel_tax_rule_change_review_required?(tax_rule_change)
+      tax_rule_change.forecast_count.to_i.positive?
+    end
+
+    def transaction_code_success_response(transaction_code, notice)
+      offcanvas_transaction_response(
+        destination: hotel_transaction_codes_path(@hotel, tab: tab_for(transaction_code)),
+        notice: notice
+      )
     end
 
     def normalize_taxable_flag(transaction_code)

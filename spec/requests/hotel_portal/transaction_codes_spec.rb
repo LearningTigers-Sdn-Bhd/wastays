@@ -26,18 +26,30 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
     Nokogiri::HTML(response.body).at_css("select[name='transaction_code[#{field}]']").present?
   end
 
-  def preview_hotel_tax_rule_change(code, attributes)
-    patch hotel_preview_transaction_code_hotel_tax_rules_path(hotel, code), params: { transaction_code: attributes }
+  def preview_hotel_tax_rule_change(code, attributes, headers: {})
+    patch hotel_preview_transaction_code_hotel_tax_rules_path(hotel, code), params: { transaction_code: attributes }, headers: headers
   end
 
-  def confirm_hotel_tax_rule_change(code, attributes, reason: "Approved hotel tax policy")
+  def confirm_hotel_tax_rule_change(code, attributes, reason: "Approved hotel tax policy", headers: {})
     token = Nokogiri::HTML(response.body).at_css("input[name='freshness_token']")["value"]
     patch hotel_transaction_code_path(hotel, code), params: {
       transaction_code: attributes,
       confirm_hotel_tax_rules: "1",
       freshness_token: token,
       reason: reason
-    }
+    }, headers: headers
+  end
+
+  def turbo_offcanvas_headers
+    { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+  end
+
+  def create_open_room_forecast
+    room_type = create(:room_type, hotel: hotel)
+    booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 1.day)
+    create(:booking_room, booking: booking, room_type: room_type, subtotal: 123.45)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(:folio_forecasted_charge, booking_folio: folio, amount: 123.45)
   end
 
   describe "GET /hotel/:hotel_id/transaction-codes" do
@@ -217,7 +229,7 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       expect(response.body).not_to include('role="alertdialog"')
     end
 
-    it "updates an existing default transaction code and tax rules while preserving kind and category" do
+    it "updates an existing default transaction code and tax rules without a hotel-wide alert when no forecasts are impacted" do
       Financials::EnsureDefaultTransactionCodes.call(hotel)
       code = hotel.transaction_codes.find_by!(system_key: "parking_revenue")
 
@@ -232,10 +244,6 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
           tax_rule_keys: [ "primary:sst_tax", "primary:tourism_tax", "hotel_tax:#{service_charge.id}", "hotel_tax:#{inactive_fee.id}" ]
       }
       preview_hotel_tax_rule_change(code, attributes)
-      expect(response.body).to include('role="alertdialog"', "Change hotel default?", "PARKING")
-      expect(code.reload.tax_rule_keys).to be_empty
-
-      confirm_hotel_tax_rule_change(code, attributes)
 
       expect(response).to redirect_to(hotel_transaction_codes_path(hotel, tab: "default_codes"))
       expect(code.reload.code).to eq("PARKING")
@@ -246,18 +254,70 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       expect(code).to be_is_taxable
       expect(code.taxes).to match_array([ service_charge, inactive_fee ])
       expect(code.tax_rule_keys).to match_array([ "primary:sst_tax", "primary:tourism_tax", "hotel_tax:#{service_charge.id}", "hotel_tax:#{inactive_fee.id}" ])
+      expect(response.body).not_to include('role="alertdialog"')
+    end
+
+    it "reviews and confirms a room tax change when open forecasts are impacted" do
+      hotel.transaction_configuration.update!(room_revenue_tax_rule_application: "open_folio_forecasts")
+      create_open_room_forecast
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      attributes = {
+          code: "ROOM",
+          name: "Room Revenue",
+          kind: "charge",
+          category: "accommodation",
+          active: "1",
+          gl_account_code: "4010",
+          is_taxable: "1",
+          tax_rule_keys: [ "primary:sst_tax" ]
+      }
+
+      preview_hotel_tax_rule_change(code, attributes)
+      expect(response.body).to include('role="alertdialog"', "Change hotel default?", "ROOM")
+      expect(code.reload.tax_rule_keys).to be_empty
+
+      confirm_hotel_tax_rule_change(code, attributes)
+
+      expect(response).to redirect_to(hotel_transaction_codes_path(hotel, tab: "default_codes"))
+      expect(code.reload.tax_rule_keys).to match_array([ "primary:sst_tax" ])
       audit = FinancialAuditEvent.find_by!(event_type: "hotel_tax_rules_changed", hotel: hotel)
       expect(audit).to have_attributes(actor: user, reason: "Approved hotel tax policy")
       expect(audit.metadata).to include(
-        "transaction_code" => "PARKING",
+        "transaction_code" => "ROOM",
         "before_tax_rule_keys" => [],
-        "after_tax_rule_keys" => match_array(attributes[:tax_rule_keys])
+        "after_tax_rule_keys" => match_array([ "primary:sst_tax" ])
       )
     end
 
-    it "rejects confirmation without a reason and leaves defaults unchanged" do
+    it "blocks direct unconfirmed room tax changes when open forecasts are impacted" do
+      hotel.transaction_configuration.update!(room_revenue_tax_rule_application: "open_folio_forecasts")
+      create_open_room_forecast
       Financials::EnsureDefaultTransactionCodes.call(hotel)
-      code = hotel.transaction_codes.find_by!(system_key: "parking_revenue")
+      code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+
+      patch hotel_transaction_code_path(hotel, code), params: {
+        transaction_code: {
+          code: code.code,
+          name: code.name,
+          kind: code.kind,
+          category: code.category,
+          active: "1",
+          is_taxable: "1",
+          tax_rule_keys: [ "primary:sst_tax" ]
+        }
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Review and confirm hotel-wide tax inclusion changes")
+      expect(code.reload.tax_rule_keys).to be_empty
+    end
+
+    it "rejects confirmation without a reason and leaves defaults unchanged" do
+      hotel.transaction_configuration.update!(room_revenue_tax_rule_application: "open_folio_forecasts")
+      create_open_room_forecast
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
       attributes = { code: code.code, name: code.name, kind: code.kind, category: code.category,
         active: "1", is_taxable: "1", tax_rule_keys: [ "primary:sst_tax" ] }
       preview_hotel_tax_rule_change(code, attributes)
@@ -270,8 +330,10 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
     end
 
     it "rejects a stale confirmation and leaves defaults unchanged" do
+      hotel.transaction_configuration.update!(room_revenue_tax_rule_application: "open_folio_forecasts")
+      create_open_room_forecast
       Financials::EnsureDefaultTransactionCodes.call(hotel)
-      code = hotel.transaction_codes.find_by!(system_key: "parking_revenue")
+      code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
       attributes = { code: code.code, name: code.name, kind: code.kind, category: code.category,
         active: "1", is_taxable: "1", tax_rule_keys: [ "primary:sst_tax" ] }
       preview_hotel_tax_rule_change(code, attributes)
@@ -308,22 +370,23 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
         active: "1", is_taxable: "1", tax_rule_keys: [ "primary:sst_tax" ] }
 
       preview_hotel_tax_rule_change(code, attributes)
-      confirm_hotel_tax_rule_change(code, attributes)
 
       expect(transaction.reload.attributes).to eq(original_attributes)
     end
 
     it "preserves the reviewed draft in the Go back link" do
+      hotel.transaction_configuration.update!(room_revenue_tax_rule_application: "open_folio_forecasts")
+      create_open_room_forecast
       Financials::EnsureDefaultTransactionCodes.call(hotel)
-      code = hotel.transaction_codes.find_by!(system_key: "parking_revenue")
-      attributes = { code: code.code, name: "Draft parking name", kind: code.kind, category: code.category,
+      code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      attributes = { code: code.code, name: "Draft room name", kind: code.kind, category: code.category,
         active: "1", is_taxable: "1", tax_rule_keys: [ "primary:sst_tax" ] }
 
       preview_hotel_tax_rule_change(code, attributes)
 
       go_back = Nokogiri::HTML(response.body).at_xpath("//a[normalize-space()='Go back']")
-      expect(go_back["href"]).to include("Draft+parking+name", "primary%3Asst_tax")
-      expect(code.reload.name).not_to eq("Draft parking name")
+      expect(go_back["href"]).to include("Draft+room+name", "primary%3Asst_tax")
+      expect(code.reload.name).not_to eq("Draft room name")
     end
 
     it "requires manage hotel profile permission for preview" do
@@ -428,6 +491,7 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
 
     it "refreshes open folio forecasts when ROOM tax rules change under the open folio policy" do
       hotel.transaction_configuration.update!(room_revenue_tax_rule_application: "open_folio_forecasts")
+      create_open_room_forecast
       Financials::EnsureDefaultTransactionCodes.call(hotel)
       code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
       allow(Folios::RefreshOpenForecastsFromRoomRevenueRules).to receive(:call)
@@ -447,6 +511,44 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
 
       expect(response).to redirect_to(hotel_transaction_codes_path(hotel, tab: "default_codes"))
       expect(Folios::RefreshOpenForecastsFromRoomRevenueRules).to have_received(:call).with(hotel: hotel, actor: user)
+    end
+
+    it "completes the transaction-code offcanvas after an update with no forecast impact" do
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+
+      preview_hotel_tax_rule_change(code, {
+        code: code.code,
+        name: "Updated F&B",
+        kind: code.kind,
+        category: code.category,
+        active: "1",
+        is_taxable: "1",
+        tax_rule_keys: [ "primary:sst_tax" ]
+      }, headers: turbo_offcanvas_headers)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_offcanvas"', 'target="offcanvas_drawer"')
+      expect(response.body).to include(hotel_transaction_codes_path(hotel, tab: "default_codes"))
+      expect(code.reload.tax_rule_keys).to match_array([ "primary:sst_tax" ])
+    end
+
+    it "completes the transaction-code offcanvas after confirming a forecast-impacting update" do
+      hotel.transaction_configuration.update!(room_revenue_tax_rule_application: "open_folio_forecasts")
+      create_open_room_forecast
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      attributes = { code: code.code, name: code.name, kind: code.kind, category: code.category,
+        active: "1", is_taxable: "1", tax_rule_keys: [ "primary:sst_tax" ] }
+
+      preview_hotel_tax_rule_change(code, attributes, headers: turbo_offcanvas_headers)
+      expect(response.body).to include('role="alertdialog"')
+
+      confirm_hotel_tax_rule_change(code, attributes, headers: turbo_offcanvas_headers)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_offcanvas"', 'target="offcanvas_drawer"')
+      expect(response.body).to include(hotel_transaction_codes_path(hotel, tab: "default_codes"))
     end
   end
 
@@ -472,6 +574,26 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       expect(code.system_key).to eq("custom_spa")
       expect(code.taxes).to contain_exactly(service_charge)
       expect(code.tax_rule_keys).to match_array([ "primary:sst_tax", "hotel_tax:#{service_charge.id}" ])
+    end
+
+    it "completes the transaction-code offcanvas after creating an additional code" do
+      expect {
+        post hotel_transaction_codes_path(hotel), params: {
+          transaction_code: {
+            code: "SPA",
+            name: "Spa Package",
+            kind: "charge",
+            category: "other",
+            active: "1",
+            is_taxable: "1",
+            tax_rule_keys: [ "primary:sst_tax" ]
+          }
+        }, headers: turbo_offcanvas_headers
+      }.to change { hotel.transaction_codes.where(system_required: false, kind: "charge").count }.by(1)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_offcanvas"', 'target="offcanvas_drawer"')
+      expect(response.body).to include(hotel_transaction_codes_path(hotel, tab: "additional_service_codes"))
     end
 
     it "prevents additional transaction codes from being created as tax codes" do

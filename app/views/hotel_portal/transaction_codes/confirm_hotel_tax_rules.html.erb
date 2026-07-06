@@ -1,10 +1,10 @@
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "fullscreen-bottom" } do %>
-  <div class="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+  <div class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
        role="alertdialog"
        aria-modal="true"
        aria-labelledby="hotel-tax-rules-confirmation-title"
        aria-describedby="hotel-tax-rules-confirmation-description">
-    <div class="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+    <div class="relative z-[130] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
       <header class="border-b border-amber-200 bg-amber-50 px-6 py-5">
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">Hotel-wide configuration</p>
         <h2 id="hotel-tax-rules-confirmation-title" class="mt-1 text-xl font-black text-slate-950">Change hotel default?</h2>
@@ -16,7 +16,7 @@
       <%= form_with model: @transaction_code,
                     url: hotel_transaction_code_path(current_hotel, @transaction_code),
                     method: :patch,
-                    data: { turbo_frame: "_top" } do |f| %>
+                    data: { turbo_frame: "offcanvas_drawer" } do |f| %>
         <% @reviewed_attributes.each do |key, value| %>
           <% next if key.to_s.in?(%w[tax_rule_keys hotel_tax_ids]) %>
           <%= hidden_field_tag "transaction_code[#{key}]", value %>
