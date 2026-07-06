@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "Hotel AR aging", type: :system, js: true do
   let(:account) { create(:account) }
   let(:hotel) { create(:hotel, account: account, status: "approved") }
-  let(:user) { create(:user, account: account, email: "aging-manager@example.com") }
+  let(:user) { create(:user, account: account) }
   let(:role) { create(:role, account: account) }
   let(:relationship) do
     create(
@@ -48,9 +48,11 @@ RSpec.describe "Hotel AR aging", type: :system, js: true do
 
   it "opens filtered outstanding invoices from the desktop row" do
     page.current_window.resize_to(1440, 1000)
-    visit hotel_ar_aging_path(hotel)
+    visit_when_loaded hotel_ar_aging_path(hotel)
 
-    find("[data-testid='aging-row-#{relationship.id}-MYR']").click
+    row = find("[data-testid='aging-row-#{relationship.id}-MYR']")
+    wait_for_stimulus_controller("[data-testid='aging-row-#{relationship.id}-MYR']", "clickable-row")
+    row.click
 
     expect(page).to have_current_path(
       hotel_ar_invoices_path(hotel, hotel_corporate_account_id: relationship.id, balance: "outstanding")
@@ -61,9 +63,11 @@ RSpec.describe "Hotel AR aging", type: :system, js: true do
 
   it "opens filtered outstanding invoices when the mobile card is keyboard-activated" do
     page.current_window.resize_to(390, 844)
-    visit hotel_ar_aging_path(hotel)
+    visit_when_loaded hotel_ar_aging_path(hotel)
 
-    find("[data-testid='aging-card-#{relationship.id}-MYR']").send_keys(:enter)
+    card = find("[data-testid='aging-card-#{relationship.id}-MYR']")
+    wait_for_stimulus_controller("[data-testid='aging-card-#{relationship.id}-MYR']", "clickable-row")
+    card.send_keys(:enter)
 
     expect(page).to have_current_path(
       hotel_ar_invoices_path(hotel, hotel_corporate_account_id: relationship.id, balance: "outstanding")

@@ -5,7 +5,7 @@ RSpec.describe "Hotel guest DOB form behavior", type: :system, js: true do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:hotel) { create(:hotel, account: account, plan: plan, status: "approved") }
-  let(:user) { create(:user, account: account, email: "owner@example.com") }
+  let(:user) { create(:user, account: account) }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let!(:room_type) { create(:room_type, hotel: hotel, name: "Deluxe") }
   let!(:guest) do
@@ -31,10 +31,7 @@ RSpec.describe "Hotel guest DOB form behavior", type: :system, js: true do
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
     create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "unified_guest_profile"), enabled: true)
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   it "populates DOB from autocomplete and only autofills from Malaysian IC when DOB is blank" do

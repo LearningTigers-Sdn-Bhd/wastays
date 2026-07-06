@@ -62,6 +62,27 @@ RSpec.describe Booking, type: :model do
     end
   end
 
+  describe "#guest_registration_card_number_display" do
+    it "assigns a guest registration number when booking is created" do
+      booking = create(:booking, guest_registration_number: nil)
+
+      expect(booking.guest_registration_number).to be_present
+    end
+
+    it "shows pending only for legacy bookings without a guest registration number" do
+      booking = build(:booking, guest_registration_number: nil)
+
+      expect(booking.guest_registration_card_number_display).to eq("Pending check-in")
+    end
+
+    it "shows formatted guest registration number when present" do
+      hotel = build(:hotel, hotel_prefix: "ABC")
+      booking = build(:booking, hotel: hotel, guest_registration_number: 1)
+
+      expect(booking.guest_registration_card_number_display).to eq("ABC-20000001")
+    end
+  end
+
   describe "status lifecycle" do
     def expect_transition(from:, to:, event:)
       booking = create(

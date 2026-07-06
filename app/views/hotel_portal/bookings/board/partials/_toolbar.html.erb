@@ -1,11 +1,12 @@
-<%# app/views/hotel_portal/bookings/board/partials/_toolbar.html.erb %>
-<% common_params = board_query_params.merge(filters: params[:filters]&.to_unsafe_h) %>
+<%# locals: (view_type:, room_types:, selected_room_type_id:, selected_room_status:, board_query_params:, start_date:, board_days:, board_layout:, current_hotel:, comfortable_mode:, nav_step_days:, rate_plan_names:, selected_rate_plan_name:, common_params:) %>
 
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
   <div class="flex flex-wrap items-center gap-3">
     <%= form_with url: board_hotel_bookings_path(current_hotel), method: :get, data: { turbo_frame: "booking_timeline_board", controller: "auto-submit", action: "change->auto-submit#submit" }, class: "flex items-center gap-3" do %>
-      <%= hidden_field_tag :days, board_days %>
+      <%= hidden_field_tag :days, board_days if view_type == "room" %>
       <%= hidden_field_tag :layout, board_layout %>
+      <%= hidden_field_tag :room_type_id, selected_room_type_id %>
+      <%= hidden_field_tag :view_type, view_type %>
       
       <div class="flex items-center gap-2">
         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Start</span>
@@ -14,17 +15,39 @@
 
       <div class="h-6 w-px bg-slate-200"></div>
 
-      <div class="flex items-center gap-2">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Days</span>
-        <%= select_tag :days, options_for_select([7, 14, 21, 30], board_days), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
-      </div>
+      <% if view_type == "stay" %>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Days</span>
+          <%= select_tag :days, options_for_select([7, 14, 21, 30], board_days), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
+        </div>
 
-      <div class="h-6 w-px bg-slate-200"></div>
+        <div class="h-6 w-px bg-slate-200"></div>
+      <% end %>
 
       <div class="flex items-center gap-2">
         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Rates</span>
         <%= select_tag "filters[rate_plan_name]", options_for_select(rate_plan_names, selected_rate_plan_name), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
       </div>
+
+      <% if view_type == "room" %>
+        <div class="h-6 w-px bg-slate-200"></div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</span>
+          <%= select_tag :room_status, options_for_select([
+            ["All Rooms", "all"],
+            ["Available", "available"],
+            ["Not Ready", "not_ready"],
+            ["Confirmed", "confirmed"],
+            ["Review No Show", "review_no_show"],
+            ["Checked In", "checked_in"],
+            ["Pending", "pending"],
+            ["Review Due Out", "review_due_out"],
+            ["Checkout Required", "checkout_required"],
+            ["No Show", "no_show"]
+          ], selected_room_status), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
+        </div>
+      <% end %>
     <% end %>
 
     <div class="h-6 w-px bg-slate-200"></div>
@@ -44,10 +67,10 @@
 
   <div class="px-2">
     <%= link_to board_hotel_bookings_path(current_hotel, common_params.merge(start_date: start_date.to_s, layout: comfortable_mode ? "compact" : "comfortable")), class: "flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors", data: { turbo_frame: "booking_timeline_board" } do %>
-      <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= comfortable_mode ? 'bg-slate-200' : 'bg-slate-900' %> transition-colors">
-        <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= comfortable_mode ? 'translate-x-1' : 'translate-x-3' %>"></span>
+      <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= layout_toggle_bg_class(comfortable_mode) %> transition-colors">
+        <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= layout_toggle_span_class(comfortable_mode) %>"></span>
       </div>
-      <%= comfortable_mode ? "Compact Mode" : "Comfortable Mode" %>
+      <%= layout_toggle_label(comfortable_mode) %>
     <% end %>
   </div>
 </div>

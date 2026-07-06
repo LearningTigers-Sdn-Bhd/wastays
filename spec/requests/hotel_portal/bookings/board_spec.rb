@@ -38,6 +38,21 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       expect(response.body).not_to include("booking-timeline-board-extend-duration-overlay")
     end
 
+    it "renders the booking block in room view with guest name and status directly inside the block as a rounded card" do
+      sign_in_with_permissions("manage_bookings")
+
+      get board_hotel_bookings_path(hotel, view_type: "room")
+
+      expect(response).to have_http_status(:success)
+      booking_block = response.parsed_body.at_css("[data-id='#{booking.id}']")
+      expect(booking_block).to be_present
+      expect(booking_block.text).to include(booking.guest_name)
+      expect(response.parsed_body.text).to include(booking.status.humanize)
+      expect(booking_block.classes).to include("rounded-md")
+      expect(booking_block.at_css("span[title='0 Children']")).to be_present
+      expect(booking_block.at_css("span[title='0 Children']").text).to include("0")
+    end
+
     it "renders accessible move and resize controls for booking managers" do
       sign_in_with_permissions("manage_bookings")
 
@@ -98,6 +113,40 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       expect(today_cell.text).to include("Walk-in Check-in", "Add Booking")
       expect(future_cell.text).to include("Add Booking")
       expect(future_cell.text).not_to include("Walk-in Check-in")
+    end
+
+    it "filters the board rooms by selected room category" do
+      sign_in_with_permissions("manage_bookings")
+
+      # Create another room type for comparison
+      other_room_type = create(:room_type, hotel: hotel, name: "Luxury Suite", room_number_mode: "custom", room_numbers: [ "201" ])
+
+      # Get board filtered by original room_type
+      get board_hotel_bookings_path(hotel, room_type_id: room_type.id)
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.css("[data-room-number='101']")).to be_present
+      expect(response.parsed_body.css("[data-room-number='201']")).to be_empty
+
+      # Get board filtered by other_room_type
+      get board_hotel_bookings_path(hotel, room_type_id: other_room_type.id)
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.css("[data-room-number='201']")).to be_present
+      expect(response.parsed_body.css("[data-room-number='101']")).to be_empty
+    end
+
+    it "filters the board rooms by computed room status in Room View" do
+      sign_in_with_permissions("manage_bookings")
+
+      # Room 101 has a confirmed booking today, so it should appear under confirmed, but not under available
+      get board_hotel_bookings_path(hotel, view_type: "room", room_status: "confirmed")
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.css("[data-room-number='101']")).to be_present
+
+      get board_hotel_bookings_path(hotel, view_type: "room", room_status: "available")
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.css("[data-room-number='101']")).to be_empty
     end
   end
 end
