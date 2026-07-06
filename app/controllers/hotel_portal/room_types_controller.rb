@@ -9,6 +9,10 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   def index
     @all_room_types = RoomTypesQuery.new(@hotel.room_types).call(params)
     @room_types = @all_room_types.page(params[:page]).per(25)
+
+    @room_groups = @hotel.room_groups.order(:name)
+    @unassigned_count = @hotel.room_types.unassigned.count
+    @active_group_id = params[:room_group_id]
   end
 
   def new

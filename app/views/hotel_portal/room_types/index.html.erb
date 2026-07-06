@@ -33,34 +33,32 @@
 
   <turbo-frame id="room_types_results">
     <!-- Tabs Filter -->
-    <% if current_hotel.room_groups.any? %>
+    <% if @room_groups.any? %>
       <div class="rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm mb-6">
         <nav class="flex items-center gap-1 overflow-x-auto" aria-label="Room Group Filter" role="tablist">
-          <% active_group_id = params[:room_group_id] %>
           
           <!-- All Tab -->
           <%= link_to hotel_room_types_path(current_hotel),
-                      class: room_group_tab_class(active_group_id, :all),
+                      class: room_group_tab_class(@active_group_id, :all),
                       data: { turbo_action: "advance" } do %>
             <span>All</span>
           <% end %>
 
           <!-- Group Tabs -->
-          <% current_hotel.room_groups.order(:name).each do |group| %>
+          <% @room_groups.each do |group| %>
             <%= link_to hotel_room_types_path(current_hotel, room_group_id: group.id),
-                        class: room_group_tab_class(active_group_id, group.id),
+                        class: room_group_tab_class(@active_group_id, group.id),
                         data: { turbo_action: "advance" } do %>
               <span><%= group.name %></span>
             <% end %>
           <% end %>
 
           <!-- Unassigned Tab -->
-          <% unassigned_count = unassigned_room_types_count(current_hotel) %>
-          <% if unassigned_count > 0 %>
+          <% if @unassigned_count > 0 %>
             <%= link_to hotel_room_types_path(current_hotel, room_group_id: 'unassigned'),
-                        class: room_group_tab_class(active_group_id, :unassigned),
+                        class: room_group_tab_class(@active_group_id, :unassigned),
                         data: { turbo_action: "advance" } do %>
-              <span>Unassigned (<%= unassigned_count %>)</span>
+              <span>Unassigned (<%= @unassigned_count %>)</span>
             <% end %>
           <% end %>
         </nav>
