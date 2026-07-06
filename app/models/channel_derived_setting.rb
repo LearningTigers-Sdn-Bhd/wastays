@@ -16,12 +16,22 @@ class ChannelDerivedSetting < ApplicationRecord
     return if Thread.current[:skip_ari_sync]
     return if hotel.preferred_channel_manager.blank?
 
-    # Force recalculation of channel rates for this channel across all dates
-    ChannelManagers::SyncJob.perform_later(
+    # 1. Sync rates & availability for the immediate 30-day window synchronously for instant feedback
+    ChannelManagers::SyncJob.perform_now(
       hotel.id,
       Date.current,
+      Date.current + 30.days,
+      sync_availability: true,
+      sync_rates: true,
+      sync_restrictions: false
+    )
+
+    # 2. Sync the remaining window (days 31 to 499) in the background
+    ChannelManagers::SyncJob.perform_later(
+      hotel.id,
+      Date.current + 31.days,
       Date.current + 499.days,
-      sync_availability: false,
+      sync_availability: true,
       sync_rates: true,
       sync_restrictions: false
     )

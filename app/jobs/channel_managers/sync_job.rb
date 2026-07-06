@@ -7,6 +7,9 @@ module ChannelManagers
       hotel = Hotel.find(hotel_id)
       return if hotel.preferred_channel_manager.blank?
 
+      # Clear cached connected channels to ensure fresh sync data
+      Rails.cache.delete("channex:channels:#{hotel.id}")
+
       adapter = ChannelManagers::SyncOrchestrator.adapter_for(hotel)
       result = adapter.push_ari(
         date_range: (start_date.to_date..end_date.to_date),
