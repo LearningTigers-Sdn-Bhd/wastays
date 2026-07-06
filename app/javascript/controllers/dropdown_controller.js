@@ -143,7 +143,7 @@ export default class extends Controller {
 
     const rect = this.toggleButton.getBoundingClientRect()
     // Keep floating menus compact by default while still respecting trigger width.
-    const menuWidth = Math.max(rect.width, 220)
+    const menuWidth = Math.max(rect.width, this.menuElement.offsetWidth || 220, 220)
     const viewportPadding = 16
     const spacing = 8
     
@@ -167,9 +167,12 @@ export default class extends Controller {
     // Prefer opening to the right so menus in the first timeline column are
     // not covered by the sticky room-details column.
     const toggleCenter = rect.left + (rect.width / 2)
-    const preferredLeft = this.element.dataset.dropdownAlign === "right"
+    const alignment = this.element.dataset.dropdownAlign
+    const preferredLeft = alignment === "right"
       ? rect.left
-      : toggleCenter - (menuWidth / 2)
+      : alignment === "end"
+        ? rect.right - menuWidth
+        : toggleCenter - (menuWidth / 2)
     const left = Math.min(Math.max(viewportPadding, preferredLeft), maxLeft)
 
     this.menuElement.style.position = "fixed"
